@@ -1,0 +1,40 @@
+{
+  "name": "e2e-runner",
+  "version": "1.0.0",
+  "description": "E2E tests framework",
+  "main": "e2e.js",
+  "scripts": {
+    "test": "mocha test",
+    "lint": "jshint --reporter=node_modules/jshint-stylish . && jscs ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.yandex-team.ru/search-interfaces/e2e-runner.git"
+  },
+  "keywords": [
+    "e2e",
+    "test"
+  ],
+  "author": "search-interfaces@yandex-team.ru",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^2.8.1",
+    "webdriverio": "3.2.6",
+    "lodash": "^3.7.0",
+    "mocha": "2.2.5",
+    "chai": "^3.0.0",
+    "chai-as-promised": "^5.1.0",
+    "shelljs": "0.5.3",
+    "is-file": "^1.0.0",
+    "vow": "^0.4.10"
+  },
+  "devDependencies": {
+    "islands-codestyle": "^3.4.0",
+    "jscs": "^2.3.5",
+    "jshint-stylish": "^2.1.0"
+  },
+  "publishConfig": {
+    "registry": "http://npm.yandex-team.ru"
+  },
+  "codestyleGroup": "tools"
+}

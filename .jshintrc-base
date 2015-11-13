@@ -1,0 +1,91 @@
+{
+    "globals": {
+        "JSON": false
+    },
+
+    "curly": true,
+    "camelcase": true,
+    "eqeqeq": true,
+    "eqnull": true,
+    "immed": true,
+    "latedef": "nofunc",
+    "newcap": true,
+    "noarg": true,
+    "noempty": true,
+    "nonew": true,
+    "undef": true,
+    "unused": "vars",
+    "strict": false,
+    "maxparams": 4,
+    "maxdepth": 4,
+    "maxlen": 120,
+
+    "expr": true,
+    "lastsemic": true,
+    "laxbreak": true,
+    "sub": true,
+
+    "overrides": {
+        "*.blocks/**/*.js": {
+            "browser": true,
+            "jquery": true,
+
+            "es3": true,
+
+            "globals": {
+                "BEM": false,
+                "BEMHTML": false,
+                "bh": false,
+                "Lego": false
+            }
+        },
+        "*.blocks/**/*.examples/**/*.js": {
+            "devel": true
+        },
+        "touch*.blocks/**/*.js": {
+            "globals": {
+                "setImmediate": false
+            }
+        },
+        "*.blocks/**/*.bemhtml.js": {
+            "globals": {
+                "apply": false,
+                "applyCtx": false,
+                "applyNext": false,
+                "attrs": false,
+                "bem": false,
+                "block": false,
+                "cache": false,
+                "cls": false,
+                "content": false,
+                "def": false,
+                "elem": false,
+                "elemMatch": false,
+                "elemMod": false,
+                "js": false,
+                "jsAttr": false,
+                "local": false,
+                "match": false,
+                "mix": false,
+                "mod": false,
+                "mode": false,
+                "once": false,
+                "oninit": false,
+                "tag": false,
+                "wrap": false
+            }
+        },
+        "*.blocks/**/*.bh.js": {
+            "node": true
+        },
+        ".enb/**.js": {
+            "node": true
+        },
+        ".tanker/**.js": {
+            "node": true
+        },
+        "gemini/*.js": {
+            "node": true
+        }
+    }
+}

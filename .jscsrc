@@ -1,0 +1,18 @@
+{
+    "plugins": ["islands-codestyle"],
+    "preset": "lego",
+    "excludeFiles": [
+        ".*",
+        "**/*.blocks/**/*.i18n/**",
+        "**/*.examples/**",
+        "**/*.bundles/**",
+        "**/*.sets/**",
+        "**/*.docs/**",
+        "**/*.tests",
+        "**/*.*specs/**",
+        "**/libs/**",
+        "**/.enb/tmp/**",
+        "libs/**",
+        "node_modules"
+    ]
+}
