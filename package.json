@@ -18,15 +18,15 @@
   "author": "search-interfaces@yandex-team.ru",
   "license": "ISC",
   "dependencies": {
-    "commander": "^2.8.1",
-    "webdriverio": "3.2.6",
-    "lodash": "^3.7.0",
-    "mocha": "2.2.5",
     "chai": "^3.0.0",
     "chai-as-promised": "^5.1.0",
-    "shelljs": "0.5.3",
+    "commander": "^2.8.1",
     "is-file": "^1.0.0",
-    "vow": "^0.4.10"
+    "lodash": "^3.7.0",
+    "mocha": "2.2.5",
+    "q": "^1.4.1",
+    "shelljs": "0.5.3",
+    "webdriverio": "3.2.6"
   },
   "devDependencies": {
     "islands-codestyle": "^3.4.0",
