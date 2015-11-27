@@ -1,8 +1,8 @@
 {
   "name": "e2e-runner",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "description": "E2E tests framework",
-  "main": "e2e.js",
+  "main": "lib/e2e.js",
   "scripts": {
     "test": "mocha test",
     "lint": "jshint --reporter=node_modules/jshint-stylish . && jscs ."
@@ -13,25 +13,26 @@
   },
   "keywords": [
     "e2e",
-    "test"
+    "test",
+    "webdriverio"
   ],
+  "bin": {
+    "e2e": "bin/e2e-runner"
+  },
   "author": "search-interfaces@yandex-team.ru",
   "license": "ISC",
   "dependencies": {
-    "chai": "^3.0.0",
-    "chai-as-promised": "^5.1.0",
-    "commander": "^2.8.1",
+    "inherit": "^2.2.2",
     "is-file": "^1.0.0",
     "lodash": "^3.7.0",
     "mocha": "2.2.5",
+    "nomnom": "^1.8.1",
     "q": "^1.4.1",
     "shelljs": "0.5.3",
+    "urijs": "^1.17.0",
     "webdriverio": "3.2.6"
   },
   "devDependencies": {
-    "islands-codestyle": "^3.4.0",
-    "jscs": "^2.3.5",
-    "jshint-stylish": "^2.1.0"
   },
   "publishConfig": {
     "registry": "http://npm.yandex-team.ru"
