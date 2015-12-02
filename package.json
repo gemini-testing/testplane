@@ -30,10 +30,10 @@
     "q": "^1.4.1",
     "shelljs": "0.5.3",
     "urijs": "^1.17.0",
+    "valid-url": "^1.0.9",
     "webdriverio": "3.2.6"
   },
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "publishConfig": {
     "registry": "http://npm.yandex-team.ru"
   },
