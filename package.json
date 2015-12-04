@@ -35,7 +35,10 @@
     "valid-url": "^1.0.9",
     "webdriverio": "3.2.6"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "jscs": "^2.6.0",
+    "jshint": "^2.8.0"
+  },
   "publishConfig": {
     "registry": "http://npm.yandex-team.ru"
   },
