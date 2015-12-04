@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+'use strict';
+
+var options = require('../lib/e2e').cli(),
+    MochaRun = require('../lib/e2e').MochaRun;
+
+// TODO multibrowser, parallel. Сейчас запускаем один браузер в один поток
+// После распараллеливания будет MochaRun на каждый процесс/поток
+new MochaRun(options)
+    .run()
+    .then(function () {
+        console.log('Tests passed');
+    }).catch(function (failures) {
+        console.log('FAILURES:');
+        console.log(failures);
+    });
