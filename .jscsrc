@@ -31,9 +31,7 @@
         "afterConsequent": true,
         "beforeAlternate": true
     },
-    "disallowSpacesInConditionalExpression": {
-        "afterTest": true
-    },
+    "requireSpacesInConditionalExpression": true,
     "requireSpacesInFunctionExpression": {
         "beforeOpeningCurlyBrace": true
     },

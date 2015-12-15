@@ -12,4 +12,3 @@ node_modules
 artifacts
 npm-debug.log
 .editorconfig
-.jshintrc-base
