@@ -4,8 +4,9 @@
   "description": "E2E tests framework",
   "main": "lib/e2e.js",
   "scripts": {
-    "test": "mocha test",
-    "lint": "jshint --reporter=node_modules/jshint-stylish . && jscs ."
+    "lint": "jshint . && jscs .",
+    "test-unit": "istanbul test _mocha -- --recursive test/",
+    "test": "npm run lint && npm run test-unit"
   },
   "repository": {
     "type": "git",
@@ -20,7 +21,7 @@
     "e2e": "bin/e2e-runner"
   },
   "author": "search-interfaces@yandex-team.ru",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "colors": "^1.1.2",
     "commander": "^2.9.0",
@@ -28,7 +29,6 @@
     "is-file": "^1.0.0",
     "lodash": "^3.7.0",
     "mocha": "2.2.5",
-    "nomnom": "^1.8.1",
     "q": "^1.4.1",
     "shelljs": "0.5.3",
     "urijs": "^1.17.0",
@@ -36,11 +36,15 @@
     "webdriverio": "3.2.6"
   },
   "devDependencies": {
+    "chai": "^3.4.1",
+    "chai-as-promised": "^5.1.0",
+    "istanbul": "^0.4.1",
     "jscs": "^2.6.0",
-    "jshint": "^2.8.0"
+    "jshint": "^2.8.0",
+    "sinon": "^1.17.2",
+    "sinon-chai": "^2.8.0"
   },
   "publishConfig": {
     "registry": "http://npm.yandex-team.ru"
-  },
-  "codestyleGroup": "tools"
+  }
 }

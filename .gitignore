@@ -13,6 +13,3 @@ artifacts
 npm-debug.log
 .editorconfig
 .jshintrc-base
-.jshintignore
-.jscsrc
-.jshintrc
