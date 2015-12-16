@@ -1,0 +1,36 @@
+{
+  "bitwise": true,
+  "camelcase": true,
+  "curly": true,
+  "eqeqeq": true,
+  "freeze": true,
+  "immed": true,
+  "indent": 4,
+  "latedef": "nofunc",
+  "newcap": true,
+  "noarg": true,
+  "nonew": true,
+  "quotmark": "single",
+  "undef": true,
+  "unused": "vars",
+  "strict": true,
+  "trailing": true,
+  "maxparams": 3,
+  "node": true,
+  "laxbreak": true,
+  "overrides": {
+    "test/**": {
+      "mocha": true
+    }
+  },
+  "globals": {
+    "describe": false,
+    "before": false,
+    "after": false,
+    "beforeEach": false,
+    "afterEach": false,
+    "it": false,
+    "assert": false,
+    "sinon": false
+  }
+}
