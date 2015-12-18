@@ -1,4 +1,4 @@
-WebdriverIO
+e2e-runner
 ===========
 
 ## Установка
@@ -10,55 +10,91 @@ npm i e2e-runner --registry http://npm.yandex-team.ru --save-dev
 ## Запуск тестов
 
 ```shell
-e2e -h
+e2e-runner path/to/config --baseUrl http://yandex.ru/search --grid http://localhost:4444/wd/hub
 ```
 
-## Кастомный исполняемый конфигурационный файл
+## Конфигурация
 
-В кастомной конфигурации задаются свои дефолныте значения параметров запуска.
-Также нужно задать массивы ```capabilities``` и ```specs```
-Кастомный конфиг исполняемый, можно конфигурировать запуск тестов так, как захочется
+**e2e-runner** конфигурируется с помощью конфигурационного файла. Путь к этому файлу обязателен и должен передаваться первым аргументом.
+Опции `grid`, `baseUrl`, `timeout`, `waitTimeout`, `slow`, `debug` могут быть переопределены cli-опциями с соответствующими именами
 
+Ниже приведён пример полного конфига. Обязательными полями являются `specs`, `browsers`, `prepareEnvironment`
 
 ```javascript
-var getBrowser = require('./lib/browsers');
+var command = require('path/to/command');
 
 module.exports = {
+    grid: 'http://localhost:4444/wd/hub',
+    baseUrl: 'http://yandex.ru/search',
+    timeout: 10000,
+    waitTimeout: 10000,
+    slow: 6000,
+    debug: true,
 
-    /**
-     * Пути к исполняемым тестам
-     */
-    specs: ['./tests'],
-
-    /**
-     * Набор браузеров, в которых будут запущены тесты
-     */
-    capabilities: [
-        getBrowser('desktop-firefox')
+    specs: [
+        'tests/desktop',
+        'tests/touch'
     ],
 
-    /**
-     * Кастомизация webdriverIO.
-     * Тут можно добавить кастомные команды, провести любые доп. манипуляции с драйвером.
-     * Выполняется перед запуском теста
-     */
+    browsers: {
+        chrome: {
+            capabilities: {
+                browserName: 'chrome'
+            },
+            sessionsPerBrowser: 3
+        },
+
+        firefox: {
+            capabilities: {
+                browserName: 'firefox'
+            },
+            sessionsPerBrowser: 10 // will be 1 if not set
+        }
+    },
+
     prepareEnvironment: function (browser) {
-        var chai = require('chai'),
-            chaiAsPromised = require('chai-as-promised');
-
-        chai.config.includeStack = true;
-        chai.use(chaiAsPromised);
-
-        global.assert = chai.assert;
-        global.PO = require('bem-page-object');
-
-        //browser.addCommand(...)
+        browser.addCommand('command', command);
     }
 };
 ```
 
-## Пример запуска
+## Описание опций
 
-```shell
-e2e test --conf ./conf.js --baseUrl http://yandex.ru/search
+### Настройки браузеров
+
+Браузеры, в которых необходимо запускать тесты, настраиваются в секции `browsers`. 
+Формат секции:
+```js
+browsers: {
+    <browser_id> {
+        <setting>:<value>
+        <setting>:<value>
+    }
+}
 ```
+Значение `<browser-id>` используется в отчёте для идентификации браузера.
+Доступные настройки браузера:
+
+* `capabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities) 
+* `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
+
+### Подготовка webdriver-сессии к работе
+Подготовка сессии к работе (например установка специфических для пользователя команд) выполняется в секции `prepareEnvironment`.
+Формат секции:
+```js
+prepareEnvironment: function(browser) {
+    // do setup here
+}
+```
+
+В данную функцию будет передана сессия `webdriver.io`.
+
+### Прочие опции
+
+* `specs`(обязательный) - Массив путей до директорий с тестами.
+* `grid` – URL до Selenium grid. По умолчанию `http://localhost:4444/wd/hub`
+* `baseUrl` - Базовый URL тестируемой страницы. По умолчанию `localhost`
+* `timeout` - Время ожидания выполнения теста. По умолчанию `60000`
+* `waitTimeout` - Время ожидания события на странице. По умолчанию `10000`
+* `slow` - Если время выполнения теста превышает это значение, то тест считается медленным. По умолчанию `10000`
+* `debug` - Включает вывод отладочной информации в консоль. По умолчанию `false`
