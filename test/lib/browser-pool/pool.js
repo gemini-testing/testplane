@@ -1,7 +1,7 @@
 'use strict';
 var q = require('q'),
     Browser = require('../../../lib/browser'),
-    Pool = require('../../../lib/browser-pool/pool'),
+    Pool = require('../../../lib/browser-pool/single-pool'),
     browserWithId = require('../../utils').browserWithId;
 
 describe('Unlimited pool', function() {
