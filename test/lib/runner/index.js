@@ -7,7 +7,7 @@ var q = require('q'),
     BrowserRunner = require('../../../lib/runner/browser-runner'),
     BrowserPool = require('../../../lib/browser-pool'),
 
-    createConfig_ = require('../../utils').createConfg,
+    makeConfigStub = require('../../utils').makeConfigStub,
 
     RunnerEvents = require('../../../lib/constants/runner-events'),
     logger = require('../../../lib/utils').logger;
@@ -21,7 +21,7 @@ describe('Runner', function() {
             tests: []
         });
 
-        var runner = opts.runner || new Runner(createConfig_(opts.browsers));
+        var runner = opts.runner || new Runner(makeConfigStub(opts.browsers));
         return runner.run(opts.tests, opts.browsers);
     }
 
@@ -40,7 +40,7 @@ describe('Runner', function() {
     describe('constructor', function() {
         /*jshint nonew: false */
         it('should create browser pool', function() {
-            var config = createConfig_();
+            var config = makeConfigStub();
 
             new Runner(config);
 
@@ -60,7 +60,7 @@ describe('Runner', function() {
 
         it('should emit `RunnerEvents.RUNNER_START` event', function() {
             var onStartRunner = sandbox.spy().named('onStartRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_START, onStartRunner);
 
@@ -72,7 +72,7 @@ describe('Runner', function() {
 
         it('should emit `RunnerEvents.RUNNER_END` event', function() {
             var onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_END, onEndRunner);
 
@@ -85,7 +85,7 @@ describe('Runner', function() {
         it('should emit events in correct order', function() {
             var onStartRunner = sandbox.spy().named('onStartRunner'),
                 onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_START, onStartRunner);
             runner.on(RunnerEvents.RUNNER_END, onEndRunner);
@@ -143,7 +143,7 @@ describe('Runner', function() {
         emitter.run = sandbox.stub().returns(q());
         BrowserRunner.prototype.__constructor.returns(emitter);
 
-        var runner = new Runner(createConfig_()),
+        var runner = new Runner(makeConfigStub()),
             onTestPass = sandbox.spy().named('onTestPass');
 
         runner.on(RunnerEvents.TEST_PASS, onTestPass);

@@ -8,7 +8,7 @@ var _ = require('lodash'),
     BrowserAgent = require('../../../lib/browser-agent'),
     SuiteRunner = require('../../../lib/runner/suite-runner'),
 
-    createConfig = require('../../utils').createConfg,
+    makeConfigStub = require('../../utils').makeConfigStub,
 
     RunnerEvents = require('../../../lib/constants/runner-events');
 
@@ -23,7 +23,7 @@ describe('Browser runner', function() {
         });
 
         return new BrowserRunner(
-            createConfig(opts.browserId, opts.suites),
+            makeConfigStub(opts.browserId, opts.suites),
             opts.browserId,
             opts.browserPool
         );

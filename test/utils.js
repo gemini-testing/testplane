@@ -12,7 +12,7 @@ function browserWithId(id) {
     return new Browser(config, id);
 }
 
-function createConfig(browsers) {
+function makeConfigStub(browsers) {
     browsers = browsers
         ? Array.isArray(browsers) ? browsers : [browsers]
         : ['id'];
@@ -31,4 +31,4 @@ function createConfig(browsers) {
 }
 
 exports.browserWithId = browserWithId;
-exports.createConfg = createConfig;
+exports.makeConfigStub = makeConfigStub;
