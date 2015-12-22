@@ -149,6 +149,34 @@ describe('Limited pool', function() {
             return assert.eventually.equal(result, expectedBrowser);
         });
 
+        it('should not wait for queued browser to start after release browser', function() {
+            var pool = makePool(1),
+                afterFree = sinon.spy().named('afterFree'),
+                afterSecondGet = sinon.spy().named('afterSecondGet');
+
+            underlyingPool.getBrowser
+                .withArgs('first').returns(q(makeBrowser()))
+                .withArgs('second').returns(q.resolve());
+
+            return pool.getBrowser('first')
+                .then(function(browser) {
+                    pool.getBrowser('second')
+                        .then(afterSecondGet);
+
+                    return q.delay(100)
+                        .then(function() {
+                            return pool.freeBrowser(browser);
+                        })
+                        .then(afterFree)
+                        .then(function() {
+                            assert.callOrder(
+                                afterFree,
+                                afterSecondGet
+                            );
+                        });
+                });
+        });
+
         it('should reject the queued call when underlying pool rejects the request', function() {
             var pool = makePool(),
                 error = new Error('You shall not pass');
