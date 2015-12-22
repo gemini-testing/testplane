@@ -1,7 +1,11 @@
 'use strict';
 var q = require('q'),
     Browser = require('../../../lib/browser'),
-    Pool = require('../../../lib/browser-pool/single-pool'),
+<<<<<<< HEAD:test/lib/browser-pool/pool.js
+    Pool = require('../../../lib/browser-pool/pool'),
+=======
+    BasicPool = require('../../../lib/browser-pool/basic-pool'),
+>>>>>>> fa6871c5a327a0ed43224caedf19727a43f516f6:test/lib/browser-pool/basic-pool.js
     browserWithId = require('../../utils').browserWithId;
 
 describe('Unlimited pool', function() {
@@ -29,7 +33,7 @@ describe('Unlimited pool', function() {
             }
         };
 
-        pool = new Pool(config);
+        pool = new BasicPool(config);
     });
 
     afterEach(function() {
