@@ -8,7 +8,8 @@ var q = require('q'),
 
     createConfig_ = require('../../utils').createConfg,
 
-    RunnerEvents = require('../../../lib/constants/runner-events');
+    RunnerEvents = require('../../../lib/constants/runner-events'),
+    logger = require('../../../lib/utils').logger;
 
 describe('Runner', function() {
     var sandbox = sinon.sandbox.create();
@@ -20,6 +21,7 @@ describe('Runner', function() {
     beforeEach(function() {
         sandbox.stub(BrowserPool.prototype);
         sandbox.stub(BrowserRunner.prototype);
+        sandbox.stub(logger);
 
         BrowserRunner.prototype.run.returns(q.resolve());
     });
@@ -113,6 +115,19 @@ describe('Runner', function() {
             BrowserRunner.prototype.run.returns(q.reject());
 
             return assert.isRejected(run_());
+        });
+
+        it('should emit error when Error occured in test', function() {
+            var runner = new Runner(createConfig_()),
+                onError = sinon.spy().named('onError');
+
+            runner.on(RunnerEvents.ERROR, onError);
+            BrowserRunner.prototype.run.returns(q.reject(new Error()));
+
+            return runner.run()
+                .fail(function() {
+                    assert.called(onError);
+                });
         });
     });
 
