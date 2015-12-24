@@ -12,10 +12,10 @@ describe('Proxy reporter', function() {
         return new ProxyReporter(runner, {
             reporterOptions: {
                 emit: emit,
-                browser: {
-                    id: browserId || 'browser',
-                    sessionId: sessionId || 'sessionId'
-                }
+                browserId: browserId || 'default-browser',
+                getBrowser: sinon.stub().returns({
+                    sessionId: sessionId || 'default-session-id'
+                })
             }
         });
     }
