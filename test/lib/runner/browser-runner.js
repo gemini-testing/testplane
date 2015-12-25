@@ -3,9 +3,9 @@
 var _ = require('lodash'),
     q = require('q'),
     EventEmitter = require('events').EventEmitter,
-    Browser = require('../../../lib/browser'),
     BrowserPool = require('../../../lib/browser-pool'),
     BrowserRunner = require('../../../lib/runner/browser-runner'),
+    BrowserAgent = require('../../../lib/browser-agent'),
     SuiteRunner = require('../../../lib/runner/suite-runner'),
 
     createConfig = require('../../utils').createConfg,
@@ -13,47 +13,52 @@ var _ = require('lodash'),
     RunnerEvents = require('../../../lib/constants/runner-events');
 
 describe('Browser runner', function() {
-    var sandbox = sinon.sandbox.create(),
-        config,
-        browserPool;
+    var sandbox = sinon.sandbox.create();
 
-    function run_(opts) {
+    function mkRunner_(opts) {
         opts = _.defaults(opts || {}, {
-            browserId: 'browser',
-            suites: ['suite'],
-            browserPool: browserPool
+            browserId: 'default-browser',
+            suites: ['default-suite'],
+            browserPool: sinon.createStubInstance(BrowserPool)
         });
 
         return new BrowserRunner(
             createConfig(opts.browserId, opts.suites),
             opts.browserId,
             opts.browserPool
-        ).run();
+        );
     }
 
     beforeEach(function() {
         sandbox.stub(SuiteRunner.prototype);
         SuiteRunner.prototype.run.returns(q.resolve());
 
-        browserPool = sinon.createStubInstance(BrowserPool);
-        browserPool.getBrowser.returns(q.resolve());
-        browserPool.freeBrowser.returns(q.resolve());
-
-        config = createConfig('browser', 'spec1');
+        sandbox.stub(BrowserAgent.prototype);
     });
 
     afterEach(function() {
         sandbox.restore();
     });
 
+    describe('constructor', function() {
+        it('should create BrowserAgent associated with passed browser', function() {
+            mkRunner_({
+                browserId: 'browser',
+                browserPool: 'some-browser-pool'
+            });
+
+            assert.calledWith(BrowserAgent.prototype.__constructor, 'browser', 'some-browser-pool');
+        });
+    });
+
     describe('run', function() {
         it('should emit `RunnerEvents.BROWSER_START` event', function() {
             var onBrowserStart = sandbox.spy().named('onBrowserStart'),
-                browserRunner = new BrowserRunner(config, 'browser', browserPool);
+                runner = mkRunner_({browserId: 'browser'});
 
-            browserRunner.on(RunnerEvents.BROWSER_START, onBrowserStart);
+            runner.on(RunnerEvents.BROWSER_START, onBrowserStart);
 
-            return browserRunner.run()
+            return runner.run()
                 .then(function() {
                     assert.calledWith(onBrowserStart, 'browser');
                 });
@@ -61,11 +66,11 @@ describe('Browser runner', function() {
 
         it('should emit `RunnerEvents.BROWSER_END` event', function() {
             var onBrowserEnd = sandbox.spy().named('onBrowserEnd'),
-                browserRunner = new BrowserRunner(config, 'browser', browserPool);
+                runner = mkRunner_({browserId: 'browser'});
 
-            browserRunner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
+            runner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
 
-            return browserRunner.run()
+            return runner.run()
                 .then(function() {
                     assert.calledWith(onBrowserEnd, 'browser');
                 });
@@ -74,45 +79,33 @@ describe('Browser runner', function() {
         it('should emit events in correct order', function() {
             var onBrowserStart = sandbox.spy().named(onBrowserStart),
                 onBrowserEnd = sandbox.spy().named('onBrowserEnd'),
-                browserRunner = new BrowserRunner(config, 'browser', browserPool);
+                runner = mkRunner_({browserId: 'browser'});
 
-            browserRunner.on(RunnerEvents.BROWSER_START, onBrowserStart);
-            browserRunner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
+            runner.on(RunnerEvents.BROWSER_START, onBrowserStart);
+            runner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
 
-            return browserRunner.run()
+            return runner.run()
                 .then(function() {
                     assert.callOrder(onBrowserStart, onBrowserEnd);
                 });
         });
 
-        it('should get browser from browser pool', function() {
-            return run_({
-                    browserId: 'browser',
-                    browserPool: browserPool
-                })
-                .then(function() {
-                    assert.called(browserPool.getBrowser, 'browser');
-                });
-        });
-
-        it('should return browser to pool when all specs finished', function() {
-            var browser = sinon.createStubInstance(Browser);
-
-            browserPool.getBrowser.returns(q.resolve(browser));
-
-            return run_({
-                    browserId: 'browser',
-                    browserPool: browserPool
-                })
-                .then(function() {
-                    assert.called(browserPool.getBrowser, browser);
-                });
-        });
-
         it('should run all suite runners', function() {
-            return run_({suites: ['path/to/suite', 'path/to/another/suite']})
+            return mkRunner_({suites: ['path/to/suite', 'path/to/another/suite']})
+                .run()
                 .then(function() {
                     assert.calledTwice(SuiteRunner.prototype.run);
+                });
+        });
+
+        it('should pass browserAgent to suite runner', function() {
+            var browserAgent = sinon.stub().named('browserAgent');
+            BrowserAgent.prototype.__constructor.returns(browserAgent);
+
+            return mkRunner_()
+                .run()
+                .then(function() {
+                    assert.calledWith(SuiteRunner.prototype.__constructor, sinon.match.any, browserAgent);
                 });
         });
 
@@ -123,7 +116,8 @@ describe('Browser runner', function() {
             SuiteRunner.prototype.run.onFirstCall().returns(q.resolve().then(firstResolveMarker));
             SuiteRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
 
-            return run_({suites: ['path/to/suite', 'path/to/another/suite']})
+            return mkRunner_({suites: ['path/to/suite', 'path/to/another/suite']})
+                .run()
                 .then(function() {
                     assert.called(firstResolveMarker);
                     assert.called(secondResolveMarker);
@@ -133,7 +127,9 @@ describe('Browser runner', function() {
         it('should be rejected if one of browser runners rejected', function() {
             SuiteRunner.prototype.run.returns(q.reject());
 
-            return assert.isRejected(run_());
+            var runner = mkRunner_();
+
+            return assert.isRejected(runner.run());
         });
     });
 
@@ -143,12 +139,12 @@ describe('Browser runner', function() {
         emitter.run = sandbox.stub().returns(q.resolve());
         SuiteRunner.prototype.__constructor.returns(emitter);
 
-        var browserRunner = new BrowserRunner(config, 'browser', browserPool),
+        var runner = mkRunner_({browserId: 'browser'}),
             onTestPass = sandbox.spy().named('onTestPass');
 
-        browserRunner.on(RunnerEvents.TEST_PASS, onTestPass);
+        runner.on(RunnerEvents.TEST_PASS, onTestPass);
 
-        return browserRunner.run().then(function() {
+        return runner.run().then(function() {
             emitter.emit(RunnerEvents.TEST_PASS);
             assert.called(onTestPass);
         });
