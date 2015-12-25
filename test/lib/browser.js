@@ -2,7 +2,8 @@
 
 var q = require('q'),
     webdriverio = require('webdriverio'),
-    Browser = require('../../lib/browser');
+    Browser = require('../../lib/browser'),
+    logger = require('../../lib/utils').logger;
 
 describe('Browser', function() {
     var sandbox = sinon.sandbox.create(),
@@ -31,6 +32,7 @@ describe('Browser', function() {
         session.end.returns(q.resolve());
 
         sandbox.stub(webdriverio, 'remote');
+        sandbox.stub(logger);
         webdriverio.remote.returns(session);
     });
 
@@ -97,6 +99,20 @@ describe('Browser', function() {
             return browser.init()
                 .then(function() {
                     assert.equal(browser.sessionId, 'foo');
+                });
+        });
+    });
+
+    describe('error handling', function() {
+        it('should warn in case of failed end', function() {
+            session.end.returns(q.reject(new Error('failed end')));
+            return new Browser(createBrowserConfig_(), 'browser')
+                .init()
+                .then(function(browser) {
+                    return browser.quit();
+                })
+                .then(function() {
+                    assert.called(logger.warn);
                 });
         });
     });
