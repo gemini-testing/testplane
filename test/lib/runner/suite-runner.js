@@ -96,6 +96,21 @@ describe('Suite runner', function() {
                 });
         });
 
+        it('should disable mocha timeouts while setting browser hooks', function() {
+            Mocha.Suite.prototype.enableTimeouts.onFirstCall().returns(true);
+
+            return run_()
+                .then(function() {
+                    assert.callOrder(
+                        Mocha.Suite.prototype.enableTimeouts, // get current value of enableTimeouts
+                        Mocha.Suite.prototype.enableTimeouts.withArgs(false).named('disableTimeouts'),
+                        Mocha.Suite.prototype.beforeAll,
+                        Mocha.Suite.prototype.afterAll,
+                        Mocha.Suite.prototype.enableTimeouts.withArgs(true).named('restoreTimeouts')
+                    );
+                });
+        });
+
         it('should not be rejected if freeBrowser failed', function() {
             var browser = {};
 
