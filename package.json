@@ -34,6 +34,7 @@
     "q-debug-mode": "0.0.1",
     "q-promise-utils": "^1.0.0",
     "shelljs": "0.5.3",
+    "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
     "valid-url": "^1.0.9",
     "webdriverio": "3.2.6"
