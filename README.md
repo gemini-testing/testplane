@@ -15,7 +15,7 @@ e2e-runner path/to/config --baseUrl http://yandex.ru/search --grid http://localh
 
 ## Конфигурация
 
-**e2e-runner** конфигурируется с помощью конфигурационного файла. Путь к этому файлу обязателен и должен передаваться первым аргументом.
+**e2e-runner** конфигурируется с помощью конфигурационного файла. Путь к этому файлу обязателен, должен быть относительным и передаваться первым аргументом.
 Опции `grid`, `baseUrl`, `timeout`, `waitTimeout`, `slow`, `debug` могут быть переопределены cli-опциями с соответствующими именами
 
 Ниже приведён пример полного конфига. Обязательными полями являются `specs`, `browsers`, `prepareEnvironment`
@@ -69,7 +69,7 @@ module.exports = {
 
 ### Настройки браузеров
 
-Браузеры, в которых необходимо запускать тесты, настраиваются в секции `browsers`. 
+Браузеры, в которых необходимо запускать тесты, настраиваются в секции `browsers`.
 Формат секции:
 ```js
 browsers: {
@@ -82,7 +82,7 @@ browsers: {
 Значение `<browser-id>` используется в отчёте для идентификации браузера.
 Доступные настройки браузера:
 
-* `capabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities) 
+* `capabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 * `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
 
 ### Подготовка webdriver-сессии к работе
