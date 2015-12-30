@@ -44,8 +44,28 @@ describe('Proxy reporter', function() {
     testTranslateEvent_('test', 'beginTest');
     testTranslateEvent_('test end', 'endTest');
     testTranslateEvent_('pass', 'passTest');
-    testTranslateEvent_('fail', 'failTest');
     testTranslateEvent_('pending', 'pendingTest');
+
+    it('should translate `fail` event from test to `failTest`', function() {
+        createReporter_();
+
+        runner.emit('fail', {type: 'test'}, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'failTest', {
+            err: {message: 'foo'}
+        });
+    });
+
+    it('should translate `fail` event from other source to `err`', function() {
+        createReporter_();
+
+        runner.emit('fail', {title: 'some-title'}, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'err',
+            {message: 'foo'},
+            {title: 'some-title'}
+        );
+    });
 
     it('should translate test data from mocha', function() {
         createReporter_();
@@ -65,16 +85,6 @@ describe('Proxy reporter', function() {
         assert.calledWithMatch(emit, 'beginSuite', {
             browserId: 'browserId',
             sessionId: 'mySessionId'
-        });
-    });
-
-    it('should append info about error to test data on suite fail', function() {
-        createReporter_();
-
-        runner.emit('fail', {}, {message: 'foo'});
-
-        assert.calledWithMatch(emit, 'failTest', {
-            err: {message: 'foo'}
         });
     });
 });
