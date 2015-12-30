@@ -52,8 +52,15 @@ module.exports = {
         }
     },
 
-    prepareEnvironment: function (browser) {
+    prepareBrowser: function (browser) {
         browser.addCommand('command', command);
+    },
+
+    // Кастомизация окружения
+    prepareEnvironment: function() {
+        if (process.env.desktop) {
+            this.specs = ['tests/desktop'];
+        }
     }
 };
 ```
@@ -79,15 +86,19 @@ browsers: {
 * `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
 
 ### Подготовка webdriver-сессии к работе
-Подготовка сессии к работе (например установка специфических для пользователя команд) выполняется в секции `prepareEnvironment`.
+Подготовка сессии к работе (например, установка специфических для пользователя команд) выполняется в секции `prepareBrowser`.
 Формат секции:
 ```js
-prepareEnvironment: function(browser) {
+prepareBrowser: function(browser) {
     // do setup here
 }
 ```
 
 В данную функцию будет передана сессия `webdriver.io`.
+
+### Кастомизация настройки окружения
+
+Данные в конфиге можно изменять в зависимости от дополнительных условий в функции `prepareEnvironment`. Использование этой функции не обязательно, она для удобства.
 
 ### Прочие опции
 
