@@ -29,6 +29,10 @@ describe('Browser runner', function() {
         );
     }
 
+    function run_(runner) {
+        return runner.run(['some/test']);
+    }
+
     beforeEach(function() {
         sandbox.stub(SuiteRunner.prototype);
         SuiteRunner.prototype.run.returns(q.resolve());
@@ -91,8 +95,8 @@ describe('Browser runner', function() {
         });
 
         it('should run all suite runners', function() {
-            return mkRunner_({suites: ['path/to/suite', 'path/to/another/suite']})
-                .run()
+            return mkRunner_()
+                .run(['path/to/suite', 'path/to/another/suite'])
                 .then(function() {
                     assert.calledTwice(SuiteRunner.prototype.run);
                 });
@@ -103,7 +107,7 @@ describe('Browser runner', function() {
             BrowserAgent.prototype.__constructor.returns(browserAgent);
 
             return mkRunner_()
-                .run()
+                .run(['path/to/suite', 'path/to/another/suite'])
                 .then(function() {
                     assert.calledWith(SuiteRunner.prototype.__constructor, sinon.match.any, browserAgent);
                 });
@@ -116,8 +120,8 @@ describe('Browser runner', function() {
             SuiteRunner.prototype.run.onFirstCall().returns(q.resolve().then(firstResolveMarker));
             SuiteRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
 
-            return mkRunner_({suites: ['path/to/suite', 'path/to/another/suite']})
-                .run()
+            return mkRunner_()
+                .run(['path/to/suite', 'path/to/another/suite'])
                 .then(function() {
                     assert.called(firstResolveMarker);
                     assert.called(secondResolveMarker);
@@ -125,11 +129,11 @@ describe('Browser runner', function() {
         });
 
         it('should be rejected if one of browser runners rejected', function() {
-            SuiteRunner.prototype.run.returns(q.reject());
+            SuiteRunner.prototype.run.returns(q.reject('Error'));
 
             var runner = mkRunner_();
 
-            return assert.isRejected(runner.run());
+            return assert.isRejected(run_(runner), /Error/);
         });
     });
 
@@ -144,7 +148,7 @@ describe('Browser runner', function() {
 
         runner.on(RunnerEvents.TEST_PASS, onTestPass);
 
-        return runner.run().then(function() {
+        return run_(runner).then(function() {
             emitter.emit(RunnerEvents.TEST_PASS);
             assert.called(onTestPass);
         });
