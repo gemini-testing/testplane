@@ -10,7 +10,7 @@ npm i e2e-runner --registry http://npm.yandex-team.ru --save-dev
 ## Запуск тестов
 
 ```shell
-e2e-runner path/to/config --baseUrl http://yandex.ru/search --grid http://localhost:4444/wd/hub
+node_modules/.bin/e2e path/to/tests --baseUrl http://yandex.ru/search --grid http://localhost:4444/wd/hub
 ```
 
 ## Конфигурация
