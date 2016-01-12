@@ -12,17 +12,12 @@ function browserWithId(id) {
     return new Browser(config, id);
 }
 
-function createConfig(browsers, suites) {
+function createConfig(browsers) {
     browsers = browsers
         ? Array.isArray(browsers) ? browsers : [browsers]
         : ['id'];
 
-    suites = suites
-        ? Array.isArray(suites) ? suites : [suites]
-        : ['spec'];
-
     var config = {
-        tests: suites,
         browsers: {}
     };
 
