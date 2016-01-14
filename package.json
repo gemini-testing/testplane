@@ -35,7 +35,7 @@
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "3.2.6"
+    "webdriverio": "webdriverio/webdriverio"
   },
   "devDependencies": {
     "chai": "^3.4.1",
