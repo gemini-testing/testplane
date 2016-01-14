@@ -35,7 +35,7 @@ describe('Browser runner', function() {
 
     beforeEach(function() {
         sandbox.stub(SuiteRunner.prototype);
-        SuiteRunner.prototype.run.returns(q.resolve());
+        SuiteRunner.prototype.run.returns(q());
 
         sandbox.stub(BrowserAgent.prototype);
     });
@@ -117,7 +117,7 @@ describe('Browser runner', function() {
             var firstResolveMarker = sandbox.stub().named('First resolve marker'),
                 secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
-            SuiteRunner.prototype.run.onFirstCall().returns(q.resolve().then(firstResolveMarker));
+            SuiteRunner.prototype.run.onFirstCall().returns(q().then(firstResolveMarker));
             SuiteRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
 
             return mkRunner_()
@@ -140,7 +140,7 @@ describe('Browser runner', function() {
     it('should passthrough events from browser runners', function() {
         var emitter = new EventEmitter();
 
-        emitter.run = sandbox.stub().returns(q.resolve());
+        emitter.run = sandbox.stub().returns(q());
         SuiteRunner.prototype.__constructor.returns(emitter);
 
         var runner = mkRunner_({browserId: 'browser'}),
