@@ -28,7 +28,7 @@
     "commander": "^2.9.0",
     "inherit": "^2.2.2",
     "lodash": "^3.7.0",
-    "mocha": "2.2.5",
+    "mocha": "mochajs/mocha#d5c0abc",
     "q": "^1.4.1",
     "q-debug-mode": "0.0.1",
     "q-io": "^1.13.2",
