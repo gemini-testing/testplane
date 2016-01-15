@@ -1,3 +1,7 @@
+## 0.3.2 - 2016-01-15
+
+* Up lodash to version with `defaultsDeep`
+
 ## 0.3.1 - 2016-01-15
 
 * Avoid 'possible EventEmitter memory leak detected' warning
