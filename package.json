@@ -1,6 +1,6 @@
 {
   "name": "e2e-runner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "E2E tests framework",
   "main": "lib/e2e.js",
   "scripts": {
