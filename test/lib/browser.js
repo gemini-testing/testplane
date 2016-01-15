@@ -27,9 +27,9 @@ describe('Browser', function() {
     beforeEach(function() {
         session = sandbox.stub();
         session.init = sandbox.stub().named('init');
-        session.init.returns(q.resolve());
+        session.init.returns(q());
         session.end = sandbox.stub().named('end');
-        session.end.returns(q.resolve());
+        session.end.returns(q());
 
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);

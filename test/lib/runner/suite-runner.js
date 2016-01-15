@@ -69,7 +69,7 @@ describe('Suite runner', function() {
 
         it('should request browser before suite execution', function() {
             Mocha.Suite.prototype.beforeAll.yields();
-            BrowserAgent.prototype.getBrowser.returns(q.resolve());
+            BrowserAgent.prototype.getBrowser.returns(q());
 
             return run_()
                 .then(function() {
@@ -82,8 +82,8 @@ describe('Suite runner', function() {
 
             Mocha.Suite.prototype.beforeAll.yields();
 
-            BrowserAgent.prototype.getBrowser.returns(q.resolve(browser));
-            BrowserAgent.prototype.freeBrowser.returns(q.resolve());
+            BrowserAgent.prototype.getBrowser.returns(q(browser));
+            BrowserAgent.prototype.freeBrowser.returns(q());
 
             return run_()
                 .then(function() {
@@ -116,7 +116,7 @@ describe('Suite runner', function() {
 
             Mocha.Suite.prototype.beforeAll.yields();
 
-            BrowserAgent.prototype.getBrowser.returns(q.resolve(browser));
+            BrowserAgent.prototype.getBrowser.returns(q(browser));
             BrowserAgent.prototype.freeBrowser.returns(q.reject('some-error'));
 
             return run_()
@@ -152,7 +152,7 @@ describe('Suite runner', function() {
             var browser = {};
 
             Mocha.Suite.prototype.beforeAll.yields();
-            BrowserAgent.prototype.getBrowser.returns(q.resolve(browser));
+            BrowserAgent.prototype.getBrowser.returns(q(browser));
 
             return run_()
                 .then(function() {

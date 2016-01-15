@@ -141,7 +141,7 @@ describe('Limited pool', function() {
                         .then(function() {
                             return pool.freeBrowser(browser);
                         })
-                        .fail(function() {
+                        .catch(function() {
                             return secondPromise;
                         });
                 });
@@ -156,7 +156,7 @@ describe('Limited pool', function() {
 
             underlyingPool.getBrowser
                 .withArgs('first').returns(q(makeBrowser()))
-                .withArgs('second').returns(q.resolve());
+                .withArgs('second').returns(q());
 
             return pool.getBrowser('first')
                 .then(function(browser) {
