@@ -15,10 +15,9 @@ node_modules/.bin/e2e path/to/tests --baseUrl http://yandex.ru/search --grid htt
 
 ## Конфигурация
 
-**e2e-runner** конфигурируется с помощью конфигурационного файла. Путь к этому файлу обязателен, должен быть относительным и передаваться первым аргументом.
-Опции `grid`, `baseUrl`, `timeout`, `waitTimeout`, `slow`, `debug` могут быть переопределены cli-опциями с соответствующими именами
+**e2e-runner** настраивается с помощью конфигурационного файла. Путь к этому файлу можно задать с помощью опции `--conf`. Стандартное имя файла -  `.e2e.conf.js`.
 
-Ниже приведён пример полного конфига. Обязательными полями являются `specs`, `browsers`, `prepareEnvironment`
+Ниже приведён пример полного конфига. Обязательными полями являются `specs` и `browsers`.
 
 ```javascript
 var command = require('path/to/command');
@@ -26,9 +25,7 @@ var command = require('path/to/command');
 module.exports = {
     grid: 'http://localhost:4444/wd/hub',
     baseUrl: 'http://yandex.ru/search',
-    timeout: 10000,
     waitTimeout: 10000,
-    slow: 6000,
     debug: true,
 
     specs: [
@@ -48,8 +45,13 @@ module.exports = {
             capabilities: {
                 browserName: 'firefox'
             },
-            sessionsPerBrowser: 10 // will be 1 if not set
+            sessionsPerBrowser: 10 // по умолчанию тесты запускаются в одной сессии
         }
+    },
+
+    // Дополнительная настройка mocha
+    mochaOpts: {
+        retries: 3
     },
 
     prepareBrowser: function (browser) {
@@ -65,7 +67,7 @@ module.exports = {
 };
 ```
 
-## Описание опций
+## Описание конфигурационного файла
 
 ### Настройки браузеров
 
@@ -100,7 +102,7 @@ prepareBrowser: function(browser) {
 
 Данные в конфиге можно изменять в зависимости от дополнительных условий в функции `prepareEnvironment`. Использование этой функции не обязательно, она для удобства.
 
-### Прочие опции
+### Прочие свойства
 
 * `specs`(обязательный) - Массив путей до директорий с тестами.
 * `grid` – URL до Selenium grid. По умолчанию `http://localhost:4444/wd/hub`
@@ -109,3 +111,20 @@ prepareBrowser: function(browser) {
 * `waitTimeout` - Время ожидания события на странице. По умолчанию `10000`
 * `slow` - Если время выполнения теста превышает это значение, то тест считается медленным. По умолчанию `10000`
 * `debug` - Включает вывод отладочной информации в консоль. По умолчанию `false`
+
+### Переопределение настроек
+
+С помощью CLI можно переопределить параметры, используя следующие опции:
+
+* `-c|--conf` - указать путь к конфигу. По умолчанию используется файл с именем `.e2e.conf.js`
+* `--baseUrl` - задать базовый `url` для всех тестов
+* `--wait-timeout` - время ожидания событий на странице в миллисекундах. По умолчанию 10000
+* `-b|--browser` - запуск тестов в определенном браузере. Возможно задать несколько браузеров одновременно. Например,
+```
+node_modules/.bin/e2e -b chrome --browser firefox
+```
+* `-r|--reporter` - указать используемый репортер. Возможно задать несколько репортеров одновременно. Например,
+```
+node_modules/.bin/e2e -r flat --reporter teamcity
+```
+* `--debug` - включить debug-режим
