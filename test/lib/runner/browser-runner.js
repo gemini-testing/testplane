@@ -56,44 +56,6 @@ describe('Browser runner', function() {
     });
 
     describe('run', function() {
-        it('should emit `RunnerEvents.BROWSER_START` event', function() {
-            var onBrowserStart = sandbox.spy().named('onBrowserStart'),
-                runner = mkRunner_({browserId: 'browser'});
-
-            runner.on(RunnerEvents.BROWSER_START, onBrowserStart);
-
-            return runner.run()
-                .then(function() {
-                    assert.calledWith(onBrowserStart, 'browser');
-                });
-        });
-
-        it('should emit `RunnerEvents.BROWSER_END` event', function() {
-            var onBrowserEnd = sandbox.spy().named('onBrowserEnd'),
-                runner = mkRunner_({browserId: 'browser'});
-
-            runner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
-
-            return runner.run()
-                .then(function() {
-                    assert.calledWith(onBrowserEnd, 'browser');
-                });
-        });
-
-        it('should emit events in correct order', function() {
-            var onBrowserStart = sandbox.spy().named(onBrowserStart),
-                onBrowserEnd = sandbox.spy().named('onBrowserEnd'),
-                runner = mkRunner_({browserId: 'browser'});
-
-            runner.on(RunnerEvents.BROWSER_START, onBrowserStart);
-            runner.on(RunnerEvents.BROWSER_END, onBrowserEnd);
-
-            return runner.run()
-                .then(function() {
-                    assert.callOrder(onBrowserStart, onBrowserEnd);
-                });
-        });
-
         it('should run all suite runners', function() {
             return mkRunner_()
                 .run(['path/to/suite', 'path/to/another/suite'])
