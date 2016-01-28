@@ -1,3 +1,7 @@
+## 0.3.3 - 2016-01-28
+
+* `webdriverio` switched to v3.4.x version
+
 ## 0.3.2 - 2016-01-15
 
 * Up lodash to version with `defaultsDeep`
