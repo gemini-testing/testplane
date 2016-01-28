@@ -84,7 +84,7 @@ browsers: {
 Значение `<browser-id>` используется в отчёте для идентификации браузера.
 Доступные настройки браузера:
 
-* `desiredCapabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesireddesiredCapabilities)
+* `desiredCapabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 * `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
 
 ### Подготовка webdriver-сессии к работе
