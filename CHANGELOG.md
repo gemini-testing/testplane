@@ -1,3 +1,7 @@
+## 0.4.0 - 2016-01-28
+
+* `capabilities` renamed to `desiredCapabilities`
+
 ## 0.3.3 - 2016-01-28
 
 * `webdriverio` switched to v3.4.x version
