@@ -35,14 +35,14 @@ module.exports = {
 
     browsers: {
         chrome: {
-            capabilities: {
+            desiredCapabilities: {
                 browserName: 'chrome'
             },
             sessionsPerBrowser: 3
         },
 
         firefox: {
-            capabilities: {
+            desiredCapabilities: {
                 browserName: 'firefox'
             },
             sessionsPerBrowser: 10 // по умолчанию тесты запускаются в одной сессии
@@ -84,7 +84,7 @@ browsers: {
 Значение `<browser-id>` используется в отчёте для идентификации браузера.
 Доступные настройки браузера:
 
-* `capabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
+* `desiredCapabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesireddesiredCapabilities)
 * `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
 
 ### Подготовка webdriver-сессии к работе
