@@ -14,7 +14,7 @@ describe('Browser', function() {
             grid: 'http://test_host:4444/wd/hub',
             browsers: {
                 browser: {
-                    capabilities: {browserName: 'browser'}
+                    desiredCapabilities: {browserName: 'browser'}
                 }
             },
             waitTimeout: 100,

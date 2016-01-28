@@ -24,7 +24,7 @@ describe('Unlimited pool', function() {
         config = {
             browsers: {
                 id: {
-                    capabilities: {browserName: 'id'}
+                    desiredCapabilities: {browserName: 'id'}
                 }
             }
         };

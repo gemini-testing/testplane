@@ -23,7 +23,7 @@ function createConfig(browsers) {
 
     browsers.forEach(function(browserId) {
         config.browsers[browserId] = {
-            capabilities: {browserName: browserId}
+            desiredCapabilities: {browserName: browserId}
         };
     });
 
