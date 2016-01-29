@@ -56,6 +56,68 @@ describe('Proxy reporter', function() {
         });
     });
 
+    it('should translate `fail` event from before* hook to `failTest`', function() {
+        createReporter_();
+
+        var hook = {
+                type: 'hook',
+                title: '"before each" hook for "some test"',
+                originalTitle: '"before each" hook',
+                ctx: {
+                    currentTest: {
+                        title: 'some test'
+                    }
+                }
+            };
+
+        runner.emit('fail', hook, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'failTest', {
+            title: 'some test',
+            err: {message: 'foo'},
+            hook: hook
+        });
+    });
+
+    it('should translate `fail` event from after* hook to `err`', function() {
+        createReporter_();
+
+        var hook = {
+                type: 'hook',
+                title: '"after each" hook for "some test"',
+                originalTitle: '"after each" hook',
+                ctx: {
+                    currentTest: {
+                        title: 'some test'
+                    }
+                }
+            };
+
+        runner.emit('fail', hook, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'err',
+            {message: 'foo'},
+            hook
+        );
+    });
+
+    it('should translate `fail` event from hook without currentTest to `err`', function() {
+        createReporter_();
+
+        var hook = {
+                type: 'hook',
+                title: '"before All" hook',
+                ctx: {}
+            };
+
+        runner.emit('fail', hook, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'err',
+            {message: 'foo'},
+            hook
+        );
+    });
+
     it('should translate `fail` event from other source to `err`', function() {
         createReporter_();
 
