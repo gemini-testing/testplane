@@ -16,7 +16,8 @@ describe('Flat reporter', function() {
             total: chalk.stripColor(args[1]),
             passed: chalk.stripColor(args[2]),
             failed: chalk.stripColor(args[3]),
-            pending: chalk.stripColor(args[4])
+            pending: chalk.stripColor(args[4]),
+            retries: chalk.stripColor(args[5])
         };
     }
 
@@ -58,6 +59,7 @@ describe('Flat reporter', function() {
         assert.equal(counters.passed, 0);
         assert.equal(counters.failed, 0);
         assert.equal(counters.pending, 0);
+        assert.equal(counters.retries, 0);
     });
 
     describe('should correctly calculate counters for', function() {
@@ -83,6 +85,14 @@ describe('Flat reporter', function() {
             var counters = getCounters_(logger.log.lastCall.args);
 
             assert.equal(counters.pending, 1);
+        });
+
+        it('retries', function() {
+            emit(RunnerEvents.RETRY, test);
+
+            var counters = getCounters_(logger.log.lastCall.args);
+
+            assert.equal(counters.retries, 1);
         });
     });
 

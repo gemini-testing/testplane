@@ -1,38 +1,64 @@
 'use strict';
 
 var q = require('q'),
-    Mocha = require('mocha'),
+    _ = require('lodash'),
+    EventEmitter = require('events').EventEmitter,
     ProxyReporter = require('../../../lib/proxy-reporter'),
     BrowserAgent = require('../../../lib/browser-agent'),
     logger = require('../../../lib/utils').logger,
     SuiteRunner,
 
-    proxyquire = require('proxyquire');
+    proxyquire = require('proxyquire').noCallThru();
 
 describe('Suite runner', function() {
     var sandbox = sinon.sandbox.create(),
-        clearRequire;
+        clearRequire,
+        mocha;
 
-    function stubMocha_() {
-        sandbox.stub(Mocha.prototype);
-        Mocha.prototype.run.yields();
+    function mkSuiteStub_() {
+        var suite = new EventEmitter();
 
-        sandbox.stub(Mocha.Suite.prototype);
+        suite.enableTimeouts = sandbox.stub();
+        suite.beforeAll = sandbox.stub();
+        suite.afterAll = sandbox.stub();
+        suite.tests = [];
+
+        return suite;
     }
 
-    function run_(suite) {
+    function mkMochaStub_() {
+        return {
+            addFile: sandbox.stub(),
+            fullTrace: sandbox.stub(),
+            reporter: sandbox.stub(),
+            run: sandbox.stub().yields(),
+
+            suite: mkSuiteStub_()
+        };
+    }
+
+    function mkTestStub_(opts) {
+        return _.defaults(opts || {}, {
+            title: 'default-title',
+            parent: mkSuiteStub_()
+        });
+    }
+
+    function run_(suite, filterFn) {
         return new SuiteRunner(
             {},
             new BrowserAgent()
-        ).run(suite || 'test_suite');
+        ).run(suite || 'test_suite', filterFn);
     }
 
     beforeEach(function() {
-        stubMocha_();
-
         clearRequire = sandbox.stub().named('clear-require');
+        mocha = mkMochaStub_();
         SuiteRunner = proxyquire('../../../lib/runner/suite-runner', {
-            'clear-require': clearRequire
+            'clear-require': clearRequire,
+            'mocha': function() {
+                return mocha;
+            }
         });
 
         sandbox.stub(BrowserAgent.prototype);
@@ -49,14 +75,14 @@ describe('Suite runner', function() {
         it('should add suite file to mocha', function() {
             return run_('path/to/suite/file')
                 .then(function() {
-                    assert.calledWith(Mocha.prototype.addFile, 'path/to/suite/file');
+                    assert.calledWith(mocha.addFile, 'path/to/suite/file');
                 });
         });
 
         it('should force mocha to pass full trace on errors', function() {
             return run_()
                 .then(function() {
-                    assert.called(Mocha.prototype.fullTrace);
+                    assert.called(mocha.fullTrace);
                 });
         });
 
@@ -68,7 +94,7 @@ describe('Suite runner', function() {
         });
 
         it('should request browser before suite execution', function() {
-            Mocha.Suite.prototype.beforeAll.yields();
+            mocha.suite.beforeAll.yields();
             BrowserAgent.prototype.getBrowser.returns(q());
 
             return run_()
@@ -80,14 +106,14 @@ describe('Suite runner', function() {
         it('should release browser after suite execution', function() {
             var browser = {};
 
-            Mocha.Suite.prototype.beforeAll.yields();
+            mocha.suite.beforeAll.yields();
 
             BrowserAgent.prototype.getBrowser.returns(q(browser));
             BrowserAgent.prototype.freeBrowser.returns(q());
 
             return run_()
                 .then(function() {
-                    var afterAll = Mocha.Suite.prototype.afterAll.firstCall.args[0];
+                    var afterAll = mocha.suite.afterAll.firstCall.args[0];
                     return afterAll();
                 })
                 .then(function() {
@@ -97,16 +123,16 @@ describe('Suite runner', function() {
         });
 
         it('should disable mocha timeouts while setting browser hooks', function() {
-            Mocha.Suite.prototype.enableTimeouts.onFirstCall().returns(true);
+            mocha.suite.enableTimeouts.onFirstCall().returns(true);
 
             return run_()
                 .then(function() {
                     assert.callOrder(
-                        Mocha.Suite.prototype.enableTimeouts, // get current value of enableTimeouts
-                        Mocha.Suite.prototype.enableTimeouts.withArgs(false).named('disableTimeouts'),
-                        Mocha.Suite.prototype.beforeAll,
-                        Mocha.Suite.prototype.afterAll,
-                        Mocha.Suite.prototype.enableTimeouts.withArgs(true).named('restoreTimeouts')
+                        mocha.suite.enableTimeouts, // get current value of enableTimeouts
+                        mocha.suite.enableTimeouts.withArgs(false).named('disableTimeouts'),
+                        mocha.suite.beforeAll,
+                        mocha.suite.afterAll,
+                        mocha.suite.enableTimeouts.withArgs(true).named('restoreTimeouts')
                     );
                 });
         });
@@ -114,14 +140,14 @@ describe('Suite runner', function() {
         it('should not be rejected if freeBrowser failed', function() {
             var browser = {};
 
-            Mocha.Suite.prototype.beforeAll.yields();
+            mocha.suite.beforeAll.yields();
 
             BrowserAgent.prototype.getBrowser.returns(q(browser));
             BrowserAgent.prototype.freeBrowser.returns(q.reject('some-error'));
 
             return run_()
                 .then(function() {
-                    var afterAll = Mocha.Suite.prototype.afterAll.firstCall.args[0];
+                    var afterAll = mocha.suite.afterAll.firstCall.args[0];
                     return assert.isFulfilled(afterAll());
                 })
                 .then(function() {
@@ -133,7 +159,7 @@ describe('Suite runner', function() {
         it('should set mocha reporter as proxy reporter in order to proxy events from mocha to runner', function() {
             return run_()
                 .then(function() {
-                    assert.calledWith(Mocha.prototype.reporter, ProxyReporter);
+                    assert.calledWith(mocha.reporter, ProxyReporter);
                 });
         });
 
@@ -142,7 +168,7 @@ describe('Suite runner', function() {
 
             return run_()
                 .then(function() {
-                    assert.calledWithMatch(Mocha.prototype.reporter, sinon.match.any, {
+                    assert.calledWithMatch(mocha.reporter, sinon.match.any, {
                         browserId: 'browser'
                     });
                 });
@@ -151,20 +177,62 @@ describe('Suite runner', function() {
         it('should pass to proxy reporter getter for requested browser', function() {
             var browser = {};
 
-            Mocha.Suite.prototype.beforeAll.yields();
+            mocha.suite.beforeAll.yields();
             BrowserAgent.prototype.getBrowser.returns(q(browser));
 
             return run_()
                 .then(function() {
-                    var getBrowser = Mocha.prototype.reporter.lastCall.args[1].getBrowser;
+                    var getBrowser = mocha.reporter.lastCall.args[1].getBrowser;
                     assert.equal(browser, getBrowser());
+                });
+        });
+
+        it('should check if test should be run', function() {
+            var someTest = mkTestStub_({parent: mocha.suite}),
+                shouldRun = sandbox.stub().returns(true);
+
+            mocha.suite.tests = [someTest];
+            BrowserAgent.prototype.browserId = 'some-browser';
+
+            return run_(null, shouldRun)
+                .then(function() {
+                    mocha.suite.emit('test', someTest);
+                    assert.calledWith(shouldRun, someTest, 'some-browser');
+                });
+        });
+
+        it('should not remove test which expected to be run', function() {
+            var test1 = mkTestStub_({parent: mocha.suite}),
+                test2 = mkTestStub_({parent: mocha.suite}),
+                shouldRun = sandbox.stub().returns(true);
+
+            mocha.suite.tests = [test1, test2];
+
+            return run_(null, shouldRun)
+                .then(function() {
+                    mocha.suite.emit('test', test2);
+                    assert.deepEqual(mocha.suite.tests, [test1, test2]);
+                });
+        });
+
+        it('should remove test which does not suppose to be run', function() {
+            var test1 = mkTestStub_({parent: mocha.suite}),
+                test2 = mkTestStub_({parent: mocha.suite}),
+                shouldRun = sandbox.stub().returns(false);
+
+            mocha.suite.tests = [test1, test2];
+
+            return run_(null, shouldRun)
+                .then(function() {
+                    mocha.suite.emit('test', test2);
+                    assert.deepEqual(mocha.suite.tests, [test1]);
                 });
         });
 
         it('should run mocha', function() {
             return run_()
                 .then(function() {
-                    assert.called(Mocha.prototype.run);
+                    assert.called(mocha.run);
                 });
         });
     });

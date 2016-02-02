@@ -23,7 +23,7 @@ describe('Browser runner', function() {
         });
 
         return new BrowserRunner(
-            makeConfigStub(opts.browserId, opts.suites),
+            makeConfigStub({browsers: [opts.browserId]}),
             opts.browserId,
             opts.browserPool
         );
@@ -57,10 +57,14 @@ describe('Browser runner', function() {
 
     describe('run', function() {
         it('should run all suite runners', function() {
+            var filterFn = sinon.spy().named('filterFn');
+
             return mkRunner_()
-                .run(['path/to/suite', 'path/to/another/suite'])
+                .run(['path/to/suite', 'path/to/another/suite'], filterFn)
                 .then(function() {
                     assert.calledTwice(SuiteRunner.prototype.run);
+                    assert.calledWith(SuiteRunner.prototype.run, 'path/to/suite', filterFn);
+                    assert.calledWith(SuiteRunner.prototype.run, 'path/to/another/suite', filterFn);
                 });
         });
 
@@ -69,7 +73,7 @@ describe('Browser runner', function() {
             BrowserAgent.prototype.__constructor.returns(browserAgent);
 
             return mkRunner_()
-                .run(['path/to/suite', 'path/to/another/suite'])
+                .run(['path/to/suite'])
                 .then(function() {
                     assert.calledWith(SuiteRunner.prototype.__constructor, sinon.match.any, browserAgent);
                 });
