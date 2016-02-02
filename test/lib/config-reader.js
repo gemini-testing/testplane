@@ -78,5 +78,40 @@ describe('config-reader', function() {
             assert.equal(config.browsers.b1.sessionsPerBrowser, defaults.sessionsPerBrowser);
             assert.equal(config.browsers.b2.sessionsPerBrowser, 2);
         });
+
+        it('should set retry option to all browsers', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {
+                    b1: {},
+                    b2: {}
+                }
+            });
+
+            var config = reader.read();
+
+            assert.isDefined(defaults.retry);
+            assert.equal(config.browsers.b1.retry, defaults.retry);
+            assert.equal(config.browsers.b2.retry, defaults.retry);
+        });
+
+        it('should override retry option per browser', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {
+                    b1: {},
+                    b2: {
+                        retry: 2
+                    }
+                }
+            });
+
+            var config = reader.read();
+
+            assert.equal(config.browsers.b1.retry, defaults.retry);
+            assert.equal(config.browsers.b2.retry, 2);
+        });
     });
 });
