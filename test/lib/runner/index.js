@@ -6,11 +6,11 @@ var q = require('q'),
     Runner = require('../../../lib/runner/index'),
     BrowserRunner = require('../../../lib/runner/browser-runner'),
     BrowserPool = require('../../../lib/browser-pool'),
+    RetryManager = require('../../../lib/retry-manager'),
 
-    createConfig_ = require('../../utils').createConfg,
+    makeConfigStub = require('../../utils').makeConfigStub,
 
-    RunnerEvents = require('../../../lib/constants/runner-events'),
-    logger = require('../../../lib/utils').logger;
+    RunnerEvents = require('../../../lib/constants/runner-events');
 
 describe('Runner', function() {
     var sandbox = sinon.sandbox.create();
@@ -21,16 +21,17 @@ describe('Runner', function() {
             tests: []
         });
 
-        var runner = opts.runner || new Runner(createConfig_(opts.browsers));
+        var runner = opts.runner || new Runner(makeConfigStub({browsers: opts.browsers}));
         return runner.run(opts.tests, opts.browsers);
     }
 
     beforeEach(function() {
         sandbox.stub(BrowserPool.prototype);
-        sandbox.stub(BrowserRunner.prototype);
-        sandbox.stub(logger);
 
+        sandbox.stub(BrowserRunner.prototype);
         BrowserRunner.prototype.run.returns(q());
+
+        sandbox.stub(RetryManager.prototype);
     });
 
     afterEach(function() {
@@ -40,11 +41,20 @@ describe('Runner', function() {
     describe('constructor', function() {
         /*jshint nonew: false */
         it('should create browser pool', function() {
-            var config = createConfig_();
+            var config = makeConfigStub();
 
             new Runner(config);
 
             assert.called(BrowserPool.prototype.__constructor, config);
+        });
+
+        it('should create retryManager with passed config', function() {
+            var config = makeConfigStub();
+
+            new Runner(config);
+
+            assert.calledOnce(RetryManager.prototype.__constructor);
+            assert.calledWith(RetryManager.prototype.__constructor, config);
         });
     });
 
@@ -60,7 +70,7 @@ describe('Runner', function() {
 
         it('should emit `RunnerEvents.RUNNER_START` event', function() {
             var onStartRunner = sandbox.spy().named('onStartRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_START, onStartRunner);
 
@@ -72,7 +82,7 @@ describe('Runner', function() {
 
         it('should emit `RunnerEvents.RUNNER_END` event', function() {
             var onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_END, onEndRunner);
 
@@ -85,7 +95,7 @@ describe('Runner', function() {
         it('should emit events in correct order', function() {
             var onStartRunner = sandbox.spy().named('onStartRunner'),
                 onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(createConfig_());
+                runner = new Runner(makeConfigStub());
 
             runner.on(RunnerEvents.RUNNER_START, onStartRunner);
             runner.on(RunnerEvents.RUNNER_END, onEndRunner);
@@ -103,6 +113,21 @@ describe('Runner', function() {
                 });
         });
 
+        it('should run browser runner with passed tests and filter function', function() {
+            return run_({tests: ['test1', 'test2']})
+                .then(function() {
+                    assert.calledWith(BrowserRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
+                });
+        });
+
+        it('should not filter out any test by default', function() {
+            return run_()
+                .then(function() {
+                    var filterFn = BrowserRunner.prototype.run.firstCall.args[1];
+                    assert.isTrue(filterFn());
+                });
+        });
+
         it('should wait until all browser runners will finish', function() {
             var firstResolveMarker = sandbox.stub().named('First resolve marker'),
                 secondResolveMarker = sandbox.stub().named('Second resolve marker');
@@ -117,39 +142,94 @@ describe('Runner', function() {
                 });
         });
 
-        it('should be rejected if one of browser runners rejected', function() {
-            BrowserRunner.prototype.run.returns(q.reject());
+        describe('if one of browser runners failed', function() {
+            var browserRunner;
 
-            return assert.isRejected(run_());
-        });
+            beforeEach(function() {
+                browserRunner = new EventEmitter();
+                browserRunner.run = sandbox.stub().returns(q());
+                BrowserRunner.prototype.__constructor.returns(browserRunner);
 
-        it('should emit error when Error occured in test', function() {
-            var runner = new Runner(createConfig_()),
-                onError = sinon.spy().named('onError');
+                var runner = new Runner(makeConfigStub());
+                run_({runner: runner});
+            });
 
-            runner.on(RunnerEvents.ERROR, onError);
-            BrowserRunner.prototype.run.returns(q.reject(new Error()));
+            it('should submit failed tests for retry', function() {
+                browserRunner.emit(RunnerEvents.TEST_FAIL, 'some-error');
 
-            return runner.run()
-                .catch(function() {
-                    assert.called(onError);
-                });
+                assert.calledOnce(RetryManager.prototype.handleTestFail);
+                assert.calledWith(RetryManager.prototype.handleTestFail, 'some-error');
+            });
+
+            it('should submit errors for retry', function() {
+                browserRunner.emit(RunnerEvents.ERROR, 'some-error', 'some-data');
+
+                assert.calledOnce(RetryManager.prototype.handleError);
+                assert.calledWith(RetryManager.prototype.handleError, 'some-error', 'some-data');
+            });
         });
     });
 
     it('should passthrough events from browser runners', function() {
-        var emitter = new EventEmitter();
+        var browserRunner = new EventEmitter();
 
-        emitter.run = sandbox.stub().returns(q());
-        BrowserRunner.prototype.__constructor.returns(emitter);
+        browserRunner.run = sandbox.stub().returns(q());
+        BrowserRunner.prototype.__constructor.returns(browserRunner);
 
-        var runner = new Runner(createConfig_()),
+        var runner = new Runner(makeConfigStub()),
             onTestPass = sandbox.spy().named('onTestPass');
 
         runner.on(RunnerEvents.TEST_PASS, onTestPass);
         run_({runner: runner});
-        emitter.emit(RunnerEvents.TEST_PASS);
+        browserRunner.emit(RunnerEvents.TEST_PASS);
 
         assert.called(onTestPass);
+    });
+
+    it('should start retry session after all', function() {
+        return run_()
+            .then(function() {
+                assert.calledOnce(RetryManager.prototype.retry);
+                assert.calledWith(RetryManager.prototype.retry, sinon.match.func);
+            });
+    });
+
+    describe('retry manager events', function() {
+        var browserRunner, runner;
+
+        beforeEach(function() {
+            browserRunner = new EventEmitter();
+            browserRunner.submitForRetry = sinon.stub();
+            RetryManager.prototype.__constructor.returns(browserRunner);
+
+            runner = new Runner(makeConfigStub());
+        });
+
+        it('should passthrough error event', function() {
+            var onError = sandbox.spy().named('onError');
+
+            runner.on(RunnerEvents.ERROR, onError);
+            browserRunner.emit(RunnerEvents.ERROR);
+
+            assert.called(onError);
+        });
+
+        it('should passthrough retry event', function() {
+            var onRetry = sandbox.spy().named('onRetry');
+
+            runner.on(RunnerEvents.RETRY, onRetry);
+            browserRunner.emit(RunnerEvents.RETRY);
+
+            assert.called(onRetry);
+        });
+
+        it('should passthrough test failed event', function() {
+            var onTestFail = sandbox.spy().named('onTestFail');
+
+            runner.on(RunnerEvents.TEST_FAIL, onTestFail);
+            browserRunner.emit(RunnerEvents.TEST_FAIL);
+
+            assert.called(onTestFail);
+        });
     });
 });

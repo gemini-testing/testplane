@@ -1,6 +1,7 @@
 'use strict';
 
-var Browser = require('../lib/browser');
+var _ = require('lodash'),
+    Browser = require('../lib/browser');
 
 function browserWithId(id) {
     var config = {browsers: {}};
@@ -12,17 +13,19 @@ function browserWithId(id) {
     return new Browser(config, id);
 }
 
-function createConfig(browsers) {
-    browsers = browsers
-        ? Array.isArray(browsers) ? browsers : [browsers]
-        : ['id'];
+function makeConfigStub(opts) {
+    opts = _.defaults(opts || {}, {
+        browsers: ['some-default-browser'],
+        retry: 0
+    });
 
     var config = {
         browsers: {}
     };
 
-    browsers.forEach(function(browserId) {
+    opts.browsers.forEach(function(browserId) {
         config.browsers[browserId] = {
+            retry: opts.retry,
             desiredCapabilities: {browserName: browserId}
         };
     });
@@ -31,4 +34,4 @@ function createConfig(browsers) {
 }
 
 exports.browserWithId = browserWithId;
-exports.createConfg = createConfig;
+exports.makeConfigStub = makeConfigStub;
