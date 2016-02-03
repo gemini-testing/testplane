@@ -27,6 +27,8 @@ module.exports = {
     baseUrl: 'http://yandex.ru/search',
     waitTimeout: 10000,
     debug: true,
+    sessionsPerBrowser: 2,
+    retry: 2
 
     specs: [
         'tests/desktop',
@@ -38,7 +40,8 @@ module.exports = {
             desiredCapabilities: {
                 browserName: 'chrome'
             },
-            sessionsPerBrowser: 3
+            sessionsPerBrowser: 3,
+            retry: 3
         },
 
         firefox: {
@@ -85,7 +88,8 @@ browsers: {
 Доступные настройки браузера:
 
 * `desiredCapabilities` (обязательная) - Необходимые для этого браузера WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
-* `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1
+* `sessionsPerBrowser` - Количество одновременно запущеных сессий для браузера с данным id. По умолчанию 1.
+* `retry` - Сколько раз тест может быть перезапущен. По умолчанию 0.
 
 ### Подготовка webdriver-сессии к работе
 Подготовка сессии к работе (например, установка специфических для пользователя команд) выполняется в секции `prepareBrowser`.
@@ -111,6 +115,8 @@ prepareBrowser: function(browser) {
 * `waitTimeout` - Время ожидания события на странице. По умолчанию `10000`
 * `slow` - Если время выполнения теста превышает это значение, то тест считается медленным. По умолчанию `10000`
 * `debug` - Включает вывод отладочной информации в консоль. По умолчанию `false`
+* `sessionsPerBrowser` - Глобальное значение опции `sessionsPerBrowser` для всех браузеров
+* `retry` - Глобальное значение опции `retry` для всех браузеров
 
 ### Переопределение настроек
 
