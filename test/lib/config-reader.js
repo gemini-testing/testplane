@@ -1,6 +1,7 @@
 'use strict';
 
-var ConfigReader = require('../../lib/config-reader'),
+var path = require('path'),
+    ConfigReader = require('../../lib/config-reader'),
     defaults = require('../../lib/defaults');
 
 describe('config-reader', function() {
@@ -41,6 +42,24 @@ describe('config-reader', function() {
 
         var result = reader.read();
         assert.equal(result.timeout, 10);
+    });
+
+    it('should not throw on relative path to config file', function() {
+        var reader = new ConfigReader({}),
+            conf = './test/fixtures/.e2e.conf.js';
+
+        assert.doesNotThrow(function() {
+            return reader.getConfigFromFile(conf);
+        });
+    });
+
+    it('should not throw on absolute path to config file', function() {
+        var reader = new ConfigReader({}),
+            conf = path.resolve(__dirname, '../fixtures/.e2e.conf.js');
+
+        assert.doesNotThrow(function() {
+            return reader.getConfigFromFile(conf);
+        });
     });
 
     describe('per browser options', function() {
