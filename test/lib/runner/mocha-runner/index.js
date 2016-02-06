@@ -25,7 +25,7 @@ describe('mocha-runner', function() {
 
     function run_(suites, filterFn) {
         return new MochaRunner(
-            {},
+            {mochaOpts: {}},
             new BrowserAgent()
         ).run(suites || ['test_suite'], filterFn);
     }
@@ -54,6 +54,16 @@ describe('mocha-runner', function() {
 
                     var mochaInstances = MochaAdapter.prototype.addFile.thisValues;
                     assert.notEqual(mochaInstances[0], mochaInstances[1]);
+                });
+        });
+
+        it('should share single opts object between all mocha instances', function() {
+            return run_(['path/to/file', 'path/to/other/file'])
+                .then(function() {
+                    assert.equal(
+                        MochaAdapter.prototype.__constructor.firstCall.args[0],
+                        MochaAdapter.prototype.__constructor.secondCall.args[0]
+                    );
                 });
         });
 
@@ -206,6 +216,24 @@ describe('mocha-runner', function() {
             return run_(['some/file', 'other/file'])
                 .then(function() {
                     assert.calledTwice(MochaAdapter.prototype.run);
+                });
+        });
+
+        it('should create all mocha instances before run any of them', function() {
+            MochaAdapter.prototype.__constructor.restore();
+            MochaAdapter.prototype.run.restore();
+
+            var order = [];
+            sandbox.stub(MochaAdapter.prototype, '__constructor', function() {
+                order.push('constructor');
+            });
+            sandbox.stub(MochaAdapter.prototype, 'run', function() {
+                order.push('run');
+            });
+
+            return run_(['some/file', 'other/file'])
+                .then(function() {
+                    assert.deepEqual(order, ['constructor', 'constructor', 'run', 'run']);
                 });
         });
 
