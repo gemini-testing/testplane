@@ -1,7 +1,7 @@
 'use strict';
 
 var EventEmitter = require('events').EventEmitter,
-    ProxyReporter = require('../../lib/proxy-reporter');
+    ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 
 describe('Proxy reporter', function() {
     var sandbox = sinon.sandbox.create(),

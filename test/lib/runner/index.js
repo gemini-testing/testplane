@@ -4,8 +4,9 @@ var q = require('q'),
     _ = require('lodash'),
     EventEmitter = require('events').EventEmitter,
     Runner = require('../../../lib/runner/index'),
-    BrowserRunner = require('../../../lib/runner/browser-runner'),
+    MochaRunner = require('../../../lib/runner/mocha-runner'),
     BrowserPool = require('../../../lib/browser-pool'),
+    BrowserAgent = require('../../../lib/browser-agent'),
     RetryManager = require('../../../lib/retry-manager'),
 
     makeConfigStub = require('../../utils').makeConfigStub,
@@ -28,8 +29,8 @@ describe('Runner', function() {
     beforeEach(function() {
         sandbox.stub(BrowserPool.prototype);
 
-        sandbox.stub(BrowserRunner.prototype);
-        BrowserRunner.prototype.run.returns(q());
+        sandbox.stub(MochaRunner.prototype);
+        MochaRunner.prototype.run.returns(q());
 
         sandbox.stub(RetryManager.prototype);
     });
@@ -59,15 +60,6 @@ describe('Runner', function() {
     });
 
     describe('run', function() {
-        it('should create browser runner for each passed browser', function() {
-            return run_({browsers: ['browser1', 'browser2']})
-                .then(function() {
-                    assert.calledTwice(BrowserRunner.prototype.__constructor);
-                    assert.calledWith(BrowserRunner.prototype.__constructor, sinon.match.any, 'browser1');
-                    assert.calledWith(BrowserRunner.prototype.__constructor, sinon.match.any, 'browser2');
-                });
-        });
-
         it('should emit `RunnerEvents.RUNNER_START` event', function() {
             var onStartRunner = sandbox.spy().named('onStartRunner'),
                 runner = new Runner(makeConfigStub());
@@ -106,24 +98,32 @@ describe('Runner', function() {
                 });
         });
 
-        it('should run all browser runners', function() {
+        it('should create browser runners with apporpriate browser agents', function() {
             return run_({browsers: ['browser1', 'browser2']})
                 .then(function() {
-                    assert.calledTwice(BrowserRunner.prototype.run);
+                    assert.calledTwice(MochaRunner.prototype.__constructor);
+                    assert.calledWith(MochaRunner.prototype.__constructor,
+                        sinon.match.any,
+                        sinon.match.instanceOf(BrowserAgent).and(sinon.match.has('browserId', 'browser1'))
+                    );
+                    assert.calledWith(MochaRunner.prototype.__constructor,
+                        sinon.match.any,
+                        sinon.match.instanceOf(BrowserAgent).and(sinon.match.has('browserId', 'browser2'))
+                    );
                 });
         });
 
         it('should run browser runner with passed tests and filter function', function() {
             return run_({tests: ['test1', 'test2']})
                 .then(function() {
-                    assert.calledWith(BrowserRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
+                    assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
                 });
         });
 
         it('should not filter out any test by default', function() {
             return run_()
                 .then(function() {
-                    var filterFn = BrowserRunner.prototype.run.firstCall.args[1];
+                    var filterFn = MochaRunner.prototype.run.firstCall.args[1];
                     assert.isTrue(filterFn());
                 });
         });
@@ -132,8 +132,8 @@ describe('Runner', function() {
             var firstResolveMarker = sandbox.stub().named('First resolve marker'),
                 secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
-            BrowserRunner.prototype.run.onFirstCall().returns(q().then(firstResolveMarker));
-            BrowserRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
+            MochaRunner.prototype.run.onFirstCall().returns(q().then(firstResolveMarker));
+            MochaRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
 
             return run_({browsers: ['browser1', 'browser2']})
                 .then(function() {
@@ -148,7 +148,7 @@ describe('Runner', function() {
             beforeEach(function() {
                 browserRunner = new EventEmitter();
                 browserRunner.run = sandbox.stub().returns(q());
-                BrowserRunner.prototype.__constructor.returns(browserRunner);
+                MochaRunner.prototype.__constructor.returns(browserRunner);
 
                 var runner = new Runner(makeConfigStub());
                 run_({runner: runner});
@@ -174,7 +174,7 @@ describe('Runner', function() {
         var browserRunner = new EventEmitter();
 
         browserRunner.run = sandbox.stub().returns(q());
-        BrowserRunner.prototype.__constructor.returns(browserRunner);
+        MochaRunner.prototype.__constructor.returns(browserRunner);
 
         var runner = new Runner(makeConfigStub()),
             onTestPass = sandbox.spy().named('onTestPass');
