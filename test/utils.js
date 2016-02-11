@@ -20,7 +20,8 @@ function makeConfigStub(opts) {
     });
 
     var config = {
-        browsers: {}
+        browsers: {},
+        reporters: []
     };
 
     opts.browsers.forEach(function(browserId) {
