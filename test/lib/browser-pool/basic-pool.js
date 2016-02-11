@@ -59,4 +59,9 @@ describe('Unlimited pool', function() {
                 assert.calledOnce(browser.quit);
             });
     });
+
+    it('should reject browser initiation after termination', function() {
+        pool.terminate();
+        return assert.isRejected(requestBrowser());
+    });
 });

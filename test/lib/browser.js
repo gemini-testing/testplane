@@ -3,7 +3,8 @@
 var q = require('q'),
     webdriverio = require('webdriverio'),
     Browser = require('../../lib/browser'),
-    logger = require('../../lib/utils').logger;
+    logger = require('../../lib/utils').logger,
+    signalHandler = require('../../lib/signalHandler');
 
 describe('Browser', function() {
     var sandbox = sinon.sandbox.create(),
@@ -24,13 +25,15 @@ describe('Browser', function() {
         };
     }
 
-    beforeEach(function() {
-        session = sandbox.stub();
-        session.init = sandbox.stub().named('init');
-        session.init.returns(q());
-        session.end = sandbox.stub().named('end');
-        session.end.returns(q());
+    function makeSessionStub() {
+        var session = q();
+        session.init = sandbox.stub().named('init').returns(session);
+        session.end = sandbox.stub().named('end').returns(q());
+        return session;
+    }
 
+    beforeEach(function() {
+        session = makeSessionStub();
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);
         webdriverio.remote.returns(session);
@@ -84,6 +87,23 @@ describe('Browser', function() {
                 })
                 .then(function() {
                     assert.called(session.end);
+                });
+        });
+
+        it('should finalize session on global exit event', function() {
+            new Browser(createBrowserConfig_(), 'browser')
+                .init();
+
+            return signalHandler.emitAndWait('exit')
+                .then(function() {
+                    assert.called(session.end);
+                });
+        });
+
+        it('should not finalize session if it has not been initialized', function() {
+            return new Browser(createBrowserConfig_(), 'browser').quit()
+                .then(function() {
+                    assert.notCalled(session.end);
                 });
         });
     });
