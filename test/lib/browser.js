@@ -4,7 +4,7 @@ var q = require('q'),
     webdriverio = require('webdriverio'),
     Browser = require('../../lib/browser'),
     logger = require('../../lib/utils').logger,
-    signalHandler = require('../../lib/signalHandler');
+    signalHandler = require('../../lib/signal-handler');
 
 describe('Browser', function() {
     var sandbox = sinon.sandbox.create(),
