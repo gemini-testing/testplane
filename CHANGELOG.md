@@ -1,3 +1,10 @@
+## 0.5.0 - 2016-02-17
+* Plugin support added
+* Retry logic added
+* Better error logging
+* Fixed `.only` option for tests
+* Quit browsers on `Ctrl + C`
+
 ## 0.4.0 - 2016-01-28
 
 * `capabilities` renamed to `desiredCapabilities`
