@@ -46,7 +46,7 @@ describe('config-reader', function() {
 
     it('should not throw on relative path to config file', function() {
         var reader = new ConfigReader({}),
-            conf = './test/fixtures/.e2e.conf.js';
+            conf = './test/fixtures/.hermione.conf.js';
 
         assert.doesNotThrow(function() {
             return reader.getConfigFromFile(conf);
@@ -55,7 +55,7 @@ describe('config-reader', function() {
 
     it('should not throw on absolute path to config file', function() {
         var reader = new ConfigReader({}),
-            conf = path.resolve(__dirname, '../fixtures/.e2e.conf.js');
+            conf = path.resolve(__dirname, '../fixtures/.hermione.conf.js');
 
         assert.doesNotThrow(function() {
             return reader.getConfigFromFile(conf);

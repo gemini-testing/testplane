@@ -1,21 +1,21 @@
-e2e-runner
+Hermione
 ===========
 
 ## Установка
 
 ```shell
-npm i e2e-runner --registry http://npm.yandex-team.ru --save-dev
+npm i hermione --save-dev
 ```
 
 ## Запуск тестов
 
 ```shell
-node_modules/.bin/e2e path/to/tests --baseUrl http://yandex.ru/search --grid http://localhost:4444/wd/hub
+node_modules/.bin/hermione path/to/tests --baseUrl http://yandex.ru/search --grid http://localhost:4444/wd/hub
 ```
 
 ## Конфигурация
 
-**e2e-runner** настраивается с помощью конфигурационного файла. Путь к этому файлу можно задать с помощью опции `--conf`. Стандартное имя файла -  `.e2e.conf.js`.
+**hermione** настраивается с помощью конфигурационного файла. Путь к этому файлу можно задать с помощью опции `--conf`. Стандартное имя файла -  `.hermione.conf.js`.
 
 Ниже приведён пример полного конфига. Обязательными полями являются `specs` и `browsers`.
 
@@ -113,18 +113,18 @@ prepareBrowser: function(browser) {
 Данные в конфиге можно изменять в зависимости от дополнительных условий в функции `prepareEnvironment`. Использование этой функции не обязательно, она для удобства.
 
 ## Плагины
-e2e-runner поддерживает расширения.
+hermione поддерживает расширения.
 Плагин представляет из себя модуль, экспортирующий одну единственную функцию. Эта функция принимает на вход два параметра:
-* инстанс e2eRunner'а
+* инстанс hermione
 * опции плагина из конфига
 
-В момент запуска тестов плагин будет загружен и вызван с текущим инстансом e2eRunner'а и опциями конфига, соответствующими данному плагину.
+В момент запуска тестов плагин будет загружен и вызван с текущим инстансом hermione и опциями конфига, соответствующими данному плагину.
 
-Если название модуля плагина начинается с `e2e-runner-`, то в конфиге этот префикс можно опустить. Если в зависимостях есть два модуля, например `e2e-runner-some-module` и `some-module`, то приоритет отдается модулю с префиксом.
+Если название модуля плагина начинается с `hermione-`, то в конфиге этот префикс можно опустить. Если в зависимостях есть два модуля, например `hermione-some-module` и `some-module`, то приоритет отдается модулю с префиксом.
 
 Пример.
 ```js
-// .e2e.conf.js
+// .hermione.conf.js
 ...
 plugins: {
     'my-cool-plugin': {
@@ -133,19 +133,19 @@ plugins: {
 }
 ...
 
-// e2e-runner-my-cool-plugin/index.js
-module.exports = function(e2e, opts) {
-    e2e.on(e2e.events.RUNNER_START, function() {
-        return setUp(e2e.config, opts.param); // config can be mutated
+// hermione-my-cool-plugin/index.js
+module.exports = function(hermione, opts) {
+    hermione.on(hermione.events.RUNNER_START, function() {
+        return setUp(hermione.config, opts.param); // config can be mutated
     });
 
-    e2e.on(e2e.events.RUNNER_END, function() {
+    hermione.on(hermione.events.RUNNER_END, function() {
         return tearDown();
     });
 }
 ```
 
-Свойства e2eRunner'а:
+Свойства объекта hermione:
 * `config` - конфиг, который используется в раннере. Может быть модифицирован
 * `events` - список событий, на которые можно подписаться
 
@@ -181,15 +181,15 @@ module.exports = function(e2e, opts) {
 
 С помощью CLI можно переопределить параметры, используя следующие опции:
 
-* `-c|--conf` - указать путь к конфигу. По умолчанию используется файл с именем `.e2e.conf.js`
+* `-c|--conf` - указать путь к конфигу. По умолчанию используется файл с именем `.hermione.conf.js`
 * `--baseUrl` - задать базовый `url` для всех тестов
 * `--wait-timeout` - время ожидания событий на странице в миллисекундах. По умолчанию 10000
 * `-b|--browser` - запуск тестов в определенном браузере. Возможно задать несколько браузеров одновременно. Например,
 ```
-node_modules/.bin/e2e -b chrome --browser firefox
+node_modules/.bin/hermione -b chrome --browser firefox
 ```
 * `-r|--reporter` - указать используемый репортер. Возможно задать несколько репортеров одновременно. Например,
 ```
-node_modules/.bin/e2e -r flat --reporter teamcity
+node_modules/.bin/hermione -r flat --reporter teamcity
 ```
 * `--debug` - включить debug-режим

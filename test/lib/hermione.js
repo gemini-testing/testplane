@@ -1,20 +1,20 @@
 'use strict';
 
-var E2ERunner = require('../../lib/e2e-runner'),
-    MainRunner = require('../../lib/runner'),
+var Hermione = require('../../lib/hermione'),
+    Runner = require('../../lib/runner'),
     RunnerEvents = require('../../lib/constants/runner-events'),
     plugins = require('../../lib/plugins'),
-    RunnerFacade = require('../../lib/e2e-runner-facade'),
+    RunnerFacade = require('../../lib/hermione-facade'),
     utils = require('../utils'),
     EventEmitter = require('events').EventEmitter;
 
-describe('e2e-runner', function() {
+describe('hermione', function() {
     var sandbox = sinon.sandbox.create();
 
     describe('run', function() {
         beforeEach(function() {
-            sandbox.stub(MainRunner, 'create');
-            MainRunner.create.returns(sinon.createStubInstance(MainRunner));
+            sandbox.stub(Runner, 'create');
+            Runner.create.returns(sinon.createStubInstance(Runner));
 
             sandbox.stub(plugins);
         });
@@ -23,16 +23,16 @@ describe('e2e-runner', function() {
             sandbox.restore();
         });
 
-        function stubMainRunner_(runFn) {
-            var mainRunner = new EventEmitter();
+        function stubRunner_(runFn) {
+            var runner = new EventEmitter();
 
-            mainRunner.run = sandbox.stub(MainRunner.prototype, 'run', runFn && runFn.bind(null, mainRunner));
-            MainRunner.create.returns(mainRunner);
-            return mainRunner;
+            runner.run = sandbox.stub(Runner.prototype, 'run', runFn && runFn.bind(null, runner));
+            Runner.create.returns(runner);
+            return runner;
         }
 
         function run_() {
-            return new E2ERunner(utils.makeConfigStub())
+            return new Hermione(utils.makeConfigStub())
                 .run();
         }
 
@@ -46,14 +46,14 @@ describe('e2e-runner', function() {
 
             it('should create facade with runner and config', function() {
                 var config = utils.makeConfigStub(),
-                    e2eRunner = new E2ERunner(config),
-                    mainRunner = stubMainRunner_();
+                    hermione = new Hermione(config),
+                    runner = stubRunner_();
 
                 sandbox.stub(RunnerFacade.prototype, '__constructor');
 
-                return e2eRunner.run()
+                return hermione.run()
                     .then(function() {
-                        assert.calledWith(RunnerFacade.prototype.__constructor, mainRunner, config);
+                        assert.calledWith(RunnerFacade.prototype.__constructor, runner, config);
                     });
             });
         });
@@ -66,7 +66,7 @@ describe('e2e-runner', function() {
         });
 
         it('should return false if there are failed tests', function() {
-            stubMainRunner_(function(runner) {
+            stubRunner_(function(runner) {
                 runner.emit(RunnerEvents.TEST_FAIL);
             });
 
@@ -77,7 +77,7 @@ describe('e2e-runner', function() {
         });
 
         it('should return false if there were some errors', function() {
-            stubMainRunner_(function(runner) {
+            stubRunner_(function(runner) {
                 runner.emit(RunnerEvents.ERROR);
             });
 
