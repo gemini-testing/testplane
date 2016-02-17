@@ -60,45 +60,34 @@ describe('Runner', function() {
     });
 
     describe('run', function() {
-        it('should emit `RunnerEvents.RUNNER_START` event', function() {
-            var onStartRunner = sandbox.spy().named('onStartRunner'),
-                runner = new Runner(makeConfigStub());
+        describe('RUNNER_START event', function() {
+            it('should start mocha runner only after RUNNER_START handler finish', function() {
+                var mediator = sinon.spy().named('mediator'),
+                    onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.delay(1).then(mediator)),
+                    runner = new Runner(makeConfigStub());
 
-            runner.on(RunnerEvents.RUNNER_START, onStartRunner);
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
 
-            return runner.run()
-                .then(function() {
-                    assert.called(onStartRunner);
-                });
+                return run_({runner: runner})
+                    .then(function() {
+                        assert.callOrder(mediator, MochaRunner.prototype.run);
+                    });
+            });
+
+            it('should not run any mocha runner if RUNNER_START handler failed', function() {
+                var onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject('some-error')),
+                    runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+
+                return assert.isRejected(run_({runner: runner}), /some-error/)
+                    .then(function() {
+                        assert.notCalled(MochaRunner.prototype.run);
+                    });
+            });
         });
 
-        it('should emit `RunnerEvents.RUNNER_END` event', function() {
-            var onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(makeConfigStub());
-
-            runner.on(RunnerEvents.RUNNER_END, onEndRunner);
-
-            return runner.run()
-                .then(function() {
-                    assert.called(onEndRunner);
-                });
-        });
-
-        it('should emit events in correct order', function() {
-            var onStartRunner = sandbox.spy().named('onStartRunner'),
-                onEndRunner = sandbox.spy().named('onEndRunner'),
-                runner = new Runner(makeConfigStub());
-
-            runner.on(RunnerEvents.RUNNER_START, onStartRunner);
-            runner.on(RunnerEvents.RUNNER_END, onEndRunner);
-
-            return runner.run()
-                .then(function() {
-                    assert.callOrder(onStartRunner, onEndRunner);
-                });
-        });
-
-        it('should create browser runners with apporpriate browser agents', function() {
+        it('should create mocha runners with apporpriate browser agents', function() {
             return run_({browsers: ['browser1', 'browser2']})
                 .then(function() {
                     assert.calledTwice(MochaRunner.prototype.__constructor);
@@ -113,7 +102,7 @@ describe('Runner', function() {
                 });
         });
 
-        it('should run browser runner with passed tests and filter function', function() {
+        it('should run mocha runner with passed tests and filter function', function() {
             return run_({tests: ['test1', 'test2']})
                 .then(function() {
                     assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
@@ -128,7 +117,7 @@ describe('Runner', function() {
                 });
         });
 
-        it('should wait until all browser runners will finish', function() {
+        it('should wait until all mocha runners will finish', function() {
             var firstResolveMarker = sandbox.stub().named('First resolve marker'),
                 secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
@@ -142,94 +131,160 @@ describe('Runner', function() {
                 });
         });
 
-        describe('if one of browser runners failed', function() {
-            var browserRunner;
+        describe('if one of mocha runners failed', function() {
+            var mochaRunner;
 
             beforeEach(function() {
-                browserRunner = new EventEmitter();
-                browserRunner.run = sandbox.stub().returns(q());
-                MochaRunner.prototype.__constructor.returns(browserRunner);
+                mochaRunner = new EventEmitter();
+                mochaRunner.run = sandbox.stub().returns(q());
+                MochaRunner.prototype.__constructor.returns(mochaRunner);
 
                 var runner = new Runner(makeConfigStub());
-                run_({runner: runner});
+                return run_({runner: runner});
             });
 
             it('should submit failed tests for retry', function() {
-                browserRunner.emit(RunnerEvents.TEST_FAIL, 'some-error');
+                mochaRunner.emit(RunnerEvents.TEST_FAIL, 'some-error');
 
                 assert.calledOnce(RetryManager.prototype.handleTestFail);
                 assert.calledWith(RetryManager.prototype.handleTestFail, 'some-error');
             });
 
             it('should submit errors for retry', function() {
-                browserRunner.emit(RunnerEvents.ERROR, 'some-error', 'some-data');
+                mochaRunner.emit(RunnerEvents.ERROR, 'some-error', 'some-data');
 
                 assert.calledOnce(RetryManager.prototype.handleError);
                 assert.calledWith(RetryManager.prototype.handleError, 'some-error', 'some-data');
             });
         });
-    });
 
-    it('should passthrough events from browser runners', function() {
-        var browserRunner = new EventEmitter();
+        it('should passthrough events from mocha runners', function() {
+            var mochaRunner = new EventEmitter();
 
-        browserRunner.run = sandbox.stub().returns(q());
-        MochaRunner.prototype.__constructor.returns(browserRunner);
+            mochaRunner.run = sandbox.stub().returns(q());
+            MochaRunner.prototype.__constructor.returns(mochaRunner);
 
-        var runner = new Runner(makeConfigStub()),
-            onTestPass = sandbox.spy().named('onTestPass');
+            var runner = new Runner(makeConfigStub()),
+                onTestPass = sandbox.spy().named('onTestPass');
 
-        runner.on(RunnerEvents.TEST_PASS, onTestPass);
-        run_({runner: runner});
-        browserRunner.emit(RunnerEvents.TEST_PASS);
+            runner.on(RunnerEvents.TEST_PASS, onTestPass);
+            return run_({runner: runner})
+                .then(function() {
+                    mochaRunner.emit(RunnerEvents.TEST_PASS);
 
-        assert.called(onTestPass);
-    });
+                    assert.called(onTestPass);
+                });
+        });
 
-    it('should start retry session after all', function() {
-        return run_()
-            .then(function() {
-                assert.calledOnce(RetryManager.prototype.retry);
-                assert.calledWith(RetryManager.prototype.retry, sinon.match.func);
+        it('should start retry session after all', function() {
+            return run_()
+                .then(function() {
+                    assert.calledOnce(RetryManager.prototype.retry);
+                    assert.calledWith(RetryManager.prototype.retry, sinon.match.func);
+                });
+        });
+
+        describe('retry manager events', function() {
+            var retryMgr, runner;
+
+            beforeEach(function() {
+                retryMgr = new EventEmitter();
+                retryMgr.submitForRetry = sinon.stub();
+                RetryManager.prototype.__constructor.returns(retryMgr);
+
+                runner = new Runner(makeConfigStub());
             });
-    });
 
-    describe('retry manager events', function() {
-        var browserRunner, runner;
+            it('should passthrough error event', function() {
+                var onError = sandbox.spy().named('onError');
 
-        beforeEach(function() {
-            browserRunner = new EventEmitter();
-            browserRunner.submitForRetry = sinon.stub();
-            RetryManager.prototype.__constructor.returns(browserRunner);
+                runner.on(RunnerEvents.ERROR, onError);
+                retryMgr.emit(RunnerEvents.ERROR);
 
-            runner = new Runner(makeConfigStub());
+                assert.called(onError);
+            });
+
+            it('should passthrough retry event', function() {
+                var onRetry = sandbox.spy().named('onRetry');
+
+                runner.on(RunnerEvents.RETRY, onRetry);
+                retryMgr.emit(RunnerEvents.RETRY);
+
+                assert.called(onRetry);
+            });
+
+            it('should passthrough test failed event', function() {
+                var onTestFail = sandbox.spy().named('onTestFail');
+
+                runner.on(RunnerEvents.TEST_FAIL, onTestFail);
+                retryMgr.emit(RunnerEvents.TEST_FAIL);
+
+                assert.called(onTestFail);
+            });
         });
 
-        it('should passthrough error event', function() {
-            var onError = sandbox.spy().named('onError');
+        describe('RUNNER_END event', function() {
+            it('should be emitted after mocha runners finish', function() {
+                var onRunnerEnd = sinon.spy().named('onRunnerEnd'),
+                    runner = new Runner(makeConfigStub());
 
-            runner.on(RunnerEvents.ERROR, onError);
-            browserRunner.emit(RunnerEvents.ERROR);
+                runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
 
-            assert.called(onError);
-        });
+                return run_({runner: runner})
+                    .then(function() {
+                        assert.callOrder(MochaRunner.prototype.run, onRunnerEnd);
+                    });
+            });
 
-        it('should passthrough retry event', function() {
-            var onRetry = sandbox.spy().named('onRetry');
+            it('runner should wait until RUNNER_END handler finished', function() {
+                var finMarker = sinon.spy().named('finMarker'),
+                    onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(q.delay(1).then(finMarker)),
+                    runner = new Runner(makeConfigStub());
 
-            runner.on(RunnerEvents.RETRY, onRetry);
-            browserRunner.emit(RunnerEvents.RETRY);
+                runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
 
-            assert.called(onRetry);
-        });
+                return run_({runner: runner})
+                    .then(function() {
+                        assert.calledOnce(finMarker);
+                    });
+            });
 
-        it('should passthrough test failed event', function() {
-            var onTestFail = sandbox.spy().named('onTestFail');
+            it('shold be emitted even if RUNNER_START handler failed', function() {
+                var onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject()),
+                    onRunnerEnd = sinon.spy().named('onRunnerEnd'),
+                    runner = new Runner(makeConfigStub());
 
-            runner.on(RunnerEvents.TEST_FAIL, onTestFail);
-            browserRunner.emit(RunnerEvents.TEST_FAIL);
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+                runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
 
-            assert.called(onTestFail);
+                return assert.isRejected(run_({runner: runner}))
+                    .then(function() {
+                        assert.calledOnce(onRunnerEnd);
+                    });
+            });
+
+            it('shold be emitted even if some mocha runner failed', function() {
+                var onRunnerEnd = sinon.spy().named('onRunnerEnd'),
+                    runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
+                MochaRunner.prototype.run.returns(q.reject());
+
+                return assert.isRejected(run_({runner: runner}))
+                    .then(function() {
+                        assert.calledOnce(onRunnerEnd);
+                    });
+            });
+
+            it('should leave original error unchaned if RUNNER_END handler failed too', function() {
+                var onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(q.reject('handler-error')),
+                    runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
+                MochaRunner.prototype.run.returns(q.reject('run-error'));
+
+                return assert.isRejected(run_({runner: runner}), /run-error/);
+            });
         });
     });
 });

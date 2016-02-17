@@ -21,7 +21,8 @@ function makeConfigStub(opts) {
 
     var config = {
         browsers: {},
-        reporters: []
+        reporters: [],
+        plugins: opts.plugins
     };
 
     opts.browsers.forEach(function(browserId) {
