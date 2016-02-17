@@ -1,8 +1,8 @@
 {
-  "name": "e2e-runner",
+  "name": "hermione",
   "version": "0.4.0",
-  "description": "E2E tests framework",
-  "main": "lib/e2e.js",
+  "description": "Tests framework based on mocha and wdio",
+  "main": "lib/hermione.js",
   "scripts": {
     "lint": "jshint . && jscs .",
     "test-unit": "istanbul test _mocha -- --recursive test/",
@@ -10,17 +10,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.yandex-team.ru/search-interfaces/e2e-runner.git"
+    "url": "git://github.com/gemini-testing/hermione.git"
   },
   "keywords": [
-    "e2e",
+    "hermione",
+    "mocha",
     "test",
     "webdriverio"
   ],
   "bin": {
-    "e2e": "bin/e2e-runner"
+    "hermione": "./bin/hermione"
   },
-  "author": "search-interfaces@yandex-team.ru",
   "license": "MIT",
   "dependencies": {
     "qemitter": "^1.1.0",
@@ -47,8 +47,5 @@
     "proxyquire": "^1.7.3",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0"
-  },
-  "publishConfig": {
-    "registry": "http://npm.yandex-team.ru"
   }
 }

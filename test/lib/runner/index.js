@@ -3,7 +3,7 @@
 var q = require('q'),
     _ = require('lodash'),
     EventEmitter = require('events').EventEmitter,
-    Runner = require('../../../lib/runner/index'),
+    Runner = require('../../../lib/runner'),
     MochaRunner = require('../../../lib/runner/mocha-runner'),
     BrowserPool = require('../../../lib/browser-pool'),
     BrowserAgent = require('../../../lib/browser-agent'),
