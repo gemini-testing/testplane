@@ -1,3 +1,7 @@
+## 0.5.1 - 2016-02-18
+
+* Fixed `NoSessionIdError` in parallel run
+
 ## 0.5.0 - 2016-02-17
 * Plugin support added
 * Retry logic added
