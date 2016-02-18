@@ -1,15 +1,21 @@
 'use strict';
 
-var proxyquire = require('proxyquire').noCallThru(),
+var BrowserAgent = require('../../../../lib/browser-agent'),
+    logger = require('../../../../lib/utils').logger,
+    ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter'),
+    proxyquire = require('proxyquire').noCallThru(),
     inherit = require('inherit'),
-    _ = require('lodash');
+    _ = require('lodash'),
+    EventEmitter = require('events').EventEmitter,
+    q = require('q');
 
 var MochaStub = inherit({
     __constructor: _.noop,
     run: _.noop,
     fullTrace: _.noop,
     addFile: _.noop,
-    loadFiles: _.noop
+    loadFiles: _.noop,
+    reporter: _.noop
 });
 
 describe('mocha-runner/mocha-adapter', function() {
@@ -17,16 +23,31 @@ describe('mocha-runner/mocha-adapter', function() {
         MochaAdapter,
         clearRequire;
 
+    function mkSuiteStub_() {
+        var suite = new EventEmitter();
+
+        suite.enableTimeouts = sandbox.stub();
+        suite.beforeAll = sandbox.stub();
+        suite.afterAll = sandbox.stub();
+        suite.tests = [];
+        suite.ctx = {};
+
+        return suite;
+    }
+
     beforeEach(function() {
         clearRequire = sandbox.stub().named('clear-require');
 
         sandbox.stub(MochaStub.prototype);
         MochaStub.prototype.run.yields();
+        MochaStub.prototype.suite = mkSuiteStub_();
 
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
             'mocha': MochaStub
         });
+
+        sandbox.stub(logger);
     });
 
     afterEach(function() {
@@ -71,6 +92,185 @@ describe('mocha-runner/mocha-adapter', function() {
             mochaAdapter.addFile('path/to/file');
 
             assert.deepEqual(mocha.files, []);
+        });
+    });
+
+    describe('attach browser', function() {
+        var browserAgent;
+
+        beforeEach(function() {
+            browserAgent = sinon.createStubInstance(BrowserAgent);
+        });
+
+        function mkMochaAdapter_() {
+            return new MochaAdapter({}, browserAgent);
+        }
+
+        it('should request browser before suite execution', function() {
+            MochaStub.prototype.suite.beforeAll.yields();
+            browserAgent.getBrowser.returns(q());
+
+            mkMochaAdapter_();
+
+            assert.calledOnce(browserAgent.getBrowser);
+        });
+
+        it('should release browser after suite execution', function() {
+            var browser = {};
+            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.freeBrowser.returns(q());
+
+            mkMochaAdapter_();
+
+            var beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0],
+                afterAll = MochaStub.prototype.suite.afterAll.firstCall.args[0];
+
+            return beforeAll()
+                .then(afterAll)
+                .then(function() {
+                    assert.calledOnce(browserAgent.freeBrowser);
+                    assert.calledWith(browserAgent.freeBrowser, browser);
+                });
+        });
+
+        it('should disable mocha timeouts while setting browser hooks', function() {
+            MochaStub.prototype.suite.enableTimeouts.onFirstCall().returns(true);
+
+            mkMochaAdapter_();
+
+            assert.callOrder(
+                MochaStub.prototype.suite.enableTimeouts, // get current value of enableTimeouts
+                MochaStub.prototype.suite.enableTimeouts.withArgs(false).named('disableTimeouts'),
+                MochaStub.prototype.suite.beforeAll,
+                MochaStub.prototype.suite.afterAll,
+                MochaStub.prototype.suite.enableTimeouts.withArgs(true).named('restoreTimeouts')
+            );
+        });
+
+        it('should not be rejected if freeBrowser failed', function() {
+            var browser = {};
+
+            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.freeBrowser.returns(q.reject('some-error'));
+
+            mkMochaAdapter_();
+
+            var beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0],
+                afterAll = MochaStub.prototype.suite.afterAll.firstCall.args[0];
+
+            return beforeAll()
+                .then(afterAll)
+                .then(function() {
+                    assert.calledOnce(logger.warn);
+                    assert.calledWithMatch(logger.warn, /some-error/);
+                });
+        });
+    });
+
+    describe('attachTestFilter', function() {
+        var browserAgent,
+            mochaAdapter;
+
+        beforeEach(function() {
+            browserAgent = sinon.createStubInstance(BrowserAgent);
+            mochaAdapter = new MochaAdapter({}, browserAgent);
+        });
+
+        function mkTestStub_(opts) {
+            return _.defaults(opts || {}, {
+                title: 'default-title',
+                parent: MochaStub.prototype.suite
+            });
+        }
+
+        it('should check if test should be run', function() {
+            var someTest = mkTestStub_(),
+                shouldRun = sandbox.stub().returns(true);
+
+            MochaStub.prototype.suite.tests = [someTest];
+            BrowserAgent.prototype.browserId = 'some-browser';
+
+            mochaAdapter.attachTestFilter(shouldRun);
+
+            MochaStub.prototype.suite.emit('test', someTest);
+            assert.calledWith(shouldRun, someTest, 'some-browser');
+        });
+
+        it('should not remove test which expected to be run', function() {
+            var test1 = mkTestStub_(),
+                test2 = mkTestStub_(),
+                shouldRun = sandbox.stub().returns(true);
+
+            MochaStub.prototype.suite.tests = [test1, test2];
+
+            mochaAdapter.attachTestFilter(shouldRun);
+
+            MochaStub.prototype.suite.emit('test', test2);
+            assert.deepEqual(MochaStub.prototype.suite.tests, [test1, test2]);
+        });
+
+        it('should remove test which does not suppose to be run', function() {
+            var test1 = mkTestStub_(),
+                test2 = mkTestStub_(),
+                shouldRun = sandbox.stub().returns(false);
+
+            MochaStub.prototype.suite.tests = [test1, test2];
+
+            mochaAdapter.attachTestFilter(shouldRun);
+
+            MochaStub.prototype.suite.emit('test', test2);
+            assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
+        });
+    });
+
+    describe('attachEmitFn', function() {
+        var browserAgent,
+            mochaAdapter;
+
+        beforeEach(function() {
+            browserAgent = sinon.createStubInstance(BrowserAgent);
+            mochaAdapter = new MochaAdapter({}, browserAgent);
+        });
+
+        it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', function() {
+            mochaAdapter.attachEmitFn(sinon.spy());
+
+            assert.calledWith(MochaStub.prototype.reporter, ProxyReporter);
+        });
+
+        it('should pass to proxy reporter emit fn', function() {
+            browserAgent.browserId = 'browser';
+
+            var emitFn = sinon.spy().named('emit');
+            mochaAdapter.attachEmitFn(emitFn);
+
+            assert.calledWithMatch(MochaStub.prototype.reporter, sinon.match.any, {
+                emit: emitFn
+            });
+        });
+
+        it('should pass to proxy reporter getter for requested browser', function() {
+            var browser = {};
+
+            mochaAdapter.attachEmitFn(sinon.spy());
+
+            browserAgent.getBrowser.returns(q(browser));
+            var beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
+
+            return beforeAll()
+                .then(function() {
+                    var getBrowser = MochaStub.prototype.reporter.lastCall.args[1].getBrowser;
+                    assert.equal(browser, getBrowser());
+                });
+        });
+
+        it('should pass to proxy reporter getter for browser id if browser not requested', function() {
+            browserAgent.browserId = 'some-browser';
+
+            mochaAdapter.attachEmitFn(sinon.spy());
+
+            var getBrowser = MochaStub.prototype.reporter.lastCall.args[1].getBrowser;
+            assert.deepEqual(getBrowser(), {id: 'some-browser'});
         });
     });
 });
