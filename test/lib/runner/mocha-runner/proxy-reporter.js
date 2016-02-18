@@ -3,7 +3,7 @@
 var EventEmitter = require('events').EventEmitter,
     ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 
-describe('Proxy reporter', function() {
+describe('mocha-runner/proxy-reporter', function() {
     var sandbox = sinon.sandbox.create(),
         runner,
         emit;
@@ -12,9 +12,9 @@ describe('Proxy reporter', function() {
         return new ProxyReporter(runner, {
             reporterOptions: {
                 emit: emit,
-                browserId: browserId || 'default-browser',
                 getBrowser: sinon.stub().returns({
-                    sessionId: sessionId || 'default-session-id'
+                    sessionId: sessionId || 'default-session-id',
+                    id: browserId || 'default-browser'
                 })
             }
         });
