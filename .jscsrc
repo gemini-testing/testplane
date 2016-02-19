@@ -2,7 +2,7 @@
     "excludeFiles": [
         ".git",
         "node_modules",
-        "/coverage"
+        "./coverage"
     ],
     "requireCurlyBraces": [
         "if",
