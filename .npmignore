@@ -5,3 +5,4 @@
 .npmignore
 .sublime-project*
 test/
+coverage/
