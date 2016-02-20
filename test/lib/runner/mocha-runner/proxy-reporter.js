@@ -9,15 +9,11 @@ describe('mocha-runner/proxy-reporter', function() {
         emit;
 
     function createReporter_(browserId, sessionId) {
-        return new ProxyReporter(runner, {
-            reporterOptions: {
-                emit: emit,
-                getBrowser: sinon.stub().returns({
-                    sessionId: sessionId || 'default-session-id',
-                    id: browserId || 'default-browser'
-                })
-            }
-        });
+        var getBrowser = sinon.stub().returns({
+                sessionId: sessionId || 'default-session-id',
+                id: browserId || 'default-browser'
+            });
+        return new ProxyReporter(emit, getBrowser, runner);
     }
 
     function testTranslateEvent_(from, to) {

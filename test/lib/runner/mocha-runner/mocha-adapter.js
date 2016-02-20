@@ -228,38 +228,43 @@ describe('mocha-runner/mocha-adapter', function() {
             mochaAdapter;
 
         beforeEach(function() {
+            sandbox.stub(ProxyReporter.prototype, '__constructor');
             browserAgent = sinon.createStubInstance(BrowserAgent);
             mochaAdapter = new MochaAdapter({}, browserAgent);
         });
 
-        it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', function() {
-            mochaAdapter.attachEmitFn(sinon.spy());
+        function attachEmitFn_(emitFn) {
+            mochaAdapter.attachEmitFn(emitFn);
 
-            assert.calledWith(MochaStub.prototype.reporter, ProxyReporter);
+            var Reporter = MochaStub.prototype.reporter.lastCall.args[0];
+            new Reporter(); // jshint ignore:line
+        }
+
+        it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', function() {
+            attachEmitFn_(sinon.spy());
+
+            assert.calledOnce(ProxyReporter.prototype.__constructor);
         });
 
         it('should pass to proxy reporter emit fn', function() {
-            browserAgent.browserId = 'browser';
-
             var emitFn = sinon.spy().named('emit');
-            mochaAdapter.attachEmitFn(emitFn);
 
-            assert.calledWithMatch(MochaStub.prototype.reporter, sinon.match.any, {
-                emit: emitFn
-            });
+            attachEmitFn_(emitFn);
+
+            assert.calledOnce(ProxyReporter.prototype.__constructor, emitFn);
         });
 
         it('should pass to proxy reporter getter for requested browser', function() {
             var browser = {};
 
-            mochaAdapter.attachEmitFn(sinon.spy());
+            attachEmitFn_(sinon.spy());
 
             browserAgent.getBrowser.returns(q(browser));
             var beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
 
             return beforeAll()
                 .then(function() {
-                    var getBrowser = MochaStub.prototype.reporter.lastCall.args[1].getBrowser;
+                    var getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
                     assert.equal(browser, getBrowser());
                 });
         });
@@ -267,9 +272,9 @@ describe('mocha-runner/mocha-adapter', function() {
         it('should pass to proxy reporter getter for browser id if browser not requested', function() {
             browserAgent.browserId = 'some-browser';
 
-            mochaAdapter.attachEmitFn(sinon.spy());
+            attachEmitFn_(sinon.spy());
 
-            var getBrowser = MochaStub.prototype.reporter.lastCall.args[1].getBrowser;
+            var getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
             assert.deepEqual(getBrowser(), {id: 'some-browser'});
         });
     });
