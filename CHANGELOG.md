@@ -1,3 +1,8 @@
+## 0.5.2 - 2016-08-20
+
+* Avoid `possible EventEmitter memory leak detected` warning in signalHandler
+* Fix session ids in reporters
+
 ## 0.5.1 - 2016-02-18
 
 * Fixed `NoSessionIdError` in parallel run
