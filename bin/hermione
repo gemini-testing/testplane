@@ -1,16 +1,4 @@
 #!/usr/bin/env node
 'use strict';
 
-var cli = require('../lib/cli');
-
-cli.run()
-    .then(function(success) {
-        if (!success) {
-            process.exit(1);
-        }
-    })
-    .catch(function(err) {
-        console.error(err.stack || err);
-        process.exit(1);
-    })
-    .done();
+var cli = require('../lib/cli').run();

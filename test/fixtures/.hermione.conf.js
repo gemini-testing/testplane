@@ -11,5 +11,6 @@ module.exports = {
             },
             sessionsPerBrowser: 5
         }
-    }
+    },
+    reporters: ['flat', 'teamcity']
 };
