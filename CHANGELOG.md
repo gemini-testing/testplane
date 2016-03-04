@@ -1,4 +1,8 @@
-## 0.5.2 - 2016-08-20
+## 0.5.3 - 2016-03-04
+
+* Correct exit code when config file is corrupted
+
+## 0.5.2 - 2016-02-20
 
 * Avoid `possible EventEmitter memory leak detected` warning in signalHandler
 * Fix session ids in reporters
