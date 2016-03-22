@@ -31,7 +31,6 @@
     "lodash": "~3.10.1",
     "mocha": "~2.4.5",
     "q": "^2.0.0",
-    "q-debug-mode": "0.0.1",
     "q-io": "^2.0.6",
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
