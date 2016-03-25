@@ -19,11 +19,13 @@ describe('Runner', function() {
     function run_(opts) {
         opts = _.defaults(opts || {}, {
             browsers: ['default-browser'],
-            tests: []
+            files: ['default-file']
         });
 
-        var runner = opts.runner || new Runner(makeConfigStub({browsers: opts.browsers}));
-        return runner.run(opts.tests, opts.browsers);
+        var tests = _.zipObject(opts.browsers, _.fill(Array(opts.browsers.length), opts.files)),
+            runner = opts.runner || new Runner(makeConfigStub({browsers: opts.browsers}));
+
+        return runner.run(tests);
     }
 
     beforeEach(function() {
@@ -103,7 +105,7 @@ describe('Runner', function() {
         });
 
         it('should run mocha runner with passed tests and filter function', function() {
-            return run_({tests: ['test1', 'test2']})
+            return run_({files: ['test1', 'test2']})
                 .then(function() {
                     assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
                 });
