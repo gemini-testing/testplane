@@ -62,6 +62,13 @@ describe('config-reader', function() {
         });
     });
 
+    it('should add grep option to mochaOpts if grep passed from CLI', function() {
+        var reader = mkReader_({grep: 'foo'}),
+            config = reader.read();
+
+        assert.equal(config.mochaOpts.grep, 'foo');
+    });
+
     describe('per browser options', function() {
         it('should set sessionsPerBrowser option to all browsers', function() {
             var reader = mkReader_();

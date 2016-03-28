@@ -295,6 +295,7 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
     --wait-timeout <ms>        Timeout for web page events [10000]
     --screenshot-path <path>   Path for saving screenshots []
     --debug <boolean>          Turn webdriver debug mode on [false]
+    --grep <grep>              Filter tests matching string or regexp 
     -r, --reporter <reporter>  Reporter [flat]
     -b, --browser <browser>    Run test in a specific browser
 ```
