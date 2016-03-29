@@ -54,6 +54,24 @@ describe('mocha-runner/mocha-adapter', function() {
         sandbox.restore();
     });
 
+    describe('constructor', function() {
+        function instantiateMocha_(config) {
+            new MochaAdapter(config); // jshint ignore:line
+        }
+
+        it('should pass shared opts to mocha instance', function() {
+            instantiateMocha_({grep: 'foo'});
+
+            assert.calledWith(MochaStub.prototype.__constructor, {grep: 'foo'});
+        });
+
+        it('should enable full stacktrace in mocha', function() {
+            instantiateMocha_();
+
+            assert.called(MochaStub.prototype.fullTrace);
+        });
+    });
+
     describe('addFile', function() {
         it('should add file', function() {
             var mochaAdapter = new MochaAdapter();
