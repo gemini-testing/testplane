@@ -15,11 +15,13 @@ function browserWithId(id) {
 
 function makeConfigStub(opts) {
     opts = _.defaults(opts || {}, {
+        specs: [],
         browsers: ['some-default-browser'],
         retry: 0
     });
 
     var config = {
+        specs: opts.specs,
         browsers: {},
         reporters: [],
         plugins: opts.plugins

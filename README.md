@@ -148,8 +148,14 @@ module.exports = {
 For example,
 ```javascript
 specs: [
-    'tests/desktop',
-    'tests/touch'
+    {                          // run tests associated with this path in all browsers
+        files: 'tests/desktop' // which are configured in option `browsers`
+    },
+    'tests/deskpad',           // the alias for the previous case
+    {
+        files: 'tests/touch',  // run tests associated with this path in a browser with id `browser`
+        browsers: ['browser']  // which is configured in option `browsers`
+    }
 ]
 ```
 
