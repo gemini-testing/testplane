@@ -1,3 +1,10 @@
+## 0.6.0 - 2016-03-30
+
+* Supported configuration of `specs` for certain browsers (see [#9]).
+* Added option `--grep` for selecting specific tests (see [#15]).
+* Improved documentation: translated from Russian to English and updated several sections.
+* Fixed crash when enabling debug mode (see [#10]).
+
 ## 0.5.3 - 2016-03-04
 
 * Correct exit code when config file is corrupted
@@ -50,3 +57,7 @@
 ## 0.1.0 - 2016-01-12
 
 * Initial release
+
+[#15]: https://github.com/gemini-testing/hermione/pull/15
+[#10]: https://github.com/gemini-testing/hermione/pull/10
+[#9]: https://github.com/gemini-testing/hermione/pull/9
