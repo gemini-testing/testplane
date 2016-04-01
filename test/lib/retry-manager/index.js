@@ -22,6 +22,8 @@ describe('retry-manager', function() {
 
     beforeEach(function() {
         sandbox.stub(Matcher, 'create');
+
+        Matcher.create.returns({file: 'default-file', browser: 'default-browser'});
     });
 
     afterEach(function() {
@@ -268,9 +270,9 @@ describe('retry-manager', function() {
             var retryManager = mkMgr_({browsers: ['b1', 'b2'], retry: 2});
 
             Matcher.create
-                .onFirstCall().returns({file: 'some/file'})
-                .onSecondCall().returns({file: 'other/file'})
-                .onThirdCall().returns({file: 'some/file'});
+                .onFirstCall().returns({file: 'some/file', browser: 'b1'})
+                .onSecondCall().returns({file: 'other/file', browser: 'b2'})
+                .onThirdCall().returns({file: 'some/file', browser: 'b1'});
 
             retryManager.handleTestFail(makeTestStub({browserId: 'b1'}));
             retryManager.handleTestFail(makeTestStub({browserId: 'b2'}));
@@ -279,17 +281,18 @@ describe('retry-manager', function() {
             var runFn = sinon.spy().named('runFn');
             retryManager.retry(runFn);
 
-            assert.calledWith(runFn,
-                ['some/file', 'other/file']
-            );
+            assert.calledWith(runFn, {
+                b1: ['some/file'],
+                b2: ['other/file']
+            });
         });
 
         it('should retry in all browsers from all matchers', function() {
             var retryManager = mkMgr_({browsers: ['b1', 'b2'], retry: 2});
 
             Matcher.create
-                .withArgs(sinon.match.any, 'b1').returns({browser: 'b1'})
-                .withArgs(sinon.match.any, 'b2').returns({browser: 'b2'});
+                .withArgs(sinon.match.any, 'b1').returns({file: 'some/file', browser: 'b1'})
+                .withArgs(sinon.match.any, 'b2').returns({file: 'some/file', browser: 'b2'});
 
             retryManager.handleTestFail(makeTestStub({browserId: 'b1'}));
             retryManager.handleTestFail(makeTestStub({browserId: 'b2'}));
@@ -297,10 +300,10 @@ describe('retry-manager', function() {
             var runFn = sinon.spy().named('runFn');
             retryManager.retry(runFn);
 
-            assert.calledWith(runFn,
-                sinon.match.any,
-                ['b1', 'b2']
-            );
+            assert.calledWith(runFn, {
+                b1: ['some/file'],
+                b2: ['some/file']
+            });
         });
 
         describe('filter function', function() {
@@ -317,7 +320,7 @@ describe('retry-manager', function() {
                 var runFn = sinon.stub().named('runFn');
                 retryManager.retry(runFn);
 
-                return runFn.firstCall.args[2];
+                return runFn.firstCall.args[1];
             }
 
             it('should test all matchers on retry', function() {
