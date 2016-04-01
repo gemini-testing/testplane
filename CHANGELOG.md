@@ -1,3 +1,7 @@
+## 0.6.1 - 2016-04-01
+
+* Fixed crash on attempt to retry test.
+
 ## 0.6.0 - 2016-03-30
 
 * Supported configuration of `specs` for certain browsers (see [#9]).
