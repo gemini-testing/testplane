@@ -5,7 +5,7 @@
   "main": "lib/hermione.js",
   "scripts": {
     "lint": "jshint . && jscs .",
-    "test-unit": "istanbul test _mocha -- --recursive test/",
+    "test-unit": "istanbul test _mocha -- test/",
     "test": "npm run lint && npm run test-unit",
     "toc": "doctoc README.md"
   },
