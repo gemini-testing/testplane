@@ -216,7 +216,7 @@ describe('retry-manager', function() {
     });
 
     describe('retry', function() {
-        it('should not retry if no failes registered', function() {
+        it('should not retry if no fails registered', function() {
             var retryManager = mkMgr_(),
                 runFn = sinon.spy().named('runFn');
 
