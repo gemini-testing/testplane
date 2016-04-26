@@ -56,6 +56,16 @@ describe('mocha-runner', function() {
                 });
         });
 
+        it('should add filter function for tests before file adding', function() {
+            return run_()
+                .then(function() {
+                    assert.callOrder(
+                        MochaAdapter.prototype.attachTestFilter,
+                        MochaAdapter.prototype.addFile
+                    );
+                });
+        });
+
         it('should create all mocha instances before run any of them', function() {
             MochaAdapter.prototype.__constructor.restore();
             MochaAdapter.prototype.run.restore();
