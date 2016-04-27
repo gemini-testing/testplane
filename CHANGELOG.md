@@ -1,3 +1,7 @@
+## 0.6.2 - 2016-04-27
+
+* Fixed retrying all suite tests on single test fail
+
 ## 0.6.1 - 2016-04-01
 
 * Fixed crash on attempt to retry test.
