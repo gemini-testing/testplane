@@ -1,6 +1,7 @@
 'use strict';
 
-var EventEmitter = require('events').EventEmitter,
+var _ = require('lodash'),
+    EventEmitter = require('events').EventEmitter,
     FlatReporter = require('../../../lib/reporters/flat'),
     RunnerEvents = require('../../../lib/constants/runner-events'),
     logger = require('../../../lib/utils').logger,
@@ -114,21 +115,86 @@ describe('Flat reporter', function() {
         assert.called(logger.error, 'foo');
     });
 
-    it('should correctly do the rendering', function() {
-        test = {
-            fullTitle: sinon.stub().returns('suite test'),
-            title: 'test',
-            browserId: 'chrome',
-            sessionId: 'test_session',
-            duration: '100500'
+    describe('rendering', () => {
+        const mkTestStub_ = (opts) => {
+            return _.defaults(opts || {}, {
+                fullTitle: sinon.stub().returns('suite test'),
+                title: 'test',
+                browserId: 'chrome',
+                sessionId: 'test_session',
+                duration: '100500'
+            });
+        };
+        const getDeserealizedResult = (log) => {
+            return chalk
+                .stripColor(log)
+                .substr(2); // remove first symbol (icon)
         };
 
-        emit(RunnerEvents.TEST_PASS, test);
+        it('should correctly do the rendering', function() {
+            test = mkTestStub_();
 
-        var deserealizedResult = chalk
-            .stripColor(logger.log.firstCall.args[0])
-            .substr(2); // remove first symbol (icon)
+            emit(RunnerEvents.TEST_PASS, test);
 
-        assert.equal(deserealizedResult, 'suite test [chrome:test_session] - 100500ms');
+            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+            assert.equal(result, 'suite test [chrome:test_session] - 100500ms');
+        });
+
+        it('should add skip comment if test was skipped', function() {
+            test = mkTestStub_({
+                pending: true,
+                skipReason: 'some comment'
+            });
+
+            emit(RunnerEvents.TEST_PENDING, test);
+
+            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+            assert.equal(result, 'suite test [chrome:test_session] - 100500ms reason: some comment');
+        });
+
+        it('should use parent skip comment if all describe was skipped', function() {
+            test = mkTestStub_({
+                pending: true,
+                skipReason: 'test comment',
+                parent: {
+                    skipReason: 'suite comment'
+                }
+            });
+
+            emit(RunnerEvents.TEST_PENDING, test);
+
+            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+            assert.match(result, /reason: suite comment/);
+        });
+
+        it('should use test skip comment if describe was skipped without comment', function() {
+            test = mkTestStub_({
+                pending: true,
+                skipReason: 'test comment',
+                parent: {some: 'data'}
+            });
+
+            emit(RunnerEvents.TEST_PENDING, test);
+
+            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+            assert.equal(result, 'suite test [chrome:test_session] - 100500ms reason: test comment');
+            assert.match(result, /reason: test comment/);
+        });
+
+        it('should use default message if test was skipped without comment', function() {
+            test = mkTestStub_({
+                pending: true
+            });
+
+            emit(RunnerEvents.TEST_PENDING, test);
+
+            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+            assert.match(result, /reason: no comment/);
+        });
     });
 });
