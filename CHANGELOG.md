@@ -1,3 +1,7 @@
+## 0.6.3 - 2016-05-04
+
+* Update webdriver.io version to v4.0.4
+
 ## 0.6.2 - 2016-04-27
 
 * Fixed retrying all suite tests on single test fail
