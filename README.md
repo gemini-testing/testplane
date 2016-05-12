@@ -14,8 +14,9 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [Extensibility](#extensibility)
   - [Retries for failed tests](#retries-for-failed-tests)
   - [Executing a separate test](#executing-a-separate-test)
-  - [Auto initilization and closing grid sessions](#auto-initilization-and-closing-grid-sessions)
+  - [Auto initialization and closing grid sessions](#auto-initialization-and-closing-grid-sessions)
 - [Prerequisites](#prerequisites)
+- [Skip](#skip)
 - [Quick start](#quick-start)
 - [.hermione.conf.js](#hermioneconfjs)
   - [specs](#specs)
@@ -65,7 +66,7 @@ Sometimes it is needed to run only specific tests but not all set. `Hermione` ma
 hermione tests/func/mytest.js
 ```
 
-### Auto initilization and closing grid sessions
+### Auto initialization and closing grid sessions
 All work with a grid client is incapsulated in hermione. Forget about `client.init` and `client.end` in your tests ;)
 
 ## Prerequisites
@@ -75,6 +76,64 @@ The simplest way to get started is to use one of the NPM selenium standalone pac
 ```
 selenium-standalone start
 ```
+
+## Skip
+This feature allows you to ignore the specified suite or test in any browser with additional comment.
+You can do it by using global `hermione.skip` helper. It supports the following methods:
+
+ - `.in` — adds matchers for browsers with additional comment
+ - `.notIn` — `.in` method with reverted value;
+
+Each method takes following arguments:
+ - browser {String|RegExp|Array<String|RegExp>} — matcher for browser(s) to skip
+ - [comment] {String} — comment for skipped test;
+
+**Note that matchers will be compared with `browserId` specified in a config file, e.g. `chrome-desktop`.**
+
+For example,
+```js
+describe('some suite', () => {
+
+    hermione.skip.in('chrome', 'some comment');
+    it('test1', () => doSomething());
+
+    it('test2', () => doSomething());
+
+    hermione.skip.in(['chrome', 'firefox', /ie\d*/], 'some comment');
+    it('test3', () => doSomething());
+});
+```
+
+in this case `test1` will be skipped only in `chrome` browser, but will be run in other browsers. `test2` will not be ignored. So skip will be applied only to the nearest test. If you need to skip all tests within a suite you can apply `skip` helper to a `describe` - all tests within this suite will be skipped with the same comment.
+```js
+hermione.skip.in('chrome', 'skip comment');
+describe('some suite', () => {
+    it(...);
+    it(...);
+});
+```
+
+Also you can use `.notIn` method to invert matching. For example,
+```js
+// ...
+hermione.skip.notIn('chrome', 'some comment');
+it('test1', () => doSomething());
+// ...
+```
+
+in this case test will be skipped in all browsers except `chrome`.
+
+Methods `in` and `notIn` are chainable. So you can skip test in several browsers with different comments. For example,
+```js
+// ...
+hermione.skip
+    .in('chrome', 'some comment')
+    .notIn('ie9', 'another comment');
+it('test1', () => doSomething());
+// ...
+```
+
+If you need to skip test in all browsers without a comment you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
 
 ## Quick start
 First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
@@ -125,7 +184,7 @@ hermione
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default `.hermione.conf.js` is used but a path to the configuration file can be specified using `--conf` option.
 
-There are only two requried fields: `specs` and `browsers`.
+There are only two required fields: `specs` and `browsers`.
 ```javascript
 module.exports = {
     specs: [
@@ -188,7 +247,7 @@ Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 Base service-under-test url. Default value is `http://localhost`.
 
 ### timeout
-Timeeout for text execution. Default value is `60000` ms.
+Timeout for text execution. Default value is `60000` ms.
 
 ### waitTimeout
 Timeout for web page events. Default value is `10000` ms.
@@ -221,13 +280,13 @@ If a plugin name starts with `hermione-`, then the prefix can be ommited in the 
 For example.
 ```js
 // .hermione.conf.js
-...
+// ...
 plugins: {
     'my-cool-plugin': {
         param: 'value'
     }
 }
-...
+// ...
 
 // hermione-my-cool-plugin/index.js
 module.exports = function(hermione, opts) {
@@ -246,14 +305,14 @@ module.exports = function(hermione, opts) {
 Property name             | Description
 ------------------------- | -------------
 `config`                  | Config which is used in test runner. Can be mutated.
-`events`                  | Events list for subscribtion
+`events`                  | Events list for subscription
 
 **Available events**
 
 Event                     | Description
 ------------------------- | -------------
-`RUNNER_START`            | Will be triggered before tests execution. If hanlder return a promise, tests will be executed only after promise is resolved.
-`RUNNER_END`              | Will be triggered after tests execution. If hanlder return a promise, tests will be executed only after promise is resolved.
+`RUNNER_START`            | Will be triggered before tests execution. If handler return a promise, tests will be executed only after promise is resolved.
+`RUNNER_END`              | Will be triggered after tests execution. If handler return a promise, tests will be executed only after promise is resolved.
 `SUITE_BEGIN`             | Test suite is about to execute
 `SUITE_END`               | Test suite execution is finished
 `TEST_BEGIN`              | Test is about to execute
@@ -265,7 +324,7 @@ Event                     | Description
 `ERROR`                   | Generic (no tests) errors. For instance, a browser cannot be loaded
 `INFO`                    | Reserved
 `WARNING`                 | Reserved
-`EXIT`                    | Will be triggered when SIGTERM is recieved (for example, Ctrl + C). Handler can return a promise.
+`EXIT`                    | Will be triggered when SIGTERM is received (for example, Ctrl + C). Handler can return a promise.
 
 ### mochaOpts
 Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options.
@@ -301,7 +360,7 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
     --wait-timeout <ms>        Timeout for web page events [10000]
     --screenshot-path <path>   Path for saving screenshots []
     --debug <boolean>          Turn webdriver debug mode on [false]
-    --grep <grep>              Filter tests matching string or regexp 
+    --grep <grep>              Filter tests matching string or regexp
     -r, --reporter <reporter>  Reporter [flat]
     -b, --browser <browser>    Run test in a specific browser
 ```

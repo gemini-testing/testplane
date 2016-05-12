@@ -3,6 +3,8 @@
 var BrowserAgent = require('../../../../lib/browser-agent'),
     logger = require('../../../../lib/utils').logger,
     ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter'),
+    SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder'),
+    Skip = require('../../../../lib/runner/mocha-runner/skip/'),
     proxyquire = require('proxyquire').noCallThru(),
     inherit = require('inherit'),
     _ = require('lodash'),
@@ -21,6 +23,7 @@ var MochaStub = inherit({
 describe('mocha-runner/mocha-adapter', function() {
     var sandbox = sinon.sandbox.create(),
         MochaAdapter,
+        browserAgent,
         clearRequire;
 
     function mkSuiteStub_() {
@@ -35,8 +38,11 @@ describe('mocha-runner/mocha-adapter', function() {
         return suite;
     }
 
+    const mkMochaAdapter_ = () => new MochaAdapter({}, browserAgent);
+
     beforeEach(function() {
         clearRequire = sandbox.stub().named('clear-require');
+        browserAgent = sinon.createStubInstance(BrowserAgent);
 
         sandbox.stub(MochaStub.prototype);
         MochaStub.prototype.run.yields();
@@ -111,19 +117,36 @@ describe('mocha-runner/mocha-adapter', function() {
 
             assert.deepEqual(mocha.files, []);
         });
+
+        it('should add global "hermione" object on "pre-require" event', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter.addFile('path/to/file');
+            MochaStub.prototype.suite.emit('pre-require');
+
+            assert.isDefined(global.hermione);
+        });
+
+        it('hermione.skip should return SkipBuilder instance', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter.addFile('path/to/file');
+            MochaStub.prototype.suite.emit('pre-require');
+
+            assert.instanceOf(global.hermione.skip, SkipBuilder);
+        });
+
+        it('should remove global "hermione" object on "post-require" event', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter.addFile('path/to/file');
+            MochaStub.prototype.suite.emit('post-require');
+
+            assert.isUndefined(global.hermione);
+        });
     });
 
     describe('attach browser', function() {
-        var browserAgent;
-
-        beforeEach(function() {
-            browserAgent = sinon.createStubInstance(BrowserAgent);
-        });
-
-        function mkMochaAdapter_() {
-            return new MochaAdapter({}, browserAgent);
-        }
-
         it('should request browser before suite execution', function() {
             MochaStub.prototype.suite.beforeAll.yields();
             browserAgent.getBrowser.returns(q());
@@ -186,12 +209,10 @@ describe('mocha-runner/mocha-adapter', function() {
     });
 
     describe('attachTestFilter', function() {
-        var browserAgent,
-            mochaAdapter;
+        let mochaAdapter;
 
         beforeEach(function() {
-            browserAgent = sinon.createStubInstance(BrowserAgent);
-            mochaAdapter = new MochaAdapter({}, browserAgent);
+            mochaAdapter = mkMochaAdapter_();
         });
 
         function mkTestStub_(opts) {
@@ -239,16 +260,46 @@ describe('mocha-runner/mocha-adapter', function() {
             MochaStub.prototype.suite.emit('test', test2);
             assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
         });
+
+        describe('handle skip entity', () => {
+            beforeEach(() => {
+                sandbox.stub(Skip.prototype, 'handleEntity');
+            });
+
+            it('should apply skip to test', () => {
+                const test = mkTestStub_();
+                const shouldRun = () => true;
+
+                MochaStub.prototype.suite.tests = [test];
+
+                mochaAdapter.attachTestFilter(shouldRun);
+
+                MochaStub.prototype.suite.emit('test', test);
+
+                assert.called(Skip.prototype.handleEntity);
+                assert.calledWith(Skip.prototype.handleEntity, test);
+            });
+
+            it('should apply skip to suite', () => {
+                const suite = MochaStub.prototype.suite;
+                const shouldRun = () => true;
+
+                mochaAdapter.attachTestFilter(shouldRun);
+
+                suite.emit('suite', suite);
+
+                assert.called(Skip.prototype.handleEntity);
+                assert.calledWith(Skip.prototype.handleEntity, suite);
+            });
+        });
     });
 
     describe('attachEmitFn', function() {
-        var browserAgent,
-            mochaAdapter;
+        let mochaAdapter;
 
         beforeEach(function() {
             sandbox.stub(ProxyReporter.prototype, '__constructor');
-            browserAgent = sinon.createStubInstance(BrowserAgent);
-            mochaAdapter = new MochaAdapter({}, browserAgent);
+            mochaAdapter = mkMochaAdapter_();
         });
 
         function attachEmitFn_(emitFn) {
