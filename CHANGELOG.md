@@ -1,3 +1,8 @@
+## 0.7.0 - 2016-05-12
+
+* Added [skip API](https://github.com/gemini-testing/hermione/blob/v0.7.0/README.md#skip)
+* Dropped supporting of node < 4.x
+
 ## 0.6.3 - 2016-05-04
 
 * Update webdriver.io version to v4.0.4
