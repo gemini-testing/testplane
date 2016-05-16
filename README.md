@@ -250,7 +250,7 @@ Base service-under-test url. Default value is `http://localhost`.
 Timeout for text execution. Default value is `60000` ms.
 
 ### waitTimeout
-Timeout for web page events. Default value is `10000` ms.
+Timeout for web page events. Default value is `1000` ms.
 
 ### slow
 If test execution time is greater than this value, then test is slow. Default value is `10000`.
