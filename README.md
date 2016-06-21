@@ -92,22 +92,21 @@ Each method takes following arguments:
 
 For example,
 ```js
-describe('some suite', () => {
+describe('feature', () => {
+    hermione.skip.in('chrome', "It shouldn't work this way in Chrome");
+    it('should work this way', () => runTestThisWay());
 
-    hermione.skip.in('chrome', 'some comment');
-    it('test1', () => doSomething());
+    it('should work that way', () => runTestThatWay());
 
-    it('test2', () => doSomething());
-
-    hermione.skip.in(['chrome', 'firefox', /ie\d*/], 'some comment');
-    it('test3', () => doSomething());
+    hermione.skip.in(['chrome', 'firefox', /ie\d*/], 'Unstable test, see ticket TEST-487');
+    it('should done some tricky things', () => runTrickyTest());
 });
 ```
 
-in this case `test1` will be skipped only in `chrome` browser, but will be run in other browsers. `test2` will not be ignored. So skip will be applied only to the nearest test. If you need to skip all tests within a suite you can apply `skip` helper to a `describe` - all tests within this suite will be skipped with the same comment.
+in this case behaviour `it should work this way` will be skipped only in `chrome` browser, but will be run in other browsers. `It should work that way` will not be ignored. So skip will be applied only to the nearest test. If you need to skip all tests within a suite you can apply `skip` helper to a `describe` - all tests within this suite will be skipped with the same comment.
 ```js
 hermione.skip.in('chrome', 'skip comment');
-describe('some suite', () => {
+describe('some feature', () => {
     it(...);
     it(...);
 });
@@ -117,7 +116,7 @@ Also you can use `.notIn` method to invert matching. For example,
 ```js
 // ...
 hermione.skip.notIn('chrome', 'some comment');
-it('test1', () => doSomething());
+it('should work this way', () => doSomething());
 // ...
 ```
 
@@ -224,7 +223,7 @@ specs: [
 Browser section has the following format
 ```javascript
 browsers: {
-    <browser_id> {
+    <browser_id>: {
         <option>:<value>
         <option>:<value>
     }
