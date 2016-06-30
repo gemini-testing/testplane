@@ -1,3 +1,8 @@
+## 0.8.0 - 2016-06-30
+
+* Update webdriver.io to 4.1.0
+* Decrease default waitTimeout value to 1000 ms
+
 ## 0.7.0 - 2016-05-12
 
 * Added [skip API](https://github.com/gemini-testing/hermione/blob/v0.7.0/README.md#skip)
