@@ -2,7 +2,8 @@
 
 var path = require('path'),
     ConfigReader = require('../../lib/config-reader'),
-    defaults = require('../../lib/defaults');
+    defaults = require('../../lib/defaults'),
+    logger = require('../../lib/utils').logger;
 
 describe('config-reader', function() {
     var sandbox = sinon.sandbox.create();
@@ -138,6 +139,68 @@ describe('config-reader', function() {
 
             assert.equal(config.browsers.b1.retry, defaults.retry);
             assert.equal(config.browsers.b2.retry, 2);
+        });
+    });
+
+    describe('environment variable `HERMIONE_SKIP_BROWSERS`', function() {
+        beforeEach(function() {
+            sandbox.stub(logger, 'warn');
+
+            process.env.HERMIONE_SKIP_BROWSERS = '';
+        });
+
+        it('should NOT filter config browsers if environment is not specified', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {b1: {}, b2: {}, b3: {}}
+            });
+
+            var config = reader.read();
+
+            assert.deepEqual(Object.keys(config.browsers), ['b1', 'b2', 'b3']);
+        });
+
+        it('should filter config browsers by passed browsers from environment variable', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {b1: {}, b2: {}, b3: {}}
+            });
+
+            process.env.HERMIONE_SKIP_BROWSERS = 'b1,b3';
+
+            var config = reader.read();
+
+            assert.deepEqual(Object.keys(config.browsers), ['b2']);
+        });
+
+        it('should handle spaces in passed browsers from environment variable', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {b1: {}, b2: {}, b3: {}}
+            });
+
+            process.env.HERMIONE_SKIP_BROWSERS = 'b1,       b3';
+
+            var config = reader.read();
+
+            assert.deepEqual(Object.keys(config.browsers), ['b2']);
+        });
+
+        it('should log warning in case of unknown browsers from environment variable', function() {
+            var reader = mkReader_();
+
+            reader.getConfigFromFile.returns({
+                browsers: {b1: {}, b2: {}}
+            });
+
+            process.env.HERMIONE_SKIP_BROWSERS = 'unknown-browser';
+
+            reader.read();
+
+            assert.calledWithMatch(logger.warn, /ids: unknown-browser.+browser/);
         });
     });
 });
