@@ -201,7 +201,7 @@ describe('tests-reader', function() {
 
         return readTests_(params)
             .then(function() {
-                assert.calledWithMatch(logger.warn, /id: unknown-browser.+browser/);
+                assert.calledWithMatch(logger.warn, /ids: unknown-browser.+browser/);
             });
     });
 
@@ -243,7 +243,7 @@ describe('tests-reader', function() {
 
         return readTests_(params)
             .then(function() {
-                assert.calledWithMatch(logger.warn, /id: unknown-browser.+browser/);
+                assert.calledWithMatch(logger.warn, /ids: unknown-browser.+browser/);
             });
     });
 
