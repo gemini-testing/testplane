@@ -34,6 +34,8 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
+- [Environment variables](#environment-variables)
+  - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -370,3 +372,14 @@ hermione --baseUrl http://yandex.ru/search
 ```
 
 **Note.** All CLI options override config values.
+
+## Environment variables
+
+### HERMIONE_SKIP_BROWSERS
+Skip browsers specified in a config by passing of browser ids. Several browser ids should be splitted by commas
+(spaces after commas are allowed).
+
+For example,
+```
+HERMIONE_SKIP_BROWSERS=ie10,ie11 hermione
+```
