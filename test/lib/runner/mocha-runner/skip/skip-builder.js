@@ -3,7 +3,7 @@
 const Skip = require('../../../../../lib/runner/mocha-runner/skip/');
 const SkipBuilder = require('../../../../../lib/runner/mocha-runner/skip/skip-builder');
 
-describe('SkipBuilder1', () => {
+describe('SkipBuilder', () => {
     let skip;
     beforeEach(() => {
         skip = new Skip();
