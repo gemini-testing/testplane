@@ -376,7 +376,7 @@ hermione --baseUrl http://yandex.ru/search
 ## Environment variables
 
 ### HERMIONE_SKIP_BROWSERS
-Skip browsers specified in a config by passing of browser ids. Several browser ids should be splitted by commas
+Skip browsers specified in a config by passing browser ids. Several browser ids should be split by commas
 (spaces after commas are allowed).
 
 For example,
