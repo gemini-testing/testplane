@@ -1,3 +1,7 @@
+## 0.8.1 - 2016-07-04
+
+* Added environment variable [HERMIONE_SKIP_BROWSERS](https://github.com/gemini-testing/hermione/blob/v0.8.1/README.md#hermione_skip_browsers).
+
 ## 0.8.0 - 2016-06-30
 
 * Update webdriver.io to 4.1.0
