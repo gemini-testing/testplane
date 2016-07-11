@@ -21,6 +21,7 @@ describe('Browser', function() {
             waitTimeout: 100,
             debug: true,
             screenshotPath: 'path/to/screenshots',
+            screenshotOnReject: true,
             baseUrl: 'http://base_url'
         };
     }
@@ -58,6 +59,7 @@ describe('Browser', function() {
                         logLevel: 'verbose',
                         coloredLogs: true,
                         screenshotPath: 'path/to/screenshots',
+                        screenshotOnReject: true,
                         baseUrl: 'http://base_url'
                     });
                 });
