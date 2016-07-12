@@ -316,13 +316,14 @@ Event                     | Description
 `RUNNER_END`              | Will be triggered after tests execution. If handler return a promise, tests will be executed only after promise is resolved.
 `SUITE_BEGIN`             | Test suite is about to execute
 `SUITE_END`               | Test suite execution is finished
+`SUITE_FAIL`              | Suite failed. For instance, `before` hook failed or a browser can not be launched (in fact, browsers are launched in `before` hook implicitly in the core of `hermione`)
 `TEST_BEGIN`              | Test is about to execute
 `TEST_END`                | Test execution is finished
 `TEST_PASS`               | Test passed
 `TEST_FAIL`               | Test failed
 `TEST_PENDING`            | Test is skipped
 `RETRY`                   | Test failed but went to retry
-`ERROR`                   | Generic (no tests) errors. For instance, a browser cannot be loaded
+`ERROR`                   | Generic (no tests) errors.
 `INFO`                    | Reserved
 `WARNING`                 | Reserved
 `EXIT`                    | Will be triggered when SIGTERM is received (for example, Ctrl + C). Handler can return a promise.

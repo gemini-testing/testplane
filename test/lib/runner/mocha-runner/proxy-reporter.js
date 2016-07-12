@@ -52,13 +52,12 @@ describe('mocha-runner/proxy-reporter', function() {
         });
     });
 
-    it('should translate `fail` event from before* hook to `failTest`', function() {
+    it('should translate `fail` event from `before each` hook to `failTest`', function() {
         createReporter_();
 
         var hook = {
                 type: 'hook',
                 title: '"before each" hook for "some test"',
-                originalTitle: '"before each" hook',
                 ctx: {
                     currentTest: {
                         title: 'some test'
@@ -73,6 +72,23 @@ describe('mocha-runner/proxy-reporter', function() {
             err: {message: 'foo'},
             hook: hook
         });
+    });
+
+    it('should translate `fail` event from `before all` hook to `failSuite`', () => {
+        createReporter_();
+
+        const hook = {
+            type: 'hook',
+            title: '"before all" hook',
+            parent: {
+                tests: [{title: 'some test'}]
+            },
+            err: {message: 'foo'}
+        };
+
+        runner.emit('fail', hook);
+
+        assert.calledWith(emit, 'failSuite', hook);
     });
 
     it('should translate `fail` event from after* hook to `err`', function() {
