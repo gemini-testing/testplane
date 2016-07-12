@@ -1,3 +1,7 @@
+## 0.9.1 - 2016-07-12
+
+* Passthrough `screenshotOnReject` option to `webdriverio`
+
 ## 0.9.0 - 2016-07-12
 
 * Added event `SUITE_FAIL` which is emitted instead of event `ERROR` when `before all` hook fails.
