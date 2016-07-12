@@ -1,3 +1,7 @@
+## 0.9.0 - 2016-07-12
+
+* Added event `SUITE_FAIL` which is emitted instead of event `ERROR` when `before all` hook fails.
+
 ## 0.8.1 - 2016-07-04
 
 * Added environment variable [HERMIONE_SKIP_BROWSERS](https://github.com/gemini-testing/hermione/blob/v0.8.1/README.md#hermione_skip_browsers).
