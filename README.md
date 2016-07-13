@@ -14,6 +14,8 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [Extensibility](#extensibility)
   - [Retries for failed tests](#retries-for-failed-tests)
   - [Executing a separate test](#executing-a-separate-test)
+  - [Skip tests in specific browsers](#skip-tests-in-specific-browsers)
+  - [Flexible tests configuration](#flexible-tests-configuration)
   - [Auto initialization and closing grid sessions](#auto-initialization-and-closing-grid-sessions)
 - [Prerequisites](#prerequisites)
 - [Skip](#skip)
@@ -43,7 +45,7 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
 `Hermione` provides several features which `WebdriverIO` doesn't and makes testing process easier.
 
 ### Easy to use
-If you know [WebdriverIO](http://webdriver.io/) and [Mocha](https://mochajs.org), you can start writting and running tests in 5 minutes! You need to install `hermione` via npm and add a tiny config in your project. See details in [Quick start](#quick-start) section.
+If you are familiar with [WebdriverIO](http://webdriver.io/) and [Mocha](https://mochajs.org), you can start writing and running tests in 5 minutes! You need to install `hermione` via npm and add a tiny config to your project. See details in [Quick start](#quick-start) section.
 
 ### Parallel test running
 When tests are run one by one, it takes a lot of time. `Hermione` can run tests in parallel sessions in different browsers out of the box.
@@ -53,20 +55,70 @@ When tests are run one by one, it takes a lot of time. `Hermione` can run tests 
 
 With `hermione` it's very simple and straightforward. You can add any number of custom commands in the hermione config and use them as `this.browser.myCustomCommand` in tests.
 
-Moreover, `hermione` provides plugins which work as a some kind of hooks. They allow a developer to prepare environement for tests and react properly to test execution events.
+Moreover, `hermione` provides plugins which work as some kind of a hooks. They allow a developer to prepare environment for tests and react properly to test execution events.
 
 ### Retries for failed tests
 Integration tests use a dynamic environment with a lot of dependencies where any of them can work unstable from time to time. As a result, integration tests become red randomly and make them undetermined. It spoils all testing process.
 
-To prevent incidental fails `hermione` retryies a failed test before marking it as failed. It makes it possible to get rid of a majority of incidental fails. Number of retries can be specified for all browsers or for a separate browser.
+To prevent incidental fails `hermione` retries a failed test before marking it as a failed. It makes it possible to get rid of a majority of incidental fails. Number of retries can be specified for all browsers or for a specific browser.
 
-`Hermione` reruns tests in a new browser session to exclude situations when the browser environment is a cause of this fail.
+:warning: `Hermione` reruns tests in a new browser session to exclude situations when the browser environment is a cause of the fail.
 
 ### Executing a separate test
-Sometimes it is needed to run only specific tests but not all set. `Hermione` makes it possible.
+Sometimes it is needed to run only specific tests but not all tests in a set. `Hermione` makes it possible. You can specify path to the test file
 ```
 hermione tests/func/mytest.js
 ```
+
+or filter describes by using `--grep` option
+
+```
+hermione --grep login
+```
+
+or simply use `mocha` `only()` API in the test
+
+```
+describe.only('user login', () => {...});
+```
+
+### Skip tests in specific browsers
+Sometimes you need to skip test not in all browsers but in a specific one. For example, you don't need to run
+some test in ~~ugly~~ IE browsers. In `hermione` you can do it with [hermione helper](#skip). For example,
+you can skip some tests in the specific browser
+```js
+describe('feature', () => {
+    hermione.skip.in('ie8', 'it can not work in this browser');
+    it('nowaday functionality', () => {...});
+});
+```
+
+or run tests in one of the browsers
+```js
+describe('feature', () => {
+    // will be skipped in all browsers except chrome
+    hermione.skip.notIn('chrome', 'it should work only in Chrome');
+    it('specific functionality', () => {...});
+});
+```
+
+### Flexible tests configuration
+`Hermione` has possibility to configure running some set of tests in specific browsers. For example,
+```js
+specs: [
+    'tests/common', // run common tests in all browsers specified in the config
+    {
+        files: 'tests/desktop',
+        browsers: ['ie8', 'opera']
+    },
+    {
+        files: 'tests/touch',
+        browsers: ['iphone', 'android']
+    }
+]
+```
+See [specs](#specs) for more details.
+
 
 ### Auto initialization and closing grid sessions
 All work with a grid client is incapsulated in hermione. Forget about `client.init` and `client.end` in your tests ;)
@@ -237,7 +289,7 @@ Available browser options:
 
 Option name               | Description
 ------------------------- | -------------
-`desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilites](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
+`desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times test should be rerun. Default value is `0`.
 
