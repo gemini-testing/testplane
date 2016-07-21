@@ -1,13 +1,23 @@
 'use strict';
 
-const logger = require('../../lib/utils').logger;
 const proxyquire = require('proxyquire');
-const glob = sinon.stub();
-const pathUtils = proxyquire('../../lib/path-utils', {
-    'glob': glob
-});
 
 describe('path-utils', () => {
+    let sandbox = sinon.sandbox.create();
+    let glob;
+    let pathUtils;
+
+    beforeEach(() => {
+        glob = sandbox.stub();
+        pathUtils = proxyquire('../../lib/path-utils', {
+            'glob': glob
+        });
+    });
+
+    afterEach(() => {
+        sandbox.restore();
+    });
+
     it('should run tests using a mask', () => {
         pathUtils.expandPaths(['/test']);
         assert.calledWith(glob, '/test');
