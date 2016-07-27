@@ -48,7 +48,7 @@ describe('Runner', function() {
 
             new Runner(config);
 
-            assert.called(BrowserPool.prototype.__constructor, config);
+            assert.calledWith(BrowserPool.prototype.__constructor, config);
         });
 
         it('should create retryManager with passed config', function() {

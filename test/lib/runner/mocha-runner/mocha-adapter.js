@@ -320,7 +320,8 @@ describe('mocha-runner/mocha-adapter', function() {
 
             attachEmitFn_(emitFn);
 
-            assert.calledOnce(ProxyReporter.prototype.__constructor, emitFn);
+            assert.calledOnce(ProxyReporter.prototype.__constructor);
+            assert.calledWith(ProxyReporter.prototype.__constructor, emitFn);
         });
 
         it('should pass to proxy reporter getter for requested browser', function() {
