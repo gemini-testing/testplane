@@ -100,19 +100,19 @@ describe('Flat reporter', function() {
     it('should print info', function() {
         emit(RunnerEvents.INFO, 'foo');
 
-        assert.called(logger.log, 'foo');
+        assert.calledWith(logger.log, 'foo');
     });
 
     it('should print warning', function() {
         emit(RunnerEvents.WARNING, 'foo');
 
-        assert.called(logger.warn, 'foo');
+        assert.calledWith(logger.warn, 'foo');
     });
 
     it('should print error', function() {
         emit(RunnerEvents.ERROR, 'foo');
 
-        assert.called(logger.error, 'foo');
+        assert.calledWith(logger.error, chalk.red('foo'));
     });
 
     describe('rendering', () => {
