@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const q = require('q');
 const webdriverio = require('webdriverio');
 const Browser = require('../../lib/browser');
@@ -10,8 +11,8 @@ describe('Browser', () => {
     const sandbox = sinon.sandbox.create();
     let session;
 
-    function createBrowserConfig_() {
-        return {
+    function createBrowserConfig_(opts) {
+        return _.defaults(opts || {}, {
             grid: 'http://test_host:4444/wd/hub',
             browsers: {
                 browser: {
@@ -23,18 +24,23 @@ describe('Browser', () => {
             screenshotPath: 'path/to/screenshots',
             screenshotOnReject: true,
             baseUrl: 'http://base_url'
-        };
+        });
     }
 
     function makeSessionStub_() {
         const session = q();
         session.init = sandbox.stub().named('init').returns(session);
         session.end = sandbox.stub().named('end').returns(q());
+        session.url = sandbox.stub().named('url').returns(session);
+
+        session.addCommand = () => {};
+        sandbox.stub(session, 'addCommand', (name, command) => session[name] = command);
+
         return session;
     }
 
-    function mkBrowser_() {
-        return new Browser(createBrowserConfig_(), 'browser');
+    function mkBrowser_(opts) {
+        return new Browser(createBrowserConfig_(opts), 'browser');
     }
 
     beforeEach(() => {
@@ -71,9 +77,76 @@ describe('Browser', () => {
         });
 
         it('should resolve promise with browser', () => {
-            var browser = mkBrowser_();
+            const browser = mkBrowser_();
 
             return assert.eventually.equal(browser.init(), browser);
+        });
+
+        it('should add meta-info access commands', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => {
+                    assert.calledWith(session.addCommand, 'setMeta');
+                    assert.calledWith(session.addCommand, 'getMeta');
+
+                    session.setMeta('foo', 'bar');
+
+                    assert.equal(session.getMeta('foo'), 'bar');
+                    assert.deepEqual(browser.meta, {foo: 'bar'});
+                });
+        });
+
+        describe('session.url decorator', () => {
+            it('should force rewrite base `url` method', () => {
+                return mkBrowser_()
+                    .init()
+                    .then(() => assert.calledWith(session.addCommand, 'url', sinon.match.func, true));
+            });
+
+            it('should call base `url` method', () => {
+                const baseUrlFn = session.url;
+
+                return mkBrowser_()
+                    .init()
+                    .then(() => {
+                        session.url('/foo/bar?baz=qux');
+
+                        assert.calledWith(baseUrlFn, '/foo/bar?baz=qux');
+                        assert.calledOn(baseUrlFn, session);
+                    });
+            });
+
+            it('should add last url to meta-info', () => {
+                return mkBrowser_()
+                    .init()
+                    .then((browser) => {
+                        session
+                            .url('/some/url')
+                            .url('/foo/bar?baz=qux');
+
+                        assert.equal(browser.meta.url, '/foo/bar?baz=qux');
+                    });
+            });
+
+            it('should not save any url if `url` called as getter', () => {
+                return mkBrowser_()
+                    .init()
+                    .then((browser) => {
+                        session.url();
+
+                        assert.notProperty(browser.meta, 'url');
+                    });
+            });
+
+            it('should save all url path including the part from baseUrl', () => {
+                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
+                    .init()
+                    .then((browser) => {
+                        session.url('/foo/bar?baz=qux');
+
+                        assert.equal(browser.meta.url, '/root/foo/bar?baz=qux');
+                    });
+            });
         });
     });
 
@@ -105,7 +178,7 @@ describe('Browser', () => {
                 sessionID: 'foo'
             };
 
-            var browser = mkBrowser_();
+            const browser = mkBrowser_();
 
             return browser.init()
                 .then(() => assert.equal(browser.sessionId, 'foo'));
