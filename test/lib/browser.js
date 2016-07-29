@@ -1,14 +1,14 @@
 'use strict';
 
-var q = require('q'),
-    webdriverio = require('webdriverio'),
-    Browser = require('../../lib/browser'),
-    logger = require('../../lib/utils').logger,
-    signalHandler = require('../../lib/signal-handler');
+const q = require('q');
+const webdriverio = require('webdriverio');
+const Browser = require('../../lib/browser');
+const logger = require('../../lib/utils').logger;
+const signalHandler = require('../../lib/signal-handler');
 
-describe('Browser', function() {
-    var sandbox = sinon.sandbox.create(),
-        session;
+describe('Browser', () => {
+    const sandbox = sinon.sandbox.create();
+    let session;
 
     function createBrowserConfig_() {
         return {
@@ -26,116 +26,100 @@ describe('Browser', function() {
         };
     }
 
-    function makeSessionStub() {
-        var session = q();
+    function makeSessionStub_() {
+        const session = q();
         session.init = sandbox.stub().named('init').returns(session);
         session.end = sandbox.stub().named('end').returns(q());
         return session;
     }
 
-    beforeEach(function() {
-        session = makeSessionStub();
+    function mkBrowser_() {
+        return new Browser(createBrowserConfig_(), 'browser');
+    }
+
+    beforeEach(() => {
+        session = makeSessionStub_();
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);
         webdriverio.remote.returns(session);
     });
 
-    afterEach(function() {
-        sandbox.restore();
-    });
+    afterEach(() => sandbox.restore());
 
-    describe('init', function() {
-        it('should create webdriver.io session with properties from config', function() {
-            var config = createBrowserConfig_();
-
-            return new Browser(config, 'browser').init()
-                .then(function() {
-                    assert.calledWith(webdriverio.remote, {
-                        host: 'test_host',
-                        port: '4444',
-                        path: '/wd/hub',
-                        desiredCapabilities: {browserName: 'browser'},
-                        waitforTimeout: 100,
-                        logLevel: 'verbose',
-                        coloredLogs: true,
-                        screenshotPath: 'path/to/screenshots',
-                        screenshotOnReject: true,
-                        baseUrl: 'http://base_url'
-                    });
-                });
-        });
-
-        it('should initialize webdriver.io session', function() {
-            return new Browser(createBrowserConfig_(), 'browser')
+    describe('init', () => {
+        it('should create webdriver.io session with properties from config', () => {
+            return mkBrowser_()
                 .init()
-                .then(function() {
-                    assert.called(session.init);
-                });
+                .then(() => assert.calledWith(webdriverio.remote, {
+                    host: 'test_host',
+                    port: '4444',
+                    path: '/wd/hub',
+                    desiredCapabilities: {browserName: 'browser'},
+                    waitforTimeout: 100,
+                    logLevel: 'verbose',
+                    coloredLogs: true,
+                    screenshotPath: 'path/to/screenshots',
+                    screenshotOnReject: true,
+                    baseUrl: 'http://base_url'
+                }));
         });
 
-        it('should resolve promise with browser', function() {
-            var browser = new Browser(createBrowserConfig_(), 'browser');
+        it('should initialize webdriver.io session', () => {
+            return mkBrowser_()
+                .init()
+                .then(() => assert.called(session.init));
+        });
+
+        it('should resolve promise with browser', () => {
+            var browser = mkBrowser_();
 
             return assert.eventually.equal(browser.init(), browser);
         });
     });
 
-    describe('quit', function() {
-        it('should finalize webdriver.io session', function() {
-            return new Browser(createBrowserConfig_(), 'browser')
+    describe('quit', () => {
+        it('should finalize webdriver.io session', () => {
+            return mkBrowser_()
                 .init()
-                .then(function(browser) {
-                    return browser.quit();
-                })
-                .then(function() {
-                    assert.called(session.end);
-                });
+                .then((browser) => browser.quit())
+                .then(() => assert.called(session.end));
         });
 
-        it('should finalize session on global exit event', function() {
-            new Browser(createBrowserConfig_(), 'browser')
-                .init();
+        it('should finalize session on global exit event', () => {
+            mkBrowser_().init();
 
             return signalHandler.emitAndWait('exit')
-                .then(function() {
-                    assert.called(session.end);
-                });
+                .then(() => assert.called(session.end));
         });
 
-        it('should not finalize session if it has not been initialized', function() {
-            return new Browser(createBrowserConfig_(), 'browser').quit()
-                .then(function() {
-                    assert.notCalled(session.end);
-                });
+        it('should not finalize session if it has not been initialized', () => {
+            return mkBrowser_()
+                .quit()
+                .then(() => assert.notCalled(session.end));
         });
     });
 
-    describe('sessionId', function() {
-        it('should return session id of initialized webdriver session', function() {
+    describe('sessionId', () => {
+        it('should return session id of initialized webdriver session', () => {
             session.requestHandler = {
                 sessionID: 'foo'
             };
 
-            var browser = new Browser(createBrowserConfig_(), 'browser');
+            var browser = mkBrowser_();
 
             return browser.init()
-                .then(function() {
-                    assert.equal(browser.sessionId, 'foo');
-                });
+                .then(() => assert.equal(browser.sessionId, 'foo'));
         });
     });
 
-    describe('error handling', function() {
-        it('should warn in case of failed end', function() {
+    describe('error handling', () => {
+        it('should warn in case of failed end', () => {
             session.end.returns(q.reject(new Error('failed end')));
-            return new Browser(createBrowserConfig_(), 'browser')
+
+            return mkBrowser_()
                 .init()
-                .then(function(browser) {
-                    return browser.quit();
-                })
-                .then(function() {
-                    assert.called(logger.warn);
-                });
+                .then((browser) => browser.quit())
+                .then(() => assert.called(logger.warn));
         });
     });
 });
