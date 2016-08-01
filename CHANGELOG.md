@@ -1,3 +1,8 @@
+## 0.10.0 - 2016-08-01
+
+* Added test metainfo access methods to webdriverio
+* Save latest url opened by webdriverio in metainfo
+
 ## 0.9.1 - 2016-07-12
 
 * Passthrough `screenshotOnReject` option to `webdriverio`
