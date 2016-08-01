@@ -287,6 +287,9 @@ specs: [
     },
     'tests/deskpad',           // the alias for the previous case
     {
+        files: 'tests/desktop/*.hermione.js' // run tests matched with a mask
+    },
+    {
         files: 'tests/touch',  // run tests associated with this path in a browser with id `browser`
         browsers: ['browser']  // which is configured in option `browsers`
     }
