@@ -188,6 +188,28 @@ it('test1', () => doSomething());
 
 If you need to skip test in all browsers without a comment you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
 
+## Sharable meta info
+On initialization hermione adds two commands to the webdriverio instance:
+* setMeta(key, value)
+* getMeta(key)
+
+These methods allow to store some information between webdriver calls so it can be used in custom commands for example. This meta information will be shown in [allure report](https://github.com/gemini-testing/hermione-allure-reporter).
+
+**Note**: hermione saves in meta info last url (without origin) opened in browser.
+
+Example:
+```js
+it('test1', () => {
+    return this.browser
+        .setMeta('foo', 'bar')
+        .url('/foo/bar?baz=qux')
+        .getMeta('foo')
+        .then((val) => console.log(val)) // prints 'bar'
+        .getMeta('url')
+        .then((url) => console.log(url)); // prints '/foo/bar?baz=qux'
+});
+```
+
 ## Quick start
 First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
 

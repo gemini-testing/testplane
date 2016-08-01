@@ -1,6 +1,7 @@
 'use strict';
 
-var EventEmitter = require('events').EventEmitter,
+var _ = require('lodash'),
+    EventEmitter = require('events').EventEmitter,
     ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 
 describe('mocha-runner/proxy-reporter', function() {
@@ -8,11 +9,13 @@ describe('mocha-runner/proxy-reporter', function() {
         runner,
         emit;
 
-    function createReporter_(browserId, sessionId) {
-        var getBrowser = sinon.stub().returns({
-                sessionId: sessionId || 'default-session-id',
-                id: browserId || 'default-browser'
-            });
+    function createReporter_(browserProps) {
+        browserProps = _.defaults(browserProps || {}, {
+            sessionId: 'default-session-id',
+            id: 'default-browser'
+        });
+
+        var getBrowser = sinon.stub().returns(browserProps);
         return new ProxyReporter(emit, getBrowser, runner);
     }
 
@@ -152,7 +155,7 @@ describe('mocha-runner/proxy-reporter', function() {
     });
 
     it('should add `browserId` and `sessionId` ', function() {
-        createReporter_('browserId', 'mySessionId');
+        createReporter_({id: 'browserId', sessionId: 'mySessionId'});
 
         runner.emit('suite', {foo: 'bar'});
 
@@ -160,5 +163,15 @@ describe('mocha-runner/proxy-reporter', function() {
             browserId: 'browserId',
             sessionId: 'mySessionId'
         });
+    });
+
+    it('should add meta info copy', function() {
+        const meta = {url: '/some/url'};
+        createReporter_({meta});
+
+        runner.emit('pass', {slow: sinon.stub()});
+
+        assert.calledWithMatch(emit, 'passTest', {meta});
+        assert.notStrictEqual(emit.firstCall.args[1].meta, meta);
     });
 });
