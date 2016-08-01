@@ -1,3 +1,7 @@
+## 0.11.0 - 2016-08-01
+
+* Added capability to run tests matched by masks
+
 ## 0.10.0 - 2016-08-01
 
 * Added test metainfo access methods to webdriverio
