@@ -70,12 +70,12 @@ describe('path-utils', () => {
             });
     });
 
-    it('should throw an error if the mask is incorrect', () => {
-        glob.withArgs('incorrect/mask/*.js').throws('Cannot find files by mask incorrect/mask/*.js');
+    it.only('should throw an error if a mask is bad', () => {
+        glob.withArgs('bad/mask/*.js').yields(null, []);
 
-        return pathUtils.expandPaths(['incorrect/mask/*.js'])
-            .catch(() => {
-                assert.threw(glob, 'Cannot find files by mask incorrect/mask/*.js');
+        return pathUtils.expandPaths(['bad/mask/*.js'])
+            .catch((globError) => {
+                assert.equal(globError, 'Cannot find files by mask bad/mask/*.js');
             });
     });
 });
