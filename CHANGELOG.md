@@ -1,3 +1,7 @@
+## 0.11.1 - 2016-08-05
+
+* Switch to the stable webdriverio version (screenshots will not be saved on reject now)
+
 ## 0.11.0 - 2016-08-01
 
 * Added capability to run tests matched by masks
