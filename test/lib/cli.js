@@ -1,4 +1,6 @@
 'use strict';
+const pathUtils = require('../../lib/path-utils');
+const q = require('q');
 
 var cli = require('../../lib/cli'),
     logger = require('../../lib/utils').logger,
@@ -10,6 +12,7 @@ describe('exit codes', function() {
     var sandbox = sinon.sandbox.create();
 
     beforeEach(function() {
+        sandbox.stub(pathUtils, 'expandPaths').returns(q([]));
         sandbox.stub(logger);
         sandbox.stub(process, 'exit');
         sandbox.stub(ConfigReader.prototype, 'read');
