@@ -1,3 +1,8 @@
+## 0.11.2 - 2016-08-08
+
+* Fix: throw error on incorrect path to test suites
+* Fix: save whole url in meta info
+
 ## 0.11.1 - 2016-08-05
 
 * Switch to the stable webdriverio version (screenshots will not be saved on reject now)
