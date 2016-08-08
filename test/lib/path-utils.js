@@ -69,4 +69,13 @@ describe('path-utils', () => {
                 assert.deepEqual(absolutePaths, ['/absolute/some/path/file.js']);
             });
     });
+
+    it.only('should throw an error if a mask is bad', () => {
+        glob.withArgs('bad/mask/*.js').yields(null, []);
+
+        return pathUtils.expandPaths(['bad/mask/*.js'])
+            .catch((globError) => {
+                assert.equal(globError, 'Cannot find files by mask bad/mask/*.js');
+            });
+    });
 });
