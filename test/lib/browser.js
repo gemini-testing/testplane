@@ -117,14 +117,14 @@ describe('Browser', () => {
             });
 
             it('should add last url to meta-info', () => {
-                return mkBrowser_()
+                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
                     .init()
                     .then((browser) => {
                         session
                             .url('/some/url')
                             .url('/foo/bar?baz=qux');
 
-                        assert.equal(browser.meta.url, '/foo/bar?baz=qux');
+                        assert.equal(browser.meta.url, 'http://some.domain.org/root/foo/bar?baz=qux');
                     });
             });
 
@@ -135,16 +135,6 @@ describe('Browser', () => {
                         session.url();
 
                         assert.notProperty(browser.meta, 'url');
-                    });
-            });
-
-            it('should save all url path including the part from baseUrl', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
-                    .init()
-                    .then((browser) => {
-                        session.url('/foo/bar?baz=qux');
-
-                        assert.equal(browser.meta.url, '/root/foo/bar?baz=qux');
                     });
             });
         });
