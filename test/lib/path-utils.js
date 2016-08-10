@@ -70,7 +70,7 @@ describe('path-utils', () => {
             });
     });
 
-    it.only('should throw an error if a mask is bad', () => {
+    it('should throw an error if a mask is bad', () => {
         glob.withArgs('bad/mask/*.js').yields(null, []);
 
         return pathUtils.expandPaths(['bad/mask/*.js'])
