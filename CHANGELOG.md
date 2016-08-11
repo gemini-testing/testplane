@@ -1,3 +1,7 @@
+## 0.11.4 - 2016-08-11
+
+* Switch to webdriverio@4.2.4
+
 ## 0.11.3 - 2016-08-11
 
 * Switch to webdriverio master with `screenshotOnReject` option
