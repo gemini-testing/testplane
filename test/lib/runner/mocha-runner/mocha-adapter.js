@@ -38,6 +38,13 @@ describe('mocha-runner/mocha-adapter', function() {
         return suite;
     }
 
+    function mkTestStub_(opts) {
+        return _.defaults(opts || {}, {
+            title: 'default-title',
+            parent: MochaStub.prototype.suite
+        });
+    }
+
     const mkMochaAdapter_ = () => new MochaAdapter({}, browserAgent);
 
     beforeEach(function() {
@@ -146,7 +153,7 @@ describe('mocha-runner/mocha-adapter', function() {
         });
     });
 
-    describe('attach browser', function() {
+    describe('inject browser', function() {
         it('should request browser before suite execution', function() {
             MochaStub.prototype.suite.beforeAll.yields();
             browserAgent.getBrowser.returns(q());
@@ -208,19 +215,39 @@ describe('mocha-runner/mocha-adapter', function() {
         });
     });
 
+    describe('inject skip', () => {
+        beforeEach(() => {
+            sandbox.stub(Skip.prototype, 'handleEntity');
+        });
+
+        it('should apply skip to test', () => {
+            const test = mkTestStub_();
+            MochaStub.prototype.suite.tests = [test];
+
+            mkMochaAdapter_();
+            MochaStub.prototype.suite.emit('test', test);
+
+            assert.called(Skip.prototype.handleEntity);
+            assert.calledWith(Skip.prototype.handleEntity, test);
+        });
+
+        it('should apply skip to suite', () => {
+            const suite = MochaStub.prototype.suite;
+
+            mkMochaAdapter_();
+            suite.emit('suite', suite);
+
+            assert.called(Skip.prototype.handleEntity);
+            assert.calledWith(Skip.prototype.handleEntity, suite);
+        });
+    });
+
     describe('attachTestFilter', function() {
         let mochaAdapter;
 
         beforeEach(function() {
             mochaAdapter = mkMochaAdapter_();
         });
-
-        function mkTestStub_(opts) {
-            return _.defaults(opts || {}, {
-                title: 'default-title',
-                parent: MochaStub.prototype.suite
-            });
-        }
 
         it('should check if test should be run', function() {
             var someTest = mkTestStub_(),
@@ -259,38 +286,6 @@ describe('mocha-runner/mocha-adapter', function() {
 
             MochaStub.prototype.suite.emit('test', test2);
             assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
-        });
-
-        describe('handle skip entity', () => {
-            beforeEach(() => {
-                sandbox.stub(Skip.prototype, 'handleEntity');
-            });
-
-            it('should apply skip to test', () => {
-                const test = mkTestStub_();
-                const shouldRun = () => true;
-
-                MochaStub.prototype.suite.tests = [test];
-
-                mochaAdapter.attachTestFilter(shouldRun);
-
-                MochaStub.prototype.suite.emit('test', test);
-
-                assert.called(Skip.prototype.handleEntity);
-                assert.calledWith(Skip.prototype.handleEntity, test);
-            });
-
-            it('should apply skip to suite', () => {
-                const suite = MochaStub.prototype.suite;
-                const shouldRun = () => true;
-
-                mochaAdapter.attachTestFilter(shouldRun);
-
-                suite.emit('suite', suite);
-
-                assert.called(Skip.prototype.handleEntity);
-                assert.calledWith(Skip.prototype.handleEntity, suite);
-            });
         });
     });
 
