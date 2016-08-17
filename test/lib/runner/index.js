@@ -251,7 +251,7 @@ describe('Runner', function() {
                     });
             });
 
-            it('shold be emitted even if RUNNER_START handler failed', function() {
+            it('should be emitted even if RUNNER_START handler failed', function() {
                 var onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject()),
                     onRunnerEnd = sinon.spy().named('onRunnerEnd'),
                     runner = new Runner(makeConfigStub());
@@ -265,7 +265,7 @@ describe('Runner', function() {
                     });
             });
 
-            it('shold be emitted even if some mocha runner failed', function() {
+            it('should be emitted even if some mocha runner failed', function() {
                 var onRunnerEnd = sinon.spy().named('onRunnerEnd'),
                     runner = new Runner(makeConfigStub());
 
