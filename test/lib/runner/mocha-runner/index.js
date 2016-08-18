@@ -1,104 +1,98 @@
 'use strict';
 
-var BrowserAgent = require('../../../../lib/browser-agent'),
-    MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter'),
-    MochaRunner = require('../../../../lib/runner/mocha-runner'),
-    q = require('q');
+const BrowserAgent = require('../../../../lib/browser-agent');
+const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
+const MochaRunner = require('../../../../lib/runner/mocha-runner');
+const q = require('q');
 
-describe('mocha-runner', function() {
-    var sandbox = sinon.sandbox.create();
+describe('mocha-runner', () => {
+    const sandbox = sinon.sandbox.create();
 
-    function run_(suites, filterFn) {
+    const run_ = (suites, filterFn) => {
         return new MochaRunner(
             {mochaOpts: {}},
             sinon.createStubInstance(BrowserAgent)
         ).run(suites || ['test_suite'], filterFn);
-    }
+    };
 
-    beforeEach(function() {
-        sandbox.stub(MochaAdapter.prototype);
-        MochaAdapter.prototype.addFile.returnsThis();
-        MochaAdapter.prototype.attachTestFilter.returnsThis();
-        MochaAdapter.prototype.attachEmitFn.returnsThis();
+    // We can't call constructor because it creates mocha instance inside
+    const mkMochaAdapterStub_ = () => Object.create(MochaAdapter.prototype);
+
+    beforeEach(() => {
+        sandbox.stub(MochaAdapter, 'create', () => mkMochaAdapterStub_());
+
+        sandbox.stub(MochaAdapter.prototype, 'addFile').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'attachEmitFn').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'run').returns(q());
     });
 
-    afterEach(function() {
-        sandbox.restore();
-    });
+    afterEach(() => sandbox.restore());
 
-    describe('run', function() {
-        it('should create mocha instance for each file', function() {
+    describe('run', () => {
+        it('should create mocha instance for each file', () => {
             return run_(['path/to/file', 'path/to/other/file'])
-                .then(function() {
-                    assert.calledTwice(MochaAdapter.prototype.__constructor);
+                .then(() => {
+                    assert.calledTwice(MochaAdapter.prototype.addFile);
                     assert.calledWith(MochaAdapter.prototype.addFile, 'path/to/file');
                     assert.calledWith(MochaAdapter.prototype.addFile, 'path/to/other/file');
 
-                    var mochaInstances = MochaAdapter.prototype.addFile.thisValues;
-                    assert.notEqual(mochaInstances[0], mochaInstances[1]);
+                    const mochaInstances = MochaAdapter.prototype.addFile.thisValues;
+                    assert.notStrictEqual(mochaInstances[0], mochaInstances[1]);
                 });
         });
 
-        it('should share single opts object between all mocha instances', function() {
+        it('should share single opts object between all mocha instances', () => {
             return run_(['path/to/file', 'path/to/other/file'])
-                .then(function() {
-                    assert.equal(
-                        MochaAdapter.prototype.__constructor.firstCall.args[0],
-                        MochaAdapter.prototype.__constructor.secondCall.args[0]
-                    );
-                });
+                .then(() => assert.equal(
+                    MochaAdapter.create.firstCall.args[0],
+                    MochaAdapter.create.secondCall.args[0]
+                ));
         });
 
-        it('should run all mocha instances', function() {
+        it('should run all mocha instances', () => {
             return run_(['some/file', 'other/file'])
-                .then(function() {
-                    assert.calledTwice(MochaAdapter.prototype.run);
-                });
+                .then(() => assert.calledTwice(MochaAdapter.prototype.run));
         });
 
-        it('should add filter function for tests before file adding', function() {
+        it('should add filter function for tests before file adding', () => {
             return run_()
-                .then(function() {
-                    assert.callOrder(
-                        MochaAdapter.prototype.attachTestFilter,
-                        MochaAdapter.prototype.addFile
-                    );
-                });
+                .then(() => assert.callOrder(
+                    MochaAdapter.prototype.attachTestFilter,
+                    MochaAdapter.prototype.addFile
+                ));
         });
 
-        it('should create all mocha instances before run any of them', function() {
-            MochaAdapter.prototype.__constructor.restore();
+        it('should create all mocha instances before run any of them', () => {
+            MochaAdapter.create.restore();
             MochaAdapter.prototype.run.restore();
 
-            var order = [];
-            sandbox.stub(MochaAdapter.prototype, '__constructor', function() {
-                order.push('constructor');
+            const order = [];
+            sandbox.stub(MochaAdapter, 'create', () => {
+                order.push('create');
+                return mkMochaAdapterStub_();
             });
-            sandbox.stub(MochaAdapter.prototype, 'run', function() {
-                order.push('run');
-            });
+            sandbox.stub(MochaAdapter.prototype, 'run', () => order.push('run'));
 
             return run_(['some/file', 'other/file'])
-                .then(function() {
-                    assert.deepEqual(order, ['constructor', 'constructor', 'run', 'run']);
-                });
+                .then(() => assert.deepEqual(order, ['create', 'create', 'run', 'run']));
         });
 
-        it('should wait until all mocha instances will finish their work', function() {
-            var firstResolveMarker = sandbox.stub().named('First resolve marker'),
-                secondResolveMarker = sandbox.stub().named('Second resolve marker');
+        it('should wait until all mocha instances will finish their work', () => {
+            const firstResolveMarker = sandbox.stub().named('First resolve marker');
+            const secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
             MochaAdapter.prototype.run.onFirstCall().returns(q().then(firstResolveMarker));
             MochaAdapter.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
 
             return run_(['path/to/suite', 'path/to/another/suite'])
-                .then(function() {
+                .then(() => {
                     assert.called(firstResolveMarker);
                     assert.called(secondResolveMarker);
                 });
         });
 
-        it('should be rejected if one of mocha instances rejected on run', function() {
+        it('should be rejected if one of mocha instances rejected on run', () => {
             MochaAdapter.prototype.run.returns(q.reject('Error'));
 
             return assert.isRejected(run_(), /Error/);
