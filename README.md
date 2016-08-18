@@ -19,6 +19,9 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [Auto initialization and closing grid sessions](#auto-initialization-and-closing-grid-sessions)
 - [Prerequisites](#prerequisites)
 - [Skip](#skip)
+- [WebdriverIO extensions](#webdriverio-extensions)
+  - [Sharable meta info](#sharable-meta-info)
+  - [Execution context](#execution-context)
 - [Quick start](#quick-start)
 - [.hermione.conf.js](#hermioneconfjs)
   - [specs](#specs)
@@ -188,18 +191,21 @@ it('test1', () => doSomething());
 
 If you need to skip test in all browsers without a comment you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
 
-## Sharable meta info
-On initialization hermione adds two commands to the webdriverio instance:
+## WebdriverIO extensions
+`Hermione` adds some usefull methods and properties to the `webdriverio` session after its initialization.
+
+### Sharable meta info
+Implemented via two commands:
 * setMeta(key, value)
 * getMeta(key)
 
 These methods allow to store some information between webdriver calls so it can be used in custom commands for example. This meta information will be shown in [allure report](https://github.com/gemini-testing/hermione-allure-reporter).
 
-**Note**: hermione saves in meta info last url (without origin) opened in browser.
+**Note**: hermione saves in meta info last url opened in browser.
 
 Example:
 ```js
-it('test1', () => {
+it('test1', function() {
     return this.browser
         .setMeta('foo', 'bar')
         .url('/foo/bar?baz=qux')
@@ -208,6 +214,38 @@ it('test1', () => {
         .getMeta('url')
         .then((url) => console.log(url)); // prints '/foo/bar?baz=qux'
 });
+```
+
+### Execution context
+Execution context can be accessed by `browser.executionContext` property which contains current test/hook mocha object extended with browser id.
+
+Example:
+```js
+it('some test', function() {
+    return this.browser
+        .url('/foo/bar')
+        .then(function() {
+            console.log('test', this.executionContext);
+        });
+});
+```
+will print something like this
+```
+test: {
+  "title": "some test",
+  "async": 0,
+  "sync": true,
+  "timedOut": false,
+  "pending": false,
+  "type": "test",
+  "body": "...",
+  "file": "/foo/bar/baz/qux.js",
+  "parent": "#<Suite>",
+  "ctx": "#<Context>",
+  "browserId": "chrome",
+  "meta": {},
+  "timer": {}
+}
 ```
 
 ## Quick start
