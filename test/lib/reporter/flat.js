@@ -121,7 +121,6 @@ describe('Flat reporter', function() {
                 fullTitle: sinon.stub().returns('suite test'),
                 title: 'test',
                 browserId: 'chrome',
-                sessionId: 'test_session',
                 duration: '100500'
             });
         };
@@ -132,7 +131,7 @@ describe('Flat reporter', function() {
         };
 
         it('should correctly do the rendering', function() {
-            test = mkTestStub_();
+            test = mkTestStub_({sessionId: 'test_session'});
 
             emit(RunnerEvents.TEST_PASS, test);
 
@@ -151,7 +150,7 @@ describe('Flat reporter', function() {
 
             const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
-            assert.equal(result, 'suite test [chrome:test_session] - 100500ms reason: some comment');
+            assert.equal(result, 'suite test [chrome] - 100500ms reason: some comment');
         });
 
         it('should use parent skip comment if all describe was skipped', function() {
@@ -181,7 +180,7 @@ describe('Flat reporter', function() {
 
             const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
-            assert.equal(result, 'suite test [chrome:test_session] - 100500ms reason: test comment');
+            assert.equal(result, 'suite test [chrome] - 100500ms reason: test comment');
             assert.match(result, /reason: test comment/);
         });
 
