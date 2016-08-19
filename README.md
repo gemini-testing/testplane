@@ -389,8 +389,10 @@ Property name             | Description
 
 Event                     | Description
 ------------------------- | -------------
-`RUNNER_START`            | Will be triggered before tests execution. If handler return a promise, tests will be executed only after promise is resolved.
-`RUNNER_END`              | Will be triggered after tests execution. If handler return a promise, tests will be executed only after promise is resolved.
+`RUNNER_START`            | Will be triggered before tests execution. If a handler returns a promise, tests will be executed only after promise is resolved.
+`RUNNER_END`              | Will be triggered after tests execution. If a handler returns a promise, tests will be executed only after promise is resolved.
+`SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after promise is resolved
+`SESSION_END`             | Will be triggered after browser session quit. If a handler returns a promise, tests will be executed only after promise is resolved
 `SUITE_BEGIN`             | Test suite is about to execute
 `SUITE_END`               | Test suite execution is finished
 `SUITE_FAIL`              | Suite failed. For instance, `before` hook failed or a browser can not be launched (in fact, browsers are launched in `before` hook implicitly in the core of `hermione`)

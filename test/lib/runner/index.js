@@ -178,6 +178,29 @@ describe('Runner', function() {
                 });
         });
 
+        describe('passing of events from browser agent', () => {
+            beforeEach(() => sandbox.stub(BrowserAgent, 'create'));
+
+            [RunnerEvents.SESSION_START, RunnerEvents.SESSION_END].forEach((event) => {
+                it(`should passthrough event ${event} from browser agent`, () => {
+                    const browserAgent = new EventEmitter();
+                    const runner = new Runner(makeConfigStub());
+                    const onEventHandler = sandbox.spy().named(event);
+
+                    BrowserAgent.create.returns(browserAgent);
+
+                    runner.on(event, onEventHandler);
+
+                    return run_({runner})
+                        .then(() => {
+                            browserAgent.emit(event);
+
+                            assert.called(onEventHandler);
+                        });
+                });
+            });
+        });
+
         it('should start retry session after all', function() {
             return run_()
                 .then(function() {
@@ -251,7 +274,7 @@ describe('Runner', function() {
                     });
             });
 
-            it('shold be emitted even if RUNNER_START handler failed', function() {
+            it('should be emitted even if RUNNER_START handler failed', function() {
                 var onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject()),
                     onRunnerEnd = sinon.spy().named('onRunnerEnd'),
                     runner = new Runner(makeConfigStub());
@@ -265,7 +288,7 @@ describe('Runner', function() {
                     });
             });
 
-            it('shold be emitted even if some mocha runner failed', function() {
+            it('should be emitted even if some mocha runner failed', function() {
                 var onRunnerEnd = sinon.spy().named('onRunnerEnd'),
                     runner = new Runner(makeConfigStub());
 
