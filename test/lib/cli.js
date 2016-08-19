@@ -1,7 +1,7 @@
 'use strict';
 
 const q = require('q');
-const pathUtils = require('../../lib/path-utils');
+const globExtra = require('glob-extra');
 const cli = require('../../lib/cli');
 const logger = require('../../lib/utils').logger;
 const ConfigReader = require('../../lib/config-reader');
@@ -12,7 +12,7 @@ describe('exit codes', () => {
     const sandbox = sinon.sandbox.create();
 
     beforeEach(() => {
-        sandbox.stub(pathUtils, 'expandPaths').returns(q([]));
+        sandbox.stub(globExtra, 'expandPaths').returns(q([]));
         sandbox.stub(logger);
         sandbox.stub(process, 'exit');
         sandbox.stub(ConfigReader.prototype, 'read');

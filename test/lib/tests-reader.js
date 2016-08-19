@@ -1,6 +1,6 @@
 'use strict';
 
-var pathUtils = require('../../lib/path-utils'),
+var globExtra = require('glob-extra'),
     readTests = require('../../lib/tests-reader'),
     logger = require('../../lib/utils').logger,
     makeConfigStub = require('../utils').makeConfigStub,
@@ -11,10 +11,10 @@ describe('tests-reader', function() {
     var sandbox = sinon.sandbox.create();
 
     beforeEach(function() {
-        sandbox.stub(pathUtils, 'expandPaths');
+        sandbox.stub(globExtra, 'expandPaths');
         sandbox.stub(logger, 'warn');
 
-        pathUtils.expandPaths.returns(q([]));
+        globExtra.expandPaths.returns(q([]));
     });
 
     afterEach(function() {
@@ -40,7 +40,7 @@ describe('tests-reader', function() {
     });
 
     it('should assign specified browsers to specified test files in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['dir']).returns(q(['/dir/test2', '/dir/test3']));
 
@@ -61,7 +61,7 @@ describe('tests-reader', function() {
     });
 
     it('should support intersection of test paths in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['dir', 'dir1']).returns(q(['/dir/test', '/dir1/test']))
             .withArgs(['dir', 'dir2']).returns(q(['/dir/test', '/dir2/test']));
 
@@ -82,7 +82,7 @@ describe('tests-reader', function() {
     });
 
     it('should support intersection of subpaths in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['dir']).returns(q(['/dir/sub-dir/test']))
             .withArgs(['dir/sub-dir']).returns(q(['/dir/sub-dir/test']));
 
@@ -103,7 +103,7 @@ describe('tests-reader', function() {
     });
 
     it('should support intersection of browsers in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['test2']).returns(q(['/test2']));
 
@@ -125,7 +125,7 @@ describe('tests-reader', function() {
     });
 
     it('should assign all browsers to test files which are specified as strings in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['test2']).returns(q(['/test2']));
 
@@ -143,7 +143,7 @@ describe('tests-reader', function() {
     });
 
     it('should assign all browsers to test files which are specified as objects without `browsers` property', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['test2']).returns(q(['/test2']));
 
@@ -161,7 +161,7 @@ describe('tests-reader', function() {
     });
 
     it('should support string and object notations in specs', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['test2']).returns(q(['/test2']));
 
@@ -179,7 +179,7 @@ describe('tests-reader', function() {
     });
 
     it('should not assign unknown browsers to test files', function() {
-        pathUtils.expandPaths.withArgs(['test']).returns(q(['/test']));
+        globExtra.expandPaths.withArgs(['test']).returns(q(['/test']));
 
         var params = {
             config: {
@@ -206,7 +206,7 @@ describe('tests-reader', function() {
     });
 
     it('should filter browsers from specs in case of input browsers', function() {
-        pathUtils.expandPaths.withArgs(['test']).returns(q(['/test']));
+        globExtra.expandPaths.withArgs(['test']).returns(q(['/test']));
 
         var params = {
             config: {
@@ -220,7 +220,7 @@ describe('tests-reader', function() {
     });
 
     it('should not assign unknown input browsers to test files', function() {
-        pathUtils.expandPaths.withArgs(['test']).returns(q(['/test']));
+        globExtra.expandPaths.withArgs(['test']).returns(q(['/test']));
 
         var params = {
             config: {
@@ -248,7 +248,7 @@ describe('tests-reader', function() {
     });
 
     it('should filter test files from specs in case of input test paths', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test1']).returns(q(['/test1']))
             .withArgs(['test2']).returns(q(['/test2']));
 
@@ -264,7 +264,7 @@ describe('tests-reader', function() {
     });
 
     it('should not assign browsers to unknown input test paths', function() {
-        pathUtils.expandPaths
+        globExtra.expandPaths
             .withArgs(['test']).returns(q(['/test']))
             .withArgs(['unknown-test']).returns(q(['/unknown-test']));
 
