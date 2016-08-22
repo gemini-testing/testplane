@@ -1,3 +1,9 @@
+## 0.12.0 - 2016-08-22
+
+* Added passing of execution context to a browser instance in tests (see the [documentation](https://github.com/gemini-testing/hermione/blob/v0.12.0/README.md#execution-context) for more details)
+* Added `SESSION_START` and `SESSION_END` events
+* Fix: do not launch browsers for skipped tests
+
 ## 0.11.4 - 2016-08-11
 
 * Switch to webdriverio@4.2.4
