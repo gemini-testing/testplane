@@ -1,18 +1,19 @@
 'use strict';
 
-var _ = require('lodash'),
-    EventEmitter = require('events').EventEmitter,
-    FlatReporter = require('../../../lib/reporters/flat'),
-    RunnerEvents = require('../../../lib/constants/runner-events'),
-    logger = require('../../../lib/utils').logger,
-    chalk = require('chalk');
+const _ = require('lodash');
+const EventEmitter = require('events').EventEmitter;
+const FlatReporter = require('../../../lib/reporters/flat');
+const RunnerEvents = require('../../../lib/constants/runner-events');
+const logger = require('../../../lib/utils').logger;
+const chalk = require('chalk');
 
-describe('Flat reporter', function() {
-    var sandbox = sinon.sandbox.create(),
-        test,
-        emitter;
+describe('Flat reporter', () => {
+    const sandbox = sinon.sandbox.create();
 
-    function getCounters_(args) {
+    let test;
+    let emitter;
+
+    const getCounters_ = (args) => {
         return {
             total: chalk.stripColor(args[1]),
             passed: chalk.stripColor(args[2]),
@@ -20,17 +21,17 @@ describe('Flat reporter', function() {
             pending: chalk.stripColor(args[4]),
             retries: chalk.stripColor(args[5])
         };
-    }
+    };
 
-    function emit(event, data) {
+    const emit = (event, data) => {
         emitter.emit(RunnerEvents.RUNNER_START);
         if (event) {
             emitter.emit(event, data);
         }
         emitter.emit(RunnerEvents.RUNNER_END);
-    }
+    };
 
-    beforeEach(function() {
+    beforeEach(() => {
         test = {
             fullTitle: sinon.stub().returns('foo bar baz'),
             title: 'baz',
@@ -39,22 +40,22 @@ describe('Flat reporter', function() {
             duration: 100500
         };
 
-        var reporter = new FlatReporter();
+        const reporter = new FlatReporter();
 
         emitter = new EventEmitter();
         reporter.attachRunner(emitter);
         sandbox.stub(logger);
     });
 
-    afterEach(function() {
+    afterEach(() => {
         sandbox.restore();
         emitter.removeAllListeners();
     });
 
-    it('should initialize counters with 0', function() {
+    it('should initialize counters with 0', () => {
         emit();
 
-        var counters = getCounters_(logger.log.lastCall.args);
+        const counters = getCounters_(logger.log.lastCall.args);
 
         assert.equal(counters.total, 0);
         assert.equal(counters.passed, 0);
@@ -63,53 +64,53 @@ describe('Flat reporter', function() {
         assert.equal(counters.retries, 0);
     });
 
-    describe('should correctly calculate counters for', function() {
-        it('successed', function() {
+    describe('should correctly calculate counters for', () => {
+        it('successed', () => {
             emit(RunnerEvents.TEST_PASS, test);
 
-            var counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.lastCall.args);
 
             assert.equal(counters.passed, 1);
         });
 
-        it('failed', function() {
+        it('failed', () => {
             emit(RunnerEvents.TEST_FAIL, test);
 
-            var counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.lastCall.args);
 
             assert.equal(counters.failed, 1);
         });
 
-        it('pending', function() {
+        it('pending', () => {
             emit(RunnerEvents.TEST_PENDING, test);
 
-            var counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.lastCall.args);
 
             assert.equal(counters.pending, 1);
         });
 
-        it('retries', function() {
+        it('retries', () => {
             emit(RunnerEvents.RETRY, test);
 
-            var counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.lastCall.args);
 
             assert.equal(counters.retries, 1);
         });
     });
 
-    it('should print info', function() {
+    it('should print info', () => {
         emit(RunnerEvents.INFO, 'foo');
 
         assert.calledWith(logger.log, 'foo');
     });
 
-    it('should print warning', function() {
+    it('should print warning', () => {
         emit(RunnerEvents.WARNING, 'foo');
 
         assert.calledWith(logger.warn, 'foo');
     });
 
-    it('should print error', function() {
+    it('should print error', () => {
         emit(RunnerEvents.ERROR, 'foo');
 
         assert.calledWith(logger.error, chalk.red('foo'));
@@ -130,7 +131,7 @@ describe('Flat reporter', function() {
                 .substr(2); // remove first symbol (icon)
         };
 
-        it('should correctly do the rendering', function() {
+        it('should correctly do the rendering', () => {
             test = mkTestStub_({sessionId: 'test_session'});
 
             emit(RunnerEvents.TEST_PASS, test);
@@ -140,7 +141,7 @@ describe('Flat reporter', function() {
             assert.equal(result, 'suite test [chrome:test_session] - 100500ms');
         });
 
-        it('should add skip comment if test was skipped', function() {
+        it('should add skip comment if test was skipped', () => {
             test = mkTestStub_({
                 pending: true,
                 skipReason: 'some comment'
@@ -153,7 +154,7 @@ describe('Flat reporter', function() {
             assert.equal(result, 'suite test [chrome] - 100500ms reason: some comment');
         });
 
-        it('should use parent skip comment if all describe was skipped', function() {
+        it('should use parent skip comment if all describe was skipped', () => {
             test = mkTestStub_({
                 pending: true,
                 skipReason: 'test comment',
@@ -169,7 +170,7 @@ describe('Flat reporter', function() {
             assert.match(result, /reason: suite comment/);
         });
 
-        it('should use test skip comment if describe was skipped without comment', function() {
+        it('should use test skip comment if describe was skipped without comment', () => {
             test = mkTestStub_({
                 pending: true,
                 skipReason: 'test comment',
@@ -184,7 +185,7 @@ describe('Flat reporter', function() {
             assert.match(result, /reason: test comment/);
         });
 
-        it('should use default message if test was skipped without comment', function() {
+        it('should use default message if test was skipped without comment', () => {
             test = mkTestStub_({
                 pending: true
             });
