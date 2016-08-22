@@ -32,7 +32,7 @@ describe('mocha-runner/mocha-adapter', () => {
             enableTimeouts: sandbox.stub(),
             beforeAll: sandbox.stub(),
             afterAll: sandbox.stub(),
-            tests: [],
+            tests: [{}],
             ctx: {}
         });
     }
@@ -160,6 +160,67 @@ describe('mocha-runner/mocha-adapter', () => {
             mkMochaAdapter_();
 
             assert.calledOnce(browserAgent.getBrowser);
+        });
+
+        it('should not request browsers for suite with one skipped test', () => {
+            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
+                suites: [
+                    {
+                        tests: [
+                            {pending: true}
+                        ]
+                    }
+                ],
+                tests: []
+            });
+            MochaStub.prototype.suite.beforeAll.yields();
+
+            mkMochaAdapter_();
+
+            assert.notCalled(browserAgent.getBrowser);
+        });
+
+        it('should request browsers for suite with at least one non-skipped test', () => {
+            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
+                suites: [
+                    {
+                        tests: [
+                            {'pending': false},
+                            {'pending': true}
+                        ]
+                    }
+                ]
+            });
+            MochaStub.prototype.suite.beforeAll.yields();
+
+            mkMochaAdapter_();
+
+            assert.calledOnce(browserAgent.getBrowser);
+        });
+
+        it('should not request browsers for suite with nested skipped tests', () => {
+            const suiteStub = mkSuiteStub_();
+
+            MochaStub.prototype.suite = _.extend(suiteStub, {
+                suites: [
+                    {
+                        suites: [
+                            {
+                                tests: [
+                                    {'pending': true},
+                                    {'pending': true}
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                tests: []
+            });
+            MochaStub.prototype.suite.beforeAll.yields();
+
+            mkMochaAdapter_();
+
+            assert.notCalled(browserAgent.getBrowser);
         });
 
         it('should release browser after suite execution', () => {
