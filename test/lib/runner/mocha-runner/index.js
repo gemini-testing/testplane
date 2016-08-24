@@ -3,16 +3,22 @@
 const BrowserAgent = require('../../../../lib/browser-agent');
 const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const MochaRunner = require('../../../../lib/runner/mocha-runner');
+const TestSkipper = require('../../../../lib/runner/test-skipper');
 const q = require('q');
 
 describe('mocha-runner', () => {
     const sandbox = sinon.sandbox.create();
 
-    const run_ = (suites, filterFn) => {
+    const mochaRunnerInit = () => {
         return new MochaRunner(
             {mochaOpts: {}},
-            sinon.createStubInstance(BrowserAgent)
-        ).run(suites || ['test_suite'], filterFn);
+            sinon.createStubInstance(BrowserAgent),
+            sinon.createStubInstance(TestSkipper)
+        );
+    };
+
+    const run_ = (suites, filterFn) => {
+        return mochaRunnerInit().run(suites || ['test_suite'], filterFn);
     };
 
     // We can't call constructor because it creates mocha instance inside
@@ -25,6 +31,7 @@ describe('mocha-runner', () => {
         sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachEmitFn').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'run').returns(q());
+        sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
     });
 
     afterEach(() => sandbox.restore());
@@ -53,6 +60,21 @@ describe('mocha-runner', () => {
         it('should run all mocha instances', () => {
             return run_(['some/file', 'other/file'])
                 .then(() => assert.calledTwice(MochaAdapter.prototype.run));
+        });
+
+        it('should skip test using test skipper', () => {
+            return run_()
+                .then(() => assert.calledWith(MochaAdapter.prototype.applySkip, sinon.match.instanceOf(TestSkipper)));
+        });
+
+        it('should skip test before file adding', () => {
+            return run_()
+                .then(() => {
+                    assert.callOrder(
+                        MochaAdapter.prototype.applySkip,
+                        MochaAdapter.prototype.addFile
+                    );
+                });
         });
 
         it('should add filter function for tests before file adding', () => {

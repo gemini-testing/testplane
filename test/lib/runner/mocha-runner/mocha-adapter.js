@@ -5,6 +5,7 @@ const logger = require('../../../../lib/utils').logger;
 const ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder');
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
+const TestSkipper = require('../../../../lib/runner/test-skipper');
 const proxyquire = require('proxyquire').noCallThru();
 const inherit = require('inherit');
 const _ = require('lodash');
@@ -26,6 +27,7 @@ describe('mocha-runner/mocha-adapter', () => {
     let MochaAdapter;
     let browserAgent;
     let clearRequire;
+    let testSkipper;
 
     function mkSuiteStub_() {
         return _.extend(new EventEmitter(), {
@@ -45,7 +47,11 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     }
 
-    const mkMochaAdapter_ = (opts) => MochaAdapter.create(opts || {}, browserAgent);
+    const mkMochaAdapter_ = (opts) => {
+        testSkipper = sinon.createStubInstance(TestSkipper);
+
+        return MochaAdapter.create(opts || {}, browserAgent, testSkipper);
+    };
 
     const mkBrowserStub_ = () => {
         return {publicAPI: Object.create({})};
@@ -297,6 +303,24 @@ describe('mocha-runner/mocha-adapter', () => {
 
             assert.called(Skip.prototype.handleEntity);
             assert.calledWith(Skip.prototype.handleEntity, suite);
+        });
+    });
+
+    describe('applySkip', () => {
+        it('should skip suite using test skipper', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            browserAgent.browserId = 'some-browser';
+
+            mochaAdapter.applySkip(testSkipper);
+
+            assert.calledWith(testSkipper.applySkip, MochaStub.prototype.suite, 'some-browser');
+        });
+
+        it('should be chainable', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const mochaInstance = mochaAdapter.applySkip(testSkipper);
+
+            assert.instanceOf(mochaInstance, MochaAdapter);
         });
     });
 
