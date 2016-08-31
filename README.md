@@ -26,7 +26,7 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
 - [.hermione.conf.js](#hermioneconfjs)
   - [specs](#specs)
   - [browsers](#browsers)
-  - [grid](#grid)
+  - [gridUrl](#gridUrl)
   - [baseUrl](#baseurl)
   - [timeout](#timeout)
   - [waitTimeout](#waittimeout)
@@ -353,23 +353,21 @@ Available browser options:
 Option name               | Description
 ------------------------- | -------------
 `desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
+`gridUrl`                 | Selenium grid Url. Default value is `http://localhost:4444/wd/hub`.
+`baseUrl`                 | Base service-under-test url. Default value is `http://localhost`.
+`waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times test should be rerun. Default value is `0`.
+`screenshotPath`          | Directory to save screenshots by webdriverio. Default value is `null`.
 
-### grid
+### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
 ### baseUrl
 Base service-under-test url. Default value is `http://localhost`.
 
-### timeout
-Timeout for test execution. Default value is `60000` ms.
-
 ### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
-
-### slow
-If test execution time is greater than this value, then test is slow. Default value is `10000`.
 
 ### debug
 Turn webdriver debug mode on. Default value is `false`.
@@ -379,6 +377,15 @@ Number of sessions which are run simultaneously. Global value for all browsers. 
 
 ### retry
 How many times test should be retried in case of a fail. Global value for all browsers. Default value is `0`.
+
+### mochaOpts
+Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options. Default values are:
+```javascript
+mochaOpts: {
+    slow: 10000, // If test execution time is greater than this value, then test is slow.
+    timeout: 60000 // timeout for test execution.
+}
+```
 
 ### plugins
 `Hermione` plugins are commonly used to extend built-in possibilities. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
@@ -445,14 +452,6 @@ Event                     | Description
 `WARNING`                 | Reserved
 `EXIT`                    | Will be triggered when SIGTERM is received (for example, Ctrl + C). Handler can return a promise.
 
-### mochaOpts
-Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options.
-```javascript
-mochaOpts: {
-    ignoreLeaks: true
-}
-```
-
 ### prepareBrowser
 Prepare browser session before tests are run. For example, adding custom user commands.
 ```js
@@ -473,23 +472,49 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
   Options:
 
     -h, --help                 Output usage information
-    -c, --conf <path>          Path to configuration file [./.hermione.conf.js]
-    --baseUrl <url>            Base service-under-test url [http://localhost]
-    --grid <url>               Selenium grid URL [http://localhost:4444/wd/hub]
-    --wait-timeout <ms>        Timeout for web page events [10000]
-    --screenshot-path <path>   Path for saving screenshots []
-    --debug <boolean>          Turn webdriver debug mode on [false]
-    --grep <grep>              Filter tests matching string or regexp
-    -r, --reporter <reporter>  Reporter [flat]
-    -b, --browser <browser>    Run test in a specific browser
+    -c, --config <path>        Path to configuration file
+    -r, --reporter <reporter>  Test reporter
+    -b, --browser <browser>    Run tests only in specified browser
+    --grep <grep>              Run only tests matching string or regexp
 ```
 
 For example,
 ```
-hermione --baseUrl http://yandex.ru/search
+hermione --config ./config.js --reporter flat --browser firefox --grep name
 ```
 
 **Note.** All CLI options override config values.
+
+## Overriding settings
+
+All options can also be overridden via command-line flags or environment variables. Priorities are the following:
+
+* command-line option has the highest priority. It overrides environment variable and config file value.
+
+* environment variable has second priority. It overrides config file value.
+
+* config file value has the lowest priority.
+
+* if no command-line option, environment variable or config file option specified, default is used.
+
+To override config setting with CLI option, convert full option path to `--kebab-case`. For example, if you want to run tests against different base URL, call:
+
+```
+hermione path/to/mytest.js --base-url http://example.com
+```
+
+To change number of sessions for Firefox (considering you have browser with `firefox` id in the config):
+
+```
+hermione path/to/mytest.js --browsers-firefox-sessions-per-browser 7
+```
+
+To override setting with environment variable, convert its full path to `snake_case` and add `hermione_` prefix. Above examples can be rewritten to use environment variables instead of CLI options:
+
+```
+hermione_base_url=http://example.com hermione path/to/mytest.js
+hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
+```
 
 ## Environment variables
 
