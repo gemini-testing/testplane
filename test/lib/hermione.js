@@ -8,12 +8,17 @@ var Hermione = require('../../lib/hermione'),
     utils = require('../utils'),
     EventEmitter = require('events').EventEmitter;
 
+const globExtra = require('glob-extra');
+const q = require('q');
+
 describe('hermione', function() {
     var sandbox = sinon.sandbox.create();
 
     describe('run', function() {
         beforeEach(function() {
             sandbox.stub(Runner, 'create');
+            sandbox.stub(globExtra, 'expandPaths').returns(q([]));
+
             Runner.create.returns(sinon.createStubInstance(Runner));
 
             sandbox.stub(plugins);
