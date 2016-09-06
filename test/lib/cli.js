@@ -1,7 +1,7 @@
 'use strict';
 
-const globExtra = require('glob-extra');
 const Commander = require('commander');
+const globExtra = require('glob-extra');
 const lodash = require('lodash');
 const q = require('q');
 
@@ -20,7 +20,6 @@ describe('cli', () => {
     beforeEach(() => {
         sandbox.stub(logger);
         sandbox.stub(process, 'exit');
-
 
         config = sinon.createStubInstance(Config);
         sandbox.stub(Config, 'create').returns(config);

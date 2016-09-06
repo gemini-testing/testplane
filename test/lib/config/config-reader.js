@@ -9,15 +9,11 @@ const logger = require('../../../lib/utils').logger;
 describe('config-reader', () => {
     const sandbox = sinon.sandbox.create();
 
+    beforeEach(() => sandbox.stub(ConfigReader.prototype, 'getConfigFromFile'));
+
     afterEach(() => sandbox.restore());
 
-    const mkReader_ = (opts) => {
-        const reader = new ConfigReader(opts || {});
-
-        sandbox.stub(reader, 'getConfigFromFile');
-
-        return reader;
-    };
+    const mkReader_ = (opts) => new ConfigReader(opts || {});
 
     it('should get default option if it does not set in config or from cli', () => {
         const reader = mkReader_();
@@ -37,7 +33,7 @@ describe('config-reader', () => {
         assert.equal(result.conf, 'hermione.js');
     });
 
-    it('should override option specified from config if it was set from cli', function() {
+    it('should override option specified from config if it was set from cli', () => {
         const reader = mkReader_({conf: 'hermione.js'});
         reader.getConfigFromFile.returns({conf: 'hermione.yaml'});
 
@@ -67,12 +63,11 @@ describe('config-reader', () => {
 
     it('should not throw on relative path to config file', () => {
         const reader = new ConfigReader({});
-        const conf = './test/fixtures/.hermione.conf.js';
 
-        assert.doesNotThrow(() => reader.getConfigFromFile(conf));
+        assert.doesNotThrow(() => reader.getConfigFromFile('./test/fixtures/.hermione.conf.js'));
     });
 
-    it('should not throw on absolute path to config file', function() {
+    it('should not throw on absolute path to config file', () => {
         const reader = new ConfigReader({});
         const conf = path.resolve(__dirname, '../../fixtures/.hermione.conf.js');
 
