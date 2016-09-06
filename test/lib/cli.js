@@ -2,7 +2,6 @@
 
 const Commander = require('commander');
 const globExtra = require('glob-extra');
-const _ = require('lodash');
 const proxyquire = require('proxyquire');
 const q = require('q');
 
@@ -11,18 +10,8 @@ const Config = require('../../lib/config');
 const defaults = require('../../lib/config/defaults');
 const Hermione = require('../../lib/hermione');
 const logger = require('../../lib/utils').logger;
-const validateBrowsers = require('../../lib/config/validators').validateBrowsers;
 
 const CONFIG = require('../fixtures/.hermione.conf.js');
-
-const mkConfig = (opts) => {
-    return _.defaults(opts || {}, {
-        browsers: {
-            b1: {},
-            b2: {}
-        }
-    });
-}
 
 describe('cli', () => {
     const sandbox = sinon.sandbox.create();
@@ -87,8 +76,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', '-b', 'yabro'];
 
         return cliStub.run()
-            .then(() => {
-                assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro'])});
+            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro']));
     });
 
     it('should collect all browser options to an array', () => {
@@ -97,8 +85,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', '-b', 'yabro', '-b', 'amigo'];
 
         return cliStub.run()
-            .then(() => {
-                assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro', 'amigo'])});
+            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro', 'amigo']));
     });
 
     it('should pass parsed config to Hermione', () => {
@@ -109,8 +96,7 @@ describe('cli', () => {
         config.parse.returns(parsedConfig);
 
         return cliStub.run()
-            .then(() => {
-                assert.calledWithExactly(Hermione.prototype.__constructor, parsedConfig)});
+            .then(() => assert.calledWithExactly(Hermione.prototype.__constructor, parsedConfig));
     });
 
     it('should pass test suite path to Hermione run as first param', () => {
@@ -119,8 +105,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', 'path/to/test-suite'];
 
         return cliStub.run()
-            .then(() => {
-                assert.deepEqual(Hermione.prototype.run.firstCall.args[0], ['path/to/test-suite'])});
+            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[0], ['path/to/test-suite']));
     });
 
     describe('validate browsers', () => {

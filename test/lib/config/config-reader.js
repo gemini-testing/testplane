@@ -80,7 +80,7 @@ describe('config-reader', () => {
 
     describe('environment variable `HERMIONE_SKIP_BROWSERS`', () => {
         beforeEach(() => {
-            sandbox.stub(ConfigReader.prototype, 'getConfigFromFile')
+            sandbox.stub(ConfigReader.prototype, 'getConfigFromFile');
             sandbox.stub(logger, 'warn');
         });
 

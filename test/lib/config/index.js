@@ -1,3 +1,5 @@
+/*jshint sub:true*/
+
 'use strict';
 
 const path = require('path');
@@ -9,7 +11,6 @@ const proxyquire = require('proxyquire');
 const ConfigReader = require('../../../lib/config/config-reader');
 const defaults = require('../../../lib/config/defaults');
 const Config = require('../../../lib/config');
-const parseOptions = require('../../../lib/config/options');
 
 describe('config', () => {
     const sandbox = sinon.sandbox.create();
@@ -24,13 +25,13 @@ describe('config', () => {
 
     describe('parse', () => {
         let configStub;
-        let parseOptionsStub;
+        let parseOptions;
 
         beforeEach(() => {
-            parseOptionsStub = sinon.stub();
+            parseOptions = sinon.stub();
 
             configStub = proxyquire('../../../lib/config', {
-                './options': parseOptionsStub
+                './options': parseOptions
             });
         });
 
@@ -47,7 +48,7 @@ describe('config', () => {
 
             configStub.create({}).parse();
 
-            assert.propertyVal(parseOptionsStub.firstCall.args[0].options, 'projectRoot', 'foo/bar');
+            assert.propertyVal(parseOptions.firstCall.args[0].options, 'projectRoot', 'foo/bar');
         });
 
         it('should set curr working dir to projectRoot field when config file does not exist', () => {
@@ -55,7 +56,7 @@ describe('config', () => {
 
             configStub.create({}).parse();
 
-            assert.propertyVal(parseOptionsStub.firstCall.args[0].options, 'projectRoot', process.cwd());
+            assert.propertyVal(parseOptions.firstCall.args[0].options, 'projectRoot', process.cwd());
         });
     });
 
@@ -304,7 +305,7 @@ describe('config', () => {
             });
 
             it('should override specs option', () => {
-                const readConfig = mkConfig_({specs: ['bar', 'baz']})
+                const readConfig = mkConfig_({specs: ['bar', 'baz']});
                 ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
@@ -354,7 +355,7 @@ describe('config', () => {
 
                     assert.throws(() => config.parse(), Error, 'desiredCapabilities should be null or object');
                 });
-            })
+            });
 
             it('should set desiredCapabilities', () => {
                 const readConfig = mkConfig_({
@@ -600,7 +601,6 @@ describe('config', () => {
                         assert.throws(() => config.parse(), Error, 'Field must be an integer number');
                     });
                 });
-
 
                 it(`should set ${option} option to all browsers`, () => {
                     const readConfig = mkConfig_({
