@@ -1,14 +1,13 @@
 'use strict';
 
-const url = require('url');
 const path = require('path');
+const url = require('url');
 
 const _ = require('lodash');
 const proxyquire = require('proxyquire');
 
 const ConfigReader = require('../../../lib/config/config-reader');
 const defaults = require('../../../lib/config/defaults');
-
 const Config = require('../../../lib/config');
 const parseOptions = require('../../../lib/config/options');
 
@@ -34,10 +33,10 @@ describe('config', () => {
 
             configStub.create({}).parse();
 
-            assert.isTrue(ConfigReader.prototype.read.called);
+            assert.isTrue(ConfigReader.prototype.read.calledOnce);
         });
 
-        it('should set dirname path for config file to projectRoot field', () => {
+        it('should set dir path for config file to projectRoot field', () => {
             sandbox.stub(ConfigReader.prototype, 'read').returns({conf: 'foo/bar/.config.js'});
 
             configStub.create({}).parse();
@@ -45,7 +44,7 @@ describe('config', () => {
             assert.propertyVal(parseOptionsStub.firstCall.args[0].options, 'projectRoot', 'foo/bar');
         });
 
-        it('should set project path to projectRoot field when config file does not exist', () => {
+        it('should set curr working dir to projectRoot field when config file does not exist', () => {
             sandbox.stub(ConfigReader.prototype, 'read').returns({});
 
             configStub.create({}).parse();
@@ -54,13 +53,8 @@ describe('config', () => {
         });
     });
 
-    describe('overrides', () => {
-        beforeEach(() => {
-            sandbox.stub(ConfigReader.prototype, 'read').returns({baseUrl: 'http://default.com'});
-
-            process.env['hermione_base_url'] = 'http://env.com';
-            process.argv = ['--base-url', 'http://cli.com'];
-        });
+    describe('overrides options', () => {
+        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'read'));
 
         afterEach(() => {
             delete process.env['hermione_base_url'];
@@ -68,30 +62,44 @@ describe('config', () => {
         });
 
         it('should not override anything by default', () => {
+            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+
             const parsedConfig = Config.create({}).parse();
 
             assert.equal(parsedConfig.baseUrl, 'http://default.com');
         });
 
         it('should not override value with env if allowOverrides.env is false', () => {
+            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+
             const parsedConfig = Config.create({}, {env: false}).parse();
 
             assert.equal(parsedConfig.baseUrl, 'http://default.com');
         });
 
         it('should override value with env if allowOverrides.env is true', () => {
+            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+
+            process.env['hermione_base_url'] = 'http://env.com';
+
             const parsedConfig = Config.create({}, {env: true}).parse();
 
             assert.equal(parsedConfig.baseUrl, 'http://env.com');
         });
 
         it('should not override value with env if allowOverrides.cli is false', () => {
+            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+
             const parsedConfig = Config.create({}, {cli: false}).parse();
 
             assert.equal(parsedConfig.baseUrl, 'http://default.com');
         });
 
         it('should override value with cli if allowOverrides.cli is true', () => {
+            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+
+            process.argv = ['--base-url', 'http://cli.com'];
+
             const parsedConfig = Config.create({}, {cli: true}).parse();
 
             assert.equal(parsedConfig.baseUrl, 'http://cli.com');
@@ -112,7 +120,7 @@ describe('config', () => {
                 assert.throws(() => config.parse(), Error, 'a value must be string');
             });
 
-            it('should set default conf option if it does not set in config file', () => {
+            it('should set default conf relative to projectRoot if it does not set in config file', () => {
                 ConfigReader.prototype.getConfigFromFile.returns({});
 
                 const parsedConfig = Config.create({}).parse();

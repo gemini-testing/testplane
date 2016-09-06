@@ -7,6 +7,7 @@ const q = require('q');
 
 const cli = require('../../lib/cli');
 const Config = require('../../lib/config');
+const defaults = require('../../lib/config/defaults');
 const Hermione = require('../../lib/hermione');
 const logger = require('../../lib/utils').logger;
 
@@ -28,7 +29,11 @@ describe('cli', () => {
         Commander.removeAllListeners();
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        Commander.reporter = null;
+        Commander.browser = null;
+        sandbox.restore();
+    });
 
     it('should pass conf option to config from cli', () => {
         process.argv = ['node', 'test', '-c', 'config.js'];
@@ -46,10 +51,9 @@ describe('cli', () => {
 
     it('should collect all reporter options to an array', () => {
         process.argv = ['node', 'test', '-r', 'bar', '-r', 'baz'];
-        Commander.reporter = null;
 
         return cli.run()
-            .then(() => assert.sameMembers(Config.create.firstCall.args[0].reporters, ['bar', 'baz']));
+            .then(() => assert.deepEqual(Config.create.firstCall.args[0].reporters, ['bar', 'baz']));
     });
 
     it('should add grep option to mochaOpts field in config from cli', () => {
@@ -59,14 +63,14 @@ describe('cli', () => {
             .then(() => assert.deepPropertyVal(Config.create.firstCall.args[0], 'mochaOpts.grep', 'someString'));
     });
 
-    it('should pass browser option to Hermione run', () => {
+    it('should pass browser option to Hermione run as second param', () => {
         sandbox.stub(Hermione.prototype);
 
         process.argv = ['node', 'test', '-b', 'yabro'];
 
         return cli.run()
             .then(() => {
-                assert.sameMembers(Hermione.prototype.run.firstCall.args[1], ['yabro'])});
+                assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro'])});
     });
 
     it('should collect all browser options to an array', () => {
@@ -76,33 +80,33 @@ describe('cli', () => {
 
         return cli.run()
             .then(() => {
-                assert.sameMembers(Hermione.prototype.run.firstCall.args[1], ['yabro', 'amigo'])});
+                assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro', 'amigo'])});
     });
 
-    it('should pass config from cli to hermione', () => {
+    it('should pass parsed config to Hermione', () => {
         sandbox.stub(Hermione.prototype);
 
-        process.argv = ['node', 'test', '-c', 'config.js', '-r', 'foo', '--grep', 'someString'];
+        const parsedConfig = defaults;
 
-        const cliConfig = {
-            conf: 'config.js',
-            reporters: ['foo'],
-            mochaOpts: {
-                grep: 'someString'
-            }
-        };
-
-        config.parse.returns(cliConfig);
+        config.parse.returns(parsedConfig);
 
         return cli.run()
             .then(() => {
-                assert.calledWithExactly(Hermione.prototype.__constructor, cliConfig)});
+                assert.calledWithExactly(Hermione.prototype.__constructor, parsedConfig)});
+    });
+
+    it('should pass test suite path to Hermione run as first param', () => {
+        sandbox.stub(Hermione.prototype);
+
+        process.argv = ['node', 'test', 'path/to/test-suite'];
+
+        return cli.run()
+            .then(() => {
+                assert.deepEqual(Hermione.prototype.run.firstCall.args[0], ['path/to/test-suite'])});
     });
 
     describe('exit codes', () => {
-        beforeEach(() => {
-            sandbox.stub(globExtra, 'expandPaths').returns(q([]));
-        });
+        beforeEach(() => sandbox.stub(globExtra, 'expandPaths').returns(q([])));
 
         describe('config validity', () => {
             it('should exit with code 0 if config is ok', () => {
