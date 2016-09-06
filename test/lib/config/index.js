@@ -16,6 +16,12 @@ describe('config', () => {
 
     afterEach(() => sandbox.restore());
 
+    const mkConfig_ = (opts) => {
+        return _.defaults(opts || {}, {
+            specs: ['path/to/test']
+        });
+    };
+
     describe('parse', () => {
         let configStub;
         let parseOptionsStub;
@@ -62,7 +68,8 @@ describe('config', () => {
         });
 
         it('should not override anything by default', () => {
-            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+            const readConfig = mkConfig_({baseUrl: 'http://default.com'});
+            ConfigReader.prototype.read.returns(readConfig);
 
             const parsedConfig = Config.create({}).parse();
 
@@ -70,7 +77,8 @@ describe('config', () => {
         });
 
         it('should not override value with env if allowOverrides.env is false', () => {
-            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+            const readConfig = mkConfig_({baseUrl: 'http://default.com'});
+            ConfigReader.prototype.read.returns(readConfig);
 
             const parsedConfig = Config.create({}, {env: false}).parse();
 
@@ -78,7 +86,8 @@ describe('config', () => {
         });
 
         it('should override value with env if allowOverrides.env is true', () => {
-            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+            const readConfig = mkConfig_({baseUrl: 'http://default.com'});
+            ConfigReader.prototype.read.returns(readConfig);
 
             process.env['hermione_base_url'] = 'http://env.com';
 
@@ -88,7 +97,8 @@ describe('config', () => {
         });
 
         it('should not override value with env if allowOverrides.cli is false', () => {
-            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+            const readConfig = mkConfig_({baseUrl: 'http://default.com'});
+            ConfigReader.prototype.read.returns(readConfig);
 
             const parsedConfig = Config.create({}, {cli: false}).parse();
 
@@ -96,7 +106,8 @@ describe('config', () => {
         });
 
         it('should override value with cli if allowOverrides.cli is true', () => {
-            ConfigReader.prototype.read.returns({baseUrl: 'http://default.com'});
+            const readConfig = mkConfig_({baseUrl: 'http://default.com'});
+            ConfigReader.prototype.read.returns(readConfig);
 
             process.argv = ['--base-url', 'http://cli.com'];
 
@@ -111,9 +122,8 @@ describe('config', () => {
 
         describe('conf', () => {
             it('should throw error if conf is not a string', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    conf: ['Array']
-                });
+                const readConfig = mkConfig_({conf: ['Array']});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -121,7 +131,7 @@ describe('config', () => {
             });
 
             it('should set default conf relative to projectRoot if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
+                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
                 const resolvedPath = path.resolve(parsedConfig.projectRoot, defaults.conf);
@@ -130,9 +140,8 @@ describe('config', () => {
             });
 
             it('should override conf relative to projectRoot', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    conf: './config.js'
-                });
+                const readConfig = mkConfig_({conf: './config.js'});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
                 const resolvedPath = path.resolve(parsedConfig.projectRoot, './config.js');
@@ -143,9 +152,8 @@ describe('config', () => {
 
         describe('debug', () => {
             it('should throw error if debug is not a boolean', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    debug: 'String'
-                });
+                const readConfig = mkConfig_({debug: 'String'});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -153,7 +161,7 @@ describe('config', () => {
             });
 
             it('should set default debug option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
+                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -161,9 +169,8 @@ describe('config', () => {
             });
 
             it('should override debug option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    debug: true
-                });
+                const readConfig = mkConfig_({debug: true});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -173,9 +180,8 @@ describe('config', () => {
 
         describe('mochaOpts', () => {
             it('should throw error if mochaOpts is not an error or object', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    mochaOpts: ['Array']
-                });
+                const readConfig = mkConfig_({mochaOpts: ['Array']});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -183,7 +189,7 @@ describe('config', () => {
             });
 
             it('should set default mochaOpts option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
+                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -198,7 +204,8 @@ describe('config', () => {
                     ignoreLeaks: true
                 };
 
-                ConfigReader.prototype.getConfigFromFile.returns({mochaOpts});
+                const readConfig = mkConfig_({mochaOpts});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -209,7 +216,8 @@ describe('config', () => {
         ['prepareBrowser', 'prepareEnvironment'].forEach((option) => {
             describe(`${option}`, () => {
                 it(`should throw error if ${option} is not a null or function`, () => {
-                    sandbox.stub(ConfigReader.prototype, 'read').returns(_.set({}, option, {}));
+                    const readConfig = mkConfig_(_.set({}, option, {}));
+                    sandbox.stub(ConfigReader.prototype, 'read').returns(readConfig);
 
                     const config = Config.create({});
 
@@ -217,7 +225,7 @@ describe('config', () => {
                 });
 
                 it(`should set default ${option} option if it does not set in config file`, () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({});
+                    ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -226,8 +234,9 @@ describe('config', () => {
 
                 it(`should override ${option} option`, () => {
                     const func = () => {};
+                    const readConfig = mkConfig_(_.set({}, option, func));
 
-                    ConfigReader.prototype.getConfigFromFile.returns(_.set({}, option, func));
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -238,9 +247,8 @@ describe('config', () => {
 
         describe('projectRoot', () => {
             it('should set config dir as projectRoot option if projectRoot is not a string', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    projectRoot: ['Array']
-                });
+                const readConfig = mkConfig_({projectRoot: ['Array']});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
                 const configDir = path.dirname(parsedConfig.conf);
@@ -251,9 +259,8 @@ describe('config', () => {
 
         describe('reporters', () => {
             it('should throw error if reporters is not an array', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    reporters: 'String'
-                });
+                const readConfig = mkConfig_({reporters: 'String'});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -261,7 +268,7 @@ describe('config', () => {
             });
 
             it('should set default reporters option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
+                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -269,9 +276,8 @@ describe('config', () => {
             });
 
             it('should override reporters option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    reporters: ['foo', 'bar']
-                });
+                const readConfig = mkConfig_({reporters: ['foo', 'bar']});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -280,28 +286,26 @@ describe('config', () => {
         });
 
         describe('specs', () => {
+            it('should throw error if specs is empty', () => {
+                ConfigReader.prototype.getConfigFromFile.returns({});
+
+                const config = Config.create({});
+
+                assert.throws(() => config.parse(), Error, '"specs" is required option and should not be empty');
+            });
+
             it('should throw error if specs option is not an array', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    specs: 'String'
-                });
+                const readConfig = mkConfig_({specs: 'String'});
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
                 assert.throws(() => config.parse(), Error, '"specs" should be an array');
             });
 
-            it('should set default specs option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
-
-                const parsedConfig = Config.create({}).parse();
-
-                assert.sameMembers(parsedConfig.specs, defaults.specs);
-            });
-
             it('should override specs option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
-                    specs: ['bar', 'baz']
-                });
+                const readConfig = mkConfig_({specs: ['bar', 'baz']})
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -322,11 +326,13 @@ describe('config', () => {
         describe('desiredCapabilities', () => {
             describe('should throw error if desiredCapabilities', () => {
                 it('is missing', () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: {}
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -334,13 +340,15 @@ describe('config', () => {
                 });
 
                 it('is not an object or null', () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: {
                                 desiredCapabilities: 'chrome'
                             }
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -349,7 +357,7 @@ describe('config', () => {
             })
 
             it('should set desiredCapabilities', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: {
                             desiredCapabilities: {
@@ -359,6 +367,8 @@ describe('config', () => {
                     }
                 });
 
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+
                 const parsedConfig = Config.create({}).parse();
 
                 assert.deepEqual(parsedConfig.browsers.b1.desiredCapabilities, {browserName: 'yabro'});
@@ -367,11 +377,13 @@ describe('config', () => {
 
         describe('baseUrl', () => {
             it('should throw error if baseUrl is not a string', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_({baseUrl: ['Array']})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -379,12 +391,14 @@ describe('config', () => {
             });
 
             it('should set baseUrl to all browsers', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -394,12 +408,14 @@ describe('config', () => {
             });
 
             it('should override baseUrl if protocol is set', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({baseUrl: 'http://foo.com'})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -408,12 +424,14 @@ describe('config', () => {
             });
 
             it('should resolve baseUrl relative to default baseUrl', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({baseUrl: '/test'})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -424,11 +442,13 @@ describe('config', () => {
 
         describe('grid', () => {
             it('should throw error if grid is not a string', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_({grid: /regExp/})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -436,12 +456,14 @@ describe('config', () => {
             });
 
             it('should set grid to all browsers', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -451,12 +473,14 @@ describe('config', () => {
             });
 
             it('should override grid option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({grid: 'http://bar.com'})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -467,11 +491,13 @@ describe('config', () => {
 
         describe('screenshotPath', () => {
             it('should throw error if screenshotPath is not a null or string', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_({screenshotPath: ['Array']})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -479,12 +505,14 @@ describe('config', () => {
             });
 
             it('should set screenshotPath option to all browsers', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -494,12 +522,14 @@ describe('config', () => {
             });
 
             it('should override screenshotPath option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({screenshotPath: '/screens'})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -508,12 +538,14 @@ describe('config', () => {
             });
 
             it('should resolve screenshotPath relative to projectRoot', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({screenshotPath: './screens'})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
                 const resolvedPath = path.resolve(parsedConfig.projectRoot, './screens');
@@ -527,11 +559,13 @@ describe('config', () => {
             describe(`${option}`, () => {
                 describe(`should throw error if ${option}`, () => {
                     it('is not a number', () => {
-                        ConfigReader.prototype.getConfigFromFile.returns({
+                        const readConfig = mkConfig_({
                             browsers: {
                                 b1: mkBrowser_(_.set({}, option, '10'))
                             }
                         });
+
+                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -539,11 +573,13 @@ describe('config', () => {
                     });
 
                     it('is negative number', () => {
-                        ConfigReader.prototype.getConfigFromFile.returns({
+                        const readConfig = mkConfig_({
                             browsers: {
                                 b1: mkBrowser_(_.set({}, option, -5))
                             }
                         });
+
+                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -551,11 +587,13 @@ describe('config', () => {
                     });
 
                     it('is float number', () => {
-                        ConfigReader.prototype.getConfigFromFile.returns({
+                        const readConfig = mkConfig_({
                             browsers: {
                                 b1: mkBrowser_(_.set({}, option, 15.5))
                             }
                         });
+
+                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -565,12 +603,14 @@ describe('config', () => {
 
 
                 it(`should set ${option} option to all browsers`, () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: mkBrowser_(),
                             b2: mkBrowser_()
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -580,12 +620,14 @@ describe('config', () => {
                 });
 
                 it(`should override ${option} option`, () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: mkBrowser_(),
                             b2: mkBrowser_(_.set({}, option, 13))
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -598,11 +640,13 @@ describe('config', () => {
         describe('retry', () => {
             describe('should throw error if retry', () => {
                 it('is not a number', () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: mkBrowser_({retry: '5'})
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -610,11 +654,13 @@ describe('config', () => {
                 });
 
                 it('is negative', () => {
-                    ConfigReader.prototype.getConfigFromFile.returns({
+                    const readConfig = mkConfig_({
                         browsers: {
                             b1: mkBrowser_({retry: -7})
                         }
                     });
+
+                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -623,12 +669,14 @@ describe('config', () => {
             });
 
             it('should set retry option to all browsers', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -638,12 +686,14 @@ describe('config', () => {
             });
 
             it('should override retry option', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({
+                const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_({retry: 7})
                     }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
