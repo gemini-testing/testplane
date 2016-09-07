@@ -1,3 +1,9 @@
+## 0.13.0 - 2016-09-07
+
+* Show tests in reports if they were skipped by the HERMIONE_SKIP_BROWSERS
+environment variable
+* Fixed files read error, when files in specs were specified as string.
+
 ## 0.12.0 - 2016-08-22
 
 * Added passing of execution context to a browser instance in tests (see the [documentation](https://github.com/gemini-testing/hermione/blob/v0.12.0/README.md#execution-context) for more details)
