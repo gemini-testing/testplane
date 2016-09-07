@@ -27,7 +27,7 @@
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
     "commander": "^2.9.0",
-    "glob-extra": "^1.1.1",
+    "glob-extra": "^1.2.0",
     "inherit": "^2.2.2",
     "lodash": "~3.10.1",
     "mocha": "~2.4.5",
