@@ -128,6 +128,36 @@ describe('Browser', () => {
                     });
             });
 
+            it('should not concat url without slash at the beginning to the base url', () => {
+                return mkBrowser_({baseUrl: 'http://some.domain.org'})
+                    .init()
+                    .then((browser) => {
+                        session.url('some/url');
+
+                        assert.equal(browser.meta.url, 'some/url');
+                    });
+            });
+
+            it('should not remove the last slash from meta url', () => {
+                return mkBrowser_({baseUrl: 'http://some.domain.org'})
+                    .init()
+                    .then((browser) => {
+                        session.url('/some/url/');
+
+                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url/');
+                    });
+            });
+
+            it('should remove consecutive slashes in meta url', () => {
+                return mkBrowser_({baseUrl: 'http://some.domain.org/'})
+                    .init()
+                    .then((browser) => {
+                        session.url('/some/url');
+
+                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
+                    });
+            });
+
             it('should not save any url if `url` called as getter', () => {
                 return mkBrowser_()
                     .init()

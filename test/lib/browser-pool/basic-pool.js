@@ -1,25 +1,25 @@
 'use strict';
-var q = require('q'),
-    Browser = require('../../../lib/browser'),
-    BasicPool = require('../../../lib/browser-pool/basic-pool'),
-    browserWithId = require('../../utils').browserWithId;
 
-describe('Unlimited pool', function() {
-    var sandbox = sinon.sandbox.create(),
-        browser,
-        config,
-        pool,
-        requestBrowser = function() {
-            return pool.getBrowser('id');
-        };
+const q = require('q');
+const Browser = require('../../../lib/browser');
+const BasicPool = require('../../../lib/browser-pool/basic-pool');
+const browserWithId = require('../../utils').browserWithId;
 
-    beforeEach(function() {
+describe('Unlimited pool', () => {
+    const sandbox = sinon.sandbox.create();
+
+    let browser;
+    let config;
+    let pool;
+
+    const requestBrowser = () => pool.getBrowser('id');
+
+    beforeEach(() => {
         browser = sandbox.stub(browserWithId('id'));
         browser.init.returns(q(browser));
         browser.quit.returns(q(browser));
 
-        sandbox.stub(Browser.prototype, '__constructor')
-            .returns(browser);
+        sandbox.stub(Browser, 'create').returns(browser);
 
         config = {
             browsers: {
@@ -32,36 +32,27 @@ describe('Unlimited pool', function() {
         pool = new BasicPool(config);
     });
 
-    afterEach(function() {
-        sandbox.restore();
-    });
+    afterEach(() => sandbox.restore());
 
-    it('should create new browser when requested', function() {
+    it('should create new browser when requested', () => {
         return requestBrowser()
-            .then(function() {
-                assert.calledWith(Browser.prototype.__constructor, config);
-            });
+            .then(() => assert.calledWith(Browser.create, config));
     });
 
-    it('should init a browser', function() {
+    it('should init a browser', () => {
         return requestBrowser()
-            .then(function() {
-                assert.calledOnce(browser.init);
-            });
+            .then(() => assert.calledOnce(browser.init));
     });
 
-    it('should quit a browser when freed', function() {
+    it('should quit a browser when freed', () => {
         return requestBrowser()
-            .then(function(browser) {
-                return pool.freeBrowser(browser);
-            })
-            .then(function() {
-                assert.calledOnce(browser.quit);
-            });
+            .then((browser) => pool.freeBrowser(browser))
+            .then(() => assert.calledOnce(browser.quit));
     });
 
-    it('should reject browser initiation after termination', function() {
+    it('should reject browser initiation after termination', () => {
         pool.terminate();
+
         return assert.isRejected(requestBrowser());
     });
 });
