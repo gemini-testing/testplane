@@ -18,8 +18,6 @@ describe('hermione', () => {
     describe('run', () => {
         beforeEach(() => {
             sandbox.stub(Runner, 'create');
-            sandbox.stub(globExtra, 'expandPaths').returns(q([]));
-
             Runner.create.returns(sinon.createStubInstance(Runner));
 
             sandbox.stub(globExtra, 'expandPaths').returns(q([]));

@@ -4,7 +4,6 @@ const path = require('path');
 
 const ConfigReader = require('../../../lib/config/config-reader');
 const defaults = require('../../../lib/config/defaults');
-const logger = require('../../../lib/utils').logger;
 
 describe('config-reader', () => {
     const sandbox = sinon.sandbox.create();
@@ -72,72 +71,9 @@ describe('config-reader', () => {
 
         it('should not throw on absolute path to config file', () => {
             const reader = new ConfigReader({});
-            const conf = path.resolve(__dirname, '../../fixtures/.hermione.conf.js');
+            const configPath = path.resolve(__dirname, '../../fixtures/.hermione.conf.js');
 
-            assert.doesNotThrow(() => reader.getConfigFromFile(conf));
-        });
-    });
-
-    describe('environment variable `HERMIONE_SKIP_BROWSERS`', () => {
-        beforeEach(() => {
-            sandbox.stub(ConfigReader.prototype, 'getConfigFromFile');
-            sandbox.stub(logger, 'warn');
-        });
-
-        afterEach(() => process.env.HERMIONE_SKIP_BROWSERS = '');
-
-        it('should NOT filter config browsers if environment is not specified', () => {
-            const reader = mkReader_();
-
-            reader.getConfigFromFile.returns({
-                browsers: {b1: {}, b2: {}, b3: {}}
-            });
-
-            const config = reader.read();
-
-            assert.deepEqual(Object.keys(config.browsers), ['b1', 'b2', 'b3']);
-        });
-
-        it('should filter config browsers by passed browsers from environment variable', () => {
-            const reader = mkReader_();
-
-            reader.getConfigFromFile.returns({
-                browsers: {b1: {}, b2: {}, b3: {}}
-            });
-
-            process.env.HERMIONE_SKIP_BROWSERS = 'b1,b3';
-
-            const config = reader.read();
-
-            assert.deepEqual(Object.keys(config.browsers), ['b2']);
-        });
-
-        it('should handle spaces in passed browsers from environment variable', () => {
-            const reader = mkReader_();
-
-            reader.getConfigFromFile.returns({
-                browsers: {b1: {}, b2: {}, b3: {}}
-            });
-
-            process.env.HERMIONE_SKIP_BROWSERS = 'b1,       b3';
-
-            const config = reader.read();
-
-            assert.deepEqual(Object.keys(config.browsers), ['b2']);
-        });
-
-        it('should log warning in case of unknown browsers from environment variable', () => {
-            const reader = mkReader_();
-
-            reader.getConfigFromFile.returns({
-                browsers: {b1: {}, b2: {}}
-            });
-
-            process.env.HERMIONE_SKIP_BROWSERS = 'unknown-browser';
-
-            reader.read();
-
-            assert.calledWithMatch(logger.warn, /ids: unknown-browser.+browser/);
+            assert.doesNotThrow(() => reader.getConfigFromFile(configPath));
         });
     });
 });
