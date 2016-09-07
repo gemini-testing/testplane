@@ -27,7 +27,7 @@
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
     "commander": "^2.9.0",
-    "gemini-configparser": "^0.2.0",
+    "gemini-configparser": "^0.3.0",
     "glob-extra": "^1.2.0",
     "inherit": "^2.2.2",
     "js-yaml": "^3.6.1",
