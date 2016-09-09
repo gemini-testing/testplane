@@ -354,8 +354,8 @@ Option name               | Description
 ------------------------- | -------------
 `desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 `grid`                    | Selenium grid Url. Default value is `http://localhost:4444/wd/hub`.
-`baseUrl`                 | Base service-under-test url. Default value is `http://localhost:4444/wd/hub`.
-`waitTimeout`             | Timeout for web page event. Default value is `http://localhost`.
+`baseUrl`                 | Base service-under-test url. Default value is `http://localhost`.
+`waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by webdriverio. Default value is `null`.
