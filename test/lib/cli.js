@@ -39,6 +39,9 @@ describe('cli', () => {
     afterEach(() => {
         Commander.reporter = null;
         Commander.browser = null;
+
+        process.argv = [];
+
         sandbox.restore();
     });
 
@@ -70,7 +73,7 @@ describe('cli', () => {
             .then(() => assert.deepPropertyVal(Config.create.firstCall.args[0], 'mochaOpts.grep', 'someString'));
     });
 
-    it('should pass browser option to Hermione run as second param', () => {
+    it('should pass browser option to Hermione run as second argument', () => {
         sandbox.stub(Hermione.prototype);
 
         process.argv = ['node', 'test', '-b', 'yabro'];
@@ -99,7 +102,7 @@ describe('cli', () => {
             .then(() => assert.calledWithExactly(Hermione.prototype.__constructor, parsedConfig));
     });
 
-    it('should pass test suite path to Hermione run as first param', () => {
+    it('should pass test suite path to Hermione run as first argument', () => {
         sandbox.stub(Hermione.prototype);
 
         process.argv = ['node', 'test', 'path/to/test-suite'];
@@ -131,18 +134,18 @@ describe('cli', () => {
     describe('exit codes', () => {
         beforeEach(() => sandbox.stub(globExtra, 'expandPaths').returns(q([])));
 
-        describe('config validity', () => {
-            it('should exit with code 0 if config is ok', () => {
-                config.parse.returns(CONFIG);
+        it('should exit with code 0 if config is ok', () => {
+            config.parse.returns(CONFIG);
 
-                return cliStub.run().finally(() => assert.calledWith(process.exit, 0));
-            });
+            return cliStub.run()
+                .finally(() => assert.calledWith(process.exit, 0));
+        });
 
-            it('should exit with code 1 if config can not be read', () => {
-                config.parse.throws(new Error('Unable to read config'));
+        it('should exit with code 1 if config can not be read', () => {
+            config.parse.throws(new Error('Unable to read config'));
 
-                return cliStub.run().finally(() => assert.calledWith(process.exit, 1));
-            });
+            return cliStub.run()
+                .finally(() => assert.calledWith(process.exit, 1));
         });
     });
 });

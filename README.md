@@ -472,7 +472,7 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
   Options:
 
     -h, --help                 Output usage information
-    -c, --conf <path>          Config file
+    -c, --conf <path>          Path to configuration file
     -r, --reporter <reporter>  Test reporter
     -b, --browser <browser>    Run tests only in specified browser
     --grep <grep>              Run only tests matching string or regexp

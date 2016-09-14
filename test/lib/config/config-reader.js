@@ -34,7 +34,9 @@ describe('config-reader', () => {
         });
 
         it('should override option specified from config if it was set from cli', () => {
-            const reader = mkReader_({conf: 'hermione.js'});
+            const cliConfig = {conf: 'hermione.js'};
+            const reader = mkReader_(cliConfig);
+
             reader.getConfigFromFile.returns({conf: 'hermione.yaml'});
 
             const result = reader.read();
@@ -44,11 +46,11 @@ describe('config-reader', () => {
 
         it('should call prepareEnvironment function if it set in config', () => {
             const prepareEnvironment = sinon.spy().named('prepareEnvironment');
-            const reader = mkReader_({conf: 'hermione.js', prepareEnvironment});
+            const reader = mkReader_({prepareEnvironment});
 
             const result = reader.read();
 
-            assert.isTrue(result.prepareEnvironment.called);
+            assert.isTrue(result.prepareEnvironment.calledOnce);
         });
 
         it('should not call prepareEnvironment function if it is not set in config', () => {
@@ -70,7 +72,7 @@ describe('config-reader', () => {
         });
 
         it('should not throw on absolute path to config file', () => {
-            const reader = new ConfigReader({});
+            const reader = mkReader_();
             const configPath = path.resolve(__dirname, '../../fixtures/.hermione.conf.js');
 
             assert.doesNotThrow(() => reader.getConfigFromFile(configPath));
