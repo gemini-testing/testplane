@@ -28,7 +28,7 @@ describe('cli', () => {
         config.parse.returns({reporters: []});
 
         cliStub = proxyquire('../../lib/cli', {
-            './config/validators': {
+            './validators': {
                 validateBrowsers: sinon.stub()
             }
         });

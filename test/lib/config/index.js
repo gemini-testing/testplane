@@ -337,7 +337,7 @@ describe('config', () => {
 
                     const config = Config.create({});
 
-                    assert.throws(() => config.parse(), Error, 'Browser must have desired capabilities set');
+                    assert.throws(() => config.parse(), Error, 'Browser must have desired capabilities option');
                 });
 
                 it('is not an object or null', () => {
