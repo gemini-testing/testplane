@@ -45,11 +45,11 @@ describe('cli', () => {
         sandbox.restore();
     });
 
-    it('should pass conf option to config from cli', () => {
+    it('should pass config option to config from cli', () => {
         process.argv = ['node', 'test', '-c', 'config.js'];
 
         return cliStub.run()
-            .then(() => assert.equal(Config.create.firstCall.args[0].conf, 'config.js'));
+            .then(() => assert.equal(Config.create.firstCall.args[0].config, 'config.js'));
     });
 
     it('should pass reporter option to config from cli', () => {

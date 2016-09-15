@@ -121,9 +121,9 @@ describe('config', () => {
     describe('root parsed options', () => {
         beforeEach(() => sandbox.stub(ConfigReader.prototype, 'getConfigFromFile'));
 
-        describe('conf', () => {
-            it('should throw error if conf is not a string', () => {
-                const readConfig = mkConfig_({conf: ['Array']});
+        describe('config', () => {
+            it('should throw error if config is not a string', () => {
+                const readConfig = mkConfig_({config: ['Array']});
                 ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const config = Config.create({});
@@ -131,23 +131,23 @@ describe('config', () => {
                 assert.throws(() => config.parse(), Error, 'a value must be string');
             });
 
-            it('should set default conf relative to projectRoot if it does not set in config file', () => {
+            it('should set default config relative to projectRoot if it does not set in config file', () => {
                 ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
-                const resolvedPath = path.resolve(parsedConfig.projectRoot, defaults.conf);
+                const resolvedPath = path.resolve(parsedConfig.projectRoot, defaults.config);
 
-                assert.equal(parsedConfig.conf, resolvedPath);
+                assert.equal(parsedConfig.config, resolvedPath);
             });
 
-            it('should override conf relative to projectRoot', () => {
-                const readConfig = mkConfig_({conf: './config.js'});
+            it('should override config relative to projectRoot', () => {
+                const readConfig = mkConfig_({config: './config.js'});
                 ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
                 const resolvedPath = path.resolve(parsedConfig.projectRoot, './config.js');
 
-                assert.equal(parsedConfig.conf, resolvedPath);
+                assert.equal(parsedConfig.config, resolvedPath);
             });
         });
 
@@ -441,11 +441,11 @@ describe('config', () => {
             });
         });
 
-        describe('grid', () => {
-            it('should throw error if grid is not a string', () => {
+        describe('gridUrl', () => {
+            it('should throw error if gridUrl is not a string', () => {
                 const readConfig = mkConfig_({
                     browsers: {
-                        b1: mkBrowser_({grid: /regExp/})
+                        b1: mkBrowser_({gridUrl: /regExp/})
                     }
                 });
 
@@ -456,7 +456,7 @@ describe('config', () => {
                 assert.throws(() => config.parse(), Error, 'a value must be string');
             });
 
-            it('should set grid to all browsers', () => {
+            it('should set gridUrl to all browsers', () => {
                 const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
@@ -468,16 +468,16 @@ describe('config', () => {
 
                 const parsedConfig = Config.create({}).parse();
 
-                assert.isDefined(defaults.grid);
-                assert.equal(parsedConfig.browsers.b1.grid, defaults.grid);
-                assert.equal(parsedConfig.browsers.b2.grid, defaults.grid);
+                assert.isDefined(defaults.gridUrl);
+                assert.equal(parsedConfig.browsers.b1.gridUrl, defaults.gridUrl);
+                assert.equal(parsedConfig.browsers.b2.gridUrl, defaults.gridUrl);
             });
 
-            it('should override grid option', () => {
+            it('should override gridUrl option', () => {
                 const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
-                        b2: mkBrowser_({grid: 'http://bar.com'})
+                        b2: mkBrowser_({gridUrl: 'http://bar.com'})
                     }
                 });
 
@@ -485,8 +485,8 @@ describe('config', () => {
 
                 const parsedConfig = Config.create({}).parse();
 
-                assert.equal(parsedConfig.browsers.b1.grid, defaults.grid);
-                assert.equal(parsedConfig.browsers.b2.grid, 'http://bar.com');
+                assert.equal(parsedConfig.browsers.b1.gridUrl, defaults.gridUrl);
+                assert.equal(parsedConfig.browsers.b2.gridUrl, 'http://bar.com');
             });
         });
 
