@@ -29,21 +29,29 @@ describe('mocha-runner/mocha-adapter', () => {
     let clearRequire;
     let testSkipper;
 
-    function mkSuiteStub_() {
+    function mkSuiteStub_(opts) {
+        opts = opts || {};
+
         return _.extend(new EventEmitter(), {
             enableTimeouts: sandbox.stub(),
             beforeAll: sandbox.stub(),
             afterAll: sandbox.stub(),
             tests: [{}],
-            ctx: {}
+            ctx: {},
+            title: opts.title || 'suite-title',
+            fullTitle: () => opts.fullTitle || ''
         });
     }
 
     function mkRunnableStub_(opts) {
-        return _.defaults(opts || {}, {
+        opts = _.defaults(opts || {}, {
             title: 'default-title',
             parent: MochaStub.prototype.suite,
-            fn: () => {}
+            fn: _.noop
+        });
+
+        return _.defaults(opts, {
+            fullTitle: () => `${opts.parent.title} ${opts.title}`
         });
     }
 
@@ -448,6 +456,27 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.prototype.suite.emit('test', test2);
             assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
+        });
+    });
+
+    describe('attachTitleValidator', () => {
+        let mochaAdapter;
+
+        beforeEach(() => mochaAdapter = mkMochaAdapter_());
+
+        it('should throw an error if tests have the same full title', () => {
+            const parentSuite = mkSuiteStub_();
+            const test1 = mkRunnableStub_({title: 'test-title', parent: parentSuite});
+            const test2 = mkRunnableStub_({title: 'test-title', parent: parentSuite});
+
+            mochaAdapter.attachTitleValidator({}, 'some/path/file.js');
+
+            MochaStub.prototype.suite.emit('test', test1);
+
+            assert.throws(
+                () => MochaStub.prototype.suite.emit('test', test2),
+                /with the same title: 'suite-title test-title'(.+) file: 'some\/path\/file.js'/
+            );
         });
     });
 
