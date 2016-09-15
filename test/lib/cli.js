@@ -29,7 +29,7 @@ describe('cli', () => {
 
         cliStub = proxyquire('../../lib/cli', {
             './validators': {
-                validateBrowsers: sinon.stub()
+                validateEmptyBrowsers: sinon.stub()
             }
         });
 
@@ -49,28 +49,28 @@ describe('cli', () => {
         process.argv = ['node', 'test', '-c', 'config.js'];
 
         return cliStub.run()
-            .then(() => assert.equal(Config.create.firstCall.args[0].config, 'config.js'));
+            .then(() => assert.calledWithMatch(Config.create, {config: 'config.js'}));
     });
 
     it('should pass reporter option to config from cli', () => {
         process.argv = ['node', 'test', '-r', 'foo'];
 
         return cliStub.run()
-            .then(() => assert.include(Config.create.firstCall.args[0].reporters, 'foo'));
+            .then(() => assert.calledWithMatch(Config.create, {reporters: ['foo']}));
     });
 
     it('should collect all reporter options to an array', () => {
         process.argv = ['node', 'test', '-r', 'bar', '-r', 'baz'];
 
         return cliStub.run()
-            .then(() => assert.deepEqual(Config.create.firstCall.args[0].reporters, ['bar', 'baz']));
+            .then(() => assert.calledWithMatch(Config.create, {reporters: ['bar', 'baz']}));
     });
 
     it('should add grep option to mochaOpts field in config from cli', () => {
         process.argv = ['node', 'test', '--grep', 'someString'];
 
         return cliStub.run()
-            .then(() => assert.deepPropertyVal(Config.create.firstCall.args[0], 'mochaOpts.grep', 'someString'));
+            .then(() => assert.calledWithMatch(Config.create, {mochaOpts: {grep: 'someString'}}));
     });
 
     it('should pass browser option to Hermione run as second argument', () => {
@@ -79,7 +79,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', '-b', 'yabro'];
 
         return cliStub.run()
-            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro']));
+            .then(() => assert.calledWithMatch(Hermione.prototype.run, sinon.match.any, ['yabro']));
     });
 
     it('should collect all browser options to an array', () => {
@@ -88,7 +88,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', '-b', 'yabro', '-b', 'amigo'];
 
         return cliStub.run()
-            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[1], ['yabro', 'amigo']));
+            .then(() => assert.calledWithMatch(Hermione.prototype.run, sinon.match.any, ['yabro', 'amigo']));
     });
 
     it('should pass parsed config to Hermione', () => {
@@ -99,7 +99,7 @@ describe('cli', () => {
         config.parse.returns(parsedConfig);
 
         return cliStub.run()
-            .then(() => assert.calledWithExactly(Hermione.prototype.__constructor, parsedConfig));
+            .then(() => assert.calledWithMatch(Hermione.prototype.__constructor, parsedConfig));
     });
 
     it('should pass test suite path to Hermione run as first argument', () => {
@@ -108,7 +108,7 @@ describe('cli', () => {
         process.argv = ['node', 'test', 'path/to/test-suite'];
 
         return cliStub.run()
-            .then(() => assert.deepEqual(Hermione.prototype.run.firstCall.args[0], ['path/to/test-suite']));
+            .then(() => assert.calledWithMatch(Hermione.prototype.run, ['path/to/test-suite']));
     });
 
     describe('validate browsers', () => {

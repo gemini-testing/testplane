@@ -44,7 +44,7 @@ describe('config', () => {
         });
 
         it('should set dir path for config file to projectRoot field', () => {
-            sandbox.stub(ConfigReader.prototype, 'read').returns({conf: 'foo/bar/.config.js'});
+            sandbox.stub(ConfigReader.prototype, 'read').returns({config: 'foo/bar/.config.js'});
 
             configStub.create({}).parse();
 

@@ -26,7 +26,7 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
 - [.hermione.conf.js](#hermioneconfjs)
   - [specs](#specs)
   - [browsers](#browsers)
-  - [grid](#grid)
+  - [gridUrl](#gridUrl)
   - [baseUrl](#baseurl)
   - [timeout](#timeout)
   - [waitTimeout](#waittimeout)
@@ -353,14 +353,14 @@ Available browser options:
 Option name               | Description
 ------------------------- | -------------
 `desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
-`grid`                    | Selenium grid Url. Default value is `http://localhost:4444/wd/hub`.
+`gridUrl`                 | Selenium grid Url. Default value is `http://localhost:4444/wd/hub`.
 `baseUrl`                 | Base service-under-test url. Default value is `http://localhost`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by webdriverio. Default value is `null`.
 
-### grid
+### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
 ### baseUrl
@@ -472,7 +472,7 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
   Options:
 
     -h, --help                 Output usage information
-    -c, --conf <path>          Path to configuration file
+    -c, --config <path>        Path to configuration file
     -r, --reporter <reporter>  Test reporter
     -b, --browser <browser>    Run tests only in specified browser
     --grep <grep>              Run only tests matching string or regexp
