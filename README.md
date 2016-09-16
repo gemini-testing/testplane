@@ -363,7 +363,7 @@ Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 Base service-under-test url. Default value is `http://localhost`.
 
 ### timeout
-Timeout for text execution. Default value is `60000` ms.
+Timeout for test execution. Default value is `60000` ms.
 
 ### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
