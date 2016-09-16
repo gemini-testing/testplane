@@ -76,7 +76,7 @@ describe('Flat reporter', () => {
         it('failed', () => {
             emit(RunnerEvents.TEST_FAIL, test);
 
-            const counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.secondCall.args);
 
             assert.equal(counters.failed, 1);
         });
@@ -92,7 +92,7 @@ describe('Flat reporter', () => {
         it('retries', () => {
             emit(RunnerEvents.RETRY, test);
 
-            const counters = getCounters_(logger.log.lastCall.args);
+            const counters = getCounters_(logger.log.thirdCall.args);
 
             assert.equal(counters.retries, 1);
         });
@@ -195,6 +195,78 @@ describe('Flat reporter', () => {
             const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
             assert.match(result, /reason: no comment/);
+        });
+
+        describe('failed tests report', () => {
+            it('should log correct number of failed suite', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                const result = chalk.stripColor(logger.log.getCall(2).args[0]);
+
+                assert.match(result, /^\n1\) .+/);
+            });
+
+            it('should log browser of failed suite', () => {
+                test = mkTestStub_({
+                    browserId: 'bro1'
+                });
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
+
+                assert.match(result, /bro1/);
+            });
+
+            it('should log error of failed test', () => {
+                test = mkTestStub_({
+                    err: 'some error'
+                });
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
+
+                assert.match(result, /some error/);
+            });
+        });
+
+        describe('retried tests report', () => {
+            it('should log correct number of retried suite', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.RETRY, test);
+
+                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
+
+                assert.match(result, /1\) .+/);
+            });
+
+            it('should log browser of retried suite', () => {
+                test = mkTestStub_({
+                    browserId: 'bro1'
+                });
+
+                emit(RunnerEvents.RETRY, test);
+
+                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
+
+                assert.match(result, /bro1/);
+            });
+
+            it('should log error of retried test', () => {
+                test = mkTestStub_({
+                    err: 'some error'
+                });
+
+                emit(RunnerEvents.RETRY, test);
+
+                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
+
+                assert.match(result, /some error/);
+            });
         });
     });
 });
