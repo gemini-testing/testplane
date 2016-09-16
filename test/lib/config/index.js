@@ -1,10 +1,8 @@
 /*jshint sub:true*/
-
 'use strict';
 
 const path = require('path');
 const url = require('url');
-
 const _ = require('lodash');
 const proxyquire = require('proxyquire');
 

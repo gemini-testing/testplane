@@ -1,7 +1,6 @@
 'use strict';
 
 const path = require('path');
-
 const ConfigReader = require('../../../lib/config/config-reader');
 const defaults = require('../../../lib/config/defaults');
 
