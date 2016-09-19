@@ -29,7 +29,7 @@ describe('cli', () => {
 
         cliStub = proxyquire('../../lib/cli', {
             './validators': {
-                validateEmptyBrowsers: sinon.stub()
+                validateEmptyBrowsers: sandbox.stub()
             }
         });
 
@@ -52,13 +52,6 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Config.create, {config: 'config.js'}));
     });
 
-    it('should pass reporter option to config from cli', () => {
-        process.argv = ['node', 'test', '-r', 'foo'];
-
-        return cliStub.run()
-            .then(() => assert.calledWithMatch(Config.create, {reporters: ['foo']}));
-    });
-
     it('should collect all reporter options to an array', () => {
         process.argv = ['node', 'test', '-r', 'bar', '-r', 'baz'];
 
@@ -71,15 +64,6 @@ describe('cli', () => {
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Config.create, {mochaOpts: {grep: 'someString'}}));
-    });
-
-    it('should pass browser option to Hermione run as second argument', () => {
-        sandbox.stub(Hermione.prototype);
-
-        process.argv = ['node', 'test', '-b', 'yabro'];
-
-        return cliStub.run()
-            .then(() => assert.calledWithMatch(Hermione.prototype.run, sinon.match.any, ['yabro']));
     });
 
     it('should collect all browser options to an array', () => {
@@ -102,7 +86,7 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.__constructor, parsedConfig));
     });
 
-    it('should pass test suite path to Hermione run as first argument', () => {
+    it('should run Hermione with test suite path', () => {
         sandbox.stub(Hermione.prototype);
 
         process.argv = ['node', 'test', 'path/to/test-suite'];
@@ -121,7 +105,7 @@ describe('cli', () => {
             });
         });
 
-        it('should throw error if "browsers" option is not an object', () => {
+        it('should throw an error if "browsers" option is not an object', () => {
             config.parse.returns({browsers: 'String'});
 
             return cli.run().finally(() => {

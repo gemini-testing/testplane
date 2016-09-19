@@ -26,7 +26,7 @@ describe('config', () => {
         let parseOptions;
 
         beforeEach(() => {
-            parseOptions = sinon.stub();
+            parseOptions = sandbox.stub();
 
             configStub = proxyquire('../../../lib/config', {
                 './options': parseOptions
@@ -636,34 +636,32 @@ describe('config', () => {
         });
 
         describe('retry', () => {
-            describe('should throw error if retry', () => {
-                it('is not a number', () => {
-                    const readConfig = mkConfig_({
-                        browsers: {
-                            b1: mkBrowser_({retry: '5'})
-                        }
-                    });
-
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
-
-                    const config = Config.create({});
-
-                    assert.throws(() => config.parse(), Error, 'a value must be number');
+            it('should throw error if retry is not a number', () => {
+                const readConfig = mkConfig_({
+                    browsers: {
+                        b1: mkBrowser_({retry: '5'})
+                    }
                 });
 
-                it('is negative', () => {
-                    const readConfig = mkConfig_({
-                        browsers: {
-                            b1: mkBrowser_({retry: -7})
-                        }
-                    });
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                const config = Config.create({});
 
-                    const config = Config.create({});
+                assert.throws(() => config.parse(), Error, 'a value must be number');
+            });
 
-                    assert.throws(() => config.parse(), Error, '"retry" should be non-negative');
+            it('should throw error if retry is negative', () => {
+                const readConfig = mkConfig_({
+                    browsers: {
+                        b1: mkBrowser_({retry: -7})
+                    }
                 });
+
+                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+
+                const config = Config.create({});
+
+                assert.throws(() => config.parse(), Error, '"retry" should be non-negative');
             });
 
             it('should set retry option to all browsers', () => {
