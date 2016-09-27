@@ -379,7 +379,7 @@ Number of sessions which are run simultaneously. Global value for all browsers. 
 How many times test should be retried in case of a fail. Global value for all browsers. Default value is `0`.
 
 ### mochaOpts
-Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options. Default value is
+Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options. Default values are:
 ```javascript
 mochaOpts: {
     slow: 10000, // If test execution time is greater than this value, then test is slow.
@@ -480,15 +480,14 @@ Configuration data can be changed depending on extra conditions in `prepareEnvir
 
 For example,
 ```
-hermione -c ./config.js
+hermione --config ./config.js --reporter flat --browser firefox --grep name
 ```
 
 **Note.** All CLI options override config values.
 
 ## Overriding settings
 
-All options can also be overridden via command-line flags or environment
-variables. Priorities are the following:
+All options can also be overridden via command-line flags or environment variables. Priorities are the following:
 
 * command-line option has the highest priority. It overrides environment variable and config file value.
 
@@ -498,24 +497,19 @@ variables. Priorities are the following:
 
 * if no command-line option, environment variable or config file option specified, default is used.
 
-To override config setting with CLI option, convert full option path to
-`--kebab-case`. For example, if you want to run tests against different base
-URL, call:
+To override config setting with CLI option, convert full option path to `--kebab-case`. For example, if you want to run tests against different base URL, call:
 
 ```
 hermione path/to/mytest.js --base-url http://example.com
 ```
 
-To change number of sessions for Firefox (considering you have
-browser with `firefox` id in the config):
+To change number of sessions for Firefox (considering you have browser with `firefox` id in the config):
 
 ```
 hermione path/to/mytest.js --browsers-firefox-sessions-per-browser 7
 ```
 
-To override setting with environment variable, convert its full path to
-`snake_case` and add `hermione_` prefix. Above examples can be rewritten to use
-environment variables instead of CLI options:
+To override setting with environment variable, convert its full path to `snake_case` and add `hermione_` prefix. Above examples can be rewritten to use environment variables instead of CLI options:
 
 ```
 hermione_base_url=http://example.com hermione path/to/mytest.js

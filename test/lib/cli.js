@@ -46,21 +46,21 @@ describe('cli', () => {
     });
 
     it('should pass config option to config from cli', () => {
-        process.argv = ['node', 'test', '-c', 'config.js'];
+        process.argv = ['node', 'hermione', '-c', 'config.js'];
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Config.create, {config: 'config.js'}));
     });
 
     it('should collect all reporter options to an array', () => {
-        process.argv = ['node', 'test', '-r', 'bar', '-r', 'baz'];
+        process.argv = ['node', 'hermione', '-r', 'bar', '-r', 'baz'];
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Config.create, {reporters: ['bar', 'baz']}));
     });
 
     it('should add grep option to mochaOpts field in config from cli', () => {
-        process.argv = ['node', 'test', '--grep', 'someString'];
+        process.argv = ['node', 'hermione', '--grep', 'someString'];
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Config.create, {mochaOpts: {grep: 'someString'}}));
@@ -69,7 +69,7 @@ describe('cli', () => {
     it('should collect all browser options to an array', () => {
         sandbox.stub(Hermione.prototype);
 
-        process.argv = ['node', 'test', '-b', 'yabro', '-b', 'amigo'];
+        process.argv = ['node', 'hermione', '-b', 'yabro', '-b', 'amigo'];
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Hermione.prototype.run, sinon.match.any, ['yabro', 'amigo']));
@@ -89,7 +89,7 @@ describe('cli', () => {
     it('should run Hermione with test suite path', () => {
         sandbox.stub(Hermione.prototype);
 
-        process.argv = ['node', 'test', 'path/to/test-suite'];
+        process.argv = ['node', 'hermione', 'path/to/test-suite'];
 
         return cliStub.run()
             .then(() => assert.calledWithMatch(Hermione.prototype.run, ['path/to/test-suite']));
@@ -100,7 +100,7 @@ describe('cli', () => {
             config.parse.returns({});
 
             return cli.run().finally(() => {
-                assert.calledOnce(logger.error);
+                assert.calledWithMatch(logger.error, '"browsers" is required option and should not be empty');
                 assert.calledWith(process.exit, 1);
             });
         });
@@ -109,7 +109,7 @@ describe('cli', () => {
             config.parse.returns({browsers: 'String'});
 
             return cli.run().finally(() => {
-                assert.calledOnce(logger.error);
+                assert.calledWithMatch(logger.error, '"browsers" should be an object');
                 assert.calledWith(process.exit, 1);
             });
         });

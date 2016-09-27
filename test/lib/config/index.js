@@ -38,23 +38,7 @@ describe('config', () => {
 
             configStub.create({}).parse();
 
-            assert.isTrue(ConfigReader.prototype.read.calledOnce);
-        });
-
-        it('should set dir path for config file to projectRoot field', () => {
-            sandbox.stub(ConfigReader.prototype, 'read').returns({config: 'foo/bar/.config.js'});
-
-            configStub.create({}).parse();
-
-            assert.propertyVal(parseOptions.firstCall.args[0].options, 'projectRoot', 'foo/bar');
-        });
-
-        it('should set curr working dir to projectRoot field when config file does not exist', () => {
-            sandbox.stub(ConfigReader.prototype, 'read').returns({});
-
-            configStub.create({}).parse();
-
-            assert.propertyVal(parseOptions.firstCall.args[0].options, 'projectRoot', process.cwd());
+            assert.calledOnce(ConfigReader.prototype.read);
         });
     });
 
@@ -72,7 +56,7 @@ describe('config', () => {
 
             const parsedConfig = Config.create({}).parse();
 
-            assert.equal(parsedConfig.baseUrl, 'http://default.com');
+            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
         });
 
         it('should not override value with env if allowOverrides.env is false', () => {
@@ -81,7 +65,7 @@ describe('config', () => {
 
             const parsedConfig = Config.create({}, {env: false}).parse();
 
-            assert.equal(parsedConfig.baseUrl, 'http://default.com');
+            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
         });
 
         it('should override value with env if allowOverrides.env is true', () => {
@@ -92,7 +76,7 @@ describe('config', () => {
 
             const parsedConfig = Config.create({}, {env: true}).parse();
 
-            assert.equal(parsedConfig.baseUrl, 'http://env.com');
+            assert.propertyVal(parsedConfig, 'baseUrl', 'http://env.com');
         });
 
         it('should not override value with env if allowOverrides.cli is false', () => {
@@ -101,7 +85,7 @@ describe('config', () => {
 
             const parsedConfig = Config.create({}, {cli: false}).parse();
 
-            assert.equal(parsedConfig.baseUrl, 'http://default.com');
+            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
         });
 
         it('should override value with cli if allowOverrides.cli is true', () => {
@@ -112,38 +96,38 @@ describe('config', () => {
 
             const parsedConfig = Config.create({}, {cli: true}).parse();
 
-            assert.equal(parsedConfig.baseUrl, 'http://cli.com');
+            assert.propertyVal(parsedConfig, 'baseUrl', 'http://cli.com');
         });
     });
 
     describe('root parsed options', () => {
-        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'getConfigFromFile'));
+        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'read'));
 
         describe('config', () => {
             it('should throw error if config is not a string', () => {
                 const readConfig = mkConfig_({config: ['Array']});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
                 assert.throws(() => config.parse(), Error, 'a value must be string');
             });
 
-            it('should set default config relative to projectRoot if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
+            it('should set default config relative to project dir if it does not set in config file', () => {
+                ConfigReader.prototype.read.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
-                const resolvedPath = path.resolve(parsedConfig.projectRoot, defaults.config);
+                const resolvedPath = path.resolve(process.cwd(), defaults.config);
 
                 assert.equal(parsedConfig.config, resolvedPath);
             });
 
-            it('should override config relative to projectRoot', () => {
+            it('should override config relative to project dir', () => {
                 const readConfig = mkConfig_({config: './config.js'});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
-                const resolvedPath = path.resolve(parsedConfig.projectRoot, './config.js');
+                const resolvedPath = path.resolve(process.cwd(), './config.js');
 
                 assert.equal(parsedConfig.config, resolvedPath);
             });
@@ -152,7 +136,7 @@ describe('config', () => {
         describe('debug', () => {
             it('should throw error if debug is not a boolean', () => {
                 const readConfig = mkConfig_({debug: 'String'});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -160,7 +144,7 @@ describe('config', () => {
             });
 
             it('should set default debug option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
+                ConfigReader.prototype.read.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -169,7 +153,7 @@ describe('config', () => {
 
             it('should override debug option', () => {
                 const readConfig = mkConfig_({debug: true});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -180,7 +164,7 @@ describe('config', () => {
         describe('mochaOpts', () => {
             it('should throw error if mochaOpts is not an error or object', () => {
                 const readConfig = mkConfig_({mochaOpts: ['Array']});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -188,7 +172,7 @@ describe('config', () => {
             });
 
             it('should set default mochaOpts option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
+                ConfigReader.prototype.read.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -204,7 +188,7 @@ describe('config', () => {
                 };
 
                 const readConfig = mkConfig_({mochaOpts});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -216,7 +200,7 @@ describe('config', () => {
             describe(`${option}`, () => {
                 it(`should throw error if ${option} is not a null or function`, () => {
                     const readConfig = mkConfig_(_.set({}, option, {}));
-                    sandbox.stub(ConfigReader.prototype, 'read').returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -224,7 +208,7 @@ describe('config', () => {
                 });
 
                 it(`should set default ${option} option if it does not set in config file`, () => {
-                    ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
+                    ConfigReader.prototype.read.returns(mkConfig_());
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -235,7 +219,7 @@ describe('config', () => {
                     const func = () => {};
                     const readConfig = mkConfig_(_.set({}, option, func));
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -244,22 +228,10 @@ describe('config', () => {
             });
         });
 
-        describe('projectRoot', () => {
-            it('should set config dir as projectRoot option if projectRoot is not a string', () => {
-                const readConfig = mkConfig_({projectRoot: ['Array']});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
-
-                const parsedConfig = Config.create({}).parse();
-                const configDir = path.dirname(parsedConfig.conf);
-
-                assert.equal(parsedConfig.projectRoot, path.resolve(configDir, parsedConfig.projectRoot));
-            });
-        });
-
         describe('reporters', () => {
             it('should throw error if reporters is not an array', () => {
                 const readConfig = mkConfig_({reporters: 'String'});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -267,7 +239,7 @@ describe('config', () => {
             });
 
             it('should set default reporters option if it does not set in config file', () => {
-                ConfigReader.prototype.getConfigFromFile.returns(mkConfig_());
+                ConfigReader.prototype.read.returns(mkConfig_());
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -276,7 +248,7 @@ describe('config', () => {
 
             it('should override reporters option', () => {
                 const readConfig = mkConfig_({reporters: ['foo', 'bar']});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -286,7 +258,7 @@ describe('config', () => {
 
         describe('specs', () => {
             it('should throw error if specs is empty', () => {
-                ConfigReader.prototype.getConfigFromFile.returns({});
+                ConfigReader.prototype.read.returns({});
 
                 const config = Config.create({});
 
@@ -295,7 +267,7 @@ describe('config', () => {
 
             it('should throw error if specs option is not an array', () => {
                 const readConfig = mkConfig_({specs: 'String'});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -304,7 +276,7 @@ describe('config', () => {
 
             it('should override specs option', () => {
                 const readConfig = mkConfig_({specs: ['bar', 'baz']});
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -314,7 +286,7 @@ describe('config', () => {
     });
 
     describe('parsed options per browser', () => {
-        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'getConfigFromFile'));
+        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'read'));
 
         const mkBrowser_ = (opts) => {
             return _.defaults(opts || {}, {
@@ -331,7 +303,7 @@ describe('config', () => {
                         }
                     });
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -347,7 +319,7 @@ describe('config', () => {
                         }
                     });
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const config = Config.create({});
 
@@ -366,7 +338,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -382,7 +354,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -397,7 +369,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -414,7 +386,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -430,7 +402,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -447,7 +419,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -462,7 +434,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -479,7 +451,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -496,7 +468,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -511,7 +483,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -528,7 +500,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -536,7 +508,7 @@ describe('config', () => {
                 assert.equal(parsedConfig.browsers.b2.screenshotPath, '/screens');
             });
 
-            it('should resolve screenshotPath relative to projectRoot', () => {
+            it('should resolve screenshotPath relative to project dir', () => {
                 const readConfig = mkConfig_({
                     browsers: {
                         b1: mkBrowser_(),
@@ -544,10 +516,10 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
-                const resolvedPath = path.resolve(parsedConfig.projectRoot, './screens');
+                const resolvedPath = path.resolve(process.cwd(), './screens');
 
                 assert.equal(parsedConfig.browsers.b1.screenshotPath, defaults.screenshotPath);
                 assert.equal(parsedConfig.browsers.b2.screenshotPath, resolvedPath);
@@ -564,7 +536,7 @@ describe('config', () => {
                             }
                         });
 
-                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                        ConfigReader.prototype.read.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -578,7 +550,7 @@ describe('config', () => {
                             }
                         });
 
-                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                        ConfigReader.prototype.read.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -592,7 +564,7 @@ describe('config', () => {
                             }
                         });
 
-                        ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                        ConfigReader.prototype.read.returns(readConfig);
 
                         const config = Config.create({});
 
@@ -608,7 +580,7 @@ describe('config', () => {
                         }
                     });
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -625,7 +597,7 @@ describe('config', () => {
                         }
                     });
 
-                    ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                    ConfigReader.prototype.read.returns(readConfig);
 
                     const parsedConfig = Config.create({}).parse();
 
@@ -643,7 +615,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -657,7 +629,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const config = Config.create({});
 
@@ -672,7 +644,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
@@ -689,7 +661,7 @@ describe('config', () => {
                     }
                 });
 
-                ConfigReader.prototype.getConfigFromFile.returns(readConfig);
+                ConfigReader.prototype.read.returns(readConfig);
 
                 const parsedConfig = Config.create({}).parse();
 
