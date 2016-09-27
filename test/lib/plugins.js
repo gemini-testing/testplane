@@ -2,14 +2,26 @@
 
 var proxyquire = require('proxyquire').noCallThru();
 
+const fs = require('fs');
+const utils = require('../../lib/utils');
+
 describe('plugins', function() {
     var hermione,
         nodeModules;
 
+    let foobarPlugin;
+
+    const sandbox = sinon.sandbox.create();
+
     beforeEach(function() {
+        foobarPlugin = sandbox.spy().named('foobarPlugin');
+        sandbox.stub(utils, 'require').returns(foobarPlugin);
+
         hermione = sinon.spy();
         nodeModules = {};
     });
+
+    afterEach(() => sandbox.restore());
 
     function load_(pluginOpts) {
         hermione.config = {
@@ -21,7 +33,6 @@ describe('plugins', function() {
 
     describe('load', function() {
         it('should load plugin specified in config without prefix', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'hermione-foobar': foobarPlugin
             };
@@ -32,7 +43,6 @@ describe('plugins', function() {
         });
 
         it('should load plugin with prefix', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'hermione-foobar': foobarPlugin
             };
@@ -43,7 +53,6 @@ describe('plugins', function() {
         });
 
         it('should load plugin without prefix', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'foobar': foobarPlugin
             };
@@ -54,8 +63,8 @@ describe('plugins', function() {
         });
 
         it('should prefer plugin with prefix', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin'),
-                someOtherModule = sinon.spy().named('someOtherModule');
+            var someOtherModule = sinon.spy().named('someOtherModule');
+            utils.require.returns(foobarPlugin);
 
             nodeModules = {
                 'hermione-foobar': foobarPlugin,
@@ -69,13 +78,20 @@ describe('plugins', function() {
         });
 
         it('should throw error if plugin not found', function() {
+            utils.require.restore();
+
             assert.throws(function() {
                 load_({'hermione-foo': true});
             });
         });
 
+        it('should throw an error if plugin has internal error', () => {
+            utils.require.withArgs('hermione-foobar').throws(new Error('some plugin error'));
+
+            assert.throws(() => load_({'hermione-foobar': true}), /some plugin error/);
+        });
+
         it('should not load disabled plugins', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'hermione-foobar': foobarPlugin
             };
@@ -86,7 +102,6 @@ describe('plugins', function() {
         });
 
         it('should load plugin with empty configuration', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'hermione-foobar': foobarPlugin
             };
@@ -109,7 +124,6 @@ describe('plugins', function() {
         });
 
         it('should pass plugin its configuration', function() {
-            var foobarPlugin = sinon.spy().named('foobarPlugin');
             nodeModules = {
                 'hermione-foobar': foobarPlugin
             };
