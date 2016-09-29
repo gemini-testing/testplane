@@ -57,13 +57,6 @@ describe('config-reader', () => {
         assert.calledOnce(result.prepareEnvironment);
     });
 
-    it('should not call prepareEnvironment function if it is not set in config', () => {
-        const reader = mkReader_({config: 'cliHermione.js'});
-        const result = reader.read();
-
-        assert.isNull(result.prepareEnvironment);
-    });
-
     it('should not throw on relative path to config file', () => {
         const reader = mkReader_({config: './test/cliHermione.js'});
 
