@@ -13,7 +13,7 @@ describe('Browser', () => {
 
     function createBrowserConfig_(opts) {
         return _.defaults(opts || {}, {
-            gridUrl: 'http://test_host:4444/wd/hub',
+            grid: 'http://test_host:4444/wd/hub',
             browsers: {
                 browser: {
                     desiredCapabilities: {browserName: 'browser'}
