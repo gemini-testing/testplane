@@ -1,6 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
+const path = require('path');
 const EventEmitter = require('events').EventEmitter;
 const FlatReporter = require('../../../lib/reporters/flat');
 const RunnerEvents = require('../../../lib/constants/runner-events');
@@ -121,10 +122,12 @@ describe('Flat reporter', () => {
             return _.defaults(opts || {}, {
                 fullTitle: sinon.stub().returns('suite test'),
                 title: 'test',
+                file: 'path/to/test',
                 browserId: 'chrome',
                 duration: '100500'
             });
         };
+
         const getDeserealizedResult = (log) => {
             return chalk
                 .stripColor(log)
@@ -208,6 +211,28 @@ describe('Flat reporter', () => {
                 assert.match(result, /^\n1\) .+/);
             });
 
+            it('should log full title of failed suite', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                const result = chalk.stripColor(logger.log.getCall(2).args[0]);
+
+                assert.include(result, test.fullTitle());
+            });
+
+            it('should log path to file of failed suite', () => {
+                test = mkTestStub_();
+
+                sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
+
+                assert.include(result, test.file);
+            });
+
             it('should log browser of failed suite', () => {
                 test = mkTestStub_({
                     browserId: 'bro1'
@@ -215,7 +240,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
+                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
 
                 assert.match(result, /bro1/);
             });
@@ -227,7 +252,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
+                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
 
                 assert.match(result, /some error/);
             });
@@ -244,6 +269,28 @@ describe('Flat reporter', () => {
                 assert.match(result, /1\) .+/);
             });
 
+            it('should log full title of retried suite', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.RETRY, test);
+
+                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
+
+                assert.include(result, test.fullTitle());
+            });
+
+            it('should log path to file of retried suite', () => {
+                test = mkTestStub_();
+
+                sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
+
+                emit(RunnerEvents.RETRY, test);
+
+                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
+
+                assert.include(result, test.file);
+            });
+
             it('should log browser of retried suite', () => {
                 test = mkTestStub_({
                     browserId: 'bro1'
@@ -251,7 +298,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
+                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
 
                 assert.match(result, /bro1/);
             });
@@ -263,7 +310,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
+                const result = chalk.stripColor(logger.log.getCall(6).args[0]);
 
                 assert.match(result, /some error/);
             });
