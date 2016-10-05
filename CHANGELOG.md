@@ -1,3 +1,13 @@
+# Changelog
+
+## 0.14.0 - 2016-10-05
+
+* Added configparser which is intended to verify configuration file and provides an opportunity to override config values through cli and environment variables
+* Show fallen tests at the end of the reporter
+* Added file path to the fallen tests at the end of the reporter
+* Show correct errors which might be occur by connecting plugins
+* Fixed bug with double slashes in meta url
+
 ## 0.13.0 - 2016-09-07
 
 * Show tests in reports if they were skipped by the HERMIONE_SKIP_BROWSERS
