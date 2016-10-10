@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.0 - 2016-10-10
+
+* Throw an error if tests have the same title
+
 ## 0.14.0 - 2016-10-05
 
 * Added configparser which is intended to verify configuration file and provides an opportunity to override config values through cli and environment variables
