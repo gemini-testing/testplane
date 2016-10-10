@@ -29,6 +29,7 @@ describe('mocha-runner', () => {
 
         sandbox.stub(MochaAdapter.prototype, 'addFile').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachEmitFn').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'run').returns(q());
         sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
@@ -83,6 +84,13 @@ describe('mocha-runner', () => {
                     MochaAdapter.prototype.attachTestFilter,
                     MochaAdapter.prototype.addFile
                 ));
+        });
+
+        it('should call title vaidator with titles and suite file', () => {
+            return run_(['some/path/file.js'])
+                .then(() => {
+                    assert.calledWith(MochaAdapter.prototype.attachTitleValidator, {}, 'some/path/file.js');
+                });
         });
 
         it('should create all mocha instances before run any of them', () => {
