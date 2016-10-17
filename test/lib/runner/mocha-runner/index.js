@@ -11,7 +11,7 @@ describe('mocha-runner', () => {
 
     const mochaRunnerInit = () => {
         return new MochaRunner(
-            {mochaOpts: {}},
+            {system: {mochaOpts: {}}},
             sinon.createStubInstance(BrowserAgent),
             sinon.createStubInstance(TestSkipper)
         );

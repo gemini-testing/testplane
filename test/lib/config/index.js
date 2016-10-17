@@ -1,45 +1,116 @@
 'use strict';
 
 const _ = require('lodash');
-const proxyquire = require('proxyquire');
+const path = require('path');
+const proxyquire = require('proxyquire').noCallThru();
 
-const ConfigReader = require('../../../lib/config/config-reader');
 const Config = require('../../../lib/config');
 
 describe('config', () => {
     const sandbox = sinon.sandbox.create();
 
-    const mkConfig_ = (opts) => {
-        return _.defaults(opts || {}, {
-            specs: ['path/to/test']
+    let configStub;
+    let parseOptions;
+
+    beforeEach(() => {
+        parseOptions = sandbox.stub();
+
+        configStub = proxyquire('../../../lib/config', {
+            './options': parseOptions
         });
-    };
+
+        sandbox.stub(configStub, 'read');
+    });
 
     afterEach(() => sandbox.restore());
 
-    describe('parse', () => {
-        let configStub;
-        let parseOptions;
+    it('should read config file', () => {
+        configStub.create();
 
-        beforeEach(() => {
-            parseOptions = sandbox.stub();
+        assert.calledOnce(configStub.read);
+    });
+
+    it('should merge parsed config and cli options', () => {
+        parseOptions.returns({test: {prop1: 'val1'}});
+        const cliOpts = {test: {prop2: 'val2'}};
+
+        const config = configStub.create('configPath', cliOpts);
+
+        assert.deepEqual(config.test, {prop1: 'val1', prop2: 'val2'});
+    });
+
+    describe('read', () => {
+        const readConfig_ = (configPath, configFromFile) => {
+            const resolvedConfigPath = path.resolve(process.cwd(), configPath);
 
             configStub = proxyquire('../../../lib/config', {
-                './options': parseOptions
+                [resolvedConfigPath]: configFromFile || {}
             });
+
+            return configStub.read(configPath);
+        };
+
+        it('should call prepareEnvironment function if it set in config', () => {
+            const prepareEnvironment = sinon.spy().named('prepareEnvironment');
+
+            const config = readConfig_('hermione.js', {prepareEnvironment});
+
+            assert.calledOnce(config.prepareEnvironment);
         });
 
-        it('should read config file', () => {
-            sandbox.stub(ConfigReader.prototype, 'read').returns({});
+        it('should not throw on relative path to config file', () => {
+            assert.doesNotThrow(() => readConfig_('./test/hermione.js'));
+        });
 
-            configStub.create({}).parse();
+        it('should not throw on absolute path to config file', () => {
+            const absolutePath = path.resolve(__dirname, '../../test/hermione.js');
 
-            assert.calledOnce(ConfigReader.prototype.read);
+            assert.doesNotThrow(() => readConfig_(absolutePath));
+        });
+    });
+
+    describe('forBrowser', () => {
+        it('should return browser config', () => {
+            const capabilities = {browserName: 'bro'};
+
+            parseOptions.returns({browsers: {bro: {capabilities}}});
+
+            const browserConfig = configStub.create().forBrowser('bro');
+
+            assert.deepEqual(browserConfig, {id: 'bro', capabilities});
+        });
+
+        it('should extend browser config by system opts', () => {
+            const capabilities = {browserName: 'bro'};
+            const system = {systemProp: true};
+
+            parseOptions.returns({browsers: {bro: {capabilities}}, system});
+
+            const browserConfig = configStub.create().forBrowser('bro');
+
+            assert.equal(browserConfig.systemProp, true);
+        });
+    });
+
+    describe('getBrowserIds', () => {
+        it('should return browsers ids', () => {
+            const browsers = {bro1: {}, bro2: {}};
+            parseOptions.returns({browsers});
+
+            const browserIds = configStub.create().getBrowserIds();
+
+            assert.deepEqual(browserIds, ['bro1', 'bro2']);
         });
     });
 
     describe('overrides options', () => {
-        beforeEach(() => sandbox.stub(ConfigReader.prototype, 'read'));
+        const mkConfig_ = (opts) => {
+            return _.defaults(opts || {}, {
+                specs: ['path/to/test']
+            });
+        };
+
+        beforeEach(() => sandbox.stub(Config, 'read'));
 
         afterEach(() => {
             delete process.env['hermione_base_url'];
@@ -48,51 +119,51 @@ describe('config', () => {
 
         it('should not override anything by default', () => {
             const readConfig = mkConfig_({baseUrl: 'http://default.com'});
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create();
 
-            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
+            assert.propertyVal(config, 'baseUrl', 'http://default.com');
         });
 
         it('should not override value with env if allowOverrides.env is false', () => {
             const readConfig = mkConfig_({baseUrl: 'http://default.com'});
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}, {env: false}).parse();
+            const config = Config.create('configPath', {}, {env: false});
 
-            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
+            assert.propertyVal(config, 'baseUrl', 'http://default.com');
         });
 
         it('should override value with env if allowOverrides.env is true', () => {
             const readConfig = mkConfig_({baseUrl: 'http://default.com'});
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
             process.env['hermione_base_url'] = 'http://env.com';
 
-            const parsedConfig = Config.create({}, {env: true}).parse();
+            const config = Config.create('configPath', {}, {env: true});
 
-            assert.propertyVal(parsedConfig, 'baseUrl', 'http://env.com');
+            assert.propertyVal(config, 'baseUrl', 'http://env.com');
         });
 
         it('should not override value with env if allowOverrides.cli is false', () => {
             const readConfig = mkConfig_({baseUrl: 'http://default.com'});
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}, {cli: false}).parse();
+            const config = Config.create('configPath', {}, {cli: false});
 
-            assert.propertyVal(parsedConfig, 'baseUrl', 'http://default.com');
+            assert.propertyVal(config, 'baseUrl', 'http://default.com');
         });
 
         it('should override value with cli if allowOverrides.cli is true', () => {
             const readConfig = mkConfig_({baseUrl: 'http://default.com'});
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
             process.argv = ['--base-url', 'http://cli.com'];
 
-            const parsedConfig = Config.create({}, {cli: true}).parse();
+            const config = Config.create('configPath', {}, {cli: true});
 
-            assert.propertyVal(parsedConfig, 'baseUrl', 'http://cli.com');
+            assert.propertyVal(config, 'baseUrl', 'http://cli.com');
         });
     });
 });

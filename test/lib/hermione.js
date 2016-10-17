@@ -34,7 +34,7 @@ describe('hermione', () => {
             return runner;
         };
 
-        const run_ = (opts) => new Hermione(utils.makeConfigStub(opts)).run();
+        const run_ = (opts) => new Hermione(utils.makeConfigStub(opts), {reporters: []}).run();
 
         describe('load plugins', () => {
             it('should load plugins', () => {
@@ -44,7 +44,8 @@ describe('hermione', () => {
 
             it('should load plugins for hermione facade instance', () => {
                 const config = utils.makeConfigStub();
-                const hermione = new Hermione(config);
+                const options = {reporters: []};
+                const hermione = new Hermione(config, options);
                 const runner = stubRunner_();
 
                 return hermione.run()

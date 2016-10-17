@@ -1,11 +1,7 @@
 'use strict';
 
-const path = require('path');
-const url = require('url');
 const _ = require('lodash');
 
-const ConfigReader = require('../../../lib/config/config-reader');
-const defaults = require('../../../lib/config/defaults');
 const Config = require('../../../lib/config');
 
 describe('config browser-options', () => {
@@ -23,7 +19,7 @@ describe('config browser-options', () => {
         });
     };
 
-    beforeEach(() => sandbox.stub(ConfigReader.prototype, 'read'));
+    beforeEach(() => sandbox.stub(Config, 'read'));
 
     afterEach(() => sandbox.restore());
 
@@ -36,11 +32,9 @@ describe('config browser-options', () => {
                     }
                 });
 
-                ConfigReader.prototype.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-                const config = Config.create({});
-
-                assert.throws(() => config.parse(), Error, 'Browser must have desired capabilities option');
+                assert.throws(() => Config.create({}), Error, 'Browser must have desired capabilities option');
             });
 
             it('is not an object or null', () => {
@@ -52,11 +46,9 @@ describe('config browser-options', () => {
                     }
                 });
 
-                ConfigReader.prototype.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-                const config = Config.create({});
-
-                assert.throws(() => config.parse(), Error, 'desiredCapabilities should be null or object');
+                assert.throws(() => Config.create({}), Error, 'desiredCapabilities should be null or object');
             });
         });
 
@@ -71,11 +63,11 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.deepEqual(parsedConfig.browsers.b1.desiredCapabilities, {browserName: 'yabro'});
+            assert.deepEqual(config.browsers.b1.desiredCapabilities, {browserName: 'yabro'});
         });
     });
 
@@ -87,11 +79,9 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const config = Config.create({});
-
-            assert.throws(() => config.parse(), Error, 'value must be a string');
+            assert.throws(() => Config.create({}), Error, 'value must be a string');
         });
 
         it('should set baseUrl to all browsers', () => {
@@ -104,15 +94,15 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.baseUrl, baseUrl);
-            assert.equal(parsedConfig.browsers.b2.baseUrl, baseUrl);
+            assert.equal(config.browsers.b1.baseUrl, baseUrl);
+            assert.equal(config.browsers.b2.baseUrl, baseUrl);
         });
 
-        it('should override baseUrl if protocol is set', () => {
+        it('should override baseUrl option if protocol is set', () => {
             const baseUrl = 'http://default.com';
             const readConfig = mkConfig_({
                 baseUrl,
@@ -122,15 +112,15 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.baseUrl, baseUrl);
-            assert.equal(parsedConfig.browsers.b2.baseUrl, 'http://foo.com');
+            assert.equal(config.browsers.b1.baseUrl, baseUrl);
+            assert.equal(config.browsers.b2.baseUrl, 'http://foo.com');
         });
 
-        it('should resolve baseUrl relative to default baseUrl', () => {
+        it('should resolve baseUrl option relative to top level baseUrl', () => {
             const baseUrl = 'http://default.com';
             const readConfig = mkConfig_({
                 baseUrl,
@@ -140,12 +130,12 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.baseUrl, baseUrl);
-            assert.equal(parsedConfig.browsers.b2.baseUrl, url.resolve(baseUrl, '/test'));
+            assert.equal(config.browsers.b1.baseUrl, baseUrl);
+            assert.equal(config.browsers.b2.baseUrl, 'http://default.com/test');
         });
     });
 
@@ -157,11 +147,9 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const config = Config.create({});
-
-            assert.throws(() => config.parse(), Error, 'value must be a string');
+            assert.throws(() => Config.create({}), Error, 'value must be a string');
         });
 
         it('should set gridUrl to all browsers', () => {
@@ -174,12 +162,12 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.gridUrl, gridUrl);
-            assert.equal(parsedConfig.browsers.b2.gridUrl, gridUrl);
+            assert.equal(config.browsers.b1.gridUrl, gridUrl);
+            assert.equal(config.browsers.b2.gridUrl, gridUrl);
         });
 
         it('should override gridUrl option', () => {
@@ -192,16 +180,70 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.gridUrl, gridUrl);
-            assert.equal(parsedConfig.browsers.b2.gridUrl, 'http://bar.com');
+            assert.equal(config.browsers.b1.gridUrl, gridUrl);
+            assert.equal(config.browsers.b2.gridUrl, 'http://bar.com');
+        });
+    });
+
+    describe('prepareBrowser', () => {
+        it('should throw error if prepareBrowser is not a null or function', () => {
+            const readConfig = mkConfig_({
+                browsers: {
+                    b1: mkBrowser_({prepareBrowser: 'String'})
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => Config.create({}), Error, '"prepareBrowser" should be null or function');
+        });
+
+        it('should set prepareBrowser to all browsers', () => {
+            const prepareBrowser = () => {};
+            const readConfig = mkConfig_({
+                prepareBrowser,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            const config = Config.create({});
+
+            assert.equal(config.browsers.b1.prepareBrowser, prepareBrowser);
+            assert.equal(config.browsers.b2.prepareBrowser, prepareBrowser);
+        });
+
+        it('should override prepareBrowser option', () => {
+            const prepareBrowser = () => {};
+            const newFunc = () => {};
+
+            const readConfig = mkConfig_({
+                prepareBrowser,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({prepareBrowser: newFunc})
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            const config = Config.create({});
+
+            assert.equal(config.browsers.b1.prepareBrowser, prepareBrowser);
+            assert.equal(config.browsers.b2.prepareBrowser, newFunc);
         });
     });
 
     describe('screenshotPath', () => {
+        beforeEach(() => sandbox.stub(process, 'cwd'));
+
         it('should throw error if screenshotPath is not a null or string', () => {
             const readConfig = mkConfig_({
                 browsers: {
@@ -209,61 +251,97 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const config = Config.create({});
-
-            assert.throws(() => config.parse(), Error, '"screenshotPath" should be null or string');
+            assert.throws(() => Config.create({}), Error, '"screenshotPath" should be null or string');
         });
 
-        it('should set screenshotPath option to all browsers', () => {
+        it('should set screenshotPath option to all browsers relative to project dir', () => {
+            const screenshotPath = 'default/path';
             const readConfig = mkConfig_({
+                screenshotPath,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            process.cwd.returns('/project_dir');
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.isDefined(defaults.screenshotPath);
-            assert.equal(parsedConfig.browsers.b1.screenshotPath, defaults.screenshotPath);
-            assert.equal(parsedConfig.browsers.b2.screenshotPath, defaults.screenshotPath);
+            assert.equal(config.browsers.b1.screenshotPath, '/project_dir/default/path');
+            assert.equal(config.browsers.b2.screenshotPath, '/project_dir/default/path');
         });
 
-        it('should override screenshotPath option', () => {
+        it('should override screenshotPath option relative to project dir', () => {
+            const screenshotPath = 'default/path';
             const readConfig = mkConfig_({
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({screenshotPath: '/screens'})
-                }
-            });
-
-            ConfigReader.prototype.read.returns(readConfig);
-
-            const parsedConfig = Config.create({}).parse();
-
-            assert.equal(parsedConfig.browsers.b1.screenshotPath, defaults.screenshotPath);
-            assert.equal(parsedConfig.browsers.b2.screenshotPath, '/screens');
-        });
-
-        it('should resolve screenshotPath relative to project dir', () => {
-            const readConfig = mkConfig_({
+                screenshotPath,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({screenshotPath: './screens'})
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            process.cwd.returns('/project_dir');
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
-            const resolvedPath = path.resolve(process.cwd(), './screens');
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.screenshotPath, defaults.screenshotPath);
-            assert.equal(parsedConfig.browsers.b2.screenshotPath, resolvedPath);
+            assert.equal(config.browsers.b1.screenshotPath, '/project_dir/default/path');
+            assert.equal(config.browsers.b2.screenshotPath, '/project_dir/screens');
+        });
+    });
+
+    describe('screenshotOnReject', () => {
+        it('should throw error if screenshotOnReject is not a boolean or object', () => {
+            const readConfig = mkConfig_({
+                browsers: {
+                    b1: mkBrowser_({screenshotOnReject: 'String'})
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => Config.create({}), Error, '"screenshotOnReject" should be boolean or object');
+        });
+
+        it('should set screenshotOnReject to all browsers', () => {
+            const screenshotOnReject = true;
+            const readConfig = mkConfig_({
+                screenshotOnReject,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            const config = Config.create({});
+
+            assert.equal(config.browsers.b1.screenshotOnReject, true);
+            assert.equal(config.browsers.b2.screenshotOnReject, true);
+        });
+
+        it('should override screenshotOnReject option', () => {
+            const screenshotOnReject = true;
+            const readConfig = mkConfig_({
+                screenshotOnReject,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({screenshotOnReject: false})
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            const config = Config.create({});
+
+            assert.equal(config.browsers.b1.screenshotOnReject, true);
+            assert.equal(config.browsers.b2.screenshotOnReject, false);
         });
     });
 
@@ -273,77 +351,72 @@ describe('config browser-options', () => {
                 it('is not a number', () => {
                     const readConfig = mkConfig_({
                         browsers: {
-                            b1: mkBrowser_(_.set({}, option, '10'))
+                            b1: mkBrowser_({[option]: '10'})
                         }
                     });
 
-                    ConfigReader.prototype.read.returns(readConfig);
+                    Config.read.returns(readConfig);
 
-                    const config = Config.create({});
-
-                    assert.throws(() => config.parse(), Error, 'Field must be an integer number');
+                    assert.throws(() => Config.create({}), Error, 'Field must be an integer number');
                 });
 
                 it('is negative number', () => {
                     const readConfig = mkConfig_({
                         browsers: {
-                            b1: mkBrowser_(_.set({}, option, -5))
+                            b1: mkBrowser_({[option]: -5})
                         }
                     });
 
-                    ConfigReader.prototype.read.returns(readConfig);
+                    Config.read.returns(readConfig);
 
-                    const config = Config.create({});
-
-                    assert.throws(() => config.parse(), Error, 'Field must be positive');
+                    assert.throws(() => Config.create({}), Error, 'Field must be positive');
                 });
 
                 it('is float number', () => {
                     const readConfig = mkConfig_({
                         browsers: {
-                            b1: mkBrowser_(_.set({}, option, 15.5))
+                            b1: mkBrowser_({[option]: 15.5})
                         }
                     });
 
-                    ConfigReader.prototype.read.returns(readConfig);
+                    Config.read.returns(readConfig);
 
-                    const config = Config.create({});
-
-                    assert.throws(() => config.parse(), Error, 'Field must be an integer number');
+                    assert.throws(() => Config.create({}), Error, 'Field must be an integer number');
                 });
             });
 
-            it(`should set ${option} option to all browsers`, () => {
+            it(`should set ${option} to all browsers`, () => {
                 const readConfig = mkConfig_({
+                    [option]: 666,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
                 });
 
-                ConfigReader.prototype.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-                const parsedConfig = Config.create({}).parse();
+                const config = Config.create({});
 
-                assert.isDefined(defaults[option]);
-                assert.equal(parsedConfig.browsers.b1[option], defaults[option]);
-                assert.equal(parsedConfig.browsers.b2[option], defaults[option]);
+                assert.equal(config.browsers.b1[option], 666);
+                assert.equal(config.browsers.b2[option], 666);
             });
 
             it(`should override ${option} option`, () => {
                 const readConfig = mkConfig_({
+                    [option]: 666,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_(_.set({}, option, 13))
                     }
                 });
 
-                ConfigReader.prototype.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-                const parsedConfig = Config.create({}).parse();
+                const config = Config.create({});
 
-                assert.equal(parsedConfig.browsers.b1[option], defaults[option]);
-                assert.equal(parsedConfig.browsers.b2[option], 13);
+                assert.equal(config.browsers.b1[option], 666);
+                assert.equal(config.browsers.b2[option], 13);
             });
         });
     });
@@ -356,11 +429,9 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const config = Config.create({});
-
-            assert.throws(() => config.parse(), Error, 'value must be a number');
+            assert.throws(() => Config.create({}), Error, 'value must be a number');
         });
 
         it('should throw error if retry is negative', () => {
@@ -370,44 +441,45 @@ describe('config browser-options', () => {
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const config = Config.create({});
-
-            assert.throws(() => config.parse(), Error, '"retry" should be non-negative');
+            assert.throws(() => Config.create({}), Error, '"retry" should be non-negative');
         });
 
         it('should set retry option to all browsers', () => {
+            const retry = 777;
             const readConfig = mkConfig_({
+                retry,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.isDefined(defaults.retry);
-            assert.equal(parsedConfig.browsers.b1.retry, defaults.retry);
-            assert.equal(parsedConfig.browsers.b2.retry, defaults.retry);
+            assert.equal(config.browsers.b1.retry, retry);
+            assert.equal(config.browsers.b2.retry, retry);
         });
 
         it('should override retry option', () => {
+            const retry = 777;
             const readConfig = mkConfig_({
+                retry,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({retry: 7})
                 }
             });
 
-            ConfigReader.prototype.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-            const parsedConfig = Config.create({}).parse();
+            const config = Config.create({});
 
-            assert.equal(parsedConfig.browsers.b1.retry, defaults.retry);
-            assert.equal(parsedConfig.browsers.b2.retry, 7);
+            assert.equal(config.browsers.b1.retry, retry);
+            assert.equal(config.browsers.b2.retry, 7);
         });
     });
 });

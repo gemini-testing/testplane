@@ -6,9 +6,7 @@ var _ = require('lodash'),
 function browserWithId(id) {
     var config = {browsers: {}};
 
-    config.browsers[id] = {
-        capabilities: {browserName: id}
-    };
+    config.forBrowser = () => ({capabilities: {browserName: id}});
 
     return new Browser(config, id);
 }
@@ -23,8 +21,8 @@ function makeConfigStub(opts) {
     var config = {
         specs: opts.specs,
         browsers: {},
-        reporters: [],
-        plugins: opts.plugins
+        plugins: opts.plugins,
+        system: {}
     };
 
     opts.browsers.forEach(function(browserId) {
