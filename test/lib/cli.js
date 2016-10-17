@@ -23,6 +23,8 @@ describe('cli', () => {
         sandbox.stub(logger);
         sandbox.stub(process, 'exit');
 
+        sandbox.stub(Hermione.prototype, 'run').returns(q(true));
+
         config = sinon.createStubInstance(Config);
         sandbox.stub(Config, 'create').returns(config);
         config.parse.returns({reporters: []});
@@ -67,8 +69,6 @@ describe('cli', () => {
     });
 
     it('should collect all browser options to an array', () => {
-        sandbox.stub(Hermione.prototype);
-
         process.argv = ['node', 'hermione', '-b', 'yabro', '-b', 'amigo'];
 
         return cliStub.run()
@@ -76,19 +76,17 @@ describe('cli', () => {
     });
 
     it('should pass parsed config to Hermione', () => {
-        sandbox.stub(Hermione.prototype);
+        sandbox.stub(Hermione, 'create');
 
         const parsedConfig = defaults;
 
         config.parse.returns(parsedConfig);
 
         return cliStub.run()
-            .then(() => assert.calledWithMatch(Hermione.prototype.__constructor, parsedConfig));
+            .then(() => assert.calledWithMatch(Hermione.create, parsedConfig));
     });
 
     it('should run Hermione with test suite path', () => {
-        sandbox.stub(Hermione.prototype);
-
         process.argv = ['node', 'hermione', 'path/to/test-suite'];
 
         return cliStub.run()
