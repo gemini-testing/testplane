@@ -19,6 +19,7 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [Auto initialization and closing grid sessions](#auto-initialization-and-closing-grid-sessions)
 - [Prerequisites](#prerequisites)
 - [Skip](#skip)
+- [Only](#only)
 - [WebdriverIO extensions](#webdriverio-extensions)
   - [Sharable meta info](#sharable-meta-info)
   - [Execution context](#execution-context)
@@ -82,7 +83,7 @@ hermione --grep login
 or simply use `mocha` `only()` API in the test
 
 ```
-describe.only('user login', () => {...});
+describe.only('user login', function() {...});
 ```
 
 ### Skip tests in specific browsers
@@ -90,20 +91,36 @@ Sometimes you need to skip test not in all browsers but in a specific one. For e
 some test in ~~ugly~~ IE browsers. In `hermione` you can do it with [hermione helper](#skip). For example,
 you can skip some tests in the specific browser
 ```js
-describe('feature', () => {
+describe('feature', function() {
     hermione.skip.in('ie8', 'it can not work in this browser');
-    it('nowaday functionality', () => {...});
+    it('nowaday functionality', function() {...});
 });
 ```
 
 or run tests in one of the browsers
 ```js
-describe('feature', () => {
+describe('feature', function() {
     // will be skipped in all browsers except chrome
     hermione.skip.notIn('chrome', 'it should work only in Chrome');
-    it('specific functionality', () => {...});
+    it('specific functionality', function() {...});
 });
 ```
+
+In these cases you will see messages with a skip reason in reports.
+
+To skip suite or test silently (without any messages in reports), you can pass the third argument with silent flag:
+```js
+hermione.skip.in('ie8', 'skipReason', {silent: true});
+// or
+hermione.skip.notIn('chrome', 'skipReason', {silent: true});
+```
+
+Or you can use another hermione helper - [only](#only), which is silent by default:
+```js
+hermione.only.in('chrome');
+```
+
+It will run tests only in one browser and skip rest silently.
 
 ### Flexible tests configuration
 `Hermione` has possibility to configure running some set of tests in specific browsers. For example,
@@ -138,32 +155,39 @@ selenium-standalone start
 This feature allows you to ignore the specified suite or test in any browser with additional comment.
 You can do it by using global `hermione.skip` helper. It supports the following methods:
 
- - `.in` — adds matchers for browsers with additional comment
+ - `.in` — adds matchers for browsers with additional comment;
  - `.notIn` — `.in` method with reverted value;
 
-Each method takes following arguments:
- - browser {String|RegExp|Array<String|RegExp>} — matcher for browser(s) to skip
+Each of these methods takes following arguments:
+ - browser {String|RegExp|Array<String|RegExp>} — matcher for browser(s) to skip;
  - [comment] {String} — comment for skipped test;
+ - [options] {Object} - additional options;
 
 **Note that matchers will be compared with `browserId` specified in a config file, e.g. `chrome-desktop`.**
 
 For example,
 ```js
-describe('feature', () => {
+describe('feature', function() {
     hermione.skip.in('chrome', "It shouldn't work this way in Chrome");
-    it('should work this way', () => runTestThisWay());
+    it('should work this way', function() {
+        return runTestThisWay();
+    });
 
-    it('should work that way', () => runTestThatWay());
+    it('should work that way', function() {
+        return runTestThatWay();
+    });
 
     hermione.skip.in(['chrome', 'firefox', /ie\d*/], 'Unstable test, see ticket TEST-487');
-    it('should done some tricky things', () => runTrickyTest());
+    it('should done some tricky things', function() {
+        return runTrickyTest();
+    });
 });
 ```
 
 in this case behaviour `it should work this way` will be skipped only in `chrome` browser, but will be run in other browsers. `It should work that way` will not be ignored. So skip will be applied only to the nearest test. If you need to skip all tests within a suite you can apply `skip` helper to a `describe` - all tests within this suite will be skipped with the same comment.
 ```js
 hermione.skip.in('chrome', 'skip comment');
-describe('some feature', () => {
+describe('some feature', function() {
     it(...);
     it(...);
 });
@@ -173,23 +197,48 @@ Also you can use `.notIn` method to invert matching. For example,
 ```js
 // ...
 hermione.skip.notIn('chrome', 'some comment');
-it('should work this way', () => doSomething());
+it('should work this way', function() {
+    return doSomething();
+});
 // ...
 ```
 
 in this case test will be skipped in all browsers except `chrome`.
 
-Methods `in` and `notIn` are chainable. So you can skip test in several browsers with different comments. For example,
+All of these methods are chainable. So you can skip test in several browsers with different comments. For example,
 ```js
 // ...
 hermione.skip
     .in('chrome', 'some comment')
     .notIn('ie9', 'another comment');
-it('test1', () => doSomething());
+it('test1', function() {
+    return doSomething();
+});
 // ...
 ```
 
 If you need to skip test in all browsers without a comment you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
+
+## Only
+This feature allows you to ignore the specified suite or test in any browser silently (without any messages in reports).
+You can do it by using global `hermione.only` helper. It supports only one method:
+
+- `.in` — `hermione.skip.notIn` method with silent flag
+
+This method takes following arguments:
+ - browser {String|RegExp|Array<String|RegExp>} — matcher for browser(s) to skip;
+
+For example:
+```js
+// ...
+hermione.only.in('chrome');
+it('should work this way', function() {
+    return doSomething();
+});
+// ...
+```
+
+in this case test will be skipped in all browsers **silently** except `chrome`.
 
 ## WebdriverIO extensions
 `Hermione` adds some usefull methods and properties to the `webdriverio` session after its initialization.

@@ -5,6 +5,7 @@ const SkipBuilder = require('../../../../../lib/runner/mocha-runner/skip/skip-bu
 
 describe('SkipBuilder', () => {
     let skip;
+
     beforeEach(() => {
         skip = new Skip();
     });
@@ -68,6 +69,30 @@ describe('SkipBuilder', () => {
                 .notIn('anotherBrowserId', 'another comment');
 
             assert.equal(skip.comment, 'another comment');
+        });
+
+        it('should skip silently if silent option is specified as true', () => {
+            const skipApi = new SkipBuilder(skip, 'browserId');
+
+            skipApi.in('browserId', '', {silent: true});
+
+            assert.equal(skip.silent, true);
+        });
+
+        it('should skip loudly if silent option is specified as false', () => {
+            const skipApi = new SkipBuilder(skip, 'browserId');
+
+            skipApi.in('browserId', '', {silent: false});
+
+            assert.equal(skip.silent, false);
+        });
+
+        it('should skip loudly if options are not passed', () => {
+            const skipApi = new SkipBuilder(skip, 'browserId');
+
+            skipApi.in('browserId');
+
+            assert.equal(skip.silent, false);
         });
     });
 
