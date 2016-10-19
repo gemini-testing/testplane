@@ -4,9 +4,9 @@ const EventEmitter = require('events').EventEmitter;
 
 const q = require('q');
 const globExtra = require('glob-extra');
+const pluginsLoader = require('plugins-loader');
 
 const Hermione = require('../../lib/hermione');
-const plugins = require('../../lib/plugins');
 const Runner = require('../../lib/runner');
 const RunnerEvents = require('../../lib/constants/runner-events');
 const RunnerFacade = require('../../lib/hermione-facade');
@@ -21,8 +21,7 @@ describe('hermione', () => {
             Runner.create.returns(sinon.createStubInstance(Runner));
 
             sandbox.stub(globExtra, 'expandPaths').returns(q([]));
-
-            sandbox.stub(plugins);
+            sandbox.stub(pluginsLoader, 'load');
         });
 
         afterEach(() => sandbox.restore());
@@ -35,27 +34,31 @@ describe('hermione', () => {
             return runner;
         };
 
-        const run_ = () => new Hermione(utils.makeConfigStub()).run();
+        const run_ = (opts) => new Hermione(utils.makeConfigStub(opts)).run();
 
         describe('load plugins', () => {
             it('should load plugins', () => {
                 return run_()
-                    .then(() => {
-                        assert.calledWith(plugins.load, sinon.match.instanceOf(RunnerFacade));
-                    });
+                    .then(() => assert.calledOnce(pluginsLoader.load));
             });
 
-            it('should create facade with runner and config', () => {
+            it('should load plugins for hermione facade instance', () => {
                 const config = utils.makeConfigStub();
                 const hermione = new Hermione(config);
                 const runner = stubRunner_();
 
-                sandbox.stub(RunnerFacade.prototype, '__constructor');
-
                 return hermione.run()
-                    .then(() => {
-                        assert.calledWith(RunnerFacade.prototype.__constructor, runner, config);
-                    });
+                    .then(() => assert.calledWith(pluginsLoader.load, new RunnerFacade(runner, config)));
+            });
+
+            it('should load plugins from config', () => {
+                return run_({plugins: {'some-plugin': true}})
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true}));
+            });
+
+            it('should load plugins with appropriate prefix', () => {
+                return run_()
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
             });
         });
 

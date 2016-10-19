@@ -32,6 +32,7 @@
     "inherit": "^2.2.2",
     "lodash": "~3.10.1",
     "mocha": "~2.4.5",
+    "plugins-loader": "1.0.1",
     "q": "^2.0.0",
     "q-promise-utils": "^1.0.0",
     "qemitter": "^1.1.0",
