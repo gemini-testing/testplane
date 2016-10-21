@@ -57,6 +57,15 @@ describe('config-reader', () => {
         assert.calledOnce(result.prepareEnvironment);
     });
 
+    it('should call prepareBrowser function if it set in config', () => {
+        const prepareBrowser = sinon.spy().named('prepareBrowser');
+        const reader = mkReader_({prepareBrowser});
+
+        const result = reader.read();
+
+        assert.calledOnce(result.prepareBrowser);
+    });
+
     it('should not throw on relative path to config file', () => {
         const reader = mkReader_({config: './test/cliHermione.js'});
 
