@@ -179,10 +179,16 @@ describe('Browser', () => {
         });
 
         it('should finalize session on global exit event', () => {
-            mkBrowser_().init();
-
-            return signalHandler.emitAndWait('exit')
+            return mkBrowser_()
+                .init()
+                .then(() => signalHandler.emitAndWait('exit'))
                 .then(() => assert.called(session.end));
+        });
+
+        it('should process an error from prepareBrowser', () => {
+            const prepareBrowser = sandbox.stub().throws();
+
+            return assert.isRejected(mkBrowser_({prepareBrowser}).init());
         });
 
         it('should not finalize session if it has not been initialized', () => {
