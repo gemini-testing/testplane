@@ -14,7 +14,10 @@ describe('config-reader', () => {
     };
 
     const mkReader_ = (cliConfig, fileConfig) => {
-        cliConfig = cliConfig || {};
+        cliConfig = _.defaults(cliConfig || {}, {
+            prepareEnvironment: sandbox.stub(),
+            prepareBrowser: sandbox.stub()
+        });
         fileConfig = fileConfig || {};
 
         const configPath = cliConfig.config || defaults.config;
@@ -57,13 +60,18 @@ describe('config-reader', () => {
         assert.calledOnce(result.prepareEnvironment);
     });
 
-    it('should call prepareBrowser function if it set in config', () => {
+    it('should call prepareBrowser function if it is specified in config', () => {
         const prepareBrowser = sinon.spy().named('prepareBrowser');
         const reader = mkReader_({prepareBrowser});
 
         const result = reader.read();
 
         assert.calledOnce(result.prepareBrowser);
+        assert.calledWith(result.prepareBrowser, sinon.match({
+            desiredCapabilities: {
+                browserName: 'firefox'
+            }
+        }));
     });
 
     it('should not throw on relative path to config file', () => {
