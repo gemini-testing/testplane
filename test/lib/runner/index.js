@@ -85,6 +85,16 @@ describe('Runner', () => {
                     .then(() => assert.callOrder(mediator, MochaRunner.prototype.run));
             });
 
+            it('should pass a runner to a RUNNER_START handler', () => {
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
+                const runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+
+                return run_({runner})
+                    .then(() => assert.calledWith(onRunnerStart, runner));
+            });
+
             it('should not run any mocha runner if RUNNER_START handler failed', () => {
                 const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject('some-error'));
                 const runner = new Runner(makeConfigStub());
