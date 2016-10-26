@@ -13,6 +13,17 @@ describe('Flat reporter', () => {
 
     let test;
     let emitter;
+    let stdout;
+
+    const mkTestStub_ = (opts) => {
+        return _.defaults(opts || {}, {
+            fullTitle: sinon.stub().returns('suite test'),
+            title: 'test',
+            file: 'path/to/test',
+            browserId: 'chrome',
+            duration: '100500'
+        });
+    };
 
     const getCounters_ = (args) => {
         return {
@@ -33,19 +44,18 @@ describe('Flat reporter', () => {
     };
 
     beforeEach(() => {
-        test = {
-            fullTitle: sinon.stub().returns('foo bar baz'),
-            title: 'baz',
-            browserId: 0,
-            sessionId: 'some_session_id',
-            duration: 100500
-        };
+        test = mkTestStub_();
 
         const reporter = new FlatReporter();
 
         emitter = new EventEmitter();
         reporter.attachRunner(emitter);
-        sandbox.stub(logger);
+
+        stdout = '';
+        sandbox.stub(logger, 'log', (str) => stdout += `${str}\n`);
+
+        sandbox.stub(logger, 'warn');
+        sandbox.stub(logger, 'error');
     });
 
     afterEach(() => {
@@ -118,16 +128,6 @@ describe('Flat reporter', () => {
     });
 
     describe('rendering', () => {
-        const mkTestStub_ = (opts) => {
-            return _.defaults(opts || {}, {
-                fullTitle: sinon.stub().returns('suite test'),
-                title: 'test',
-                file: 'path/to/test',
-                browserId: 'chrome',
-                duration: '100500'
-            });
-        };
-
         const getDeserealizedResult = (log) => {
             return chalk
                 .stripColor(log)
@@ -206,9 +206,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(2).args[0]);
-
-                assert.match(result, /^\n1\) .+/);
+                assert.match(stdout, /\n1\) .+/);
             });
 
             it('should log full title of failed suite', () => {
@@ -216,9 +214,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(2).args[0]);
-
-                assert.include(result, test.fullTitle());
+                assert.include(stdout, test.fullTitle());
             });
 
             it('should log path to file of failed suite', () => {
@@ -228,9 +224,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
-
-                assert.include(result, test.file);
+                assert.include(stdout, test.file);
             });
 
             it('should log browser of failed suite', () => {
@@ -240,21 +234,45 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
-
-                assert.match(result, /bro1/);
+                assert.match(stdout, /bro1/);
             });
 
-            it('should log error of failed test', () => {
+            it('should log an error stack of failed test', () => {
+                test = mkTestStub_({
+                    err: {stack: 'some stack'}
+                });
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.match(stdout, /some stack/);
+            });
+
+            it('should log an error message of failed test if an error stack does not exist', () => {
+                test = mkTestStub_({
+                    err: {message: 'some message'}
+                });
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.match(stdout, /some message/);
+            });
+
+            it('should log an error of failed test if an error stack and message do not exist', () => {
                 test = mkTestStub_({
                     err: 'some error'
                 });
 
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
+                assert.match(stdout, /some error/);
+            });
 
-                assert.match(result, /some error/);
+            it('should log "undefined" if failed test does not have "err" property', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.match(stdout, /undefined/);
             });
         });
 
@@ -264,9 +282,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
-
-                assert.match(result, /1\) .+/);
+                assert.match(stdout, /1\) .+/);
             });
 
             it('should log full title of retried suite', () => {
@@ -274,9 +290,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(3).args[0]);
-
-                assert.include(result, test.fullTitle());
+                assert.include(stdout, test.fullTitle());
             });
 
             it('should log path to file of retried suite', () => {
@@ -286,9 +300,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(4).args[0]);
-
-                assert.include(result, test.file);
+                assert.include(stdout, test.file);
             });
 
             it('should log browser of retried suite', () => {
@@ -298,21 +310,45 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(5).args[0]);
-
-                assert.match(result, /bro1/);
+                assert.match(stdout, /bro1/);
             });
 
-            it('should log error of retried test', () => {
+            it('should log an error stack of retried test', () => {
                 test = mkTestStub_({
-                    err: 'some error'
+                    err: {stack: 'some stack'}
                 });
 
                 emit(RunnerEvents.RETRY, test);
 
-                const result = chalk.stripColor(logger.log.getCall(6).args[0]);
+                assert.match(stdout, /some stack/);
+            });
 
-                assert.match(result, /some error/);
+            it('should log an error message of retried test if an error stack does not exist', () => {
+                test = mkTestStub_({
+                    err: {message: 'some message'}
+                });
+
+                emit(RunnerEvents.RETRY, test);
+
+                assert.match(stdout, /some message/);
+            });
+
+            it('should log an error of retried test if an error stack and message do not exist', () => {
+                test = mkTestStub_({
+                    err: 'some error'
+                });
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.match(stdout, /some error/);
+            });
+
+            it('should log "undefined" if retried test does not have "err" property', () => {
+                test = mkTestStub_();
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.match(stdout, /undefined/);
             });
         });
     });
