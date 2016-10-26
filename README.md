@@ -413,7 +413,7 @@ plugins: {
 
 // hermione-my-cool-plugin/index.js
 module.exports = function(hermione, opts) {
-    hermione.on(hermione.events.RUNNER_START, function() {
+    hermione.on(hermione.events.RUNNER_START, function(runner) {
         return setUp(hermione.config, opts.param); // config can be mutated
     });
 
@@ -434,7 +434,7 @@ Property name             | Description
 
 Event                     | Description
 ------------------------- | -------------
-`RUNNER_START`            | Will be triggered before tests execution. If a handler returns a promise, tests will be executed only after promise is resolved.
+`RUNNER_START`            | Will be triggered before tests execution. If a handler returns a promise, tests will be executed only after promise is resolved. Handler accepts an instance of a runner as a first argument. Using this instance you can emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after tests execution. If a handler returns a promise, tests will be executed only after promise is resolved.
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after promise is resolved
 `SESSION_END`             | Will be triggered after browser session quit. If a handler returns a promise, tests will be executed only after promise is resolved
