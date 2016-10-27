@@ -185,12 +185,6 @@ describe('Browser', () => {
                 .then(() => assert.called(session.end));
         });
 
-        it('should process an error from prepareBrowser', () => {
-            const prepareBrowser = sandbox.stub().throws();
-
-            return assert.isRejected(mkBrowser_({prepareBrowser}).init());
-        });
-
         it('should not finalize session if it has not been initialized', () => {
             return mkBrowser_()
                 .quit()
@@ -219,6 +213,12 @@ describe('Browser', () => {
                 .init()
                 .then((browser) => browser.quit())
                 .then(() => assert.called(logger.warn));
+        });
+
+        it('should handle an error from prepareBrowser', () => {
+            const prepareBrowser = sandbox.stub().throws();
+
+            return assert.isRejected(mkBrowser_({prepareBrowser}).init());
         });
     });
 });
