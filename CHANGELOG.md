@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 - 2016-10-26
+
+* Added passing of runner instance to `RUNNER_START` event handler which allows to trigger and subscribe to any other events via this runner
+* Fixed `flat` reporter which incorrectly counts statistics (`total`, `passed`, `failed` e.t.c) when several events were triggered for the same test (for example, `TEST_FAIL` after `TEST_PENDING`)
+
 ## 0.15.0 - 2016-10-10
 
 * Throw an error if tests have the same title
