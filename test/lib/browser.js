@@ -179,9 +179,9 @@ describe('Browser', () => {
         });
 
         it('should finalize session on global exit event', () => {
-            mkBrowser_().init();
-
-            return signalHandler.emitAndWait('exit')
+            return mkBrowser_()
+                .init()
+                .then(() => signalHandler.emitAndWait('exit'))
                 .then(() => assert.called(session.end));
         });
 
@@ -213,6 +213,12 @@ describe('Browser', () => {
                 .init()
                 .then((browser) => browser.quit())
                 .then(() => assert.called(logger.warn));
+        });
+
+        it('should handle an error from prepareBrowser', () => {
+            const prepareBrowser = sandbox.stub().throws();
+
+            return assert.isRejected(mkBrowser_({prepareBrowser}).init());
         });
     });
 });
