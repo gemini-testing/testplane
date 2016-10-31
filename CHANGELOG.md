@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.2 – 2016-10-31
+
+* Fixed bug with hermione freezing because of errors in `prepareBrowser` option in config
+
 ## 0.15.1 - 2016-10-26
 
 * Added passing of runner instance to `RUNNER_START` event handler which allows to trigger and subscribe to any other events via this runner
