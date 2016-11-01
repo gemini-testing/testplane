@@ -59,14 +59,14 @@ describe('mocha-runner/proxy-reporter', function() {
         createReporter_();
 
         var hook = {
-                type: 'hook',
-                title: '"before each" hook for "some test"',
-                ctx: {
-                    currentTest: {
-                        title: 'some test'
-                    }
+            type: 'hook',
+            title: '"before each" hook for "some test"',
+            ctx: {
+                currentTest: {
+                    title: 'some test'
                 }
-            };
+            }
+        };
 
         runner.emit('fail', hook, {message: 'foo'});
 
@@ -98,15 +98,15 @@ describe('mocha-runner/proxy-reporter', function() {
         createReporter_();
 
         var hook = {
-                type: 'hook',
-                title: '"after each" hook for "some test"',
-                originalTitle: '"after each" hook',
-                ctx: {
-                    currentTest: {
-                        title: 'some test'
-                    }
+            type: 'hook',
+            title: '"after each" hook for "some test"',
+            originalTitle: '"after each" hook',
+            ctx: {
+                currentTest: {
+                    title: 'some test'
                 }
-            };
+            }
+        };
 
         runner.emit('fail', hook, {message: 'foo'});
 
@@ -120,10 +120,10 @@ describe('mocha-runner/proxy-reporter', function() {
         createReporter_();
 
         var hook = {
-                type: 'hook',
-                title: '"before All" hook',
-                ctx: {}
-            };
+            type: 'hook',
+            title: '"before All" hook',
+            ctx: {}
+        };
 
         runner.emit('fail', hook, {message: 'foo'});
 
