@@ -30,7 +30,7 @@ describe('test-skipper', () => {
     it('should skip browsers from HERMIONE_SKIP_BROWSERS environment variable', () => {
         process.env.HERMIONE_SKIP_BROWSERS = 'b1';
 
-        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2:{}}});
+        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2: {}}});
         const suite = {pending: false};
 
         testSkipper.applySkip(suite, 'b1');
@@ -42,7 +42,7 @@ describe('test-skipper', () => {
     it('should not skip browsers which are not in the environment variable', () => {
         process.env.HERMIONE_SKIP_BROWSERS = 'b1';
 
-        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2:{}}});
+        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2: {}}});
         const suite = {pending: false};
 
         testSkipper.applySkip(suite, 'b2');
@@ -53,7 +53,7 @@ describe('test-skipper', () => {
     it('should correctly split the environment variable', () => {
         process.env.HERMIONE_SKIP_BROWSERS = 'b1,b2';
 
-        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2:{}}});
+        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2: {}}});
         const suite1 = {pending: false};
         const suite2 = {pending: false};
 
@@ -67,7 +67,7 @@ describe('test-skipper', () => {
     it('should correctly split the environment variable which contains spaces', () => {
         process.env.HERMIONE_SKIP_BROWSERS = 'b1, b2';
 
-        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2:{}}});
+        const testSkipper = mkTestSkipper({browsers: {b1: {}, b2: {}}});
         const suite1 = {pending: false};
         const suite2 = {pending: false};
 
@@ -81,7 +81,7 @@ describe('test-skipper', () => {
     it('should warn about unknown browsers in the environment variable', () => {
         process.env.HERMIONE_SKIP_BROWSERS = 'b3';
 
-        mkTestSkipper({browsers: {b1: {}, b2:{}}});
+        mkTestSkipper({browsers: {b1: {}, b2: {}}});
 
         assert.calledWith(logger.warn, sinon.match(/Unknown browser ids: b3(.+) specified in the config file: b1, b2/));
     });

@@ -55,8 +55,7 @@ describe('Runner', () => {
         it('should create browser pool', () => {
             const config = makeConfigStub();
 
-            /*jshint nonew: false */
-            new Runner(config);
+            new Runner(config); // eslint-disable-line no-new
 
             assert.calledWith(BrowserPool.prototype.__constructor, config);
         });
@@ -64,8 +63,7 @@ describe('Runner', () => {
         it('should create retryManager with passed config', () => {
             const config = makeConfigStub();
 
-            /*jshint nonew: false */
-            new Runner(config);
+            new Runner(config); // eslint-disable-line no-new
 
             assert.calledOnce(RetryManager.prototype.__constructor);
             assert.calledWith(RetryManager.prototype.__constructor, config);
@@ -127,8 +125,7 @@ describe('Runner', () => {
             const config = makeConfigStub();
             sandbox.stub(TestSkipper, 'create');
 
-            /*jshint nonew: false */
-            new Runner(config);
+            new Runner(config); // eslint-disable-line no-new
 
             assert.calledWith(TestSkipper.create, config);
         });

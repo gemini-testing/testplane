@@ -492,7 +492,7 @@ describe('mocha-runner/mocha-adapter', () => {
             mochaAdapter.attachEmitFn(emitFn);
 
             const Reporter = MochaStub.prototype.reporter.lastCall.args[0];
-            new Reporter(); // jshint ignore:line
+            new Reporter(); // eslint-disable-line no-new
         }
 
         it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', () => {
