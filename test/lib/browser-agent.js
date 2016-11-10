@@ -11,10 +11,16 @@ const logger = require('../../lib/utils').logger;
 describe('BrowserAgent', () => {
     const sandbox = sinon.sandbox.create();
 
-    const mkBrowserStub = (publicAPI) => {
+    const mkBrowserStub = (publicAPI, id) => {
         publicAPI = publicAPI || {};
 
-        return {publicAPI};
+        const browser = {publicAPI};
+
+        if (id) {
+            browser.id = id;
+        }
+
+        return browser;
     };
 
     const createBrowserAgent = (opts) => {
@@ -56,6 +62,19 @@ describe('BrowserAgent', () => {
 
             return browserAgent.getBrowser()
                 .then(() => assert.calledWith(onSessionStart, {foo: 'bar'}));
+        });
+
+        it('should emit `SESSION_START` event with browser id', () => {
+            const pool = sinon.createStubInstance(BrowserPool);
+            const browserAgent = createBrowserAgent({pool});
+            const onSessionStart = sinon.spy().named(RunnerEvents.SESSION_START);
+
+            pool.getBrowser.returns(q(mkBrowserStub({foo: 'bar'}, 'some-browser')));
+
+            browserAgent.on(RunnerEvents.SESSION_START, onSessionStart);
+
+            return browserAgent.getBrowser()
+                .then(() => assert.calledWith(onSessionStart, {foo: 'bar'}, {browserId: 'some-browser'}));
         });
 
         it('should wait all `SESSION_START` listeners', () => {
@@ -126,6 +145,17 @@ describe('BrowserAgent', () => {
 
             return browserAgent.freeBrowser(mkBrowserStub({foo: 'bar'}))
                 .then(() => assert.calledWith(onSessionEnd, {foo: 'bar'}));
+        });
+
+        it('should emit `SESSION_END` event with browser id', () => {
+            const pool = sinon.createStubInstance(BrowserPool);
+            const browserAgent = createBrowserAgent({pool});
+            const onSessionEnd = sinon.spy().named(RunnerEvents.SESSION_END);
+
+            browserAgent.on(RunnerEvents.SESSION_END, onSessionEnd);
+
+            return browserAgent.freeBrowser(mkBrowserStub({foo: 'bar'}, 'some-browser'))
+                .then(() => assert.calledWith(onSessionEnd, {foo: 'bar'}, {browserId: 'some-browser'}));
         });
 
         it('should wait all `SESSION_END` listeners', () => {
