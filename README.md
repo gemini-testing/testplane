@@ -436,8 +436,8 @@ Event                     | Description
 ------------------------- | -------------
 `RUNNER_START`            | Will be triggered before tests execution. If a handler returns a promise, tests will be executed only after promise is resolved. Handler accepts an instance of a runner as a first argument. Using this instance you can emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after tests execution. If a handler returns a promise, tests will be executed only after promise is resolved.
-`SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after promise is resolved
-`SESSION_END`             | Will be triggered after browser session quit. If a handler returns a promise, tests will be executed only after promise is resolved
+`SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after promise is resolved. Handler accepts an instance of webdriverIO as a first argument and object with browser identifier as second.
+`SESSION_END`             | Will be triggered after browser session quit. If a handler returns a promise, tests will be executed only after promise is resolved. Handler accepts an instance of webdriverIO as a first argument and object with  browser identifier as second.
 `SUITE_BEGIN`             | Test suite is about to execute
 `SUITE_END`               | Test suite execution is finished
 `SUITE_FAIL`              | Suite failed. For instance, `before` hook failed or a browser can not be launched (in fact, browsers are launched in `before` hook implicitly in the core of `hermione`)
