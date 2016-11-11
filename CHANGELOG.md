@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.3 – 2016-11-11
+
+* Added passing of browser identifier to `SESSION_START` and `SESSION_END` event handlers
+* Added eslint code validation tool instead of jshint and jscs
+
 ## 0.15.2 – 2016-10-31
 
 * Fixed bug with hermione freezing because of errors in `prepareBrowser` option in config
