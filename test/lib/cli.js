@@ -5,7 +5,6 @@ const globExtra = require('glob-extra');
 const proxyquire = require('proxyquire');
 const q = require('q');
 
-const cli = require('../../lib/cli');
 const Config = require('../../lib/config');
 const defaults = require('../../lib/config/defaults');
 const Hermione = require('../../lib/hermione');
@@ -27,7 +26,6 @@ describe('cli', () => {
 
         config = sinon.createStubInstance(Config);
         sandbox.stub(Config, 'create').returns(config);
-        config.parse.returns({reporters: []});
 
         cliStub = proxyquire('../../lib/cli', {
             './validators': {
@@ -47,25 +45,29 @@ describe('cli', () => {
         sandbox.restore();
     });
 
-    it('should pass config option to config from cli', () => {
+    it('should pass config path to config initialization from cli', () => {
         process.argv = ['node', 'hermione', '-c', 'config.js'];
 
         return cliStub.run()
-            .then(() => assert.calledWithMatch(Config.create, {config: 'config.js'}));
+            .then(() => assert.calledWithMatch(Config.create, 'config.js'));
     });
 
     it('should collect all reporter options to an array', () => {
+        sandbox.stub(Hermione, 'create');
+
         process.argv = ['node', 'hermione', '-r', 'bar', '-r', 'baz'];
 
         return cliStub.run()
-            .then(() => assert.calledWithMatch(Config.create, {reporters: ['bar', 'baz']}));
+            .then(() => assert.calledWithMatch(Hermione.create, sinon.match.any, {reporters: ['bar', 'baz']}));
     });
 
-    it('should add grep option to mochaOpts field in config from cli', () => {
+    it('should pass grep option to config initialization from cli', () => {
         process.argv = ['node', 'hermione', '--grep', 'someString'];
 
+        const cliConfig = {system: {mochaOpts: {grep: 'someString'}}};
+
         return cliStub.run()
-            .then(() => assert.calledWithMatch(Config.create, {mochaOpts: {grep: 'someString'}}));
+            .then(() => assert.calledWithMatch(Config.create, sinon.match.any, cliConfig));
     });
 
     it('should collect all browser options to an array', () => {
@@ -75,15 +77,13 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, sinon.match.any, ['yabro', 'amigo']));
     });
 
-    it('should pass parsed config to Hermione', () => {
+    it('should pass config to Hermione', () => {
         sandbox.stub(Hermione, 'create');
 
-        const parsedConfig = defaults;
-
-        config.parse.returns(parsedConfig);
+        Config.create.returns(defaults);
 
         return cliStub.run()
-            .then(() => assert.calledWithMatch(Hermione.create, parsedConfig));
+            .then(() => assert.calledWithMatch(Hermione.create, defaults));
     });
 
     it('should run Hermione with test suite path', () => {
@@ -93,38 +93,18 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, ['path/to/test-suite']));
     });
 
-    describe('validate browsers', () => {
-        it('should throw error if "browsers" is empty', () => {
-            config.parse.returns({});
-
-            return cli.run().finally(() => {
-                assert.calledWithMatch(logger.error, '"browsers" is required option and should not be empty');
-                assert.calledWith(process.exit, 1);
-            });
-        });
-
-        it('should throw an error if "browsers" option is not an object', () => {
-            config.parse.returns({browsers: 'String'});
-
-            return cli.run().finally(() => {
-                assert.calledWithMatch(logger.error, '"browsers" should be an object');
-                assert.calledWith(process.exit, 1);
-            });
-        });
-    });
-
     describe('exit codes', () => {
         beforeEach(() => sandbox.stub(globExtra, 'expandPaths').returns(q([])));
 
         it('should exit with code 0 if config is ok', () => {
-            config.parse.returns(CONFIG);
+            Config.create.returns(CONFIG);
 
             return cliStub.run()
                 .finally(() => assert.calledWith(process.exit, 0));
         });
 
         it('should exit with code 1 if config can not be read', () => {
-            config.parse.throws(new Error('Unable to read config'));
+            Config.create.throws(new Error('Unable to read config'));
 
             return cliStub.run()
                 .finally(() => assert.calledWith(process.exit, 1));

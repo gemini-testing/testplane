@@ -12,19 +12,21 @@ describe('Browser', () => {
     let session;
 
     function createBrowserConfig_(opts) {
-        return _.defaults(opts || {}, {
+        const browser = _.defaults(opts || {}, {
+            desiredCapabilities: {browserName: 'browser'},
+            baseUrl: 'http://base_url',
             gridUrl: 'http://test_host:4444/wd/hub',
-            browsers: {
-                browser: {
-                    desiredCapabilities: {browserName: 'browser'}
-                }
-            },
             waitTimeout: 100,
             debug: true,
             screenshotPath: 'path/to/screenshots',
-            screenshotOnReject: true,
-            baseUrl: 'http://base_url'
+            screenshotOnReject: true
         });
+
+        return {
+            baseUrl: 'http://main_url',
+            gridUrl: 'http://main_host:4444/wd/hub',
+            forBrowser: () => browser
+        };
     }
 
     function makeSessionStub_() {
@@ -53,7 +55,7 @@ describe('Browser', () => {
     afterEach(() => sandbox.restore());
 
     describe('init', () => {
-        it('should create webdriver.io session with properties from config', () => {
+        it('should create webdriver.io session with properties from browser config', () => {
             return mkBrowser_()
                 .init()
                 .then(() => assert.calledWith(webdriverio.remote, {
