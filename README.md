@@ -26,9 +26,9 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
 - [.hermione.conf.js](#hermioneconfjs)
   - [specs](#specs)
   - [browsers](#browsers)
-  - [gridUrl](#gridUrl)
+  - [gridUrl](#gridurl)
   - [baseUrl](#baseurl)
-  - [timeout](#timeout)
+  - [httpTimeout](#httptimeout)
   - [waitTimeout](#waittimeout)
   - [slow](#slow)
   - [debug](#debug)
@@ -365,6 +365,9 @@ Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
 ### baseUrl
 Base service-under-test url. Default value is `http://localhost`.
+
+### httpTimeout
+Timeout for any requests to Selenium server. Default value is `90000` ms.
 
 ### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
