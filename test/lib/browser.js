@@ -19,7 +19,8 @@ describe('Browser', () => {
             waitTimeout: 100,
             debug: true,
             screenshotPath: 'path/to/screenshots',
-            screenshotOnReject: true
+            screenshotOnReject: true,
+            httpTimeout: 3000
         });
 
         return {
@@ -68,6 +69,8 @@ describe('Browser', () => {
                     coloredLogs: true,
                     screenshotPath: 'path/to/screenshots',
                     screenshotOnReject: true,
+                    connectionRetryTimeout: 3000,
+                    connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
                 }));
         });

@@ -421,65 +421,65 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('retry', () => {
-        it('should throw error if retry is not a number', () => {
-            const readConfig = mkConfig_({
-                browsers: {
-                    b1: mkBrowser_({retry: '5'})
-                }
+    ['retry', 'httpTimeout'].forEach((option) => {
+        describe(`${option}`, () => {
+            it(`should throw error if ${option} is not a number`, () => {
+                const readConfig = mkConfig_({
+                    browsers: {
+                        b1: mkBrowser_(_.set({}, option, '100500'))
+                    }
+                });
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => Config.create({}), Error, 'Field must be an integer number');
             });
 
-            Config.read.returns(readConfig);
+            it(`should throw error if ${option} is negative`, () => {
+                const readConfig = mkConfig_({
+                    browsers: {
+                        b1: mkBrowser_({retry: -7})
+                    }
+                });
 
-            assert.throws(() => Config.create({}), Error, 'value must be a number');
-        });
+                Config.read.returns(readConfig);
 
-        it('should throw error if retry is negative', () => {
-            const readConfig = mkConfig_({
-                browsers: {
-                    b1: mkBrowser_({retry: -7})
-                }
+                assert.throws(() => Config.create({}), Error, 'Field must be non-negative');
             });
 
-            Config.read.returns(readConfig);
+            it(`should set ${option} option to all browsers`, () => {
+                const readConfig = mkConfig_({
+                    [option]: 100500,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_()
+                    }
+                });
 
-            assert.throws(() => Config.create({}), Error, '"retry" should be non-negative');
-        });
+                Config.read.returns(readConfig);
 
-        it('should set retry option to all browsers', () => {
-            const retry = 777;
-            const readConfig = mkConfig_({
-                retry,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_()
-                }
+                const config = Config.create({});
+
+                assert.equal(config.browsers.b1[option], 100500);
+                assert.equal(config.browsers.b2[option], 100500);
             });
 
-            Config.read.returns(readConfig);
+            it(`should override ${option} option`, () => {
+                const readConfig = mkConfig_({
+                    [option]: 100500,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_(_.set({}, option, 500100))
+                    }
+                });
 
-            const config = Config.create({});
+                Config.read.returns(readConfig);
 
-            assert.equal(config.browsers.b1.retry, retry);
-            assert.equal(config.browsers.b2.retry, retry);
-        });
+                const config = Config.create({});
 
-        it('should override retry option', () => {
-            const retry = 777;
-            const readConfig = mkConfig_({
-                retry,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({retry: 7})
-                }
+                assert.equal(config.browsers.b1[option], 100500);
+                assert.equal(config.browsers.b2[option], 500100);
             });
-
-            Config.read.returns(readConfig);
-
-            const config = Config.create({});
-
-            assert.equal(config.browsers.b1.retry, retry);
-            assert.equal(config.browsers.b2.retry, 7);
         });
     });
 });
