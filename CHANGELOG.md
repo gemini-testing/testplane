@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.15.4 - 2016-11-16
+
+* Fix: ability to override browser options from config
+
 ## 0.15.3 – 2016-11-11
 
 * Added passing of browser identifier to `SESSION_START` and `SESSION_END` event handlers
