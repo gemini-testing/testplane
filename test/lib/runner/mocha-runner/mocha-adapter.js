@@ -4,6 +4,7 @@ const BrowserAgent = require('../../../../lib/browser-agent');
 const logger = require('../../../../lib/utils').logger;
 const ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder');
+const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
 const proxyquire = require('proxyquire').noCallThru();
@@ -153,6 +154,15 @@ describe('mocha-runner/mocha-adapter', () => {
             MochaStub.prototype.suite.emit('pre-require');
 
             assert.instanceOf(global.hermione.skip, SkipBuilder);
+        });
+
+        it('hermione.only should return OnlyBuilder instance', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter.addFile('path/to/file');
+            MochaStub.prototype.suite.emit('pre-require');
+
+            assert.instanceOf(global.hermione.only, OnlyBuilder);
         });
 
         it('should remove global "hermione" object on "post-require" event', () => {

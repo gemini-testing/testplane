@@ -144,60 +144,61 @@ describe('Flat reporter', () => {
             assert.equal(result, 'suite test [chrome:test_session] - 100500ms');
         });
 
-        it('should add skip comment if test was skipped', () => {
-            test = mkTestStub_({
-                pending: true,
-                skipReason: 'some comment'
+        describe('skipped tests report', () => {
+            it('should add skip comment if test was skipped', () => {
+                test = mkTestStub_({
+                    pending: true,
+                    skipReason: 'some comment'
+                });
+
+                emit(RunnerEvents.TEST_PENDING, test);
+
+                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+
+                assert.match(result, /reason: some comment/);
             });
 
-            emit(RunnerEvents.TEST_PENDING, test);
+            it('should use parent skip comment if all describe was skipped', () => {
+                test = mkTestStub_({
+                    pending: true,
+                    skipReason: 'test comment',
+                    parent: {
+                        skipReason: 'suite comment'
+                    }
+                });
 
-            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                emit(RunnerEvents.TEST_PENDING, test);
 
-            assert.equal(result, 'suite test [chrome] - 100500ms reason: some comment');
-        });
+                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
-        it('should use parent skip comment if all describe was skipped', () => {
-            test = mkTestStub_({
-                pending: true,
-                skipReason: 'test comment',
-                parent: {
-                    skipReason: 'suite comment'
-                }
+                assert.match(result, /reason: suite comment/);
             });
 
-            emit(RunnerEvents.TEST_PENDING, test);
+            it('should use test skip comment if describe was skipped without comment', () => {
+                test = mkTestStub_({
+                    pending: true,
+                    skipReason: 'test comment',
+                    parent: {some: 'data'}
+                });
 
-            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                emit(RunnerEvents.TEST_PENDING, test);
 
-            assert.match(result, /reason: suite comment/);
-        });
+                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
-        it('should use test skip comment if describe was skipped without comment', () => {
-            test = mkTestStub_({
-                pending: true,
-                skipReason: 'test comment',
-                parent: {some: 'data'}
+                assert.match(result, /reason: test comment/);
             });
 
-            emit(RunnerEvents.TEST_PENDING, test);
+            it('should use default message if test was skipped without comment', () => {
+                test = mkTestStub_({
+                    pending: true
+                });
 
-            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                emit(RunnerEvents.TEST_PENDING, test);
 
-            assert.equal(result, 'suite test [chrome] - 100500ms reason: test comment');
-            assert.match(result, /reason: test comment/);
-        });
+                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
 
-        it('should use default message if test was skipped without comment', () => {
-            test = mkTestStub_({
-                pending: true
+                assert.match(result, /reason: no comment/);
             });
-
-            emit(RunnerEvents.TEST_PENDING, test);
-
-            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
-
-            assert.match(result, /reason: no comment/);
         });
 
         describe('failed tests report', () => {
