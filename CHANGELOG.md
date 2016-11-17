@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0 - 2016-11-17
+
+* Add ability to run specific tests only in specific browsers without marking test as skipped in other browsers. See method [only](https://github.com/gemini-testing/hermione#only)
+* Add ability to specify http timeout for requests to Selenium server
+
 ## 0.15.4 - 2016-11-16
 
 * Fix: ability to override browser options from config
