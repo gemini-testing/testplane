@@ -1,32 +1,64 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-
-const q = require('q');
-const globExtra = require('glob-extra');
 const pluginsLoader = require('plugins-loader');
-
-const Hermione = require('../../lib/hermione');
-const Runner = require('../../lib/runner');
+const proxyquire = require('proxyquire');
+const q = require('q');
+const Config = require('../../lib/config');
 const RunnerEvents = require('../../lib/constants/runner-events');
 const RunnerFacade = require('../../lib/hermione-facade');
-const utils = require('../utils');
+const Runner = require('../../lib/runner');
+const makeConfigStub = require('../utils').makeConfigStub;
 
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
 
-    describe('run', () => {
-        beforeEach(() => {
-            sandbox.stub(Runner, 'create');
-            Runner.create.returns(sinon.createStubInstance(Runner));
+    let Hermione;
+    let testsReader;
 
-            sandbox.stub(globExtra, 'expandPaths').returns(q([]));
-            sandbox.stub(pluginsLoader, 'load');
+    beforeEach(() => {
+        testsReader = sandbox.stub().returns(q());
+
+        Hermione = proxyquire('../../lib/hermione', {
+            './tests-reader': testsReader
         });
 
-        afterEach(() => sandbox.restore());
+        sandbox.stub(Config, 'create').returns(makeConfigStub());
+        sandbox.stub(Runner, 'create').returns(sinon.createStubInstance(Runner));
 
-        const stubRunner_ = (runFn) => {
+        sandbox.stub(pluginsLoader, 'load');
+    });
+
+    afterEach(() => sandbox.restore());
+
+    describe('constructor', () => {
+        it('should create config', () => {
+            Hermione.create();
+
+            assert.calledOnce(Config.create);
+        });
+
+        it('should create config from passed path', () => {
+            Hermione.create('.hermione.conf.js');
+
+            assert.calledWith(Config.create, '.hermione.conf.js');
+        });
+
+        it('should create config from passed object', () => {
+            Hermione.create({some: 'config'});
+
+            assert.calledWith(Config.create, {some: 'config'});
+        });
+
+        it('should create config with passed options', () => {
+            Hermione.create(null, {some: 'options'});
+
+            assert.calledWith(Config.create, sinon.match.any, {some: 'options'});
+        });
+    });
+
+    describe('run', () => {
+        const stubRunner = (runFn) => {
             const runner = new EventEmitter();
 
             runner.run = sandbox.stub(Runner.prototype, 'run', runFn && runFn.bind(null, runner));
@@ -34,54 +66,125 @@ describe('hermione', () => {
             return runner;
         };
 
-        const run_ = (opts) => new Hermione(utils.makeConfigStub(opts), {reporters: []}).run();
+        const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
 
-        describe('load plugins', () => {
+        it('should create runner', () => {
+            return runHermione()
+                .then(() => assert.calledOnce(Runner.create));
+        });
+
+        it('should create runner with config', () => {
+            const config = makeConfigStub();
+            Config.create.returns(config);
+
+            return runHermione()
+                .then(() => assert.calledWith(Runner.create, config));
+        });
+
+        describe('loading of plugins', () => {
             it('should load plugins', () => {
-                return run_()
+                return runHermione()
                     .then(() => assert.calledOnce(pluginsLoader.load));
             });
 
             it('should load plugins for hermione facade instance', () => {
-                const config = utils.makeConfigStub();
-                const options = {reporters: []};
-                const hermione = new Hermione(config, options);
-                const runner = stubRunner_();
+                const config = makeConfigStub();
+                const runner = stubRunner();
 
-                return hermione.run()
+                Config.create.returns(config);
+
+                return runHermione()
                     .then(() => assert.calledWith(pluginsLoader.load, new RunnerFacade(runner, config)));
             });
 
             it('should load plugins from config', () => {
-                return run_({plugins: {'some-plugin': true}})
+                Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
+
+                return runHermione()
                     .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true}));
             });
 
             it('should load plugins with appropriate prefix', () => {
-                return run_()
+                return runHermione()
                     .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
             });
         });
 
-        it('should return true if there are no failed tests', () => {
-            return run_()
-                .then((success) => assert.ok(success));
-        });
-
-        it('should return false if there are failed tests', () => {
-            stubRunner_((runner) => {
-                runner.emit(RunnerEvents.TEST_FAIL);
+        describe('reading of tests', () => {
+            it('should read tests', () => {
+                return runHermione()
+                    .then(() => assert.calledOnce(testsReader));
             });
 
-            return run_()
-                .then((success) => assert.isFalse(success));
+            it('should pass paths to a tests reader', () => {
+                return runHermione(['first.js', 'second.js'])
+                    .then(() => assert.calledWith(testsReader, ['first.js', 'second.js']));
+            });
+
+            it('should pass browsers to a tests reader', () => {
+                return runHermione(null, {browsers: ['bro1', 'bro2']})
+                    .then(() => assert.calledWith(testsReader, sinon.match.any, ['bro1', 'bro2']));
+            });
+
+            it('should pass config to a tests reader', () => {
+                const config = makeConfigStub();
+                Config.create.returns(config);
+
+                return runHermione()
+                    .then(() => assert.calledWith(testsReader, sinon.match.any, sinon.match.any, config));
+            });
+
+            it('should extend config with pass mocha options before reading of tests', () => {
+                return runHermione(null, {grep: 'some-pattern'})
+                    .then(() => {
+                        const config = testsReader.lastCall.args[2];
+                        assert.deepPropertyVal(config, 'system.mochaOpts.grep', 'some-pattern');
+                    });
+            });
         });
 
-        it('should return false if there were some errors', () => {
-            stubRunner_((runner) => runner.emit(RunnerEvents.ERROR));
+        describe('running of tests', () => {
+            it('should run tests', () => {
+                stubRunner();
 
-            return run_()
-                .then((success) => assert.isFalse(success));
+                return runHermione()
+                    .then(() => assert.calledOnce(Runner.prototype.run));
+            });
+
+            it('should run read tests', () => {
+                stubRunner();
+
+                testsReader.returns(q(['first.js', 'second.js']));
+
+                return runHermione()
+                    .then(() => assert.calledWith(Runner.prototype.run, ['first.js', 'second.js']));
+            });
+
+            it('should return "true" if there are no failed tests', () => {
+                return runHermione()
+                    .then((success) => assert.isTrue(success));
+            });
+
+            it('should return "false" if there are failed suites', () => {
+                stubRunner((runner) => runner.emit(RunnerEvents.SUITE_FAIL));
+
+                return runHermione()
+                    .then((success) => assert.isFalse(success));
+            });
+
+            it('should return "false" if there are failed tests', () => {
+                stubRunner((runner) => runner.emit(RunnerEvents.TEST_FAIL));
+
+                return runHermione()
+                    .then((success) => assert.isFalse(success));
+            }) ;
+
+            it('should return "false" if there were some errors', () => {
+                stubRunner((runner) => runner.emit(RunnerEvents.ERROR));
+
+                return runHermione()
+                    .then((success) => assert.isFalse(success));
+            });
         });
     });
 });

@@ -17,7 +17,6 @@ describe('Browser', () => {
             baseUrl: 'http://base_url',
             gridUrl: 'http://test_host:4444/wd/hub',
             waitTimeout: 100,
-            debug: true,
             screenshotPath: 'path/to/screenshots',
             screenshotOnReject: true,
             httpTimeout: 3000
@@ -26,6 +25,7 @@ describe('Browser', () => {
         return {
             baseUrl: 'http://main_url',
             gridUrl: 'http://main_host:4444/wd/hub',
+            system: {debug: true},
             forBrowser: () => browser
         };
     }

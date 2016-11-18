@@ -13,6 +13,8 @@ describe('config options', () => {
         });
     };
 
+    const createConfig = () => Config.create(defaults.config);
+
     beforeEach(() => sandbox.stub(Config, 'read'));
 
     afterEach(() => sandbox.restore());
@@ -24,13 +26,13 @@ describe('config options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => Config.create({}), Error, 'value must be a boolean');
+                assert.throws(() => createConfig(), Error, 'value must be a boolean');
             });
 
             it('should set default debug option if it does not set in config file', () => {
                 Config.read.returns(mkConfig_());
 
-                const config = Config.create({});
+                const config = createConfig();
 
                 assert.equal(config.system.debug, defaults.debug);
             });
@@ -39,7 +41,7 @@ describe('config options', () => {
                 const readConfig = mkConfig_(_.set({}, 'system.debug', true));
                 Config.read.returns(readConfig);
 
-                const config = Config.create({});
+                const config = createConfig();
 
                 assert.equal(config.system.debug, true);
             });
@@ -51,13 +53,13 @@ describe('config options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => Config.create({}), Error, '"mochaOpts" should be null or object');
+                assert.throws(() => createConfig(), Error, '"mochaOpts" should be null or object');
             });
 
             it('should set default mochaOpts option if it does not set in config file', () => {
                 Config.read.returns(mkConfig_());
 
-                const config = Config.create({});
+                const config = createConfig();
 
                 assert.deepEqual(config.system.mochaOpts, defaults.mochaOpts);
             });
@@ -66,7 +68,7 @@ describe('config options', () => {
                 const readConfig = mkConfig_(_.set({}, 'system.mochaOpts.grep', /test/));
                 Config.read.returns(readConfig);
 
-                const config = Config.create({});
+                const config = createConfig();
 
                 assert.deepEqual(config.system.mochaOpts.grep, /test/);
             });
@@ -79,13 +81,13 @@ describe('config options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => Config.create({}), Error, '"prepareEnvironment" should be null or function');
+            assert.throws(() => createConfig(), Error, '"prepareEnvironment" should be null or function');
         });
 
         it('should set default prepareEnvironment option if it does not set in config file', () => {
             Config.read.returns(mkConfig_());
 
-            const config = Config.create({});
+            const config = createConfig();
 
             assert.equal(config.prepareEnvironment, defaults.prepareEnvironment);
         });
@@ -96,7 +98,7 @@ describe('config options', () => {
 
             Config.read.returns(readConfig);
 
-            const config = Config.create({});
+            const config = createConfig();
 
             assert.deepEqual(config.prepareEnvironment, newFunc);
         });
@@ -106,7 +108,7 @@ describe('config options', () => {
         it('should throw error if specs is empty', () => {
             Config.read.returns({});
 
-            assert.throws(() => Config.create({}), Error, '"specs" is required option and should not be empty');
+            assert.throws(() => createConfig(), Error, '"specs" is required option and should not be empty');
         });
 
         it('should throw error if specs option is not an array', () => {
@@ -114,14 +116,14 @@ describe('config options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => Config.create({}), Error, '"specs" should be an array');
+            assert.throws(() => createConfig(), Error, '"specs" should be an array');
         });
 
         it('should override specs option', () => {
             const readConfig = mkConfig_({specs: ['bar', 'baz']});
             Config.read.returns(readConfig);
 
-            const config = Config.create({});
+            const config = createConfig();
 
             assert.deepEqual(config.specs, ['bar', 'baz']);
         });

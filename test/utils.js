@@ -4,7 +4,7 @@ var _ = require('lodash'),
     Browser = require('../lib/browser');
 
 function browserWithId(id) {
-    var config = {browsers: {}};
+    var config = {browsers: {}, system: {debug: false}};
 
     config.forBrowser = () => ({capabilities: {browserName: id}});
 
@@ -22,7 +22,7 @@ function makeConfigStub(opts) {
         specs: opts.specs,
         browsers: {},
         plugins: opts.plugins,
-        system: {}
+        system: opts.system || {mochaOpts: {}}
     };
 
     opts.browsers.forEach(function(browserId) {
