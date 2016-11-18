@@ -31,15 +31,17 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [baseUrl](#baseurl)
   - [httpTimeout](#httptimeout)
   - [waitTimeout](#waittimeout)
-  - [slow](#slow)
-  - [debug](#debug)
   - [sessionsPerBrowser](#sessionsperbrowser)
   - [retry](#retry)
+  - [system](#system)
+    - [debug](#debug)
+    - [mochaOpts](#mochaopts)
   - [plugins](#plugins)
-  - [mochaOpts](#mochaopts)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
+- [Overriding settings](#overriding-settings)
+- [Programmatic API](#programmatic-api)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
@@ -405,6 +407,7 @@ Option name               | Description
 `gridUrl`                 | Selenium grid Url. Default value is `http://localhost:4444/wd/hub`.
 `baseUrl`                 | Base service-under-test url. Default value is `http://localhost`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
+`httpTimeout`             | Timeout for any requests to Selenium server. Default value is `90000` ms.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by webdriverio. Default value is `null`.
@@ -421,16 +424,18 @@ Timeout for any requests to Selenium server. Default value is `90000` ms.
 ### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
 
-### debug
-Turn webdriver debug mode on. Default value is `false`.
-
 ### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
 
 ### retry
 How many times test should be retried in case of a fail. Global value for all browsers. Default value is `0`.
 
-### mochaOpts
+### system
+
+#### debug
+Turn webdriver debug mode on. Default value is `false`.
+
+#### mochaOpts
 Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options. Default values are:
 ```javascript
 mochaOpts: {
@@ -567,6 +572,34 @@ To override setting with environment variable, convert its full path to `snake_c
 hermione_base_url=http://example.com hermione path/to/mytest.js
 hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
 ```
+
+## Programmatic API
+
+With the help of API you can use Hermione programmatically in your scripts or build tools.
+
+```js
+const Hermione = require('hermione');
+
+const hermione = new Hermione(config, allowOverrides);
+
+hermione.run(testPaths, options)
+    .then((success) => process.exit(success ? 0 : 1))
+    .catch((e) => {
+        console.log(e.stack);
+        process.exit(1);
+    })
+    .done();
+```
+
+* **config** (required) `String|Object` - path to configuration file which will be read relatively to `process.cwd` or [configuration object](#hermioneconfjs).
+* **allowOverrides** (optional) `Object` - switch on/off [configuration override](#overriding-settings) via environment variables or cli options:
+  * **env** (optional) `Boolean` – switch on/off configuration override via environment variables. Default is `false`
+  * **cli** (optional) `Boolean` - switch on/off configuration override via cli options. Default is `false`
+* **testPaths** (optional) `String[]` - paths to tests relatively to `process.cwd`
+* **options** (optional) `Object`
+  * **reporters** (optional) `String[]` - test result reporters
+  * **browsers** (optional) `String[]` - browsers in which to run tests
+  * **grep** (optional) `RegExp` - pattern which indicates which tests to run
 
 ## Environment variables
 
