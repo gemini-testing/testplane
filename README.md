@@ -586,7 +586,16 @@ With the help of API you can use Hermione programmatically in your scripts or bu
 const Hermione = require('hermione');
 
 const hermione = new Hermione(config, allowOverrides);
+```
 
+* **config** (required) `String|Object` - path to configuration file which will be read relatively to `process.cwd` or [configuration object](#hermioneconfjs).
+* **allowOverrides** (optional) `Object` - switch on/off [configuration override](#overriding-settings) via environment variables or cli options:
+  * **env** (optional) `Boolean` – switch on/off configuration override via environment variables. Default is `false`
+  * **cli** (optional) `Boolean` - switch on/off configuration override via cli options. Default is `false`
+
+### run
+
+```js
 hermione.run(testPaths, options)
     .then((success) => process.exit(success ? 0 : 1))
     .catch((e) => {
@@ -596,15 +605,20 @@ hermione.run(testPaths, options)
     .done();
 ```
 
-* **config** (required) `String|Object` - path to configuration file which will be read relatively to `process.cwd` or [configuration object](#hermioneconfjs).
-* **allowOverrides** (optional) `Object` - switch on/off [configuration override](#overriding-settings) via environment variables or cli options:
-  * **env** (optional) `Boolean` – switch on/off configuration override via environment variables. Default is `false`
-  * **cli** (optional) `Boolean` - switch on/off configuration override via cli options. Default is `false`
 * **testPaths** (optional) `String[]` - paths to tests relatively to `process.cwd`
 * **options** (optional) `Object`
   * **reporters** (optional) `String[]` - test result reporters
   * **browsers** (optional) `String[]` - browsers in which to run tests
   * **grep** (optional) `RegExp` - pattern which indicates which tests to run
+
+### readTests
+
+```js
+hermione.readTests(testPaths, browsers).done();
+```
+
+* **testPaths** (required) `String[]` - paths to tests relatively to `process.cwd`
+* **browsers** (optional) `String[]` - read tests only for specified browsers
 
 ## Environment variables
 
