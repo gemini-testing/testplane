@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.0 - 2016-11-23
+
+* Add programmatic API. See [doc](https://github.com/gemini-testing/hermione/blob/master/README.md#programmatic-api) for more details.
+
 ## 0.16.0 - 2016-11-17
 
 * Add ability to run specific tests only in specific browsers without marking test as skipped in other browsers. See method [only](https://github.com/gemini-testing/hermione#only)
