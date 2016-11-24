@@ -14,12 +14,6 @@ describe('config browser-options', () => {
         });
     };
 
-    const mkConfig_ = (opts) => {
-        return _.defaults(opts || {}, {
-            specs: ['path/to/test']
-        });
-    };
-
     const createConfig = () => Config.create(defaults.config);
 
     beforeEach(() => sandbox.stub(Config, 'read'));
@@ -29,11 +23,11 @@ describe('config browser-options', () => {
     describe('desiredCapabilities', () => {
         describe('should throw error if desiredCapabilities', () => {
             it('is missing', () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     browsers: {
                         b1: {}
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -41,13 +35,13 @@ describe('config browser-options', () => {
             });
 
             it('is not an object or null', () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     browsers: {
                         b1: {
                             desiredCapabilities: 'chrome'
                         }
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -56,7 +50,7 @@ describe('config browser-options', () => {
         });
 
         it('should set desiredCapabilities', () => {
-            const readConfig = mkConfig_({
+            const readConfig = {
                 browsers: {
                     b1: {
                         desiredCapabilities: {
@@ -64,7 +58,7 @@ describe('config browser-options', () => {
                         }
                     }
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -76,11 +70,11 @@ describe('config browser-options', () => {
 
     describe('baseUrl', () => {
         it('should throw error if baseUrl is not a string', () => {
-            const readConfig = mkConfig_({
+            const readConfig = {
                 browsers: {
                     b1: mkBrowser_({baseUrl: ['Array']})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -89,13 +83,13 @@ describe('config browser-options', () => {
 
         it('should set baseUrl to all browsers', () => {
             const baseUrl = 'http://default.com';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 baseUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -107,13 +101,13 @@ describe('config browser-options', () => {
 
         it('should override baseUrl option if protocol is set', () => {
             const baseUrl = 'http://default.com';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 baseUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({baseUrl: 'http://foo.com'})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -125,13 +119,13 @@ describe('config browser-options', () => {
 
         it('should resolve baseUrl option relative to top level baseUrl', () => {
             const baseUrl = 'http://default.com';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 baseUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({baseUrl: '/test'})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -143,13 +137,13 @@ describe('config browser-options', () => {
 
         it('should resolve baseUrl option relative to top level baseUrl with path', () => {
             const baseUrl = 'http://default.com/search/';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 baseUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({baseUrl: '/test'})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -162,11 +156,11 @@ describe('config browser-options', () => {
 
     describe('gridUrl', () => {
         it('should throw error if gridUrl is not a string', () => {
-            const readConfig = mkConfig_({
+            const readConfig = {
                 browsers: {
                     b1: mkBrowser_({gridUrl: /regExp/})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -175,13 +169,13 @@ describe('config browser-options', () => {
 
         it('should set gridUrl to all browsers', () => {
             const gridUrl = 'http://default.com';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 gridUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -193,13 +187,13 @@ describe('config browser-options', () => {
 
         it('should override gridUrl option', () => {
             const gridUrl = 'http://default.com';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 gridUrl,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({gridUrl: 'http://bar.com'})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -212,11 +206,11 @@ describe('config browser-options', () => {
 
     describe('prepareBrowser', () => {
         it('should throw error if prepareBrowser is not a null or function', () => {
-            const readConfig = mkConfig_({
+            const readConfig = {
                 browsers: {
                     b1: mkBrowser_({prepareBrowser: 'String'})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -225,13 +219,13 @@ describe('config browser-options', () => {
 
         it('should set prepareBrowser to all browsers', () => {
             const prepareBrowser = () => {};
-            const readConfig = mkConfig_({
+            const readConfig = {
                 prepareBrowser,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -245,13 +239,13 @@ describe('config browser-options', () => {
             const prepareBrowser = () => {};
             const newFunc = () => {};
 
-            const readConfig = mkConfig_({
+            const readConfig = {
                 prepareBrowser,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({prepareBrowser: newFunc})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -266,11 +260,11 @@ describe('config browser-options', () => {
         beforeEach(() => sandbox.stub(process, 'cwd'));
 
         it('should throw error if screenshotPath is not a null or string', () => {
-            const readConfig = mkConfig_({
+            const readConfig = {
                 browsers: {
                     b1: mkBrowser_({screenshotPath: ['Array']})
                 }
-            });
+            };
 
             Config.read.returns(readConfig);
 
@@ -279,13 +273,13 @@ describe('config browser-options', () => {
 
         it('should set screenshotPath option to all browsers relative to project dir', () => {
             const screenshotPath = 'default/path';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 screenshotPath,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_()
                 }
-            });
+            };
 
             process.cwd.returns('/project_dir');
             Config.read.returns(readConfig);
@@ -298,13 +292,13 @@ describe('config browser-options', () => {
 
         it('should override screenshotPath option relative to project dir', () => {
             const screenshotPath = 'default/path';
-            const readConfig = mkConfig_({
+            const readConfig = {
                 screenshotPath,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({screenshotPath: './screens'})
                 }
-            });
+            };
 
             process.cwd.returns('/project_dir');
             Config.read.returns(readConfig);
@@ -320,11 +314,11 @@ describe('config browser-options', () => {
         describe(`${option}`, () => {
             describe(`should throw error if ${option}`, () => {
                 it('is not a number', () => {
-                    const readConfig = mkConfig_({
+                    const readConfig = {
                         browsers: {
                             b1: mkBrowser_({[option]: '10'})
                         }
-                    });
+                    };
 
                     Config.read.returns(readConfig);
 
@@ -332,11 +326,11 @@ describe('config browser-options', () => {
                 });
 
                 it('is negative number', () => {
-                    const readConfig = mkConfig_({
+                    const readConfig = {
                         browsers: {
                             b1: mkBrowser_({[option]: -5})
                         }
-                    });
+                    };
 
                     Config.read.returns(readConfig);
 
@@ -344,11 +338,11 @@ describe('config browser-options', () => {
                 });
 
                 it('is float number', () => {
-                    const readConfig = mkConfig_({
+                    const readConfig = {
                         browsers: {
                             b1: mkBrowser_({[option]: 15.5})
                         }
-                    });
+                    };
 
                     Config.read.returns(readConfig);
 
@@ -357,13 +351,13 @@ describe('config browser-options', () => {
             });
 
             it(`should set ${option} to all browsers`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     [option]: 666,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -374,13 +368,13 @@ describe('config browser-options', () => {
             });
 
             it(`should override ${option} option`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     [option]: 666,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_(_.set({}, option, 13))
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -395,11 +389,11 @@ describe('config browser-options', () => {
     ['retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout'].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     browsers: {
                         b1: mkBrowser_(_.set({}, option, '100500'))
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -407,11 +401,11 @@ describe('config browser-options', () => {
             });
 
             it(`should throw error if ${option} is negative`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     browsers: {
                         b1: mkBrowser_(_.set({}, option, -7))
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -419,13 +413,13 @@ describe('config browser-options', () => {
             });
 
             it(`should set ${option} option to all browsers`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     [option]: 100500,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_()
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 
@@ -436,13 +430,13 @@ describe('config browser-options', () => {
             });
 
             it(`should override ${option} option`, () => {
-                const readConfig = mkConfig_({
+                const readConfig = {
                     [option]: 100500,
                     browsers: {
                         b1: mkBrowser_(),
                         b2: mkBrowser_(_.set({}, option, 500100))
                     }
-                });
+                };
 
                 Config.read.returns(readConfig);
 

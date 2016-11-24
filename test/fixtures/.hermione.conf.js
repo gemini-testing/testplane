@@ -1,8 +1,5 @@
 'use strict';
 module.exports = {
-    specs: [
-        'test-suites/desktop'
-    ],
     browsers: {
         chrome: {
             capabilities: {

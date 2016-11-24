@@ -25,7 +25,7 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [Execution context](#execution-context)
 - [Quick start](#quick-start)
 - [.hermione.conf.js](#hermioneconfjs)
-  - [specs](#specs)
+  - [sets](#sets)
   - [browsers](#browsers)
   - [gridUrl](#gridurl)
   - [baseUrl](#baseurl)
@@ -129,19 +129,18 @@ It will run tests only in one browser and skip rest silently.
 ### Flexible tests configuration
 `Hermione` has possibility to configure running some set of tests in specific browsers. For example,
 ```js
-specs: [
-    'tests/common', // run common tests in all browsers specified in the config
-    {
+sets: {
+    desktop: {
         files: 'tests/desktop',
         browsers: ['ie8', 'opera']
     },
-    {
+    touch: {
         files: 'tests/touch',
         browsers: ['iphone', 'android']
     }
-]
+}
 ```
-See [specs](#specs) for more details.
+See [sets](#sets) for more details.
 
 
 ### Auto initialization and closing grid sessions
@@ -312,7 +311,11 @@ npm install -g hermione
 Then put `.hermione.conf.js` in the project root.
 ```javascript
 module.exports = {
-    specs: ['tests/func'],
+    sets: {
+        desktop: {
+            files: 'tests/desktop'
+        }
+    },
 
     browsers: {
         chrome: {
@@ -350,13 +353,9 @@ hermione
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default `.hermione.conf.js` is used but a path to the configuration file can be specified using `--conf` option.
 
-There are only two required fields: `specs` and `browsers`.
+There is only one required field – `browsers`.
 ```javascript
 module.exports = {
-    specs: [
-        'tests/desktop',
-        'tests/touch'
-    ],
     browsers: {
         chrome: {
             desiredCapabilities: {
@@ -367,25 +366,40 @@ module.exports = {
 };
 ```
 
-### specs
-**Required.** The list of paths where `hermione` will look for tests.
+### sets
+You can bind some set of tests with certain browsers using sets.
 
-For example,
+Format of the sets section:
 ```javascript
-specs: [
-    {                          // run tests associated with this path in all browsers
-        files: 'tests/desktop' // which are configured in option `browsers`
+sets: {
+    common: {                 // run tests associated with this path in all browsers
+        files: 'tests/common' // which are configured in option `browsers`
     },
-    'tests/deskpad',           // the alias for the previous case
-    {
-        files: 'tests/desktop/*.hermione.js' // run tests matched with a mask
-    },
-    {
-        files: 'tests/touch',  // run tests associated with this path in a browser with id `browser`
-        browsers: ['browser']  // which is configured in option `browsers`
+    desktop: {              
+        files: [
+            'tests/desktop/*.hermione.js',
+            'tests/common/*.hermione.js'
+        ]
+        browsers: ['browser'] // run tests which match the specified masks in the browser with id `browser`
     }
-]
+}
 ```
+
+* `files` - list of test files or directories with test files. Can be a string if you want to specify just one file or directory. Also, you can use
+masks for this property.
+
+* `browsers` - list of browser ids to run tests specified in `files`. All browsers by default.
+
+You can specify sets to run using CLI option `--set`.
+
+If sets are not specified in config and paths were not passed from cli, all files from `hermione`
+directory will be launched in all browsers specified in config.
+
+Running tests using sets:
+
+ ```
+ hermione --set desktop
+ ```
 
 ### browsers
 **Required.** The list of browsers which should be used for running tests.

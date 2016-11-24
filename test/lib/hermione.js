@@ -2,28 +2,25 @@
 
 const EventEmitter = require('events').EventEmitter;
 const pluginsLoader = require('plugins-loader');
-const proxyquire = require('proxyquire');
 const q = require('q');
 const Config = require('../../lib/config');
+const Hermione = require('../../lib/hermione');
 const RunnerEvents = require('../../lib/constants/runner-events');
 const RunnerFacade = require('../../lib/hermione-facade');
 const Runner = require('../../lib/runner');
+const sets = require('../../lib/sets');
+const logger = require('../../lib/utils').logger;
 const makeConfigStub = require('../utils').makeConfigStub;
 
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
 
-    let Hermione;
-    let testsReader;
-
     beforeEach(() => {
-        testsReader = sandbox.stub().returns(q());
+        sandbox.stub(sets, 'reveal').returns(q());
 
-        Hermione = proxyquire('../../lib/hermione', {
-            './tests-reader': testsReader
-        });
-
+        sandbox.stub(logger, 'warn');
         sandbox.stub(Config, 'create').returns(makeConfigStub());
+
         sandbox.stub(pluginsLoader, 'load');
     });
 
@@ -81,6 +78,11 @@ describe('hermione', () => {
                 .then(() => assert.calledWith(Runner.create, config));
         });
 
+        it('should warn about unknown browsers from cli', () => {
+            return runHermione([], {browsers: ['bro3']})
+                .then(() => assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/));
+        });
+
         describe('loading of plugins', () => {
             it('should load plugins', () => {
                 return runHermione()
@@ -110,36 +112,28 @@ describe('hermione', () => {
             });
         });
 
-        describe('reading of tests', () => {
-            it('should read tests', () => {
+        describe('sets revealing', () => {
+            it('should reveal sets', () => {
                 return runHermione()
-                    .then(() => assert.calledOnce(testsReader));
+                    .then(() => assert.calledOnce(sets.reveal));
             });
 
-            it('should pass paths to a tests reader', () => {
+            it('should reveal sets using passed paths', () => {
                 return runHermione(['first.js', 'second.js'])
-                    .then(() => assert.calledWith(testsReader, ['first.js', 'second.js']));
+                    .then(() => assert.calledWith(sets.reveal, sinon.match.any, {paths: ['first.js', 'second.js']}));
             });
 
-            it('should pass browsers to a tests reader', () => {
+            it('should reveal sets using passed browsers', () => {
                 return runHermione(null, {browsers: ['bro1', 'bro2']})
-                    .then(() => assert.calledWith(testsReader, sinon.match.any, ['bro1', 'bro2']));
+                    .then(() => assert.calledWithMatch(sets.reveal, sinon.match.any, {browsers: ['bro1', 'bro2']}));
             });
 
-            it('should pass config to a tests reader', () => {
-                const config = makeConfigStub();
+            it('should reveal sets using passed sets from config', () => {
+                const config = makeConfigStub({sets: {all: {}}});
                 Config.create.returns(config);
 
                 return runHermione()
-                    .then(() => assert.calledWith(testsReader, sinon.match.any, sinon.match.any, config));
-            });
-
-            it('should extend config with pass mocha options before reading of tests', () => {
-                return runHermione(null, {grep: 'some-pattern'})
-                    .then(() => {
-                        const config = testsReader.lastCall.args[2];
-                        assert.deepPropertyVal(config, 'system.mochaOpts.grep', 'some-pattern');
-                    });
+                    .then(() => assert.calledWith(sets.reveal, config.sets));
             });
         });
 
@@ -151,13 +145,13 @@ describe('hermione', () => {
                     .then(() => assert.calledOnce(Runner.prototype.run));
             });
 
-            it('should run read tests', () => {
+            it('should use revealed sets', () => {
                 stubRunner();
 
-                testsReader.returns(q(['first.js', 'second.js']));
+                sets.reveal.returns(q({bro: ['some/path/file.js']}));
 
                 return runHermione()
-                    .then(() => assert.calledWith(Runner.prototype.run, ['first.js', 'second.js']));
+                    .then(() => assert.calledWith(Runner.prototype.run, {bro: ['some/path/file.js']}));
             });
 
             it('should return "true" if there are no failed tests', () => {
@@ -205,21 +199,23 @@ describe('hermione', () => {
                 });
         });
 
-        it('should read test files using specified paths, browsers and config', () => {
-            const config = makeConfigStub();
+        it('should reveal sets using specified paths, browsers and sets from config', () => {
+            const config = makeConfigStub({sets: {all: {}}});
             Config.create.returns(config);
 
             return Hermione
                 .create(config)
                 .readTests(['some/path'], ['bro1', 'bro2'])
-                .then(() => assert.calledWith(testsReader, ['some/path'], ['bro1', 'bro2'], config));
+                .then(() => {
+                    assert.calledWith(sets.reveal, config.sets, {paths: ['some/path'], browsers: ['bro1', 'bro2']});
+                });
         });
 
         it('should build suite tree using tests', () => {
             const config = makeConfigStub();
             Config.create.returns(config);
 
-            testsReader.returns(q(['some/path/file.js']));
+            sets.reveal.returns(q(['some/path/file.js']));
 
             return Hermione
                 .create(config)
