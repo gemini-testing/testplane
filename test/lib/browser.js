@@ -75,6 +75,40 @@ describe('Browser', () => {
                 }));
         });
 
+        it('should set screenshotOnReject as "true"', () => {
+            const browser = mkBrowser_({screenshotOnReject: true});
+
+            return browser
+                .init()
+                .then(() => assert.calledWithMatch(webdriverio.remote, {screenshotOnReject: true}));
+        });
+
+        it('should set screenshotOnReject as "false"', () => {
+            const browser = mkBrowser_({screenshotOnReject: false});
+
+            return browser
+                .init()
+                .then(() => assert.calledWithMatch(webdriverio.remote, {screenshotOnReject: false}));
+        });
+
+        it('should set screenshotOnReject option', () => {
+            const browser = mkBrowser_({
+                screenshotOnReject: {
+                    httpTimeout: 666
+                }
+            });
+
+            return browser
+                .init()
+                .then(() => {
+                    assert.calledWithMatch(webdriverio.remote, {
+                        screenshotOnReject: {
+                            connectionRetryTimeout: 666
+                        }
+                    });
+                });
+        });
+
         it('should initialize webdriver.io session', () => {
             return mkBrowser_()
                 .init()
