@@ -37,7 +37,7 @@ describe('config browser-options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, 'Browser must have desired capabilities option');
+                assert.throws(() => createConfig(), Error, 'Each browser must have "desiredCapabilities" option');
             });
 
             it('is not an object or null', () => {
@@ -51,7 +51,7 @@ describe('config browser-options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, 'desiredCapabilities should be null or object');
+                assert.throws(() => createConfig(), Error, '"desiredCapabilities" must be an object');
             });
         });
 
@@ -84,7 +84,7 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, 'value must be a string');
+            assert.throws(() => createConfig(), Error, '"baseUrl" must be a string');
         });
 
         it('should set baseUrl to all browsers', () => {
@@ -152,7 +152,7 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, 'value must be a string');
+            assert.throws(() => createConfig(), Error, '"gridUrl" must be a string');
         });
 
         it('should set gridUrl to all browsers', () => {
@@ -202,7 +202,7 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"prepareBrowser" should be null or function');
+            assert.throws(() => createConfig(), Error, '"prepareBrowser" must be a function');
         });
 
         it('should set prepareBrowser to all browsers', () => {
@@ -256,7 +256,7 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"screenshotPath" should be null or string');
+            assert.throws(() => createConfig(), Error, '"screenshotPath" must be a string');
         });
 
         it('should set screenshotPath option to all browsers relative to project dir', () => {
@@ -360,7 +360,7 @@ describe('config browser-options', () => {
 
                     Config.read.returns(readConfig);
 
-                    assert.throws(() => createConfig(), Error, 'Field must be an integer number');
+                    assert.throws(() => createConfig(), Error, `"${option}" must be a positive integer`);
                 });
 
                 it('is negative number', () => {
@@ -372,7 +372,7 @@ describe('config browser-options', () => {
 
                     Config.read.returns(readConfig);
 
-                    assert.throws(() => createConfig(), Error, 'Field must be positive');
+                    assert.throws(() => createConfig(), Error, `"${option}" must be a positive integer`);
                 });
 
                 it('is float number', () => {
@@ -384,7 +384,7 @@ describe('config browser-options', () => {
 
                     Config.read.returns(readConfig);
 
-                    assert.throws(() => createConfig(), Error, 'Field must be an integer number');
+                    assert.throws(() => createConfig(), Error, `"${option}" must be a positive integer`);
                 });
             });
 
@@ -435,19 +435,19 @@ describe('config browser-options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, 'Field must be an integer number');
+                assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
             });
 
             it(`should throw error if ${option} is negative`, () => {
                 const readConfig = mkConfig_({
                     browsers: {
-                        b1: mkBrowser_({retry: -7})
+                        b1: mkBrowser_(_.set({}, option, -7))
                     }
                 });
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, 'Field must be non-negative');
+                assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
             });
 
             it(`should set ${option} option to all browsers`, () => {

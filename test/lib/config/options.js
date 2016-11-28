@@ -26,7 +26,7 @@ describe('config options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, 'value must be a boolean');
+                assert.throws(() => createConfig(), Error, '"debug" must be a boolean');
             });
 
             it('should set default debug option if it does not set in config file', () => {
@@ -53,7 +53,7 @@ describe('config options', () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, '"mochaOpts" should be null or object');
+                assert.throws(() => createConfig(), Error, '"mochaOpts" must be an object');
             });
 
             it('should set default mochaOpts option if it does not set in config file', () => {
@@ -81,7 +81,7 @@ describe('config options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"prepareEnvironment" should be null or function');
+            assert.throws(() => createConfig(), Error, '"prepareEnvironment" must be a function');
         });
 
         it('should set default prepareEnvironment option if it does not set in config file', () => {
@@ -108,7 +108,7 @@ describe('config options', () => {
         it('should throw error if specs is empty', () => {
             Config.read.returns({});
 
-            assert.throws(() => createConfig(), Error, '"specs" is required option and should not be empty');
+            assert.throws(() => createConfig(), Error, '"specs" is the required option which should not be empty');
         });
 
         it('should throw error if specs option is not an array', () => {
