@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0 - 2016-11-29
+
+* major: Remove option `screenshotOnReject`
+* feat: add option [sessionQuitTimeout](https://github.com/gemini-testing/hermione/blob/v0.18.0/README.md#sessionquittimeout)
+* fix: more informative error if parsing of a config fails
+
 ## 0.17.0 - 2016-11-23
 
 * Add programmatic API. See [doc](https://github.com/gemini-testing/hermione/blob/master/README.md#programmatic-api) for more details.
