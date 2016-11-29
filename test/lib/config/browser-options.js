@@ -374,7 +374,7 @@ describe('config browser-options', () => {
         });
     });
 
-    ['retry', 'httpTimeout'].forEach((option) => {
+    ['retry', 'httpTimeout', 'sessionQuitTimeout'].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {
                 const readConfig = mkConfig_({

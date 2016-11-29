@@ -19,7 +19,8 @@ describe('Browser', () => {
             waitTimeout: 100,
             screenshotPath: 'path/to/screenshots',
             screenshotOnReject: true,
-            httpTimeout: 3000
+            httpTimeout: 3000,
+            sessionQuitTimeout: null
         });
 
         return {
@@ -35,6 +36,7 @@ describe('Browser', () => {
         session.init = sandbox.stub().named('init').returns(session);
         session.end = sandbox.stub().named('end').returns(q());
         session.url = sandbox.stub().named('url').returns(session);
+        session.requestHandler = {defaultOptions: {}};
 
         session.addCommand = () => {};
         sandbox.stub(session, 'addCommand', (name, command) => session[name] = command);
@@ -194,6 +196,42 @@ describe('Browser', () => {
             return mkBrowser_()
                 .quit()
                 .then(() => assert.notCalled(session.end));
+        });
+
+        it('should set custom options before finalizing of a session', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => {
+                    sandbox.spy(session, 'extendOptions');
+
+                    return browser.quit();
+                })
+                .then(() => assert.callOrder(session.extendOptions, session.end));
+        });
+
+        it('should use common http timeout for finalizing of a session', () => {
+            return mkBrowser_({httpTimeout: 100500})
+                .init()
+                .then((browser) => browser.quit())
+                .then(() => {
+                    assert.propertyVal(session.requestHandler.defaultOptions, 'connectionRetryTimeout', 100500);
+                });
+        });
+
+        it('should use session quit timeout for finalizing of a session', () => {
+            return mkBrowser_({sessionQuitTimeout: 500100})
+                .init()
+                .then((browser) => browser.quit())
+                .then(() => {
+                    assert.propertyVal(session.requestHandler.defaultOptions, 'connectionRetryTimeout', 500100);
+                });
+        });
+
+        it('should not take screenshot if finalizing of a session rejects', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => browser.quit())
+                .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
         });
     });
 
