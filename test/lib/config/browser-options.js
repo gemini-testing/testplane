@@ -298,56 +298,6 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('screenshotOnReject', () => {
-        it('should throw error if screenshotOnReject is not a boolean or object', () => {
-            const readConfig = mkConfig_({
-                browsers: {
-                    b1: mkBrowser_({screenshotOnReject: 'String'})
-                }
-            });
-
-            Config.read.returns(readConfig);
-
-            assert.throws(() => createConfig(), Error, '"screenshotOnReject" should be boolean or object');
-        });
-
-        it('should set screenshotOnReject to all browsers', () => {
-            const screenshotOnReject = true;
-            const readConfig = mkConfig_({
-                screenshotOnReject,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_()
-                }
-            });
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.screenshotOnReject, true);
-            assert.equal(config.browsers.b2.screenshotOnReject, true);
-        });
-
-        it('should override screenshotOnReject option', () => {
-            const screenshotOnReject = true;
-            const readConfig = mkConfig_({
-                screenshotOnReject,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({screenshotOnReject: false})
-                }
-            });
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.screenshotOnReject, true);
-            assert.equal(config.browsers.b2.screenshotOnReject, false);
-        });
-    });
-
     ['sessionsPerBrowser', 'waitTimeout'].forEach((option) => {
         describe(`${option}`, () => {
             describe(`should throw error if ${option}`, () => {
