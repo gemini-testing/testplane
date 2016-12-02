@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1 - 2016-12-02
+
+* feat: add ability to configure timeout for take screenshot
+
 ## 0.18.0 - 2016-11-29
 
 * major: Remove option `screenshotOnReject`
