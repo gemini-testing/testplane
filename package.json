@@ -7,7 +7,11 @@
     "lint": "eslint .",
     "test-unit": "istanbul test _mocha -- test/",
     "test": "npm run lint && npm run test-unit",
-    "toc": "doctoc README.md"
+    "toc": "doctoc README.md",
+    "precommit": "npm run lint",
+    "preversion": "npm run lint && npm test",
+    "commitmsg": "conventional-changelog-lint -e",
+    "release": "standard-version"
   },
   "repository": {
     "type": "git",
@@ -43,11 +47,14 @@
   "devDependencies": {
     "chai": "^3.4.1",
     "chai-as-promised": "^5.1.0",
+    "conventional-changelog-lint": "^1.0.1",
     "doctoc": "^1.0.0",
+    "husky": "^0.11.4",
     "istanbul": "^0.4.1",
     "proxyquire": "^1.7.3",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0",
+    "standard-version": "^3.0.0",	
     "eslint": "^3.9.0",
     "eslint-config-gemini-testing": "^2.4.0"
   }
