@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.2 - 2016-12-05
+
+* fix: `screenshotOnReject` may not be declared in config file
+
 ## 0.18.1 - 2016-12-02
 
 * feat: add ability to configure timeout for take screenshot
