@@ -1,6 +1,6 @@
 {
   "name": "hermione",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "description": "Tests framework based on mocha and wdio",
   "main": "lib/hermione.js",
   "scripts": {
@@ -54,7 +54,7 @@
     "proxyquire": "^1.7.3",
     "sinon": "^1.17.2",
     "sinon-chai": "^2.8.0",
-    "standard-version": "^3.0.0",	
+    "standard-version": "^3.0.0",
     "eslint": "^3.9.0",
     "eslint-config-gemini-testing": "^2.4.0"
   }
