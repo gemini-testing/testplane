@@ -140,19 +140,9 @@ describe('Runner', () => {
                 });
         });
 
-        it('should run mocha runner with passed tests and filter function', () => {
+        it('should run mocha runner with passed tests', () => {
             return run_({files: ['test1', 'test2']})
-                .then(() => {
-                    assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2'], sinon.match.func);
-                });
-        });
-
-        it('should not filter out any test by default', () => {
-            return run_()
-                .then(() => {
-                    const filterFn = MochaRunner.prototype.run.firstCall.args[1];
-                    assert.isTrue(filterFn());
-                });
+                .then(() => assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2']));
         });
 
         it('should wait until all mocha runners will finish', () => {
@@ -333,6 +323,53 @@ describe('Runner', () => {
 
                 return assert.isRejected(run_({runner}), /run-error/);
             });
+        });
+    });
+
+    describe('buildSuiteTree', () => {
+        beforeEach(() => {
+            sandbox.stub(MochaRunner.prototype, 'buildSuiteTree');
+            sandbox.stub(BrowserAgent, 'create').returns(sinon.createStubInstance(BrowserAgent));
+        });
+
+        it('should create browser agent for each browser', () => {
+            const runner = new Runner(makeConfigStub());
+
+            runner.buildSuiteTree({bro1: [], bro2: []});
+
+            assert.calledTwice(BrowserAgent.create);
+            assert.calledWith(BrowserAgent.create, 'bro1');
+            assert.calledWith(BrowserAgent.create, 'bro2');
+            assert.calledWith(BrowserAgent.create, sinon.match.any, sinon.match.instanceOf(BrowserPool));
+        });
+
+        it('should create mocha runner with the specified config and browser agent', () => {
+            const config = makeConfigStub();
+            const runner = new Runner(config);
+            const createMochaRunner = sinon.spy(MochaRunner, 'create');
+
+            runner.buildSuiteTree({bro: []});
+
+            assert.calledWith(createMochaRunner, config, sinon.match.instanceOf(BrowserAgent), sinon.match.instanceOf(TestSkipper));
+        });
+
+        it('should assign suite tree from mocha runner to passed browsers', () => {
+            const config = makeConfigStub();
+            const runner = new Runner(config);
+            const suiteTreeStub = sandbox.stub();
+            MochaRunner.prototype.buildSuiteTree.returns(suiteTreeStub);
+
+            const suiteTree = runner.buildSuiteTree({bro: []});
+
+            assert.deepEqual(suiteTree, {bro: suiteTreeStub});
+        });
+
+        it('should build suite tree for each set of files', () => {
+            const runner = new Runner(makeConfigStub());
+
+            runner.buildSuiteTree({bro: ['some/path/file1.js', 'other/path/file2.js']});
+
+            assert.calledWith(MochaRunner.prototype.buildSuiteTree, ['some/path/file1.js', 'other/path/file2.js']);
         });
     });
 });

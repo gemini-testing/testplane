@@ -24,8 +24,6 @@ describe('hermione', () => {
         });
 
         sandbox.stub(Config, 'create').returns(makeConfigStub());
-        sandbox.stub(Runner, 'create').returns(sinon.createStubInstance(Runner));
-
         sandbox.stub(pluginsLoader, 'load');
     });
 
@@ -58,6 +56,8 @@ describe('hermione', () => {
     });
 
     describe('run', () => {
+        beforeEach(() => sandbox.stub(Runner, 'create').returns(sinon.createStubInstance(Runner)));
+
         const stubRunner = (runFn) => {
             const runner = new EventEmitter();
 
@@ -185,6 +185,59 @@ describe('hermione', () => {
                 return runHermione()
                     .then((success) => assert.isFalse(success));
             });
+        });
+    });
+
+    describe('readTests', () => {
+        beforeEach(() => sandbox.stub(Runner.prototype, 'buildSuiteTree'));
+
+        it('should create runner with specified config', () => {
+            const config = makeConfigStub();
+            const createRunner = sandbox.spy(Runner, 'create');
+            Config.create.returns(config);
+
+            return Hermione
+                .create(config)
+                .readTests()
+                .then(() => {
+                    assert.calledOnce(createRunner);
+                    assert.calledWith(createRunner, config);
+                });
+        });
+
+        it('should read test files using specified paths, browsers and config', () => {
+            const config = makeConfigStub();
+            Config.create.returns(config);
+
+            return Hermione
+                .create(config)
+                .readTests(['some/path'], ['bro1', 'bro2'])
+                .then(() => assert.calledWith(testsReader, ['some/path'], ['bro1', 'bro2'], config));
+        });
+
+        it('should build suite tree using tests', () => {
+            const config = makeConfigStub();
+            Config.create.returns(config);
+
+            testsReader.returns(q(['some/path/file.js']));
+
+            return Hermione
+                .create(config)
+                .readTests()
+                .then(() => {
+                    assert.calledOnce(Runner.prototype.buildSuiteTree);
+                    assert.calledWith(Runner.prototype.buildSuiteTree, ['some/path/file.js']);
+                });
+        });
+
+        it('should return suite tree for specified browsers', () => {
+            const suiteTreeStub = {};
+            Runner.prototype.buildSuiteTree.returns({bro: suiteTreeStub});
+
+            return Hermione
+                .create()
+                .readTests()
+                .then((suiteTree) => assert.deepEqual(suiteTree, {bro: suiteTreeStub}));
         });
     });
 });

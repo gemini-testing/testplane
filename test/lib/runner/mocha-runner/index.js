@@ -1,10 +1,11 @@
 'use strict';
 
+const _ = require('lodash');
+const q = require('q');
 const BrowserAgent = require('../../../../lib/browser-agent');
 const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const MochaRunner = require('../../../../lib/runner/mocha-runner');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
-const q = require('q');
 
 describe('mocha-runner', () => {
     const sandbox = sinon.sandbox.create();
@@ -25,9 +26,7 @@ describe('mocha-runner', () => {
     const mkMochaAdapterStub_ = () => Object.create(MochaAdapter.prototype);
 
     beforeEach(() => {
-        sandbox.stub(MochaAdapter, 'create', () => mkMochaAdapterStub_());
-
-        sandbox.stub(MochaAdapter.prototype, 'addFile').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'addFiles').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachEmitFn').returnsThis();
@@ -38,14 +37,17 @@ describe('mocha-runner', () => {
     afterEach(() => sandbox.restore());
 
     describe('run', () => {
+        beforeEach(() => sandbox.stub(MochaAdapter, 'create', () => mkMochaAdapterStub_()));
+
         it('should create mocha instance for each file', () => {
             return run_(['path/to/file', 'path/to/other/file'])
                 .then(() => {
-                    assert.calledTwice(MochaAdapter.prototype.addFile);
-                    assert.calledWith(MochaAdapter.prototype.addFile, 'path/to/file');
-                    assert.calledWith(MochaAdapter.prototype.addFile, 'path/to/other/file');
+                    assert.calledTwice(MochaAdapter.prototype.addFiles);
+                    assert.calledWith(MochaAdapter.prototype.addFiles, ['path/to/file']);
+                    assert.calledWith(MochaAdapter.prototype.addFiles, ['path/to/other/file']);
 
-                    const mochaInstances = MochaAdapter.prototype.addFile.thisValues;
+                    const mochaInstances = MochaAdapter.prototype.addFiles.thisValues;
+
                     assert.notStrictEqual(mochaInstances[0], mochaInstances[1]);
                 });
         });
@@ -73,7 +75,7 @@ describe('mocha-runner', () => {
                 .then(() => {
                     assert.callOrder(
                         MochaAdapter.prototype.applySkip,
-                        MochaAdapter.prototype.addFile
+                        MochaAdapter.prototype.addFiles
                     );
                 });
         });
@@ -82,14 +84,15 @@ describe('mocha-runner', () => {
             return run_()
                 .then(() => assert.callOrder(
                     MochaAdapter.prototype.attachTestFilter,
-                    MochaAdapter.prototype.addFile
+                    MochaAdapter.prototype.addFiles
                 ));
         });
 
-        it('should call title vaidator with titles and suite file', () => {
-            return run_(['some/path/file.js'])
+        it('should call title vaidator for each file', () => {
+            return run_(['some/path/file.js', 'other/path/file.js'])
                 .then(() => {
-                    assert.calledWith(MochaAdapter.prototype.attachTitleValidator, {}, 'some/path/file.js');
+                    assert.calledTwice(MochaAdapter.prototype.attachTitleValidator);
+                    assert.calledWith(MochaAdapter.prototype.attachTitleValidator, {});
                 });
         });
 
@@ -126,6 +129,61 @@ describe('mocha-runner', () => {
             MochaAdapter.prototype.run.returns(q.reject('Error'));
 
             return assert.isRejected(run_(), /Error/);
+        });
+    });
+
+    describe('buildSuiteTree', () => {
+        beforeEach(() => {
+            sandbox.stub(MochaAdapter, 'create').returns(Object.create(MochaAdapter.prototype));
+        });
+
+        it('should build suite tree for specified paths', () => {
+            const mochaRunner = mochaRunnerInit();
+
+            mochaRunner.buildSuiteTree(['some/path']);
+
+            assert.called(MochaAdapter.create);
+            assert.calledWith(MochaAdapter.prototype.addFiles, ['some/path']);
+        });
+
+        it('should not filter apply filter function', () => {
+            const mochaRunner = mochaRunnerInit();
+
+            mochaRunner.buildSuiteTree(['some/path']);
+            assert.calledWith(MochaAdapter.prototype.attachTestFilter, undefined);
+        });
+
+        it('should call title validator for passed files', () => {
+            const mochaRunner = mochaRunnerInit();
+            mochaRunner.buildSuiteTree(['some/path/file1.js', 'other/path/file2.js']);
+
+            assert.calledOnce(MochaAdapter.prototype.attachTitleValidator);
+            assert.calledWith(MochaAdapter.prototype.attachTitleValidator, {});
+        });
+
+        it('should skip test using test skipper', () => {
+            const mochaRunner = mochaRunnerInit();
+
+            mochaRunner.buildSuiteTree(['some/path']);
+            assert.calledWith(MochaAdapter.prototype.applySkip, sinon.match.instanceOf(TestSkipper));
+        });
+
+        it('should build suite tree if passed specified as string', () => {
+            const mochaRunner = mochaRunnerInit();
+
+            mochaRunner.buildSuiteTree('some/path');
+
+            assert.called(MochaAdapter.create);
+            assert.calledWith(MochaAdapter.prototype.addFiles, ['some/path']);
+        });
+
+        it('should return suite of mocha-adapter', () => {
+            const mochaRunner = mochaRunnerInit();
+            const suiteStub = sandbox.stub();
+            MochaAdapter.create.returns(_.extend(Object.create(MochaAdapter.prototype), {suite: suiteStub}));
+
+            const suiteTree = mochaRunner.buildSuiteTree(['some/path']);
+            assert.deepEqual(suiteTree, suiteStub);
         });
     });
 });

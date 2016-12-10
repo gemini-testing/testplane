@@ -98,11 +98,11 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('addFile', () => {
-        it('should add file', () => {
+    describe('addFiles', () => {
+        it('should add files', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
 
             assert.calledOnce(MochaStub.prototype.addFile);
             assert.calledWith(MochaStub.prototype.addFile, 'path/to/file');
@@ -111,7 +111,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should clear require cache for file before adding', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
 
             assert.calledWithMatch(clearRequire, 'path/to/file');
             assert.callOrder(clearRequire, MochaStub.prototype.addFile);
@@ -120,7 +120,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should load files after add', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
 
             assert.calledOnce(MochaStub.prototype.loadFiles);
             assert.callOrder(MochaStub.prototype.addFile, MochaStub.prototype.loadFiles);
@@ -133,7 +133,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
 
             assert.deepEqual(mocha.files, []);
         });
@@ -141,7 +141,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should add global "hermione" object on "pre-require" event', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
             MochaStub.prototype.suite.emit('pre-require');
 
             assert.isDefined(global.hermione);
@@ -150,7 +150,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('hermione.skip should return SkipBuilder instance', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
             MochaStub.prototype.suite.emit('pre-require');
 
             assert.instanceOf(global.hermione.skip, SkipBuilder);
@@ -159,7 +159,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('hermione.only should return OnlyBuilder instance', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
             MochaStub.prototype.suite.emit('pre-require');
 
             assert.instanceOf(global.hermione.only, OnlyBuilder);
@@ -168,7 +168,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should remove global "hermione" object on "post-require" event', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFile('path/to/file');
+            mochaAdapter.addFiles(['path/to/file']);
             MochaStub.prototype.suite.emit('post-require');
 
             assert.isUndefined(global.hermione);
@@ -467,6 +467,16 @@ describe('mocha-runner/mocha-adapter', () => {
             MochaStub.prototype.suite.emit('test', test2);
             assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
         });
+
+        it('should not filter any test if filter function is not passed', () => {
+            const someTest = mkRunnableStub_();
+
+            MochaStub.prototype.suite.tests = [someTest];
+            mochaAdapter.attachTestFilter();
+            MochaStub.prototype.suite.emit('test', someTest);
+
+            assert.deepEqual(MochaStub.prototype.suite.tests, [someTest]);
+        });
     });
 
     describe('attachTitleValidator', () => {
@@ -476,10 +486,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should throw an error if tests have the same full title', () => {
             const parentSuite = mkSuiteStub_();
-            const test1 = mkRunnableStub_({title: 'test-title', parent: parentSuite});
-            const test2 = mkRunnableStub_({title: 'test-title', parent: parentSuite});
+            const test1 = mkRunnableStub_({file: 'some/path/file.js', title: 'test-title', parent: parentSuite});
+            const test2 = mkRunnableStub_({file: 'other/path/file.js', title: 'test-title', parent: parentSuite});
 
-            mochaAdapter.attachTitleValidator({}, 'some/path/file.js');
+            mochaAdapter.attachTitleValidator({});
 
             MochaStub.prototype.suite.emit('test', test1);
 
