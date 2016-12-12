@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0 - 2016-12-10
+
+* feat: add API for tests reading
+
 ## 0.18.2 - 2016-12-05
 
 * fix: `screenshotOnReject` may not be declared in config file
