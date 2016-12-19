@@ -140,6 +140,24 @@ describe('config browser-options', () => {
             assert.equal(config.browsers.b1.baseUrl, baseUrl);
             assert.equal(config.browsers.b2.baseUrl, 'http://default.com/test');
         });
+
+        it('should resolve baseUrl option relative to top level baseUrl with path', () => {
+            const baseUrl = 'http://default.com/search/';
+            const readConfig = mkConfig_({
+                baseUrl,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({baseUrl: '/test'})
+                }
+            });
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.baseUrl, baseUrl);
+            assert.equal(config.browsers.b2.baseUrl, 'http://default.com/search/test');
+        });
     });
 
     describe('gridUrl', () => {
