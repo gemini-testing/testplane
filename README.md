@@ -472,7 +472,7 @@ mochaOpts: {
 `Hermione` plugins are commonly used to extend built-in possibilities. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
 
 Plugin is a module which exports a single function. The function has two arguments:
-* hermione instance;
+* hermione facade instance;
 * plugin options from configuration file.
 
 Plugins will be loaded before `hermione` runs tests.

@@ -91,12 +91,11 @@ describe('hermione', () => {
 
             it('should load plugins for hermione facade instance', () => {
                 const config = makeConfigStub();
-                const runner = stubRunner();
 
                 Config.create.returns(config);
 
                 return runHermione()
-                    .then(() => assert.calledWith(pluginsLoader.load, new RunnerFacade(runner, config)));
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(RunnerFacade)));
             });
 
             it('should load plugins from config', () => {
