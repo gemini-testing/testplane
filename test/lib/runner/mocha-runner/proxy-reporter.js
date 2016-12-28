@@ -1,42 +1,41 @@
 'use strict';
 
-var _ = require('lodash'),
-    EventEmitter = require('events').EventEmitter,
-    ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
+const _ = require('lodash');
+const EventEmitter = require('events').EventEmitter;
+const ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 
-describe('mocha-runner/proxy-reporter', function() {
-    var sandbox = sinon.sandbox.create(),
-        runner,
-        emit;
+describe('mocha-runner/proxy-reporter', () => {
+    const sandbox = sinon.sandbox.create();
 
-    function createReporter_(browserProps) {
+    let runner;
+    let emit;
+
+    const createReporter_ = (browserProps) => {
         browserProps = _.defaults(browserProps || {}, {
             sessionId: 'default-session-id',
             id: 'default-browser'
         });
 
-        var getBrowser = sinon.stub().returns(browserProps);
+        const getBrowser = sinon.stub().returns(browserProps);
         return new ProxyReporter(emit, getBrowser, runner);
-    }
+    };
 
-    function testTranslateEvent_(from, to) {
-        it('should translate event `' + from + '` to event `' + to + '`', function() {
+    const testTranslateEvent_ = (from, to) => {
+        it(`should translate event "${from}" to event "${to}"`, () => {
             createReporter_();
 
             runner.emit(from, {slow: sinon.stub()}); // slow will be called by Mocha.BaseReporter inside
 
             assert.calledWith(emit, to);
         });
-    }
+    };
 
-    beforeEach(function() {
+    beforeEach(() => {
         runner = new EventEmitter();
         emit = sandbox.stub().named('emit');
     });
 
-    afterEach(function() {
-        sandbox.restore();
-    });
+    afterEach(() => sandbox.restore());
 
     testTranslateEvent_('suite', 'beginSuite');
     testTranslateEvent_('suite end', 'endSuite');
@@ -45,7 +44,7 @@ describe('mocha-runner/proxy-reporter', function() {
     testTranslateEvent_('pass', 'passTest');
     testTranslateEvent_('pending', 'pendingTest');
 
-    it('should translate `fail` event from test to `failTest`', function() {
+    it('should translate `fail` event from test to `failTest`', () => {
         createReporter_();
 
         runner.emit('fail', {type: 'test'}, {message: 'foo'});
@@ -55,10 +54,10 @@ describe('mocha-runner/proxy-reporter', function() {
         });
     });
 
-    it('should translate `fail` event from `before each` hook to `failTest`', function() {
+    it('should translate `fail` event from `before each` hook to `failTest`', () => {
         createReporter_();
 
-        var hook = {
+        const hook = {
             type: 'hook',
             title: '"before each" hook for "some test"',
             ctx: {
@@ -73,7 +72,7 @@ describe('mocha-runner/proxy-reporter', function() {
         assert.calledWithMatch(emit, 'failTest', {
             title: 'some test',
             err: {message: 'foo'},
-            hook: hook
+            hook
         });
     });
 
@@ -94,10 +93,10 @@ describe('mocha-runner/proxy-reporter', function() {
         assert.calledWith(emit, 'failSuite', hook);
     });
 
-    it('should translate `fail` event from after* hook to `err`', function() {
+    it('should translate `fail` event from after* hook to `err`', () => {
         createReporter_();
 
-        var hook = {
+        const hook = {
             type: 'hook',
             title: '"after each" hook for "some test"',
             originalTitle: '"after each" hook',
@@ -116,10 +115,10 @@ describe('mocha-runner/proxy-reporter', function() {
         );
     });
 
-    it('should translate `fail` event from hook without currentTest to `err`', function() {
+    it('should translate `fail` event from hook without currentTest to `err`', () => {
         createReporter_();
 
-        var hook = {
+        const hook = {
             type: 'hook',
             title: '"before All" hook',
             ctx: {}
@@ -133,7 +132,7 @@ describe('mocha-runner/proxy-reporter', function() {
         );
     });
 
-    it('should translate `fail` event from other source to `err`', function() {
+    it('should translate `fail` event from other source to `err`', () => {
         createReporter_();
 
         runner.emit('fail', {title: 'some-title'}, {message: 'foo'});
@@ -144,7 +143,7 @@ describe('mocha-runner/proxy-reporter', function() {
         );
     });
 
-    it('should translate test data from mocha', function() {
+    it('should translate test data from mocha', () => {
         createReporter_();
 
         runner.emit('suite', {foo: 'bar'});
@@ -154,7 +153,7 @@ describe('mocha-runner/proxy-reporter', function() {
         });
     });
 
-    it('should add `browserId` and `sessionId` ', function() {
+    it('should add `browserId` and `sessionId`', () => {
         createReporter_({id: 'browserId', sessionId: 'mySessionId'});
 
         runner.emit('suite', {foo: 'bar'});
@@ -165,7 +164,7 @@ describe('mocha-runner/proxy-reporter', function() {
         });
     });
 
-    it('should add meta info copy', function() {
+    it('should add meta info copy', () => {
         const meta = {url: '/some/url'};
         createReporter_({meta});
 
@@ -173,5 +172,20 @@ describe('mocha-runner/proxy-reporter', function() {
 
         assert.calledWithMatch(emit, 'passTest', {meta});
         assert.notStrictEqual(emit.firstCall.args[1].meta, meta);
+    });
+
+    it('should add meta info on `before each` hook', () => {
+        const meta = {url: '/some/url'};
+        createReporter_({meta});
+
+        const hook = {
+            type: 'hook',
+            title: '"before each" hook for "some test"',
+            ctx: {currentTest: {}}
+        };
+
+        runner.emit('fail', hook, {message: 'foo'});
+
+        assert.calledWithMatch(emit, 'failTest', {meta: {url: '/some/url'}});
     });
 });
