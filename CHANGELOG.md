@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.23.0"></a>
+# [0.23.0](https://github.com/gemini-testing/hermione/compare/v0.20.0...v0.23.0) (2016-12-30)
+
+
+### Bug Fixes
+
+* set meta info on before each hook ([f0ea113](https://github.com/gemini-testing/hermione/commit/f0ea113))
+
+
+### Features
+
+* add ability to specify sets in config ([b713732](https://github.com/gemini-testing/hermione/commit/b713732))
+* make hermione instance available from hermione plugins ([0767d5f](https://github.com/gemini-testing/hermione/commit/0767d5f))
+* remove hermione facade module ([738796b](https://github.com/gemini-testing/hermione/commit/738796b))
+
+
+
 <a name="0.22.0"></a>
 # [0.22.0](https://github.com/gemini-testing/hermione/compare/v0.15.3...v0.22.0) (2016-12-26)
 
