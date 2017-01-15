@@ -43,7 +43,7 @@
     "qemitter": "^1.1.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "https://github.com/dudagod/webdriverio#4.5.0"
+    "webdriverio": "^4.6.1"
   },
   "devDependencies": {
     "chai": "^3.4.1",
