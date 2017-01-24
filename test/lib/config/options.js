@@ -63,6 +63,23 @@ describe('config options', () => {
                 assert.deepEqual(config.system.mochaOpts.grep, /test/);
             });
         });
+
+        describe('ctx', () => {
+            it('should be empty by default', () => {
+                const config = createConfig();
+
+                assert.deepEqual(config.system.ctx, {});
+            });
+
+            it('should override ctx option', () => {
+                const readConfig = _.set({}, 'system.ctx', {some: 'ctx'});
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.system.ctx, {some: 'ctx'});
+            });
+        });
     });
 
     describe('prepareEnvironment', () => {
