@@ -26,6 +26,8 @@ describe('mocha-runner', () => {
     const mkMochaAdapterStub_ = () => Object.create(MochaAdapter.prototype);
 
     beforeEach(() => {
+        sandbox.stub(MochaAdapter, 'init');
+        sandbox.stub(MochaAdapter, 'clean');
         sandbox.stub(MochaAdapter.prototype, 'addFiles').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
@@ -35,6 +37,22 @@ describe('mocha-runner', () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    describe('init', () => {
+        it('should init mocha adapter', () => {
+            MochaRunner.init();
+
+            assert.calledOnce(MochaAdapter.init);
+        });
+    });
+
+    describe('clean', () => {
+        it('should clean mocha adapter', () => {
+            MochaRunner.clean();
+
+            assert.calledOnce(MochaAdapter.clean);
+        });
+    });
 
     describe('run', () => {
         beforeEach(() => sandbox.stub(MochaAdapter, 'create', () => mkMochaAdapterStub_()));
