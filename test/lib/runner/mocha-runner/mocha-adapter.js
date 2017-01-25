@@ -94,16 +94,6 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('clean', () => {
-        it('should delete hermione from global', () => {
-            global.hermione = 'some-global-value';
-
-            MochaAdapter.clean();
-
-            assert.isUndefined(global.hermione);
-        });
-    });
-
     describe('constructor', () => {
         it('should pass shared opts to mocha instance', () => {
             mkMochaAdapter_({grep: 'foo'});
@@ -160,7 +150,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         describe('hermione global', () => {
             beforeEach(() => MochaAdapter.init());
-            afterEach(() => MochaAdapter.clean());
+            afterEach(() => delete global.hermione);
 
             it('hermione.skip should return SkipBuilder instance', () => {
                 mkMochaAdapter_();
