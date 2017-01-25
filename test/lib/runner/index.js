@@ -47,7 +47,6 @@ describe('Runner', () => {
         MochaRunner.prototype.run.returns(q());
 
         sandbox.stub(MochaRunner, 'init');
-        sandbox.stub(MochaRunner, 'clean');
 
         sandbox.stub(RetryManager.prototype);
     });
@@ -73,19 +72,9 @@ describe('Runner', () => {
         });
 
         it('should init mocha runner on RUNNER_START event', () => {
-            const runner = new Runner(makeConfigStub());
-
-            runner.emit(RunnerEvents.RUNNER_START);
+            new Runner(makeConfigStub()); // eslint-disable-line no-new
 
             assert.calledOnce(MochaRunner.init);
-        });
-
-        it('should clean mocha runner on RUNNER_END event', () => {
-            const runner = new Runner(makeConfigStub());
-
-            runner.emit(RunnerEvents.RUNNER_END);
-
-            assert.calledOnce(MochaRunner.clean);
         });
     });
 
