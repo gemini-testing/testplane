@@ -216,7 +216,7 @@ describe('Browser', () => {
                     });
             });
 
-            it('should add last url to meta-info', () => {
+            it('should add last url to meta-info if it starts from /', () => {
                 return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
                     .init()
                     .then((browser) => {
@@ -225,6 +225,16 @@ describe('Browser', () => {
                             .url('/foo/bar?baz=qux');
 
                         assert.equal(browser.meta.url, 'http://some.domain.org/root/foo/bar?baz=qux');
+                    });
+            });
+
+            it('should add last url to meta-info if it contains only query part', () => {
+                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
+                    .init()
+                    .then((browser) => {
+                        session.url('?baz=qux');
+
+                        assert.equal(browser.meta.url, 'http://some.domain.org/root?baz=qux');
                     });
             });
 
