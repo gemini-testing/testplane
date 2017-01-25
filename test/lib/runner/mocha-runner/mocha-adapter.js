@@ -84,6 +84,26 @@ describe('mocha-runner/mocha-adapter', () => {
 
     afterEach(() => sandbox.restore());
 
+    describe('init', () => {
+        it('should add an empty hermione object to global', () => {
+            MochaAdapter.init();
+
+            assert.deepEqual(global.hermione, {});
+
+            delete global.hermione;
+        });
+    });
+
+    describe('clean', () => {
+        it('should delete hermione from global', () => {
+            global.hermione = 'some-global-value';
+
+            MochaAdapter.clean();
+
+            assert.isUndefined(global.hermione);
+        });
+    });
+
     describe('constructor', () => {
         it('should pass shared opts to mocha instance', () => {
             mkMochaAdapter_({grep: 'foo'});
@@ -138,53 +158,26 @@ describe('mocha-runner/mocha-adapter', () => {
             assert.deepEqual(mocha.files, []);
         });
 
-        it('should add global "hermione" object on "pre-require" event', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            mochaAdapter.addFiles(['path/to/file']);
-            MochaStub.prototype.suite.emit('pre-require');
-
-            assert.isDefined(global.hermione);
-        });
-
         describe('hermione global', () => {
-            afterEach(() => delete global.hermione);
+            beforeEach(() => MochaAdapter.init());
+            afterEach(() => MochaAdapter.clean());
 
             it('hermione.skip should return SkipBuilder instance', () => {
-                const mochaAdapter = mkMochaAdapter_();
-
-                mochaAdapter.addFiles(['path/to/file']);
-                MochaStub.prototype.suite.emit('pre-require');
+                mkMochaAdapter_();
 
                 assert.instanceOf(global.hermione.skip, SkipBuilder);
             });
 
             it('hermione.only should return OnlyBuilder instance', () => {
-                const mochaAdapter = mkMochaAdapter_();
-
-                mochaAdapter.addFiles(['path/to/file']);
-                MochaStub.prototype.suite.emit('pre-require');
+                mkMochaAdapter_();
 
                 assert.instanceOf(global.hermione.only, OnlyBuilder);
             });
 
             it('hermione.ctx should return passed ctx', () => {
-                const mochaAdapter = mkMochaAdapter_({}, {some: 'ctx'});
-
-                mochaAdapter.addFiles(['path/to/file.js']);
-                MochaStub.prototype.suite.emit('pre-require');
+                mkMochaAdapter_({}, {some: 'ctx'});
 
                 assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
-            });
-
-            it('should remove global "hermione" object on "post-require" event', () => {
-                const mochaAdapter = mkMochaAdapter_();
-
-                mochaAdapter.addFiles(['path/to/file']);
-                MochaStub.prototype.suite.emit('pre-require');
-                MochaStub.prototype.suite.emit('post-require');
-
-                assert.isUndefined(global.hermione);
             });
         });
     });
