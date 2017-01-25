@@ -56,10 +56,8 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     }
 
-    const mkMochaAdapter_ = (opts) => {
-        testSkipper = sinon.createStubInstance(TestSkipper);
-
-        return MochaAdapter.create(opts || {}, browserAgent, testSkipper);
+    const mkMochaAdapter_ = (opts, ctx) => {
+        return MochaAdapter.create(opts || {}, browserAgent, ctx);
     };
 
     const mkBrowserStub_ = () => {
@@ -67,6 +65,8 @@ describe('mocha-runner/mocha-adapter', () => {
     };
 
     beforeEach(() => {
+        testSkipper = sinon.createStubInstance(TestSkipper);
+
         clearRequire = sandbox.stub().named('clear-require');
         browserAgent = sinon.createStubInstance(BrowserAgent);
 
@@ -147,31 +147,45 @@ describe('mocha-runner/mocha-adapter', () => {
             assert.isDefined(global.hermione);
         });
 
-        it('hermione.skip should return SkipBuilder instance', () => {
-            const mochaAdapter = mkMochaAdapter_();
+        describe('hermione global', () => {
+            afterEach(() => delete global.hermione);
 
-            mochaAdapter.addFiles(['path/to/file']);
-            MochaStub.prototype.suite.emit('pre-require');
+            it('hermione.skip should return SkipBuilder instance', () => {
+                const mochaAdapter = mkMochaAdapter_();
 
-            assert.instanceOf(global.hermione.skip, SkipBuilder);
-        });
+                mochaAdapter.addFiles(['path/to/file']);
+                MochaStub.prototype.suite.emit('pre-require');
 
-        it('hermione.only should return OnlyBuilder instance', () => {
-            const mochaAdapter = mkMochaAdapter_();
+                assert.instanceOf(global.hermione.skip, SkipBuilder);
+            });
 
-            mochaAdapter.addFiles(['path/to/file']);
-            MochaStub.prototype.suite.emit('pre-require');
+            it('hermione.only should return OnlyBuilder instance', () => {
+                const mochaAdapter = mkMochaAdapter_();
 
-            assert.instanceOf(global.hermione.only, OnlyBuilder);
-        });
+                mochaAdapter.addFiles(['path/to/file']);
+                MochaStub.prototype.suite.emit('pre-require');
 
-        it('should remove global "hermione" object on "post-require" event', () => {
-            const mochaAdapter = mkMochaAdapter_();
+                assert.instanceOf(global.hermione.only, OnlyBuilder);
+            });
 
-            mochaAdapter.addFiles(['path/to/file']);
-            MochaStub.prototype.suite.emit('post-require');
+            it('hermione.ctx should return passed ctx', () => {
+                const mochaAdapter = mkMochaAdapter_({}, {some: 'ctx'});
 
-            assert.isUndefined(global.hermione);
+                mochaAdapter.addFiles(['path/to/file.js']);
+                MochaStub.prototype.suite.emit('pre-require');
+
+                assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
+            });
+
+            it('should remove global "hermione" object on "post-require" event', () => {
+                const mochaAdapter = mkMochaAdapter_();
+
+                mochaAdapter.addFiles(['path/to/file']);
+                MochaStub.prototype.suite.emit('pre-require');
+                MochaStub.prototype.suite.emit('post-require');
+
+                assert.isUndefined(global.hermione);
+            });
         });
     });
 

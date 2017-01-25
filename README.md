@@ -38,12 +38,15 @@ Hermione is the utility for integration testing of web pages using [WebdriverIO]
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
+    - [ctx](#ctx)
   - [plugins](#plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
 - [Overriding settings](#overriding-settings)
 - [Programmatic API](#programmatic-api)
+  - [run](#run)
+  - [readTests](#readtests)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
@@ -467,6 +470,22 @@ mochaOpts: {
     timeout: 60000 // timeout for test execution.
 }
 ```
+
+#### ctx
+A context which will be available in tests via method `hermione.ctx`:
+```javascript
+ctx: {
+    foo: 'bar'
+}
+```
+
+```javascript
+it('awesome test', function() {
+    console.log(hermione.ctx); // {foo: 'bar'}
+});
+```
+
+**Recommendation**: use `ctx` in your tests in favor of global variables.
 
 ### plugins
 `Hermione` plugins are commonly used to extend built-in possibilities. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).

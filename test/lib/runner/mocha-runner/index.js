@@ -12,7 +12,7 @@ describe('mocha-runner', () => {
 
     const mochaRunnerInit = () => {
         return new MochaRunner(
-            {system: {mochaOpts: {}}},
+            {system: {mochaOpts: {}, ctx: {}}},
             sinon.createStubInstance(BrowserAgent),
             sinon.createStubInstance(TestSkipper)
         );
@@ -57,6 +57,14 @@ describe('mocha-runner', () => {
                 .then(() => assert.equal(
                     MochaAdapter.create.firstCall.args[0],
                     MochaAdapter.create.secondCall.args[0]
+                ));
+        });
+
+        it('should share a ctx from config between all mocha instances', () => {
+            return run_(['path/to/file', 'path/to/other/file'])
+                .then(() => assert.equal(
+                    MochaAdapter.create.firstCall.args[2],
+                    MochaAdapter.create.secondCall.args[2]
                 ));
         });
 
