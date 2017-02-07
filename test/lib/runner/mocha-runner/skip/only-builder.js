@@ -8,15 +8,16 @@ describe('OnlyBuilder', () => {
     const sandbox = sinon.sandbox.create();
     let skipBuilder;
 
-    describe('.in', () => {
-        beforeEach(() => {
-            const skip = new Skip();
-            skipBuilder = new SkipBuilder(skip, 'browserId');
+    beforeEach(() => {
+        skipBuilder = new SkipBuilder(new Skip(), 'browserId');
+    });
 
+    describe(`.in`, () => {
+        beforeEach(() => {
             sandbox.stub(skipBuilder, 'notIn');
         });
 
-        it('should call skipBuilder.notIn', () => {
+        it(`should call skipBuilder.notIn`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.in();
@@ -24,7 +25,7 @@ describe('OnlyBuilder', () => {
             assert.calledOnce(skipBuilder.notIn);
         });
 
-        it('should call skipBuilder.notIn with option silent by default', () => {
+        it(`should call skipBuilder.notIn with option silent by default`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.in();
@@ -32,7 +33,7 @@ describe('OnlyBuilder', () => {
             assert.calledWithMatch(skipBuilder.notIn, sinon.match.any, sinon.match.any, {silent: true});
         });
 
-        it('should pass arguments to skipBuilder.notIn', () => {
+        it(`should pass arguments to skipBuilder.notIn`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.in('browserId');
@@ -40,15 +41,12 @@ describe('OnlyBuilder', () => {
             assert.calledWith(skipBuilder.notIn, 'browserId');
         });
     });
-    describe('.notIin', () => {
+    describe(`.notIn`, () => {
         beforeEach(() => {
-            const skip = new Skip();
-            skipBuilder = new SkipBuilder(skip, 'browserId');
-
             sandbox.stub(skipBuilder, 'in');
         });
 
-        it('should call skipBuilder.in', () => {
+        it(`should call skipBuilder.in`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.notIn();
@@ -56,7 +54,7 @@ describe('OnlyBuilder', () => {
             assert.calledOnce(skipBuilder.in);
         });
 
-        it('should call skipBuilder.in with option silent by default', () => {
+        it(`should call skipBuilder.in with option silent by default`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.notIn();
@@ -64,7 +62,7 @@ describe('OnlyBuilder', () => {
             assert.calledWithMatch(skipBuilder.in, sinon.match.any, sinon.match.any, {silent: true});
         });
 
-        it('should pass arguments to skipBuilder.in', () => {
+        it(`should pass arguments to skipBuilder.in`, () => {
             const onlyBuilder = new OnlyBuilder(skipBuilder);
 
             onlyBuilder.notIn('browserId');
