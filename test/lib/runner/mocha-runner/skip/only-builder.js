@@ -6,37 +6,70 @@ const OnlyBuilder = require('../../../../../lib/runner/mocha-runner/skip/only-bu
 
 describe('OnlyBuilder', () => {
     const sandbox = sinon.sandbox.create();
-
     let skipBuilder;
 
-    beforeEach(() => {
-        const skip = new Skip();
-        skipBuilder = new SkipBuilder(skip, 'browserId');
+    describe('.in', () => {
+        beforeEach(() => {
+            const skip = new Skip();
+            skipBuilder = new SkipBuilder(skip, 'browserId');
 
-        sandbox.stub(skipBuilder, 'notIn');
+            sandbox.stub(skipBuilder, 'notIn');
+        });
+
+        it('should call skipBuilder.notIn', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
+
+            onlyBuilder.in();
+
+            assert.calledOnce(skipBuilder.notIn);
+        });
+
+        it('should call skipBuilder.notIn with option silent by default', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
+
+            onlyBuilder.in();
+
+            assert.calledWithMatch(skipBuilder.notIn, sinon.match.any, sinon.match.any, {silent: true});
+        });
+
+        it('should pass arguments to skipBuilder.notIn', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
+
+            onlyBuilder.in('browserId');
+
+            assert.calledWith(skipBuilder.notIn, 'browserId');
+        });
     });
+    describe('.notIin', () => {
+        beforeEach(() => {
+            const skip = new Skip();
+            skipBuilder = new SkipBuilder(skip, 'browserId');
 
-    it('should call skipBuilder.notIn', () => {
-        const onlyBuilder = new OnlyBuilder(skipBuilder);
+            sandbox.stub(skipBuilder, 'in');
+        });
 
-        onlyBuilder.in();
+        it('should call skipBuilder.in', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
 
-        assert.calledOnce(skipBuilder.notIn);
-    });
+            onlyBuilder.notIn();
 
-    it('should call skipBuilder.notIn with option silent by default', () => {
-        const onlyBuilder = new OnlyBuilder(skipBuilder);
+            assert.calledOnce(skipBuilder.in);
+        });
 
-        onlyBuilder.in();
+        it('should call skipBuilder.in with option silent by default', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
 
-        assert.calledWithMatch(skipBuilder.notIn, sinon.match.any, sinon.match.any, {silent: true});
-    });
+            onlyBuilder.notIn();
 
-    it('should pass arguments to skipBuilder.notIn', () => {
-        const onlyBuilder = new OnlyBuilder(skipBuilder);
+            assert.calledWithMatch(skipBuilder.in, sinon.match.any, sinon.match.any, {silent: true});
+        });
 
-        onlyBuilder.in('browserId');
+        it('should pass arguments to skipBuilder.in', () => {
+            const onlyBuilder = new OnlyBuilder(skipBuilder);
 
-        assert.calledWith(skipBuilder.notIn, 'browserId');
+            onlyBuilder.notIn('browserId');
+
+            assert.calledWith(skipBuilder.in, 'browserId');
+        });
     });
 });

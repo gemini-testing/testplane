@@ -126,8 +126,14 @@ Or you can use another hermione helper, [only](#only), which is silent by defaul
 ```js
 hermione.only.in('chrome');
 ```
+will run tests only in one browser and skip the rest silently,
 
-It will run tests only in one browser and skip the rest silently.
+```js
+hermione.only.notIn('ie8');
+
+```
+will run tests in all browsers except one.
+
 
 ### Offers flexible test configuration
 `Hermione` lets you configure running some set of tests in specific browsers. For example,
