@@ -129,8 +129,8 @@ hermione.only.in('chrome');
 hermione.only.notIn('ie8');
 ```
 
-`hermione.only.in` will run tests only in specified browsers and skip the rest silently.
-`hermione.only.notIn` will run tests in all browsers except specified.
+`hermione.only.in` will run tests only in the specified browsers and skip the rest silently.
+`hermione.only.notIn` will run tests in all browsers except the specified ones.
 
 
 ### Offers flexible test configuration
@@ -236,27 +236,27 @@ You can do this by using the global `hermione.only` helper. It supports two meth
 - `.in` — The `hermione.skip.notIn` method with the silent flag,
 - `.notIn` — The `hermione.skip.in` with the silent flag.
 
-This methods takes the following arguments:
+These methods take the following arguments:
  - browser {String|RegExp|Array<String|RegExp>} — A matcher for browser(s) to skip.
 
 For example:
 ```js
 // ...
 hermione.only.in('chrome');
+
 it('should work this way', function() {
     return doSomething();
 });
 ```
-In this case, the test will be skipped in all browsers **silently**, except in `chrome`.
+In this case, the test will be skipped all browsers **silently** except in `chrome`.
 
 ```js
 hermione.only.notIn('ie9');
 it('should work another way', function() {
     return doSomething();
-// ...
 });
 ```
-And in this, the test will be processed in all browsers and **silently** skipper in `ie9`.
+The test will be processed in all browsers and **silently** skipped in `ie9`.
 
 ## WebdriverIO extensions
 `Hermione` adds some useful methods and properties to the `webdriverio` session after its initialization.
