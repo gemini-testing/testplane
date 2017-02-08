@@ -60,10 +60,22 @@ describe('Skip', () => {
             assert.notProperty(test, 'skipReason');
         });
 
-        it('should reset skip data after test will be skipped', () => {
+        it('should reset skip data after test will be skipped loudly', () => {
             const test = mkTest();
             skip.shouldSkip = true;
             skip.silent = false;
+
+            skip.handleEntity(test);
+
+            assert.equal(skip.comment, '');
+            assert.equal(skip.shouldSkip, false);
+            assert.equal(skip.silent, false);
+        });
+
+        it('should reset skip data after test will be skipped silently', () => {
+            const test = mkTest();
+            skip.shouldSkip = true;
+            skip.silent = true;
 
             skip.handleEntity(test);
 
