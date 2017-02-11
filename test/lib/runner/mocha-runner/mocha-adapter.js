@@ -7,6 +7,7 @@ const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-build
 const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
+const RunnerEvents = require('../../../../lib/constants/runner-events');
 const proxyquire = require('proxyquire').noCallThru();
 const inherit = require('inherit');
 const _ = require('lodash');
@@ -549,6 +550,32 @@ describe('mocha-runner/mocha-adapter', () => {
 
             const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
             assert.deepEqual(getBrowser(), {id: 'some-browser'});
+        });
+
+        describe('file events', () => {
+            beforeEach(() => MochaAdapter.init());
+            afterEach(() => delete global.hermione);
+
+            _.forEach({
+                'pre-require': 'BEFORE_FILE_READ',
+                'post-require': 'AFTER_FILE_READ'
+            }, (hermioneEvent, mochaEvent) => {
+                it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, () => {
+                    const emit = sinon.spy();
+                    browserAgent.browserId = 'bro';
+
+                    mochaAdapter.attachEmitFn(emit);
+
+                    MochaStub.prototype.suite.emit(mochaEvent, {}, '/some/file.js');
+
+                    assert.calledOnce(emit);
+                    assert.calledWith(emit, RunnerEvents[hermioneEvent], sinon.match({
+                        file: '/some/file.js',
+                        hermione: global.hermione,
+                        browser: 'bro'
+                    }));
+                });
+            });
         });
     });
 });
