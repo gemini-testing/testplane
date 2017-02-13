@@ -198,6 +198,9 @@ describe('Runner', () => {
 
             describe('events', () => {
                 const mochaRunnerEvents = [
+                    RunnerEvents.BEFORE_FILE_READ,
+                    RunnerEvents.AFTER_FILE_READ,
+
                     RunnerEvents.SUITE_BEGIN,
                     RunnerEvents.SUITE_END,
 
@@ -243,7 +246,7 @@ describe('Runner', () => {
             });
         });
 
-        describe('passing of events from browser agent', () => {
+        describe('passing events from browser agent', () => {
             beforeEach(() => sandbox.stub(BrowserAgent, 'create').returns(sinon.createStubInstance(BrowserAgent)));
 
             [RunnerEvents.SESSION_START, RunnerEvents.SESSION_END].forEach((event) => {

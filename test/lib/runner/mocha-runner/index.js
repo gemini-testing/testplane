@@ -105,6 +105,14 @@ describe('mocha-runner', () => {
                 ));
         });
 
+        it('should attach emit function before file adding', () => {
+            return run_()
+                .then(() => assert.callOrder(
+                    MochaAdapter.prototype.attachEmitFn,
+                    MochaAdapter.prototype.addFiles
+                ));
+        });
+
         it('should call title vaidator for each file', () => {
             return run_(['some/path/file.js', 'other/path/file.js'])
                 .then(() => {

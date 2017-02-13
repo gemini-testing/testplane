@@ -391,7 +391,7 @@ sets: {
     common: {                 // run tests associated with this path in all browsers
         files: 'tests/common' // which are configured in the `browsers` option
     },
-    desktop: {              
+    desktop: {
         files: [
             'tests/desktop/*.hermione.js',
             'tests/common/*.hermione.js'
@@ -547,6 +547,8 @@ Property name             | Description
 
 Event                     | Description
 ------------------------- | -------------
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
 `RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after test execution. If a handler returns a promise, tests will be executed only after the promise is resolved.
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
