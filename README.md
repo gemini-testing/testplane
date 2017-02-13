@@ -129,7 +129,8 @@ hermione.only.in('chrome');
 hermione.only.notIn('ie8');
 ```
 
-`hermione.only.in` will run tests only in the specified browsers and skip the rest silently.
+`hermione.only.in` will run tests only in the specified browsers and skip the rest silently. 
+
 `hermione.only.notIn` will run tests in all browsers except the specified ones.
 
 
@@ -248,7 +249,7 @@ it('should work this way', function() {
     return doSomething();
 });
 ```
-In this case, the test will be skipped all browsers **silently** except in `chrome`.
+The test will be skipped all browsers **silently** except in `chrome`.
 
 ```js
 hermione.only.notIn('ie9');

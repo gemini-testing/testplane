@@ -1,6 +1,6 @@
 {
   "name": "hermione",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "description": "Tests framework based on mocha and wdio",
   "main": "lib/hermione.js",
   "scripts": {
@@ -40,7 +40,7 @@
     "plugins-loader": "1.0.1",
     "q": "^2.0.0",
     "q-promise-utils": "^1.0.0",
-    "qemitter": "^1.1.0",
+    "qemitter": "^2.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
     "webdriverio": "^4.6.1"
