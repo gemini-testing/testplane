@@ -4,6 +4,8 @@ const _ = require('lodash');
 const Config = require('../../../lib/config');
 const defaults = require('../../../lib/config/defaults');
 
+const parser = require('../../../lib/config/options');
+
 describe('config options', () => {
     const sandbox = sinon.sandbox.create();
 
@@ -106,6 +108,66 @@ describe('config options', () => {
             const config = createConfig();
 
             assert.deepEqual(config.prepareEnvironment, newFunc);
+        });
+    });
+
+    describe('plugins', () => {
+        const parse_ = (opts) => parser(_.defaults(opts, {env: {}, argv: []}));
+
+        it('should parse boolean value from environment', () => {
+            const result = parse_({
+                options: {plugins: {foo: {}}},
+                env: {'hermione_plugins_foo': 'true'}
+            });
+
+            assert.strictEqual(result.plugins.foo, true);
+        });
+
+        it('should parse object value from environment', () => {
+            const result = parse_({
+                options: {plugins: {foo: {}}},
+                env: {'hermione_plugins_foo': '{"opt": 1}'}
+            });
+
+            assert.deepEqual(result.plugins.foo, {opt: 1});
+        });
+
+        it('should throw error on invalid values from environment', () => {
+            assert.throws(
+                () => parse_({
+                    options: {plugins: {foo: {}}},
+                    env: {'hermione_plugins_foo': '{key: 1}'}
+                }),
+                'a value must be a primitive type'
+            );
+        });
+
+        it('should parse boolean value from cli', () => {
+            const result = parse_({
+                options: {plugins: {foo: {}}},
+                argv: ['--plugins-foo', 'true']
+            });
+
+            assert.strictEqual(result.plugins.foo, true);
+        });
+
+        it('should parse object value from cli', () => {
+            const result = parse_({
+                options: {plugins: {foo: {}}},
+                argv: ['--plugins-foo', '{"opt": 1}']
+            });
+
+            assert.deepEqual(result.plugins.foo, {opt: 1});
+        });
+
+        it('should throw error on invalid values from cli', () => {
+            assert.throws(
+                () => parse_({
+                    options: {plugins: {foo: {}}},
+                    argv: ['--plugins-foo', '{key: 1}']
+                }),
+                'a value must be a primitive type'
+            );
         });
     });
 });
