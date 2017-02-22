@@ -228,6 +228,21 @@ describe('Flat reporter', () => {
                 assert.include(stdout, test.file);
             });
 
+            it('should log path to file of failed hook', () => {
+                test = mkTestStub_({
+                    file: null,
+                    parent: {
+                        file: 'path-to-test'
+                    }
+                });
+
+                sandbox.stub(path, 'relative').returns(`relative/${test.parent.file}`);
+
+                emit(RunnerEvents.TEST_FAIL, test);
+
+                assert.include(stdout, 'relative/path-to-test');
+            });
+
             it('should log browser of failed suite', () => {
                 test = mkTestStub_({
                     browserId: 'bro1'
