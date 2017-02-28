@@ -424,6 +424,22 @@ describe('Runner', () => {
             assert.calledWith(BrowserAgent.create, sinon.match.any, sinon.match.instanceOf(BrowserPool));
         });
 
+        it('should passthrough BEFORE_FILE_READ and AFTER_FILE_READ events synchronously', () => {
+            sandbox.stub(qUtils, 'passthroughEvent');
+            const runner = new Runner(makeConfigStub());
+
+            runner.buildSuiteTree([{}]);
+
+            assert.calledWith(qUtils.passthroughEvent,
+                sinon.match.instanceOf(QEmitter),
+                sinon.match.instanceOf(Runner),
+                [
+                    RunnerEvents.BEFORE_FILE_READ,
+                    RunnerEvents.AFTER_FILE_READ
+                ]
+            );
+        });
+
         it('should create mocha runner with the specified config and browser agent', () => {
             const config = makeConfigStub();
             const runner = new Runner(config);
