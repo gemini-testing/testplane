@@ -243,6 +243,15 @@ describe('Flat reporter', () => {
                 assert.include(stdout, 'relative/path-to-test');
             });
 
+            it('should not throw if path to file is not specified on failed hook', () => {
+                test = mkTestStub_({
+                    file: null,
+                    parent: {}
+                });
+
+                assert.doesNotThrow(() => emit(RunnerEvents.TEST_FAIL, test));
+            });
+
             it('should log browser of failed suite', () => {
                 test = mkTestStub_({
                     browserId: 'bro1'
