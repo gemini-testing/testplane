@@ -19,6 +19,14 @@ const makeConfigStub = require('../utils').makeConfigStub;
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
 
+    const mkRunnerStub_ = (runFn) => {
+        const runner = new QEmitter();
+
+        runner.run = sandbox.stub(Runner.prototype, 'run', runFn && runFn.bind(null, runner));
+        sandbox.stub(Runner, 'create').returns(runner);
+        return runner;
+    };
+
     beforeEach(() => {
         sandbox.stub(sets, 'reveal').returns(q());
 
@@ -62,14 +70,6 @@ describe('hermione', () => {
 
     describe('run', () => {
         const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
-
-        const mkRunnerStub_ = (runFn) => {
-            const runner = new QEmitter();
-
-            runner.run = sandbox.stub(Runner.prototype, 'run', runFn && runFn.bind(null, runner));
-            sandbox.stub(Runner, 'create').returns(runner);
-            return runner;
-        };
 
         it('should create runner', () => {
             mkRunnerStub_();
@@ -317,6 +317,38 @@ describe('hermione', () => {
                 .readTests(['some/path'], ['bro1', 'bro2'])
                 .then(() => {
                     assert.calledWith(sets.reveal, config.sets, {paths: ['some/path'], browsers: ['bro1', 'bro2']});
+                });
+        });
+
+        it('should passthrough all synchronous runner events', () => {
+            const runner = mkRunnerStub_();
+            runner.buildSuiteTree = () => Promise.resolve({});
+            const hermione = Hermione.create(makeConfigStub());
+
+            return hermione.readTests()
+                .then(() => {
+                    _.forEach(RunnerEvents.getSync(), (event, name) => {
+                        const spy = sinon.spy().named(`${name} handler`);
+                        hermione.on(event, spy);
+
+                        runner.emit(event);
+
+                        assert.calledOnce(spy);
+                    });
+                });
+        });
+
+        it('should load plugins from config', () => {
+            Config.create.returns({plugins: {'some-plugin': {}}});
+
+            return Hermione
+                .create(Config.create())
+                .readTests()
+                .then(() => {
+                    assert.calledWith(
+                        pluginsLoader.load,
+                        sinon.match.instanceOf(Hermione), {'some-plugin': {}}
+                    );
                 });
         });
 
