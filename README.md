@@ -129,7 +129,7 @@ hermione.only.in('chrome');
 hermione.only.notIn('ie8');
 ```
 
-`hermione.only.in` will run tests only in the specified browsers and skip the rest silently. 
+`hermione.only.in` will run tests only in the specified browsers and skip the rest silently.
 
 `hermione.only.notIn` will run tests in all browsers except the specified ones.
 
@@ -547,8 +547,8 @@ Property name             | Description
 
 Event                     | Description
 ------------------------- | -------------
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
-`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after test execution. If a handler returns a promise, tests will be executed only after the promise is resolved.
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.

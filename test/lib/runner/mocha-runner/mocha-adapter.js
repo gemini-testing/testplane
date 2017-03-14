@@ -569,11 +569,12 @@ describe('mocha-runner/mocha-adapter', () => {
                     MochaStub.prototype.suite.emit(mochaEvent, {}, '/some/file.js');
 
                     assert.calledOnce(emit);
-                    assert.calledWith(emit, RunnerEvents[hermioneEvent], sinon.match({
+                    assert.calledWith(emit, RunnerEvents[hermioneEvent], {
                         file: '/some/file.js',
                         hermione: global.hermione,
-                        browser: 'bro'
-                    }));
+                        browser: 'bro',
+                        suite: mochaAdapter.suite
+                    });
                 });
             });
         });
