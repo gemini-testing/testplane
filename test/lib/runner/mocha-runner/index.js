@@ -10,9 +10,9 @@ const TestSkipper = require('../../../../lib/runner/test-skipper');
 describe('mocha-runner', () => {
     const sandbox = sinon.sandbox.create();
 
-    const mochaRunnerInit = () => {
+    const mochaRunnerInit = (mochaConfig) => {
         return new MochaRunner(
-            {system: {mochaOpts: {}, ctx: {}}},
+            {system: {mochaOpts: mochaConfig || {}, ctx: {}}},
             sinon.createStubInstance(BrowserAgent),
             sinon.createStubInstance(TestSkipper)
         );
@@ -31,6 +31,7 @@ describe('mocha-runner', () => {
         sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'attachEmitFn').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'applyGrep').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'run').returns(q());
         sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
     });
@@ -121,19 +122,44 @@ describe('mocha-runner', () => {
                 });
         });
 
-        it('should create all mocha instances before run any of them', () => {
+        it('should create all mocha instances before applying grep', () => {
             MochaAdapter.create.restore();
-            MochaAdapter.prototype.run.restore();
+            MochaAdapter.prototype.applyGrep.restore();
 
             const order = [];
             sandbox.stub(MochaAdapter, 'create', () => {
                 order.push('create');
                 return mkMochaAdapterStub_();
             });
+            sandbox.stub(MochaAdapter.prototype, 'applyGrep', function() {
+                order.push('applyGrep');
+                return this;
+            });
+
+            return run_(['some/file', 'other/file'])
+                .then(() => assert.deepEqual(order, ['create', 'create', 'applyGrep', 'applyGrep']));
+        });
+
+        it('should apply grep before any run', () => {
+            MochaAdapter.prototype.applyGrep.restore();
+            MochaAdapter.prototype.run.restore();
+
+            const order = [];
+            sandbox.stub(MochaAdapter.prototype, 'applyGrep', function() {
+                order.push('applyGrep');
+                return this;
+            });
             sandbox.stub(MochaAdapter.prototype, 'run', () => order.push('run'));
 
             return run_(['some/file', 'other/file'])
-                .then(() => assert.deepEqual(order, ['create', 'create', 'run', 'run']));
+                .then(() => assert.deepEqual(order, ['applyGrep', 'applyGrep', 'run', 'run']));
+        });
+
+        it('should pass grep option to mocha', () => {
+            const mochaRunner = mochaRunnerInit({grep: 'pattern'});
+
+            return mochaRunner.run(['some/file'])
+                .then(() => assert.calledWith(MochaAdapter.prototype.applyGrep, 'pattern'));
         });
 
         it('should wait until all mocha instances will finish their work', () => {

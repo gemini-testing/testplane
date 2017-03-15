@@ -11,8 +11,11 @@ const RunnerEvents = require('../../../../lib/constants/runner-events');
 const proxyquire = require('proxyquire').noCallThru();
 const inherit = require('inherit');
 const _ = require('lodash');
-const EventEmitter = require('events').EventEmitter;
 const q = require('q');
+const mkRunnableStub = require('./utils').mkRunnableStub;
+const mkSuiteStub = require('./utils').mkSuiteStub;
+const mkTree = require('./utils').mkTree;
+const treeToObj = require('./utils').treeToObj;
 
 const MochaStub = inherit({
     __constructor: _.noop,
@@ -31,30 +34,12 @@ describe('mocha-runner/mocha-adapter', () => {
     let clearRequire;
     let testSkipper;
 
-    function mkSuiteStub_(opts) {
-        opts = opts || {};
-
-        return _.extend(new EventEmitter(), {
-            enableTimeouts: sandbox.stub(),
-            beforeAll: sandbox.stub(),
-            afterAll: sandbox.stub(),
-            tests: [{}],
-            ctx: {},
-            title: opts.title || 'suite-title',
-            fullTitle: () => opts.fullTitle || ''
-        });
-    }
-
     function mkRunnableStub_(opts) {
         opts = _.defaults(opts || {}, {
-            title: 'default-title',
-            parent: MochaStub.prototype.suite,
-            fn: _.noop
+            parent: MochaStub.prototype.suite
         });
 
-        return _.defaults(opts, {
-            fullTitle: () => `${opts.parent.title} ${opts.title}`
-        });
+        return mkRunnableStub(opts);
     }
 
     const mkMochaAdapter_ = (opts, ctx) => {
@@ -73,7 +58,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         sandbox.stub(MochaStub.prototype);
         MochaStub.prototype.run.yields();
-        MochaStub.prototype.suite = mkSuiteStub_();
+        MochaStub.prototype.suite = mkSuiteStub({parent: null});
 
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
@@ -185,7 +170,7 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         it('should not request browsers for suite with one skipped test', () => {
-            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
+            MochaStub.prototype.suite = _.extend(mkSuiteStub(), {
                 suites: [
                     {
                         tests: [
@@ -203,7 +188,7 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         it('should request browsers for suite with at least one non-skipped test', () => {
-            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
+            MochaStub.prototype.suite = _.extend(mkSuiteStub(), {
                 suites: [
                     {
                         tests: [
@@ -221,7 +206,7 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         it('should not request browsers for suite with nested skipped tests', () => {
-            const suiteStub = mkSuiteStub_();
+            const suiteStub = mkSuiteStub();
 
             MochaStub.prototype.suite = _.extend(suiteStub, {
                 suites: [
@@ -378,7 +363,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should handle nested tests', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            const nestedSuite = mkSuiteStub_();
+            const nestedSuite = mkSuiteStub();
             const test = mkRunnableStub_({title: 'nested test'});
 
             mochaAdapter.suite.emit('suite', nestedSuite);
@@ -483,7 +468,7 @@ describe('mocha-runner/mocha-adapter', () => {
         beforeEach(() => mochaAdapter = mkMochaAdapter_());
 
         it('should throw an error if tests have the same full title', () => {
-            const parentSuite = mkSuiteStub_();
+            const parentSuite = mkSuiteStub({title: 'suite-title', parent: null});
             const test1 = mkRunnableStub_({file: 'some/path/file.js', title: 'test-title', parent: parentSuite});
             const test2 = mkRunnableStub_({file: 'other/path/file.js', title: 'test-title', parent: parentSuite});
 
@@ -577,6 +562,107 @@ describe('mocha-runner/mocha-adapter', () => {
                     });
                 });
             });
+        });
+    });
+
+    describe('applyGrep', () => {
+        const applyGrep_ = (treeSceleton, grep) => {
+            const mocha = mkMochaAdapter_();
+            mocha.suite = mkTree(treeSceleton);
+
+            mocha.applyGrep(grep);
+
+            return treeToObj(mocha.suite);
+        };
+
+        it('should not modify suite tree if grep was not set', () => {
+            const tree = {
+                someSuite: ['test']
+            };
+
+            const result = applyGrep_(tree, undefined);
+
+            assert.deepEqual(result, {
+                someSuite: ['test']
+            });
+        });
+
+        it('should leave only suites matched on grep pattern', () => {
+            const tree = {
+                someSuite: ['test1', 'test2'],
+                otherSuite: {
+                    nextSuite: ['test3']
+                }
+            };
+
+            const result = applyGrep_(tree, /^otherSuite nextSuite test3$/);
+
+            assert.deepEqual(result, {
+                otherSuite: {
+                    nextSuite: ['test3']
+                }
+            });
+        });
+
+        it('should leave only suites matched on grep string', () => {
+            const tree = {
+                someSuite: ['my test', 'test2'],
+                otherSuite: {
+                    nextSuite: ['my test 1']
+                }
+            };
+
+            const result = applyGrep_(tree, 'my test');
+
+            assert.deepEqual(result, {
+                someSuite: ['my test'],
+                otherSuite: {
+                    nextSuite: ['my test 1']
+                }
+            });
+        });
+
+        it('should accept regexp as a string', () => {
+            const tree = {
+                someSuite: ['my test', 'test2'],
+                otherSuite: {
+                    nextSuite: ['my test 1']
+                }
+            };
+
+            const result = applyGrep_(tree, 'my test.*');
+
+            assert.deepEqual(result, {
+                someSuite: ['my test'],
+                otherSuite: {
+                    nextSuite: ['my test 1']
+                }
+            });
+        });
+
+        it('should match on suite', () => {
+            const tree = {
+                someSuite: ['my test', 'test2'],
+                otherSuite: {
+                    nextSuite: ['my test 1']
+                }
+            };
+
+            const result = applyGrep_(tree, 'someSuite');
+
+            assert.deepEqual(result, {
+                someSuite: ['my test', 'test2']
+            });
+        });
+
+        it('should not remove parent suite in case of no matches at all', () => {
+            const tree = {
+                someSuite: ['my test']
+            };
+
+            const result = applyGrep_(tree, 'anotherTest');
+
+            assert.deepEqual(result, {});
         });
     });
 });
