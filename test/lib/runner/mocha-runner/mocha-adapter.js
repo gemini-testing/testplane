@@ -72,7 +72,7 @@ describe('mocha-runner/mocha-adapter', () => {
         browserAgent = sinon.createStubInstance(BrowserAgent);
 
         sandbox.stub(MochaStub.prototype);
-        MochaStub.prototype.run.yields();
+        MochaStub.prototype.run = (cb) => process.nextTick(cb);
         MochaStub.prototype.suite = mkSuiteStub_();
 
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
@@ -524,8 +524,11 @@ describe('mocha-runner/mocha-adapter', () => {
 
             attachEmitFn_(emitFn);
 
-            assert.calledOnce(ProxyReporter.prototype.__constructor);
-            assert.calledWith(ProxyReporter.prototype.__constructor, emitFn);
+            const emit_ = ProxyReporter.prototype.__constructor.firstCall.args[0];
+            emit_('some-event', {some: 'data'});
+
+            assert.calledOnce(emitFn);
+            assert.calledWith(emitFn, 'some-event', sinon.match({some: 'data'}));
         });
 
         it('should pass to proxy reporter getter for requested browser', () => {
@@ -550,6 +553,40 @@ describe('mocha-runner/mocha-adapter', () => {
 
             const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
             assert.deepEqual(getBrowser(), {id: 'some-browser'});
+        });
+
+        describe('if event handler throws', () => {
+            const initBadHandler_ = (event, handler) => {
+                const emitter = new EventEmitter();
+                emitter.on(event, handler);
+
+                attachEmitFn_(emitter.emit.bind(emitter));
+                return ProxyReporter.prototype.__constructor.firstCall.args[0];
+            };
+
+            it('proxy should rethrow error', () => {
+                const emit_ = initBadHandler_('foo', () => {
+                    throw new Error(new Error('bar'));
+                });
+
+                assert.throws(() => emit_('foo'), /bar/);
+            });
+
+            it('run should be rejected', () => {
+                const emit_ = initBadHandler_('foo', () => {
+                    throw new Error('bar');
+                });
+
+                const promise = mochaAdapter.run();
+
+                try {
+                    emit_('foo');
+                } catch (e) {
+                    // eslint иди лесом
+                }
+
+                return assert.isRejected(promise, /bar/);
+            });
         });
 
         describe('file events', () => {
