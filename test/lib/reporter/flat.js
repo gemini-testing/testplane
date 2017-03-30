@@ -1,12 +1,13 @@
 'use strict';
 
-const _ = require('lodash');
+const chalk = require('chalk');
 const path = require('path');
 const EventEmitter = require('events').EventEmitter;
 const FlatReporter = require('../../../lib/reporters/flat');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 const logger = require('../../../lib/utils').logger;
-const chalk = require('chalk');
+const mkTestStub_ = require('./utils').mkTestStub_;
+const getDeserializedResult = require('./utils').getDeserializedResult;
 
 describe('Flat reporter', () => {
     const sandbox = sinon.sandbox.create();
@@ -14,16 +15,6 @@ describe('Flat reporter', () => {
     let test;
     let emitter;
     let stdout;
-
-    const mkTestStub_ = (opts) => {
-        return _.defaults(opts || {}, {
-            fullTitle: sinon.stub().returns('suite test'),
-            title: 'test',
-            file: 'path/to/test',
-            browserId: 'chrome',
-            duration: '100500'
-        });
-    };
 
     const getCounters_ = (args) => {
         return {
@@ -128,18 +119,12 @@ describe('Flat reporter', () => {
     });
 
     describe('rendering', () => {
-        const getDeserealizedResult = (log) => {
-            return chalk
-                .stripColor(log)
-                .substr(2); // remove first symbol (icon)
-        };
-
         it('should correctly do the rendering', () => {
             test = mkTestStub_({sessionId: 'test_session'});
 
             emit(RunnerEvents.TEST_PASS, test);
 
-            const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+            const result = getDeserializedResult(logger.log.firstCall.args[0]);
 
             assert.equal(result, 'suite test [chrome:test_session] - 100500ms');
         });
@@ -153,7 +138,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_PENDING, test);
 
-                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                const result = getDeserializedResult(logger.log.firstCall.args[0]);
 
                 assert.match(result, /reason: some comment/);
             });
@@ -169,7 +154,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_PENDING, test);
 
-                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                const result = getDeserializedResult(logger.log.firstCall.args[0]);
 
                 assert.match(result, /reason: suite comment/);
             });
@@ -183,7 +168,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_PENDING, test);
 
-                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                const result = getDeserializedResult(logger.log.firstCall.args[0]);
 
                 assert.match(result, /reason: test comment/);
             });
@@ -195,7 +180,7 @@ describe('Flat reporter', () => {
 
                 emit(RunnerEvents.TEST_PENDING, test);
 
-                const result = getDeserealizedResult(logger.log.firstCall.args[0]);
+                const result = getDeserializedResult(logger.log.firstCall.args[0]);
 
                 assert.match(result, /reason: no comment/);
             });
