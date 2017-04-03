@@ -211,12 +211,12 @@ describe('Browser', () => {
                     .then(() => {
                         session.url('/foo/bar?baz=qux');
 
-                        assert.calledWith(baseUrlFn, '/foo/bar?baz=qux');
+                        assert.calledWith(baseUrlFn, 'http://base_url/foo/bar?baz=qux');
                         assert.calledOn(baseUrlFn, session);
                     });
             });
 
-            it('should add last url to meta-info if it starts from /', () => {
+            it('should add last url to meta-info and replace path if it starts from /', () => {
                 return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
                     .init()
                     .then((browser) => {
@@ -224,7 +224,7 @@ describe('Browser', () => {
                             .url('/some/url')
                             .url('/foo/bar?baz=qux');
 
-                        assert.equal(browser.meta.url, 'http://some.domain.org/root/foo/bar?baz=qux');
+                        assert.equal(browser.meta.url, 'http://some.domain.org/foo/bar?baz=qux');
                     });
             });
 
@@ -238,13 +238,13 @@ describe('Browser', () => {
                     });
             });
 
-            it('should not concat url without slash at the beginning to the base url', () => {
+            it('should concat url without slash at the beginning to the base url', () => {
                 return mkBrowser_({baseUrl: 'http://some.domain.org'})
                     .init()
                     .then((browser) => {
                         session.url('some/url');
 
-                        assert.equal(browser.meta.url, 'some/url');
+                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
                     });
             });
 
