@@ -43,6 +43,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
+- [Reporters](#Reporters)
 - [Overriding settings](#overriding-settings)
 - [Programmatic API](#programmatic-api)
   - [run](#run)
@@ -599,6 +600,13 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 ```
 
 **Note.** All CLI options override config values.
+
+## Reporters
+You can choose `flat` or `plain` reporter by option `-r, --reporter`. Default is `flat`.
+
+* `flat` – all information about failed and retried tests would be grouped by browsers at the end of the report.
+
+* `plain` – information about fails and retries would be placed after each test.
 
 ## Overriding settings
 
