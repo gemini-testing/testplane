@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.32.0"></a>
+# [0.32.0](https://github.com/gemini-testing/hermione/compare/v0.21.0...v0.32.0) (2017-04-04)
+
+
+### Features
+
+* add plain reporter ([3d30df9](https://github.com/gemini-testing/hermione/commit/3d30df9))
+
+
+
 <a name="0.31.0"></a>
 # [0.31.0](https://github.com/gemini-testing/hermione/compare/v0.30.2...v0.31.0) (2017-04-03)
 

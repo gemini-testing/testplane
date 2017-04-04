@@ -43,7 +43,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
-- [Reporters](#Reporters)
+- [Reporters](#reporters)
 - [Overriding settings](#overriding-settings)
 - [Programmatic API](#programmatic-api)
   - [run](#run)
