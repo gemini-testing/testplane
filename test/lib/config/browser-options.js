@@ -447,4 +447,46 @@ describe('config browser-options', () => {
             });
         });
     });
+
+    describe('meta', () => {
+        it('should throw error if "meta" is not a object', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({meta: 'meta-string'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"meta" must be an object');
+        });
+
+        it('should set null by default', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.meta, null);
+        });
+
+        it('should set provided value', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({meta: {k1: 'v1', k2: 'v2'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.meta, {k1: 'v1', k2: 'v2'});
+        });
+    });
 });

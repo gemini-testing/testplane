@@ -444,6 +444,7 @@ Option name               | Description
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
+`meta`                    | Additional data that can be obtained via .getMeta() method
 
 ### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -468,6 +469,9 @@ Number of sessions which are run simultaneously. Global value for all browsers. 
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
+
+### meta
+Additional data that can be obtained via .getMeta() method
 
 ### system
 
