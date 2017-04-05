@@ -107,6 +107,22 @@ describe('Browser', () => {
                 });
         });
 
+        it('should set empty meta-info by default', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => {
+                    assert.deepEqual(browser.meta, {});
+                });
+        });
+
+        it('should set meta-info with provided meta option', () => {
+            return mkBrowser_({meta: {k1: 'v1'}})
+                .init()
+                .then((browser) => {
+                    assert.deepEqual(browser.meta, {k1: 'v1'});
+                });
+        });
+
         it('should set custom options before initializing of a session', () => {
             return mkBrowser_()
                 .init()
