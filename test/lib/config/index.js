@@ -1,9 +1,9 @@
 'use strict';
 
-const path = require('path');
 const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
 const defaults = require('../../../lib/config/defaults');
+const utils = require('../../../lib/config/utils');
 
 describe('config', () => {
     const sandbox = sinon.sandbox.create();
@@ -15,11 +15,11 @@ describe('config', () => {
         parseOptions = sandbox.stub().returns(opts.configParserReturns);
 
         const configPath = opts.configPath || defaults.config;
-        const resolvedConfigPath = path.resolve(process.cwd(), configPath);
         const Config = proxyquire('../../../lib/config', {
-            './options': parseOptions,
-            [resolvedConfigPath]: opts.requireConfigReturns || {}
+            './options': parseOptions
         });
+
+        sandbox.stub(utils, 'requireWithNoCache').returns(opts.requireConfigReturns || {});
 
         return Config.create(opts.config || configPath, opts.allowOverrides);
     };
@@ -76,6 +76,12 @@ describe('config', () => {
 
         it('should create config', () => {
             assert.deepEqual(initConfig({configParserReturns: {some: 'option'}}), {some: 'option'});
+        });
+
+        it('should require config with clear cache', () => {
+            initConfig({config: 'config/path'});
+
+            assert.calledWithMatch(utils.requireWithNoCache, 'config/path');
         });
     });
 
