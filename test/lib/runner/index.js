@@ -11,6 +11,7 @@ const MochaRunner = require('../../../lib/runner/mocha-runner');
 const Runner = require('../../../lib/runner');
 const TestSkipper = require('../../../lib/runner/test-skipper');
 const RetryManager = require('../../../lib/retry-manager');
+const RepeatManager = require('../../../lib/repeat-manager');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 
 const makeConfigStub = require('../../utils').makeConfigStub;
@@ -50,6 +51,7 @@ describe('Runner', () => {
         sandbox.stub(MochaRunner, 'init');
 
         sandbox.stub(RetryManager.prototype);
+        sandbox.stub(RepeatManager.prototype);
     });
 
     afterEach(() => sandbox.restore());
@@ -70,6 +72,15 @@ describe('Runner', () => {
 
             assert.calledOnce(RetryManager.prototype.__constructor);
             assert.calledWith(RetryManager.prototype.__constructor, config);
+        });
+
+        it('should create repeatManager with passed config', () => {
+            const config = makeConfigStub();
+
+            new Runner(config); // eslint-disable-line no-new
+
+            assert.calledOnce(RepeatManager.prototype.__constructor);
+            assert.calledWith(RepeatManager.prototype.__constructor, config);
         });
 
         it('should init mocha runner on RUNNER_START event', () => {
@@ -293,6 +304,14 @@ describe('Runner', () => {
                 });
         });
 
+        it('should start repeat session after all', () => {
+            return run_()
+                .then(() => {
+                    assert.calledOnce(RepeatManager.prototype.repeat);
+                    assert.calledWith(RepeatManager.prototype.repeat, sinon.match.func);
+                });
+        });
+
         describe('retry manager events', () => {
             let retryMgr;
             let runner;
@@ -344,7 +363,8 @@ describe('Runner', () => {
                         RunnerEvents.TEST_FAIL,
                         RunnerEvents.SUITE_FAIL,
                         RunnerEvents.ERROR,
-                        RunnerEvents.RETRY
+                        RunnerEvents.RETRY,
+                        RunnerEvents.REPEAT
                     ]
                 );
             });
