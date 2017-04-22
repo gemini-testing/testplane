@@ -8,20 +8,11 @@ const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-build
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
 const RunnerEvents = require('../../../../lib/constants/runner-events');
+const MochaStub = require('../../_mocha');
 const proxyquire = require('proxyquire').noCallThru();
-const inherit = require('inherit');
-const _ = require('lodash');
 const EventEmitter = require('events').EventEmitter;
+const _ = require('lodash');
 const q = require('q');
-
-const MochaStub = inherit({
-    __constructor: _.noop,
-    run: _.noop,
-    fullTrace: _.noop,
-    addFile: _.noop,
-    loadFiles: _.noop,
-    reporter: _.noop
-});
 
 describe('mocha-runner/mocha-adapter', () => {
     const sandbox = sinon.sandbox.create();
@@ -30,32 +21,6 @@ describe('mocha-runner/mocha-adapter', () => {
     let browserAgent;
     let clearRequire;
     let testSkipper;
-
-    function mkSuiteStub_(opts) {
-        opts = opts || {};
-
-        return _.extend(new EventEmitter(), {
-            enableTimeouts: sandbox.stub(),
-            beforeAll: sandbox.stub(),
-            afterAll: sandbox.stub(),
-            tests: [{}],
-            ctx: {},
-            title: opts.title || 'suite-title',
-            fullTitle: () => opts.fullTitle || ''
-        });
-    }
-
-    function mkRunnableStub_(opts) {
-        opts = _.defaults(opts || {}, {
-            title: 'default-title',
-            parent: MochaStub.prototype.suite,
-            fn: _.noop
-        });
-
-        return _.defaults(opts, {
-            fullTitle: () => `${opts.parent.title} ${opts.title}`
-        });
-    }
 
     const mkMochaAdapter_ = (opts, ctx) => {
         return MochaAdapter.create(opts || {}, browserAgent, ctx);
@@ -67,14 +32,9 @@ describe('mocha-runner/mocha-adapter', () => {
 
     beforeEach(() => {
         testSkipper = sinon.createStubInstance(TestSkipper);
-
-        clearRequire = sandbox.stub().named('clear-require');
         browserAgent = sinon.createStubInstance(BrowserAgent);
 
-        sandbox.stub(MochaStub.prototype);
-        MochaStub.prototype.run = (cb) => process.nextTick(cb);
-        MochaStub.prototype.suite = mkSuiteStub_();
-
+        clearRequire = sandbox.stub().named('clear-require');
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
             'mocha': MochaStub
@@ -99,13 +59,13 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should pass shared opts to mocha instance', () => {
             mkMochaAdapter_({grep: 'foo'});
 
-            assert.calledWith(MochaStub.prototype.__constructor, {grep: 'foo'});
+            assert.deepEqual(MochaStub.lastInstance.constructorArgs, {grep: 'foo'});
         });
 
         it('should enable full stacktrace in mocha', () => {
             mkMochaAdapter_();
 
-            assert.called(MochaStub.prototype.fullTrace);
+            assert.called(MochaStub.lastInstance.fullTrace);
         });
     });
 
@@ -115,8 +75,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
             mochaAdapter.addFiles(['path/to/file']);
 
-            assert.calledOnce(MochaStub.prototype.addFile);
-            assert.calledWith(MochaStub.prototype.addFile, 'path/to/file');
+            assert.calledOnce(MochaStub.lastInstance.addFile);
+            assert.calledWith(MochaStub.lastInstance.addFile, 'path/to/file');
         });
 
         it('should clear require cache for file before adding', () => {
@@ -125,7 +85,7 @@ describe('mocha-runner/mocha-adapter', () => {
             mochaAdapter.addFiles(['path/to/file']);
 
             assert.calledWithMatch(clearRequire, 'path/to/file');
-            assert.callOrder(clearRequire, MochaStub.prototype.addFile);
+            assert.callOrder(clearRequire, MochaStub.lastInstance.addFile);
         });
 
         it('should load files after add', () => {
@@ -133,20 +93,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
             mochaAdapter.addFiles(['path/to/file']);
 
-            assert.calledOnce(MochaStub.prototype.loadFiles);
-            assert.callOrder(MochaStub.prototype.addFile, MochaStub.prototype.loadFiles);
-        });
-
-        it('should flush files after load', () => {
-            const mocha = new MochaStub();
-            mocha.files = ['some/file'];
-            MochaStub.prototype.__constructor.returns(mocha);
-
-            const mochaAdapter = mkMochaAdapter_();
-
-            mochaAdapter.addFiles(['path/to/file']);
-
-            assert.deepEqual(mocha.files, []);
+            assert.calledOnce(MochaStub.lastInstance.loadFiles);
+            assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFiles);
         });
 
         describe('hermione global', () => {
@@ -174,75 +122,56 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('inject browser', () => {
-        beforeEach(() => browserAgent.getBrowser.returns(q(mkBrowserStub_())));
+        beforeEach(() => {
+            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(q());
+        });
 
         it('should request browser before suite execution', () => {
-            MochaStub.prototype.suite.beforeAll.yields();
+            const mochaAdapter = mkMochaAdapter_();
 
-            mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            assert.calledOnce(browserAgent.getBrowser);
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(browserAgent.getBrowser));
         });
 
         it('should not request browsers for suite with one skipped test', () => {
-            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
-                suites: [
-                    {
-                        tests: [
-                            {pending: true}
-                        ]
-                    }
-                ],
-                tests: []
-            });
-            MochaStub.prototype.suite.beforeAll.yields();
+            const mochaAdapter = mkMochaAdapter_();
 
-            mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({skipped: true}));
 
-            assert.notCalled(browserAgent.getBrowser);
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(browserAgent.getBrowser));
         });
 
         it('should request browsers for suite with at least one non-skipped test', () => {
-            MochaStub.prototype.suite = _.extend(mkSuiteStub_(), {
-                suites: [
-                    {
-                        tests: [
-                            {'pending': false},
-                            {'pending': true}
-                        ]
-                    }
-                ]
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({skipped: true})
+                    .addTest();
             });
-            MochaStub.prototype.suite.beforeAll.yields();
 
-            mkMochaAdapter_();
-
-            assert.calledOnce(browserAgent.getBrowser);
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(browserAgent.getBrowser));
         });
 
         it('should not request browsers for suite with nested skipped tests', () => {
-            const suiteStub = mkSuiteStub_();
+            const mochaAdapter = mkMochaAdapter_();
 
-            MochaStub.prototype.suite = _.extend(suiteStub, {
-                suites: [
-                    {
-                        suites: [
-                            {
-                                tests: [
-                                    {'pending': true},
-                                    {'pending': true}
-                                ]
-                            }
-                        ]
-                    }
-                ],
-                tests: []
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addSuite(
+                        MochaStub.Suite.create()
+                            .addTest({skipped: true})
+                            .addTest({skipped: true})
+                    );
             });
-            MochaStub.prototype.suite.beforeAll.yields();
 
-            mkMochaAdapter_();
-
-            assert.notCalled(browserAgent.getBrowser);
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(browserAgent.getBrowser));
         });
 
         it('should release browser after suite execution', () => {
@@ -250,30 +179,30 @@ describe('mocha-runner/mocha-adapter', () => {
             browserAgent.getBrowser.returns(q(browser));
             browserAgent.freeBrowser.returns(q());
 
-            mkMochaAdapter_();
+            const mochaAdapter = mkMochaAdapter_();
 
-            const beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
-            const afterAll = MochaStub.prototype.suite.afterAll.firstCall.args[0];
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            return beforeAll()
-                .then(afterAll)
-                .then(() => {
-                    assert.calledOnce(browserAgent.freeBrowser);
-                    assert.calledWith(browserAgent.freeBrowser, browser);
-                });
+            return mochaAdapter.run().then(() => {
+                assert.calledOnce(browserAgent.freeBrowser);
+                assert.calledWith(browserAgent.freeBrowser, browser);
+            });
         });
 
         it('should disable mocha timeouts while setting browser hooks', () => {
-            MochaStub.prototype.suite.enableTimeouts.onFirstCall().returns(true);
+            const suitePrototype = MochaStub.Suite.prototype;
+            const beforeAllStub = sandbox.stub(suitePrototype, 'beforeAll');
+            const afterAllStub = sandbox.stub(suitePrototype, 'afterAll');
 
             mkMochaAdapter_();
+            const suite = MochaStub.lastInstance.suite;
 
             assert.callOrder(
-                MochaStub.prototype.suite.enableTimeouts, // get current value of enableTimeouts
-                MochaStub.prototype.suite.enableTimeouts.withArgs(false).named('disableTimeouts'),
-                MochaStub.prototype.suite.beforeAll,
-                MochaStub.prototype.suite.afterAll,
-                MochaStub.prototype.suite.enableTimeouts.withArgs(true).named('restoreTimeouts')
+                suite.enableTimeouts, // get current value of enableTimeouts
+                suite.enableTimeouts.withArgs(false).named('disableTimeouts'),
+                beforeAllStub,
+                afterAllStub,
+                suite.enableTimeouts.withArgs(true).named('restoreTimeouts')
             );
         });
 
@@ -283,13 +212,11 @@ describe('mocha-runner/mocha-adapter', () => {
             browserAgent.getBrowser.returns(q(browser));
             browserAgent.freeBrowser.returns(q.reject('some-error'));
 
-            mkMochaAdapter_();
+            const mochaAdapter = mkMochaAdapter_();
 
-            const beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
-            const afterAll = MochaStub.prototype.suite.afterAll.firstCall.args[0];
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            return beforeAll()
-                .then(afterAll)
+            return mochaAdapter.run()
                 .then(() => {
                     assert.calledOnce(logger.warn);
                     assert.calledWithMatch(logger.warn, /some-error/);
@@ -298,27 +225,38 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('inject skip', () => {
-        beforeEach(() => sandbox.stub(Skip.prototype, 'handleEntity'));
+        let mochaAdapter;
+
+        beforeEach(() => {
+            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(q());
+            sandbox.stub(Skip.prototype, 'handleEntity');
+
+            mochaAdapter = mkMochaAdapter_();
+        });
 
         it('should apply skip to test', () => {
-            const test = mkRunnableStub_();
-            MochaStub.prototype.suite.tests = [test];
+            const test = new MochaStub.Test();
 
-            mkMochaAdapter_();
-            MochaStub.prototype.suite.emit('test', test);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            assert.called(Skip.prototype.handleEntity);
-            assert.calledWith(Skip.prototype.handleEntity, test);
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.called(Skip.prototype.handleEntity);
+                    assert.calledWith(Skip.prototype.handleEntity, test);
+                });
         });
 
         it('should apply skip to suite', () => {
-            const suite = MochaStub.prototype.suite;
+            const nestedSuite = MochaStub.Suite.create();
 
-            mkMochaAdapter_();
-            suite.emit('suite', suite);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
 
-            assert.called(Skip.prototype.handleEntity);
-            assert.calledWith(Skip.prototype.handleEntity, suite);
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.called(Skip.prototype.handleEntity);
+                    assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
+                });
         });
     });
 
@@ -329,7 +267,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             mochaAdapter.applySkip(testSkipper);
 
-            assert.calledWith(testSkipper.applySkip, MochaStub.prototype.suite, 'some-browser');
+            assert.calledWith(testSkipper.applySkip, MochaStub.lastInstance.suite, 'some-browser');
         });
 
         it('should be chainable', () => {
@@ -341,160 +279,157 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('inject execution context', () => {
-        const startBrowser_ = () => {
-            const browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
+        let browser;
+        let mochaAdapter;
 
-            const beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
-            return beforeAll()
-                .thenResolve(browser.publicAPI);
-        };
+        beforeEach(() => {
+            browser = mkBrowserStub_();
+            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.freeBrowser.returns(q());
+
+            mochaAdapter = mkMochaAdapter_();
+        });
 
         it('should add execution context to browser', () => {
-            const mochaAdapter = mkMochaAdapter_();
+            const test = new MochaStub.Test();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            const scenario = {
-                'beforeAll': mkRunnableStub_({title: 'before hook'}),
-                'beforeEach': mkRunnableStub_({title: 'before each hook'}),
-                'test': mkRunnableStub_({title: 'some test'}),
-                'afterEach': mkRunnableStub_({title: 'after each hook'}),
-                'afterAll': mkRunnableStub_({title: 'after hook'})
-            };
-
-            _.forEach(scenario, (runnable, event) => mochaAdapter.suite.emit(event, runnable));
-
-            return startBrowser_()
-                .then((browser) => {
-                    _.forEach(scenario, (runnable) => {
-                        runnable.fn();
-                        assert.includeMembers(
-                            _.keys(browser.executionContext),
-                            _.keys(runnable)
-                        );
-                    });
-                });
+            return mochaAdapter.run()
+                .then(() => assert.includeMembers(_.keys(browser.publicAPI.executionContext), _.keys(test)));
         });
 
         it('should handle nested tests', () => {
-            const mochaAdapter = mkMochaAdapter_();
+            let nestedSuite = MochaStub.Suite.create();
+            let nestedSuiteTest;
 
-            const nestedSuite = mkSuiteStub_();
-            const test = mkRunnableStub_({title: 'nested test'});
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                suite.addSuite(nestedSuite);
 
-            mochaAdapter.suite.emit('suite', nestedSuite);
-            nestedSuite.emit('test', test);
+                nestedSuiteTest = new MochaStub.Test();
+                nestedSuite.addTest(nestedSuiteTest);
+                return suite;
+            });
 
-            return startBrowser_()
-                .then((browser) => {
-                    test.fn();
+            return mochaAdapter.run()
+                .then(() => {
                     assert.includeMembers(
-                        _.keys(browser.executionContext),
-                        _.keys(test)
+                        _.keys(browser.publicAPI.executionContext),
+                        _.keys(nestedSuiteTest)
                     );
                 });
         });
 
         it('should add browser id to the context', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            const test = mkRunnableStub_();
-            mochaAdapter.suite.emit('test', test);
-
             BrowserAgent.prototype.browserId = 'some-browser';
 
-            return startBrowser_()
-                .then((browser) => {
-                    test.fn();
-                    assert.property(browser.executionContext, 'browserId', 'some-browser');
-                });
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+            return mochaAdapter.run()
+                .then(() => assert.property(browser.publicAPI.executionContext, 'browserId', 'some-browser'));
         });
 
         it('should add execution context to the browser prototype', () => {
-            const mochaAdapter = mkMochaAdapter_();
+            BrowserAgent.prototype.browserId = 'some-browser';
 
-            const test = mkRunnableStub_();
-            mochaAdapter.suite.emit('test', test);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            return startBrowser_()
-                .then((browser) => {
-                    assert.property(Object.getPrototypeOf(browser), 'executionContext');
-                });
+            return mochaAdapter.run()
+                .then(() => assert.property(Object.getPrototypeOf(browser.publicAPI), 'executionContext'));
         });
     });
 
     describe('attachTestFilter', () => {
-        let mochaAdapter;
-
-        beforeEach(() => mochaAdapter = mkMochaAdapter_());
-
         it('should check if test should be run', () => {
-            const someTest = mkRunnableStub_();
-            const shouldRun = sandbox.stub().returns(true);
-
-            MochaStub.prototype.suite.tests = [someTest];
             BrowserAgent.prototype.browserId = 'some-browser';
 
+            const shouldRun = sandbox.stub().returns(true);
+            const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTestFilter(shouldRun);
 
-            MochaStub.prototype.suite.emit('test', someTest);
-            assert.calledWith(shouldRun, someTest, 'some-browser');
+            const test = new MochaStub.Test();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return mochaAdapter.run()
+                .then(() => assert.calledWith(shouldRun, test, 'some-browser'));
         });
 
         it('should not remove test which expected to be run', () => {
-            const test1 = mkRunnableStub_();
-            const test2 = mkRunnableStub_();
+            const testSpy = sinon.spy();
             const shouldRun = () => true;
-
-            MochaStub.prototype.suite.tests = [test1, test2];
-
+            const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTestFilter(shouldRun);
 
-            MochaStub.prototype.suite.emit('test', test2);
-            assert.deepEqual(MochaStub.prototype.suite.tests, [test1, test2]);
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'test1'})
+                    .addTest({title: 'test2'})
+                    .onTestBegin(testSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledTwice(testSpy);
+                    assert.calledWithMatch(testSpy.firstCall, {title: 'test1'});
+                    assert.calledWithMatch(testSpy.secondCall, {title: 'test2'});
+                });
         });
 
         it('should remove test which does not suppose to be run', () => {
-            const test1 = mkRunnableStub_();
-            const test2 = mkRunnableStub_();
-            const shouldRun = () => false;
+            const testSpy = sinon.spy();
+            const shouldRun = sandbox.stub();
+            shouldRun.onFirstCall().returns(true);
+            shouldRun.onSecondCall().returns(false);
 
-            MochaStub.prototype.suite.tests = [test1, test2];
-
+            const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTestFilter(shouldRun);
 
-            MochaStub.prototype.suite.emit('test', test2);
-            assert.deepEqual(MochaStub.prototype.suite.tests, [test1]);
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'test1'})
+                    .addTest({title: 'test2'})
+                    .onTestBegin(testSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledOnce(testSpy);
+                    assert.calledWithMatch(testSpy.firstCall, {title: 'test1'});
+                });
         });
 
         it('should not filter any test if filter function is not passed', () => {
-            const someTest = mkRunnableStub_();
-
-            MochaStub.prototype.suite.tests = [someTest];
+            const testSpy = sinon.spy();
+            const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTestFilter();
-            MochaStub.prototype.suite.emit('test', someTest);
 
-            assert.deepEqual(MochaStub.prototype.suite.tests, [someTest]);
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some-test'})
+                    .onTestBegin(testSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledOnce(testSpy);
+                    assert.calledWithMatch(testSpy.firstCall, {title: 'some-test'});
+                });
         });
     });
 
     describe('attachTitleValidator', () => {
-        let mochaAdapter;
-
-        beforeEach(() => mochaAdapter = mkMochaAdapter_());
-
         it('should throw an error if tests have the same full title', () => {
-            const parentSuite = mkSuiteStub_();
-            const test1 = mkRunnableStub_({file: 'some/path/file.js', title: 'test-title', parent: parentSuite});
-            const test2 = mkRunnableStub_({file: 'other/path/file.js', title: 'test-title', parent: parentSuite});
-
+            const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTitleValidator({});
 
-            MochaStub.prototype.suite.emit('test', test1);
-
-            assert.throws(
-                () => MochaStub.prototype.suite.emit('test', test2),
-                /with the same title: 'suite-title test-title'(.+) file: 'some\/path\/file.js'/
-            );
+            assert.throws(() => {
+                MochaStub.lastInstance
+                    .updateSuiteTree((suite) => {
+                        return suite
+                            .addTest({title: 'test-title', file: 'some/path/file.js'})
+                            .addTest({title: 'test-title', file: 'other/path/file.js'});
+                    });
+            }, /with the same title: 'suite-title test-title'(.+) file: 'some\/path\/file.js'/);
         });
     });
 
@@ -509,7 +444,7 @@ describe('mocha-runner/mocha-adapter', () => {
         function attachEmitFn_(emitFn) {
             mochaAdapter.attachEmitFn(emitFn);
 
-            const Reporter = MochaStub.prototype.reporter.lastCall.args[0];
+            const Reporter = MochaStub.lastInstance.reporter.lastCall.args[0];
             new Reporter(); // eslint-disable-line no-new
         }
 
@@ -533,13 +468,12 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should pass to proxy reporter getter for requested browser', () => {
             const browser = mkBrowserStub_();
-
+            browserAgent.getBrowser.returns(q(browser));
             attachEmitFn_(sinon.spy());
 
-            browserAgent.getBrowser.returns(q(browser));
-            const beforeAll = MochaStub.prototype.suite.beforeAll.firstCall.args[0];
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            return beforeAll()
+            return mochaAdapter.run()
                 .then(() => {
                     const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
                     assert.equal(browser, getBrowser());
@@ -602,8 +536,7 @@ describe('mocha-runner/mocha-adapter', () => {
                     browserAgent.browserId = 'bro';
 
                     mochaAdapter.attachEmitFn(emit);
-
-                    MochaStub.prototype.suite.emit(mochaEvent, {}, '/some/file.js');
+                    MochaStub.lastInstance.suite.emit(mochaEvent, {}, '/some/file.js');
 
                     assert.calledOnce(emit);
                     assert.calledWith(emit, RunnerEvents[hermioneEvent], {
@@ -614,6 +547,159 @@ describe('mocha-runner/mocha-adapter', () => {
                     });
                 });
             });
+        });
+    });
+
+    describe('"before" hook error handling', () => {
+        let mochaAdapter;
+
+        beforeEach(() => {
+            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(q());
+
+            mochaAdapter = mkMochaAdapter_();
+        });
+
+        it('should not launch suite original test if "before" hook failed', () => {
+            const testCb = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeAll(() => q.reject(new Error()))
+                    .addTest({fn: testCb});
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(testCb));
+        });
+
+        it('should fail suite tests with "before" hook error', () => {
+            const error = new Error();
+            const testFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeAll(() => q.reject(error))
+                    .addTest({title: 'some-test'})
+                    .onFail(testFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}}));
+        });
+
+        it('should handle sync "before hook" errors', () => {
+            const testFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeAll(() => {
+                        throw new Error();
+                    })
+                    .addTest({title: 'some-test'})
+                    .onFail(testFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(testFailSpy));
+        });
+
+        it('should not execute "before each" hook if "before" hook failed', () => {
+            const beforeEachHookFn = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeAll(() => q.reject(new Error()))
+                    .beforeEach(beforeEachHookFn)
+                    .addTest();
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeEachHookFn));
+        });
+
+        it('should fail test with error from "before" hook if before each hook was executed successfully', () => {
+            const error = new Error();
+            const hookFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeAll(() => q.reject(error))
+                    .beforeEach(() => true)
+                    .addTest()
+                    .onFail(hookFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledWithMatch(hookFailSpy, {error}));
+        });
+    });
+
+    describe('"before each" hook error handling', () => {
+        let mochaAdapter;
+
+        beforeEach(() => {
+            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(q());
+
+            mochaAdapter = mkMochaAdapter_();
+        });
+
+        it('should not execute original suite test if "before each" hook failed', () => {
+            const testCb = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeEach(() => q.reject(new Error()))
+                    .addTest({fn: testCb});
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(testCb));
+        });
+
+        it('should execute original suite test if "before each" hook was executed successfully', () => {
+            const testCb = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeEach(_.noop)
+                    .addTest({fn: testCb});
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.called(testCb));
+        });
+
+        it('should fail test with error from "before each" hook', () => {
+            const error = new Error();
+            const testFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeEach(sandbox.stub().returns(q.reject(error)))
+                    .addTest({title: 'some-test'})
+                    .onFail(testFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}}));
+        });
+
+        it('should handle sync "before each" hook errors', () => {
+            const testFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .beforeEach(() => {
+                        throw new Error();
+                    })
+                    .addTest({title: 'some-test'})
+                    .onFail(testFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(testFailSpy));
         });
     });
 });
