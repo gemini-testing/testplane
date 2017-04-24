@@ -43,7 +43,7 @@ describe('Flat reporter', () => {
         reporter.attachRunner(emitter);
 
         stdout = '';
-        sandbox.stub(logger, 'log', (str) => stdout += `${str}\n`);
+        sandbox.stub(logger, 'log').callsFake((str) => stdout += `${str}\n`);
 
         sandbox.stub(logger, 'warn');
         sandbox.stub(logger, 'error');

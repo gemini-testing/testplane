@@ -53,8 +53,8 @@
     "husky": "^0.11.4",
     "istanbul": "^0.4.1",
     "proxyquire": "^1.7.3",
-    "sinon": "^1.17.2",
-    "sinon-chai": "^2.8.0",
+    "sinon": "^2.1.0",
+    "sinon-chai": "^2.9.0",
     "standard-version": "^3.0.0",
     "eslint": "^3.9.0",
     "eslint-config-gemini-testing": "^2.4.0"

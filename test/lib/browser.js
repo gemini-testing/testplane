@@ -40,7 +40,7 @@ describe('Browser', () => {
         session.requestHandler = {defaultOptions: {}};
 
         session.addCommand = () => {};
-        sandbox.stub(session, 'addCommand', (name, command) => {
+        sandbox.stub(session, 'addCommand').callsFake((name, command) => {
             session[name] = command;
             sandbox.spy(session, name);
         });
