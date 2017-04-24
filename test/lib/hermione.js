@@ -22,7 +22,7 @@ describe('hermione', () => {
     const mkRunnerStub_ = (runFn) => {
         const runner = new QEmitter();
 
-        runner.run = sandbox.stub(Runner.prototype, 'run', runFn && runFn.bind(null, runner));
+        runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
     };

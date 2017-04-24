@@ -46,7 +46,7 @@ describe('mocha-runner', () => {
     });
 
     describe('run', () => {
-        beforeEach(() => sandbox.stub(MochaAdapter, 'create', () => mkMochaAdapterStub_()));
+        beforeEach(() => sandbox.stub(MochaAdapter, 'create').callsFake(() => mkMochaAdapterStub_()));
 
         it('should create mocha instance for each file', () => {
             return run_(['path/to/file', 'path/to/other/file'])
@@ -126,11 +126,11 @@ describe('mocha-runner', () => {
             MochaAdapter.prototype.run.restore();
 
             const order = [];
-            sandbox.stub(MochaAdapter, 'create', () => {
+            sandbox.stub(MochaAdapter, 'create').callsFake(() => {
                 order.push('create');
                 return mkMochaAdapterStub_();
             });
-            sandbox.stub(MochaAdapter.prototype, 'run', () => order.push('run'));
+            sandbox.stub(MochaAdapter.prototype, 'run').callsFake(() => order.push('run'));
 
             return run_(['some/file', 'other/file'])
                 .then(() => assert.deepEqual(order, ['create', 'create', 'run', 'run']));
