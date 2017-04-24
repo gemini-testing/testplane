@@ -54,45 +54,6 @@ describe('mocha-runner/proxy-reporter', () => {
         });
     });
 
-    it('should translate `fail` event from `before each` hook to `failTest`', () => {
-        createReporter_();
-
-        const hook = {
-            type: 'hook',
-            title: '"before each" hook for "some test"',
-            ctx: {
-                currentTest: {
-                    title: 'some test'
-                }
-            }
-        };
-
-        runner.emit('fail', hook, {message: 'foo'});
-
-        assert.calledWithMatch(emit, 'failTest', {
-            title: 'some test',
-            err: {message: 'foo'},
-            hook
-        });
-    });
-
-    it('should translate `fail` event from `before all` hook to `failSuite`', () => {
-        createReporter_();
-
-        const hook = {
-            type: 'hook',
-            title: '"before all" hook',
-            parent: {
-                tests: [{title: 'some test'}]
-            },
-            err: {message: 'foo'}
-        };
-
-        runner.emit('fail', hook);
-
-        assert.calledWith(emit, 'failSuite', hook);
-    });
-
     it('should translate `fail` event from after* hook to `err`', () => {
         createReporter_();
 
@@ -172,20 +133,5 @@ describe('mocha-runner/proxy-reporter', () => {
 
         assert.calledWithMatch(emit, 'passTest', {meta});
         assert.notStrictEqual(emit.firstCall.args[1].meta, meta);
-    });
-
-    it('should add meta info on `before each` hook', () => {
-        const meta = {url: '/some/url'};
-        createReporter_({meta});
-
-        const hook = {
-            type: 'hook',
-            title: '"before each" hook for "some test"',
-            ctx: {currentTest: {}}
-        };
-
-        runner.emit('fail', hook, {message: 'foo'});
-
-        assert.calledWithMatch(emit, 'failTest', {meta: {url: '/some/url'}});
     });
 });
