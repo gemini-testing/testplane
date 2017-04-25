@@ -558,7 +558,6 @@ Event                     | Description
 `SESSION_END`             | Will be triggered after the browser session ends. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SUITE_BEGIN`             | Test suite is about to execute.
 `SUITE_END`               | Test suite execution is finished.
-`SUITE_FAIL`              | Suite failed. For instance, the `before` hook failed or a browser cannot be launched (in fact, browsers are launched in `before` hook implicitly in the core of `hermione`).
 `TEST_BEGIN`              | Test is about to execute.
 `TEST_END`                | Test execution is finished.
 `TEST_PASS`               | Test passed.
