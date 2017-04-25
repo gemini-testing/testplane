@@ -8,7 +8,11 @@ class Mocha {
         this._suite = Suite.create();
         this.constructor._instance = this;
 
-        this.addFile = sinon.stub();
+        this.files = [];
+        this.addFile = function(file) {
+            this.files.push(file);
+        };
+        sinon.spy(this, 'addFile');
         this.loadFiles = sinon.stub();
         this.reporter = sinon.stub();
         this.fullTrace = sinon.stub();

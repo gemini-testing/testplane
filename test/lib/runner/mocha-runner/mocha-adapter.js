@@ -97,6 +97,14 @@ describe('mocha-runner/mocha-adapter', () => {
             assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFiles);
         });
 
+        it('should flush files after load', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter.addFiles(['path/to/file']);
+
+            assert.deepEqual(MochaStub.lastInstance.files, []);
+        });
+
         describe('hermione global', () => {
             beforeEach(() => MochaAdapter.init());
             afterEach(() => delete global.hermione);
