@@ -33,9 +33,8 @@ describe('mocha-runner', () => {
         sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'loadFiles').returnsThis();
-        sandbox.stub(MochaAdapter.prototype, 'run').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'run');
 
-        sandbox.spy(RetryMochaRunner, 'create');
         sandbox.stub(RetryMochaRunner.prototype, 'run');
     });
 
@@ -66,6 +65,8 @@ describe('mocha-runner', () => {
         });
 
         it('should wrap each mocha instance into a retry runner', () => {
+            sandbox.spy(RetryMochaRunner, 'create');
+
             const config = stubConfig();
 
             config.forBrowser.withArgs('some-bro').returns({retry: 10});
@@ -128,15 +129,12 @@ describe('mocha-runner', () => {
         });
 
         it('should create all mocha instances before run any of them', () => {
-            MochaAdapter.create.restore();
-            RetryMochaRunner.prototype.run.restore();
-
             const order = [];
-            sandbox.stub(MochaAdapter, 'create').callsFake(() => {
+            MochaAdapter.create.callsFake(() => {
                 order.push('create');
                 return mkMochaAdapterStub_();
             });
-            sandbox.stub(RetryMochaRunner.prototype, 'run').callsFake(() => order.push('run'));
+            RetryMochaRunner.prototype.run.callsFake(() => order.push('run'));
 
             return run_(['some/file', 'other/file'])
                 .then(() => assert.deepEqual(order, ['create', 'create', 'run', 'run']));
@@ -164,8 +162,7 @@ describe('mocha-runner', () => {
 
         describe('should passthrough events from a', () => {
             const testPassthroughing = (event, from) => {
-                RetryMochaRunner.prototype.run.restore();
-                sandbox.stub(RetryMochaRunner.prototype, 'run').callsFake(() => from.emit(event, 'some-data'));
+                RetryMochaRunner.prototype.run.callsFake(() => from.emit(event, 'some-data'));
 
                 const mochaRunner = mochaRunnerInit();
                 const spy = sinon.spy();
@@ -217,7 +214,6 @@ describe('mocha-runner', () => {
                 events.forEach((event) => {
                     it(`${event}`, () => {
                         const retryMochaRunner = Object.create(RetryMochaRunner.prototype);
-                        RetryMochaRunner.create.restore();
                         sandbox.stub(RetryMochaRunner, 'create').returns(retryMochaRunner);
 
                         return testPassthroughing(event, retryMochaRunner);
@@ -264,9 +260,6 @@ describe('mocha-runner', () => {
         });
 
         it('should return suite of mocha-adapter', () => {
-            MochaAdapter.create.restore();
-            sandbox.stub(MochaAdapter, 'create');
-
             const mochaRunner = mochaRunnerInit();
             const suiteStub = sandbox.stub();
             MochaAdapter.create.returns(_.extend(Object.create(MochaAdapter.prototype), {suite: suiteStub}));
