@@ -342,7 +342,6 @@ describe('Runner', () => {
                     retryMgr,
                     sinon.match.instanceOf(Runner), [
                         RunnerEvents.TEST_FAIL,
-                        RunnerEvents.SUITE_FAIL,
                         RunnerEvents.ERROR,
                         RunnerEvents.RETRY
                     ]
