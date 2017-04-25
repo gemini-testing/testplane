@@ -39,8 +39,7 @@ describe('Browser', () => {
         session.url = sandbox.stub().named('url').returns(session);
         session.requestHandler = {defaultOptions: {}};
 
-        session.addCommand = () => {};
-        sandbox.stub(session, 'addCommand').callsFake((name, command) => {
+        session.addCommand = sinon.stub().callsFake((name, command) => {
             session[name] = command;
             sandbox.spy(session, name);
         });
