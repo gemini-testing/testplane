@@ -9,9 +9,6 @@ class Mocha {
         this.constructor._instance = this;
 
         this.files = [];
-        this.addFile = function(file) {
-            this.files.push(file);
-        };
         sinon.spy(this, 'addFile');
         this.loadFiles = sinon.stub();
         this.reporter = sinon.stub();
@@ -43,6 +40,10 @@ class Mocha {
     updateSuiteTree(cb) {
         this._suite = cb(this._suite);
         return this;
+    }
+
+    addFile(file) {
+        this.files.push(file);
     }
 }
 
