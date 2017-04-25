@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.35.0"></a>
+# [0.35.0](https://github.com/gemini-testing/hermione/compare/v0.34.0...v0.35.0) (2017-04-25)
+
+
+### Bug Fixes
+
+* improve the algorithm of retries ([b2d91b7](https://github.com/gemini-testing/hermione/commit/b2d91b7))
+
+
+### Features
+
+* remove handling of 'before*'-hooks failure in tests ([0c74de2](https://github.com/gemini-testing/hermione/commit/0c74de2))
+
+
+
 <a name="0.34.0"></a>
 # [0.34.0](https://github.com/gemini-testing/hermione/compare/v0.25.0...v0.34.0) (2017-04-22)
 
