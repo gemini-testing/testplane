@@ -7,16 +7,24 @@ const qUtils = require('qemitter/utils');
 
 const BrowserAgent = require('../../../lib/browser-agent');
 const BrowserPool = require('../../../lib/browser-pool');
+const logger = require('../../../lib/utils').logger;
 const MochaRunner = require('../../../lib/runner/mocha-runner');
 const Runner = require('../../../lib/runner');
 const TestSkipper = require('../../../lib/runner/test-skipper');
-const RetryManager = require('../../../lib/retry-manager');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 
-const makeConfigStub = require('../../utils').makeConfigStub;
+const utils = require('../../utils');
 
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
+
+    const makeConfigStub = (opts) => {
+        const config = utils.makeConfigStub(opts);
+
+        config.forBrowser = sandbox.stub();
+
+        return config;
+    };
 
     const mkMochaRunner = () => {
         sandbox.stub(MochaRunner, 'create');
@@ -48,8 +56,7 @@ describe('Runner', () => {
         MochaRunner.prototype.run.returns(q());
 
         sandbox.stub(MochaRunner, 'init');
-
-        sandbox.stub(RetryManager.prototype);
+        sandbox.stub(logger, 'warn');
     });
 
     afterEach(() => sandbox.restore());
@@ -61,15 +68,6 @@ describe('Runner', () => {
             new Runner(config); // eslint-disable-line no-new
 
             assert.calledWith(BrowserPool.prototype.__constructor, config);
-        });
-
-        it('should create retryManager with passed config', () => {
-            const config = makeConfigStub();
-
-            new Runner(config); // eslint-disable-line no-new
-
-            assert.calledOnce(RetryManager.prototype.__constructor);
-            assert.calledWith(RetryManager.prototype.__constructor, config);
         });
 
         it('should init mocha runner on RUNNER_START event', () => {
@@ -175,44 +173,8 @@ describe('Runner', () => {
                 mochaRunner = mkMochaRunner();
             });
 
-            describe('if one of mocha runners failed', () => {
-                beforeEach(() => {
-                    const runner = new Runner(makeConfigStub());
-                    return run_({runner});
-                });
-
-                it('should submit failed tests for retry', () => {
-                    mochaRunner.emit(RunnerEvents.TEST_FAIL, 'some-error');
-
-                    assert.calledOnce(RetryManager.prototype.handleTestFail);
-                    assert.calledWith(RetryManager.prototype.handleTestFail, 'some-error');
-                });
-
-                it('should submit errors for retry', () => {
-                    mochaRunner.emit(RunnerEvents.ERROR, 'some-error', 'some-data');
-
-                    assert.calledOnce(RetryManager.prototype.handleError);
-                    assert.calledWith(RetryManager.prototype.handleError, 'some-error', 'some-data');
-                });
-            });
-
             describe('events', () => {
-                const mochaRunnerEvents = [
-                    RunnerEvents.BEFORE_FILE_READ,
-                    RunnerEvents.AFTER_FILE_READ,
-
-                    RunnerEvents.SUITE_BEGIN,
-                    RunnerEvents.SUITE_END,
-
-                    RunnerEvents.TEST_BEGIN,
-                    RunnerEvents.TEST_END,
-
-                    RunnerEvents.TEST_PASS,
-                    RunnerEvents.TEST_PENDING,
-
-                    RunnerEvents.INFO,
-                    RunnerEvents.WARNING
-                ];
+                const mochaRunnerEvents = _.values(RunnerEvents.getSync());
 
                 it('should passthrough events', () => {
                     const runner = new Runner(makeConfigStub());
@@ -282,70 +244,6 @@ describe('Runner', () => {
                             ]
                         );
                     });
-            });
-        });
-
-        it('should start retry session after all', () => {
-            return run_()
-                .then(() => {
-                    assert.calledOnce(RetryManager.prototype.retry);
-                    assert.calledWith(RetryManager.prototype.retry, sinon.match.func);
-                });
-        });
-
-        describe('retry manager events', () => {
-            let retryMgr;
-            let runner;
-
-            beforeEach(() => {
-                retryMgr = new QEmitter();
-                retryMgr.submitForRetry = sinon.stub();
-                RetryManager.prototype.__constructor.returns(retryMgr);
-            });
-
-            it('should passthrough error event', () => {
-                const onError = sandbox.spy().named('onError');
-
-                runner = new Runner(makeConfigStub());
-                runner.on(RunnerEvents.ERROR, onError);
-                retryMgr.emit(RunnerEvents.ERROR);
-
-                assert.called(onError);
-            });
-
-            it('should passthrough retry event', () => {
-                const onRetry = sandbox.spy().named('onRetry');
-
-                runner = new Runner(makeConfigStub());
-                runner.on(RunnerEvents.RETRY, onRetry);
-                retryMgr.emit(RunnerEvents.RETRY);
-
-                assert.called(onRetry);
-            });
-
-            it('should passthrough test failed event', () => {
-                const onTestFail = sandbox.spy().named('onTestFail');
-
-                runner = new Runner(makeConfigStub());
-                runner.on(RunnerEvents.TEST_FAIL, onTestFail);
-                retryMgr.emit(RunnerEvents.TEST_FAIL);
-
-                assert.called(onTestFail);
-            });
-
-            it('should synchrony passthrough necessary events', () => {
-                sandbox.stub(qUtils, 'passthroughEvent');
-
-                new Runner(makeConfigStub()); // eslint-disable-line no-new
-
-                assert.calledWith(qUtils.passthroughEvent,
-                    retryMgr,
-                    sinon.match.instanceOf(Runner), [
-                        RunnerEvents.TEST_FAIL,
-                        RunnerEvents.ERROR,
-                        RunnerEvents.RETRY
-                    ]
-                );
             });
         });
 

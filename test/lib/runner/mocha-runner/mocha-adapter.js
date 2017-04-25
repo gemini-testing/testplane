@@ -10,7 +10,6 @@ const TestSkipper = require('../../../../lib/runner/test-skipper');
 const RunnerEvents = require('../../../../lib/constants/runner-events');
 const MochaStub = require('../../_mocha');
 const proxyquire = require('proxyquire').noCallThru();
-const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
 const q = require('q');
 
@@ -70,10 +69,10 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('addFiles', () => {
-        it('should add files', () => {
+        it('should load files', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFiles(['path/to/file']);
+            mochaAdapter.loadFiles(['path/to/file']);
 
             assert.calledOnce(MochaStub.lastInstance.addFile);
             assert.calledWith(MochaStub.lastInstance.addFile, 'path/to/file');
@@ -82,7 +81,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should clear require cache for file before adding', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFiles(['path/to/file']);
+            mochaAdapter.loadFiles(['path/to/file']);
 
             assert.calledWithMatch(clearRequire, 'path/to/file');
             assert.callOrder(clearRequire, MochaStub.lastInstance.addFile);
@@ -91,7 +90,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should load files after add', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFiles(['path/to/file']);
+            mochaAdapter.loadFiles(['path/to/file']);
 
             assert.calledOnce(MochaStub.lastInstance.loadFiles);
             assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFiles);
@@ -100,9 +99,20 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should flush files after load', () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            mochaAdapter.addFiles(['path/to/file']);
+            mochaAdapter.loadFiles(['path/to/file']);
 
             assert.deepEqual(MochaStub.lastInstance.files, []);
+        });
+
+        it('should reload files', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            mochaAdapter
+                .loadFiles(['path/to/file'])
+                .loadFiles();
+
+            assert.calledTwice(MochaStub.lastInstance.addFile);
+            assert.alwaysCalledWith(MochaStub.lastInstance.addFile, 'path/to/file');
         });
 
         describe('hermione global', () => {
@@ -441,43 +451,40 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('attachEmitFn', () => {
+    describe('passthrough mocha events', () => {
         let mochaAdapter;
 
         beforeEach(() => {
             sandbox.stub(ProxyReporter.prototype, '__constructor');
             mochaAdapter = mkMochaAdapter_();
+            sandbox.spy(mochaAdapter, 'emit').named('emit');
         });
 
-        function attachEmitFn_(emitFn) {
-            mochaAdapter.attachEmitFn(emitFn);
-
+        function passthroughMochaEvents_() {
             const Reporter = MochaStub.lastInstance.reporter.lastCall.args[0];
             new Reporter(); // eslint-disable-line no-new
         }
 
         it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', () => {
-            attachEmitFn_(sinon.spy());
+            passthroughMochaEvents_();
 
             assert.calledOnce(ProxyReporter.prototype.__constructor);
         });
 
         it('should pass to proxy reporter emit fn', () => {
-            const emitFn = sinon.spy().named('emit');
-
-            attachEmitFn_(emitFn);
+            passthroughMochaEvents_();
 
             const emit_ = ProxyReporter.prototype.__constructor.firstCall.args[0];
             emit_('some-event', {some: 'data'});
 
-            assert.calledOnce(emitFn);
-            assert.calledWith(emitFn, 'some-event', sinon.match({some: 'data'}));
+            assert.calledOnce(mochaAdapter.emit);
+            assert.calledWith(mochaAdapter.emit, 'some-event', sinon.match({some: 'data'}));
         });
 
         it('should pass to proxy reporter getter for requested browser', () => {
             const browser = mkBrowserStub_();
             browserAgent.getBrowser.returns(q(browser));
-            attachEmitFn_(sinon.spy());
+            passthroughMochaEvents_();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
@@ -491,7 +498,7 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should pass to proxy reporter getter for browser id if browser not requested', () => {
             browserAgent.browserId = 'some-browser';
 
-            attachEmitFn_(sinon.spy());
+            passthroughMochaEvents_();
 
             const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
             assert.deepEqual(getBrowser(), {id: 'some-browser'});
@@ -499,10 +506,9 @@ describe('mocha-runner/mocha-adapter', () => {
 
         describe('if event handler throws', () => {
             const initBadHandler_ = (event, handler) => {
-                const emitter = new EventEmitter();
-                emitter.on(event, handler);
+                mochaAdapter.on(event, handler);
 
-                attachEmitFn_(emitter.emit.bind(emitter));
+                passthroughMochaEvents_();
                 return ProxyReporter.prototype.__constructor.firstCall.args[0];
             };
 
@@ -540,14 +546,12 @@ describe('mocha-runner/mocha-adapter', () => {
                 'post-require': 'AFTER_FILE_READ'
             }, (hermioneEvent, mochaEvent) => {
                 it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, () => {
-                    const emit = sinon.spy();
                     browserAgent.browserId = 'bro';
 
-                    mochaAdapter.attachEmitFn(emit);
                     MochaStub.lastInstance.suite.emit(mochaEvent, {}, '/some/file.js');
 
-                    assert.calledOnce(emit);
-                    assert.calledWith(emit, RunnerEvents[hermioneEvent], {
+                    assert.calledOnce(mochaAdapter.emit);
+                    assert.calledWith(mochaAdapter.emit, RunnerEvents[hermioneEvent], {
                         file: '/some/file.js',
                         hermione: global.hermione,
                         browser: 'bro',

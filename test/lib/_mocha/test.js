@@ -9,6 +9,7 @@ module.exports = class Test extends Runnable {
 
         super(parent, options);
 
+        this.type = 'test';
         this.title = options.title || 'some-test';
         this.fn = options.fn || _.noop;
         this.file = options.file || null;

@@ -2,7 +2,9 @@
 
 module.exports = class Runnable {
     constructor(parent, options) {
-        this.title = options.title;
+        options = options || {};
+
+        this.title = options.title || 'some-runnable';
         this.fn = options.fn;
         this.parent = parent;
         this.ctx = {};
