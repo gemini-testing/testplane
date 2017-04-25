@@ -164,13 +164,6 @@ describe('hermione', () => {
                     .then((success) => assert.isTrue(success));
             });
 
-            it('should return "false" if there are failed suites', () => {
-                mkRunnerStub_((runner) => runner.emit(RunnerEvents.SUITE_FAIL));
-
-                return runHermione()
-                    .then((success) => assert.isFalse(success));
-            });
-
             it('should return "false" if there are failed tests', () => {
                 mkRunnerStub_((runner) => runner.emit(RunnerEvents.TEST_FAIL));
 
