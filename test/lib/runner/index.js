@@ -7,11 +7,11 @@ const qUtils = require('qemitter/utils');
 
 const BrowserAgent = require('../../../lib/browser-agent');
 const BrowserPool = require('../../../lib/browser-pool');
-const logger = require('../../../lib/utils').logger;
 const MochaRunner = require('../../../lib/runner/mocha-runner');
 const Runner = require('../../../lib/runner');
 const TestSkipper = require('../../../lib/runner/test-skipper');
 const RunnerEvents = require('../../../lib/constants/runner-events');
+const logger = require('../../../lib/utils').logger;
 
 const utils = require('../../utils');
 
@@ -30,6 +30,7 @@ describe('Runner', () => {
         sandbox.stub(MochaRunner, 'create');
 
         const mochaRunner = new QEmitter();
+        mochaRunner.init = sandbox.stub().returnsThis();
         mochaRunner.run = sandbox.stub().returns(q());
 
         MochaRunner.create.returns(mochaRunner);
@@ -52,10 +53,10 @@ describe('Runner', () => {
     beforeEach(() => {
         sandbox.stub(BrowserPool.prototype);
 
-        sandbox.stub(MochaRunner.prototype, 'run');
-        MochaRunner.prototype.run.returns(q());
+        sandbox.stub(MochaRunner, 'prepare');
+        sandbox.stub(MochaRunner.prototype, 'init').returnsThis();
+        sandbox.stub(MochaRunner.prototype, 'run').returns(q());
 
-        sandbox.stub(MochaRunner, 'init');
         sandbox.stub(logger, 'warn');
     });
 
@@ -70,26 +71,15 @@ describe('Runner', () => {
             assert.calledWith(BrowserPool.prototype.__constructor, config);
         });
 
-        it('should init mocha runner on RUNNER_START event', () => {
+        it('should prepare mocha runner', () => {
             new Runner(makeConfigStub()); // eslint-disable-line no-new
 
-            assert.calledOnce(MochaRunner.init);
+            assert.calledOnce(MochaRunner.prepare);
         });
     });
 
     describe('run', () => {
         describe('RUNNER_START event', () => {
-            it('should start mocha runner only after RUNNER_START handler finish', () => {
-                const mediator = sinon.spy().named('mediator');
-                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.delay(1).then(mediator));
-                const runner = new Runner(makeConfigStub());
-
-                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
-
-                return run_({runner})
-                    .then(() => assert.callOrder(mediator, MochaRunner.prototype.run));
-            });
-
             it('should pass a runner to a RUNNER_START handler', () => {
                 const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
                 const runner = new Runner(makeConfigStub());
@@ -98,6 +88,17 @@ describe('Runner', () => {
 
                 return run_({runner})
                     .then(() => assert.calledWith(onRunnerStart, runner));
+            });
+
+            it('should start mocha runner only after RUNNER_START handler finish', () => {
+                const mediator = sinon.spy().named('mediator');
+                const onRunnerStart = sinon.stub().named('onRunnerStart').callsFake(() => q.delay(1).then(mediator));
+                const runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+
+                return run_({runner})
+                    .then(() => assert.callOrder(mediator, MochaRunner.prototype.run));
             });
 
             it('should not run any mocha runner if RUNNER_START handler failed', () => {
@@ -111,7 +112,23 @@ describe('Runner', () => {
             });
         });
 
-        it('should create mocha runners with apporpriate browser agents', () => {
+        it('should emit BEGIN event between runner init and run calls', () => {
+            const onBegin = sinon.stub().named('onBegin');
+            const runner = new Runner(makeConfigStub());
+
+            runner.on(RunnerEvents.BEGIN, onBegin);
+
+            return run_({runner})
+                .then(() => {
+                    assert.callOrder(
+                        MochaRunner.prototype.init,
+                        onBegin,
+                        MochaRunner.prototype.run
+                    );
+                });
+        });
+
+        it('should create mocha runners with appropriate browser agents', () => {
             mkMochaRunner();
 
             return run_({browsers: ['browser1', 'browser2']})
@@ -147,17 +164,18 @@ describe('Runner', () => {
                 });
         });
 
-        it('should run mocha runner with passed tests', () => {
+        it('should init mocha runner with passed tests', () => {
             return run_({files: ['test1', 'test2']})
-                .then(() => assert.calledWith(MochaRunner.prototype.run, ['test1', 'test2']));
+                .then(() => assert.calledWith(MochaRunner.prototype.init, ['test1', 'test2']));
         });
 
         it('should wait until all mocha runners will finish', () => {
             const firstResolveMarker = sandbox.stub().named('First resolve marker');
             const secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
-            MochaRunner.prototype.run.onFirstCall().returns(q().then(firstResolveMarker));
-            MochaRunner.prototype.run.onSecondCall().returns(q.delay(1).then(secondResolveMarker));
+            MochaRunner.prototype.run
+                .onFirstCall().callsFake(() => q().then(firstResolveMarker))
+                .onSecondCall().callsFake(() => q.delay(1).then(secondResolveMarker));
 
             return run_({browsers: ['browser1', 'browser2']})
                 .then(() => {
@@ -169,9 +187,7 @@ describe('Runner', () => {
         describe('Mocha runners', () => {
             let mochaRunner;
 
-            beforeEach(() => {
-                mochaRunner = mkMochaRunner();
-            });
+            beforeEach(() => mochaRunner = mkMochaRunner());
 
             describe('events', () => {
                 const mochaRunnerEvents = _.values(RunnerEvents.getSync());
@@ -292,7 +308,7 @@ describe('Runner', () => {
                     .then(() => assert.calledOnce(onRunnerEnd));
             });
 
-            it('should leave original error unchaned if RUNNER_END handler failed too', () => {
+            it('should fail with original error if RUNNER_END handler is failed too', () => {
                 const onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(q.reject('handler-error'));
                 const runner = new Runner(makeConfigStub());
 
@@ -344,7 +360,10 @@ describe('Runner', () => {
 
             runner.buildSuiteTree({bro: []});
 
-            assert.calledWith(createMochaRunner, config, sinon.match.instanceOf(BrowserAgent), sinon.match.instanceOf(TestSkipper));
+            assert.calledWith(
+                createMochaRunner,
+                config, sinon.match.instanceOf(BrowserAgent), sinon.match.instanceOf(TestSkipper)
+            );
         });
 
         it('should assign suite tree from mocha runner to passed browsers', () => {
