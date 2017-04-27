@@ -154,6 +154,28 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.calledOnce(browserAgent.getBrowser));
         });
 
+        it('should fail all suite tests if requesting of a browser fails', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const testFailSpy = sinon.spy();
+            const error = new Error();
+
+            browserAgent.getBrowser.returns(q.reject(error));
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                return rootSuite
+                    .addTest({title: 'first-test'})
+                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'second-test'}).onFail(testFailSpy))
+                    .onFail(testFailSpy);
+            });
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledTwice(testFailSpy);
+                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'first-test'}});
+                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'second-test'}});
+                });
+        });
+
         it('should not request browsers for suite with one skipped test', () => {
             const mochaAdapter = mkMochaAdapter_();
 
@@ -585,19 +607,24 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.notCalled(testCb));
         });
 
-        it('should fail suite tests with "before" hook error', () => {
+        it('should fail all suite tests with "before" hook error', () => {
             const error = new Error();
             const testFailSpy = sinon.spy();
 
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                return rootSuite
                     .beforeAll(() => q.reject(error))
-                    .addTest({title: 'some-test'})
+                    .addTest({title: 'first-test'})
+                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'second-test'}).onFail(testFailSpy))
                     .onFail(testFailSpy);
             });
 
             return mochaAdapter.run()
-                .then(() => assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}}));
+                .then(() => {
+                    assert.calledTwice(testFailSpy);
+                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'first-test'}});
+                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'second-test'}});
+                });
         });
 
         it('should handle sync "before hook" errors', () => {
@@ -616,7 +643,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.calledOnce(testFailSpy));
         });
 
-        it('should not execute "before each" hook if "before" hook failed', () => {
+        it('should not execute "before each" hook if "before" hook failed at the same level', () => {
             const beforeEachHookFn = sinon.spy();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
@@ -630,7 +657,64 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.notCalled(beforeEachHookFn));
         });
 
-        it('should fail test with error from "before" hook if before each hook was executed successfully', () => {
+        it('should not execute "before each" hook if "before" hook has already failed on a higher level', () => {
+            const beforeEachHookFn = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                const suite = MochaStub.Suite.create();
+
+                rootSuite
+                    .beforeAll(() => q.reject(new Error()))
+                    .addSuite(suite);
+
+                suite.beforeEach(beforeEachHookFn).addTest();
+
+                return rootSuite;
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeEachHookFn));
+        });
+
+        it('should not execute "before" hook if another one has already failed on a higher level', () => {
+            const beforeAllHookFn = sandbox.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                const suite = MochaStub.Suite.create();
+
+                rootSuite
+                    .beforeAll(() => q.reject(new Error()))
+                    .addSuite(suite);
+
+                suite.beforeAll(beforeAllHookFn).addTest();
+
+                return rootSuite;
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeAllHookFn));
+        });
+
+        it('should not execute "before each" hook if "before" hook has already failed on a lower level', () => {
+            const beforeEachHookFn = sandbox.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                const suite = MochaStub.Suite.create();
+
+                rootSuite
+                    .beforeEach(beforeEachHookFn)
+                    .addSuite(suite);
+
+                suite.beforeAll(() => q.reject(new Error())).addTest();
+
+                return rootSuite;
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeEachHookFn));
+        });
+
+        it('should fail suite tests with error from "before" hook if "before each" hook is present at the same level', () => {
             const error = new Error();
             const hookFailSpy = sinon.spy();
 
@@ -639,11 +723,15 @@ describe('mocha-runner/mocha-adapter', () => {
                     .beforeAll(() => q.reject(error))
                     .beforeEach(() => true)
                     .addTest()
+                    .addTest()
                     .onFail(hookFailSpy);
             });
 
             return mochaAdapter.run()
-                .then(() => assert.calledWithMatch(hookFailSpy, {error}));
+                .then(() => {
+                    assert.calledTwice(hookFailSpy);
+                    assert.calledWithMatch(hookFailSpy, {error});
+                });
         });
     });
 
@@ -689,7 +777,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeEach(sandbox.stub().returns(q.reject(error)))
+                    .beforeEach(() => q.reject(error))
                     .addTest({title: 'some-test'})
                     .onFail(testFailSpy);
             });
@@ -712,6 +800,25 @@ describe('mocha-runner/mocha-adapter', () => {
 
             return mochaAdapter.run()
                 .then(() => assert.calledOnce(testFailSpy));
+        });
+
+        it('should not execute "before each" hook if another one has already failed on a higher level', () => {
+            const beforeEachHookFn = sandbox.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                const suite = MochaStub.Suite.create(rootSuite);
+
+                rootSuite
+                    .beforeEach(() => q.reject(new Error()))
+                    .addSuite(suite);
+
+                suite.beforeEach(beforeEachHookFn).addTest();
+
+                return rootSuite;
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeEachHookFn));
         });
     });
 });
