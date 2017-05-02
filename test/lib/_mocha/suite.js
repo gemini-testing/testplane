@@ -46,11 +46,11 @@ module.exports = class Suite extends EventEmitter {
     }
 
     get beforeEachHooks() {
-        return this._beforeEach;
+        return this.parent ? this.parent.beforeEachHooks.concat(this._beforeEach) : this._beforeEach;
     }
 
     get afterEachHooks() {
-        return this._afterEach;
+        return this.parent ? this.parent.afterEachHooks.concat(this._afterEach) : this._afterEach;
     }
 
     get afterAllHooks() {
@@ -160,7 +160,7 @@ module.exports = class Suite extends EventEmitter {
                     .catch((error) => this.emit(EVENTS.FAIL, {error, test}))
                     .then(this._execRunnables(this.afterEachHooks));
             }, q()))
-            .then(this._execRunnables(this.suites, []))
+            .then(this._execRunnables(this.suites))
             .then(this._execRunnables(this.afterAllHooks));
     }
 
