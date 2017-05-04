@@ -380,8 +380,6 @@ describe('mocha-runner/mocha-adapter', () => {
 
     describe('attachTestFilter', () => {
         it('should check if test should be run', () => {
-            BrowserAgent.prototype.browserId = 'some-browser';
-
             const shouldRun = sandbox.stub().returns(true);
             const mochaAdapter = mkMochaAdapter_();
             mochaAdapter.attachTestFilter(shouldRun);
@@ -391,7 +389,7 @@ describe('mocha-runner/mocha-adapter', () => {
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
             return mochaAdapter.run()
-                .then(() => assert.calledWith(shouldRun, test, 'some-browser'));
+                .then(() => assert.calledWith(shouldRun, test));
         });
 
         it('should not remove test which expected to be run', () => {
