@@ -44,9 +44,9 @@ describe('mocha-runner/mocha-adapter', () => {
 
     afterEach(() => sandbox.restore());
 
-    describe('init', () => {
+    describe('prepare', () => {
         it('should add an empty hermione object to global', () => {
-            MochaAdapter.init();
+            MochaAdapter.prepare();
 
             assert.deepEqual(global.hermione, {});
 
@@ -116,7 +116,7 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         describe('hermione global', () => {
-            beforeEach(() => MochaAdapter.init());
+            beforeEach(() => MochaAdapter.prepare());
             afterEach(() => delete global.hermione);
 
             it('hermione.skip should return SkipBuilder instance', () => {
