@@ -1,11 +1,14 @@
 'use strict';
 
+const EventEmitter = require('events').EventEmitter;
 const Suite = require('./suite');
 const Test = require('./test');
 
-class Mocha {
+class Mocha extends EventEmitter {
     constructor(options) {
-        this._suite = Suite.create();
+        super();
+
+        this._suite = Suite.create(null, '');
         this.constructor._instance = this;
 
         this.files = [];

@@ -1,47 +1,165 @@
 'use strict';
 
+const _ = require('lodash');
 const MochaBuilder = require('../../../../lib/runner/mocha-runner/mocha-builder');
 const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const RunnerEvents = require('../../../../lib/constants/runner-events');
+const TestStub = require('../../_mocha').Test;
 
 describe('mocha-runner/mocha-builder', () => {
     const sandbox = sinon.sandbox.create();
 
-    // We can't call constructor because it creates mocha instance inside
-    const mkMochaAdapterStub_ = () => Object.create(MochaAdapter.prototype);
-    const buildAdapters_ = (paths, opts) => MochaBuilder.create({}).buildAdapters(paths, opts);
+    const mkMochaAdapterStub_ = () => {
+        // We can't call constructor because it creates mocha instance inside
+        const mochaAdapter = Object.create(MochaAdapter.prototype);
+
+        mochaAdapter.suite = {tests: []};
+        mochaAdapter.hasTests = function() {
+            return Boolean(this.suite.tests.length);
+        };
+        Object.defineProperty(mochaAdapter, 'testsCountToRun', {
+            get: function() {
+                return _.reject(this.suite.tests, {pending: true}).length;
+            }
+        });
+
+        return _.extend(mochaAdapter, {suite: {tests: []}});
+    };
+    const buildAdapters_ = (paths, opts) => MochaBuilder.create({}).buildAdapters(paths, opts ? opts.limit : Infinity);
 
     beforeEach(() => {
-        sandbox.stub(MochaAdapter.prototype, 'attachTitleValidator').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'attachTestFilter').callsFake(function() {
+            return this;
+        });
         sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
-        sandbox.stub(MochaAdapter.prototype, 'loadFiles').returnsThis();
+        sandbox.stub(MochaAdapter.prototype, 'loadFile').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'run');
     });
 
     afterEach(() => sandbox.restore());
 
     describe('buildAdapters', () => {
+        const stubTest = (options) => {
+            options = _.isString(options) ? {title: options} : options;
+
+            return new TestStub(null, options);
+        };
+
+        const stubTestFiles = (files) => {
+            let filterFn;
+            MochaAdapter.prototype.attachTestFilter.callsFake(function(fn) {
+                filterFn = fn;
+                return this;
+            });
+
+            _.forEach(files, (tests, file) => {
+                MochaAdapter.prototype.loadFile
+                    .withArgs(file).callsFake(function() {
+                        tests.forEach((test, index) => {
+                            test.file = file;
+                            filterFn(test, index) && this.suite.tests.push(test);
+                        });
+
+                        return this;
+                    });
+            });
+        };
+
         beforeEach(() => {
             sandbox.stub(MochaAdapter, 'create').callsFake(() => mkMochaAdapterStub_());
         });
 
-        it('should create mocha instance for each file', () => {
-            const mochas = buildAdapters_(['some/file', 'another/file']);
+        describe('should build mocha adapters ', () => {
+            const assertTests = (mocha, titles) => assert.deepEqual(_.map(mocha.suite.tests, 'title'), titles);
 
-            assert.calledTwice(MochaAdapter.prototype.loadFiles);
-            assert.calledWith(MochaAdapter.prototype.loadFiles, ['some/file']);
-            assert.calledWith(MochaAdapter.prototype.loadFiles, ['another/file']);
+            it('when the total number of tests equals to the limit', () => {
+                stubTestFiles({
+                    'first/file': [stubTest('test 1')],
+                    'second/file': [stubTest('test 2')]
+                });
 
-            const mochaInstances = MochaAdapter.prototype.loadFiles.thisValues;
-            assert.notStrictEqual(mochaInstances[0], mochaInstances[1]);
-            assert.deepEqual(mochas, mochaInstances);
-        });
+                const mochas = buildAdapters_(['first/file', 'second/file'], {limit: 2});
 
-        it('should create one instance if single instance option is present', () => {
-            buildAdapters_(['some/file', 'another/file'], {singleInstance: true});
+                assert.lengthOf(mochas, 1);
+                assertTests(mochas[0], ['test 1', 'test 2']);
+            });
 
-            assert.calledOnceWith(MochaAdapter.prototype.loadFiles, ['some/file', 'another/file']);
-            assert.lengthOf(MochaAdapter.prototype.loadFiles.thisValues, 1);
+            it('when the total number of tests is less than the limit', () => {
+                stubTestFiles({
+                    'first/file': [stubTest('test 1')],
+                    'second/file': [stubTest('test 2')]
+                });
+
+                const mochas = buildAdapters_(['first/file', 'second/file'], {limit: 3});
+
+                assert.lengthOf(mochas, 1);
+                assertTests(mochas[0], ['test 1', 'test 2']);
+            });
+
+            it('when number of tests in each file equals to the limit', () => {
+                stubTestFiles({
+                    'first/file': [stubTest('test 1')],
+                    'second/file': [stubTest('test 2')]
+                });
+
+                const mochas = buildAdapters_(['first/file', 'second/file'], {limit: 1});
+
+                assert.lengthOf(mochas, 2);
+                assertTests(mochas[0], ['test 1']);
+                assertTests(mochas[1], ['test 2']);
+            });
+
+            it('when number of tests in a file is greater than the limit', () => {
+                stubTestFiles({
+                    'some/file': [stubTest('test 1'), stubTest('test 2')]
+                });
+
+                const mochas = buildAdapters_(['some/file'], {limit: 1});
+
+                assert.lengthOf(mochas, 2);
+                assertTests(mochas[0], ['test 1']);
+                assertTests(mochas[1], ['test 2']);
+            });
+
+            it('when number of tests in some file is not divisible by the limit', () => {
+                stubTestFiles({
+                    'first/file': [stubTest('test 1'), stubTest('test 2'), stubTest('test 3')],
+                    'second/file': [stubTest('test 4')]
+                });
+
+                const mochas = buildAdapters_(['first/file', 'second/file'], {limit: 2});
+
+                assert.lengthOf(mochas, 2);
+                assertTests(mochas[0], ['test 1', 'test 2']);
+                assertTests(mochas[1], ['test 3', 'test 4']);
+            });
+
+            it('when files do not contain any tests', () => {
+                stubTestFiles({
+                    'some/file': []
+                });
+
+                const mochas = buildAdapters_(['some/file']);
+
+                assert.lengthOf(mochas, 0);
+            });
+
+            it('when files have pending tests', () => {
+                stubTestFiles({
+                    'some/file': [
+                        stubTest('test 1'),
+                        stubTest({title: 'test 2', pending: true}),
+                        stubTest('test 3'),
+                        stubTest({title: 'test 4', pending: true})
+                    ]
+                });
+
+                const mochas = buildAdapters_(['some/file'], {limit: 2});
+
+                assert.lengthOf(mochas, 2);
+                assertTests(mochas[0], ['test 1', 'test 2', 'test 3']);
+                assertTests(mochas[1], ['test 4']);
+            });
         });
 
         it('should pass mocha opts to mocha adapter', () => {
@@ -53,9 +171,15 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should share single opts object between all mocha instances', () => {
+            stubTestFiles({
+                'some/file': [stubTest()],
+                'another/file': [stubTest()]
+            });
+
+            const limit = 1;
             MochaBuilder
                 .create({mochaOpts: {foo: 'bar'}})
-                .buildAdapters(['some/file', 'another/file']);
+                .buildAdapters(['some/file', 'another/file'], limit);
 
             assert.strictEqual(
                 MochaAdapter.create.firstCall.args[0],
@@ -64,6 +188,10 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should pass browser agent to mocha adapter', () => {
+            stubTestFiles({
+                'some/file': [stubTest()]
+            });
+
             const mochaBuilder = MochaBuilder.create({}, {browserId: 'bro'});
 
             mochaBuilder.buildAdapters(['some/file']);
@@ -72,6 +200,10 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should pass ctx to mocha adapter', () => {
+            stubTestFiles({
+                'some/file': [stubTest()]
+            });
+
             const mochaBuilder = MochaBuilder.create({ctx: {foo: 'bar'}});
 
             mochaBuilder.buildAdapters(['some/file']);
@@ -80,9 +212,15 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should share ctx from config between all mocha instances', () => {
+            stubTestFiles({
+                'some/file': [stubTest()],
+                'another/file': [stubTest()]
+            });
+
+            const limit = 1;
             MochaBuilder
                 .create({ctx: {foo: 'bar'}})
-                .buildAdapters(['some/file', 'another/file']);
+                .buildAdapters(['some/file', 'another/file'], limit);
 
             assert.strictEqual(
                 MochaAdapter.create.firstCall.args[2],
@@ -91,6 +229,10 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should skip test using test skipper', () => {
+            stubTestFiles({
+                'some/file': [stubTest()]
+            });
+
             const testSkipper = {foo: 'bar'};
 
             MochaBuilder
@@ -101,21 +243,15 @@ describe('mocha-runner/mocha-builder', () => {
         });
 
         it('should skip test before file adding', () => {
+            stubTestFiles({
+                'some/file': [stubTest()]
+            });
+
             buildAdapters_(['some/file']);
 
             assert.callOrder(
                 MochaAdapter.prototype.applySkip,
-                MochaAdapter.prototype.loadFiles
-            );
-        });
-
-        it('should call title validator for each file', () => {
-            buildAdapters_(['some/file', 'another/file']);
-
-            assert.calledTwice(MochaAdapter.prototype.attachTitleValidator);
-            assert.strictEqual(
-                MochaAdapter.prototype.attachTitleValidator.args[0],
-                MochaAdapter.prototype.attachTitleValidator.args[0]
+                MochaAdapter.prototype.loadFile
             );
         });
 
@@ -130,7 +266,7 @@ describe('mocha-runner/mocha-builder', () => {
                     const mochaAdapter = mkMochaAdapterStub_();
                     MochaAdapter.create.returns(mochaAdapter);
 
-                    MochaAdapter.prototype.loadFiles.onFirstCall().callsFake(function() {
+                    MochaAdapter.prototype.loadFile.onFirstCall().callsFake(function() {
                         mochaAdapter.emit(event, 'some-data');
                         return this;
                     });

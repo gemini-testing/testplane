@@ -17,7 +17,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
         mochaAdapter.run = sinon.stub().callsFake(() => Promise.resolve());
         mochaAdapter.reinit = sinon.stub().returnsThis();
         mochaAdapter.attachTestFilter = sinon.stub().returnsThis();
-        mochaAdapter.loadFiles = sinon.stub();
+        mochaAdapter.reloadFiles = sinon.stub();
 
         return mochaAdapter;
     };
@@ -105,7 +105,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
                 const test = createTestStub('some-test');
 
                 mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, test));
-                mochaAdapter.loadFiles.callsFake(() => {
+                mochaAdapter.reloadFiles.callsFake(() => {
                     const filterFn = mochaAdapter.attachTestFilter.lastCall.args[0];
 
                     assert.isTrue(filterFn(test));
@@ -125,7 +125,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
                         assert.callOrder(
                             mochaAdapter.reinit,
                             mochaAdapter.attachTestFilter,
-                            mochaAdapter.loadFiles,
+                            mochaAdapter.reloadFiles,
                             mochaAdapter.run
                         );
                     });
@@ -221,7 +221,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
                 const test2 = createTestStub('second-test');
                 const runnable = createRunnableStub({tests: [test1], suites: [{tests: [test2]}]});
 
-                mochaAdapter.loadFiles.callsFake(() => {
+                mochaAdapter.reloadFiles.callsFake(() => {
                     const filterFn = mochaAdapter.attachTestFilter.lastCall.args[0];
 
                     assert.isTrue(filterFn(test1));
@@ -244,7 +244,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
                         assert.callOrder(
                             mochaAdapter.reinit,
                             mochaAdapter.attachTestFilter,
-                            mochaAdapter.loadFiles,
+                            mochaAdapter.reloadFiles,
                             mochaAdapter.run
                         );
                     });
