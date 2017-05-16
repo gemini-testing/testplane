@@ -469,8 +469,8 @@ Timeout for web page events. Default value is `1000` ms.
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
 
 ### testsPerSession
-Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session closes and new session starts.
-By default is `Infinity` (no limit, all tests will be run in the same session). Set to smaller number in case of problems with stability.
+Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
+By default is `0` (no limit, all tests will be run in the same session). Set to smaller number in case of problems with stability.
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.

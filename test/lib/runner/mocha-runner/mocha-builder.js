@@ -14,14 +14,7 @@ describe('mocha-runner/mocha-builder', () => {
         const mochaAdapter = Object.create(MochaAdapter.prototype);
 
         mochaAdapter.suite = {tests: []};
-        mochaAdapter.hasTests = function() {
-            return Boolean(this.suite.tests.length);
-        };
-        Object.defineProperty(mochaAdapter, 'testsCountToRun', {
-            get: function() {
-                return _.reject(this.suite.tests, {pending: true}).length;
-            }
-        });
+        mochaAdapter.tests = [];
 
         return _.extend(mochaAdapter, {suite: {tests: []}});
     };
@@ -57,7 +50,7 @@ describe('mocha-runner/mocha-builder', () => {
                     .withArgs(file).callsFake(function() {
                         tests.forEach((test, index) => {
                             test.file = file;
-                            filterFn(test, index) && this.suite.tests.push(test);
+                            filterFn(test, index) && this.tests.push(test) && this.suite.tests.push(test);
                         });
 
                         return this;

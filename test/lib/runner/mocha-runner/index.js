@@ -70,8 +70,7 @@ describe('mocha-runner', () => {
                     mochaRunner.on(event, spy);
                     mochaBuilder.emit(event, 'some-data');
 
-                    assert.calledOnce(spy);
-                    assert.calledWith(spy, 'some-data');
+                    assert.calledOnceWith(spy, 'some-data');
                 });
             });
         });
@@ -123,7 +122,8 @@ describe('mocha-runner', () => {
 
             MochaBuilder.prototype.buildAdapters.returns([{suite: mocha1.suite}, {suite: mocha2.suite}]);
 
-            assert.throws(() => init_(), 'Cannot use tests with the same title: \'some test\' in file: \'first file\'');
+            assert.throws(() => init_(),
+                'Tests with the same title \'some test\' in files \'first file\' and \'second file\' can\'t be used');
         });
 
         it('should does not throw on mocha adapters without duplicates', () => {
@@ -279,7 +279,7 @@ describe('mocha-runner', () => {
             const mochaRunner = createMochaRunner_();
             mochaRunner.buildSuiteTree(['some/path']);
 
-            assert.calledOnceWith(MochaBuilder.prototype.buildAdapters, ['some/path'], Infinity);
+            assert.calledOnceWith(MochaBuilder.prototype.buildAdapters, ['some/path']);
         });
 
         it('should return suite of mocha-adapter', () => {
@@ -310,8 +310,7 @@ describe('mocha-runner', () => {
                     mochaRunner.on(event, spy);
                     mochaRunner.buildSuiteTree(['path/to/file']);
 
-                    assert.calledOnce(spy);
-                    assert.calledWith(spy, 'some-data');
+                    assert.calledOnceWith(spy, 'some-data');
                 });
             });
         });

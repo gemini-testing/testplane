@@ -435,7 +435,7 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('attachTestFilter', () => {
-        it('should pass a tests and its index in a file to a filter function', () => {
+        it('should pass tests and its index in a file to a filter function', () => {
             const shouldRun = sandbox.stub();
 
             mkMochaAdapter_()
@@ -516,8 +516,8 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('testsCountToRun', () => {
-        it('should count tests to run', () => {
+    describe('tests', () => {
+        it('should return filtered tests', () => {
             const mochaAdapter = mkMochaAdapter_();
             const shouldRun = sandbox.stub()
                 .onFirstCall().returns(true)
@@ -525,49 +525,27 @@ describe('mocha-runner/mocha-adapter', () => {
 
             mochaAdapter.attachTestFilter(shouldRun);
 
+            const test1 = new MochaStub.Test();
+            const test2 = new MochaStub.Test();
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .addTest(new MochaStub.Test())
-                    .addTest(new MochaStub.Test());
+                    .addTest(test1)
+                    .addTest(test2);
             });
 
-            assert.deepEqual(mochaAdapter.testsCountToRun, 1);
+            assert.deepEqual(mochaAdapter.tests, [test1]);
         });
 
-        it('should not count pending tests', () => {
+        it('should restore tests storage after reinit', () => {
             const mochaAdapter = mkMochaAdapter_();
 
             mochaAdapter.attachTestFilter(sandbox.stub().returns(true));
 
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .addTest(new MochaStub.Test())
-                    .addTest(new MochaStub.Test(null, {pending: true}));
-            });
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(new MochaStub.Test()));
 
-            assert.deepEqual(mochaAdapter.testsCountToRun, 1);
-        });
-    });
+            mochaAdapter.reinit();
 
-    describe('hasTests', () => {
-        it('should return "true" if there are tests', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            mochaAdapter.attachTestFilter(sandbox.stub().returns(true));
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .addTest(new MochaStub.Test())
-                    .addTest(new MochaStub.Test());
-            });
-
-            assert.isTrue(mochaAdapter.hasTests());
-        });
-
-        it('should return "false" if there are no tests', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            assert.isFalse(mochaAdapter.hasTests());
+            assert.deepEqual(mochaAdapter.tests, []);
         });
     });
 
