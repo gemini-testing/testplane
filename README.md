@@ -442,6 +442,7 @@ Option name               | Description
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
 `sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
+`testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method
@@ -466,6 +467,10 @@ Timeout for web page events. Default value is `1000` ms.
 
 ### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
+
+### testsPerSession
+Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
+By default is `0` (no limit, all tests will be run in the same session). Set to smaller number in case of problems with stability.
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
