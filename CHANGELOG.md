@@ -6,6 +6,10 @@ All notable changes to this project will be documented in this file. See [standa
 # [0.37.0](https://github.com/gemini-testing/hermione/compare/v0.36.0...v0.37.0) (2017-06-08)
 
 
+### Major
+
+* `before` hook is similar in meaning to `beforeEach` one while running tests
+
 ### Features
 
 * implement 'testsPerSession' option ([a5f817e](https://github.com/gemini-testing/hermione/commit/a5f817e))
