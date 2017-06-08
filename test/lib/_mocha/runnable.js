@@ -15,7 +15,7 @@ module.exports = class Runnable {
     }
 
     fullTitle() {
-        return `${this.parent.title} ${this.title}`;
+        return `${this.parent.title} ${this.title}`.trim();
     }
 
     run() {

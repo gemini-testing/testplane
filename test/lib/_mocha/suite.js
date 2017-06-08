@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const q = require('q');
 const EventEmitter = require('events').EventEmitter;
 const Runnable = require('./runnable');
@@ -11,11 +12,11 @@ const EVENTS = {
 };
 
 module.exports = class Suite extends EventEmitter {
-    constructor(parent) {
+    constructor(parent, title) {
         super();
 
         this.parent = parent;
-        this.title = 'suite-title';
+        this.title = _.isUndefined(title) ? 'suite-title' : title;
 
         this._beforeAll = [];
         this._beforeEach = [];
@@ -29,8 +30,8 @@ module.exports = class Suite extends EventEmitter {
         this.enableTimeouts = sinon.stub().returns(true);
     }
 
-    static create(parent) {
-        return new this(parent);
+    static create(parent, title) {
+        return new this(parent, title);
     }
 
     get tests() {

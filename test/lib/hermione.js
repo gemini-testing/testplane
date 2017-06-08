@@ -332,7 +332,7 @@ describe('hermione', () => {
         });
 
         it('should load plugins from config', () => {
-            Config.create.returns({plugins: {'some-plugin': {}}});
+            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
 
             return Hermione
                 .create(Config.create())
@@ -380,8 +380,11 @@ describe('hermione', () => {
         });
 
         it('hermione configuration', () => {
-            const config = makeConfigStub();
-            const hermione = Hermione.create(config);
+            const config = {foo: 'bar'};
+
+            Config.create.returns(config);
+
+            const hermione = Hermione.create();
 
             assert.deepEqual(hermione.config, config);
         });

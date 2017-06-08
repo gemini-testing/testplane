@@ -1,28 +1,24 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const _ = require('lodash');
 const q = require('q');
-const BrowserAgent = require('../../../../lib/browser-agent');
+const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('../../../../lib/constants/runner-events');
 const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const MochaRunner = require('../../../../lib/runner/mocha-runner');
 const RetryMochaRunner = require('../../../../lib/runner/mocha-runner/retry-mocha-runner');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
 const MochaBuilder = require('../../../../lib/runner/mocha-runner/mocha-builder');
+const MochaStub = require('../../_mocha');
+const makeConfigStub = require('../../../utils').makeConfigStub;
 
 describe('mocha-runner', () => {
     const sandbox = sinon.sandbox.create();
 
-    const stubConfig_ = (config) => {
-        return _.defaults(config || {}, {
-            system: {mochaOpts: {}, ctx: {}},
-            forBrowser: sandbox.stub().returns({})
-        });
-    };
     const createMochaRunner_ = () => {
         return new MochaRunner(
-            stubConfig_(),
+            'bro',
+            makeConfigStub({browsers: ['bro']}),
             sinon.createStubInstance(BrowserAgent),
             sinon.createStubInstance(TestSkipper)
         );
@@ -31,15 +27,11 @@ describe('mocha-runner', () => {
     const init_ = (suites) => createMochaRunner_().init(suites || ['test_suite']);
     const run_ = (suites) => init_(suites).run();
 
-    // We can't call constructor because it creates mocha instance inside
-    const mkMochaAdapterStub_ = () => Object.create(MochaAdapter.prototype);
-
     beforeEach(() => {
         sandbox.stub(MochaAdapter, 'prepare');
-
         sandbox.stub(RetryMochaRunner.prototype, 'run');
-
-        sandbox.stub(MochaBuilder.prototype, 'buildAdapters');
+        sandbox.stub(MochaBuilder.prototype, 'buildAdapters').returns([]);
+        sandbox.stub(MochaBuilder.prototype, 'buildSingleAdapter');
     });
 
     afterEach(() => sandbox.restore());
@@ -48,13 +40,9 @@ describe('mocha-runner', () => {
         it('should create mocha adapter builder', () => {
             sandbox.spy(MochaBuilder, 'create');
 
-            const config = stubConfig_({system: {foo: 'bar'}});
-            const browserAgent = {browserId: 'bro'};
-            const testSkipper = {baz: 'qux'};
+            MochaRunner.create('bro', makeConfigStub({system: {foo: 'bar'}}), {browser: 'pool'}, {test: 'skipper'});
 
-            MochaRunner.create(config, browserAgent, testSkipper);
-
-            assert.calledOnceWith(MochaBuilder.create, {foo: 'bar'}, browserAgent, testSkipper);
+            assert.calledOnceWith(MochaBuilder.create, 'bro', {foo: 'bar'}, {browser: 'pool'}, {test: 'skipper'});
         });
 
         describe('should passthrough events from a mocha builder', () => {
@@ -74,8 +62,7 @@ describe('mocha-runner', () => {
                     mochaRunner.on(event, spy);
                     mochaBuilder.emit(event, 'some-data');
 
-                    assert.calledOnce(spy);
-                    assert.calledWith(spy, 'some-data');
+                    assert.calledOnceWith(spy, 'some-data');
                 });
             });
         });
@@ -101,12 +88,71 @@ describe('mocha-runner', () => {
 
             assert.deepEqual(mochaRunner.init(), mochaRunner);
         });
+
+        it('should throw in case of duplicate test titles in mocha adapters in different files', () => {
+            const mocha1 = new MochaStub();
+            const mocha2 = new MochaStub();
+
+            mocha1.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'first file'});
+            });
+
+            mocha2.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'second file'});
+            });
+
+            MochaBuilder.prototype.buildAdapters.returns([{suite: mocha1.suite}, {suite: mocha2.suite}]);
+
+            assert.throws(() => init_(),
+                'Tests with the same title \'some test\' in files \'first file\' and \'second file\' can\'t be used');
+        });
+
+        it('should throw in case of duplicate test titles in mocha adapters in the same file', () => {
+            const mocha1 = new MochaStub();
+            const mocha2 = new MochaStub();
+
+            mocha1.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'some file'});
+            });
+
+            mocha2.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'some file'});
+            });
+
+            MochaBuilder.prototype.buildAdapters.returns([{suite: mocha1.suite}, {suite: mocha2.suite}]);
+
+            assert.throws(() => init_(),
+                'Tests with the same title \'some test\' in file \'some file\' can\'t be used');
+        });
+
+        it('should does not throw on mocha adapters without duplicates', () => {
+            const mocha1 = new MochaStub();
+            const mocha2 = new MochaStub();
+
+            mocha1.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'first test', file: 'first file'});
+            });
+
+            mocha2.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'second test', file: 'second file'});
+            });
+
+            MochaBuilder.prototype.buildAdapters.returns([{suite: mocha1.suite}, {suite: mocha2.suite}]);
+
+            assert.doesNotThrow(() => init_());
+        });
     });
 
     describe('run', () => {
         it('should wrap each mocha instance into a retry runner', () => {
-            const mocha1 = sinon.createStubInstance(MochaAdapter);
-            const mocha2 = sinon.createStubInstance(MochaAdapter);
+            const mocha1 = new MochaStub();
+            const mocha2 = new MochaStub();
 
             MochaBuilder.prototype.buildAdapters.returns([mocha1, mocha2]);
             sandbox.spy(RetryMochaRunner, 'create');
@@ -120,18 +166,18 @@ describe('mocha-runner', () => {
         });
 
         it('should create a retry runner for a passed browser', () => {
-            MochaBuilder.prototype.buildAdapters.returns([sinon.createStubInstance(MochaAdapter)]);
+            MochaBuilder.prototype.buildAdapters.returns([new MochaStub()]);
             sandbox.spy(RetryMochaRunner, 'create');
 
-            const config = stubConfig_();
-            config.forBrowser.withArgs('bro').returns({retry: 10});
+            const config = makeConfigStub({browsers: ['bro'], retry: 10});
 
-            return MochaRunner.create(config, {browserId: 'bro'}).init().run()
-                .then(() => assert.calledOnceWith(RetryMochaRunner.create, sinon.match.any, {retry: 10}));
+            return MochaRunner.create('bro', config).init().run()
+                .then(() => assert.calledOnceWith(RetryMochaRunner.create, sinon.match.any, config.forBrowser('bro')));
         });
 
         it('should run mocha instances via a retry runner', () => {
-            const mocha = sinon.createStubInstance(MochaAdapter);
+            const mocha = new MochaStub();
+            sandbox.stub(mocha, 'run');
             MochaBuilder.prototype.buildAdapters.returns([mocha]);
 
             return run_()
@@ -146,8 +192,8 @@ describe('mocha-runner', () => {
             const secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
             MochaBuilder.prototype.buildAdapters.returns([
-                sinon.createStubInstance(MochaAdapter),
-                sinon.createStubInstance(MochaAdapter)
+                new MochaStub(),
+                new MochaStub()
             ]);
 
             RetryMochaRunner.prototype.run
@@ -162,7 +208,7 @@ describe('mocha-runner', () => {
         });
 
         it('should be rejected if one of mocha instances rejected on run', () => {
-            MochaBuilder.prototype.buildAdapters.returns([sinon.createStubInstance(MochaAdapter)]);
+            MochaBuilder.prototype.buildAdapters.returns([new MochaStub()]);
 
             RetryMochaRunner.prototype.run.returns(q.reject('Error'));
 
@@ -199,7 +245,7 @@ describe('mocha-runner', () => {
 
                 events.forEach((event) => {
                     it(`${event}`, () => {
-                        const mocha = mkMochaAdapterStub_();
+                        const mocha = new MochaStub();
                         MochaBuilder.prototype.buildAdapters.returns([mocha]);
 
                         return testPassthroughing(event, mocha);
@@ -219,7 +265,7 @@ describe('mocha-runner', () => {
                         const retryMochaRunner = Object.create(RetryMochaRunner.prototype);
                         sandbox.stub(RetryMochaRunner, 'create').returns(retryMochaRunner);
 
-                        MochaBuilder.prototype.buildAdapters.returns([mkMochaAdapterStub_()]);
+                        MochaBuilder.prototype.buildAdapters.returns([new MochaStub()]);
 
                         return testPassthroughing(event, retryMochaRunner);
                     });
@@ -230,21 +276,53 @@ describe('mocha-runner', () => {
 
     describe('buildSuiteTree', () => {
         it('should build suite tree for specified paths', () => {
-            MochaBuilder.prototype.buildAdapters.returns([sinon.createStubInstance(MochaAdapter)]);
+            MochaBuilder.prototype.buildSingleAdapter.returns([new MochaStub()]);
 
             const mochaRunner = createMochaRunner_();
             mochaRunner.buildSuiteTree(['some/path']);
 
-            assert.calledOnceWith(MochaBuilder.prototype.buildAdapters, ['some/path'], {singleInstance: true});
+            assert.calledOnceWith(MochaBuilder.prototype.buildSingleAdapter, ['some/path']);
         });
 
         it('should return suite of mocha-adapter', () => {
+            const mocha = new MochaStub();
             const mochaRunner = createMochaRunner_();
-            const suiteStub = sandbox.stub();
-            MochaBuilder.prototype.buildAdapters.returns([_.extend(mkMochaAdapterStub_(), {suite: suiteStub})]);
 
-            const suiteTree = mochaRunner.buildSuiteTree(['some/path']);
-            assert.deepEqual(suiteTree, suiteStub);
+            MochaBuilder.prototype.buildSingleAdapter.returns({suite: mocha.suite});
+
+            assert.deepEqual(mochaRunner.buildSuiteTree(), mocha.suite);
+        });
+
+        it('should throw in case of duplicate test titles in different files', () => {
+            const mocha = new MochaStub();
+            const mochaRunner = createMochaRunner_();
+
+            mocha.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'first file'})
+                    .addTest({title: 'some test', file: 'second file'});
+            });
+
+            MochaBuilder.prototype.buildSingleAdapter.returns({suite: mocha.suite});
+
+            assert.throws(() => mochaRunner.buildSuiteTree(),
+                'Tests with the same title \'some test\' in files \'first file\' and \'second file\' can\'t be used');
+        });
+
+        it('should throw in case of duplicate test titles in the same file', () => {
+            const mocha = new MochaStub();
+            const mochaRunner = createMochaRunner_();
+
+            mocha.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({title: 'some test', file: 'some file'})
+                    .addTest({title: 'some test', file: 'some file'});
+            });
+
+            MochaBuilder.prototype.buildSingleAdapter.returns({suite: mocha.suite});
+
+            assert.throws(() => mochaRunner.buildSuiteTree(),
+                'Tests with the same title \'some test\' in file \'some file\' can\'t be used');
         });
 
         describe('should passthrough events from a mocha runner', () => {
@@ -255,9 +333,9 @@ describe('mocha-runner', () => {
 
             events.forEach((event) => {
                 it(`${event}`, () => {
-                    MochaBuilder.prototype.buildAdapters.callsFake(function() {
+                    MochaBuilder.prototype.buildSingleAdapter.callsFake(function() {
                         this.emit(event, 'some-data');
-                        return [mkMochaAdapterStub_()];
+                        return [new MochaStub()];
                     });
 
                     const mochaRunner = createMochaRunner_();
@@ -266,8 +344,7 @@ describe('mocha-runner', () => {
                     mochaRunner.on(event, spy);
                     mochaRunner.buildSuiteTree(['path/to/file']);
 
-                    assert.calledOnce(spy);
-                    assert.calledWith(spy, 'some-data');
+                    assert.calledOnceWith(spy, 'some-data');
                 });
             });
         });

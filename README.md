@@ -6,15 +6,15 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 
-- [Why you should choose hermione](#why-should-you-choose-hermione)
+- [Why you should choose hermione](#why-you-should-choose-hermione)
   - [Easy to use](#easy-to-use)
-  - [Runs tests in parallel](#parallel-test-running)
-  - [Extensible](#extensibility)
-  - [Retries failed tests](#retries-for-failed-tests)
-  - [Executes separate tests](#executing-a-separate-test)
-  - [Skips tests in specific browsers](#skip-tests-in-specific-browsers)
-  - [Offers flexible test configuration](#flexible-tests-configuration)
-  - [Automatically initializes and closes grid sessions](#auto-initialization-and-closing-grid-sessions)
+  - [Runs tests in parallel](#runs-tests-in-parallel)
+  - [Extensible](#extensible)
+  - [Retries failed tests](#retries-failed-tests)
+  - [Executes separate tests](#executes-separate-tests)
+  - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
+  - [Offers flexible test configuration](#offers-flexible-test-configuration)
+  - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
 - [Prerequisites](#prerequisites)
 - [Skip](#skip)
 - [Only](#only)
@@ -32,7 +32,9 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [sessionQuitTimeout](#sessionquittimeout)
   - [waitTimeout](#waittimeout)
   - [sessionsPerBrowser](#sessionsperbrowser)
+  - [testsPerSession](#testspersession)
   - [retry](#retry)
+  - [meta](#meta)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -442,6 +444,7 @@ Option name               | Description
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
 `sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
+`testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method
@@ -466,6 +469,10 @@ Timeout for web page events. Default value is `1000` ms.
 
 ### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
+
+### testsPerSession
+Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
+By default is `Infinity` (no limit, all tests will be run in the same session). Set to smaller number in case of problems with stability.
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
