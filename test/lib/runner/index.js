@@ -1,11 +1,11 @@
 'use strict';
 
-const q = require('q');
+const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
+const q = require('q');
 const QEmitter = require('qemitter');
 const qUtils = require('qemitter/utils');
 
-const BrowserAgent = require('../../../lib/browser-agent');
 const BrowserPool = require('../../../lib/browser-pool');
 const MochaRunner = require('../../../lib/runner/mocha-runner');
 const Runner = require('../../../lib/runner');
@@ -13,18 +13,10 @@ const TestSkipper = require('../../../lib/runner/test-skipper');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 const logger = require('../../../lib/utils').logger;
 
-const utils = require('../../utils');
+const makeConfigStub = require('../../utils').makeConfigStub;
 
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
-
-    const makeConfigStub = (opts) => {
-        const config = utils.makeConfigStub(opts);
-
-        config.forBrowser = sandbox.stub();
-
-        return config;
-    };
 
     const mkMochaRunner = () => {
         sandbox.stub(MochaRunner, 'create');
@@ -45,13 +37,13 @@ describe('Runner', () => {
         });
 
         const tests = _.zipObject(opts.browsers, _.fill(Array(opts.browsers.length), opts.files));
-        const runner = opts.runner || new Runner(makeConfigStub({browsers: opts.browsers}));
+        const runner = opts.runner || new Runner(opts.config || makeConfigStub({browsers: opts.browsers}));
 
         return runner.run(tests);
     };
 
     beforeEach(() => {
-        sandbox.stub(BrowserPool.prototype);
+        sandbox.stub(BrowserPool, 'create');
 
         sandbox.stub(MochaRunner, 'prepare');
         sandbox.stub(MochaRunner.prototype, 'init').returnsThis();
@@ -65,14 +57,13 @@ describe('Runner', () => {
     describe('constructor', () => {
         it('should create browser pool', () => {
             const config = makeConfigStub();
+            const runner = new Runner(config);
 
-            new Runner(config); // eslint-disable-line no-new
-
-            assert.calledWith(BrowserPool.prototype.__constructor, config);
+            assert.calledOnceWith(BrowserPool.create, config, runner);
         });
 
         it('should prepare mocha runner', () => {
-            new Runner(makeConfigStub()); // eslint-disable-line no-new
+            Runner.create(makeConfigStub());
 
             assert.calledOnce(MochaRunner.prepare);
         });
@@ -87,7 +78,7 @@ describe('Runner', () => {
                 runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
 
                 return run_({runner})
-                    .then(() => assert.calledWith(onRunnerStart, runner));
+                    .then(() => assert.calledOnceWith(onRunnerStart, runner));
             });
 
             it('should start mocha runner only after RUNNER_START handler finish', () => {
@@ -128,30 +119,43 @@ describe('Runner', () => {
                 });
         });
 
-        it('should create mocha runners with appropriate browser agents', () => {
+        it('should create mocha runners for all browsers from config', () => {
             mkMochaRunner();
 
             return run_({browsers: ['browser1', 'browser2']})
                 .then(() => {
                     assert.calledTwice(MochaRunner.create);
-                    assert.calledWith(MochaRunner.create,
-                        sinon.match.any,
-                        sinon.match.instanceOf(BrowserAgent).and(sinon.match.has('browserId', 'browser1'))
-                    );
-                    assert.calledWith(MochaRunner.create,
-                        sinon.match.any,
-                        sinon.match.instanceOf(BrowserAgent).and(sinon.match.has('browserId', 'browser2'))
-                    );
+                    assert.calledWith(MochaRunner.create, 'browser1');
+                    assert.calledWith(MochaRunner.create, 'browser2');
+                });
+        });
+
+        it('should pass config to a mocha runner', () => {
+            mkMochaRunner();
+
+            return run_({config: {some: 'config'}})
+                .then(() => assert.calledOnceWith(MochaRunner.create, sinon.match.any, {some: 'config'}));
+        });
+
+        it('should create mocha runners with the same browser pool', () => {
+            mkMochaRunner();
+
+            BrowserPool.create.returns({browser: 'pool'});
+
+            return run_({browsers: ['browser1', 'browser2']})
+                .then(() => {
+                    assert.calledTwice(MochaRunner.create);
+                    assert.calledWith(MochaRunner.create, sinon.match.any, sinon.match.any, {browser: 'pool'});
+                    assert.calledWith(MochaRunner.create, sinon.match.any, sinon.match.any, {browser: 'pool'});
                 });
         });
 
         it('should create test skipper with browsers from config', () => {
-            const config = makeConfigStub();
             sandbox.stub(TestSkipper, 'create');
 
-            new Runner(config); // eslint-disable-line no-new
+            Runner.create({some: 'config'});
 
-            assert.calledWith(TestSkipper.create, config);
+            assert.calledOnceWith(TestSkipper.create, {some: 'config'});
         });
 
         it('should create mocha runner with test skipper', () => {
@@ -159,14 +163,14 @@ describe('Runner', () => {
 
             return run_()
                 .then(() => {
-                    assert.calledWith(MochaRunner.create,
-                        sinon.match.any, sinon.match.any, sinon.match.instanceOf(TestSkipper));
+                    assert.calledOnceWith(MochaRunner.create,
+                        sinon.match.any, sinon.match.any, sinon.match.any, sinon.match.instanceOf(TestSkipper));
                 });
         });
 
         it('should init mocha runner with passed tests', () => {
             return run_({files: ['test1', 'test2']})
-                .then(() => assert.calledWith(MochaRunner.prototype.init, ['test1', 'test2']));
+                .then(() => assert.calledOnceWith(MochaRunner.prototype.init, ['test1', 'test2']));
         });
 
         it('should wait until all mocha runners will finish', () => {
@@ -179,8 +183,8 @@ describe('Runner', () => {
 
             return run_({browsers: ['browser1', 'browser2']})
                 .then(() => {
-                    assert.called(firstResolveMarker);
-                    assert.called(secondResolveMarker);
+                    assert.calledOnce(firstResolveMarker);
+                    assert.calledOnce(secondResolveMarker);
                 });
         });
 
@@ -214,52 +218,13 @@ describe('Runner', () => {
 
                     return run_({runner})
                         .then(() => {
-                            assert.calledWith(qUtils.passthroughEvent,
+                            assert.calledOnceWith(qUtils.passthroughEvent,
                                 sinon.match.instanceOf(QEmitter),
                                 sinon.match.instanceOf(Runner),
                                 mochaRunnerEvents
                             );
                         });
                 });
-            });
-        });
-
-        describe('passing events from browser agent', () => {
-            beforeEach(() => sandbox.stub(BrowserAgent, 'create').returns(sinon.createStubInstance(BrowserAgent)));
-
-            [RunnerEvents.SESSION_START, RunnerEvents.SESSION_END].forEach((event) => {
-                it(`should passthrough event ${event} from browser agent`, () => {
-                    const browserAgent = new QEmitter();
-                    const runner = new Runner(makeConfigStub());
-                    const onEventHandler = sandbox.spy().named(event);
-
-                    BrowserAgent.create.returns(browserAgent);
-
-                    runner.on(event, onEventHandler);
-
-                    return run_({runner})
-                        .then(() => {
-                            browserAgent.emitAndWait(event);
-
-                            assert.called(onEventHandler);
-                        });
-                });
-            });
-
-            it('should passthrough SESSION_START and SESSION_END events asynchronously', () => {
-                sandbox.stub(qUtils, 'passthroughEventAsync');
-                const runner = new Runner(makeConfigStub());
-
-                return run_({runner})
-                    .then(() => {
-                        assert.calledWith(qUtils.passthroughEventAsync,
-                            sinon.match.instanceOf(BrowserAgent),
-                            sinon.match.instanceOf(Runner), [
-                                RunnerEvents.SESSION_START,
-                                RunnerEvents.SESSION_END
-                            ]
-                        );
-                    });
             });
         });
 
@@ -326,17 +291,6 @@ describe('Runner', () => {
             sandbox.stub(BrowserAgent, 'create').returns(sinon.createStubInstance(BrowserAgent));
         });
 
-        it('should create browser agent for each browser', () => {
-            const runner = new Runner(makeConfigStub());
-
-            runner.buildSuiteTree({bro1: [], bro2: []});
-
-            assert.calledTwice(BrowserAgent.create);
-            assert.calledWith(BrowserAgent.create, 'bro1');
-            assert.calledWith(BrowserAgent.create, 'bro2');
-            assert.calledWith(BrowserAgent.create, sinon.match.any, sinon.match.instanceOf(BrowserPool));
-        });
-
         it('should passthrough BEFORE_FILE_READ and AFTER_FILE_READ events synchronously', () => {
             sandbox.stub(qUtils, 'passthroughEvent');
             const runner = new Runner(makeConfigStub());
@@ -353,16 +307,20 @@ describe('Runner', () => {
             );
         });
 
-        it('should create mocha runner with the specified config and browser agent', () => {
+        it('should create mocha runner with the specified config, browser pool and test skipper', () => {
             const config = makeConfigStub();
+            const browserPool = {baz: 'bar'};
+
+            BrowserPool.create.returns(browserPool);
+
             const runner = new Runner(config);
             const createMochaRunner = sinon.spy(MochaRunner, 'create');
 
             runner.buildSuiteTree({bro: []});
 
-            assert.calledWith(
+            assert.calledOnceWith(
                 createMochaRunner,
-                config, sinon.match.instanceOf(BrowserAgent), sinon.match.instanceOf(TestSkipper)
+                'bro', config, browserPool, sinon.match.instanceOf(TestSkipper)
             );
         });
 
@@ -382,7 +340,7 @@ describe('Runner', () => {
 
             runner.buildSuiteTree({bro: ['some/path/file1.js', 'other/path/file2.js']});
 
-            assert.calledWith(MochaRunner.prototype.buildSuiteTree, ['some/path/file1.js', 'other/path/file2.js']);
+            assert.calledOnceWith(MochaRunner.prototype.buildSuiteTree, ['some/path/file1.js', 'other/path/file2.js']);
         });
     });
 });

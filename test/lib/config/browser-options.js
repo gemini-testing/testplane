@@ -386,6 +386,80 @@ describe('config browser-options', () => {
         });
     });
 
+    describe('testsPerSession', () => {
+        describe('should throw error if "testsPerSession"', () => {
+            it('is not a number', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({testsPerSession: '10'})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"testsPerSession" must be a positive integer or Infinity');
+            });
+
+            it('is a negative number', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({testsPerSession: -5})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"testsPerSession" must be a positive integer or Infinity');
+            });
+
+            it('is a float number', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({testsPerSession: 15.5})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"testsPerSession" must be a positive integer or Infinity');
+            });
+        });
+
+        it('should set "testsPerSession" to all browsers', () => {
+            const readConfig = {
+                testsPerSession: 666,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.testsPerSession, 666);
+            assert.equal(config.browsers.b2.testsPerSession, 666);
+        });
+
+        it('should override "testsPerSession option"', () => {
+            const readConfig = {
+                testsPerSession: 666,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({testsPerSession: 13})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.testsPerSession, 666);
+            assert.equal(config.browsers.b2.testsPerSession, 13);
+        });
+    });
+
     ['retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout'].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {

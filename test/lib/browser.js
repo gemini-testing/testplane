@@ -295,6 +295,10 @@ describe('Browser', () => {
         });
     });
 
+    describe('reset', () =>{
+        it('should be fulfilled', () => assert.isFulfilled(mkBrowser_().reset()));
+    });
+
     describe('quit', () => {
         it('should finalize webdriver.io session', () => {
             return mkBrowser_()

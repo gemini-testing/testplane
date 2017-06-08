@@ -13,6 +13,6 @@ module.exports = class Test extends Runnable {
         this.title = options.title || 'some-test';
         this.fn = options.fn || _.noop;
         this.file = options.file || null;
-        this.pending = options.skipped || false;
+        this.pending = options.pending || false;
     }
 };

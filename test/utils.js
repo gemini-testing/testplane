@@ -14,7 +14,9 @@ function browserWithId(id) {
 function makeConfigStub(opts) {
     opts = _.defaults(opts || {}, {
         browsers: ['some-default-browser'],
-        retry: 0
+        retry: 0,
+        sessionsPerBrowser: 1,
+        testsPerSession: Infinity
     });
 
     const config = {
@@ -27,9 +29,14 @@ function makeConfigStub(opts) {
     opts.browsers.forEach(function(browserId) {
         config.browsers[browserId] = {
             retry: opts.retry,
+            sessionsPerBrowser: opts.sessionsPerBrowser,
+            testsPerSession: opts.testsPerSession,
             desiredCapabilities: {browserName: browserId}
         };
     });
+
+    config.forBrowser = (browserId) => config.browsers[browserId];
+    config.getBrowserIds = () => _.keys(config.browsers);
 
     return config;
 }
