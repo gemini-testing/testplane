@@ -115,4 +115,13 @@ describe('mocha-runner/single-test-mocha-adapter', () => {
 
         assert.deepEqual(singleTestMochaAdapter.on('arg1', 'arg2'), {foo: 'bar'});
     });
+
+    it('should passthrough "disableHooksInSkippedSuites" method from the decorated mocha adapter', () => {
+        const mochaAdapter = mkMochaAdapterStub();
+        const singleTestMochaAdapter = SingleTestMochaAdapter.create(mochaAdapter);
+
+        mochaAdapter.disableHooksInSkippedSuites.returns({foo: 'bar'});
+
+        assert.deepEqual(singleTestMochaAdapter.disableHooksInSkippedSuites(), {foo: 'bar'});
+    });
 });
