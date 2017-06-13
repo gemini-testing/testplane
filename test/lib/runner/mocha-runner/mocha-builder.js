@@ -17,12 +17,21 @@ describe('mocha-runner/mocha-builder', () => {
 
         sandbox.stub(SingleTestMochaAdapter, 'create').returns({tests: []});
 
+        sandbox.stub(MochaAdapter, 'prepare');
         sandbox.stub(MochaAdapter, 'create').callsFake(() => mkMochaAdapterStub_());
         sandbox.stub(MochaAdapter.prototype, 'applySkip').returnsThis();
         sandbox.stub(MochaAdapter.prototype, 'loadFiles');
     });
 
     afterEach(() => sandbox.restore());
+
+    describe('prepare', () => {
+        it('should prepare mocha adapter', () => {
+            MochaBuilder.prepare();
+
+            assert.calledOnce(MochaAdapter.prepare);
+        });
+    });
 
     describe('buildAdapters', () => {
         const buildAdapters_ = (paths) => MochaBuilder.create('bro', {}).buildAdapters(paths);

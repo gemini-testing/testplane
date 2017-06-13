@@ -4,7 +4,6 @@ const EventEmitter = require('events').EventEmitter;
 const q = require('q');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('../../../../lib/constants/runner-events');
-const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const MochaRunner = require('../../../../lib/runner/mocha-runner');
 const RetryMochaRunner = require('../../../../lib/runner/mocha-runner/retry-mocha-runner');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
@@ -28,8 +27,9 @@ describe('mocha-runner', () => {
     const run_ = (suites) => init_(suites).run();
 
     beforeEach(() => {
-        sandbox.stub(MochaAdapter, 'prepare');
         sandbox.stub(RetryMochaRunner.prototype, 'run');
+
+        sandbox.stub(MochaBuilder, 'prepare');
         sandbox.stub(MochaBuilder.prototype, 'buildAdapters').returns([]);
         sandbox.stub(MochaBuilder.prototype, 'buildSingleAdapter');
     });
@@ -69,10 +69,10 @@ describe('mocha-runner', () => {
     });
 
     describe('prepare', () => {
-        it('should prepare mocha adapter', () => {
+        it('should prepare mocha builder', () => {
             MochaRunner.prepare();
 
-            assert.calledOnce(MochaAdapter.prepare);
+            assert.calledOnce(MochaBuilder.prepare);
         });
     });
 
