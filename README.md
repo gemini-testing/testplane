@@ -495,9 +495,10 @@ Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https:/
 ```javascript
 mochaOpts: {
     slow: 10000, // If test execution time is greater than this value, then the test is slow.
-    timeout: 60000 // timeout for test execution.
 }
 ```
+
+**Important**: `timeout` option will be set to `Infinity` regardless to configured value.
 
 #### ctx
 A context which will be available in tests via method `hermione.ctx`:
