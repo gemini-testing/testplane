@@ -33,6 +33,7 @@ describe('mocha-runner/mocha-adapter', () => {
     beforeEach(() => {
         testSkipper = sinon.createStubInstance(TestSkipper);
         browserAgent = sinon.createStubInstance(BrowserAgent);
+        browserAgent.getBrowser.returns(q(mkBrowserStub_()));
 
         clearRequire = sandbox.stub().named('clear-require');
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
@@ -179,42 +180,17 @@ describe('mocha-runner/mocha-adapter', () => {
                 });
         });
 
-        it('should not request browsers for suite with one skipped test', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({pending: true}));
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(browserAgent.getBrowser));
-        });
-
         it('should request browsers for suite with at least one non-skipped test', () => {
             const mochaAdapter = mkMochaAdapter_();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .addTest({skipped: true})
+                    .addTest({pending: true})
                     .addTest();
             });
 
             return mochaAdapter.run()
                 .then(() => assert.calledOnce(browserAgent.getBrowser));
-        });
-
-        it('should not request browsers for suite with nested skipped tests', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .addSuite(
-                        MochaStub.Suite.create()
-                            .addTest({pending: true})
-                            .addTest({pending: true})
-                    );
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(browserAgent.getBrowser));
         });
 
         it('should release browser after suite execution', () => {
@@ -575,7 +551,6 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
             browserAgent.freeBrowser.returns(q());
 
             mochaAdapter = mkMochaAdapter_();
@@ -806,6 +781,52 @@ describe('mocha-runner/mocha-adapter', () => {
 
             return mochaAdapter.run()
                 .then(() => assert.notCalled(beforeEachHookFn));
+        });
+    });
+
+    describe('disableHooksInSkippedSuites', () => {
+        it('should switch of "beforeAll" and "afterAll" hooks in skipped suites', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const firstBeforeAll = sinon.spy().named('firstBeforeAll');
+            const firstAfterAll = sinon.spy().named('firstAfterAll');
+            const secondBeforeAll = sinon.spy().named('secondBeforeAll');
+            const secondAfterAll = sinon.spy().named('secondAfterAll');
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                const suite = MochaStub.Suite.create(rootSuite);
+
+                return rootSuite
+                    .beforeAll(firstBeforeAll)
+                    .addTest({pending: false})
+                    .addSuite(suite.beforeAll(secondBeforeAll).addTest({pending: true}).afterAll(secondAfterAll))
+                    .afterAll(firstAfterAll);
+            });
+
+            mochaAdapter.disableHooksInSkippedSuites();
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledOnce(firstBeforeAll);
+                    assert.calledOnce(firstAfterAll);
+
+                    assert.notCalled(secondBeforeAll);
+                    assert.notCalled(secondAfterAll);
+                });
+        });
+
+        it('should not try to request a browser for a completely skipped suite', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                return rootSuite
+                    .addTest({pending: true})
+                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({pending: true}));
+            });
+
+            mochaAdapter.disableHooksInSkippedSuites();
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(browserAgent.getBrowser));
         });
     });
 });
