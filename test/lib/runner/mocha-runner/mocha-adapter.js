@@ -297,6 +297,52 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
+    describe('timeouts', () => {
+        beforeEach(() => {
+            mkMochaAdapter_();
+        });
+
+        it('should disable mocha timeouts', () => {
+            const test = new MochaStub.Test();
+            test.enableTimeouts(true);
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            assert.isFalse(test.enableTimeouts());
+        });
+
+        it('should set promise timeout', () => {
+            const test = new MochaStub.Test(null, {
+                fn: () => q.delay(100)
+            });
+            test.timeout(50);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return assert.isRejected(test.run(), /Timed out/);
+        });
+
+        it('should not fail test if timeout not exceeded', () => {
+            const test = new MochaStub.Test(null, {
+                fn: () => q.delay(50)
+            });
+            test.timeout(100);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return assert.isFulfilled(test.run());
+        });
+
+        it('should not set timeout if it is disabled', () => {
+            const test = new MochaStub.Test(null, {
+                fn: () => q.delay(100)
+            });
+            test.timeout(50);
+            test.enableTimeouts(false);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return assert.isFulfilled(test.run());
+        });
+    });
+
     describe('inject execution context', () => {
         let browser;
         let mochaAdapter;
