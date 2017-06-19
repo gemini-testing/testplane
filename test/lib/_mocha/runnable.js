@@ -21,4 +21,21 @@ module.exports = class Runnable {
     run() {
         return this.fn();
     }
+
+    enableTimeouts(val) {
+        if (val === undefined) {
+            return this._enableTimeouts;
+        }
+
+        this._enableTimeouts = val;
+    }
+
+    timeout(val) {
+        if (val === undefined) {
+            return this._timeout;
+        }
+
+        this.enableTimeouts(true);
+        this._timeout = val;
+    }
 };
