@@ -66,64 +66,60 @@ describe('mocha-runner/proxy-reporter', () => {
         });
     });
 
-    it('should translate `fail` event from test to `failTest`', () => {
-        createReporter_();
+    describe('"fail" event', () => {
+        beforeEach(() => createReporter_());
 
-        runner.emit('fail', {type: 'test'}, {message: 'foo'});
+        it('should translate `fail` event from test to `failTest`', () => {
+            runner.emit('fail', {type: 'test'}, {message: 'foo'});
 
-        assert.calledWithMatch(emit, 'failTest', {
-            err: {message: 'foo'}
+            assert.calledWithMatch(emit, 'failTest', {
+                err: {message: 'foo'}
+            });
         });
-    });
 
-    it('should translate `fail` event from after* hook to `err`', () => {
-        createReporter_();
-
-        const hook = {
-            type: 'hook',
-            title: '"after each" hook for "some test"',
-            originalTitle: '"after each" hook',
-            ctx: {
-                currentTest: {
-                    title: 'some test'
+        it('should translate `fail` event from after* hook to `err`', () => {
+            const hook = {
+                type: 'hook',
+                title: '"after each" hook for "some test"',
+                originalTitle: '"after each" hook',
+                ctx: {
+                    currentTest: {
+                        title: 'some test'
+                    }
                 }
-            }
-        };
+            };
 
-        runner.emit('fail', hook, {message: 'foo'});
+            runner.emit('fail', hook, {message: 'foo'});
 
-        assert.calledWithMatch(emit, 'err',
-            {message: 'foo'},
-            hook
-        );
-    });
+            assert.calledWithMatch(emit, 'err',
+                {message: 'foo'},
+                hook
+            );
+        });
 
-    it('should translate `fail` event from hook without currentTest to `err`', () => {
-        createReporter_();
+        it('should translate `fail` event from hook without currentTest to `err`', () => {
+            const hook = {
+                type: 'hook',
+                title: '"before All" hook',
+                ctx: {}
+            };
 
-        const hook = {
-            type: 'hook',
-            title: '"before All" hook',
-            ctx: {}
-        };
+            runner.emit('fail', hook, {message: 'foo'});
 
-        runner.emit('fail', hook, {message: 'foo'});
+            assert.calledWithMatch(emit, 'err',
+                {message: 'foo'},
+                hook
+            );
+        });
 
-        assert.calledWithMatch(emit, 'err',
-            {message: 'foo'},
-            hook
-        );
-    });
+        it('should translate `fail` event from other source to `err`', () => {
+            runner.emit('fail', {title: 'some-title'}, {message: 'foo'});
 
-    it('should translate `fail` event from other source to `err`', () => {
-        createReporter_();
-
-        runner.emit('fail', {title: 'some-title'}, {message: 'foo'});
-
-        assert.calledWithMatch(emit, 'err',
-            {message: 'foo'},
-            {title: 'some-title'}
-        );
+            assert.calledWithMatch(emit, 'err',
+                {message: 'foo'},
+                {title: 'some-title'}
+            );
+        });
     });
 
     it('should translate test data from mocha', () => {
