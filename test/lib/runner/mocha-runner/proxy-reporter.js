@@ -44,6 +44,28 @@ describe('mocha-runner/proxy-reporter', () => {
     testTranslateEvent_('pass', 'passTest');
     testTranslateEvent_('pending', 'pendingTest');
 
+    describe('"pending" event', () => {
+        beforeEach(() => createReporter_());
+
+        it('should not translate "pending" event if an entity was skipped silently', () => {
+            runner.emit('pending', {silentSkip: true});
+
+            assert.notCalled(emit);
+        });
+
+        it('should not translate "pending" event if a parent of an entity was skipped silently', () => {
+            runner.emit('pending', {parent: {parent: {silentSkip: true}}});
+
+            assert.notCalled(emit);
+        });
+
+        it('should translate "pending" event if an entity was not skipped silently', () => {
+            runner.emit('pending', {foo: 'bar'});
+
+            assert.calledWithMatch(emit, 'pending', {foo: 'bar'});
+        });
+    });
+
     it('should translate `fail` event from test to `failTest`', () => {
         createReporter_();
 
