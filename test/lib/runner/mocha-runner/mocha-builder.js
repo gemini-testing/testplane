@@ -49,12 +49,12 @@ describe('mocha-runner/mocha-builder', () => {
             ]);
         });
 
-        it('should pass mocha opts to mocha adapter', () => {
-            const mochaBuilder = MochaBuilder.create('bro', {mochaOpts: {foo: 'bar'}});
+        it('should pass config to mocha adapter', () => {
+            const mochaBuilder = MochaBuilder.create('bro', {some: 'config'});
 
             mochaBuilder.buildAdapters(['some/file']);
 
-            assert.calledOnceWith(MochaAdapter.create, {foo: 'bar'});
+            assert.calledOnceWith(MochaAdapter.create, sinon.match.any, {some: 'config'});
         });
 
         it('should share single opts object between all mocha instances', () => {
@@ -75,15 +75,7 @@ describe('mocha-runner/mocha-builder', () => {
 
             mochaBuilder.buildAdapters(['some/file']);
 
-            assert.calledWith(MochaAdapter.create, sinon.match.any, {browser: 'agent'});
-        });
-
-        it('should pass ctx to mocha adapter', () => {
-            const mochaBuilder = MochaBuilder.create('bro', {ctx: {foo: 'bar'}});
-
-            mochaBuilder.buildAdapters(['some/file']);
-
-            assert.calledWith(MochaAdapter.create, sinon.match.any, sinon.match.any, {foo: 'bar'});
+            assert.calledWith(MochaAdapter.create, {browser: 'agent'});
         });
 
         it('should share ctx from config between all mocha instances', () => {
@@ -143,14 +135,6 @@ describe('mocha-runner/mocha-builder', () => {
     });
 
     describe('buildSingleAdapter', () => {
-        it('should pass mocha opts to mocha adapter', () => {
-            const mochaBuilder = MochaBuilder.create(null, {mochaOpts: {foo: 'bar'}});
-
-            mochaBuilder.buildSingleAdapter();
-
-            assert.calledOnceWith(MochaAdapter.create, {foo: 'bar'});
-        });
-
         it('should pass browser agent to mocha adapter', () => {
             BrowserAgent.create.withArgs('bro', {browser: 'pool'}).returns({browser: 'agent'});
 
@@ -158,15 +142,15 @@ describe('mocha-runner/mocha-builder', () => {
 
             mochaBuilder.buildSingleAdapter(['some/file']);
 
-            assert.calledWith(MochaAdapter.create, sinon.match.any, {browser: 'agent'});
+            assert.calledWith(MochaAdapter.create, {browser: 'agent'});
         });
 
-        it('should pass ctx to mocha adapter', () => {
-            const mochaBuilder = MochaBuilder.create(null, {ctx: {foo: 'bar'}});
+        it('should pass config to mocha adapter', () => {
+            const mochaBuilder = MochaBuilder.create(null, {some: 'config'});
 
             mochaBuilder.buildSingleAdapter();
 
-            assert.calledWith(MochaAdapter.create, sinon.match.any, sinon.match.any, {foo: 'bar'});
+            assert.calledWith(MochaAdapter.create, sinon.match.any, {some: 'config'});
         });
 
         it('should skip test using test skipper', () => {

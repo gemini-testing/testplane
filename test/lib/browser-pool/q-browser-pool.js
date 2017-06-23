@@ -47,12 +47,12 @@ describe('browser-pool/q-browser-pool', () => {
     });
 
     describe('freeBrowser', () => {
-        it('should free a browser', () => {
+        it('should free a browser with passed options', () => {
             const browserPool = stubBrowserPool();
             const qBrowserPool = QBrowserPool.create(browserPool);
 
-            return qBrowserPool.freeBrowser({some: 'browser'})
-                .then(() => assert.calledOnceWith(browserPool.freeBrowser, {some: 'browser'}));
+            return qBrowserPool.freeBrowser({some: 'browser'}, {some: 'options'})
+                .then(() => assert.calledOnceWith(browserPool.freeBrowser, {some: 'browser'}, {some: 'options'}));
         });
 
         it('should wrap a result into "q" promises', () => {
