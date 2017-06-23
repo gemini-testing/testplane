@@ -4,18 +4,16 @@ const CoreBrowserPool = require('gemini-core').BrowserPool;
 const _ = require('lodash');
 const q = require('q');
 const QEmitter = require('qemitter');
-const BrowserPool = require('../../../lib/browser-pool');
-const QBrowserPool = require('../../../lib/browser-pool/q-browser-pool');
-const Browser = require('../../../lib/browser');
-const Events = require('../../../lib/constants/runner-events');
-const makeConfigStub = require('../../utils').makeConfigStub;
+const BrowserPool = require('../../lib/browser-pool');
+const Browser = require('../../lib/browser');
+const Events = require('../../lib/constants/runner-events');
+const makeConfigStub = require('../utils').makeConfigStub;
 
 describe('browser-pool', () => {
     const sandbox = sinon.sandbox.create();
 
     beforeEach(() => {
         sandbox.stub(CoreBrowserPool, 'create');
-        sandbox.stub(QBrowserPool, 'create');
         sandbox.stub(Browser, 'create');
     });
 
@@ -27,13 +25,6 @@ describe('browser-pool', () => {
 
             assert.calledOnce(CoreBrowserPool.create);
             assert.calledWithMatch(CoreBrowserPool.create, sinon.match.any, {logNamespace: 'hermione'});
-        });
-
-        it('should wrap browser pool into "q" promises', () => {
-            CoreBrowserPool.create.returns({foo: 'bar'});
-            QBrowserPool.create.withArgs({foo: 'bar'}).returns({baz: 'qux'});
-
-            assert.deepEqual(BrowserPool.create(), {baz: 'qux'});
         });
 
         describe('browser manager', () => {
