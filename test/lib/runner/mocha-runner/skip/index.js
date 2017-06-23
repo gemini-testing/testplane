@@ -27,102 +27,73 @@ describe('Skip', () => {
     });
 
     describe('handleEntity', () => {
-        it('should extend test data with additional info', () => {
-            const test = mkTest();
-            skip.shouldSkip = true;
-            skip.silent = false;
+        describe('loud skip', () => {
+            beforeEach(() => skip.silent = false);
 
-            skip.handleEntity(test);
-
-            assert.propertyVal(test, 'pending', true);
-            assert.property(test, 'skipReason');
-        });
-
-        it('should not extend test data if browser does not match', () => {
-            const test = mkTest();
-            skip.shouldSkip = false;
-            skip.silent = false;
-
-            skip.handleEntity(test);
-
-            assert.notProperty(test, 'pending');
-            assert.notProperty(test, 'skipReason');
-        });
-
-        it('should not mark silently skipped test as skipped', () => {
-            const test = mkTest();
-            skip.shouldSkip = true;
-            skip.silent = true;
-
-            skip.handleEntity(test);
-
-            assert.notProperty(test, 'pending');
-            assert.notProperty(test, 'skipReason');
-        });
-
-        it('should reset skip data after test will be skipped loudly', () => {
-            const test = mkTest();
-            skip.shouldSkip = true;
-            skip.silent = false;
-
-            skip.handleEntity(test);
-
-            assert.equal(skip.comment, '');
-            assert.equal(skip.shouldSkip, false);
-            assert.equal(skip.silent, false);
-        });
-
-        it('should reset skip data after test will be skipped silently', () => {
-            const test = mkTest();
-            skip.shouldSkip = true;
-            skip.silent = true;
-
-            skip.handleEntity(test);
-
-            assert.equal(skip.comment, '');
-            assert.equal(skip.shouldSkip, false);
-            assert.equal(skip.silent, false);
-        });
-
-        describe('silent flag', () => {
-            it('should remove silently skipped test from the end of parent tests', () => {
-                const test = _.set({type: 'test'}, 'parent.tests', ['test1', 'test2']);
+            it('should extend test data with additional info if an entity should be skipped', () => {
+                const test = mkTest();
                 skip.shouldSkip = true;
-                skip.silent = true;
 
                 skip.handleEntity(test);
 
-                assert.deepEqual(test.parent.tests, ['test1']);
+                assert.propertyVal(test, 'pending', true);
+                assert.property(test, 'skipReason');
             });
 
-            it('should not remove skipped test without silent flag from parent', () => {
-                const test = _.set({type: 'test'}, 'parent.tests', ['test1']);
-                skip.shouldSkip = true;
-                skip.silent = false;
+            it('should not extend test data if an entity should not be skipped', () => {
+                const test = mkTest();
+                skip.shouldSkip = false;
 
                 skip.handleEntity(test);
 
-                assert.deepEqual(test.parent.tests, ['test1']);
+                assert.notProperty(test, 'pending');
+                assert.notProperty(test, 'skipReason');
             });
 
-            it('should remove silently skipped suite from the end of parent suites', () => {
-                const suite = _.set({}, 'parent.suites', ['suite1', 'suite2']);
+            it('should reset skip data after skip', () => {
+                const test = mkTest();
                 skip.shouldSkip = true;
-                skip.silent = true;
 
-                skip.handleEntity(suite);
+                skip.handleEntity(test);
 
-                assert.deepEqual(suite.parent.suites, ['suite1']);
+                assert.equal(skip.comment, '');
+                assert.equal(skip.shouldSkip, false);
+                assert.equal(skip.silent, false);
+            });
+        });
+
+        describe('silent skip', () => {
+            beforeEach(() => skip.silent = true);
+
+            it('should extend test data with additional info if an entity should be skipped', () => {
+                const test = mkTest();
+                skip.shouldSkip = true;
+
+                skip.handleEntity(test);
+
+                assert.propertyVal(test, 'pending', true);
+                assert.propertyVal(test, 'silentSkip', true);
             });
 
-            it('should not remove skipped suite without silent flag from parent', () => {
-                const suite = _.set({type: 'test'}, 'parent.suites', ['suite1']);
+            it('should not extend test data if an entity should not be skipped', () => {
+                const test = mkTest();
+                skip.shouldSkip = false;
+
+                skip.handleEntity(test);
+
+                assert.notProperty(test, 'pending');
+                assert.notProperty(test, 'skipReason');
+            });
+
+            it('should reset skip data after skip', () => {
+                const test = mkTest();
                 skip.shouldSkip = true;
-                skip.silent = false;
 
-                skip.handleEntity(suite);
+                skip.handleEntity(test);
 
-                assert.deepEqual(suite.parent.suites, ['suite1']);
+                assert.equal(skip.comment, '');
+                assert.equal(skip.shouldSkip, false);
+                assert.equal(skip.silent, false);
             });
         });
     });
