@@ -3,8 +3,7 @@
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
 const q = require('q');
-const QEmitter = require('qemitter');
-const qUtils = require('qemitter/utils');
+const PassthroughEmitter = require('gemini-core').PassthroughEmitter;
 
 const BrowserPool = require('../../../lib/browser-pool');
 const MochaRunner = require('../../../lib/runner/mocha-runner');
@@ -21,7 +20,7 @@ describe('Runner', () => {
     const mkMochaRunner = () => {
         sandbox.stub(MochaRunner, 'create');
 
-        const mochaRunner = new QEmitter();
+        const mochaRunner = new PassthroughEmitter();
         mochaRunner.init = sandbox.stub().returnsThis();
         mochaRunner.run = sandbox.stub().returns(q());
 
@@ -213,14 +212,13 @@ describe('Runner', () => {
                 });
 
                 it('should passthrough events from mocha runners synchronously', () => {
-                    sandbox.stub(qUtils, 'passthroughEvent');
                     const runner = new Runner(makeConfigStub());
+                    sandbox.stub(runner, 'passthroughEvent');
 
                     return run_({runner})
                         .then(() => {
-                            assert.calledOnceWith(qUtils.passthroughEvent,
-                                sinon.match.instanceOf(QEmitter),
-                                sinon.match.instanceOf(Runner),
+                            assert.calledOnceWith(runner.passthroughEvent,
+                                sinon.match.instanceOf(PassthroughEmitter),
                                 mochaRunnerEvents
                             );
                         });
@@ -291,15 +289,14 @@ describe('Runner', () => {
             sandbox.stub(BrowserAgent, 'create').returns(sinon.createStubInstance(BrowserAgent));
         });
 
-        it('should passthrough BEFORE_FILE_READ and AFTER_FILE_READ events synchronously', () => {
-            sandbox.stub(qUtils, 'passthroughEvent');
+        it('should passthrough "BEFORE_FILE_READ" and "AFTER_FILE_READ" events synchronously', () => {
             const runner = new Runner(makeConfigStub());
+            sandbox.stub(runner, 'passthroughEvent');
 
             runner.buildSuiteTree([{}]);
 
-            assert.calledWith(qUtils.passthroughEvent,
-                sinon.match.instanceOf(QEmitter),
-                sinon.match.instanceOf(Runner),
+            assert.calledWith(runner.passthroughEvent,
+                sinon.match.instanceOf(PassthroughEmitter),
                 [
                     RunnerEvents.BEFORE_FILE_READ,
                     RunnerEvents.AFTER_FILE_READ

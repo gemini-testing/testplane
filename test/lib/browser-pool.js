@@ -1,9 +1,9 @@
 'use strict';
 
-const CoreBrowserPool = require('gemini-core').BrowserPool;
 const _ = require('lodash');
 const q = require('q');
-const QEmitter = require('qemitter');
+const CoreBrowserPool = require('gemini-core').BrowserPool;
+const AsyncEmitter = require('gemini-core').AsyncEmitter;
 const BrowserPool = require('../../lib/browser-pool');
 const Browser = require('../../lib/browser');
 const Events = require('../../lib/constants/runner-events');
@@ -58,7 +58,7 @@ describe('browser-pool', () => {
             _.forEach({onStart: Events.SESSION_START, onQuit: Events.SESSION_END}, (event, method) => {
                 describe(`${method}`, () => {
                     it(`should emit browser event "${event}"`, () => {
-                        const emitter = new QEmitter();
+                        const emitter = new AsyncEmitter();
                         const onEvent = sandbox.spy();
 
                         BrowserPool.create(null, emitter);
@@ -72,7 +72,7 @@ describe('browser-pool', () => {
                     });
 
                     it('should wait all async listeners', () => {
-                        const emitter = new QEmitter();
+                        const emitter = new AsyncEmitter();
                         const onEvent = sandbox.stub().callsFake(() => q.delay(1).then(() => ({foo: 'bar'})));
 
                         BrowserPool.create(null, emitter);
