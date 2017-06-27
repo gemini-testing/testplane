@@ -66,6 +66,24 @@ describe('config options', () => {
 
                 assert.deepEqual(config.system.mochaOpts.grep, /test/);
             });
+
+            it('should parse mochaOpts option from environment', () => {
+                const result = parse_({
+                    options: {system: {mochaOpts: {}}},
+                    env: {'hermione_system_mocha_opts': '{"some": "opts"}'}
+                });
+
+                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
+            });
+
+            it('should parse mochaOpts options from cli', () => {
+                const result = parse_({
+                    options: {system: {mochaOpts: {}}},
+                    argv: ['--system-mocha-opts', '{"some": "opts"}']
+                });
+
+                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
+            });
         });
 
         describe('ctx', () => {
