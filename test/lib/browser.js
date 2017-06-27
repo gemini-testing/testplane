@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const webdriverio = require('webdriverio');
 const Browser = require('../../lib/browser');
 const logger = require('../../lib/utils').logger;
@@ -33,9 +33,9 @@ describe('Browser', () => {
     }
 
     function makeSessionStub_() {
-        const session = q();
+        const session = Promise.resolve();
         session.init = sandbox.stub().named('init').returns(session);
-        session.end = sandbox.stub().named('end').returns(q());
+        session.end = sandbox.stub().named('end').returns(Promise.resolve());
         session.url = sandbox.stub().named('url').returns(session);
         session.requestHandler = {defaultOptions: {}};
 
@@ -359,7 +359,7 @@ describe('Browser', () => {
 
     describe('error handling', () => {
         it('should warn in case of failed end', () => {
-            session.end.returns(q.reject(new Error('failed end')));
+            session.end.returns(Promise.reject(new Error('failed end')));
 
             return mkBrowser_()
                 .init()

@@ -1,8 +1,8 @@
 'use strict';
 
-const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
+const BrowserAgent = require('gemini-core').BrowserAgent;
 const PassthroughEmitter = require('gemini-core').PassthroughEmitter;
 
 const BrowserPool = require('../../../lib/browser-pool');
@@ -22,7 +22,7 @@ describe('Runner', () => {
 
         const mochaRunner = new PassthroughEmitter();
         mochaRunner.init = sandbox.stub().returnsThis();
-        mochaRunner.run = sandbox.stub().returns(q());
+        mochaRunner.run = sandbox.stub().returns(Promise.resolve());
 
         MochaRunner.create.returns(mochaRunner);
 
@@ -46,7 +46,7 @@ describe('Runner', () => {
 
         sandbox.stub(MochaRunner, 'prepare');
         sandbox.stub(MochaRunner.prototype, 'init').returnsThis();
-        sandbox.stub(MochaRunner.prototype, 'run').returns(q());
+        sandbox.stub(MochaRunner.prototype, 'run').returns(Promise.resolve());
 
         sandbox.stub(logger, 'warn');
     });
@@ -71,7 +71,7 @@ describe('Runner', () => {
     describe('run', () => {
         describe('RUNNER_START event', () => {
             it('should pass a runner to a RUNNER_START handler', () => {
-                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(Promise.resolve());
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
@@ -82,7 +82,8 @@ describe('Runner', () => {
 
             it('should start mocha runner only after RUNNER_START handler finish', () => {
                 const mediator = sinon.spy().named('mediator');
-                const onRunnerStart = sinon.stub().named('onRunnerStart').callsFake(() => q.delay(1).then(mediator));
+                const onRunnerStart = sinon.stub().named('onRunnerStart')
+                    .callsFake(() => Promise.delay(1).then(mediator));
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
@@ -92,7 +93,7 @@ describe('Runner', () => {
             });
 
             it('should not run any mocha runner if RUNNER_START handler failed', () => {
-                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject('some-error'));
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(Promise.reject('some-error'));
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
@@ -177,8 +178,8 @@ describe('Runner', () => {
             const secondResolveMarker = sandbox.stub().named('Second resolve marker');
 
             MochaRunner.prototype.run
-                .onFirstCall().callsFake(() => q().then(firstResolveMarker))
-                .onSecondCall().callsFake(() => q.delay(1).then(secondResolveMarker));
+                .onFirstCall().callsFake(() => Promise.resolve().then(firstResolveMarker))
+                .onSecondCall().callsFake(() => Promise.delay(1).then(secondResolveMarker));
 
             return run_({browsers: ['browser1', 'browser2']})
                 .then(() => {
@@ -239,7 +240,7 @@ describe('Runner', () => {
 
             it('runner should wait until RUNNER_END handler finished', () => {
                 const finMarker = sinon.spy().named('finMarker');
-                const onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(q.delay(1).then(finMarker));
+                const onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(Promise.delay(1).then(finMarker));
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
@@ -249,7 +250,7 @@ describe('Runner', () => {
             });
 
             it('should be emitted even if RUNNER_START handler failed', () => {
-                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q.reject());
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(Promise.reject());
                 const onRunnerEnd = sinon.spy().named('onRunnerEnd');
                 const runner = new Runner(makeConfigStub());
 
@@ -265,18 +266,18 @@ describe('Runner', () => {
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
-                MochaRunner.prototype.run.returns(q.reject());
+                MochaRunner.prototype.run.returns(Promise.reject());
 
                 return assert.isRejected(run_({runner}))
                     .then(() => assert.calledOnce(onRunnerEnd));
             });
 
             it('should fail with original error if RUNNER_END handler is failed too', () => {
-                const onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(q.reject('handler-error'));
+                const onRunnerEnd = sinon.stub().named('onRunnerEnd').returns(Promise.reject('handler-error'));
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_END, onRunnerEnd);
-                MochaRunner.prototype.run.returns(q.reject('run-error'));
+                MochaRunner.prototype.run.returns(Promise.reject('run-error'));
 
                 return assert.isRejected(run_({runner}), /run-error/);
             });

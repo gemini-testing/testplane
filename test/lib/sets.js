@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const globExtra = require('glob-extra');
 const SetsBuilder = require('gemini-core').SetsBuilder;
 const sets = require('../../lib/sets');
@@ -33,7 +33,7 @@ describe('sets', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(globExtra, 'expandPaths').returns(q([]));
+        sandbox.stub(globExtra, 'expandPaths').returns(Promise.resolve([]));
         sandbox.stub(SetsBuilder.prototype, 'useFiles').returnsThis();
         sandbox.stub(SetsBuilder.prototype, 'useSets').returnsThis();
         sandbox.stub(SetsBuilder.prototype, 'useBrowsers').returnsThis();

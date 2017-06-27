@@ -1,8 +1,8 @@
 'use strict';
 
 const path = require('path');
-const q = require('q');
 const _ = require('lodash');
+const Promise = require('bluebird');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
 const logger = require('../../../../lib/utils').logger;
@@ -33,7 +33,7 @@ describe('mocha-runner/mocha-adapter', () => {
     beforeEach(() => {
         testSkipper = sinon.createStubInstance(TestSkipper);
         browserAgent = sinon.createStubInstance(BrowserAgent);
-        browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+        browserAgent.getBrowser.returns(Promise.resolve(mkBrowserStub_()));
 
         clearRequire = sandbox.stub().named('clear-require');
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
@@ -145,8 +145,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
     describe('inject browser', () => {
         beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.getBrowser.returns(Promise.resolve(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(Promise.resolve());
         });
 
         it('should request browser before suite execution', () => {
@@ -163,7 +163,7 @@ describe('mocha-runner/mocha-adapter', () => {
             const testFailSpy = sinon.spy();
             const error = new Error();
 
-            browserAgent.getBrowser.returns(q.reject(error));
+            browserAgent.getBrowser.returns(Promise.reject(error));
 
             MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
                 return rootSuite
@@ -213,8 +213,8 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should not be rejected if freeBrowser failed', () => {
             const browser = mkBrowserStub_();
 
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q.reject('some-error'));
+            browserAgent.getBrowser.returns(Promise.resolve(browser));
+            browserAgent.freeBrowser.returns(Promise.reject('some-error'));
 
             const mochaAdapter = mkMochaAdapter_();
 
@@ -230,8 +230,8 @@ describe('mocha-runner/mocha-adapter', () => {
         describe('should release browser', () => {
             it('after suite execution', () => {
                 const browser = mkBrowserStub_();
-                browserAgent.getBrowser.returns(q(browser));
-                browserAgent.freeBrowser.returns(q());
+                browserAgent.getBrowser.returns(Promise.resolve(browser));
+                browserAgent.freeBrowser.returns(Promise.resolve());
 
                 const mochaAdapter = mkMochaAdapter_();
 
@@ -270,8 +270,8 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.getBrowser.returns(Promise.resolve(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(Promise.resolve());
             sandbox.stub(Skip.prototype, 'handleEntity');
 
             mochaAdapter = mkMochaAdapter_();
@@ -336,17 +336,17 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should set promise timeout', () => {
             const test = new MochaStub.Test(null, {
-                fn: () => q.delay(100)
+                fn: () => Promise.delay(100)
             });
             test.timeout(50);
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return assert.isRejected(test.run(), /Timed out/);
+            return assert.isRejected(test.run(), /timed out/);
         });
 
         it('should not fail test if timeout not exceeded', () => {
             const test = new MochaStub.Test(null, {
-                fn: () => q.delay(50)
+                fn: () => Promise.delay(50)
             });
             test.timeout(100);
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
@@ -356,7 +356,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should not set timeout if it is disabled', () => {
             const test = new MochaStub.Test(null, {
-                fn: () => q.delay(100)
+                fn: () => Promise.delay(100)
             });
             test.timeout(50);
             test.enableTimeouts(false);
@@ -372,8 +372,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
         beforeEach(() => {
             browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.getBrowser.returns(Promise.resolve(browser));
+            browserAgent.freeBrowser.returns(Promise.resolve());
 
             mochaAdapter = mkMochaAdapter_();
         });
@@ -537,7 +537,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should pass to proxy reporter getter for requested browser', () => {
             const browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.getBrowser.returns(Promise.resolve(browser));
             passthroughMochaEvents_();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
@@ -620,7 +620,7 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.freeBrowser.returns(Promise.resolve());
 
             mochaAdapter = mkMochaAdapter_();
         });
@@ -630,7 +630,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeAll(() => q.reject(new Error()))
+                    .beforeAll(() => Promise.reject(new Error()))
                     .addTest({fn: testCb});
             });
 
@@ -644,7 +644,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
                 return rootSuite
-                    .beforeAll(() => q.reject(error))
+                    .beforeAll(() => Promise.reject(error))
                     .addTest({title: 'first-test'})
                     .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'second-test'}).onFail(testFailSpy))
                     .onFail(testFailSpy);
@@ -679,7 +679,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeAll(() => q.reject(new Error()))
+                    .beforeAll(() => Promise.reject(new Error()))
                     .beforeEach(beforeEachHookFn)
                     .addTest();
             });
@@ -695,7 +695,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 const suite = MochaStub.Suite.create();
 
                 rootSuite
-                    .beforeAll(() => q.reject(new Error()))
+                    .beforeAll(() => Promise.reject(new Error()))
                     .addSuite(suite);
 
                 suite.beforeEach(beforeEachHookFn).addTest();
@@ -714,7 +714,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 const suite = MochaStub.Suite.create();
 
                 rootSuite
-                    .beforeAll(() => q.reject(new Error()))
+                    .beforeAll(() => Promise.reject(new Error()))
                     .addSuite(suite);
 
                 suite.beforeAll(beforeAllHookFn).addTest();
@@ -736,7 +736,7 @@ describe('mocha-runner/mocha-adapter', () => {
                     .beforeEach(beforeEachHookFn)
                     .addSuite(suite);
 
-                suite.beforeAll(() => q.reject(new Error())).addTest();
+                suite.beforeAll(() => Promise.reject(new Error())).addTest();
 
                 return rootSuite;
             });
@@ -751,7 +751,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeAll(() => q.reject(error))
+                    .beforeAll(() => Promise.reject(error))
                     .beforeEach(() => true)
                     .addTest()
                     .addTest()
@@ -770,8 +770,8 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.getBrowser.returns(Promise.resolve(mkBrowserStub_()));
+            browserAgent.freeBrowser.returns(Promise.resolve());
 
             mochaAdapter = mkMochaAdapter_();
         });
@@ -781,7 +781,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeEach(() => q.reject(new Error()))
+                    .beforeEach(() => Promise.reject(new Error()))
                     .addTest({fn: testCb});
             });
 
@@ -808,7 +808,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .beforeEach(() => q.reject(error))
+                    .beforeEach(() => Promise.reject(error))
                     .addTest({title: 'some-test'})
                     .onFail(testFailSpy);
             });
@@ -840,7 +840,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 const suite = MochaStub.Suite.create(rootSuite);
 
                 rootSuite
-                    .beforeEach(() => q.reject(new Error()))
+                    .beforeEach(() => Promise.reject(new Error()))
                     .addSuite(suite);
 
                 suite.beforeEach(beforeEachHookFn).addTest();

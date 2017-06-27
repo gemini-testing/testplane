@@ -2,7 +2,7 @@
 
 const program = require('commander');
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const hermioneCli = require('../../../lib/cli');
 const info = require('../../../lib/cli/info');
 const Config = require('../../../lib/config');
@@ -26,7 +26,7 @@ describe('cli', () => {
         sandbox.stub(Config, 'create');
 
         sandbox.spy(Hermione, 'create');
-        sandbox.stub(Hermione.prototype, 'run').returns(q(true));
+        sandbox.stub(Hermione.prototype, 'run').returns(Promise.resolve(true));
 
         sandbox.stub(logger, 'log');
         sandbox.stub(logger, 'error');
@@ -128,35 +128,35 @@ describe('cli', () => {
     });
 
     it('should exit with code 0 if tests pass', () => {
-        Hermione.prototype.run.returns(q(true));
+        Hermione.prototype.run.returns(Promise.resolve(true));
 
         return hermioneCli.run()
             .then(() => assert.calledWith(process.exit, 0));
     });
 
     it('should exit with code 1 if tests fail', () => {
-        Hermione.prototype.run.returns(q(false));
+        Hermione.prototype.run.returns(Promise.resolve(false));
 
         return hermioneCli.run()
             .then(() => assert.calledWith(process.exit, 1));
     });
 
     it('should exit with code 1 on reject', () => {
-        Hermione.prototype.run.returns(q.reject({}));
+        Hermione.prototype.run.returns(Promise.reject({}));
 
         return hermioneCli.run()
             .then(() => assert.calledWith(process.exit, 1));
     });
 
     it('should log an error stack on reject', () => {
-        Hermione.prototype.run.returns(q.reject({stack: 'some-stack'}));
+        Hermione.prototype.run.returns(Promise.reject({stack: 'some-stack'}));
 
         return hermioneCli.run()
             .then(() => assert.calledWith(logger.error, 'some-stack'));
     });
 
     it('should log an error on reject if stack does not exist', () => {
-        Hermione.prototype.run.returns(q.reject('some-error'));
+        Hermione.prototype.run.returns(Promise.reject('some-error'));
 
         return hermioneCli.run()
             .then(() => assert.calledWith(logger.error, 'some-error'));

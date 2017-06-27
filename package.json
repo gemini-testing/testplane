@@ -28,7 +28,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "bluebird-q": "^2.1.1",
+    "bluebird": "^3.5.0",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
     "commander": "^2.9.0",
@@ -39,7 +39,6 @@
     "lodash": "^4.17.4",
     "mocha": "~2.4.5",
     "plugins-loader": "1.0.1",
-    "q": "^2.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
     "webdriverio": "^4.6.1"

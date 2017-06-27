@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const q = require('q');
+const Promise = require('bluebird');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('../../../../lib/constants/runner-events');
 const MochaRunner = require('../../../../lib/runner/mocha-runner');
@@ -174,6 +174,7 @@ describe('mocha-runner', () => {
 
             MochaBuilder.prototype.buildAdapters.returns([mocha1, mocha2]);
             sandbox.spy(RetryMochaRunner, 'create');
+            RetryMochaRunner.prototype.run.returns(Promise.resolve());
 
             return run_()
                 .then(() => {
@@ -186,6 +187,7 @@ describe('mocha-runner', () => {
         it('should create a retry runner for a passed browser', () => {
             MochaBuilder.prototype.buildAdapters.returns([createMochaStub_()]);
             sandbox.spy(RetryMochaRunner, 'create');
+            RetryMochaRunner.prototype.run.returns(Promise.resolve());
 
             const config = makeConfigStub({browsers: ['bro'], retry: 10});
 
@@ -197,6 +199,7 @@ describe('mocha-runner', () => {
             const mocha = createMochaStub_();
             sandbox.stub(mocha, 'run');
             MochaBuilder.prototype.buildAdapters.returns([mocha]);
+            RetryMochaRunner.prototype.run.returns(Promise.resolve());
 
             return run_()
                 .then(() => {
@@ -215,8 +218,8 @@ describe('mocha-runner', () => {
             ]);
 
             RetryMochaRunner.prototype.run
-                .onFirstCall().callsFake(() => q().then(firstResolveMarker))
-                .onSecondCall().callsFake(() => q.delay(1).then(secondResolveMarker));
+                .onFirstCall().callsFake(() => Promise.resolve().then(firstResolveMarker))
+                .onSecondCall().callsFake(() => Promise.delay(1).then(secondResolveMarker));
 
             return run_()
                 .then(() => {
@@ -228,14 +231,17 @@ describe('mocha-runner', () => {
         it('should be rejected if one of mocha instances rejected on run', () => {
             MochaBuilder.prototype.buildAdapters.returns([createMochaStub_()]);
 
-            RetryMochaRunner.prototype.run.returns(q.reject('Error'));
+            RetryMochaRunner.prototype.run.returns(Promise.reject('Error'));
 
             return assert.isRejected(run_(), /Error/);
         });
 
         describe('should passthrough events from a', () => {
             const testPassthroughing = (event, from) => {
-                RetryMochaRunner.prototype.run.callsFake(() => from.emit(event, 'some-data'));
+                RetryMochaRunner.prototype.run.callsFake(() => {
+                    from.emit(event, 'some-data');
+                    return Promise.resolve();
+                });
 
                 const mochaRunner = createMochaRunner_();
                 const spy = sinon.spy();

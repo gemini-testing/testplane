@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const CoreBrowserPool = require('gemini-core').BrowserPool;
 const AsyncEmitter = require('gemini-core').AsyncEmitter;
 const BrowserPool = require('../../lib/browser-pool');
@@ -50,7 +50,7 @@ describe('browser-pool', () => {
                 BrowserPool.create();
 
                 const browser = stubBrowser();
-                browser.init.returns(q({session: 'id'}));
+                browser.init.returns(Promise.resolve({session: 'id'}));
 
                 assert.becomes(getBrowserManager().start(browser), {session: 'id'});
             });
@@ -73,7 +73,7 @@ describe('browser-pool', () => {
 
                     it('should wait all async listeners', () => {
                         const emitter = new AsyncEmitter();
-                        const onEvent = sandbox.stub().callsFake(() => q.delay(1).then(() => ({foo: 'bar'})));
+                        const onEvent = sandbox.stub().callsFake(() => Promise.delay(1).then(() => ({foo: 'bar'})));
 
                         BrowserPool.create(null, emitter);
 
@@ -89,7 +89,7 @@ describe('browser-pool', () => {
             it('should quit a browser', () => {
                 const browser = stubBrowser();
 
-                browser.quit.returns(q({foo: 'bar'}));
+                browser.quit.returns(Promise.resolve({foo: 'bar'}));
 
                 BrowserPool.create();
 

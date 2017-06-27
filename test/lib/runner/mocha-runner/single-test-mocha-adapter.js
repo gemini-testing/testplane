@@ -1,6 +1,6 @@
 'use strict';
 
-const q = require('q');
+const Promise = require('bluebird');
 const MochaAdapter = require('../../../../lib/runner/mocha-runner/mocha-adapter');
 const SingleTestMochaAdapter = require('../../../../lib/runner/mocha-runner/single-test-mocha-adapter');
 
@@ -102,7 +102,7 @@ describe('mocha-runner/single-test-mocha-adapter', () => {
         const mochaAdapter = mkMochaAdapterStub();
         const singleTestMochaAdapter = SingleTestMochaAdapter.create(mochaAdapter);
 
-        mochaAdapter.run.returns(q({foo: 'bar'}));
+        mochaAdapter.run.returns(Promise.resolve({foo: 'bar'}));
 
         return assert.becomes(singleTestMochaAdapter.run(), {foo: 'bar'});
     });

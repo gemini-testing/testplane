@@ -1,8 +1,8 @@
 'use strict';
 
 const _ = require('lodash');
+const Promise = require('bluebird');
 const pluginsLoader = require('plugins-loader');
-const q = require('q');
 const EventEmitter = require('events').EventEmitter;
 const AsyncEmitter = require('gemini-core').AsyncEmitter;
 const PassthroughEmitter = require('gemini-core').PassthroughEmitter;
@@ -28,7 +28,7 @@ describe('hermione', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(sets, 'reveal').returns(q());
+        sandbox.stub(sets, 'reveal').returns(Promise.resolve());
 
         sandbox.stub(logger, 'warn');
         sandbox.stub(Config, 'create').returns(makeConfigStub());
@@ -160,7 +160,7 @@ describe('hermione', () => {
             it('should use revealed sets', () => {
                 mkRunnerStub_();
 
-                sets.reveal.returns(q({bro: ['some/path/file.js']}));
+                sets.reveal.returns(Promise.resolve({bro: ['some/path/file.js']}));
 
                 return runHermione()
                     .then(() => assert.calledWith(Runner.prototype.run, {bro: ['some/path/file.js']}));
@@ -350,7 +350,7 @@ describe('hermione', () => {
             const config = makeConfigStub();
             Config.create.returns(config);
 
-            sets.reveal.returns(q(['some/path/file.js']));
+            sets.reveal.returns(Promise.resolve(['some/path/file.js']));
 
             return Hermione
                 .create(makeConfigStub())
