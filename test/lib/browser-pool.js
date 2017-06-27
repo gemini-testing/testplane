@@ -68,7 +68,7 @@ describe('browser-pool', () => {
                         emitter.on(event, onEvent);
 
                         return BrowserManager[method](stubBrowser('bro', {public: 'api'}))
-                            .then(() => assert.calledOnceWith(onEvent, {public: 'api'}, {browserId: 'bro'}));
+                            .then(() => assert.calledOnceWith(onEvent, {public: 'api', browserId: 'bro'}));
                     });
 
                     it('should wait all async listeners', () => {
@@ -81,7 +81,7 @@ describe('browser-pool', () => {
 
                         emitter.on(event, onEvent);
 
-                        assert.becomes(BrowserManager[method](stubBrowser()), [{foo: 'bar'}]);
+                        assert.becomes(BrowserManager[method](stubBrowser('bro', {public: 'api'})), [{foo: 'bar'}]);
                     });
                 });
             });
