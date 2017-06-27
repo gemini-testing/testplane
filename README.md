@@ -353,15 +353,13 @@ Write your first test.
 ```javascript
 var assert = require('chai').assert;
 
-describe('yandex', function() {
-    it('should find itself', function() {
+describe('github', function() {
+    it('should find hermione', function() {
         return this.browser
-            .url('https://yandex.com')
-            .setValue('.search2__input input', 'yandex')
-            .click('.search2__button button')
-            .getText('.z-entity-card__title')
+            .url('https://github.com/gemini-testing/hermione')
+            .getText('#readme h1')
             .then(function(title) {
-                assert.equal(title, 'Yandex')
+                assert.equal(title, 'Hermione')
             });
     });
 });
