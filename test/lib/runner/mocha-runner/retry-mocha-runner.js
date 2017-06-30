@@ -35,6 +35,20 @@ describe('mocha-runner/retry-mocha-runner', () => {
     beforeEach(() => mochaAdapter = createMochaAdapter());
     afterEach(() => sandbox.restore());
 
+    describe('constructor', () => {
+        it('should provide the ability to mutate the passed config', () => {
+            const config = {retry: 1};
+            const retryMochaRunner = createRetryMochaRunner(config);
+
+            mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, createTestStub()));
+
+            config.retry = 0;
+
+            return retryMochaRunner.run()
+                .then(() => assert.calledOnce(mochaAdapter.run));
+        });
+    });
+
     describe('run', () => {
         describe('on test fail', () => {
             it('should emit "TEST_FAIL" event if no retries were set', () => {
@@ -47,6 +61,36 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 return retryMochaRunner.run()
                     .then(() => assert.calledOnceWith(onTestFail, test));
+            });
+
+            it('should not retry if no retries were set', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 0});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, createTestStub()));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
+            });
+
+            it('should emit "TEST_FAIL" event if retries count is below zero', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: -1});
+                const onTestFail = sinon.spy().named('onTestFail');
+                const test = createTestStub();
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, test));
+                retryMochaRunner.on(RunnerEvents.TEST_FAIL, onTestFail);
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnceWith(onTestFail, test));
+            });
+
+            it('should not retry if retries count is below zero', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: -1});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
             });
 
             it('should emit "RETRY" event if retries were set', () => {
@@ -128,6 +172,15 @@ describe('mocha-runner/retry-mocha-runner', () => {
                     .then(() => assert.calledOnceWith(onErr, 'err'));
             });
 
+            it('should not retry if no runnable passed', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 1});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err'));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
+            });
+
             it('should emit "ERROR" event if a failed runnable does not have a parent', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 1});
                 const onErr = sinon.spy().named('onErr');
@@ -140,6 +193,15 @@ describe('mocha-runner/retry-mocha-runner', () => {
                     .then(() => assert.calledOnceWith(onErr, 'err', runnable));
             });
 
+            it('should not retry if a failed runnable does not have a parent', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 1});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createRunnableStub()));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
+            });
+
             it('should emit "ERROR" event if no retries were set', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 0});
                 const onErr = sinon.spy().named('onErr');
@@ -150,6 +212,36 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 return retryMochaRunner.run()
                     .then(() => assert.calledOnceWith(onErr, 'err', runnable));
+            });
+
+            it('should not retry if no retries were set', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 0});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createTestStub({})));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
+            });
+
+            it('should emit "ERROR" event if retries count is below zero', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: -1});
+                const onErr = sinon.spy().named('onErr');
+                const runnable = createTestStub({});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', runnable));
+                retryMochaRunner.on(RunnerEvents.ERROR, onErr);
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnceWith(onErr, 'err', runnable));
+            });
+
+            it('should not retry if retries count is below zero', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: -1});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createTestStub({})));
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnce(mochaAdapter.run));
             });
 
             it('should emit "RETRY" event if retries were set', () => {
@@ -202,7 +294,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
             it('should submit for retry a failed mocha', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 1});
 
-                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR));
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createRunnableStub({})));
 
                 return retryMochaRunner.run()
                     .then(() => assert.calledTwice(mochaAdapter.run));
@@ -211,7 +303,7 @@ describe('mocha-runner/retry-mocha-runner', () => {
             it('should reinit mocha before a retry', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 1});
 
-                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR));
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createRunnableStub({})));
 
                 return retryMochaRunner.run()
                     .then(() => assert.callOrder(mochaAdapter.reinit, mochaAdapter.run));
