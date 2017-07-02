@@ -22,8 +22,8 @@ describe('mocha-runner/mocha-adapter', () => {
     let clearRequire;
     let testSkipper;
 
-    const mkMochaAdapter_ = (opts, ctx) => {
-        return MochaAdapter.create(opts || {}, browserAgent, ctx);
+    const mkMochaAdapter_ = (config) => {
+        return MochaAdapter.create(browserAgent, _.extend({patternsOnReject: []}, config));
     };
 
     const mkBrowserStub_ = () => {
@@ -58,7 +58,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
     describe('constructor', () => {
         it('should pass shared opts to mocha instance', () => {
-            mkMochaAdapter_({grep: 'foo'});
+            mkMochaAdapter_({mochaOpts: {grep: 'foo'}});
 
             assert.deepEqual(MochaStub.lastInstance.constructorArgs, {grep: 'foo'});
         });
@@ -137,7 +137,7 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         it('hermione.ctx should return passed ctx', () => {
-            mkMochaAdapter_({}, {some: 'ctx'});
+            mkMochaAdapter_({ctx: {some: 'ctx'}});
 
             assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
         });
@@ -193,21 +193,6 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.calledOnce(browserAgent.getBrowser));
         });
 
-        it('should release browser after suite execution', () => {
-            const browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q());
-
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run().then(() => {
-                assert.calledOnce(browserAgent.freeBrowser);
-                assert.calledWith(browserAgent.freeBrowser, browser);
-            });
-        });
-
         it('should disable mocha timeouts while setting browser hooks', () => {
             const suitePrototype = MochaStub.Suite.prototype;
             const beforeAllStub = sandbox.stub(suitePrototype, 'beforeAll');
@@ -240,6 +225,44 @@ describe('mocha-runner/mocha-adapter', () => {
                     assert.calledOnce(logger.warn);
                     assert.calledWithMatch(logger.warn, /some-error/);
                 });
+        });
+
+        describe('should release browser', () => {
+            it('after suite execution', () => {
+                const browser = mkBrowserStub_();
+                browserAgent.getBrowser.returns(q(browser));
+                browserAgent.freeBrowser.returns(q());
+
+                const mochaAdapter = mkMochaAdapter_();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, browser, {force: false});
+                });
+            });
+
+            it('conditionally if test error does not matches on patterns on reject', () => {
+                const patternsOnReject = [/some-error/i];
+                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
+
+                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'other-error'}});
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
+                });
+            });
+
+            it('unconditionally if test error matches on patterns on reject', () => {
+                const patternsOnReject = [/some-error/i];
+                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
+
+                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'SOME-ERROR'}});
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
+                });
+            });
         });
     });
 

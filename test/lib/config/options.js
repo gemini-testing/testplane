@@ -11,6 +11,8 @@ describe('config options', () => {
 
     const createConfig = () => Config.create(defaults.config);
 
+    const parse_ = (opts) => parser(_.defaults(opts, {env: {}, argv: []}));
+
     beforeEach(() => sandbox.stub(Config, 'read'));
 
     afterEach(() => sandbox.restore());
@@ -64,6 +66,24 @@ describe('config options', () => {
 
                 assert.deepEqual(config.system.mochaOpts.grep, /test/);
             });
+
+            it('should parse mochaOpts option from environment', () => {
+                const result = parse_({
+                    options: {system: {mochaOpts: {}}},
+                    env: {'hermione_system_mocha_opts': '{"some": "opts"}'}
+                });
+
+                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
+            });
+
+            it('should parse mochaOpts options from cli', () => {
+                const result = parse_({
+                    options: {system: {mochaOpts: {}}},
+                    argv: ['--system-mocha-opts', '{"some": "opts"}']
+                });
+
+                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
+            });
         });
 
         describe('ctx', () => {
@@ -80,6 +100,49 @@ describe('config options', () => {
                 const config = createConfig();
 
                 assert.deepEqual(config.system.ctx, {some: 'ctx'});
+            });
+        });
+
+        describe('patternsOnReject', () => {
+            it('should be empty by default', () => {
+                const config = createConfig();
+
+                assert.deepEqual(config.system.patternsOnReject, []);
+            });
+
+            it('should throw error if "patternsOnReject" is not an array', () => {
+                const readConfig = _.set({}, 'system.patternsOnReject', {});
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"patternsOnReject" must be an array');
+            });
+
+            it('should override "patternsOnReject" option', () => {
+                const readConfig = _.set({}, 'system.patternsOnReject', ['some-pattern']);
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.system.patternsOnReject, ['some-pattern']);
+            });
+
+            it('should parse "patternsOnReject" option from environment', () => {
+                const result = parse_({
+                    options: {system: {patternsOnReject: []}},
+                    env: {'hermione_system_patterns_on_reject': '["some-pattern"]'}
+                });
+
+                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
+            });
+
+            it('should parse "patternsOnReject" options from cli', () => {
+                const result = parse_({
+                    options: {system: {patternsOnReject: []}},
+                    argv: ['--system-patterns-on-reject', '["some-pattern"]']
+                });
+
+                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
             });
         });
     });
@@ -112,8 +175,6 @@ describe('config options', () => {
     });
 
     describe('plugins', () => {
-        const parse_ = (opts) => parser(_.defaults(opts, {env: {}, argv: []}));
-
         it('should parse boolean value from environment', () => {
             const result = parse_({
                 options: {plugins: {foo: {}}},

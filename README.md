@@ -40,6 +40,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
     - [ctx](#ctx)
+    - [patternsOnReject](#patternsonreject)
   - [plugins](#plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
@@ -512,6 +513,15 @@ it('awesome test', function() {
 ```
 
 **Recommendation**: use `ctx` in your tests in favor of global variables.
+
+#### patternsOnReject
+Session would be rejected if test has been faile with error message which matches to specified patterns:
+```javascript
+patternsOnReject: [
+    /some-pattern/,
+    'other-pattern'
+]
+```
 
 ### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
