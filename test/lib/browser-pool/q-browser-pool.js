@@ -38,7 +38,6 @@ describe('browser-pool/q-browser-pool', () => {
             const browserPool = stubBrowserPool();
             const qBrowserPool = QBrowserPool.create(browserPool);
 
-
             browserPool.getBrowser.returns({some: 'browser'});
             bluebirdQ.withArgs({some: 'browser'}).returns(q({qPromisified: 'browser'}));
 
