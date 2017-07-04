@@ -9,7 +9,6 @@ All notable changes to this project will be documented in this file. See [standa
 ### Features
 
 * provide the ability to modify retries count from plugins ([fc1a372](https://github.com/gemini-testing/hermione/commit/fc1a372))
-* reject session if error matches on patterns from config ([775e0ea](https://github.com/gemini-testing/hermione/commit/775e0ea))
 
 
 
