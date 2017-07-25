@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.39.1"></a>
+## [0.39.1](https://github.com/gemini-testing/hermione/compare/v0.39.0...v0.39.1) (2017-07-25)
+
+
+### Bug Fixes
+
+* load plugins early ([5c00a24](https://github.com/gemini-testing/hermione/commit/5c00a24))
+
+
+
 <a name="0.39.0"></a>
 # [0.39.0](https://github.com/gemini-testing/hermione/compare/v0.37.4...v0.39.0) (2017-07-04)
 
