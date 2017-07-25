@@ -193,7 +193,7 @@ describe('hermione', () => {
 
                 return hermione.run()
                     .then(() => {
-                        _.forEach(RunnerEvents.getAll(), (event, name) => {
+                        _.forEach(RunnerEvents.get(), (event, name) => {
                             const spy = sinon.spy().named(`${name} handler`);
                             hermione.on(event, spy);
 
@@ -215,7 +215,7 @@ describe('hermione', () => {
                     .then(() => {
                         assert.calledWith(hermione.passthroughEvent,
                             runner,
-                            _.values(RunnerEvents.getAll())
+                            _.values(RunnerEvents.get())
                         );
                         assert.callOrder(hermione.passthroughEvent, runner.run);
                     });
