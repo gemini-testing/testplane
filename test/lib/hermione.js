@@ -115,6 +115,13 @@ describe('hermione', () => {
                 return runHermione()
                     .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
             });
+
+            it('should load plugins before creating any runner', () => {
+                sandbox.spy(Runner, 'create');
+
+                return runHermione()
+                    .then(() => assert.callOrder(pluginsLoader.load, Runner.create));
+            });
         });
 
         describe('sets revealing', () => {
