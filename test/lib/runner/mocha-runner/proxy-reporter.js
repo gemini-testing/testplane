@@ -43,6 +43,8 @@ describe('mocha-runner/proxy-reporter', () => {
     testTranslateEvent_('test end', 'endTest');
     testTranslateEvent_('pass', 'passTest');
     testTranslateEvent_('pending', 'pendingTest');
+    testTranslateEvent_('hook', 'beginHook');
+    testTranslateEvent_('hook end', 'endHook');
 
     describe('"pending" event', () => {
         beforeEach(() => createReporter_());

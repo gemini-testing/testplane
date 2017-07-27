@@ -257,6 +257,9 @@ describe('mocha-runner', () => {
                     RunnerEvents.TEST_PASS,
                     RunnerEvents.TEST_PENDING,
 
+                    RunnerEvents.HOOK_BEGIN,
+                    RunnerEvents.HOOK_END,
+
                     RunnerEvents.INFO,
                     RunnerEvents.WARNING
                 ];
