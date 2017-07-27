@@ -423,4 +423,41 @@ describe('hermione', () => {
             assert.deepEqual(hermione.config, config);
         });
     });
+
+    describe('isFailed', () => {
+        it('should return "false" by default', () => {
+            assert.isFalse(Hermione.create(makeConfigStub()).isFailed());
+        });
+
+        it('should return "false" if there are no failed tests or errors', () => {
+            const hermione = Hermione.create(makeConfigStub());
+
+            return hermione.run()
+                .then(() => assert.isFalse(hermione.isFailed()));
+        });
+
+        it('should return "true" after some error', () => {
+            const hermione = Hermione.create(makeConfigStub());
+
+            mkRunnerStub_((runner) => {
+                runner.emit(RunnerEvents.ERROR);
+
+                assert.isTrue(hermione.isFailed());
+            });
+
+            return hermione.run();
+        });
+
+        it('should return "true" after some test fail', () => {
+            const hermione = Hermione.create(makeConfigStub());
+
+            mkRunnerStub_((runner) => {
+                runner.emit(RunnerEvents.TEST_FAIL);
+
+                assert.isTrue(hermione.isFailed());
+            });
+
+            return hermione.run();
+        });
+    });
 });
