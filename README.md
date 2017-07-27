@@ -584,6 +584,8 @@ Event                     | Description
 `TEST_PASS`               | Test passed.
 `TEST_FAIL`               | Test failed.
 `TEST_PENDING`            | Test is skipped.
+`HOOK_BEGIN`              | Test hook is about to execute
+`HOOK_END`                | Test hook execution is finished
 `RETRY`                   | Test failed but went to retry.
 `ERROR`                   | Generic (no tests) errors.
 `INFO`                    | Reserved.
