@@ -50,6 +50,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Programmatic API](#programmatic-api)
   - [run](#run)
   - [readTests](#readtests)
+  - [isFailed](#isfailed)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
@@ -704,6 +705,15 @@ hermione.readTests(testPaths, browsers, options).done();
 * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
 * **options** (optional) `Object`:
   * **loadPlugins** (optional) `Boolean` – flag which enables/disables loading of plugins before reading tests; default is `true`.
+
+### isFailed
+
+```js
+hermione.isFailed();
+```
+
+Returns `true` or `false` depending on whether there has been an error or a test fail while running tests; can be useful in plugins to
+determine current Hermione status.
 
 ## Environment variables
 
