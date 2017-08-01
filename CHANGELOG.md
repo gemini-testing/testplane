@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.41.0"></a>
+# [0.41.0](https://github.com/gemini-testing/hermione/compare/v0.40.0...v0.41.0) (2017-08-01)
+
+
+### Features
+
+* update lodash version to 4.x ([68500a0](https://github.com/gemini-testing/hermione/commit/68500a0))
+
+
+
 <a name="0.40.0"></a>
 # [0.40.0](https://github.com/gemini-testing/hermione/compare/v0.39.1...v0.40.0) (2017-08-01)
 
