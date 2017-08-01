@@ -697,11 +697,13 @@ hermione.run(testPaths, options)
 ### readTests
 
 ```js
-hermione.readTests(testPaths, browsers).done();
+hermione.readTests(testPaths, browsers, options).done();
 ```
 
 * **testPaths** (required) `String[]` – Paths to tests relative to `process.cwd`.
 * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
+* **options** (optional) `Object`:
+  * **loadPlugins** (optional) `Boolean` – flag which enables/disables loading of plugins before reading tests; default is `true`.
 
 ## Environment variables
 

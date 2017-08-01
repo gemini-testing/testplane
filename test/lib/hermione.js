@@ -352,6 +352,33 @@ describe('hermione', () => {
                 });
         });
 
+        it('should not load plugins from config if option "loadPlugins" is set to "false"', () => {
+            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
+
+            return Hermione
+                .create(Config.create())
+                .readTests(null, null, {loadPlugins: false})
+                .then(() => assert.notCalled(pluginsLoader.load));
+        });
+
+        it('should not passthrough synchronous runner events if option "loadPlugins" is set to "false"', () => {
+            const runner = mkRunnerStub_();
+            runner.buildSuiteTree = () => Promise.resolve({});
+            const hermione = Hermione.create(makeConfigStub());
+
+            return hermione.readTests(null, null, {loadPlugins: false})
+                .then(() => {
+                    _.forEach(RunnerEvents.getSync(), (event, name) => {
+                        const spy = sinon.spy().named(`${name} handler`);
+                        hermione.on(event, spy);
+
+                        runner.emit(event);
+
+                        assert.notCalled(spy);
+                    });
+                });
+        });
+
         it('should build suite tree using tests', () => {
             const config = makeConfigStub();
             Config.create.returns(config);
