@@ -83,7 +83,13 @@ describe('config', () => {
         it('should get config for a browser', () => {
             const config = initConfig({configParserReturns: {browsers: {bro: {some: 'option'}}}});
 
-            assert.deepEqual(config.forBrowser('bro'), {some: 'option'});
+            assert.include(config.forBrowser('bro'), {some: 'option'});
+        });
+
+        it('should extend browser config with its id', () => {
+            const config = initConfig({configParserReturns: {browsers: {bro: {some: 'option'}}}});
+
+            assert.include(config.forBrowser('bro'), {id: 'bro'});
         });
     });
 
