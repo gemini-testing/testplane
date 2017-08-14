@@ -102,9 +102,9 @@ describe('mocha-runner/single-test-mocha-adapter', () => {
         const mochaAdapter = mkMochaAdapterStub();
         const singleTestMochaAdapter = SingleTestMochaAdapter.create(mochaAdapter);
 
-        mochaAdapter.run.returns(q({foo: 'bar'}));
+        mochaAdapter.run.withArgs({some: 'workers'}).returns(q({foo: 'bar'}));
 
-        return assert.becomes(singleTestMochaAdapter.run(), {foo: 'bar'});
+        return assert.becomes(singleTestMochaAdapter.run({some: 'workers'}), {foo: 'bar'});
     });
 
     it('should passthrough "on" method from the decorated mocha adapter', () => {
@@ -114,14 +114,5 @@ describe('mocha-runner/single-test-mocha-adapter', () => {
         mochaAdapter.on.withArgs('arg1', 'arg2').returns({foo: 'bar'});
 
         assert.deepEqual(singleTestMochaAdapter.on('arg1', 'arg2'), {foo: 'bar'});
-    });
-
-    it('should passthrough "disableHooksInSkippedSuites" method from the decorated mocha adapter', () => {
-        const mochaAdapter = mkMochaAdapterStub();
-        const singleTestMochaAdapter = SingleTestMochaAdapter.create(mochaAdapter);
-
-        mochaAdapter.disableHooksInSkippedSuites.returns({foo: 'bar'});
-
-        assert.deepEqual(singleTestMochaAdapter.disableHooksInSkippedSuites(), {foo: 'bar'});
     });
 });

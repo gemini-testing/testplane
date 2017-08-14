@@ -1,14 +1,15 @@
 'use strict';
 
+const EventEmitter = require('events').EventEmitter;
+const path = require('path');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
+const proxyquire = require('proxyquire');
 const q = require('q');
-const QEmitter = require('qemitter');
 const qUtils = require('qemitter/utils');
 
 const BrowserPool = require('../../../lib/browser-pool');
 const MochaRunner = require('../../../lib/runner/mocha-runner');
-const Runner = require('../../../lib/runner');
 const TestSkipper = require('../../../lib/runner/test-skipper');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 const logger = require('../../../lib/utils').logger;
@@ -18,10 +19,12 @@ const makeConfigStub = require('../../utils').makeConfigStub;
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
 
+    let Runner, workerFarm, workers;
+
     const mkMochaRunner = () => {
         sandbox.stub(MochaRunner, 'create');
 
-        const mochaRunner = new QEmitter();
+        const mochaRunner = new EventEmitter();
         mochaRunner.init = sandbox.stub().returnsThis();
         mochaRunner.run = sandbox.stub().returns(q());
 
@@ -43,6 +46,16 @@ describe('Runner', () => {
     };
 
     beforeEach(() => {
+        workers = {
+            init: sandbox.stub().yields(),
+            syncConfig: sandbox.stub().yields()
+        };
+
+        workerFarm = sandbox.stub().returns(workers);
+        workerFarm.end = sandbox.stub();
+
+        Runner = proxyquire('../../../lib/runner', {'worker-farm': workerFarm});
+
         sandbox.stub(BrowserPool, 'create');
 
         sandbox.stub(MochaRunner, 'prepare');
@@ -70,6 +83,64 @@ describe('Runner', () => {
     });
 
     describe('run', () => {
+        describe('worker farm', () => {
+            it('should create a worker farm', () => {
+                mkMochaRunner();
+
+                return run_({config: {system: {workers: 100500}}})
+                    .then(() => {
+                        assert.calledOnceWith(workerFarm, {
+                            maxConcurrentWorkers: 100500,
+                            maxConcurrentCallsPerWorker: Infinity,
+                            autoStart: true
+                        }, path.join(process.cwd(), 'lib/worker/index.js'), [
+                            {name: 'init', broadcast: true},
+                            {name: 'syncConfig', broadcast: true},
+                            'runTest'
+                        ]);
+                    });
+            });
+
+            it('should create a worker farm before RUNNER_START event', () => {
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
+                const runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+
+                return run_({runner})
+                    .then(() => assert.callOrder(workerFarm, onRunnerStart));
+            });
+
+            it('should init workers', () => {
+                const runner = new Runner(makeConfigStub({configPath: 'some-config-path'}));
+
+                return runner.run({bro: ['file1', 'file2']})
+                    .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path'));
+            });
+
+            it('should sync config in workers', () => {
+                mkMochaRunner();
+
+                return run_({config: {some: 'config', system: {workers: 100500}}})
+                    .then(() => assert.calledOnceWith(workers.syncConfig, {some: 'config', system: {workers: 100500}}));
+            });
+
+            it('should sync config after all RUNNER_START handler have finished', () => {
+                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q().then(() => q.delay(1)));
+                const runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
+
+                return run_({runner})
+                    .then(() => assert.callOrder(onRunnerStart, workers.syncConfig));
+            });
+
+            it('should pass workers to each mocha runner', () => {
+                return run_({browsers: ['bro1', 'bro2']})
+                    .then(() => assert.alwaysCalledWith(MochaRunner.prototype.run, workers));
+            });
+        });
+
         describe('RUNNER_START event', () => {
             it('should pass a runner to a RUNNER_START handler', () => {
                 const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
@@ -133,8 +204,8 @@ describe('Runner', () => {
         it('should pass config to a mocha runner', () => {
             mkMochaRunner();
 
-            return run_({config: {some: 'config'}})
-                .then(() => assert.calledOnceWith(MochaRunner.create, sinon.match.any, {some: 'config'}));
+            return run_({config: {some: 'config', system: {}}})
+                .then(() => assert.calledOnceWith(MochaRunner.create, sinon.match.any, sinon.match({some: 'config'})));
         });
 
         it('should create mocha runners with the same browser pool', () => {
@@ -219,7 +290,7 @@ describe('Runner', () => {
                     return run_({runner})
                         .then(() => {
                             assert.calledOnceWith(qUtils.passthroughEvent,
-                                sinon.match.instanceOf(QEmitter),
+                                sinon.match.instanceOf(EventEmitter),
                                 sinon.match.instanceOf(Runner),
                                 mochaRunnerEvents
                             );
@@ -298,7 +369,7 @@ describe('Runner', () => {
             runner.buildSuiteTree([{}]);
 
             assert.calledWith(qUtils.passthroughEvent,
-                sinon.match.instanceOf(QEmitter),
+                sinon.match.instanceOf(EventEmitter),
                 sinon.match.instanceOf(Runner),
                 [
                     RunnerEvents.BEFORE_FILE_READ,

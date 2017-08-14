@@ -43,28 +43,10 @@ describe('hermione', () => {
             sandbox.stub(Runner, 'create').returns(new EventEmitter());
         });
 
-        it('should create config', () => {
-            Hermione.create();
+        it('should create a config from the passed path', () => {
+            Hermione.create('some-config-path.js');
 
-            assert.calledOnce(Config.create);
-        });
-
-        it('should create config from passed path', () => {
-            Hermione.create('.hermione.conf.js');
-
-            assert.calledWith(Config.create, '.hermione.conf.js');
-        });
-
-        it('should create config from passed object', () => {
-            Hermione.create({some: 'config'});
-
-            assert.calledWith(Config.create, {some: 'config'});
-        });
-
-        it('should create config with passed options', () => {
-            Hermione.create(null, {some: 'options'});
-
-            assert.calledWith(Config.create, sinon.match.any, {some: 'options'});
+            assert.calledOnceWith(Config.create, 'some-config-path.js');
         });
     });
 
@@ -74,8 +56,8 @@ describe('hermione', () => {
         it('should create runner', () => {
             mkRunnerStub_();
 
-            return Hermione.create(makeConfigStub())
-                .run(() => assert.calledOnce(Runner.create));
+            return runHermione()
+                .then(() => assert.calledOnce(Runner.create));
         });
 
         it('should create runner with config', () => {
@@ -89,11 +71,15 @@ describe('hermione', () => {
         });
 
         it('should warn about unknown browsers from cli', () => {
+            mkRunnerStub_();
+
             return runHermione([], {browsers: ['bro3']})
                 .then(() => assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/));
         });
 
         describe('loading of plugins', () => {
+            beforeEach(() => mkRunnerStub_());
+
             it('should load plugins', () => {
                 return runHermione()
                     .then(() => assert.calledOnce(pluginsLoader.load));
@@ -117,14 +103,14 @@ describe('hermione', () => {
             });
 
             it('should load plugins before creating any runner', () => {
-                sandbox.spy(Runner, 'create');
-
                 return runHermione()
                     .then(() => assert.callOrder(pluginsLoader.load, Runner.create));
             });
         });
 
         describe('sets revealing', () => {
+            beforeEach(() => mkRunnerStub_());
+
             it('should reveal sets', () => {
                 return runHermione()
                     .then(() => assert.calledOnce(sets.reveal));
@@ -132,7 +118,9 @@ describe('hermione', () => {
 
             it('should reveal sets using passed paths', () => {
                 return runHermione(['first.js', 'second.js'])
-                    .then(() => assert.calledWith(sets.reveal, sinon.match.any, {paths: ['first.js', 'second.js']}));
+                    .then(() => {
+                        assert.calledWith(sets.reveal, sinon.match.any, sinon.match({paths: ['first.js', 'second.js']}));
+                    });
             });
 
             it('should reveal sets using passed browsers', () => {
@@ -167,6 +155,8 @@ describe('hermione', () => {
             });
 
             it('should return "true" if there are no failed tests', () => {
+                mkRunnerStub_();
+
                 return runHermione()
                     .then((success) => assert.isTrue(success));
             });
@@ -259,7 +249,7 @@ describe('hermione', () => {
 
                 return hermione.run()
                     .then(() => {
-                        _.forEach(_.omit(hermione.events, 'EXIT'), (event, name) => {
+                        _.forEach(_.omit(hermione.events, ['EXIT', 'NEW_BROWSER']), (event, name) => {
                             const spy = sinon.spy().named(`${name} handler`);
                             hermione.on(event, spy);
 
@@ -407,10 +397,9 @@ describe('hermione', () => {
 
     describe('should provide access to', () => {
         it('hermione events', () => {
-            const hermione = Hermione.create(makeConfigStub());
-            const expectedEvents = _.extend({EXIT: 'exit'}, RunnerEvents);
+            const expectedEvents = _.extend({NEW_BROWSER: 'newBrowser'}, RunnerEvents);
 
-            assert.deepEqual(hermione.events, expectedEvents);
+            assert.deepEqual(Hermione.create(makeConfigStub()).events, expectedEvents);
         });
 
         it('hermione configuration', () => {
@@ -418,9 +407,7 @@ describe('hermione', () => {
 
             Config.create.returns(config);
 
-            const hermione = Hermione.create();
-
-            assert.deepEqual(hermione.config, config);
+            assert.deepEqual(Hermione.create().config, config);
         });
     });
 
@@ -430,6 +417,8 @@ describe('hermione', () => {
         });
 
         it('should return "false" if there are no failed tests or errors', () => {
+            mkRunnerStub_();
+
             const hermione = Hermione.create(makeConfigStub());
 
             return hermione.run()

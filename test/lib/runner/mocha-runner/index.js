@@ -153,18 +153,6 @@ describe('mocha-runner', () => {
 
             assert.doesNotThrow(() => init_());
         });
-
-        it('should switch of hooks in skipped suites', () => {
-            const mocha1 = createMochaStub_();
-            const mocha2 = createMochaStub_();
-
-            MochaBuilder.prototype.buildAdapters.returns([mocha1, mocha2]);
-
-            init_();
-
-            assert.calledOnce(mocha1.disableHooksInSkippedSuites);
-            assert.calledOnce(mocha2.disableHooksInSkippedSuites);
-        });
     });
 
     describe('run', () => {
@@ -198,10 +186,11 @@ describe('mocha-runner', () => {
             sandbox.stub(mocha, 'run');
             MochaBuilder.prototype.buildAdapters.returns([mocha]);
 
-            return run_()
+            return init_()
+                .run({some: 'workers'})
                 .then(() => {
                     assert.notCalled(mocha.run);
-                    assert.calledOnce(RetryMochaRunner.prototype.run);
+                    assert.calledOnceWith(RetryMochaRunner.prototype.run, {some: 'workers'});
                 });
         });
 
