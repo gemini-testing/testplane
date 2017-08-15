@@ -73,7 +73,7 @@ describe('Browser', () => {
                     logLevel: 'verbose',
                     coloredLogs: true,
                     screenshotPath: 'path/to/screenshots',
-                    screenshotOnReject: false,
+                    screenshotOnReject: true,
                     connectionRetryTimeout: 3000,
                     connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
@@ -132,14 +132,14 @@ describe('Browser', () => {
             return mkBrowser_({sessionRequestTimeout: 100500, httpTimeout: 500100})
                 .init()
                 .then(() => {
-                    assert.calledWithMatch(session.extendOptions.firstCall, {connectionRetryTimeout: 100500});
+                    assert.calledWithMatch(session.extendOptions.secondCall, {connectionRetryTimeout: 100500});
                 });
         });
 
         it('should set option "screenshotOnReject" to "false" before initializing of a session', () => {
             return mkBrowser_()
                 .init()
-                .then(() => assert.calledWithMatch(webdriverio.remote, {screenshotOnReject: false}));
+                .then(() => assert.calledWithMatch(session.extendOptions.firstCall, {screenshotOnReject: false}));
         });
 
         it('should reset options to default after initializing of a session', () => {
