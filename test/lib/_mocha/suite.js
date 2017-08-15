@@ -156,6 +156,9 @@ module.exports = class Suite extends EventEmitter {
                     })
                     .then(this._execRunnables(this.beforeEachHooks))
                     .then(() => {
+                        if (test.pending) {
+                            return;
+                        }
                         this.emit(EVENTS.TEST_BEGIN, test);
                         return test.run();
                     })

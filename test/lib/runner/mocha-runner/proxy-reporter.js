@@ -24,11 +24,14 @@ describe('mocha-runner/proxy-reporter', () => {
         it(`should translate event "${from}" to event "${to}"`, () => {
             createReporter_();
 
-            runner.emit(from, {slow: sinon.stub()}); // slow will be called by Mocha.BaseReporter inside
+            runner.emit(from, {});
 
             assert.calledWith(emit, to);
         });
     };
+
+     // slow will be called by Mocha.BaseReporter inside
+    const stubTest = (opts) => _.extend({}, opts, {type: 'test', slow: sinon.stub()});
 
     beforeEach(() => {
         runner = new EventEmitter();
@@ -41,8 +44,19 @@ describe('mocha-runner/proxy-reporter', () => {
     testTranslateEvent_('suite end', 'endSuite');
     testTranslateEvent_('test', 'beginTest');
     testTranslateEvent_('test end', 'endTest');
-    testTranslateEvent_('pass', 'passTest');
     testTranslateEvent_('pending', 'pendingTest');
+
+    describe('"pass" event', () => {
+        beforeEach(() => createReporter_());
+
+        it('should translate event "pass" to event "passTest"', () => {
+            const test = stubTest({duration: 100500, time: 500100});
+            runner.emit('pass', test);
+
+            assert.calledWithMatch(emit, 'passTest', {duration: 500100});
+            assert.notProperty(test, 'time');
+        });
+    });
 
     describe('"pending" event', () => {
         beforeEach(() => createReporter_());
@@ -70,11 +84,15 @@ describe('mocha-runner/proxy-reporter', () => {
         beforeEach(() => createReporter_());
 
         it('should translate `fail` event from test to `failTest`', () => {
-            runner.emit('fail', {type: 'test'}, {message: 'foo'});
+            const test = stubTest({duration: 100500, time: 500100});
+
+            runner.emit('fail', test, {message: 'foo'});
 
             assert.calledWithMatch(emit, 'failTest', {
+                duration: 500100,
                 err: {message: 'foo'}
             });
+            assert.notProperty(test, 'time');
         });
 
         it('should translate `fail` event from after* hook to `err`', () => {
