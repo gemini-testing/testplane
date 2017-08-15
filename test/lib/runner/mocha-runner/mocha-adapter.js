@@ -34,6 +34,7 @@ describe('mocha-runner/mocha-adapter', () => {
         testSkipper = sinon.createStubInstance(TestSkipper);
         browserAgent = sinon.createStubInstance(BrowserAgent);
         browserAgent.getBrowser.returns(q(mkBrowserStub_()));
+        browserAgent.freeBrowser.returns(q());
 
         clearRequire = sandbox.stub().named('clear-require');
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
@@ -67,6 +68,12 @@ describe('mocha-runner/mocha-adapter', () => {
             mkMochaAdapter_();
 
             assert.called(MochaStub.lastInstance.fullTrace);
+        });
+
+        it('should disable timeouts', () => {
+            mkMochaAdapter_();
+
+            assert.calledOnceWith(MochaStub.lastInstance.suite.enableTimeouts, false);
         });
     });
 
@@ -193,23 +200,6 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.calledOnce(browserAgent.getBrowser));
         });
 
-        it('should disable mocha timeouts while setting browser hooks', () => {
-            const suitePrototype = MochaStub.Suite.prototype;
-            const beforeAllStub = sandbox.stub(suitePrototype, 'beforeAll');
-            const afterAllStub = sandbox.stub(suitePrototype, 'afterAll');
-
-            mkMochaAdapter_();
-            const suite = MochaStub.lastInstance.suite;
-
-            assert.callOrder(
-                suite.enableTimeouts, // get current value of enableTimeouts
-                suite.enableTimeouts.withArgs(false).named('disableTimeouts'),
-                beforeAllStub,
-                afterAllStub,
-                suite.enableTimeouts.withArgs(true).named('restoreTimeouts')
-            );
-        });
-
         it('should not be rejected if freeBrowser failed', () => {
             const browser = mkBrowserStub_();
 
@@ -266,6 +256,10 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
+    describe('remove hooks', () => {
+        it('TODO');
+    });
+
     describe('inject skip', () => {
         let mochaAdapter;
 
@@ -317,112 +311,6 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaInstance = mochaAdapter.applySkip(testSkipper);
 
             assert.instanceOf(mochaInstance, MochaAdapter);
-        });
-    });
-
-    describe('timeouts', () => {
-        beforeEach(() => {
-            mkMochaAdapter_();
-        });
-
-        it('should disable mocha timeouts', () => {
-            const test = new MochaStub.Test();
-            test.enableTimeouts(true);
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            assert.isFalse(test.enableTimeouts());
-        });
-
-        it('should set promise timeout', () => {
-            const test = new MochaStub.Test(null, {
-                fn: () => q.delay(100)
-            });
-            test.timeout(50);
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            return assert.isRejected(test.run(), /Timed out/);
-        });
-
-        it('should not fail test if timeout not exceeded', () => {
-            const test = new MochaStub.Test(null, {
-                fn: () => q.delay(50)
-            });
-            test.timeout(100);
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            return assert.isFulfilled(test.run());
-        });
-
-        it('should not set timeout if it is disabled', () => {
-            const test = new MochaStub.Test(null, {
-                fn: () => q.delay(100)
-            });
-            test.timeout(50);
-            test.enableTimeouts(false);
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            return assert.isFulfilled(test.run());
-        });
-    });
-
-    describe('inject execution context', () => {
-        let browser;
-        let mochaAdapter;
-
-        beforeEach(() => {
-            browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q());
-
-            mochaAdapter = mkMochaAdapter_();
-        });
-
-        it('should add execution context to browser', () => {
-            const test = new MochaStub.Test();
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            return mochaAdapter.run()
-                .then(() => assert.includeMembers(_.keys(browser.publicAPI.executionContext), _.keys(test)));
-        });
-
-        it('should handle nested tests', () => {
-            let nestedSuite = MochaStub.Suite.create();
-            let nestedSuiteTest;
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                suite.addSuite(nestedSuite);
-
-                nestedSuiteTest = new MochaStub.Test();
-                nestedSuite.addTest(nestedSuiteTest);
-                return suite;
-            });
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.includeMembers(
-                        _.keys(browser.publicAPI.executionContext),
-                        _.keys(nestedSuiteTest)
-                    );
-                });
-        });
-
-        it('should add browser id to the context', () => {
-            BrowserAgent.prototype.browserId = 'some-browser';
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => assert.property(browser.publicAPI.executionContext, 'browserId', 'some-browser'));
-        });
-
-        it('should add execution context to the browser prototype', () => {
-            BrowserAgent.prototype.browserId = 'some-browser';
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => assert.property(Object.getPrototypeOf(browser.publicAPI), 'executionContext'));
         });
     });
 
@@ -616,286 +504,16 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('"before" hook error handling', () => {
-        let mochaAdapter;
-
-        beforeEach(() => {
-            browserAgent.freeBrowser.returns(q());
-
-            mochaAdapter = mkMochaAdapter_();
-        });
-
-        it('should not launch suite original test if "before" hook failed', () => {
-            const testCb = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeAll(() => q.reject(new Error()))
-                    .addTest({fn: testCb});
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(testCb));
-        });
-
-        it('should fail all suite tests with "before" hook error', () => {
-            const error = new Error();
-            const testFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                return rootSuite
-                    .beforeAll(() => q.reject(error))
-                    .addTest({title: 'first-test'})
-                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'second-test'}).onFail(testFailSpy))
-                    .onFail(testFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledTwice(testFailSpy);
-                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'first-test'}});
-                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'second-test'}});
-                });
-        });
-
-        it('should handle sync "before hook" errors', () => {
-            const testFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeAll(() => {
-                        throw new Error();
-                    })
-                    .addTest({title: 'some-test'})
-                    .onFail(testFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(testFailSpy));
-        });
-
-        it('should not execute "before each" hook if "before" hook failed at the same level', () => {
-            const beforeEachHookFn = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeAll(() => q.reject(new Error()))
-                    .beforeEach(beforeEachHookFn)
-                    .addTest();
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(beforeEachHookFn));
-        });
-
-        it('should not execute "before each" hook if "before" hook has already failed on a higher level', () => {
-            const beforeEachHookFn = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                const suite = MochaStub.Suite.create();
-
-                rootSuite
-                    .beforeAll(() => q.reject(new Error()))
-                    .addSuite(suite);
-
-                suite.beforeEach(beforeEachHookFn).addTest();
-
-                return rootSuite;
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(beforeEachHookFn));
-        });
-
-        it('should not execute "before" hook if another one has already failed on a higher level', () => {
-            const beforeAllHookFn = sandbox.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                const suite = MochaStub.Suite.create();
-
-                rootSuite
-                    .beforeAll(() => q.reject(new Error()))
-                    .addSuite(suite);
-
-                suite.beforeAll(beforeAllHookFn).addTest();
-
-                return rootSuite;
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(beforeAllHookFn));
-        });
-
-        it('should not execute "before each" hook if "before" hook has already failed on a lower level', () => {
-            const beforeEachHookFn = sandbox.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                const suite = MochaStub.Suite.create();
-
-                rootSuite
-                    .beforeEach(beforeEachHookFn)
-                    .addSuite(suite);
-
-                suite.beforeAll(() => q.reject(new Error())).addTest();
-
-                return rootSuite;
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(beforeEachHookFn));
-        });
-
-        it('should fail suite tests with error from "before" hook if "before each" hook is present at the same level', () => {
-            const error = new Error();
-            const hookFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeAll(() => q.reject(error))
-                    .beforeEach(() => true)
-                    .addTest()
-                    .addTest()
-                    .onFail(hookFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledTwice(hookFailSpy);
-                    assert.calledWithMatch(hookFailSpy, {error});
-                });
-        });
-    });
-
-    describe('"before each" hook error handling', () => {
-        let mochaAdapter;
-
-        beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
-
-            mochaAdapter = mkMochaAdapter_();
-        });
-
-        it('should not execute original suite test if "before each" hook failed', () => {
-            const testCb = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeEach(() => q.reject(new Error()))
-                    .addTest({fn: testCb});
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(testCb));
-        });
-
-        it('should execute original suite test if "before each" hook was executed successfully', () => {
-            const testCb = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeEach(_.noop)
-                    .addTest({fn: testCb});
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.called(testCb));
-        });
-
-        it('should fail test with error from "before each" hook', () => {
-            const error = new Error();
-            const testFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeEach(() => q.reject(error))
-                    .addTest({title: 'some-test'})
-                    .onFail(testFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}}));
-        });
-
-        it('should handle sync "before each" hook errors', () => {
-            const testFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .beforeEach(() => {
-                        throw new Error();
-                    })
-                    .addTest({title: 'some-test'})
-                    .onFail(testFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(testFailSpy));
-        });
-
-        it('should not execute "before each" hook if another one has already failed on a higher level', () => {
-            const beforeEachHookFn = sandbox.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                const suite = MochaStub.Suite.create(rootSuite);
-
-                rootSuite
-                    .beforeEach(() => q.reject(new Error()))
-                    .addSuite(suite);
-
-                suite.beforeEach(beforeEachHookFn).addTest();
-
-                return rootSuite;
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(beforeEachHookFn));
-        });
-    });
-
-    describe('disableHooksInSkippedSuites', () => {
-        it('should switch of "beforeAll" and "afterAll" hooks in skipped suites', () => {
+    describe('run', () => {
+        it('should run a test in subprocess using passed workers', () => {
             const mochaAdapter = mkMochaAdapter_();
-            const firstBeforeAll = sinon.spy().named('firstBeforeAll');
-            const firstAfterAll = sinon.spy().named('firstAfterAll');
-            const secondBeforeAll = sinon.spy().named('secondBeforeAll');
-            const secondAfterAll = sinon.spy().named('secondAfterAll');
+            const workers = {runTest: sandbox.stub().yields()};
+            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
 
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                const suite = MochaStub.Suite.create(rootSuite);
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title'}));
 
-                return rootSuite
-                    .beforeAll(firstBeforeAll)
-                    .addTest({pending: false})
-                    .addSuite(suite.beforeAll(secondBeforeAll).addTest({pending: true}).afterAll(secondAfterAll))
-                    .afterAll(firstAfterAll);
-            });
-
-            mochaAdapter.disableHooksInSkippedSuites();
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledOnce(firstBeforeAll);
-                    assert.calledOnce(firstAfterAll);
-
-                    assert.notCalled(secondBeforeAll);
-                    assert.notCalled(secondAfterAll);
-                });
-        });
-
-        it('should not try to request a browser for a completely skipped suite', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                return rootSuite
-                    .addTest({pending: true})
-                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({pending: true}));
-            });
-
-            mochaAdapter.disableHooksInSkippedSuites();
-
-            return mochaAdapter.run()
-                .then(() => assert.notCalled(browserAgent.getBrowser));
+            return mochaAdapter.run(workers)
+                .then(() => assert.calledOnceWith(workers.runTest, 'test-title', {browserId: 'bro-id', sessionId: '100-500'}));
         });
     });
 });

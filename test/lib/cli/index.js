@@ -74,11 +74,6 @@ describe('cli', () => {
             .then(() => assert.calledWith(Hermione.create, '.conf.hermione.js'));
     });
 
-    it('should create Hermione which allows to override config from env vars and cli opts', () => {
-        return hermioneCli.run()
-            .then(() => assert.calledWith(Hermione.create, any, {cli: true, env: true}));
-    });
-
     it('should run hermione', () => {
         return hermioneCli.run()
             .then(() => assert.calledOnce(Hermione.prototype.run));

@@ -68,8 +68,8 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, createTestStub()));
 
-                return retryMochaRunner.run()
-                    .then(() => assert.calledOnce(mochaAdapter.run));
+                return retryMochaRunner.run({some: 'workers'})
+                    .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
             });
 
             it('should emit "TEST_FAIL" event if retries count is below zero', () => {
@@ -89,8 +89,8 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL));
 
-                return retryMochaRunner.run()
-                    .then(() => assert.calledOnce(mochaAdapter.run));
+                return retryMochaRunner.run({some: 'workers'})
+                    .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
             });
 
             it('should emit "RETRY" event if retries were set', () => {
@@ -146,8 +146,11 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL));
 
-                return retryMochaRunner.run()
-                    .then(() => assert.calledTwice(mochaAdapter.run));
+                return retryMochaRunner.run({some: 'workers'})
+                    .then(() => {
+                        assert.calledTwice(mochaAdapter.run);
+                        assert.alwaysCalledWith(mochaAdapter.run, {some: 'workers'});
+                    });
             });
 
             it('should reinit mocha before a retry', () => {

@@ -16,14 +16,16 @@ function makeConfigStub(opts) {
         browsers: ['some-default-browser'],
         retry: 0,
         sessionsPerBrowser: 1,
-        testsPerSession: Infinity
+        testsPerSession: Infinity,
+        configPath: 'some-default-config-path'
     });
 
     const config = {
         browsers: {},
         plugins: opts.plugins,
         system: opts.system || {mochaOpts: {}},
-        sets: opts.sets || {}
+        sets: opts.sets || {},
+        configPath: opts.configPath
     };
 
     opts.browsers.forEach(function(browserId) {

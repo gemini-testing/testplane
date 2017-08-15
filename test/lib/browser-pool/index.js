@@ -64,20 +64,6 @@ describe('browser-pool', () => {
                 assert.becomes(getBrowserManager().start(browser), {session: 'id'});
             });
 
-            it(`onStart should emit NEW_BROWSER event`, () => {
-                const emitter = new QEmitter();
-                const onNewBrowser = sandbox.spy();
-
-                BrowserPool.create(null, emitter);
-
-                const BrowserManager = getBrowserManager();
-
-                emitter.on(Events.NEW_BROWSER, onNewBrowser);
-
-                return BrowserManager.onStart(stubBrowser('bro', {public: 'api'}))
-                    .then(() => assert.calledOnceWith(onNewBrowser, {public: 'api'}, {browserId: 'bro'}));
-            });
-
             _.forEach({onStart: Events.SESSION_START, onQuit: Events.SESSION_END}, (event, method) => {
                 describe(`${method}`, () => {
                     it(`should emit browser event "${event}"`, () => {

@@ -145,6 +145,30 @@ describe('config options', () => {
                 assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
             });
         });
+
+        describe('workers', () => {
+            it('should throw in case of not positive integer', () => {
+                [0, -1, 'string', {foo: 'bar'}].forEach((workers) => {
+                    Config.read.returns({system: {workers}});
+
+                    assert.throws(() => createConfig(), '"workers" must be a positive integer');
+                });
+            });
+
+            it('should equal one by default', () => {
+                const config = createConfig();
+
+                assert.equal(config.system.workers, 1);
+            });
+
+            it('should be overriden from a config', () => {
+                Config.read.returns({system: {workers: 100500}});
+
+                const config = createConfig();
+
+                assert.equal(config.system.workers, 100500);
+            });
+        });
     });
 
     describe('prepareEnvironment', () => {

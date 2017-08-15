@@ -140,6 +140,7 @@ module.exports = class Suite extends EventEmitter {
 
     eachTest(fn) {
         this.tests.forEach(fn);
+        this.suites.forEach((suite) => suite.eachTest(fn));
     }
 
     run() {

@@ -44,20 +44,21 @@
     "qemitter": "^2.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "^4.6.1"
+    "webdriverio": "^4.6.1",
+    "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#feat/broadcast"
   },
   "devDependencies": {
-    "chai": "^3.4.1",
-    "chai-as-promised": "^5.1.0",
+    "chai": "^4.1.1",
+    "chai-as-promised": "^7.1.1",
     "conventional-changelog-lint": "^1.0.1",
     "doctoc": "^1.0.0",
+    "eslint": "^3.9.0",
+    "eslint-config-gemini-testing": "^2.4.0",
     "husky": "^0.11.4",
     "istanbul": "^0.4.1",
     "proxyquire": "^1.7.3",
     "sinon": "^2.1.0",
-    "sinon-chai": "^2.9.0",
-    "standard-version": "^3.0.0",
-    "eslint": "^3.9.0",
-    "eslint-config-gemini-testing": "^2.4.0"
+    "sinon-chai": "^2.12.0",
+    "standard-version": "^3.0.0"
   }
 }

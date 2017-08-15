@@ -205,8 +205,7 @@ describe('Browser', () => {
                 return browser
                     .init()
                     .then(() => {
-                        assert.deepPropertyVal(session.requestHandler.defaultOptions,
-                            'screenshotOnReject.connectionRetryTimeout', 666);
+                        assert.equal(session.requestHandler.defaultOptions.screenshotOnReject.connectionRetryTimeout, 666);
                     });
             });
         });
@@ -314,12 +313,6 @@ describe('Browser', () => {
                 .then(() => assert.called(session.end));
         });
 
-        it('should not finalize session if it has not been initialized', () => {
-            return mkBrowser_()
-                .quit()
-                .then(() => assert.notCalled(session.end));
-        });
-
         it('should set custom options before finalizing of a session', () => {
             return mkBrowser_()
                 .init()
@@ -350,10 +343,19 @@ describe('Browser', () => {
                 sessionID: 'foo'
             };
 
+            assert.equal(mkBrowser_().sessionId, 'foo');
+        });
+
+        it('should set session id', () => {
+            session.requestHandler = {
+                sessionID: 'foo'
+            };
+
             const browser = mkBrowser_();
 
-            return browser.init()
-                .then(() => assert.equal(browser.sessionId, 'foo'));
+            browser.sessionId = 'bar';
+
+            assert.equal(browser.sessionId, 'bar');
         });
     });
 
@@ -370,7 +372,7 @@ describe('Browser', () => {
         it('should handle an error from prepareBrowser', () => {
             const prepareBrowser = sandbox.stub().throws();
 
-            return assert.isRejected(mkBrowser_({prepareBrowser}).init());
+            assert.throws(() => mkBrowser_({prepareBrowser}));
         });
     });
 });

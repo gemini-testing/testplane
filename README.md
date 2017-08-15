@@ -670,13 +670,10 @@ With the API, you can use Hermione programmatically in your scripts or build too
 ```js
 const Hermione = require('hermione');
 
-const hermione = new Hermione(config, allowOverrides);
+const hermione = new Hermione(config);
 ```
 
-* **config** (required) `String|Object` – Path to the configuration file that will be read relative to `process.cwd` or [configuration object](#hermioneconfjs).
-* **allowOverrides** (optional) `Object` – Switch on/off [configuration override](#overriding-settings) via environment variables or CLI options:
-  * **env** (optional) `Boolean` – Switch on/off configuration override via environment variables. Default is `false`.
-  * **cli** (optional) `Boolean` - Switch on/off configuration override via CLI options. Default is `false`.
+* **config** (required) `String` – Path to the configuration file that will be read relative to `process.cwd`.
 
 ### run
 
@@ -694,6 +691,7 @@ hermione.run(testPaths, options)
 * **options** (optional) `Object`
   * **reporters** (optional) `String[]` – Test result reporters.
   * **browsers** (optional) `String[]` – Browsers to run tests in.
+  * **sets** (optional) `String[]`– Sets to run tests in.
   * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
 
 ### readTests
