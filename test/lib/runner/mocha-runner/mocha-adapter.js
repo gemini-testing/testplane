@@ -150,112 +150,6 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('inject browser', () => {
-        beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
-        });
-
-        it('should request browser before suite execution', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(browserAgent.getBrowser));
-        });
-
-        it('should fail all suite tests if requesting of a browser fails', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const testFailSpy = sinon.spy();
-            const error = new Error();
-
-            browserAgent.getBrowser.returns(q.reject(error));
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                return rootSuite
-                    .addTest({title: 'first-test'})
-                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'second-test'}).onFail(testFailSpy))
-                    .onFail(testFailSpy);
-            });
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledTwice(testFailSpy);
-                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'first-test'}});
-                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'second-test'}});
-                });
-        });
-
-        it('should request browsers for suite with at least one non-skipped test', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => {
-                return suite
-                    .addTest({pending: true})
-                    .addTest();
-            });
-
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(browserAgent.getBrowser));
-        });
-
-        it('should not be rejected if freeBrowser failed', () => {
-            const browser = mkBrowserStub_();
-
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q.reject('some-error'));
-
-            const mochaAdapter = mkMochaAdapter_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledOnce(logger.warn);
-                    assert.calledWithMatch(logger.warn, /some-error/);
-                });
-        });
-
-        describe('should release browser', () => {
-            it('after suite execution', () => {
-                const browser = mkBrowserStub_();
-                browserAgent.getBrowser.returns(q(browser));
-                browserAgent.freeBrowser.returns(q());
-
-                const mochaAdapter = mkMochaAdapter_();
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-                return mochaAdapter.run().then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, browser, {force: false});
-                });
-            });
-
-            it('conditionally if test error does not matches on patterns on reject', () => {
-                const patternsOnReject = [/some-error/i];
-                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
-
-                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'other-error'}});
-
-                return mochaAdapter.run().then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
-                });
-            });
-
-            it('unconditionally if test error matches on patterns on reject', () => {
-                const patternsOnReject = [/some-error/i];
-                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
-
-                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'SOME-ERROR'}});
-
-                return mochaAdapter.run().then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
-                });
-            });
-        });
-    });
-
     describe('remove hooks', () => {
         it('TODO');
     });
@@ -505,6 +399,104 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('run', () => {
+        it('should request browser before suite execution', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(browserAgent.getBrowser));
+        });
+
+        it('should fail test if requesting of a browser fails', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const testFailSpy = sinon.spy();
+            const error = new Error();
+
+            browserAgent.getBrowser.returns(q.reject(error));
+
+            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
+                return rootSuite
+                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'some-test'}).onFail(testFailSpy));
+            });
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledOnce(testFailSpy);
+                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}});
+                });
+        });
+
+        it('should request browsers for suite with at least one non-skipped test', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({pending: true})
+                    .addTest();
+            });
+
+            return mochaAdapter.run()
+                .then(() => assert.calledOnce(browserAgent.getBrowser));
+        });
+
+        it('should not be rejected if freeBrowser failed', () => {
+            const browser = mkBrowserStub_();
+
+            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.freeBrowser.returns(q.reject('some-error'));
+
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+            return mochaAdapter.run()
+                .then(() => {
+                    assert.calledOnce(logger.warn);
+                    assert.calledWithMatch(logger.warn, /some-error/);
+                });
+        });
+
+        describe('should release browser', () => {
+            it('after suite execution', () => {
+                const browser = mkBrowserStub_();
+                browserAgent.getBrowser.returns(q(browser));
+                browserAgent.freeBrowser.returns(q());
+
+                const mochaAdapter = mkMochaAdapter_();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, browser, {force: false});
+                });
+            });
+
+            it('conditionally if test error does not matches on patterns on reject', () => {
+                const patternsOnReject = [/some-error/i];
+                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'other-error'}});
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
+                });
+            });
+
+            it('unconditionally if test error matches on patterns on reject', () => {
+                const patternsOnReject = [/some-error/i];
+                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'SOME-ERROR'}});
+
+                return mochaAdapter.run().then(() => {
+                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
+                });
+            });
+        });
+
         it('should run a test in subprocess using passed workers', () => {
             const mochaAdapter = mkMochaAdapter_();
             const workers = {runTest: sandbox.stub().yields()};
