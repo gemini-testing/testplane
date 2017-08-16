@@ -48,12 +48,20 @@ describe('mocha-runner/mocha-adapter', () => {
     afterEach(() => sandbox.restore());
 
     describe('prepare', () => {
+        afterEach(() => delete global.hermione);
+
         it('should add an empty hermione object to global', () => {
             MochaAdapter.prepare();
 
             assert.deepEqual(global.hermione, {});
+        });
 
-            delete global.hermione;
+        it('should do nothing if hermione is already in a global', () => {
+            global.hermione = {some: 'data'};
+
+            MochaAdapter.prepare();
+
+            assert.deepEqual(global.hermione, {some: 'data'});
         });
     });
 
