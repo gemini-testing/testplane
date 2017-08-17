@@ -407,6 +407,11 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('run', () => {
+        function stubWorkers() {
+            const stub = sandbox.stub();
+            return {runTest: stub.yields.apply(stub, arguments)};
+        }
+
         it('should request browser before suite execution', () => {
             const mochaAdapter = mkMochaAdapter_();
 
@@ -507,13 +512,51 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should run a test in subprocess using passed workers', () => {
             const mochaAdapter = mkMochaAdapter_();
-            const workers = {runTest: sandbox.stub().yields()};
+            const workers = stubWorkers();
+
             browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title'}));
 
             return mochaAdapter.run(workers)
                 .then(() => assert.calledOnceWith(workers.runTest, 'test-title', {browserId: 'bro-id', sessionId: '100-500'}));
+        });
+
+        it('should extend test with browser data', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const test = MochaStub.Test.create();
+
+            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return mochaAdapter.run(stubWorkers(null, {meta: {some: 'meta'}}))
+                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
+        });
+
+        it('should fail test if running of test in subprocess fails', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const testFailSpy = sinon.spy();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
+
+            return mochaAdapter.run(stubWorkers({err: {some: 'err'}}))
+                .then(() => {
+                    assert.calledOnce(testFailSpy);
+                    assert.calledWithMatch(testFailSpy, {error: {some: 'err'}});
+                });
+        });
+
+        it('should extend test with browser data even if running of test in subprocess fails', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const test = MochaStub.Test.create();
+
+            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return mochaAdapter.run(stubWorkers({meta: {some: 'meta'}}))
+                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
         });
     });
 });
