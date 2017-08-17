@@ -91,30 +91,29 @@ describe('worker', () => {
             assert.calledOnceWith(Hermione.prototype.runTest, 'fullTitle', {some: 'options'});
         });
 
-        it('should call callback without arguments if running of a test ends successfully', () => {
+        it('should call callback with data as the second argument if running of a test ends successfully', () => {
             const cb = sandbox.spy().named('cb');
+
+            Hermione.prototype.runTest.returns(q({some: 'data'}));
 
             worker.init(null, null, () => {});
 
             worker.runTest(null, null, cb);
 
             return q.delay(1)
-                .then(() => {
-                    assert.calledOnce(cb);
-                    assert.calledWithExactly(cb);
-                });
+                .then(() => assert.calledOnceWith(cb, null, {some: 'data'}));
         });
 
-        it('should call callback with an error as the first argument if running of a test fails', () => {
-            const err = new Error();
+        it('should call callback with data as the first argument if running of a test fails', () => {
+            const data = {err: new Error()};
             const cb = sandbox.spy().named('cb');
 
-            Hermione.prototype.runTest.returns(q.reject(err));
+            Hermione.prototype.runTest.returns(q.reject(data));
 
             worker.runTest(null, null, cb);
 
             return q.delay(1)
-                .then(() => assert.calledOnceWith(cb, err));
+                .then(() => assert.calledOnceWith(cb, data));
         });
     });
 });
