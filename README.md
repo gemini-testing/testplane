@@ -9,6 +9,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Why you should choose hermione](#why-you-should-choose-hermione)
   - [Easy to use](#easy-to-use)
   - [Runs tests in parallel](#runs-tests-in-parallel)
+  - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
   - [Extensible](#extensible)
   - [Retries failed tests](#retries-failed-tests)
   - [Executes separate tests](#executes-separate-tests)
@@ -41,6 +42,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [mochaOpts](#mochaopts)
     - [ctx](#ctx)
     - [patternsOnReject](#patternsonreject)
+    - [workers](#workers)
   - [plugins](#plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
@@ -64,6 +66,9 @@ If you are familiar with [WebdriverIO](http://webdriver.io/) and [Mocha](https:/
 
 ### Runs tests in parallel
 When tests are run one by one, it takes a lot of time. `Hermione` can run tests in parallel sessions in different browsers out of the box.
+
+### Runs tests in subprocesses
+Running of too many tests in parallel can lead to the overloading of the main process CPU usage which causes degradation in test passing time, so Hermione runs all tests in subprocesses in order to solve this problem.
 
 ### Extensible
 `WebdriverIO` provides built-in commands for browser and page manipulation. Often projects need to store some common code and reuse it throughout all tests, so the developer needs to create some helpers and include them in the tests.
@@ -524,6 +529,9 @@ patternsOnReject: [
 ]
 ```
 
+#### workers
+Hermione runs all tests in subprocesses in order to decrease the main process CPU usage. This options defines the numbers of subprocesses to start for running tests. Default value is `1`.
+
 ### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
 
@@ -567,7 +575,7 @@ Property name             | Description
 `config`                  | Config that is used in the test runner. Can be mutated.
 `events`                  | Events list for subscription.
 
-**Available events**
+**Available events which are triggered in the main process**
 
 Event                     | Description
 ------------------------- | -------------
@@ -575,7 +583,6 @@ Event                     | Description
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after test execution. If a handler returns a promise, tests will be executed only after the promise is resolved.
-`NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SESSION_END`             | Will be triggered after the browser session ends. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `BEGIN`                   | Will be triggered before test execution, but after all the runners are initialized.
@@ -591,6 +598,55 @@ Event                     | Description
 `INFO`                    | Reserved.
 `WARNING`                 | Reserved.
 `EXIT`                    | Will be triggered when SIGTERM is received (for example, Ctrl + C). The handler can return a promise.
+
+**Available events which are triggered in subprocesses**
+
+Event                     | Description
+------------------------- | -------------
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
+`NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
+
+**REMARK!**
+
+Events which are triggered in the main process and subprocesses can not share information between each other, for example:
+
+```js
+module.exports = (hermione) => {
+    let flag = false;
+
+    hermione.on(hermione.events.RUNNER_START, () => {
+        flag = true;
+    });
+
+    hermione.on(hermione.events.NEW_BROWSER, () => {
+        // outputs `false`, because `NEW_BROWSER` event was triggered in a subprocess,
+        // but `RUNNER_START` was not
+        console.log(flag);
+    });
+
+    hermione.on(hermione.events.RUNNER_END, () => {
+        // outputs `true`
+        console.log(flag);
+    });
+};
+```
+
+But you can solve such problem this way:
+
+```js
+module.exports = (hermione, opts) => {
+    hermione.on(hermione.events.RUNNER_START, () => {
+      opts.flag = true;
+    });
+
+    hermione.on(hermione.events.NEW_BROWSER, () => {
+        // outputs `true`, because properties in a config (variable `opts` is a part of a config)
+        // which have raw data types are passed to subprocesses after `RUNNER_START` event
+        console.log(opts.flag);
+    });
+};
+```
 
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
