@@ -409,7 +409,8 @@ describe('mocha-runner/mocha-adapter', () => {
     describe('run', () => {
         function stubWorkers() {
             const stub = sandbox.stub();
-            return {runTest: stub.yields.apply(stub, arguments)};
+            const args = arguments.length ? arguments : [null, {}];
+            return {runTest: stub.yields.apply(stub, args)};
         }
 
         it('should request browser before suite execution', () => {
@@ -463,7 +464,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            return mochaAdapter.run()
+            return mochaAdapter.run(stubWorkers())
                 .then(() => {
                     assert.calledOnce(logger.warn);
                     assert.calledWithMatch(logger.warn, /some-error/);
@@ -480,7 +481,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-                return mochaAdapter.run().then(() => {
+                return mochaAdapter.run(stubWorkers()).then(() => {
                     assert.calledOnceWith(browserAgent.freeBrowser, browser, {force: false});
                 });
             });
@@ -492,7 +493,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
                 mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'other-error'}});
 
-                return mochaAdapter.run().then(() => {
+                return mochaAdapter.run(stubWorkers()).then(() => {
                     assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
                 });
             });
@@ -504,7 +505,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
                 mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'SOME-ERROR'}});
 
-                return mochaAdapter.run().then(() => {
+                return mochaAdapter.run(stubWorkers()).then(() => {
                     assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
                 });
             });
@@ -540,7 +541,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
-            return mochaAdapter.run(stubWorkers({err: {some: 'err'}}))
+            return mochaAdapter.run(stubWorkers({some: 'err'}))
                 .then(() => {
                     assert.calledOnce(testFailSpy);
                     assert.calledWithMatch(testFailSpy, {error: {some: 'err'}});
