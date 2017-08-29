@@ -368,11 +368,5 @@ describe('Browser', () => {
                 .then((browser) => browser.quit())
                 .then(() => assert.called(logger.warn));
         });
-
-        it('should handle an error from prepareBrowser', () => {
-            const prepareBrowser = sandbox.stub().throws();
-
-            assert.throws(() => mkBrowser_({prepareBrowser}));
-        });
     });
 });
