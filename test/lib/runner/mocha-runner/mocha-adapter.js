@@ -26,8 +26,11 @@ describe('mocha-runner/mocha-adapter', () => {
         return MochaAdapter.create(browserAgent, _.extend({patternsOnReject: []}, config));
     };
 
-    const mkBrowserStub_ = () => {
-        return {publicAPI: Object.create({})};
+    const mkBrowserStub_ = (opts) => {
+        return _.defaults(opts || {}, {
+            publicAPI: Object.create({}),
+            updateChanges: sinon.stub()
+        });
     };
 
     beforeEach(() => {
@@ -561,12 +564,26 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaAdapter = mkMochaAdapter_();
             const test = MochaStub.Test.create();
 
-            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
+            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}}));
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
             return mochaAdapter.run(stubWorkers(null, {meta: {some: 'meta'}}))
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
+        });
+
+        it('should update browser state', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const browser = mkBrowserStub_();
+
+            browserAgent.getBrowser.returns(q(browser));
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+            const workersData = {meta: {some: 'meta'}, changes: {originWindowSize: {width: 1, height: 1}}};
+            return mochaAdapter.run(stubWorkers(null, workersData))
+                .then(() => {
+                    assert.calledWith(browser.updateChanges, {originWindowSize: {width: 1, height: 1}});
+                });
         });
 
         it('should fail test if running of test in subprocess fails', () => {
