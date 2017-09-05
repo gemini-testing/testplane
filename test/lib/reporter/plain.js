@@ -64,6 +64,21 @@ describe('Plain reporter', () => {
                     /some test title \[bro\] - 100ms\s.+some\/path\/file.js\s.+some error stack/
                 );
             });
+
+            it('should extend error with original selenium error if it exist', () => {
+                test = mkTestStub_({
+                    err: {
+                        stack: 'some stack',
+                        seleniumStack: {
+                            orgStatusMessage: 'some original message'
+                        }
+                    }
+                });
+
+                emit(RunnerEvents[event], test);
+
+                assert.match(stdout, /some stack \(some original message\)/);
+            });
         });
     });
 });
