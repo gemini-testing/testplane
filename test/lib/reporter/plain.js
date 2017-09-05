@@ -40,28 +40,30 @@ describe('Plain reporter', () => {
 
     afterEach(() => sandbox.restore());
 
-    const testSates = {
+    const testStates = {
         RETRY: 'retried',
         TEST_FAIL: 'failed'
     };
 
     ['RETRY', 'TEST_FAIL'].forEach((event) => {
-        it(`should log correct info about ${testSates[event]} test`, () => {
-            test = mkTestStub_({
-                fullTitle: () => 'some test title',
-                title: 'test title',
-                file: 'some/path/file.js',
-                browserId: 'bro',
-                duration: '100',
-                err: {stack: 'some error stack'}
+        describe(`${testStates[event]} tests report`, () => {
+            it(`should log correct info about test`, () => {
+                test = mkTestStub_({
+                    fullTitle: () => 'some test title',
+                    title: 'test title',
+                    file: 'some/path/file.js',
+                    browserId: 'bro',
+                    duration: '100',
+                    err: {stack: 'some error stack'}
+                });
+
+                emit(RunnerEvents[event], test);
+
+                assert.match(
+                    getDeserializedResult(stdout),
+                    /some test title \[bro\] - 100ms\s.+some\/path\/file.js\s.+some error stack/
+                );
             });
-
-            emit(RunnerEvents[event], test);
-
-            assert.match(
-                getDeserializedResult(stdout),
-                /some test title \[bro\] - 100ms\s.+some\/path\/file.js\s.+some error stack/
-            );
         });
     });
 });
