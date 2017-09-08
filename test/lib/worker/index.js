@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const q = require('q');
 const Config = require('../../../lib/config');
 const worker = require('../../../lib/worker');
@@ -55,26 +56,43 @@ describe('worker', () => {
     });
 
     describe('syncConfig', () => {
+        const stubConfig = (opts) => _.defaults(opts || {}, {mergeWith: sandbox.stub(), system: {mochaOpts: {}}});
+        const syncConfig = (config, cb) => {
+            worker.init(null, null, () => {});
+            worker.syncConfig(config, cb || (() => {}));
+        };
+
         it('should sync passed config with a config of inited hermione', () => {
-            const config = {mergeWith: sandbox.stub()};
+            const config = stubConfig();
 
             Config.create.returns(config);
 
-            worker.init(null, null, () => {});
-            worker.syncConfig({some: 'config'}, () => {});
+            syncConfig(stubConfig({some: 'config'}));
 
-            assert.calledOnceWith(config.mergeWith, {some: 'config'});
+            assert.calledOnce(config.mergeWith);
+            assert.calledWithMatch(config.mergeWith, {some: 'config'});
+        });
+
+        it('should sync all mocha opts except grep', () => {
+            const config = stubConfig();
+
+            Config.create.returns(config);
+
+            syncConfig({system: {mochaOpts: {grep: 'foo', timeout: 10}}});
+
+            assert.deepEqual(
+                config.mergeWith.firstCall.args[0],
+                {system: {mochaOpts: {timeout: 10}}}
+            );
         });
 
         it('should call callback after merge', () => {
             const cb = sandbox.spy().named('cb');
-            const config = {mergeWith: sandbox.stub()};
+            const config = stubConfig();
 
             Config.create.returns(config);
 
-            worker.init(null, null, () => {});
-
-            worker.syncConfig({some: 'config'}, cb);
+            syncConfig(stubConfig(), cb);
 
             assert.callOrder(config.mergeWith, cb);
         });
