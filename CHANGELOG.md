@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.44.0"></a>
+# [0.44.0](https://github.com/gemini-testing/hermione/compare/v0.37.4...v0.44.0) (2017-09-10)
+
+
+### Features
+
+* extend test error with original selenium error ([500d30c](https://github.com/gemini-testing/hermione/commit/500d30c))
+
+
+
 <a name="0.43.8"></a>
 ## [0.43.8](https://github.com/gemini-testing/hermione/compare/v0.43.7...v0.43.8) (2017-09-08)
 
