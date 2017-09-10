@@ -119,6 +119,11 @@ describe('Flat reporter', () => {
     });
 
     describe('rendering', () => {
+        const testStates = {
+            RETRY: 'retried',
+            TEST_FAIL: 'failed'
+        };
+
         it('should correctly do the rendering', () => {
             test = mkTestStub_({sessionId: 'test_session'});
 
@@ -186,33 +191,100 @@ describe('Flat reporter', () => {
             });
         });
 
+        ['RETRY', 'TEST_FAIL'].forEach((event) => {
+            describe(`${testStates[event]} tests report`, () => {
+                it(`should log correct number of ${testStates[event]} suite`, () => {
+                    test = mkTestStub_();
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /1\) .+/);
+                });
+
+                it(`should log full title of ${testStates[event]} suite`, () => {
+                    test = mkTestStub_();
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.include(stdout, test.fullTitle());
+                });
+
+                it(`should log path to file of ${testStates[event]} suite`, () => {
+                    test = mkTestStub_();
+
+                    sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.include(stdout, test.file);
+                });
+
+                it(`should log browser of ${testStates[event]} suite`, () => {
+                    test = mkTestStub_({
+                        browserId: 'bro1'
+                    });
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /bro1/);
+                });
+
+                it(`should log an error stack of ${testStates[event]} test`, () => {
+                    test = mkTestStub_({
+                        err: {stack: 'some stack'}
+                    });
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /some stack/);
+                });
+
+                it(`should log an error message of ${testStates[event]} test if an error stack does not exist`, () => {
+                    test = mkTestStub_({
+                        err: {message: 'some message'}
+                    });
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /some message/);
+                });
+
+                it(`should log an error of ${testStates[event]} test if an error stack and message do not exist`, () => {
+                    test = mkTestStub_({
+                        err: 'some error'
+                    });
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /some error/);
+                });
+
+                it('should extend error with original selenium error if it exist', () => {
+                    test = mkTestStub_({
+                        err: {
+                            stack: 'some stack',
+                            seleniumStack: {
+                                orgStatusMessage: 'some original message'
+                            }
+                        }
+                    });
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /some stack \(some original message\)/);
+                });
+
+                it(`should log "undefined" if ${testStates[event]} test does not have "err" property`, () => {
+                    test = mkTestStub_();
+
+                    emit(RunnerEvents[event], test);
+
+                    assert.match(stdout, /undefined/);
+                });
+            });
+        });
+
         describe('failed tests report', () => {
-            it('should log correct number of failed suite', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /\n1\) .+/);
-            });
-
-            it('should log full title of failed suite', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.include(stdout, test.fullTitle());
-            });
-
-            it('should log path to file of failed suite', () => {
-                test = mkTestStub_();
-
-                sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.include(stdout, test.file);
-            });
-
             it('should log path to file of failed hook', () => {
                 test = mkTestStub_({
                     file: null,
@@ -235,130 +307,6 @@ describe('Flat reporter', () => {
                 });
 
                 assert.doesNotThrow(() => emit(RunnerEvents.TEST_FAIL, test));
-            });
-
-            it('should log browser of failed suite', () => {
-                test = mkTestStub_({
-                    browserId: 'bro1'
-                });
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /bro1/);
-            });
-
-            it('should log an error stack of failed test', () => {
-                test = mkTestStub_({
-                    err: {stack: 'some stack'}
-                });
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /some stack/);
-            });
-
-            it('should log an error message of failed test if an error stack does not exist', () => {
-                test = mkTestStub_({
-                    err: {message: 'some message'}
-                });
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /some message/);
-            });
-
-            it('should log an error of failed test if an error stack and message do not exist', () => {
-                test = mkTestStub_({
-                    err: 'some error'
-                });
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /some error/);
-            });
-
-            it('should log "undefined" if failed test does not have "err" property', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /undefined/);
-            });
-        });
-
-        describe('retried tests report', () => {
-            it('should log correct number of retried suite', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.match(stdout, /1\) .+/);
-            });
-
-            it('should log full title of retried suite', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.include(stdout, test.fullTitle());
-            });
-
-            it('should log path to file of retried suite', () => {
-                test = mkTestStub_();
-
-                sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.include(stdout, test.file);
-            });
-
-            it('should log browser of retried suite', () => {
-                test = mkTestStub_({
-                    browserId: 'bro1'
-                });
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.match(stdout, /bro1/);
-            });
-
-            it('should log an error stack of retried test', () => {
-                test = mkTestStub_({
-                    err: {stack: 'some stack'}
-                });
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.match(stdout, /some stack/);
-            });
-
-            it('should log an error message of retried test if an error stack does not exist', () => {
-                test = mkTestStub_({
-                    err: {message: 'some message'}
-                });
-
-                emit(RunnerEvents.RETRY, test);
-
-                assert.match(stdout, /some message/);
-            });
-
-            it('should log an error of retried test if an error stack and message do not exist', () => {
-                test = mkTestStub_({
-                    err: 'some error'
-                });
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /some error/);
-            });
-
-            it('should log "undefined" if retried test does not have "err" property', () => {
-                test = mkTestStub_();
-
-                emit(RunnerEvents.TEST_FAIL, test);
-
-                assert.match(stdout, /undefined/);
             });
         });
     });
