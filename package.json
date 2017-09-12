@@ -17,6 +17,9 @@
     "type": "git",
     "url": "git://github.com/gemini-testing/hermione.git"
   },
+  "engines": {
+    "node": ">= 6.4.0"
+  },
   "keywords": [
     "hermione",
     "mocha",
