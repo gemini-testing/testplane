@@ -17,7 +17,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [Offers flexible test configuration](#offers-flexible-test-configuration)
   - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
 - [Prerequisites](#prerequisites)
-- [`before` and `beforeEach` hooks](#before-and-beforeeach-hooks)
+- [Hooks](#hooks)
 - [Skip](#skip)
 - [Only](#only)
 - [WebdriverIO extensions](#webdriverio-extensions)
@@ -171,9 +171,9 @@ The simplest way to get started is to use one of the NPM selenium standalone pac
 selenium-standalone start
 ```
 
-## `before` and `beforeEach` hooks
+## Hooks
 
-`before` hook is similar in meaning to `beforeEach` one. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
+`before` and `after` hooks **are forbidden** in `hermione`, you should use `beforeEach` and `afterEach` hooks instead. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
 
 ## Skip
 This feature allows you to ignore the specified suite or test in any browser, with an additional comment.

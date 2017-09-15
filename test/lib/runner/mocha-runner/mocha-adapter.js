@@ -158,8 +158,42 @@ describe('mocha-runner/mocha-adapter', () => {
         });
     });
 
-    describe('remove hooks', () => {
-        it('TODO');
+    describe('forbid suite hooks', () => {
+        beforeEach(() => mkMochaAdapter_());
+
+        it('should throw in case of "before" hook', () => {
+            assert.throws(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeAll(() => {}));
+            }, '"before" and "after" hooks are forbidden, use "beforeEach" and "afterEach" hooks instead');
+        });
+
+        it('should throw in case of "after" hook', () => {
+            assert.throw(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterAll(() => {}));
+            }, '"before" and "after" hooks are forbidden, use "beforeEach" and "afterEach" hooks instead');
+        });
+    });
+
+    describe('remove test hooks', () => {
+        it('should remove "beforeEach" hooks', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const beforeEach = sandbox.spy().named('beforeEach');
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeEach(beforeEach).addTest());
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(beforeEach));
+        });
+
+        it('should remove "afterEach" hooks', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const afterEach = sandbox.spy().named('afterEach');
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterEach(afterEach).addTest());
+
+            return mochaAdapter.run()
+                .then(() => assert.notCalled(afterEach));
+        });
     });
 
     describe('inject skip', () => {
