@@ -449,4 +449,12 @@ describe('hermione', () => {
             return hermione.run();
         });
     });
+
+    describe('isWorker', () => {
+        it('should return "false"', () => {
+            const hermione = Hermione.create();
+
+            assert.isFalse(hermione.isWorker());
+        });
+    });
 });
