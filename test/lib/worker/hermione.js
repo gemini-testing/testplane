@@ -148,4 +148,12 @@ describe('worker/hermione', () => {
             return assert.becomes(hermione.runTest('fullTitle', {some: 'options'}), 'foo bar');
         });
     });
+
+    describe('isWorker', () => {
+        it('should return "true"', () => {
+            const hermione = Hermione.create();
+
+            assert.isTrue(hermione.isWorker());
+        });
+    });
 });

@@ -53,6 +53,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [run](#run)
   - [readTests](#readtests)
   - [isFailed](#isfailed)
+  - [isWorker](#isworker)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
@@ -769,6 +770,26 @@ hermione.isFailed();
 
 Returns `true` or `false` depending on whether there has been an error or a test fail while running tests; can be useful in plugins to
 determine current Hermione status.
+
+### isWorker
+
+```js
+hermione.isWorker();
+```
+
+Returns `true` or `false` depending on whether you call the method in one of the workers or in the master process; can be useful in plugins to share some code execution between the master process and its workers, for example:
+
+
+```js
+// implementation of some plugin
+module.exports = (hermione) => {
+    if (hermione.isWorker()) {
+        // do some stuff only in workers
+    } else {
+        // do some stuff only in the master process
+    }
+};
+```
 
 ## Environment variables
 
