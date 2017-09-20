@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.48.0"></a>
+# [0.48.0](https://github.com/gemini-testing/hermione/compare/v0.47.0...v0.48.0) (2017-09-20)
+
+
+### Features
+
+* add windowSize option ([a71ea86](https://github.com/gemini-testing/hermione/commit/a71ea86))
+
+
+
 <a name="0.47.0"></a>
 # [0.47.0](https://github.com/gemini-testing/hermione/compare/v0.46.0...v0.47.0) (2017-09-19)
 
