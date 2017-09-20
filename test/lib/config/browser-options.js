@@ -563,4 +563,133 @@ describe('config browser-options', () => {
             assert.deepEqual(config.browsers.b1.meta, {k1: 'v1', k2: 'v2'});
         });
     });
+
+    describe('windowSize', () => {
+        describe('should throw error if "windowSize" is', () => {
+            it('not object, string or null', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({windowSize: 1})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"windowSize" must be string, object or null');
+            });
+
+            it('object without "width" or "height" keys', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({windowSize: {width: 1}})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"windowSize" must be an object with "width" and "height" keys');
+            });
+
+            it('object with "width" or "height" keys that are not numbers', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({windowSize: {width: 1, height: '2'}})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"windowSize" must be an object with "width" and "height" keys');
+            });
+
+            it('string with wrong pattern', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({windowSize: 'some_size'})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"windowSize" should have form of <width>x<height> (i.e. 1600x1200)');
+            });
+        });
+
+        it('should be "null" by default', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.windowSize, null);
+        });
+
+        it('should accept string value', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({windowSize: '1x2'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.windowSize, {width: 1, height: 2});
+        });
+
+        it('should pass object with "width" and "height" keys as is', () => {
+            const size = {width: 1, height: 2, check: true};
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({windowSize: size})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.windowSize, size);
+        });
+
+        it('should set option to all browsers', () => {
+            const readConfig = {
+                windowSize: '1x2',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.windowSize, {width: 1, height: 2});
+            assert.deepEqual(config.browsers.b2.windowSize, {width: 1, height: 2});
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                windowSize: '1x2',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({windowSize: '5x5'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.windowSize, {width: 1, height: 2});
+            assert.deepEqual(config.browsers.b2.windowSize, {width: 5, height: 5});
+        });
+    });
 });

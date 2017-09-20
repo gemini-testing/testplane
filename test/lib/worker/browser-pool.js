@@ -25,6 +25,12 @@ describe('worker/browser-pool', () => {
         return BrowserPool.create(opts.config, opts.emitter);
     };
 
+    const stubBrowser = (opts) => {
+        return _.defaults(opts || {}, {
+            updateChanges: () => {}
+        });
+    };
+
     beforeEach(() => {
         sandbox.stub(logger, 'warn');
     });
@@ -33,25 +39,28 @@ describe('worker/browser-pool', () => {
 
     describe('getBrowser', () => {
         beforeEach(() => {
-            sandbox.stub(Browser, 'create').returns({});
+            sandbox.stub(Browser, 'create').returns({
+                updateChanges: () => {}
+            });
         });
 
         it('should create a new browser if there are no free browsers in a cache', () => {
             const config = stubConfig();
             const browserPool = createPool({config});
 
-            Browser.create.withArgs(config, 'bro-id').returns({browserId: 'bro-id'});
+            Browser.create.withArgs(config, 'bro-id').returns(stubBrowser({browserId: 'bro-id'}));
 
             const browser = browserPool.getBrowser('bro-id', '100-500');
 
-            assert.deepEqual(browser, {browserId: 'bro-id', sessionId: '100-500'});
+            assert.propertyVal(browser, 'browserId', 'bro-id');
+            assert.propertyVal(browser, 'sessionId', '100-500');
         });
 
         it('should call prepareBrowser on new browser', () => {
             const prepareBrowser = sinon.stub();
             const config = stubConfig({prepareBrowser});
             const browserPool = createPool({config});
-            const bro = {publicAPI: {some: 'api'}};
+            const bro = stubBrowser({publicAPI: {some: 'api'}});
 
             Browser.create.returns(bro);
 
@@ -63,7 +72,7 @@ describe('worker/browser-pool', () => {
         it('should not fail on error in prepareBrowser', () => {
             const config = stubConfig({prepareBrowser: sinon.stub().throws()});
             const browserPool = createPool({config});
-            const bro = {publicAPI: {foo: 'bar'}};
+            const bro = stubBrowser({publicAPI: {foo: 'bar'}});
 
             Browser.create.returns(bro);
 
@@ -80,7 +89,7 @@ describe('worker/browser-pool', () => {
 
             emitter.on(RunnerEvents.NEW_BROWSER, onNewBrowser);
 
-            Browser.create.returns({id: 'bro-id', publicAPI: {some: 'api'}});
+            Browser.create.returns(stubBrowser({id: 'bro-id', publicAPI: {some: 'api'}}));
 
             browserPool.getBrowser();
 
@@ -93,7 +102,7 @@ describe('worker/browser-pool', () => {
 
             emitter.on(RunnerEvents.NEW_BROWSER, sinon.stub().throws());
 
-            const bro = {id: 'bro-id', publicAPI: {some: 'api'}};
+            const bro = stubBrowser({id: 'bro-id', publicAPI: {some: 'api'}});
             Browser.create.returns(bro);
 
             const browser = browserPool.getBrowser();

@@ -37,6 +37,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [testsPerSession](#testspersession)
   - [retry](#retry)
   - [meta](#meta)
+  - [windowSize](#windowsize)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -459,6 +460,7 @@ Option name               | Description
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method
+`windowSize`              | Browser window dimensions. Default value is `null`.
 
 ### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -490,6 +492,23 @@ How many times a test should be retried if it fails. Global value for all browse
 
 ### meta
 Additional data that can be obtained via .getMeta() method
+
+### windowSize
+Browser window dimensions (i.e. `1600x1200`). If not specified, the size of the window depends on WebDriver. Can be specified as string with pattern `800x1000` or object with `width` and `height` keys (both keys should be number). For example,
+
+```javascript
+windowSize: '800x1000'
+```
+and
+```javascript
+windowSize: {
+  width: 800,
+  height: 1000
+}
+```
+are the same.
+
+:warning: You can't set specific resolutions for browser Opera or mobile platforms. They use only full-screen resolution.
 
 ### system
 
