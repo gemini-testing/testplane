@@ -572,6 +572,18 @@ describe('mocha-runner/mocha-adapter', () => {
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
         });
 
+        it('should extend test with hermione context', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const test = MochaStub.Test.create();
+
+            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}}));
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            return mochaAdapter.run(stubWorkers(null, {hermioneCtx: {some: 'data'}}))
+                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', hermioneCtx: {some: 'data'}}));
+        });
+
         it('should update browser state', () => {
             const mochaAdapter = mkMochaAdapter_();
             const browser = mkBrowserStub_();
