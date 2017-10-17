@@ -528,7 +528,6 @@ describe('mocha-runner/mocha-adapter', () => {
                 const mochaAdapter = mkMochaAdapter_({patternsOnReject});
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'other-error'}});
 
                 return mochaAdapter.run(stubWorkers()).then(() => {
                     assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
@@ -539,10 +538,10 @@ describe('mocha-runner/mocha-adapter', () => {
                 const patternsOnReject = [/some-error/i];
                 const mochaAdapter = mkMochaAdapter_({patternsOnReject});
 
+                const workerStub = {runTest: sinon.stub().yields(new Error('some-error'))};
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-                mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: {message: 'SOME-ERROR'}});
 
-                return mochaAdapter.run(stubWorkers()).then(() => {
+                return mochaAdapter.run(workerStub).then(() => {
                     assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
                 });
             });
