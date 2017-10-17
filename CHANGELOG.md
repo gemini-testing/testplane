@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.50.0"></a>
+# [0.50.0](https://github.com/gemini-testing/hermione/compare/v0.46.0...v0.50.0) (2017-10-17)
+
+
+### Bug Fixes
+
+* Fix session rejection logic ([6393c6e](https://github.com/gemini-testing/hermione/commit/6393c6e))
+* update webdriver.io fork with keep-alive fix ([8926d5d](https://github.com/gemini-testing/hermione/commit/8926d5d))
+
+
+### Features
+
+* add common data transfer between main process and subprocess ([88011c4](https://github.com/gemini-testing/hermione/commit/88011c4))
+* add method 'isWorker' to the API ([0698611](https://github.com/gemini-testing/hermione/commit/0698611))
+* add windowSize option ([a71ea86](https://github.com/gemini-testing/hermione/commit/a71ea86))
+
+
+
 <a name="0.49.0"></a>
 # [0.49.0](https://github.com/gemini-testing/hermione/compare/v0.48.1...v0.49.0) (2017-10-05)
 
