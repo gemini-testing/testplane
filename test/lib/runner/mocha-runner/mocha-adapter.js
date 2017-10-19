@@ -6,7 +6,6 @@ const _ = require('lodash');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
 const logger = require('../../../../lib/utils').logger;
-const ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
 const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder');
 const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
@@ -21,6 +20,7 @@ describe('mocha-runner/mocha-adapter', () => {
     let browserAgent;
     let clearRequire;
     let testSkipper;
+    let proxyReporter;
 
     const mkMochaAdapter_ = (config) => {
         return MochaAdapter.create(browserAgent, _.extend({patternsOnReject: []}, config));
@@ -40,9 +40,11 @@ describe('mocha-runner/mocha-adapter', () => {
         browserAgent.freeBrowser.returns(q());
 
         clearRequire = sandbox.stub().named('clear-require');
+        proxyReporter = sandbox.stub().named('proxy-reporter');
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
-            'mocha': MochaStub
+            'mocha': MochaStub,
+            './proxy-reporter': proxyReporter
         });
 
         sandbox.stub(logger);
@@ -336,7 +338,6 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            sandbox.stub(ProxyReporter.prototype, '__constructor');
             mochaAdapter = mkMochaAdapter_();
             sandbox.spy(mochaAdapter, 'emit').named('emit');
         });
@@ -349,17 +350,17 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', () => {
             passthroughMochaEvents_();
 
-            assert.calledOnce(ProxyReporter.prototype.__constructor);
+            assert.calledOnce(proxyReporter);
+            assert.calledWithNew(proxyReporter);
         });
 
         it('should pass to proxy reporter emit fn', () => {
             passthroughMochaEvents_();
 
-            const emit_ = ProxyReporter.prototype.__constructor.firstCall.args[0];
+            const emit_ = proxyReporter.firstCall.args[0];
             emit_('some-event', {some: 'data'});
 
-            assert.calledOnce(mochaAdapter.emit);
-            assert.calledWith(mochaAdapter.emit, 'some-event', sinon.match({some: 'data'}));
+            assert.calledOnceWith(mochaAdapter.emit, 'some-event', sinon.match({some: 'data'}));
         });
 
         it('should pass to proxy reporter getter for requested browser', () => {
@@ -371,8 +372,23 @@ describe('mocha-runner/mocha-adapter', () => {
 
             return mochaAdapter.run()
                 .then(() => {
-                    const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
+                    const getBrowser = proxyReporter.lastCall.args[1];
                     assert.equal(browser, getBrowser());
+                });
+        });
+
+        it('should reset browser on reinit', () => {
+            const browser = mkBrowserStub_();
+            browserAgent.getBrowser.returns(q(browser));
+
+            passthroughMochaEvents_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+
+            return mochaAdapter.run()
+                .then(() => mochaAdapter.reinit())
+                .then(() => {
+                    const getBrowser = proxyReporter.lastCall.args[1];
+                    assert.notDeepEqual(getBrowser(), browser);
                 });
         });
 
@@ -381,7 +397,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             passthroughMochaEvents_();
 
-            const getBrowser = ProxyReporter.prototype.__constructor.lastCall.args[1];
+            const getBrowser = proxyReporter.lastCall.args[1];
             assert.deepEqual(getBrowser(), {id: 'some-browser'});
         });
 
@@ -390,7 +406,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 mochaAdapter.on(event, handler);
 
                 passthroughMochaEvents_();
-                return ProxyReporter.prototype.__constructor.firstCall.args[0];
+                return proxyReporter.firstCall.args[0];
             };
 
             it('proxy should rethrow error', () => {
