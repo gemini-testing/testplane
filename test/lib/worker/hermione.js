@@ -3,7 +3,7 @@
 const _ = require('lodash');
 const pluginsLoader = require('plugins-loader');
 const q = require('q');
-const qUtils = require('qemitter/utils');
+const eventsUtils = require('gemini-core').events.utils;
 const Config = require('../../../lib/config');
 const RunnerEvents = require('../../../lib/constants/runner-events');
 const WorkerRunnerEvents = require('../../../lib/worker/constants/runner-events');
@@ -52,7 +52,7 @@ describe('worker/hermione', () => {
 
     describe('init', () => {
         beforeEach(() => {
-            sandbox.spy(qUtils, 'passthroughEvent');
+            sandbox.spy(eventsUtils, 'passthroughEvent');
         });
 
         it('should create a runner instance', () => {
@@ -128,12 +128,12 @@ describe('worker/hermione', () => {
                 const hermione = Hermione.create();
                 hermione.init();
 
-                assert.calledOnceWith(qUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
+                assert.calledOnceWith(eventsUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
                     WorkerRunnerEvents.BEFORE_FILE_READ,
                     WorkerRunnerEvents.AFTER_FILE_READ,
                     WorkerRunnerEvents.NEW_BROWSER
                 ]);
-                assert.callOrder(qUtils.passthroughEvent, Runner.prototype.init);
+                assert.callOrder(eventsUtils.passthroughEvent, Runner.prototype.init);
             });
         });
     });

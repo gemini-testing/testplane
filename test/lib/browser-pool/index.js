@@ -3,7 +3,7 @@
 const CoreBrowserPool = require('gemini-core').BrowserPool;
 const _ = require('lodash');
 const q = require('q');
-const QEmitter = require('qemitter');
+const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
 const BrowserPool = require('../../../lib/browser-pool');
 const QBrowserPool = require('../../../lib/browser-pool/q-browser-pool');
 const Browser = require('../../../lib/browser');
@@ -67,7 +67,7 @@ describe('browser-pool', () => {
             _.forEach({onStart: Events.SESSION_START, onQuit: Events.SESSION_END}, (event, method) => {
                 describe(`${method}`, () => {
                     it(`should emit browser event "${event}"`, () => {
-                        const emitter = new QEmitter();
+                        const emitter = new AsyncEmitter();
                         const onEvent = sandbox.spy();
 
                         BrowserPool.create(null, emitter);
@@ -81,7 +81,7 @@ describe('browser-pool', () => {
                     });
 
                     it('should wait all async listeners', () => {
-                        const emitter = new QEmitter();
+                        const emitter = new AsyncEmitter();
                         const onEvent = sandbox.stub().callsFake(() => q.delay(1).then(() => ({foo: 'bar'})));
 
                         BrowserPool.create(null, emitter);
@@ -90,7 +90,7 @@ describe('browser-pool', () => {
 
                         emitter.on(event, onEvent);
 
-                        assert.becomes(BrowserManager[method](stubBrowser()), [{foo: 'bar'}]);
+                        return assert.becomes(BrowserManager[method](stubBrowser()), [{foo: 'bar'}]);
                     });
                 });
             });
