@@ -17,7 +17,7 @@ describe('worker/hermione', () => {
     beforeEach(() => {
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
-        sandbox.stub(pluginsLoader, 'load');
+        sandbox.stub(pluginsLoader, 'load').returns([]);
 
         sandbox.spy(Runner, 'create');
         sandbox.stub(Runner.prototype, 'init');
@@ -58,48 +58,51 @@ describe('worker/hermione', () => {
         it('should create a runner instance', () => {
             Config.create.returns({some: 'config'});
 
-            Hermione.create().init();
-
-            assert.calledOnceWith(Runner.create, {some: 'config'});
+            return Hermione.create()
+                .init()
+                .then(() => assert.calledOnceWith(Runner.create, {some: 'config'}));
         });
 
         it('should init a runner instance', () => {
-            Hermione.create().init({bro: ['file']});
-
-            assert.calledOnceWith(Runner.prototype.init, {bro: ['file']});
+            return Hermione.create()
+                .init({bro: ['file']})
+                .then(() => assert.calledOnceWith(Runner.prototype.init, {bro: ['file']}));
         });
 
         describe('loading of plugins', () => {
             it('should load plugins', () => {
-                Hermione.create().init();
-
-                assert.calledOnce(pluginsLoader.load);
+                return Hermione.create()
+                    .init()
+                    .then(() => assert.calledOnce(pluginsLoader.load));
             });
 
             it('should load plugins for hermione instance', () => {
-                Hermione.create().init();
-
-                assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione));
+                return Hermione.create()
+                    .init()
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione)));
             });
 
             it('should load plugins from config', () => {
                 Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
 
-                Hermione.create().init();
-
-                assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true});
+                return Hermione.create()
+                    .init()
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true}));
             });
 
             it('should load plugins with appropriate prefix', () => {
-                Hermione.create().init();
-
-                assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-');
+                Hermione.create()
+                    .init()
+                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
             });
 
-            it('should load plugins before creating of any runner', () => {
-                Hermione.create().init();
+            it('should wait until all plugins loaded before init', () => {
+                const afterLoad = sinon.spy();
+                pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
 
-                assert.callOrder(pluginsLoader.load, Runner.create);
+                return Hermione.create()
+                    .init()
+                    .then(() => assert.callOrder(afterLoad, Runner.prototype.init));
             });
         });
 
@@ -126,14 +129,16 @@ describe('worker/hermione', () => {
 
             it('all subprocess runner event before initialization of a runner', () => {
                 const hermione = Hermione.create();
-                hermione.init();
 
-                assert.calledOnceWith(eventsUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
-                    WorkerRunnerEvents.BEFORE_FILE_READ,
-                    WorkerRunnerEvents.AFTER_FILE_READ,
-                    WorkerRunnerEvents.NEW_BROWSER
-                ]);
-                assert.callOrder(eventsUtils.passthroughEvent, Runner.prototype.init);
+                return hermione.init()
+                    .then(() => {
+                        assert.calledOnceWith(eventsUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
+                            WorkerRunnerEvents.BEFORE_FILE_READ,
+                            WorkerRunnerEvents.AFTER_FILE_READ,
+                            WorkerRunnerEvents.NEW_BROWSER
+                        ]);
+                        assert.callOrder(eventsUtils.passthroughEvent, Runner.prototype.init);
+                    });
             });
         });
     });
@@ -143,9 +148,9 @@ describe('worker/hermione', () => {
             Runner.prototype.runTest.withArgs('fullTitle', {some: 'options'}).returns(q('foo bar'));
 
             const hermione = Hermione.create();
-            hermione.init();
-
-            return assert.becomes(hermione.runTest('fullTitle', {some: 'options'}), 'foo bar');
+            return hermione.init()
+                .then(() => hermione.runTest('fullTitle', {some: 'options'}))
+                .then((result) => assert.equal(result, 'foo bar'));
         });
     });
 
