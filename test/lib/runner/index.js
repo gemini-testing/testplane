@@ -6,7 +6,7 @@ const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
 const proxyquire = require('proxyquire');
 const q = require('q');
-const qUtils = require('qemitter/utils');
+const eventsUtils = require('gemini-core').events.utils;
 
 const BrowserPool = require('../../../lib/browser-pool');
 const MochaRunner = require('../../../lib/runner/mocha-runner');
@@ -284,12 +284,12 @@ describe('Runner', () => {
                 });
 
                 it('should passthrough events from mocha runners synchronously', () => {
-                    sandbox.stub(qUtils, 'passthroughEvent');
+                    sandbox.stub(eventsUtils, 'passthroughEvent');
                     const runner = new Runner(makeConfigStub());
 
                     return run_({runner})
                         .then(() => {
-                            assert.calledOnceWith(qUtils.passthroughEvent,
+                            assert.calledOnceWith(eventsUtils.passthroughEvent,
                                 sinon.match.instanceOf(EventEmitter),
                                 sinon.match.instanceOf(Runner),
                                 mochaRunnerEvents
@@ -363,12 +363,12 @@ describe('Runner', () => {
         });
 
         it('should passthrough BEFORE_FILE_READ and AFTER_FILE_READ events synchronously', () => {
-            sandbox.stub(qUtils, 'passthroughEvent');
+            sandbox.stub(eventsUtils, 'passthroughEvent');
             const runner = new Runner(makeConfigStub());
 
             runner.buildSuiteTree([{}]);
 
-            assert.calledWith(qUtils.passthroughEvent,
+            assert.calledWith(eventsUtils.passthroughEvent,
                 sinon.match.instanceOf(EventEmitter),
                 sinon.match.instanceOf(Runner),
                 [
