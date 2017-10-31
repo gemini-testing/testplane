@@ -29,12 +29,12 @@ describe('worker', () => {
                 });
         });
 
-        it('should call callback without arguments if init ends successfully', () => {
+        it('should return no result if init ends successfully', () => {
             return worker.init_(null, null)
                 .then((res) => assert.isUndefined(res));
         });
 
-        it('should call callback with an error as the first argument if init fails', () => {
+        it('should passthrough hermione init rejection error', () => {
             Hermione.prototype.init.throws(new Error('o.O'));
 
             return assert.isRejected(worker.init_(null, null), 'o.O');
