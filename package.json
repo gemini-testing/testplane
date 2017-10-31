@@ -42,7 +42,7 @@
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
     "mocha": "~2.4.5",
-    "plugins-loader": "1.0.1",
+    "plugins-loader": "^1.1.0",
     "q": "^2.0.0",
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
@@ -51,6 +51,7 @@
     "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#release/feat/broadcast"
   },
   "devDependencies": {
+    "bluebird": "^3.5.1",
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
     "conventional-changelog-lint": "^1.0.1",

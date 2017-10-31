@@ -33,7 +33,7 @@ describe('hermione', () => {
         sandbox.stub(logger, 'warn');
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
-        sandbox.stub(pluginsLoader, 'load');
+        sandbox.stub(pluginsLoader, 'load').returns([]);
     });
 
     afterEach(() => sandbox.restore());
@@ -102,9 +102,12 @@ describe('hermione', () => {
                     .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
             });
 
-            it('should load plugins before creating any runner', () => {
+            it('should wait until all plugins loaded before running tests', () => {
+                const afterLoad = sinon.spy();
+                pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
+
                 return runHermione()
-                    .then(() => assert.callOrder(pluginsLoader.load, Runner.create));
+                    .then(() => assert.callOrder(afterLoad, Runner.prototype.run));
             });
         });
 
@@ -340,6 +343,17 @@ describe('hermione', () => {
                         sinon.match.instanceOf(Hermione), {'some-plugin': {}}
                     );
                 });
+        });
+
+        it('should wait until plugins loaded before reading the tests', () => {
+            const afterLoad = sinon.spy();
+            pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
+            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
+
+            return Hermione
+                .create(Config.create())
+                .readTests()
+                .then(() => assert.callOrder(afterLoad, Runner.prototype.buildSuiteTree));
         });
 
         it('should not load plugins from config if option "loadPlugins" is set to "false"', () => {
