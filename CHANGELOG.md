@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.51.0"></a>
+# [0.51.0](https://github.com/gemini-testing/hermione/compare/v0.50.3...v0.51.0) (2017-11-01)
+
+
+### Features
+
+* wait for plugins load ([6499b2c](https://github.com/gemini-testing/hermione/commit/6499b2c))
+
+
+
 <a name="0.50.3"></a>
 ## [0.50.3](https://github.com/gemini-testing/hermione/compare/v0.50.2...v0.50.3) (2017-10-31)
 
