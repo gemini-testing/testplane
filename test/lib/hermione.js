@@ -50,6 +50,14 @@ describe('hermione', () => {
         });
     });
 
+    describe('init', () => {
+        it('should load plugins', () => {
+            const hermione = Hermione.create();
+            hermione.init()
+                .then(() => assert.calledOnce(pluginsLoader.load));
+        });
+    });
+
     describe('run', () => {
         const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
 
