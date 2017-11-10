@@ -51,9 +51,15 @@ describe('hermione', () => {
     });
 
     describe('init', () => {
+        it('should resolve to hermione instance', () => {
+            const hermione = Hermione.create();
+            return hermione.init()
+                .then((resolved) => assert.equal(resolved, hermione));
+        });
+
         it('should load plugins', () => {
             const hermione = Hermione.create();
-            hermione.init()
+            return hermione.init()
                 .then(() => assert.calledOnce(pluginsLoader.load));
         });
     });
