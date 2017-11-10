@@ -51,6 +51,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Reporters](#reporters)
 - [Overriding settings](#overriding-settings)
 - [Programmatic API](#programmatic-api)
+  - [init](#init)
   - [run](#run)
   - [readTests](#readtests)
   - [isFailed](#isfailed)
@@ -750,6 +751,14 @@ const hermione = new Hermione(config);
 ```
 
 * **config** (required) `String` – Path to the configuration file that will be read relative to `process.cwd`.
+
+### init
+
+```js
+hermione.init().done();
+```
+
+Initializes hermione instance, load all plugins ans so on.
 
 ### run
 

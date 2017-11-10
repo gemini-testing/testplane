@@ -50,6 +50,20 @@ describe('hermione', () => {
         });
     });
 
+    describe('init', () => {
+        it('should resolve to hermione instance', () => {
+            const hermione = Hermione.create();
+            return hermione.init()
+                .then((resolved) => assert.equal(resolved, hermione));
+        });
+
+        it('should load plugins', () => {
+            const hermione = Hermione.create();
+            return hermione.init()
+                .then(() => assert.calledOnce(pluginsLoader.load));
+        });
+    });
+
     describe('run', () => {
         const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
 
