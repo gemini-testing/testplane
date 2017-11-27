@@ -2,8 +2,8 @@
 
 const _ = require('lodash');
 
-const Config = require('../../../lib/config');
-const defaults = require('../../../lib/config/defaults');
+const Config = require('lib/config');
+const defaults = require('lib/config/defaults');
 
 describe('config browser-options', () => {
     const sandbox = sinon.sandbox.create();
@@ -257,7 +257,7 @@ describe('config browser-options', () => {
     });
 
     describe('screenshotPath', () => {
-        beforeEach(() => sandbox.stub(process, 'cwd'));
+        beforeEach(() => sandbox.stub(process, 'cwd').returns('/default/path'));
 
         it('should throw error if screenshotPath is not a null or string', () => {
             const readConfig = {
@@ -307,6 +307,75 @@ describe('config browser-options', () => {
 
             assert.equal(config.browsers.b1.screenshotPath, '/project_dir/default/path');
             assert.equal(config.browsers.b2.screenshotPath, '/project_dir/screens');
+        });
+    });
+
+    describe('screenshotsDir', () => {
+        it('should set a default screenshotsDir option if it is not set in config', () => {
+            const config = createConfig();
+
+            assert.equal(config.screenshotsDir, defaults.screenshotsDir);
+        });
+
+        it('should throw an error if a value is not a string or function', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({screenshotsDir: ['Array']})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"screenshotsDir" must be a string or function');
+        });
+
+        it('should does not throw if a value is a function', () => {
+            const readConfig = {
+                screenshotsDir: () => {},
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.doesNotThrow(createConfig);
+        });
+
+        it('should set screenshotsDir option to all browsers', () => {
+            const screenshotsDir = '/some/dir';
+            const readConfig = {
+                screenshotsDir,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.screenshotsDir, '/some/dir');
+            assert.equal(config.browsers.b2.screenshotsDir, '/some/dir');
+        });
+
+        it('should override screenshotsDir option per browser', () => {
+            const screenshotsDir = '/some/dir';
+            const readConfig = {
+                screenshotsDir,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({screenshotsDir: '/screens'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.screenshotsDir, '/some/dir');
+            assert.equal(config.browsers.b2.screenshotsDir, '/screens');
         });
     });
 
@@ -690,6 +759,77 @@ describe('config browser-options', () => {
 
             assert.deepEqual(config.browsers.b1.windowSize, {width: 1, height: 2});
             assert.deepEqual(config.browsers.b2.windowSize, {width: 5, height: 5});
+        });
+    });
+
+    describe('tolerance', () => {
+        describe('should throw an error', () => {
+            it('if value is not number', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({tolerance: []})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"tolerance" must be a number');
+            });
+
+            it('if value is negative', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({tolerance: -1})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"tolerance" must be non-negative');
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.tolerance, defaults.tolerance);
+        });
+
+        it('should does not throw if value is 0', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({tolerance: 0})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.doesNotThrow(createConfig);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                tolerance: 100,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({tolerance: 200})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.tolerance, 100);
+            assert.deepEqual(config.browsers.b2.tolerance, 200);
         });
     });
 });

@@ -8,11 +8,11 @@ const proxyquire = require('proxyquire');
 const q = require('q');
 const eventsUtils = require('gemini-core').events.utils;
 
-const BrowserPool = require('../../../lib/browser-pool');
-const MochaRunner = require('../../../lib/runner/mocha-runner');
-const TestSkipper = require('../../../lib/runner/test-skipper');
-const RunnerEvents = require('../../../lib/constants/runner-events');
-const logger = require('../../../lib/utils').logger;
+const BrowserPool = require('lib/browser-pool');
+const MochaRunner = require('lib/runner/mocha-runner');
+const TestSkipper = require('lib/runner/test-skipper');
+const RunnerEvents = require('lib/constants/runner-events');
+const logger = require('lib/utils/logger');
 
 const makeConfigStub = require('../../utils').makeConfigStub;
 

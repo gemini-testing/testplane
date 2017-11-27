@@ -7,13 +7,13 @@ const EventEmitter = require('events').EventEmitter;
 const pluginsLoader = require('plugins-loader');
 const q = require('q');
 
-const Config = require('../../lib/config');
-const Hermione = require('../../lib/hermione');
-const RunnerEvents = require('../../lib/constants/runner-events');
-const signalHandler = require('../../lib/signal-handler');
-const Runner = require('../../lib/runner');
-const sets = require('../../lib/sets');
-const logger = require('../../lib/utils').logger;
+const Config = require('lib/config');
+const Hermione = require('lib/hermione');
+const RunnerEvents = require('lib/constants/runner-events');
+const signalHandler = require('lib/signal-handler');
+const Runner = require('lib/runner');
+const sets = require('lib/sets');
+const logger = require('lib/utils/logger');
 const makeConfigStub = require('../utils').makeConfigStub;
 
 describe('hermione', () => {
