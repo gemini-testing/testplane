@@ -46,6 +46,31 @@ describe('mocha-runner/proxy-reporter', () => {
     testTranslateEvent_('test end', 'endTest');
     testTranslateEvent_('pending', 'pendingTest');
 
+    [
+        {mochaEvent: 'suite', runnerEvent: 'beginSuite'},
+        {mochaEvent: 'suite end', runnerEvent: 'endSuite'}
+    ].forEach((e) => {
+        describe(`"${e.mochaEvent}" event`, () => {
+            beforeEach(() => createReporter_());
+
+            it(`should translate event ${e.mochaEvent} to event ${e.runnerEvent}`, () => {
+                const suite = {root: false};
+
+                runner.emit(e.mochaEvent, suite);
+
+                assert.calledWith(emit, e.runnerEvent);
+            });
+
+            it(`should not translate event ${e.mochaEvent} to event ${e.runnerEvent} for root suite`, () => {
+                const suite = {root: true};
+
+                runner.emit(e.mochaEvent, suite);
+
+                assert.notCalled(emit);
+            });
+        });
+    });
+
     describe('"pass" event', () => {
         beforeEach(() => createReporter_());
 

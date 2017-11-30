@@ -5,7 +5,7 @@ const q = require('q');
 const _ = require('lodash');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
-const logger = require('../../../../lib/utils').logger;
+const utils = require('../../../../lib/utils');
 const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder');
 const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('../../../../lib/runner/mocha-runner/skip/');
@@ -41,13 +41,15 @@ describe('mocha-runner/mocha-adapter', () => {
 
         clearRequire = sandbox.stub().named('clear-require');
         proxyReporter = sandbox.stub().named('proxy-reporter');
+
+        sandbox.stub(utils.logger);
+        sandbox.stub(utils, 'getShortMD5');
+
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
             'mocha': MochaStub,
             './proxy-reporter': proxyReporter
         });
-
-        sandbox.stub(logger);
     });
 
     afterEach(() => sandbox.restore());
@@ -234,6 +236,37 @@ describe('mocha-runner/mocha-adapter', () => {
                     assert.called(Skip.prototype.handleEntity);
                     assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
                 });
+        });
+    });
+
+    describe('extend suite API', () => {
+        describe('id', () => {
+            it('should be added to suite', () => {
+                mkMochaAdapter_();
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(MochaStub.Suite.create()));
+
+                const suite = MochaStub.lastInstance.suite.suites[0];
+
+                assert.isFunction(suite.id);
+            });
+
+            it('should generate uniq suite id', () => {
+                utils.getShortMD5.returns('12345');
+
+                mkMochaAdapter_();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => {
+                    return suite
+                        .addSuite(MochaStub.Suite.create())
+                        .addSuite(MochaStub.Suite.create());
+                });
+
+                const suite1 = MochaStub.lastInstance.suite.suites[0];
+                const suite2 = MochaStub.lastInstance.suite.suites[1];
+
+                assert.equal(suite1.id(), '123450');
+                assert.equal(suite2.id(), '123451');
+            });
         });
     });
 
@@ -519,8 +552,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
             return mochaAdapter.run(stubWorkers())
                 .then(() => {
-                    assert.calledOnce(logger.warn);
-                    assert.calledWithMatch(logger.warn, /some-error/);
+                    assert.calledOnce(utils.logger.warn);
+                    assert.calledWithMatch(utils.logger.warn, /some-error/);
                 });
         });
 
