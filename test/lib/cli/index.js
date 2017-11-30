@@ -5,7 +5,6 @@ const _ = require('lodash');
 const q = require('q');
 const hermioneCli = require('../../../lib/cli');
 const info = require('../../../lib/cli/info');
-const Config = require('../../../lib/config');
 const defaults = require('../../../lib/config/defaults');
 const Hermione = require('../../../lib/hermione');
 const logger = require('../../../lib/utils').logger;
@@ -23,9 +22,7 @@ describe('cli', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(Config, 'create');
-
-        sandbox.spy(Hermione, 'create');
+        sandbox.stub(Hermione, 'create').returns(Object.create(Hermione.prototype));
         sandbox.stub(Hermione.prototype, 'run').returns(q(true));
 
         sandbox.stub(logger, 'log');
