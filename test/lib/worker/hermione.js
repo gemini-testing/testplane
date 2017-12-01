@@ -17,7 +17,7 @@ describe('worker/hermione', () => {
     beforeEach(() => {
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
-        sandbox.stub(pluginsLoader, 'load').returns([]);
+        sandbox.stub(pluginsLoader, 'load');
 
         sandbox.spy(Runner, 'create');
         sandbox.stub(Runner.prototype, 'init');
@@ -31,6 +31,34 @@ describe('worker/hermione', () => {
             Hermione.create('some-config-path.js');
 
             assert.calledOnceWith(Config.create, 'some-config-path.js');
+        });
+
+        describe('loading of plugins', () => {
+            it('should load plugins', () => {
+                Hermione.create();
+
+                assert.calledOnce(pluginsLoader.load);
+            });
+
+            it('should load plugins for hermione instance', () => {
+                Hermione.create();
+
+                assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione));
+            });
+
+            it('should load plugins from config', () => {
+                Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
+
+                Hermione.create();
+
+                assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true});
+            });
+
+            it('should load plugins with appropriate prefix', () => {
+                Hermione.create();
+
+                assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-');
+            });
         });
     });
 
@@ -58,52 +86,15 @@ describe('worker/hermione', () => {
         it('should create a runner instance', () => {
             Config.create.returns({some: 'config'});
 
-            return Hermione.create()
-                .init()
-                .then(() => assert.calledOnceWith(Runner.create, {some: 'config'}));
+            Hermione.create().init();
+
+            assert.calledOnceWith(Runner.create, {some: 'config'});
         });
 
         it('should init a runner instance', () => {
-            return Hermione.create()
-                .init({bro: ['file']})
-                .then(() => assert.calledOnceWith(Runner.prototype.init, {bro: ['file']}));
-        });
+            Hermione.create().init({bro: ['file']});
 
-        describe('loading of plugins', () => {
-            it('should load plugins', () => {
-                return Hermione.create()
-                    .init()
-                    .then(() => assert.calledOnce(pluginsLoader.load));
-            });
-
-            it('should load plugins for hermione instance', () => {
-                return Hermione.create()
-                    .init()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione)));
-            });
-
-            it('should load plugins from config', () => {
-                Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
-
-                return Hermione.create()
-                    .init()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true}));
-            });
-
-            it('should load plugins with appropriate prefix', () => {
-                Hermione.create()
-                    .init()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
-            });
-
-            it('should wait until all plugins loaded before init', () => {
-                const afterLoad = sinon.spy();
-                pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
-
-                return Hermione.create()
-                    .init()
-                    .then(() => assert.callOrder(afterLoad, Runner.prototype.init));
-            });
+            assert.calledOnceWith(Runner.prototype.init, {bro: ['file']});
         });
 
         describe('should passthrough', () => {
@@ -111,13 +102,11 @@ describe('worker/hermione', () => {
                 const hermione = Hermione.create();
                 hermione.init();
 
-                const events = [
+                [
                     WorkerRunnerEvents.BEFORE_FILE_READ,
                     WorkerRunnerEvents.AFTER_FILE_READ,
                     WorkerRunnerEvents.NEW_BROWSER
-                ];
-
-                events.forEach((event, name) => {
+                ].forEach((event, name) => {
                     const spy = sinon.spy().named(`${name} handler`);
                     hermione.on(event, spy);
 
@@ -130,15 +119,14 @@ describe('worker/hermione', () => {
             it('all subprocess runner event before initialization of a runner', () => {
                 const hermione = Hermione.create();
 
-                return hermione.init()
-                    .then(() => {
-                        assert.calledOnceWith(eventsUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
-                            WorkerRunnerEvents.BEFORE_FILE_READ,
-                            WorkerRunnerEvents.AFTER_FILE_READ,
-                            WorkerRunnerEvents.NEW_BROWSER
-                        ]);
-                        assert.callOrder(eventsUtils.passthroughEvent, Runner.prototype.init);
-                    });
+                hermione.init();
+
+                assert.calledOnceWith(eventsUtils.passthroughEvent, Runner.create.returnValues[0], hermione, [
+                    WorkerRunnerEvents.BEFORE_FILE_READ,
+                    WorkerRunnerEvents.AFTER_FILE_READ,
+                    WorkerRunnerEvents.NEW_BROWSER
+                ]);
+                assert.callOrder(eventsUtils.passthroughEvent, Runner.prototype.init);
             });
         });
     });
@@ -148,8 +136,9 @@ describe('worker/hermione', () => {
             Runner.prototype.runTest.withArgs('fullTitle', {some: 'options'}).returns(q('foo bar'));
 
             const hermione = Hermione.create();
-            return hermione.init()
-                .then(() => hermione.runTest('fullTitle', {some: 'options'}))
+            hermione.init();
+
+            return hermione.runTest('fullTitle', {some: 'options'})
                 .then((result) => assert.equal(result, 'foo bar'));
         });
     });

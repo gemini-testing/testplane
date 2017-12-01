@@ -48,19 +48,31 @@ describe('hermione', () => {
 
             assert.calledOnceWith(Config.create, 'some-config-path.js');
         });
-    });
-
-    describe('init', () => {
-        it('should resolve to hermione instance', () => {
-            const hermione = Hermione.create();
-            return hermione.init()
-                .then((resolved) => assert.equal(resolved, hermione));
-        });
 
         it('should load plugins', () => {
-            const hermione = Hermione.create();
-            return hermione.init()
-                .then(() => assert.calledOnce(pluginsLoader.load));
+            Hermione.create();
+
+            assert.calledOnce(pluginsLoader.load);
+        });
+
+        it('should load plugins for hermione instance', () => {
+            Hermione.create();
+
+            assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione));
+        });
+
+        it('should load plugins from config', () => {
+            Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
+
+            Hermione.create();
+
+            assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true});
+        });
+
+        it('should load plugins with appropriate prefix', () => {
+            Hermione.create();
+
+            assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-');
         });
     });
 
@@ -91,37 +103,32 @@ describe('hermione', () => {
                 .then(() => assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/));
         });
 
-        describe('loading of plugins', () => {
+        describe('INIT', () => {
             beforeEach(() => mkRunnerStub_());
 
-            it('should load plugins', () => {
-                return runHermione()
-                    .then(() => assert.calledOnce(pluginsLoader.load));
+            it('should emit INIT on run', () => {
+                const onInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.run()
+                    .then(() => assert.calledOnce(onInit));
             });
 
-            it('should load plugins for hermione instance', () => {
-                return runHermione()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione)));
+            it('should reject on INIT handler fail', () => {
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, () => q.reject('o.O'));
+
+                return assert.isRejected(hermione.run(), /o.O/);
             });
 
-            it('should load plugins from config', () => {
-                Config.create.returns(makeConfigStub({plugins: {'some-plugin': true}}));
+            it('should wait INIT handler before running tests', () => {
+                const afterInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, () => q.delay(20).then(afterInit));
 
-                return runHermione()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, {'some-plugin': true}));
-            });
-
-            it('should load plugins with appropriate prefix', () => {
-                return runHermione()
-                    .then(() => assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, 'hermione-'));
-            });
-
-            it('should wait until all plugins loaded before running tests', () => {
-                const afterLoad = sinon.spy();
-                pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
-
-                return runHermione()
-                    .then(() => assert.callOrder(afterLoad, Runner.prototype.run));
+                return hermione.run()
+                    .then(() => assert.callOrder(afterInit, Runner.prototype.run));
             });
         });
 
@@ -345,46 +352,12 @@ describe('hermione', () => {
                 });
         });
 
-        it('should load plugins from config', () => {
-            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
-
-            return Hermione
-                .create(Config.create())
-                .readTests()
-                .then(() => {
-                    assert.calledWith(
-                        pluginsLoader.load,
-                        sinon.match.instanceOf(Hermione), {'some-plugin': {}}
-                    );
-                });
-        });
-
-        it('should wait until plugins loaded before reading the tests', () => {
-            const afterLoad = sinon.spy();
-            pluginsLoader.load.callsFake(() => [q.delay(20).then(afterLoad)]);
-            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
-
-            return Hermione
-                .create(Config.create())
-                .readTests()
-                .then(() => assert.callOrder(afterLoad, Runner.prototype.buildSuiteTree));
-        });
-
-        it('should not load plugins from config if option "loadPlugins" is set to "false"', () => {
-            Config.create.returns(makeConfigStub({plugins: {'some-plugin': {}}}));
-
-            return Hermione
-                .create(Config.create())
-                .readTests(null, null, {loadPlugins: false})
-                .then(() => assert.notCalled(pluginsLoader.load));
-        });
-
-        it('should not passthrough synchronous runner events if option "loadPlugins" is set to "false"', () => {
+        it('should not passthrough runner events on silent read', () => {
             const runner = mkRunnerStub_();
             runner.buildSuiteTree = () => Promise.resolve({});
             const hermione = Hermione.create(makeConfigStub());
 
-            return hermione.readTests(null, null, {loadPlugins: false})
+            return hermione.readTests(null, null, {silent: true})
                 .then(() => {
                     _.forEach(RunnerEvents.getSync(), (event, name) => {
                         const spy = sinon.spy().named(`${name} handler`);
@@ -395,6 +368,42 @@ describe('hermione', () => {
                         assert.notCalled(spy);
                     });
                 });
+        });
+
+        describe('INIT', () => {
+            it('should emit INIT on read', () => {
+                const onInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.readTests()
+                    .then(() => assert.calledOnce(onInit));
+            });
+
+            it('should reject on INIT handler fail', () => {
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, () => q.reject('o.O'));
+
+                return assert.isRejected(hermione.readTests(), /o.O/);
+            });
+
+            it('should wait INIT handler before reading tests', () => {
+                const afterInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, () => q.delay(20).then(afterInit));
+
+                return hermione.readTests()
+                    .then(() => assert.callOrder(afterInit, Runner.prototype.buildSuiteTree));
+            });
+
+            it('should not emit INIT on silent read', () => {
+                const onInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.readTests(null, null, {silent: true})
+                    .then(() => assert.notCalled(onInit));
+            });
         });
 
         it('should build suite tree using tests', () => {

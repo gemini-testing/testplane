@@ -600,6 +600,7 @@ Property name             | Description
 
 Event                     | Description
 ------------------------- | -------------
+`INIT`                    | Will be triggered before any job start (`run` or `readTests`). If handler returns a promise then job will start only after the promise will be resolved. Emitted only once no matter how many times job will be performed.
 `BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
@@ -788,7 +789,7 @@ hermione.readTests(testPaths, browsers, options).done();
 * **testPaths** (required) `String[]` – Paths to tests relative to `process.cwd`.
 * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
 * **options** (optional) `Object`:
-  * **loadPlugins** (optional) `Boolean` – flag which enables/disables loading of plugins before reading tests; default is `true`.
+  * **silent** (optional) `Boolean` – flag to disable events emitting while reading tests; default is `false`.
 
 ### isFailed
 
