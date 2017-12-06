@@ -76,6 +76,20 @@ describe('hermione', () => {
         });
     });
 
+    describe('extendCli', () => {
+        it ('should emit CLI event with passed parser', () => {
+            const hermione = Hermione.create();
+            const onCli = sinon.spy().named('onCli');
+            const parser = {foo: 'bar'};
+
+            hermione.on(RunnerEvents.CLI, onCli);
+
+            hermione.extendCli(parser);
+
+            assert.calledOnceWith(onCli, parser);
+        });
+    });
+
     describe('run', () => {
         const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
 
