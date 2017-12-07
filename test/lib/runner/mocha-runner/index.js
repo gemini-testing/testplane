@@ -8,6 +8,7 @@ const MochaRunner = require('../../../../lib/runner/mocha-runner');
 const RetryMochaRunner = require('../../../../lib/runner/mocha-runner/retry-mocha-runner');
 const TestSkipper = require('../../../../lib/runner/test-skipper');
 const MochaBuilder = require('../../../../lib/runner/mocha-runner/mocha-builder');
+const SuiteMonitor = require('../../../../lib/suite-monitor');
 const MochaStub = require('../../_mocha');
 const makeConfigStub = require('../../../utils').makeConfigStub;
 
@@ -38,37 +39,73 @@ describe('mocha-runner', () => {
         sandbox.stub(MochaBuilder, 'prepare');
         sandbox.stub(MochaBuilder.prototype, 'buildAdapters').returns([]);
         sandbox.stub(MochaBuilder.prototype, 'buildSingleAdapter');
+
+        sandbox.stub(SuiteMonitor.prototype, 'suiteBegin');
+        sandbox.stub(SuiteMonitor.prototype, 'suiteEnd');
+        sandbox.stub(SuiteMonitor.prototype, 'testRetry');
     });
 
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
-        it('should create mocha adapter builder', () => {
-            sandbox.spy(MochaBuilder, 'create');
+        const testPassthroughing = (event, from) => {
+            const mochaRunner = createMochaRunner_();
+            const spy = sinon.spy();
 
-            MochaRunner.create('bro', makeConfigStub({system: {foo: 'bar'}}), {browser: 'pool'}, {test: 'skipper'});
+            mochaRunner.on(event, spy);
+            from.emit(event, 'some-data');
 
-            assert.calledOnceWith(MochaBuilder.create, 'bro', {foo: 'bar'}, {browser: 'pool'}, {test: 'skipper'});
+            assert.calledOnceWith(spy, 'some-data');
+        };
+
+        describe('mocha builder', () => {
+            it('should create instance', () => {
+                sandbox.spy(MochaBuilder, 'create');
+
+                MochaRunner.create('bro', makeConfigStub({system: {foo: 'bar'}}), {browser: 'pool'}, {test: 'skipper'});
+
+                assert.calledOnceWith(MochaBuilder.create, 'bro', {foo: 'bar'}, {browser: 'pool'}, {test: 'skipper'});
+            });
+
+            describe('should passthrough events', () => {
+                const events = [
+                    RunnerEvents.BEFORE_FILE_READ,
+                    RunnerEvents.AFTER_FILE_READ
+                ];
+
+                events.forEach((event) => {
+                    it(`${event}`, () => {
+                        const mochaBuilder = new EventEmitter();
+                        sandbox.stub(MochaBuilder, 'create').returns(mochaBuilder);
+
+                        testPassthroughing(event, mochaBuilder);
+                    });
+                });
+            });
         });
 
-        describe('should passthrough events from a mocha builder', () => {
-            const events = [
-                RunnerEvents.BEFORE_FILE_READ,
-                RunnerEvents.AFTER_FILE_READ
-            ];
+        describe('suite monitor', () => {
+            it('should create an instance', () => {
+                sandbox.spy(SuiteMonitor, 'create');
 
-            events.forEach((event) => {
-                it(`${event}`, () => {
-                    const mochaBuilder = new EventEmitter();
-                    sandbox.stub(MochaBuilder, 'create').returns(mochaBuilder);
+                createMochaRunner_();
 
-                    const mochaRunner = createMochaRunner_();
-                    const spy = sinon.spy();
+                assert.calledOnce(SuiteMonitor.create);
+            });
 
-                    mochaRunner.on(event, spy);
-                    mochaBuilder.emit(event, 'some-data');
+            describe('should passthrough events', () => {
+                const events = [
+                    RunnerEvents.SUITE_BEGIN,
+                    RunnerEvents.SUITE_END
+                ];
 
-                    assert.calledOnceWith(spy, 'some-data');
+                events.forEach((event) => {
+                    it(`${event}`, () => {
+                        const suiteMonitor = new EventEmitter();
+                        sandbox.stub(SuiteMonitor, 'create').returns(suiteMonitor);
+
+                        testPassthroughing(event, suiteMonitor);
+                    });
                 });
             });
         });
@@ -222,6 +259,39 @@ describe('mocha-runner', () => {
             return assert.isRejected(run_(), /Error/);
         });
 
+        describe('suite monitor', () => {
+            it('should handle "SUITE_BEGIN" event', () => {
+                const mocha = createMochaStub_();
+                MochaBuilder.prototype.buildAdapters.returns([mocha]);
+
+                RetryMochaRunner.prototype.run.callsFake(() => mocha.emit(RunnerEvents.SUITE_BEGIN, 'some-data'));
+
+                return run_()
+                    .then(() => assert.calledOnceWith(SuiteMonitor.prototype.suiteBegin, 'some-data'));
+            });
+
+            it('should handle "SUITE_END" event', () => {
+                const mocha = createMochaStub_();
+                MochaBuilder.prototype.buildAdapters.returns([mocha]);
+
+                RetryMochaRunner.prototype.run.callsFake(() => mocha.emit(RunnerEvents.SUITE_END, 'some-data'));
+
+                return run_()
+                    .then(() => assert.calledOnceWith(SuiteMonitor.prototype.suiteEnd, 'some-data'));
+            });
+
+            it('should handle "RETRY" event', () => {
+                const retryMochaRunner = Object.create(RetryMochaRunner.prototype);
+                sandbox.stub(RetryMochaRunner, 'create').returns(retryMochaRunner);
+
+                MochaBuilder.prototype.buildAdapters.returns([createMochaStub_()]);
+                RetryMochaRunner.prototype.run.callsFake(() => retryMochaRunner.emit(RunnerEvents.RETRY, 'some-data'));
+
+                return run_()
+                    .then(() => assert.calledOnceWith(SuiteMonitor.prototype.testRetry, 'some-data'));
+            });
+        });
+
         describe('should passthrough events from a', () => {
             const testPassthroughing = (event, from) => {
                 RetryMochaRunner.prototype.run.callsFake(() => from.emit(event, 'some-data'));
@@ -237,9 +307,6 @@ describe('mocha-runner', () => {
 
             describe('mocha runner', () => {
                 const events = [
-                    RunnerEvents.SUITE_BEGIN,
-                    RunnerEvents.SUITE_END,
-
                     RunnerEvents.TEST_BEGIN,
                     RunnerEvents.TEST_END,
 
