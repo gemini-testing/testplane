@@ -1,7 +1,6 @@
 'use strict';
 
-const program = require('commander');
-const _ = require('lodash');
+const {Command} = require('commander');
 const q = require('q');
 const hermioneCli = require('../../../lib/cli');
 const info = require('../../../lib/cli/info');
@@ -14,33 +13,31 @@ const any = sinon.match.any;
 describe('cli', () => {
     const sandbox = sinon.sandbox.create();
 
-    let originalArgs;
-
-    const addToProcessArgv = (argv) => {
-        originalArgs = _.clone(process.argv);
-        process.argv = process.argv.concat(argv);
+    const onParse = (fn) => {
+        Command.prototype.parse.callsFake(function() {
+            fn(this);
+        });
     };
 
     beforeEach(() => {
         sandbox.stub(Hermione, 'create').returns(Object.create(Hermione.prototype));
         sandbox.stub(Hermione.prototype, 'run').returns(q(true));
+        sandbox.stub(Hermione.prototype, 'extendCli');
 
         sandbox.stub(logger, 'log');
         sandbox.stub(logger, 'error');
 
         sandbox.stub(process, 'exit');
+
+        sandbox.stub(Command.prototype, 'parse');
     });
 
-    afterEach(() => {
-        sandbox.restore();
-        program.removeAllListeners();
-
-        process.argv = originalArgs || process.argv;
-    });
+    afterEach(() => sandbox.restore());
 
     it('should show information about config overriding on "--help"', () => {
+        onParse((parser) => parser.emit('--help'));
+
         return hermioneCli.run()
-            .then(() => program.emit('--help'))
             .then(() => {
                 assert.calledOnce(logger.log);
                 assert.calledWith(logger.log, info.configOverriding);
@@ -52,20 +49,13 @@ describe('cli', () => {
             .then(() => assert.calledOnce(Hermione.create));
     });
 
-    it('should use default config path', () => {
+    it('should create Hermione without config by default', () => {
         return hermioneCli.run()
-            .then(() => assert.calledWith(Hermione.create, defaults.config));
+            .then(() => assert.calledWith(Hermione.create, undefined));
     });
 
-    it('should use config path from cli option "--config"', () => {
-        addToProcessArgv(['--config', '.conf.hermione.js']);
-
-        return hermioneCli.run()
-            .then(() => assert.calledWith(Hermione.create, '.conf.hermione.js'));
-    });
-
-    it('should use config path from cli option "-c"', () => {
-        addToProcessArgv(['-c', '.conf.hermione.js']);
+    it('should use config path from cli', () => {
+        onParse((parser) => parser.config = '.conf.hermione.js');
 
         return hermioneCli.run()
             .then(() => assert.calledWith(Hermione.create, '.conf.hermione.js'));
@@ -77,7 +67,7 @@ describe('cli', () => {
     });
 
     it('should run hermione with paths from args', () => {
-        addToProcessArgv(['first.hermione.js', 'second.hermione.js']);
+        onParse((parser) => parser.args = ['first.hermione.js', 'second.hermione.js']);
 
         return hermioneCli.run()
             .then(() => assert.calledWith(Hermione.prototype.run, ['first.hermione.js', 'second.hermione.js']));
@@ -88,8 +78,8 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {reporters: defaults.reporters}));
     });
 
-    it('should use reporters from cli options "--reporter" and "-r"', () => {
-        addToProcessArgv(['--reporter', 'first', '-r', 'second']);
+    it('should use reporters from cli', () => {
+        onParse((parser) => parser.reporter = ['first', 'second']);
 
         return hermioneCli.run()
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {reporters: ['first', 'second']}));
@@ -100,8 +90,8 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {browsers: undefined}));
     });
 
-    it('should use browsers from cli options "--browser" and "-b"', () => {
-        addToProcessArgv(['--browser', 'first', '-b', 'second']);
+    it('should use browsers from cli', () => {
+        onParse((parser) => parser.browser = ['first', 'second']);
 
         return hermioneCli.run()
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {browsers: ['first', 'second']}));
@@ -112,11 +102,24 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {grep: undefined}));
     });
 
-    it('should use grep rule from cli option "--grep"', () => {
-        addToProcessArgv(['--grep', 'some-rule']);
+    it('should use grep rule from cli', () => {
+        onParse((parser) => parser.grep = 'some-rule');
 
         return hermioneCli.run()
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {grep: 'some-rule'}));
+    });
+
+    it('should allow hermione to extend cli', () => {
+        let parser_;
+        onParse((parser) => parser_ = parser);
+
+        return hermioneCli.run()
+            .then(() => assert.calledOnceWith(Hermione.prototype.extendCli, parser_));
+    });
+
+    it('should extend cli before parse', () => {
+        return hermioneCli.run()
+            .then(() => assert.callOrder(Hermione.prototype.extendCli, Command.prototype.parse));
     });
 
     it('should exit with code 0 if tests pass', () => {

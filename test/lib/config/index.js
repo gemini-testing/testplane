@@ -20,7 +20,7 @@ describe('config', () => {
             [resolvedConfigPath]: opts.requireConfigReturns || {}
         });
 
-        return Config.create(configPath, opts.allowOverrides);
+        return Config.create(opts.configPath, opts.allowOverrides);
     };
 
     afterEach(() => sandbox.restore());
