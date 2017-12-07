@@ -35,7 +35,7 @@
     "bluebird-q": "^2.1.1",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
-    "commander": "^2.9.0",
+    "commander": "^2.12.2",
     "gemini-configparser": "^1.0.0",
     "gemini-core": "^2.1.0",
     "glob-extra": "^2.0.0",
