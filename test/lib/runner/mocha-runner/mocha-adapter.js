@@ -243,6 +243,7 @@ describe('mocha-runner/mocha-adapter', () => {
         describe('id', () => {
             it('should be added to suite', () => {
                 mkMochaAdapter_();
+
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(MochaStub.Suite.create()));
 
                 const suite = MochaStub.lastInstance.suite.suites[0];
@@ -251,9 +252,11 @@ describe('mocha-runner/mocha-adapter', () => {
             });
 
             it('should generate uniq suite id', () => {
-                utils.getShortMD5.returns('12345');
+                utils.getShortMD5.withArgs('/some/file.js').returns('12345');
 
                 mkMochaAdapter_();
+
+                MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
