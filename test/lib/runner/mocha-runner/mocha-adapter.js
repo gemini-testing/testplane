@@ -5,12 +5,13 @@ const q = require('q');
 const _ = require('lodash');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
-const utils = require('../../../../lib/utils');
-const SkipBuilder = require('../../../../lib/runner/mocha-runner/skip/skip-builder');
-const OnlyBuilder = require('../../../../lib/runner/mocha-runner/skip/only-builder');
-const Skip = require('../../../../lib/runner/mocha-runner/skip/');
-const TestSkipper = require('../../../../lib/runner/test-skipper');
-const RunnerEvents = require('../../../../lib/constants/runner-events');
+const logger = require('lib/utils/logger');
+const crypto = require('lib/utils/crypto');
+const SkipBuilder = require('lib/runner/mocha-runner/skip/skip-builder');
+const OnlyBuilder = require('lib/runner/mocha-runner/skip/only-builder');
+const Skip = require('lib/runner/mocha-runner/skip/');
+const TestSkipper = require('lib/runner/test-skipper');
+const RunnerEvents = require('lib/constants/runner-events');
 const MochaStub = require('../../_mocha');
 
 describe('mocha-runner/mocha-adapter', () => {
@@ -42,8 +43,8 @@ describe('mocha-runner/mocha-adapter', () => {
         clearRequire = sandbox.stub().named('clear-require');
         proxyReporter = sandbox.stub().named('proxy-reporter');
 
-        sandbox.stub(utils.logger);
-        sandbox.stub(utils, 'getShortMD5');
+        sandbox.stub(logger);
+        sandbox.stub(crypto, 'getShortMD5');
 
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
@@ -252,7 +253,7 @@ describe('mocha-runner/mocha-adapter', () => {
             });
 
             it('should generate uniq suite id', () => {
-                utils.getShortMD5.withArgs('/some/file.js').returns('12345');
+                crypto.getShortMD5.withArgs('/some/file.js').returns('12345');
 
                 mkMochaAdapter_();
 
@@ -334,6 +335,27 @@ describe('mocha-runner/mocha-adapter', () => {
                     assert.calledOnce(testSpy);
                     assert.calledWithMatch(testSpy.firstCall, {title: 'test1'});
                 });
+        });
+    });
+
+    describe('extend test API', () => {
+        it('should add "id" method for test', () => {
+            mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(new MochaStub.Test()));
+
+            const test = MochaStub.lastInstance.suite.tests[0];
+
+            assert.isFunction(test.id);
+        });
+
+        it('should generate uniq id for test by calling "id" method', () => {
+            crypto.getShortMD5.returns('12345');
+            mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(new MochaStub.Test()));
+
+            const test = MochaStub.lastInstance.suite.tests[0];
+
+            assert.equal(test.id(), '12345');
         });
     });
 
@@ -555,8 +577,8 @@ describe('mocha-runner/mocha-adapter', () => {
 
             return mochaAdapter.run(stubWorkers())
                 .then(() => {
-                    assert.calledOnce(utils.logger.warn);
-                    assert.calledWithMatch(utils.logger.warn, /some-error/);
+                    assert.calledOnce(logger.warn);
+                    assert.calledWithMatch(logger.warn, /some-error/);
                 });
         });
 

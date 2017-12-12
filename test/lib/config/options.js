@@ -1,10 +1,10 @@
 'use strict';
 
 const _ = require('lodash');
-const Config = require('../../../lib/config');
-const defaults = require('../../../lib/config/defaults');
+const Config = require('lib/config');
+const defaults = require('lib/config/defaults');
 
-const parser = require('../../../lib/config/options');
+const parser = require('lib/config/options');
 
 describe('config options', () => {
     const sandbox = sinon.sandbox.create();
@@ -167,6 +167,64 @@ describe('config options', () => {
                 const config = createConfig();
 
                 assert.equal(config.system.workers, 100500);
+            });
+        });
+
+        describe('diffColor', () => {
+            it('should be #ff00ff by default', () => {
+                const config = createConfig();
+
+                assert.deepEqual(config.system.diffColor, '#ff00ff');
+            });
+
+            it('should override diffColor option', () => {
+                const readConfig = _.set({}, 'system.diffColor', '#f5f5f5');
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.system.diffColor, '#f5f5f5');
+            });
+
+            it('should throw an error if option is not a string', () => {
+                const readConfig = _.set({}, 'system.diffColor', 1);
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"diffColor" must be a string');
+            });
+
+            it('should throw an error if option is not a hexadecimal value', () => {
+                const readConfig = _.set({}, 'system.diffColor', '#gggggg');
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, /"diffColor" must be a hexadecimal/);
+            });
+        });
+
+        describe('tempDir', () => {
+            it('should set default option if it does not set in config file', () => {
+                const config = createConfig();
+
+                assert.deepEqual(config.system.tempDir, defaults.tempDir);
+            });
+
+            it('should override tempDir option', () => {
+                const readConfig = _.set({}, 'system.tempDir', '/def/path');
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.system.tempDir, '/def/path');
+            });
+
+            it('should throw an error if option is not a string', () => {
+                const readConfig = _.set({}, 'system.tempDir', 1);
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"tempDir" must be a string');
             });
         });
     });

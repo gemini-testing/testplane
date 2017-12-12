@@ -1,9 +1,9 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const logger = require('../../../lib/utils').logger;
-const PlainReporter = require('../../../lib/reporters/plain');
-const RunnerEvents = require('../../../lib/constants/runner-events');
+const logger = require('lib/utils/logger');
+const PlainReporter = require('lib/reporters/plain');
+const RunnerEvents = require('lib/constants/runner-events');
 
 const mkTestStub_ = require('./utils').mkTestStub_;
 const getDeserializedResult = require('./utils').getDeserializedResult;

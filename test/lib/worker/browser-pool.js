@@ -2,10 +2,10 @@
 
 const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
-const Browser = require('../../../lib/browser');
-const BrowserPool = require('../../../lib/worker/browser-pool');
-const RunnerEvents = require('../../../lib/worker/constants/runner-events');
-const logger = require('../../../lib/utils').logger;
+const Browser = require('lib/browser');
+const BrowserPool = require('lib/worker/browser-pool');
+const RunnerEvents = require('lib/worker/constants/runner-events');
+const logger = require('lib/utils/logger');
 
 describe('worker/browser-pool', () => {
     const sandbox = sinon.sandbox.create();

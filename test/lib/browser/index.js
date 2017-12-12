@@ -1,60 +1,17 @@
 'use strict';
 
-const _ = require('lodash');
 const q = require('q');
 const webdriverio = require('webdriverio');
-const Browser = require('../../lib/browser');
-const logger = require('../../lib/utils').logger;
-const signalHandler = require('../../lib/signal-handler');
+const logger = require('lib/utils/logger');
+const signalHandler = require('lib/signal-handler');
+const {mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('Browser', () => {
     const sandbox = sinon.sandbox.create();
     let session;
 
-    function createBrowserConfig_(opts) {
-        const browser = _.defaults(opts || {}, {
-            desiredCapabilities: {browserName: 'browser'},
-            baseUrl: 'http://base_url',
-            gridUrl: 'http://test_host:4444/wd/hub',
-            waitTimeout: 100,
-            screenshotPath: 'path/to/screenshots',
-            screenshotOnReject: true,
-            httpTimeout: 3000,
-            sessionRequestTimeout: null,
-            sessionQuitTimeout: null,
-            windowSize: null
-        });
-
-        return {
-            baseUrl: 'http://main_url',
-            gridUrl: 'http://main_host:4444/wd/hub',
-            system: {debug: true},
-            forBrowser: () => browser
-        };
-    }
-
-    function makeSessionStub_() {
-        const session = q();
-        session.init = sandbox.stub().named('init').returns(session);
-        session.end = sandbox.stub().named('end').returns(q());
-        session.url = sandbox.stub().named('url').returns(session);
-        session.windowHandleSize = sandbox.stub().named('windowHandleSize').returns(q({value: {}}));
-        session.requestHandler = {defaultOptions: {}};
-
-        session.addCommand = sinon.stub().callsFake((name, command) => {
-            session[name] = command;
-            sandbox.spy(session, name);
-        });
-
-        return session;
-    }
-
-    function mkBrowser_(opts) {
-        return new Browser(createBrowserConfig_(opts), 'browser');
-    }
-
     beforeEach(() => {
-        session = makeSessionStub_();
+        session = mkSessionStub_(sandbox);
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);
         webdriverio.remote.returns(session);
@@ -122,6 +79,12 @@ describe('Browser', () => {
                 .then((browser) => {
                     assert.deepEqual(browser.meta, {k1: 'v1'});
                 });
+        });
+
+        it('should add "assertView" command', () => {
+            return mkBrowser_()
+                .init()
+                .then(() => assert.calledWith(session.addCommand, 'assertView'));
         });
 
         it('should set custom options before initializing of a session', () => {

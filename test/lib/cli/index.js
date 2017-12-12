@@ -2,11 +2,11 @@
 
 const {Command} = require('commander');
 const q = require('q');
-const hermioneCli = require('../../../lib/cli');
-const info = require('../../../lib/cli/info');
-const defaults = require('../../../lib/config/defaults');
-const Hermione = require('../../../lib/hermione');
-const logger = require('../../../lib/utils').logger;
+const hermioneCli = require('lib/cli');
+const info = require('lib/cli/info');
+const defaults = require('lib/config/defaults');
+const Hermione = require('lib/hermione');
+const logger = require('lib/utils/logger');
 
 const any = sinon.match.any;
 

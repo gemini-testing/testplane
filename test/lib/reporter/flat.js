@@ -3,9 +3,9 @@
 const chalk = require('chalk');
 const path = require('path');
 const EventEmitter = require('events').EventEmitter;
-const FlatReporter = require('../../../lib/reporters/flat');
-const RunnerEvents = require('../../../lib/constants/runner-events');
-const logger = require('../../../lib/utils').logger;
+const FlatReporter = require('lib/reporters/flat');
+const RunnerEvents = require('lib/constants/runner-events');
+const logger = require('lib/utils/logger');
 const mkTestStub_ = require('./utils').mkTestStub_;
 const getDeserializedResult = require('./utils').getDeserializedResult;
 
