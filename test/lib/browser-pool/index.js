@@ -1,6 +1,6 @@
 'use strict';
 
-const CoreBrowserPool = require('gemini-core').BrowserPool;
+const {BrowserPool: CoreBrowserPool, Calibrator} = require('gemini-core');
 const _ = require('lodash');
 const q = require('q');
 const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
@@ -59,7 +59,7 @@ describe('browser-pool', () => {
                 BrowserPool.create();
 
                 const browser = stubBrowser();
-                browser.init.returns(q({session: 'id'}));
+                browser.init.withArgs(sinon.match.instanceOf(Calibrator)).returns(q({session: 'id'}));
 
                 assert.becomes(getBrowserManager().start(browser), {session: 'id'});
             });

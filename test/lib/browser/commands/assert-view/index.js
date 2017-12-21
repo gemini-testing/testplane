@@ -11,18 +11,19 @@ describe('assertView command', () => {
     const sandbox = sinon.sandbox.create();
     let session, imageStub;
     const assertView = (config) => {
-        return mkBrowser_(config)
-            .init()
+        const browser = mkBrowser_(config);
+        sandbox.stub(browser, 'captureViewportImage').resolves(imageStub);
+
+        return browser.init()
             .then(() => session.assertView());
     };
 
     beforeEach(() => {
         session = mkSessionStub_(sandbox);
-        session.screenshot = sandbox.stub().named('screenshot').resolves({value: 'base64hash'});
         session.executionContext = {};
         sandbox.stub(webdriverio, 'remote').returns(session);
         imageStub = {save: sandbox.stub().named('save')};
-        sandbox.stub(Image, 'fromBase64').resolves(imageStub);
+
         sandbox.stub(Image, 'compare');
         sandbox.stub(Image.prototype, 'save').resolves();
         sandbox.stub(fs, 'existsSync');
@@ -32,25 +33,27 @@ describe('assertView command', () => {
     afterEach(() => sandbox.restore());
 
     describe('take screenshot', () => {
+        let browser;
+
         beforeEach(() => {
             fs.existsSync.returns(true);
             Image.compare.resolves(true);
+
+            browser = mkBrowser_();
+            sandbox.stub(browser, 'captureViewportImage').resolves(imageStub);
         });
 
-        it('should take a screenshot', () => {
-            return assertView()
-                .then(() => assert.calledOnce(session.screenshot));
-        });
-
-        it('should create Image instance from captured screenshot', () => {
-            return assertView()
-                .then(() => assert.calledOnceWith(Image.fromBase64, 'base64hash'));
+        it('should capture viewport image', () => {
+            return browser.init()
+                .then(() => session.assertView())
+                .then(() => assert.calledOnce(browser.captureViewportImage));
         });
 
         it('should save a captured screenshot', () => {
             temp.path.returns('/curr/path');
 
-            return assertView()
+            return browser.init()
+                .then(() => session.assertView())
                 .then(() => assert.calledOnceWith(imageStub.save, '/curr/path'));
         });
     });
