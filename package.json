@@ -47,7 +47,7 @@
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "gemini-testing/webdriverio#master",
+    "webdriverio": "gemini-testing/webdriverio#fix.opera",
     "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#release/feat/broadcast"
   },
   "devDependencies": {
