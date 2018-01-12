@@ -37,6 +37,7 @@ exports.mkSessionStub_ = (sandbox) => {
     session.init = sandbox.stub().named('init').returns(session);
     session.end = sandbox.stub().named('end').resolves();
     session.url = sandbox.stub().named('url').returns(session);
+    session.execute = sandbox.stub().named('execute').returns(session);
     session.windowHandleSize = sandbox.stub().named('windowHandleSize').resolves({value: {}});
     session.requestHandler = {defaultOptions: {}};
 

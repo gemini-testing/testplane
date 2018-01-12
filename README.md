@@ -36,6 +36,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [sessionsPerBrowser](#sessionsperbrowser)
   - [testsPerSession](#testspersession)
   - [retry](#retry)
+  - [calibrate](#calibrate)
   - [meta](#meta)
   - [windowSize](#windowsize)
   - [system](#system)
@@ -50,6 +51,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [CLI](#cli)
 - [Reporters](#reporters)
 - [Overriding settings](#overriding-settings)
+- [Tests API](#tests-api)
+  - [assertView](#assertview)
 - [Programmatic API](#programmatic-api)
   - [init](#init)
   - [run](#run)
@@ -459,6 +462,7 @@ Option name               | Description
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
+`calibrate`               | Allows to correctly capture the image. Default value is `false`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method
 `windowSize`              | Browser window dimensions. Default value is `null`.
@@ -490,6 +494,9 @@ By default is `Infinity` (no limit, all tests will be run in the same session). 
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
+
+### calibrate
+Does this browser need to perform the calibration procedure. This procedure allows to correctly capture the image in case the particular WebDriver implementation captures browser UI along with web page. Default value is `false`.
 
 ### meta
 Additional data that can be obtained via .getMeta() method
@@ -740,6 +747,12 @@ To override a setting with an environment variable, convert its full path to `sn
 hermione_base_url=http://example.com hermione path/to/mytest.js
 hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
 ```
+
+## Tests API
+
+### AssertView
+
+Under development.
 
 ## Programmatic API
 

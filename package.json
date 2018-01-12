@@ -37,7 +37,7 @@
     "clear-require": "^1.0.1",
     "commander": "^2.12.2",
     "gemini-configparser": "^1.0.0",
-    "gemini-core": "^2.2.1",
+    "gemini-core": "^2.3.1",
     "glob-extra": "^2.0.0",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",

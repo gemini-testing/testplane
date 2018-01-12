@@ -832,4 +832,40 @@ describe('config browser-options', () => {
             assert.deepEqual(config.browsers.b2.tolerance, 200);
         });
     });
+
+    describe('calibrate', () => {
+        it('should throw an error if value is not a boolean', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_({calibrate: 'foo'}));
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"calibrate" must be a boolean');
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.calibrate, defaults.calibrate);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                calibrate: false,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({calibrate: true})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.calibrate, false);
+            assert.equal(config.browsers.b2.calibrate, true);
+        });
+    });
 });

@@ -2,16 +2,21 @@
 
 const q = require('q');
 const webdriverio = require('webdriverio');
+const {Calibrator} = require('gemini-core');
+const Browser = require('lib/browser');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
+const Camera = require('lib/browser/camera');
 const {mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('Browser', () => {
     const sandbox = sinon.sandbox.create();
     let session;
+    let calibrator;
 
     beforeEach(() => {
         session = mkSessionStub_(sandbox);
+        calibrator = sinon.createStubInstance(Calibrator);
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);
         webdriverio.remote.returns(session);
@@ -133,6 +138,39 @@ describe('Browser', () => {
             return mkBrowser_({screenshotOnReject: true})
                 .init()
                 .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', true));
+        });
+
+        describe('camera calibration', () => {
+            beforeEach(() => {
+                sandbox.stub(Camera.prototype, 'calibrate');
+                sandbox.stub(Camera.prototype, 'isCalibrated');
+            });
+
+            it('should perform calibration if `calibrate` is turn on', () => {
+                calibrator.calibrate.withArgs(sinon.match.instanceOf(Browser)).resolves({foo: 'bar'});
+
+                return mkBrowser_({calibrate: true})
+                    .init(calibrator)
+                    .then(() => assert.calledOnceWith(Camera.prototype.calibrate, {foo: 'bar'}));
+            });
+
+            it('should not perform calibration if `calibrate` is turn off', () => {
+                return mkBrowser_({calibrate: false})
+                    .init(calibrator)
+                    .then(() => {
+                        assert.notCalled(Camera.prototype.calibrate);
+                    });
+            });
+
+            it('should not perform calibration if camera is already calibrated', () => {
+                Camera.prototype.isCalibrated.returns(true);
+
+                return mkBrowser_({calibrate: true})
+                    .init(calibrator)
+                    .then(() => {
+                        assert.notCalled(Camera.prototype.calibrate);
+                    });
+            });
         });
 
         describe('"extendOptions" command', () => {
@@ -335,6 +373,42 @@ describe('Browser', () => {
                         });
                 });
             });
+        });
+    });
+
+    describe('open', () => {
+        it('should open URL', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => browser.open('some-url'))
+                .then(() => assert.calledOnceWith(session.url, 'some-url'));
+        });
+    });
+
+    describe('evalScript', () => {
+        it('should execute script with added `return` operator', () => {
+            return mkBrowser_()
+                .init()
+                .then((browser) => browser.evalScript('some-script'))
+                .then(() => assert.calledOnceWith(session.execute, 'return some-script'));
+        });
+    });
+
+    describe('captureViewportImage', () => {
+        beforeEach(() => {
+            sandbox.stub(Camera.prototype, 'captureViewportImage');
+        });
+
+        it('should delegate actual capturing to camera object', () => {
+            Camera.prototype.captureViewportImage.resolves({some: 'image'});
+
+            return mkBrowser_()
+                .init()
+                .then((browser) => browser.captureViewportImage())
+                .then((image) => {
+                    assert.calledOnce(Camera.prototype.captureViewportImage);
+                    assert.deepEqual(image, {some: 'image'});
+                });
         });
     });
 
