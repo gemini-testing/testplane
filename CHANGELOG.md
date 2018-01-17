@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.56.0"></a>
+# [0.56.0](https://github.com/gemini-testing/hermione/compare/v0.55.0...v0.56.0) (2018-01-17)
+
+
+### Bug Fixes
+
+* do not overwrite system.mochaOpts.grep property in workers ([8dce8ad](https://github.com/gemini-testing/hermione/commit/8dce8ad))
+
+
+### Features
+
+* use new glob-extra version ([2e7509f](https://github.com/gemini-testing/hermione/commit/2e7509f))
+
+
+
 <a name="0.55.0"></a>
 # [0.55.0](https://github.com/gemini-testing/hermione/compare/v0.54.3...v0.55.0) (2018-01-12)
 
