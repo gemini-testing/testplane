@@ -45,4 +45,14 @@ describe('BrowserConfig', () => {
             assert.equal(res, '/foo/plain.png');
         });
     });
+
+    describe('serialize', () => {
+        it('should serialize all props except system options', () => {
+            const config = new BrowserConfig('bro', {foo: 'bar'}, {baz: 'qux'});
+
+            const result = config.serialize();
+
+            assert.deepEqual(result, {id: 'bro', foo: 'bar'});
+        });
+    });
 });

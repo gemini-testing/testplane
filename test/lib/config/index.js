@@ -82,6 +82,27 @@ describe('config', () => {
         });
     });
 
+    describe('serialize', () => {
+        it('should delegate browsers serialization to browser config', () => {
+            const config = initConfig({configParserReturns: {
+                browsers: {
+                    bro: {}
+                },
+                configPath: 'foo/bar/baz'
+            }});
+            sandbox.stub(BrowserConfig.prototype, 'serialize').returns({foo: 'bar'});
+
+            const result = config.serialize();
+
+            assert.deepEqual(result, {
+                browsers: {
+                    bro: {foo: 'bar'}
+                },
+                configPath: 'foo/bar/baz'
+            });
+        });
+    });
+
     describe('mergeWith', () => {
         it('should deeply merge config with another one', () => {
             const config = initConfig({configParserReturns: {some: {deep: {option: 'foo'}}}});
