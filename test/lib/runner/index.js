@@ -87,7 +87,7 @@ describe('Runner', () => {
             it('should create a worker farm', () => {
                 mkMochaRunner();
 
-                return run_({config: {system: {workers: 100500}}})
+                return run_({config: makeConfigStub({system: {workers: 100500}})})
                     .then(() => {
                         assert.calledOnceWith(workerFarm, {
                             maxConcurrentWorkers: 100500,
@@ -118,11 +118,14 @@ describe('Runner', () => {
                     .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path'));
             });
 
-            it('should sync config in workers', () => {
+            it('should sync serialized config with workers', () => {
                 mkMochaRunner();
 
-                return run_({config: {some: 'config', system: {workers: 100500}}})
-                    .then(() => assert.calledOnceWith(workers.syncConfig, {some: 'config', system: {workers: 100500}}));
+                const config = makeConfigStub();
+                config.serialize.returns({foo: 'bar'});
+
+                return run_({config})
+                    .then(() => assert.calledOnceWith(workers.syncConfig, {foo: 'bar'}));
             });
 
             it('should sync config after all RUNNER_START handler have finished', () => {
@@ -204,8 +207,12 @@ describe('Runner', () => {
         it('should pass config to a mocha runner', () => {
             mkMochaRunner();
 
-            return run_({config: {some: 'config', system: {}}})
-                .then(() => assert.calledOnceWith(MochaRunner.create, sinon.match.any, sinon.match({some: 'config'})));
+            return run_({config: makeConfigStub({plugins: {foo: 'bar'}})})
+                .then(() => assert.calledOnceWith(
+                    MochaRunner.create,
+                    sinon.match.any,
+                    sinon.match({plugins: {foo: 'bar'}})
+                ));
         });
 
         it('should create mocha runners with the same browser pool', () => {
