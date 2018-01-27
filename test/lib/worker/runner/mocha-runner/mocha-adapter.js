@@ -4,6 +4,7 @@ const _ = require('lodash');
 const q = require('q');
 const proxyquire = require('proxyquire');
 const BrowserAgent = require('gemini-core').BrowserAgent;
+const RunnerEvents = require('lib/constants/runner-events');
 const MochaStub = require('../../../_mocha');
 
 describe('worker/mocha-adapter', () => {
@@ -40,6 +41,40 @@ describe('worker/mocha-adapter', () => {
 
             return mochaAdapter.runInSession()
                 .then((data) => assert.property(data, 'hermioneCtx'));
+        });
+    });
+
+    describe('runInSession', () => {
+        it('should return test error on test fail', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({fn: () => mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: new Error('test fail')})});
+            });
+
+            return assert.isRejected(mochaAdapter.runInSession(), /test fail/);
+        });
+
+        it('should return hook error on afterEach hook fail', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest()
+                    .afterEach(() => mochaAdapter.emit(RunnerEvents.ERROR, new Error('hook fail')));
+            });
+
+            return assert.isRejected(mochaAdapter.runInSession(), /hook fail/);
+        });
+
+        it('should return test error if both test and afterEach hook failed', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest({fn: () => mochaAdapter.emit(RunnerEvents.TEST_FAIL, {err: new Error('test fail')})})
+                    .afterEach(() => mochaAdapter.emit(RunnerEvents.ERROR, new Error('hook fail')));
+            });
+
+            return assert.isRejected(mochaAdapter.runInSession(), /test fail/);
         });
     });
 });
