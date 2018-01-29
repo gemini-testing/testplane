@@ -8,6 +8,7 @@ const pluginsLoader = require('plugins-loader');
 const q = require('q');
 
 const Config = require('lib/config');
+const RuntimeConfig = require('lib/config/runtime-config');
 const Hermione = require('lib/hermione');
 const RunnerEvents = require('lib/constants/runner-events');
 const signalHandler = require('lib/signal-handler');
@@ -34,6 +35,8 @@ describe('hermione', () => {
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
         sandbox.stub(pluginsLoader, 'load').returns([]);
+
+        sandbox.stub(RuntimeConfig, 'getInstance').returns({extend: sandbox.stub()});
     });
 
     afterEach(() => sandbox.restore());
@@ -115,6 +118,16 @@ describe('hermione', () => {
 
             return runHermione([], {browsers: ['bro3']})
                 .then(() => assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/));
+        });
+
+        it('should init runtime config', () => {
+            mkRunnerStub_();
+
+            return runHermione([], {updateRefs: true})
+                .then(() => {
+                    assert.calledOnce(RuntimeConfig.getInstance);
+                    assert.calledOnceWith(RuntimeConfig.getInstance.lastCall.returnValue.extend, {updateRefs: true});
+                });
         });
 
         describe('INIT', () => {
