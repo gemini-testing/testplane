@@ -36,10 +36,9 @@ describe('ImageDiffError', () => {
         assert.equal(error.refImagePath, '/ref/path');
     });
 
-    it('should contain a function which generates image diff', () => {
-        const buildDiffFn = () => 'foo';
-        const error = new ImageDiffError('', '', '', buildDiffFn);
+    it('should contain options for image diff building', () => {
+        const error = new ImageDiffError('', '', '', {some: 'opts'});
 
-        assert.equal(error.saveDiffTo(), 'foo');
+        assert.deepEqual(error.diffOpts, {some: 'opts'});
     });
 });
