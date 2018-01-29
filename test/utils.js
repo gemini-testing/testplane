@@ -44,5 +44,25 @@ function makeConfigStub(opts) {
     return config;
 }
 
+function makeSuite(opts = {}) {
+    return _.defaults(opts, {
+        root: false,
+        id: () => 'default-id',
+        parent: {root: true},
+        title: 'default-suite',
+        fullTitle: () => 'default-suite'
+    });
+}
+
+function makeTest(opts = {}) {
+    return _.defaults(opts, {
+        parent: makeSuite(),
+        title: 'default-test',
+        browserId: 'yabro'
+    });
+}
+
 exports.browserWithId = browserWithId;
 exports.makeConfigStub = makeConfigStub;
+exports.makeSuite = makeSuite;
+exports.makeTest = makeTest;

@@ -20,7 +20,7 @@ describe('Plain reporter', () => {
         if (event) {
             emitter.emit(event, data);
         }
-        emitter.emit(RunnerEvents.RUNNER_END);
+        emitter.emit(RunnerEvents.RUNNER_END, {});
     };
 
     beforeEach(() => {
