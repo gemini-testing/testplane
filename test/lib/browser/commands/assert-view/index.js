@@ -100,43 +100,28 @@ describe('assertView command', () => {
                 return assert.isRejected(assertView(mkConfig_()), ImageDiffError);
             });
 
-            it('should extend an error with buildDiff function', () => {
-                return assertView(mkConfig_())
-                    .catch((error) => {
-                        assert.isFunction(error.saveDiffTo);
-                    });
-            });
-
-            describe('build image diff function', () => {
-                const saveDiff = (diffPath = '/diff/path', config) => {
-                    return assertView(config)
-                        .catch((error) => error.saveDiffTo(diffPath));
-                };
-
-                it('should build diff for passed image paths', () => {
+            describe('passing diff options', () => {
+                it('should pass diff options for passed image paths', () => {
                     const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
                     temp.path.returns('/current/path');
 
-                    return saveDiff('/diff/path', config)
-                        .then(() => {
-                            assert.calledWithMatch(Image.buildDiff, {
-                                currPath: '/current/path',
-                                diffPath: '/diff/path',
-                                refPath: '/reference/path'
+                    return assertView(config)
+                        .catch((e) => {
+                            assert.match(e.diffOpts, {
+                                current: '/current/path',
+                                reference: '/reference/path'
                             });
                         });
                 });
 
-                it('should build diff with passed compare options', () => {
+                it('should pass diff options with passed compare options', () => {
                     const config = {
                         tolerance: 100,
                         system: {diffColor: '#111111'}
                     };
 
-                    return saveDiff('/diff/path', config)
-                        .then(() => {
-                            assert.calledWithMatch(Image.buildDiff, {tolerance: 100, diffColor: '#111111'});
-                        });
+                    return assertView(config)
+                        .catch((e) => assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'}));
                 });
             });
         });

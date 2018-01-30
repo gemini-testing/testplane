@@ -5,8 +5,10 @@ const q = require('q');
 const _ = require('lodash');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
+const {Image} = require('gemini-core');
 const logger = require('lib/utils/logger');
 const crypto = require('lib/utils/crypto');
+const errors = require('lib/constants/errors');
 const SkipBuilder = require('lib/runner/mocha-runner/skip/skip-builder');
 const OnlyBuilder = require('lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('lib/runner/mocha-runner/skip/');
@@ -518,6 +520,10 @@ describe('mocha-runner/mocha-adapter', () => {
     });
 
     describe('run', () => {
+        beforeEach(() => {
+            sandbox.stub(Image, 'buildDiff');
+        });
+
         function stubWorkers() {
             const stub = sandbox.stub();
             const args = arguments.length ? arguments : [null, {}];
@@ -681,6 +687,52 @@ describe('mocha-runner/mocha-adapter', () => {
                     assert.calledOnce(testFailSpy);
                     assert.calledWithMatch(testFailSpy, {error: {some: 'err'}});
                 });
+        });
+
+        describe('extend test error on "ImageDiffError"', () => {
+            it('should extend image diff error by saving diff function', () => {
+                const mochaAdapter = mkMochaAdapter_();
+                const testFailSpy = sinon.spy();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
+
+                return mochaAdapter.run(stubWorkers({type: errors.IMAGE_DIFF_ERROR}))
+                    .then(() => {
+                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
+
+                        assert.isFunction(saveDiffTo);
+                    });
+            });
+
+            it('should extend image diff error by saving diff function with diff options', () => {
+                const mochaAdapter = mkMochaAdapter_();
+                const testFailSpy = sinon.spy();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
+
+                return mochaAdapter.run(stubWorkers({type: errors.IMAGE_DIFF_ERROR, diffOpts: {some: 'opts'}}))
+                    .then(() => {
+                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error || sandbox.stub();
+
+                        saveDiffTo('some/path');
+
+                        assert.calledWith(Image.buildDiff, {some: 'opts', diff: 'some/path'});
+                    });
+            });
+
+            it('should extend image diff error by saving diff function if test did not fail with image diff error', () => {
+                const mochaAdapter = mkMochaAdapter_();
+                const testFailSpy = sinon.spy();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
+
+                return mochaAdapter.run(stubWorkers({type: 'some-error'}))
+                    .then(() => {
+                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
+
+                        assert.isUndefined(saveDiffTo);
+                    });
+            });
         });
 
         it('should extend test with browser data even if running of test in subprocess fails', () => {
