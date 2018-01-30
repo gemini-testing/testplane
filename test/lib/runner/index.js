@@ -9,6 +9,7 @@ const q = require('q');
 const eventsUtils = require('gemini-core').events.utils;
 
 const BrowserPool = require('lib/browser-pool');
+const RuntimeConfig = require('lib/config/runtime-config');
 const MochaRunner = require('lib/runner/mocha-runner');
 const TestSkipper = require('lib/runner/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
@@ -63,6 +64,7 @@ describe('Runner', () => {
         sandbox.stub(MochaRunner.prototype, 'run').returns(q());
 
         sandbox.stub(logger, 'warn');
+        sandbox.stub(RuntimeConfig, 'getInstance');
     });
 
     afterEach(() => sandbox.restore());
@@ -114,8 +116,10 @@ describe('Runner', () => {
             it('should init workers', () => {
                 const runner = new Runner(makeConfigStub({configPath: 'some-config-path'}));
 
+                RuntimeConfig.getInstance.returns({runtime: 'config'});
+
                 return runner.run({bro: ['file1', 'file2']})
-                    .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path'));
+                    .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path', {runtime: 'config'}));
             });
 
             it('should sync serialized config with workers', () => {

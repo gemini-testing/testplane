@@ -1,8 +1,10 @@
 'use strict';
 
 const fs = require('fs');
+const fsExtra = require('fs-extra');
 const webdriverio = require('webdriverio');
 const {Image, temp} = require('gemini-core');
+const RuntimeConfig = require('lib/config/runtime-config');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const {mkBrowser_, mkSessionStub_} = require('../../utils');
@@ -28,6 +30,9 @@ describe('assertView command', () => {
         sandbox.stub(Image.prototype, 'save').resolves();
         sandbox.stub(fs, 'existsSync');
         sandbox.stub(temp, 'path');
+
+        sandbox.stub(RuntimeConfig, 'getInstance').returns({});
+        sandbox.stub(fsExtra, 'copy');
     });
 
     afterEach(() => sandbox.restore());
@@ -58,10 +63,31 @@ describe('assertView command', () => {
         });
     });
 
-    it('should fail with "NoRefImageError" error if there is no reference image', () => {
-        fs.existsSync.returns(false);
+    describe('assert refs', () => {
+        it('should fail with "NoRefImageError" error if there is no reference image', () => {
+            fs.existsSync.returns(false);
 
-        return assert.isRejected(assertView(), NoRefImageError);
+            return assert.isRejected(assertView(), NoRefImageError);
+        });
+    });
+
+    describe('update refs', () => {
+        beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true}));
+
+        it('should be fulfilled if there is not reference image', () => {
+            fs.existsSync.returns(false);
+
+            return assert.isFulfilled(assertView());
+        });
+
+        it('should update reference image if it does not exist', () => {
+            temp.path.returns('/curr/path');
+
+            fs.existsSync.withArgs('/ref/path').returns(false);
+
+            return assertView({getScreenshotPath: () => '/ref/path'})
+                .then(() => assert.calledOnceWith(fsExtra.copy, '/curr/path', '/ref/path'));
+        });
     });
 
     describe('image compare', () => {
@@ -96,32 +122,49 @@ describe('assertView command', () => {
                 sandbox.stub(Image, 'buildDiff');
             });
 
-            it('should fail with "ImageDiffError" error', () => {
-                return assert.isRejected(assertView(mkConfig_()), ImageDiffError);
-            });
-
-            describe('passing diff options', () => {
-                it('should pass diff options for passed image paths', () => {
-                    const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
-                    temp.path.returns('/current/path');
-
-                    return assertView(config)
-                        .catch((e) => {
-                            assert.match(e.diffOpts, {
-                                current: '/current/path',
-                                reference: '/reference/path'
-                            });
-                        });
+            describe('assert refs', () => {
+                it('should fail with "ImageDiffError" error', () => {
+                    return assert.isRejected(assertView(mkConfig_()), ImageDiffError);
                 });
 
-                it('should pass diff options with passed compare options', () => {
-                    const config = {
-                        tolerance: 100,
-                        system: {diffColor: '#111111'}
-                    };
+                describe('passing diff options', () => {
+                    it('should pass diff options for passed image paths', () => {
+                        const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
+                        temp.path.returns('/current/path');
 
-                    return assertView(config)
-                        .catch((e) => assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'}));
+                        return assertView(config)
+                            .catch((e) => {
+                                assert.match(e.diffOpts, {
+                                    current: '/current/path',
+                                    reference: '/reference/path'
+                                });
+                            });
+                    });
+
+                    it('should pass diff options with passed compare options', () => {
+                        const config = {
+                            tolerance: 100,
+                            system: {diffColor: '#111111'}
+                        };
+
+                        return assertView(config)
+                            .catch((e) => assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'}));
+                    });
+                });
+            });
+
+            describe('update refs', () => {
+                beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true}));
+
+                it('should be fulfilled', () => {
+                    return assert.isFulfilled(assertView());
+                });
+
+                it('should update reference image by a current image', () => {
+                    temp.path.returns('/cur/path');
+
+                    return assertView({getScreenshotPath: () => '/ref/path'})
+                        .then(() => assert.calledOnceWith(fsExtra.copy, '/cur/path', '/ref/path'));
                 });
             });
         });

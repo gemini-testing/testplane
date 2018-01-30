@@ -109,6 +109,13 @@ describe('cli', () => {
             .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {grep: 'some-rule'}));
     });
 
+    it('should use update refs mode from cli', () => {
+        onParse((parser) => parser.updateRefs = true);
+
+        return hermioneCli.run()
+            .then(() => assert.calledWithMatch(Hermione.prototype.run, any, {updateRefs: true}));
+    });
+
     it('should allow hermione to extend cli', () => {
         let parser_;
         onParse((parser) => parser_ = parser);
