@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.56.2"></a>
+## [0.56.2](https://github.com/gemini-testing/hermione/compare/v0.56.1...v0.56.2) (2018-01-30)
+
+
+### Bug Fixes
+
+* init save diff function in master process ([c263d87](https://github.com/gemini-testing/hermione/commit/c263d87))
+
+
+
 <a name="0.56.1"></a>
 ## [0.56.1](https://github.com/gemini-testing/hermione/compare/v0.56.0...v0.56.1) (2018-01-27)
 
