@@ -7,6 +7,7 @@ const _ = require('lodash');
 const proxyquire = require('proxyquire');
 const q = require('q');
 const eventsUtils = require('gemini-core').events.utils;
+const {temp} = require('gemini-core');
 
 const BrowserPool = require('lib/browser-pool');
 const RuntimeConfig = require('lib/config/runtime-config');
@@ -63,8 +64,11 @@ describe('Runner', () => {
         sandbox.stub(MochaRunner.prototype, 'init').returnsThis();
         sandbox.stub(MochaRunner.prototype, 'run').returns(q());
 
+        sandbox.stub(temp, 'init');
+        sandbox.stub(temp, 'serialize');
+
         sandbox.stub(logger, 'warn');
-        sandbox.stub(RuntimeConfig, 'getInstance');
+        sandbox.stub(RuntimeConfig, 'getInstance').returns({extend: () => {}});
     });
 
     afterEach(() => sandbox.restore());
@@ -116,10 +120,29 @@ describe('Runner', () => {
             it('should init workers', () => {
                 const runner = new Runner(makeConfigStub({configPath: 'some-config-path'}));
 
-                RuntimeConfig.getInstance.returns({runtime: 'config'});
+                RuntimeConfig.getInstance.returns({
+                    extend: () => ({runtime: 'config'})
+                });
 
                 return runner.run({bro: ['file1', 'file2']})
                     .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path', {runtime: 'config'}));
+            });
+
+            it('should init temp with dir from config', () => {
+                const config = makeConfigStub({system: {tempDir: 'some/dir'}});
+
+                return run_({config})
+                    .then(() => assert.calledOnceWith(temp.init, 'some/dir'));
+            });
+
+            it('should extend runtime config with temp options', () => {
+                const extend = sandbox.stub();
+                RuntimeConfig.getInstance.returns({extend});
+
+                temp.serialize.returns({some: 'opts'});
+
+                return run_()
+                    .then(() => assert.calledOnceWith(extend, {tempOpts: {some: 'opts'}}));
             });
 
             it('should sync serialized config with workers', () => {
@@ -235,9 +258,10 @@ describe('Runner', () => {
         it('should create test skipper with browsers from config', () => {
             sandbox.stub(TestSkipper, 'create');
 
-            Runner.create({some: 'config'});
+            const config = makeConfigStub();
+            Runner.create(config);
 
-            assert.calledOnceWith(TestSkipper.create, {some: 'config'});
+            assert.calledOnceWith(TestSkipper.create, config);
         });
 
         it('should create mocha runner with test skipper', () => {

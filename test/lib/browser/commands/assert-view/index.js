@@ -12,8 +12,20 @@ const {mkBrowser_, mkSessionStub_} = require('../../utils');
 describe('assertView command', () => {
     const sandbox = sinon.sandbox.create();
     let session, imageStub;
+
+    const mkConfig_ = (opts = {}) => {
+        return Object.assign({
+            getScreenshotPath: () => '/some/path',
+            system: {
+                diffColor: '#ffffff',
+                tempOpts: {}
+            }
+        }, opts);
+    };
+
     const assertView = (config) => {
         const browser = mkBrowser_(config);
+
         sandbox.stub(browser, 'captureViewportImage').resolves(imageStub);
 
         return browser.init()
@@ -30,8 +42,9 @@ describe('assertView command', () => {
         sandbox.stub(Image.prototype, 'save').resolves();
         sandbox.stub(fs, 'existsSync');
         sandbox.stub(temp, 'path');
+        sandbox.stub(temp, 'attach');
 
-        sandbox.stub(RuntimeConfig, 'getInstance').returns({});
+        sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
         sandbox.stub(fsExtra, 'copy');
     });
 
@@ -57,8 +70,7 @@ describe('assertView command', () => {
         it('should save a captured screenshot', () => {
             temp.path.returns('/curr/path');
 
-            return browser.init()
-                .then(() => session.assertView())
+            return assertView(mkConfig_())
                 .then(() => assert.calledOnceWith(imageStub.save, '/curr/path'));
         });
     });
@@ -72,7 +84,7 @@ describe('assertView command', () => {
     });
 
     describe('update refs', () => {
-        beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true}));
+        beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
         it('should be fulfilled if there is not reference image', () => {
             fs.existsSync.returns(false);
@@ -91,15 +103,16 @@ describe('assertView command', () => {
     });
 
     describe('image compare', () => {
-        const mkConfig_ = (opts = {}) => {
-            return Object.assign({
-                getScreenshotPath: () => '/some/path',
-                system: {diffColor: '#ffffff'}
-            }, opts);
-        };
-
         beforeEach(() => {
             fs.existsSync.returns(true);
+        });
+
+        it('should add opts from runtime config to temp', () => {
+            Image.compare.resolves(true);
+            RuntimeConfig.getInstance.returns({tempOpts: {some: 'opts'}});
+
+            return assertView(mkConfig_())
+                .then(() => assert.calledOnceWith(temp.attach, {some: 'opts', suffix: '.png'}));
         });
 
         it('should compare a current image with a reference', () => {
@@ -154,7 +167,7 @@ describe('assertView command', () => {
             });
 
             describe('update refs', () => {
-                beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true}));
+                beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
                 it('should be fulfilled', () => {
                     return assert.isFulfilled(assertView());
