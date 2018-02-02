@@ -7,7 +7,7 @@ const {Image, temp} = require('gemini-core');
 const RuntimeConfig = require('lib/config/runtime-config');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
-const {mkBrowser_, mkSessionStub_} = require('../../utils');
+const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
 
 describe('assertView command', () => {
     const sandbox = sinon.sandbox.create();
@@ -28,8 +28,7 @@ describe('assertView command', () => {
 
         sandbox.stub(browser, 'captureViewportImage').resolves(imageStub);
 
-        return browser.init()
-            .then(() => session.assertView());
+        return session.assertView();
     };
 
     beforeEach(() => {
@@ -62,8 +61,7 @@ describe('assertView command', () => {
         });
 
         it('should capture viewport image', () => {
-            return browser.init()
-                .then(() => session.assertView())
+            return session.assertView()
                 .then(() => assert.calledOnce(browser.captureViewportImage));
         });
 

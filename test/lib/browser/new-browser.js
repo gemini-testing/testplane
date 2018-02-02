@@ -3,13 +3,13 @@
 const q = require('q');
 const webdriverio = require('webdriverio');
 const {Calibrator} = require('gemini-core');
-const Browser = require('lib/browser');
+const Browser = require('lib/browser/new-browser');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
 const Camera = require('lib/browser/camera');
-const {mkBrowser_, mkSessionStub_} = require('./utils');
+const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
-describe('Browser', () => {
+describe('NewBrowser', () => {
     const sandbox = sinon.sandbox.create();
     let session;
     let calibrator;
@@ -24,7 +24,7 @@ describe('Browser', () => {
 
     afterEach(() => sandbox.restore());
 
-    describe('init', () => {
+    describe('constructor', () => {
         it('should create webdriver.io session with properties from browser config', () => {
             return mkBrowser_()
                 .init()
@@ -44,6 +44,127 @@ describe('Browser', () => {
                 }));
         });
 
+        describe('extendOptions command', () => {
+            it('should add command', () => {
+                return mkBrowser_()
+                    .init()
+                    .then(() => assert.calledWith(session.addCommand, 'extendOptions'));
+            });
+
+            it('should add new option to "requestHandler" options', () => {
+                return mkBrowser_()
+                    .init()
+                    .then(() => {
+                        session.extendOptions({newOption: 'foo'});
+                        assert.propertyVal(session.requestHandler.defaultOptions, 'newOption', 'foo');
+                    });
+            });
+
+            it('should override "requestHandler" option', () => {
+                return mkBrowser_({screenshotOnReject: true})
+                    .init()
+                    .then(() => {
+                        session.extendOptions({screenshotOnReject: false});
+                        assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false);
+                    });
+            });
+        });
+
+        describe('windowHandleSize decorator', () => {
+            it('should force rewrite base "windowHandleSize" method', () => {
+                return mkBrowser_()
+                    .init()
+                    .then(() => assert.calledWith(session.addCommand, 'windowHandleSize', sinon.match.func, true));
+            });
+
+            it('should call base `windowHandleSize` method', () => {
+                const baseFn = session.windowHandleSize;
+
+                return mkBrowser_()
+                    .init()
+                    .then(() => {
+                        session.windowHandleSize('some-id');
+
+                        assert.calledWith(baseFn, 'some-id');
+                        assert.calledOn(baseFn, session);
+                    });
+            });
+
+            it('should save origin browser window size if it will be changed', () => {
+                session.windowHandleSize.withArgs({width: 10, height: 10}).returns(session);
+
+                return mkBrowser_({windowSize: {width: 5, height: 10}})
+                    .init()
+                    .then((browser) => {
+                        return session
+                            .windowHandleSize({width: 10, height: 10})
+                            .then(() => assert.deepEqual(browser.changes.originWindowSize, {width: 5, height: 10}));
+                    });
+            });
+
+            describe('should not mark browser as needed to restore', () => {
+                it('by default', () => {
+                    return mkBrowser_({windowSize: {width: 5, height: 10}})
+                        .init()
+                        .then((browser) => assert.isNull(browser.changes.originWindowSize));
+                });
+
+                it('if "windowHandleSize" was called as getter', () => {
+                    return mkBrowser_()
+                        .init()
+                        .then((browser) => {
+                            session.windowHandleSize();
+
+                            assert.isNull(browser.changes.originWindowSize);
+                        });
+                });
+
+                it('if "windowHandleSize" was called with session id', () => {
+                    return mkBrowser_()
+                        .init()
+                        .then((browser) => {
+                            session.windowHandleSize('session-id');
+
+                            assert.isNull(browser.changes.originWindowSize);
+                        });
+                });
+
+                it('if "windowHandleSize" was called with the same size as in the config', () => {
+                    return mkBrowser_({windowSize: {width: 5, height: 10}})
+                        .init()
+                        .then((browser) => {
+                            session.windowHandleSize({width: 5, height: 10});
+
+                            assert.isNull(browser.changes.originWindowSize);
+                        });
+                });
+            });
+        });
+    });
+
+    describe('screenshotOnReject option', () => {
+        it('should support boolean notation', () => {
+            return mkBrowser_({screenshotOnReject: false})
+                .init()
+                .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
+        });
+
+        it('should support object notation', () => {
+            const browser = mkBrowser_({
+                screenshotOnReject: {
+                    httpTimeout: 666
+                }
+            });
+
+            return browser
+                .init()
+                .then(() => {
+                    assert.equal(session.requestHandler.defaultOptions.screenshotOnReject.connectionRetryTimeout, 666);
+                });
+        });
+    });
+
+    describe('init', () => {
         it('should initialize webdriver.io session', () => {
             return mkBrowser_()
                 .init()
@@ -54,42 +175,6 @@ describe('Browser', () => {
             const browser = mkBrowser_();
 
             return assert.eventually.equal(browser.init(), browser);
-        });
-
-        it('should add meta-info access commands', () => {
-            return mkBrowser_()
-                .init()
-                .then((browser) => {
-                    assert.calledWith(session.addCommand, 'setMeta');
-                    assert.calledWith(session.addCommand, 'getMeta');
-
-                    session.setMeta('foo', 'bar');
-
-                    assert.equal(session.getMeta('foo'), 'bar');
-                    assert.deepEqual(browser.meta, {foo: 'bar'});
-                });
-        });
-
-        it('should set empty meta-info by default', () => {
-            return mkBrowser_()
-                .init()
-                .then((browser) => {
-                    assert.deepEqual(browser.meta, {});
-                });
-        });
-
-        it('should set meta-info with provided meta option', () => {
-            return mkBrowser_({meta: {k1: 'v1'}})
-                .init()
-                .then((browser) => {
-                    assert.deepEqual(browser.meta, {k1: 'v1'});
-                });
-        });
-
-        it('should add "assertView" command', () => {
-            return mkBrowser_()
-                .init()
-                .then(() => assert.calledWith(session.addCommand, 'assertView'));
         });
 
         it('should set custom options before initializing of a session', () => {
@@ -170,208 +255,6 @@ describe('Browser', () => {
                     .then(() => {
                         assert.notCalled(Camera.prototype.calibrate);
                     });
-            });
-        });
-
-        describe('"extendOptions" command', () => {
-            it('should add command', () => {
-                return mkBrowser_()
-                    .init()
-                    .then(() => assert.calledWith(session.addCommand, 'extendOptions'));
-            });
-
-            it('should add new option to "requestHandler" options', () => {
-                return mkBrowser_()
-                    .init()
-                    .then(() => {
-                        session.extendOptions({newOption: 'foo'});
-                        assert.propertyVal(session.requestHandler.defaultOptions, 'newOption', 'foo');
-                    });
-            });
-
-            it('should override "requestHandler" option', () => {
-                return mkBrowser_({screenshotOnReject: true})
-                    .init()
-                    .then(() => {
-                        session.extendOptions({screenshotOnReject: false});
-                        assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false);
-                    });
-            });
-        });
-
-        describe('screenshotOnReject option', () => {
-            it('should support boolean notation', () => {
-                return mkBrowser_({screenshotOnReject: false})
-                    .init()
-                    .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
-            });
-
-            it('should support object notation', () => {
-                const browser = mkBrowser_({
-                    screenshotOnReject: {
-                        httpTimeout: 666
-                    }
-                });
-
-                return browser
-                    .init()
-                    .then(() => {
-                        assert.equal(session.requestHandler.defaultOptions.screenshotOnReject.connectionRetryTimeout, 666);
-                    });
-            });
-        });
-
-        describe('session.url decorator', () => {
-            it('should force rewrite base `url` method', () => {
-                return mkBrowser_()
-                    .init()
-                    .then(() => assert.calledWith(session.addCommand, 'url', sinon.match.func, true));
-            });
-
-            it('should call base `url` method', () => {
-                const baseUrlFn = session.url;
-
-                return mkBrowser_()
-                    .init()
-                    .then(() => {
-                        session.url('/foo/bar?baz=qux');
-
-                        assert.calledWith(baseUrlFn, 'http://base_url/foo/bar?baz=qux');
-                        assert.calledOn(baseUrlFn, session);
-                    });
-            });
-
-            it('should add last url to meta-info and replace path if it starts from /', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
-                    .init()
-                    .then((browser) => {
-                        session
-                            .url('/some/url')
-                            .url('/foo/bar?baz=qux');
-
-                        assert.equal(browser.meta.url, 'http://some.domain.org/foo/bar?baz=qux');
-                    });
-            });
-
-            it('should add last url to meta-info if it contains only query part', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org/root'})
-                    .init()
-                    .then((browser) => {
-                        session.url('?baz=qux');
-
-                        assert.equal(browser.meta.url, 'http://some.domain.org/root?baz=qux');
-                    });
-            });
-
-            it('should concat url without slash at the beginning to the base url', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org'})
-                    .init()
-                    .then((browser) => {
-                        session.url('some/url');
-
-                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
-                    });
-            });
-
-            it('should not remove the last slash from meta url', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org'})
-                    .init()
-                    .then((browser) => {
-                        session.url('/some/url/');
-
-                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url/');
-                    });
-            });
-
-            it('should remove consecutive slashes in meta url', () => {
-                return mkBrowser_({baseUrl: 'http://some.domain.org/'})
-                    .init()
-                    .then((browser) => {
-                        session.url('/some/url');
-
-                        assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
-                    });
-            });
-
-            it('should not save any url if `url` called as getter', () => {
-                return mkBrowser_()
-                    .init()
-                    .then((browser) => {
-                        session.url();
-
-                        assert.notProperty(browser.meta, 'url');
-                    });
-            });
-        });
-
-        describe('session.windowHandleSize decorator', () => {
-            it('should force rewrite base "windowHandleSize" method', () => {
-                return mkBrowser_()
-                    .init()
-                    .then(() => assert.calledWith(session.addCommand, 'windowHandleSize', sinon.match.func, true));
-            });
-
-            it('should call base `windowHandleSize` method', () => {
-                const baseFn = session.windowHandleSize;
-
-                return mkBrowser_()
-                    .init()
-                    .then(() => {
-                        session.windowHandleSize('some-id');
-
-                        assert.calledWith(baseFn, 'some-id');
-                        assert.calledOn(baseFn, session);
-                    });
-            });
-
-            it('should save origin browser window size if it will be changed', () => {
-                session.windowHandleSize.withArgs({width: 10, height: 10}).returns(session);
-
-                return mkBrowser_({windowSize: {width: 5, height: 10}})
-                    .init()
-                    .then((browser) => {
-                        return session
-                            .windowHandleSize({width: 10, height: 10})
-                            .then(() => assert.deepEqual(browser.changes.originWindowSize, {width: 5, height: 10}));
-                    });
-            });
-
-            describe('should not mark browser as needed to restore', () => {
-                it('by default', () => {
-                    return mkBrowser_({windowSize: {width: 5, height: 10}})
-                        .init()
-                        .then((browser) => assert.isNull(browser.changes.originWindowSize));
-                });
-
-                it('if "windowHandleSize" was called as getter', () => {
-                    return mkBrowser_()
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize();
-
-                            assert.isNull(browser.changes.originWindowSize);
-                        });
-                });
-
-                it('if "windowHandleSize" was called with session id', () => {
-                    return mkBrowser_()
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize('session-id');
-
-                            assert.isNull(browser.changes.originWindowSize);
-                        });
-                });
-
-                it('if "windowHandleSize" was called with the same size as in the config', () => {
-                    return mkBrowser_({windowSize: {width: 5, height: 10}})
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize({width: 5, height: 10});
-
-                            assert.isNull(browser.changes.originWindowSize);
-                        });
-                });
             });
         });
     });
