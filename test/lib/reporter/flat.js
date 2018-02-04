@@ -16,22 +16,12 @@ describe('Flat reporter', () => {
     let emitter;
     let stdout;
 
-    const getCounters_ = (args) => {
-        return {
-            total: chalk.stripColor(args[1]),
-            passed: chalk.stripColor(args[2]),
-            failed: chalk.stripColor(args[3]),
-            pending: chalk.stripColor(args[4]),
-            retries: chalk.stripColor(args[5])
-        };
-    };
-
     const emit = (event, data) => {
         emitter.emit(RunnerEvents.RUNNER_START);
         if (event) {
             emitter.emit(event, data);
         }
-        emitter.emit(RunnerEvents.RUNNER_END);
+        emitter.emit(RunnerEvents.RUNNER_END, {});
     };
 
     beforeEach(() => {
@@ -54,52 +44,6 @@ describe('Flat reporter', () => {
         emitter.removeAllListeners();
     });
 
-    it('should initialize counters with 0', () => {
-        emit();
-
-        const counters = getCounters_(logger.log.lastCall.args);
-
-        assert.equal(counters.total, 0);
-        assert.equal(counters.passed, 0);
-        assert.equal(counters.failed, 0);
-        assert.equal(counters.pending, 0);
-        assert.equal(counters.retries, 0);
-    });
-
-    describe('should correctly calculate counters for', () => {
-        it('successed', () => {
-            emit(RunnerEvents.TEST_PASS, test);
-
-            const counters = getCounters_(logger.log.lastCall.args);
-
-            assert.equal(counters.passed, 1);
-        });
-
-        it('failed', () => {
-            emit(RunnerEvents.TEST_FAIL, test);
-
-            const counters = getCounters_(logger.log.secondCall.args);
-
-            assert.equal(counters.failed, 1);
-        });
-
-        it('pending', () => {
-            emit(RunnerEvents.TEST_PENDING, test);
-
-            const counters = getCounters_(logger.log.lastCall.args);
-
-            assert.equal(counters.pending, 1);
-        });
-
-        it('retries', () => {
-            emit(RunnerEvents.RETRY, test);
-
-            const counters = getCounters_(logger.log.thirdCall.args);
-
-            assert.equal(counters.retries, 1);
-        });
-    });
-
     it('should print info', () => {
         emit(RunnerEvents.INFO, 'foo');
 
@@ -116,6 +60,20 @@ describe('Flat reporter', () => {
         emit(RunnerEvents.ERROR, 'foo');
 
         assert.calledWith(logger.error, chalk.red('foo'));
+    });
+
+    it('should print statistics of the tests execution', () => {
+        emit(RunnerEvents.RUNNER_END, {
+            total: 5,
+            passed: 2,
+            failed: 2,
+            skipped: 1,
+            retries: 2
+        });
+
+        const deserealizedResult = chalk.stripColor(logger.log.firstCall.args[0]);
+
+        assert.equal(deserealizedResult, 'Total: 5 Passed: 2 Failed: 2 Skipped: 1 Retries: 2');
     });
 
     describe('rendering', () => {
