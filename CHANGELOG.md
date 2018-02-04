@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.57.0"></a>
+# [0.57.0](https://github.com/gemini-testing/hermione/compare/v0.56.2...v0.57.0) (2018-02-04)
+
+
+### Bug Fixes
+
+* init temp in master process ([5dd0dee](https://github.com/gemini-testing/hermione/commit/5dd0dee))
+
+
+### Features
+
+* option '--update-refs' for 'assertView' command ([186ca73](https://github.com/gemini-testing/hermione/commit/186ca73))
+
+
+
 <a name="0.56.2"></a>
 ## [0.56.2](https://github.com/gemini-testing/hermione/compare/v0.56.1...v0.56.2) (2018-01-30)
 
