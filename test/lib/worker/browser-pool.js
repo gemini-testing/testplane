@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
-const Browser = require('lib/browser');
+const Browser = require('lib/browser/existing-browser');
 const BrowserPool = require('lib/worker/browser-pool');
 const RunnerEvents = require('lib/worker/constants/runner-events');
 const logger = require('lib/utils/logger');

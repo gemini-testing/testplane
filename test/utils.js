@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const Browser = require('../lib/browser');
+const Browser = require('../lib/browser/new-browser');
 
 function browserWithId(id) {
     const config = {browsers: {}, system: {debug: false}};

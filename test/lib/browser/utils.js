@@ -2,7 +2,8 @@
 
 const _ = require('lodash');
 const q = require('q');
-const Browser = require('lib/browser');
+const NewBrowser = require('lib/browser/new-browser');
+const ExistingBrowser = require('lib/browser/existing-browser');
 
 function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
@@ -28,8 +29,12 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkBrowser_ = (opts) => {
-    return new Browser(createBrowserConfig_(opts), 'browser');
+exports.mkNewBrowser_ = (opts) => {
+    return NewBrowser.create(createBrowserConfig_(opts), 'browser');
+};
+
+exports.mkExistingBrowser_ = (opts) => {
+    return ExistingBrowser.create(createBrowserConfig_(opts), 'browser');
 };
 
 exports.mkSessionStub_ = (sandbox) => {

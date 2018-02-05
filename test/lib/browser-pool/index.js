@@ -6,7 +6,7 @@ const q = require('q');
 const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
 const BrowserPool = require('../../../lib/browser-pool');
 const QBrowserPool = require('../../../lib/browser-pool/q-browser-pool');
-const Browser = require('../../../lib/browser');
+const Browser = require('../../../lib/browser/new-browser');
 const Events = require('../../../lib/constants/runner-events');
 const makeConfigStub = require('../../utils').makeConfigStub;
 
