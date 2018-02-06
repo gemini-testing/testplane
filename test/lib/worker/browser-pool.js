@@ -1,6 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
+const {Calibrator} = require('gemini-core');
 const _ = require('lodash');
 const Browser = require('lib/browser/existing-browser');
 const BrowserPool = require('lib/worker/browser-pool');
@@ -26,60 +27,45 @@ describe('worker/browser-pool', () => {
     };
 
     const stubBrowser = (opts) => {
-        return _.defaults(opts || {}, {
+        const bro = _.defaults(opts || {}, {
             updateChanges: () => {}
         });
+
+        bro.init = sandbox.stub().resolves();
+        bro.attach = sandbox.stub().resolves(bro);
+        bro.quit = sandbox.stub();
+
+        return bro;
     };
 
     beforeEach(() => {
         sandbox.stub(logger, 'warn');
+
+        sandbox.stub(Browser, 'create').returns({
+            updateChanges: () => {}
+        });
     });
 
     afterEach(() => sandbox.restore());
 
     describe('getBrowser', () => {
-        beforeEach(() => {
-            sandbox.stub(Browser, 'create').returns({
-                updateChanges: () => {}
-            });
-        });
-
         it('should create a new browser if there are no free browsers in a cache', () => {
             const config = stubConfig();
             const browserPool = createPool({config});
+            const browser = stubBrowser({browserId: 'bro-id'});
 
-            Browser.create.withArgs(config, 'bro-id').returns(stubBrowser({browserId: 'bro-id'}));
+            Browser.create.withArgs(config, 'bro-id').returns(browser);
 
-            const browser = browserPool.getBrowser('bro-id', '100-500');
-
-            assert.propertyVal(browser, 'browserId', 'bro-id');
-            assert.propertyVal(browser, 'sessionId', '100-500');
+            return assert.becomes(browserPool.getBrowser('bro-id'), browser);
         });
 
-        it('should call prepareBrowser on new browser', () => {
-            const prepareBrowser = sinon.stub();
-            const config = stubConfig({prepareBrowser});
-            const browserPool = createPool({config});
-            const bro = stubBrowser({publicAPI: {some: 'api'}});
+        it('should init a new created browser if there are no free browsers in a cache', () => {
+            const browser = stubBrowser({browserId: 'bro-id'});
 
-            Browser.create.returns(bro);
+            Browser.create.returns(browser);
 
-            browserPool.getBrowser();
-
-            assert.calledOnceWith(prepareBrowser, {some: 'api'});
-        });
-
-        it('should not fail on error in prepareBrowser', () => {
-            const config = stubConfig({prepareBrowser: sinon.stub().throws()});
-            const browserPool = createPool({config});
-            const bro = stubBrowser({publicAPI: {foo: 'bar'}});
-
-            Browser.create.returns(bro);
-
-            const browser = browserPool.getBrowser();
-
-            assert.equal(browser, bro);
-            assert.calledOnce(logger.warn);
+            return createPool().getBrowser('bro-id', '100-500')
+                .then(() => assert.calledOnceWith(browser.init, '100-500', sinon.match.instanceOf(Calibrator)));
         });
 
         it('should emit "NEW_BROWSER" event on creating of a browser', () => {
@@ -91,37 +77,40 @@ describe('worker/browser-pool', () => {
 
             Browser.create.returns(stubBrowser({id: 'bro-id', publicAPI: {some: 'api'}}));
 
-            browserPool.getBrowser();
-
-            assert.calledOnceWith(onNewBrowser, {some: 'api'}, {browserId: 'bro-id'});
-        });
-
-        it('should not fail on error in "NEW_BROWSER" handler', () => {
-            const emitter = new EventEmitter();
-            const browserPool = createPool({emitter});
-
-            emitter.on(RunnerEvents.NEW_BROWSER, sinon.stub().throws());
-
-            const bro = stubBrowser({id: 'bro-id', publicAPI: {some: 'api'}});
-            Browser.create.returns(bro);
-
-            const browser = browserPool.getBrowser();
-
-            assert.equal(browser, bro);
-            assert.calledOnce(logger.warn);
+            return browserPool.getBrowser()
+                .then(() => assert.calledOnceWith(onNewBrowser, {some: 'api'}, {browserId: 'bro-id'}));
         });
 
         it('should not create a new browser if there is a free browser in a cache', () => {
             const browserPool = createPool();
 
-            const browser = browserPool.getBrowser('bro-id', '100-500');
-            browserPool.freeBrowser(browser);
+            Browser.create.returns(stubBrowser());
 
-            Browser.create.resetHistory();
+            return browserPool.getBrowser('bro-id', '100-500')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
+                    Browser.create.resetHistory();
 
-            assert.deepEqual(browserPool.getBrowser('bro-id', '500-100'), browser);
-            assert.equal(browser.sessionId, '500-100');
-            assert.notCalled(Browser.create);
+                    return browserPool.getBrowser('bro-id', '500-100')
+                        .then((anotherBrowser) => {
+                            assert.deepEqual(browser, anotherBrowser);
+                            assert.notCalled(Browser.create);
+                        });
+                });
+        });
+
+        it('should attach a given session  to a free browser in a cache', () => {
+            const browserPool = createPool();
+
+            Browser.create.returns(stubBrowser());
+
+            return browserPool.getBrowser('bro-id', '100-500')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
+
+                    return browserPool.getBrowser('bro-id', '500-100')
+                        .then((anotherBrowser) => assert.calledOnceWith(anotherBrowser.attach, '500-100'));
+                });
         });
 
         it('should not emit "NEW_BROWSER" event on getting of a free browser from a cache', () => {
@@ -129,27 +118,34 @@ describe('worker/browser-pool', () => {
             const onNewBrowser = sandbox.spy().named('onNewBrowser');
             const browserPool = createPool({emitter});
 
+            Browser.create.returns(stubBrowser());
+
             emitter.on(RunnerEvents.NEW_BROWSER, onNewBrowser);
 
-            const browser = browserPool.getBrowser('bro-id', '100-500');
-            browserPool.freeBrowser(browser);
+            return browserPool.getBrowser('bro-id')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
 
-            onNewBrowser.reset();
+                    onNewBrowser.reset();
 
-            browserPool.getBrowser('bro-id');
-
-            assert.notCalled(onNewBrowser);
+                    return browserPool.getBrowser('bro-id')
+                        .then(() => assert.notCalled(onNewBrowser));
+                });
         });
     });
 
     describe('freeBrowser', () => {
         it('should set session id to "null"', () => {
             const browserPool = createPool();
-            const browser = {sessionId: '100-500'};
 
-            browserPool.freeBrowser(browser);
+            Browser.create.returns(stubBrowser());
 
-            assert.isNull(browser.sessionId);
+            return browserPool.getBrowser('bro-id', '100-500')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
+
+                    assert.calledOnce(browser.quit);
+                });
         });
     });
 });
