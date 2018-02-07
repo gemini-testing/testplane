@@ -99,7 +99,8 @@ describe('Runner', () => {
                         assert.calledOnceWith(workerFarm, {
                             maxConcurrentWorkers: 100500,
                             maxConcurrentCallsPerWorker: Infinity,
-                            autoStart: true
+                            autoStart: true,
+                            maxRetries: 0
                         }, path.join(process.cwd(), 'lib/worker/index.js'), [
                             {name: 'init', broadcast: true},
                             {name: 'syncConfig', broadcast: true},
