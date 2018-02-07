@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.58.1"></a>
+## [0.58.1](https://github.com/gemini-testing/hermione/compare/v0.58.0...v0.58.1) (2018-02-07)
+
+
+### Bug Fixes
+
+* browser calibration ([2391a28](https://github.com/gemini-testing/hermione/commit/2391a28))
+* do not retry worker init on fail ([28352cd](https://github.com/gemini-testing/hermione/commit/28352cd))
+
+
+
 <a name="0.58.0"></a>
 # [0.58.0](https://github.com/gemini-testing/hermione/compare/v0.57.0...v0.58.0) (2018-02-04)
 
