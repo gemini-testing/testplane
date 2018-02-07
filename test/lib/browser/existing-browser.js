@@ -1,6 +1,10 @@
 'use strict';
 
+const {Calibrator} = require('gemini-core');
 const webdriverio = require('webdriverio');
+const Camera = require('lib/browser/camera');
+const Browser = require('lib/browser/existing-browser');
+const logger = require('lib/utils/logger');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('NewBrowser', () => {
@@ -11,6 +15,7 @@ describe('NewBrowser', () => {
         session = mkSessionStub_(sandbox);
         sandbox.stub(webdriverio, 'remote');
         webdriverio.remote.returns(session);
+        sandbox.stub(logger, 'warn');
     });
 
     afterEach(() => sandbox.restore());
@@ -115,6 +120,114 @@ describe('NewBrowser', () => {
             mkBrowser_();
 
             assert.calledWith(session.addCommand, 'assertView');
+        });
+    });
+
+    describe('init', () => {
+        it('should call prepareBrowser on new browser', () => {
+            const prepareBrowser = sandbox.stub();
+
+            return mkBrowser_({prepareBrowser})
+                .init()
+                .then(() => assert.calledOnceWith(prepareBrowser, session));
+        });
+
+        it('should not fail on error in prepareBrowser', () => {
+            const prepareBrowser = sandbox.stub().throws();
+
+            return mkBrowser_({prepareBrowser})
+                .init()
+                .then(() => assert.calledOnce(logger.warn));
+        });
+
+        it('should attach a browser to a provided session', () => {
+            const browser = mkBrowser_();
+
+            return browser.init('100-500')
+                .then(() => assert.equal(browser.sessionId, '100-500'));
+        });
+
+        describe('camera calibration', () => {
+            let calibrator;
+
+            beforeEach(() => {
+                calibrator = sinon.createStubInstance(Calibrator);
+
+                calibrator.calibrate.resolves();
+
+                sandbox.stub(Camera.prototype, 'calibrate');
+                sandbox.stub(Camera.prototype, 'isCalibrated');
+            });
+
+            it('should perform calibration if `calibrate` is turn on', () => {
+                calibrator.calibrate.withArgs(sinon.match.instanceOf(Browser)).resolves({foo: 'bar'});
+
+                return mkBrowser_({calibrate: true})
+                    .init(null, calibrator)
+                    .then(() => assert.calledOnceWith(Camera.prototype.calibrate, {foo: 'bar'}));
+            });
+
+            it('should not perform calibration if `calibrate` is turn off', () => {
+                return mkBrowser_({calibrate: false})
+                    .init(null, calibrator)
+                    .then(() => {
+                        assert.notCalled(Camera.prototype.calibrate);
+                    });
+            });
+
+            it('should not perform calibration if camera is already calibrated', () => {
+                Camera.prototype.isCalibrated.returns(true);
+
+                return mkBrowser_({calibrate: true})
+                    .init(null, calibrator)
+                    .then(() => {
+                        assert.notCalled(Camera.prototype.calibrate);
+                    });
+            });
+
+            it('should perform calibration after attaching of a session id', () => {
+                sandbox.spy(Browser.prototype, 'attach');
+
+                return mkBrowser_({calibrate: true})
+                    .init(null, calibrator)
+                    .then(() => assert.callOrder(Browser.prototype.attach, calibrator.calibrate));
+            });
+        });
+    });
+
+    describe('open', () => {
+        it('should open URL', () => {
+            return mkBrowser_().open('some-url')
+                .then(() => assert.calledOnceWith(session.url, 'some-url'));
+        });
+    });
+
+    describe('evalScript', () => {
+        it('should execute script with added `return` operator', () => {
+            return mkBrowser_().evalScript('some-script')
+                .then(() => assert.calledOnceWith(session.execute, 'return some-script'));
+        });
+
+        it('should return the value of the executed script', () => {
+            session.execute.resolves({value: {foo: 'bar'}});
+
+            return assert.becomes(mkBrowser_().evalScript('some-script'), {foo: 'bar'});
+        });
+    });
+
+    describe('captureViewportImage', () => {
+        beforeEach(() => {
+            sandbox.stub(Camera.prototype, 'captureViewportImage');
+        });
+
+        it('should delegate actual capturing to camera object', () => {
+            Camera.prototype.captureViewportImage.resolves({some: 'image'});
+
+            return mkBrowser_().captureViewportImage()
+                .then((image) => {
+                    assert.calledOnce(Camera.prototype.captureViewportImage);
+                    assert.deepEqual(image, {some: 'image'});
+                });
         });
     });
 });
