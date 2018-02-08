@@ -10,14 +10,14 @@ describe('Workers', () => {
 
     let workersImpl, workerFarm;
 
-    const mkWorkers_ = ({config, testFiles} = {}) => {
+    const mkWorkers_ = (config = {}) => {
         config = _.defaults(config, {
             system: {}
         });
 
         const Workers = proxyquire('../../../lib/runner/workers', {'worker-farm': workerFarm});
 
-        return Workers.create(testFiles, config);
+        return Workers.create(config);
     };
 
     beforeEach(() => {
@@ -35,10 +35,10 @@ describe('Workers', () => {
 
     describe('constructor', () => {
         it('should init worker farm', () => {
-            mkWorkers_({config: {system: {
+            mkWorkers_({system: {
                 workers: 100500,
                 testsPerWorker: 500100
-            }}});
+            }});
 
             assert.calledOnceWith(workerFarm,
                 {
@@ -68,10 +68,7 @@ describe('Workers', () => {
 
         it('should reply to worker init request', () => {
             RuntimeConfig.getInstance.returns({baz: 'qux'});
-            mkWorkers_({
-                config: {configPath: 'foo/bar'},
-                testFiles: {bro: []}
-            });
+            mkWorkers_({configPath: 'foo/bar'});
 
             const child = initChild_();
 
@@ -80,16 +77,13 @@ describe('Workers', () => {
             assert.calledOnceWith(child.send, {
                 event: 'master.init',
                 configPath: 'foo/bar',
-                testFiles: {bro: []},
                 runtimeConfig: {baz: 'qux'}
             });
         });
 
         it('should reply to worker sync config request', () => {
             mkWorkers_({
-                config: {
-                    serialize: () => ({foo: 'bar'})
-                }
+                serialize: () => ({foo: 'bar'})
             });
 
             const child = initChild_();

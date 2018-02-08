@@ -636,10 +636,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
             browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
 
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title'}));
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title', file: 'some/file'}));
 
             return mochaAdapter.run(workers)
-                .then(() => assert.calledOnceWith(workers.runTest, 'test-title', {browserId: 'bro-id', sessionId: '100-500'}));
+                .then(() => assert.calledOnceWith(workers.runTest, 'test-title', {browserId: 'bro-id', sessionId: '100-500', file: 'some/file'}));
         });
 
         it('should extend test with browser data', () => {
