@@ -45,6 +45,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [ctx](#ctx)
     - [patternsOnReject](#patternsonreject)
     - [workers](#workers)
+    - [testsPerWorker](#testsperworker)
   - [plugins](#plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
@@ -52,7 +53,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Reporters](#reporters)
 - [Overriding settings](#overriding-settings)
 - [Tests API](#tests-api)
-  - [assertView](#assertview)
+  - [AssertView](#assertview)
 - [Programmatic API](#programmatic-api)
   - [init](#init)
   - [run](#run)
@@ -559,6 +560,9 @@ patternsOnReject: [
 
 #### workers
 Hermione runs all tests in subprocesses in order to decrease the main process CPU usage. This options defines the numbers of subprocesses to start for running tests. Default value is `1`.
+
+#### testsPerWorker
+The maximum number of tests to be run in one worker before it will be restarted.
 
 ### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).

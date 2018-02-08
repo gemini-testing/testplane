@@ -35,11 +35,15 @@ describe('Workers', () => {
 
     describe('constructor', () => {
         it('should init worker farm', () => {
-            mkWorkers_({config: {system: {workers: 100500}}});
+            mkWorkers_({config: {system: {
+                workers: 100500,
+                testsPerWorker: 500100
+            }}});
 
             assert.calledOnceWith(workerFarm,
                 {
                     maxConcurrentWorkers: 100500,
+                    maxCallsPerWorker: 500100,
                     maxConcurrentCallsPerWorker: Infinity,
                     autoStart: true,
                     maxRetries: 0,
