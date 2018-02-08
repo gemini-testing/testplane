@@ -1,7 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
 const proxyquire = require('proxyquire');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('lib/constants/runner-events');
@@ -19,8 +18,7 @@ describe('worker/mocha-adapter', () => {
 
     const mkMochaAdapter_ = (config) => {
         const browserAgent = sinon.createStubInstance(BrowserAgent);
-        browserAgent.getBrowser.returns(mkBrowserStub_());
-        browserAgent.freeBrowser.returns(q());
+        browserAgent.getBrowser.resolves(mkBrowserStub_());
 
         return MochaAdapter.create(browserAgent, _.extend({patternsOnReject: []}, config));
     };
