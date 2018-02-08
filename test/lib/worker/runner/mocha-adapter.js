@@ -5,7 +5,7 @@ const q = require('q');
 const proxyquire = require('proxyquire');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('lib/constants/runner-events');
-const MochaStub = require('../../../_mocha');
+const MochaStub = require('../../_mocha');
 
 describe('worker/mocha-adapter', () => {
     let MochaAdapter;
@@ -26,7 +26,7 @@ describe('worker/mocha-adapter', () => {
     };
 
     beforeEach(() => {
-        MochaAdapter = proxyquire('../../../../../lib/worker/runner/mocha-runner/mocha-adapter', {
+        MochaAdapter = proxyquire(require.resolve('lib/worker/runner/mocha-adapter'), {
             'mocha': MochaStub
         });
     });

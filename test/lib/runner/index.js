@@ -105,9 +105,9 @@ describe('Runner', () => {
                 const config = makeConfigStub();
                 const runner = new Runner(config);
 
-                return runner.run({foo: 'bar'})
+                return runner.run()
                     .then(() => {
-                        assert.calledOnceWith(Workers.create, {foo: 'bar'}, config);
+                        assert.calledOnceWith(Workers.create, config);
                     });
             });
 
