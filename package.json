@@ -49,7 +49,7 @@
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
     "webdriverio": "gemini-testing/webdriverio#fix.opera",
-    "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#release/feat/broadcast"
+    "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#release/feat/on.child.start"
   },
   "devDependencies": {
     "app-module-path": "^2.2.0",

@@ -1,10 +1,8 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const path = require('path');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const _ = require('lodash');
-const proxyquire = require('proxyquire');
 const q = require('q');
 const eventsUtils = require('gemini-core').events.utils;
 const {temp} = require('gemini-core');
@@ -16,13 +14,13 @@ const RunnerStats = require('lib/stats');
 const TestSkipper = require('lib/runner/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
 const logger = require('lib/utils/logger');
+const Workers = require('lib/runner/workers');
+const Runner = require('lib/runner');
 
 const {makeConfigStub, makeTest} = require('../../utils');
 
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
-
-    let Runner, workerFarm, workers;
 
     const mkMochaRunner = () => {
         sandbox.stub(MochaRunner, 'create');
@@ -49,15 +47,8 @@ describe('Runner', () => {
     };
 
     beforeEach(() => {
-        workers = {
-            init: sandbox.stub().yields(),
-            syncConfig: sandbox.stub().yields()
-        };
-
-        workerFarm = sandbox.stub().returns(workers);
-        workerFarm.end = sandbox.stub();
-
-        Runner = proxyquire('../../../lib/runner', {'worker-farm': workerFarm});
+        sandbox.stub(Workers.prototype);
+        sandbox.stub(Workers, 'create').returns(Object.create(Workers.prototype));
 
         sandbox.stub(BrowserPool, 'create');
 
@@ -87,89 +78,69 @@ describe('Runner', () => {
 
             assert.calledOnce(MochaRunner.prepare);
         });
+
+        it('should init temp with dir from config', () => {
+            const config = makeConfigStub({system: {tempDir: 'some/dir'}});
+
+            Runner.create(config);
+
+            assert.calledOnceWith(temp.init, 'some/dir');
+        });
+
+        it('should extend runtime config with temp options', () => {
+            const extend = sandbox.stub();
+            RuntimeConfig.getInstance.returns({extend});
+
+            temp.serialize.returns({some: 'opts'});
+
+            Runner.create(makeConfigStub());
+
+            assert.calledOnceWith(extend, {tempOpts: {some: 'opts'}});
+        });
     });
 
     describe('run', () => {
-        describe('worker farm', () => {
-            it('should create a worker farm', () => {
-                mkMochaRunner();
+        describe('workers', () => {
+            it('should create workers', () => {
+                const config = makeConfigStub();
+                const runner = new Runner(config);
 
-                return run_({config: makeConfigStub({system: {workers: 100500}})})
+                return runner.run({foo: 'bar'})
                     .then(() => {
-                        assert.calledOnceWith(workerFarm, {
-                            maxConcurrentWorkers: 100500,
-                            maxConcurrentCallsPerWorker: Infinity,
-                            autoStart: true,
-                            maxRetries: 0
-                        }, path.join(process.cwd(), 'lib/worker/index.js'), [
-                            {name: 'init', broadcast: true},
-                            {name: 'syncConfig', broadcast: true},
-                            'runTest'
-                        ]);
+                        assert.calledOnceWith(Workers.create, {foo: 'bar'}, config);
                     });
             });
 
-            it('should create a worker farm before RUNNER_START event', () => {
+            it('should create workers before RUNNER_START event', () => {
                 const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q());
                 const runner = new Runner(makeConfigStub());
 
                 runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
 
                 return run_({runner})
-                    .then(() => assert.callOrder(workerFarm, onRunnerStart));
-            });
-
-            it('should init workers', () => {
-                const runner = new Runner(makeConfigStub({configPath: 'some-config-path'}));
-
-                RuntimeConfig.getInstance.returns({
-                    extend: () => ({runtime: 'config'})
-                });
-
-                return runner.run({bro: ['file1', 'file2']})
-                    .then(() => assert.calledOnceWith(workers.init, {bro: ['file1', 'file2']}, 'some-config-path', {runtime: 'config'}));
-            });
-
-            it('should init temp with dir from config', () => {
-                const config = makeConfigStub({system: {tempDir: 'some/dir'}});
-
-                return run_({config})
-                    .then(() => assert.calledOnceWith(temp.init, 'some/dir'));
-            });
-
-            it('should extend runtime config with temp options', () => {
-                const extend = sandbox.stub();
-                RuntimeConfig.getInstance.returns({extend});
-
-                temp.serialize.returns({some: 'opts'});
-
-                return run_()
-                    .then(() => assert.calledOnceWith(extend, {tempOpts: {some: 'opts'}}));
-            });
-
-            it('should sync serialized config with workers', () => {
-                mkMochaRunner();
-
-                const config = makeConfigStub();
-                config.serialize.returns({foo: 'bar'});
-
-                return run_({config})
-                    .then(() => assert.calledOnceWith(workers.syncConfig, {foo: 'bar'}));
-            });
-
-            it('should sync config after all RUNNER_START handler have finished', () => {
-                const onRunnerStart = sinon.stub().named('onRunnerStart').returns(q().then(() => q.delay(1)));
-                const runner = new Runner(makeConfigStub());
-
-                runner.on(RunnerEvents.RUNNER_START, onRunnerStart);
-
-                return run_({runner})
-                    .then(() => assert.callOrder(onRunnerStart, workers.syncConfig));
+                    .then(() => assert.callOrder(Workers.create, onRunnerStart));
             });
 
             it('should pass workers to each mocha runner', () => {
+                const workers = Object.create(Workers.prototype);
+                Workers.create.returns(workers);
+
                 return run_({browsers: ['bro1', 'bro2']})
                     .then(() => assert.alwaysCalledWith(MochaRunner.prototype.run, workers));
+            });
+
+            it('should end workers after work is done', () => {
+                return run_()
+                    .then(() => assert.calledOnce(Workers.prototype.end));
+            });
+
+            it('should end workers on fail', () => {
+                const runner = new Runner(makeConfigStub());
+
+                runner.on(RunnerEvents.RUNNER_START, () => Promise.reject('o.O'));
+
+                return assert.isRejected(run_({runner}))
+                    .then(() => assert.calledOnce(Workers.prototype.end));
             });
         });
 
