@@ -93,6 +93,31 @@ describe('mocha-runner/retry-mocha-runner', () => {
                     .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
             });
 
+            it('should not retry if retries left and shouldRetry() told so', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 10, shouldRetry: () => false});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL));
+
+                return retryMochaRunner.run({some: 'workers'})
+                    .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
+            });
+
+            it('shouldRetry() should have proper argument', () => {
+                const rule = sandbox.spy();
+                const retryMochaRunner = createRetryMochaRunner({retry: 1, shouldRetry: rule});
+                const error = {some: 'value'};
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, error));
+
+                return retryMochaRunner.run()
+                    .then(() => {
+                        const arg = rule.args[0][0];
+                        assert.equal(rule.args[0].length, 1, 'shouldRetry() expect one argument');
+                        assert.equal(arg.retriesLeft, 1, 'shouldRetry() have context with "retriesLeft" field');
+                        assert.equal(arg.ctx, error, 'shouldRetry() have context with error data as "ctx" field');
+                    });
+            });
+
             it('should emit "RETRY" event if retries were set', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 1});
                 const onTestRetry = sinon.spy().named('onTestRetry');
@@ -236,6 +261,34 @@ describe('mocha-runner/retry-mocha-runner', () => {
 
                 return retryMochaRunner.run()
                     .then(() => assert.calledOnceWith(onErr, 'err', runnable));
+            });
+
+            it('should not retry if retries left and shouldRetry() told so', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 10, shouldRetry: () => false});
+                const onErr = sinon.spy().named('onErr');
+                const runnable = createTestStub({});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', runnable));
+                retryMochaRunner.on(RunnerEvents.ERROR, onErr);
+
+                return retryMochaRunner.run()
+                    .then(() => assert.calledOnceWith(onErr, 'err', runnable));
+            });
+
+            it('shouldRetry() should have proper argument', () => {
+                const rule = sandbox.spy();
+                const retryMochaRunner = createRetryMochaRunner({retry: 1, shouldRetry: rule});
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.ERROR, 'err', createRunnableStub({})));
+
+                return retryMochaRunner.run()
+                    .then(() => {
+                        const arg = rule.args[0][0];
+                        assert.equal(rule.args[0].length, 1, 'shouldRetry() expect one arguments');
+                        assert.equal(arg.retriesLeft, 1, 'shouldRetry() have context with "retriesLeft" field');
+                        assert.equal(arg.error, 'err', 'shouldRetry() have context with "error" field');
+                        assert.instanceOf(arg.ctx, Runnable, 'shouldRetry() have context with Runnable as "ctx" field');
+                    });
             });
 
             it('should not retry if retries count is below zero', () => {
