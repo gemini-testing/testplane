@@ -525,9 +525,9 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         function stubWorkers() {
-            const stub = sandbox.stub();
-            const args = arguments.length ? arguments : [null, {}];
-            return {runTest: stub.yields.apply(stub, args)};
+            return {
+                runTest: sandbox.stub().resolves({})
+            };
         }
 
         it('should request browser before suite execution', () => {
@@ -620,9 +620,13 @@ describe('mocha-runner/mocha-adapter', () => {
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-                return mochaAdapter.run(stubWorkers(new Error('some-error'))).then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
-                });
+                const workers = stubWorkers();
+                workers.runTest.rejects(new Error('some-error'));
+
+                return mochaAdapter.run(workers)
+                    .then(() => {
+                        assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
+                    });
             });
         });
 
@@ -646,7 +650,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return mochaAdapter.run(stubWorkers(null, {meta: {some: 'meta'}}))
+            const workers = stubWorkers();
+            workers.runTest.resolves({meta: {some: 'meta'}});
+
+            return mochaAdapter.run(workers)
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
         });
 
@@ -658,7 +665,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return mochaAdapter.run(stubWorkers(null, {hermioneCtx: {some: 'data'}}))
+            const workers = stubWorkers();
+            workers.runTest.resolves({hermioneCtx: {some: 'data'}});
+
+            return mochaAdapter.run(workers)
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', hermioneCtx: {some: 'data'}}));
         });
 
@@ -669,10 +679,17 @@ describe('mocha-runner/mocha-adapter', () => {
             browserAgent.getBrowser.returns(q(browser));
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
-            const workersData = {meta: {some: 'meta'}, changes: {originWindowSize: {width: 1, height: 1}}};
-            return mochaAdapter.run(stubWorkers(null, workersData))
+            const workers = stubWorkers();
+            workers.runTest.resolves({
+                meta: {some: 'meta'},
+                changes: {originWindowSize: {width: 1, height: 1}}
+            });
+
+            return mochaAdapter.run(workers)
                 .then(() => {
-                    assert.calledWith(browser.updateChanges, {originWindowSize: {width: 1, height: 1}});
+                    assert.calledWith(browser.updateChanges, {
+                        originWindowSize: {width: 1, height: 1}
+                    });
                 });
         });
 
@@ -682,7 +699,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
-            return mochaAdapter.run(stubWorkers({some: 'err'}))
+            const workers = stubWorkers();
+            workers.runTest.rejects({some: 'err'});
+
+            return mochaAdapter.run(workers)
                 .then(() => {
                     assert.calledOnce(testFailSpy);
                     assert.calledWithMatch(testFailSpy, {error: {some: 'err'}});
@@ -696,7 +716,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
-                return mochaAdapter.run(stubWorkers({type: errors.IMAGE_DIFF_ERROR}))
+                const workers = stubWorkers();
+                workers.runTest.rejects({type: errors.IMAGE_DIFF_ERROR});
+
+                return mochaAdapter.run(workers)
                     .then(() => {
                         const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
 
@@ -710,7 +733,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
-                return mochaAdapter.run(stubWorkers({type: errors.IMAGE_DIFF_ERROR, diffOpts: {some: 'opts'}}))
+                const workers = stubWorkers();
+                workers.runTest.rejects({type: errors.IMAGE_DIFF_ERROR, diffOpts: {some: 'opts'}});
+
+                return mochaAdapter.run(workers)
                     .then(() => {
                         const {saveDiffTo} = testFailSpy.firstCall.args[0].error || sandbox.stub();
 
@@ -726,7 +752,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
-                return mochaAdapter.run(stubWorkers({type: 'some-error'}))
+                const workers = stubWorkers();
+                workers.runTest.rejects({type: 'some-error'});
+
+                return mochaAdapter.run(workers)
                     .then(() => {
                         const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
 
@@ -743,7 +772,10 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return mochaAdapter.run(stubWorkers({meta: {some: 'meta'}}))
+            const workers = stubWorkers();
+            workers.runTest.rejects({meta: {some: 'meta'}});
+
+            return mochaAdapter.run(workers)
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
         });
     });
