@@ -36,6 +36,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [sessionsPerBrowser](#sessionsperbrowser)
   - [testsPerSession](#testspersession)
   - [retry](#retry)
+  - [shouldRetry](#shouldRetry)
   - [calibrate](#calibrate)
   - [meta](#meta)
   - [windowSize](#windowsize)
@@ -463,6 +464,7 @@ Option name               | Description
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
+`shouldRetry`             | Function that determines whether to make a retry. By default returns `true `if retry attempts are available otherwise returns `false`. 
 `calibrate`               | Allows to correctly capture the image. Default value is `false`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method
@@ -495,6 +497,14 @@ By default is `Infinity` (no limit, all tests will be run in the same session). 
 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
+
+## shouldRetry
+Function that determines whether to make a retry. Must return boolean value. By default returns `true` if retry attempts are available otherwise returns `false`.
+Argument of this function is object with fields:
+  * `retriesLeft {Number}` — number of available retries
+  * `ctx` — in case of test `TEST_FAIL` it would be bound data, in case of `ERROR` it would be link to `Runnable`
+  * `[error]` — error type (available only in case of ERROR)
+  
 
 ### calibrate
 Does this browser need to perform the calibration procedure. This procedure allows to correctly capture the image in case the particular WebDriver implementation captures browser UI along with web page. Default value is `false`.
