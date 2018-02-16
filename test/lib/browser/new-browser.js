@@ -32,7 +32,7 @@ describe('NewBrowser', () => {
                     logLevel: 'verbose',
                     coloredLogs: true,
                     screenshotPath: 'path/to/screenshots',
-                    screenshotOnReject: true,
+                    screenshotOnReject: {connectionRetryTimeout: 3000},
                     connectionRetryTimeout: 3000,
                     connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
@@ -138,18 +138,14 @@ describe('NewBrowser', () => {
     });
 
     describe('screenshotOnReject option', () => {
-        it('should support boolean notation', () => {
+        it('should set screenshotOnReject as false if option is disabled', () => {
             return mkBrowser_({screenshotOnReject: false})
                 .init()
                 .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
         });
 
-        it('should support object notation', () => {
-            const browser = mkBrowser_({
-                screenshotOnReject: {
-                    httpTimeout: 666
-                }
-            });
+        it('should set screenshotOnReject as object with timeout if option is enabled', () => {
+            const browser = mkBrowser_({screenshotOnReject: true, screenshotOnRejectTimeout: 666});
 
             return browser
                 .init()
@@ -217,7 +213,7 @@ describe('NewBrowser', () => {
         it('should set option "screenshotOnReject" after initializing of a session', () => {
             return mkBrowser_({screenshotOnReject: true})
                 .init()
-                .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', true));
+                .then(() => assert.isObject(session.requestHandler.defaultOptions.screenshotOnReject));
         });
     });
 
