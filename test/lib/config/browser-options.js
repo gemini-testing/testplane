@@ -529,7 +529,7 @@ describe('config browser-options', () => {
         });
     });
 
-    ['retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout'].forEach((option) => {
+    ['retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout', 'screenshotOnRejectTimeout'].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {
                 const readConfig = {
@@ -833,39 +833,41 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('calibrate', () => {
-        it('should throw an error if value is not a boolean', () => {
-            const readConfig = _.set({}, 'browsers.b1', mkBrowser_({calibrate: 'foo'}));
+    ['calibrate', 'screenshotOnReject'].forEach((option) => {
+        describe(`${option}`, () => {
+            it('should throw an error if value is not a boolean', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'foo'}));
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"calibrate" must be a boolean');
-        });
+                assert.throws(() => createConfig(), Error, `"${option}" must be a boolean`);
+            });
 
-        it('should set a default value if it is not set in config', () => {
-            const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
-            Config.read.returns(readConfig);
+            it('should set a default value if it is not set in config', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+                Config.read.returns(readConfig);
 
-            const config = createConfig();
+                const config = createConfig();
 
-            assert.equal(config.calibrate, defaults.calibrate);
-        });
+                assert.equal(config[option], defaults[option]);
+            });
 
-        it('should override option for browser', () => {
-            const readConfig = {
-                calibrate: false,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({calibrate: true})
-                }
-            };
+            it('should override option for browser', () => {
+                const readConfig = {
+                    [option]: false,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[option]: true})
+                    }
+                };
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            const config = createConfig();
+                const config = createConfig();
 
-            assert.equal(config.browsers.b1.calibrate, false);
-            assert.equal(config.browsers.b2.calibrate, true);
+                assert.isFalse(config.browsers.b1[option]);
+                assert.isTrue(config.browsers.b2[option]);
+            });
         });
     });
 });

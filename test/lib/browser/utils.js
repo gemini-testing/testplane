@@ -12,10 +12,11 @@ function createBrowserConfig_(opts = {}) {
         gridUrl: 'http://test_host:4444/wd/hub',
         waitTimeout: 100,
         screenshotPath: 'path/to/screenshots',
-        screenshotOnReject: true,
         httpTimeout: 3000,
         sessionRequestTimeout: null,
         sessionQuitTimeout: null,
+        screenshotOnReject: true,
+        screenshotOnRejectTimeout: 3000,
         windowSize: null,
         getScreenshotPath: () => '/some/path',
         system: opts.system || {}
