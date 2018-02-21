@@ -8,8 +8,6 @@ const Promise = require('bluebird');
 describe('worker/hermione-facade', () => {
     const sandbox = sinon.sandbox.create();
 
-    const runtimeConfigStub = {extend: () => {}};
-    const hermioneStub = {configPath: 'config/path', runTest: () => {}, config: {mergeWith: () => {}}};
     let initCallbackArg;
     let syncCallbackArg;
 
@@ -23,11 +21,29 @@ describe('worker/hermione-facade', () => {
         callback(syncCallbackArg);
     };
 
+    const mkRuntimeConfigStub = () => {
+        const config = {extend: sandbox.stub()};
+
+        sandbox.stub(RuntimeConfig, 'getInstance').returns(config);
+        return config;
+    };
+
+    const mkHermioneStub = () => {
+        const hermione = {
+            configPath: 'config/path',
+            runTest: sandbox.stub(),
+            config: {mergeWith: sandbox.stub()}
+        };
+
+        sandbox.stub(Hermione, 'create').returns(hermione);
+        return hermione;
+    };
+
     beforeEach(() => {
         process.send = sandbox.stub().named('process.send');
         sandbox.stub(process, 'on');
-        sandbox.stub(RuntimeConfig, 'getInstance').returns(runtimeConfigStub);
-        sandbox.stub(Hermione, 'create').returns(hermioneStub);
+        mkHermioneStub();
+        mkRuntimeConfigStub();
 
         initCallbackArg = {
             event: 'master.init',
@@ -36,7 +52,7 @@ describe('worker/hermione-facade', () => {
         };
         syncCallbackArg = {
             event: 'master.syncConfig',
-            config: {'Harry Potter': 'loves Ron Weasley', system: {mochaOpts: {grep: 'grep'}}}
+            config: {system: {mochaOpts: {grep: 'grep'}}}
         };
     });
 
@@ -85,7 +101,7 @@ describe('worker/hermione-facade', () => {
             });
 
             it('should not fulfill without "message" event', () => {
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isPending());
                 });
             });
@@ -94,7 +110,7 @@ describe('worker/hermione-facade', () => {
                 initCallbackArg.event = 'not.master.init';
                 callback(initCallbackArg);
 
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isPending());
                 });
             });
@@ -102,18 +118,18 @@ describe('worker/hermione-facade', () => {
             it('should fulfill with "master.init" event', () => {
                 callback(initCallbackArg);
 
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isFulfilled());
                 });
             });
 
             it('should extend RuntimeConfig', () => {
-                sandbox.spy(runtimeConfigStub, 'extend');
+                const runtimeConfig = RuntimeConfig.getInstance();
 
                 callback(initCallbackArg);
 
                 return hermioneFacade.promise.then(() => {
-                    assert.calledOnceWith(runtimeConfigStub.extend, {foo: 'runtime', bar: 'config'});
+                    assert.calledOnceWith(runtimeConfig.extend, {foo: 'runtime', bar: 'config'});
                 });
             });
 
@@ -147,13 +163,13 @@ describe('worker/hermione-facade', () => {
         });
 
         it('should send worker.syncConfig event', () => {
-            return Promise.delay(100).then(() => {
+            return Promise.delay(50).then(() => {
                 assert.calledWith(process.send, {event: 'worker.syncConfig'});
             });
         });
 
         it('should subscribe on "message" event', () => {
-            return Promise.delay(100).then(() => {
+            return Promise.delay(50).then(() => {
                 assert.calledTwice(process.on);
                 assert.calledWith(process.on, 'message');
                 assert.isFunction(process.on.getCall(1).args[1]);
@@ -164,13 +180,13 @@ describe('worker/hermione-facade', () => {
             let callback;
 
             beforeEach(() => {
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     callback = process.on.getCall(1).args[1];
                 });
             });
 
             it('should not fulfill without "message" event', () => {
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isPending());
                 });
             });
@@ -179,7 +195,7 @@ describe('worker/hermione-facade', () => {
                 syncCallbackArg.event = 'not.master.syncConfig';
                 callback(syncCallbackArg);
 
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isPending());
                 });
             });
@@ -187,17 +203,17 @@ describe('worker/hermione-facade', () => {
             it('should fulfill with "master.init" event', () => {
                 callback(syncCallbackArg);
 
-                return Promise.delay(100).then(() => {
+                return Promise.delay(50).then(() => {
                     assert.isTrue(hermioneFacade.promise.isFulfilled());
                 });
             });
 
             it('should remove grep and merge hermione\'s config', () => {
-                sandbox.spy(hermioneStub.config, 'mergeWith');
+                const hermione = Hermione.create();
 
                 callback(syncCallbackArg);
 
-                assert.calledOnceWith(hermioneStub.config.mergeWith, {'Harry Potter': 'loves Ron Weasley', system: {mochaOpts: {}}});
+                assert.calledOnceWith(hermione.config.mergeWith, {system: {mochaOpts: {}}});
             });
         });
     });
@@ -218,12 +234,13 @@ describe('worker/hermione-facade', () => {
         });
 
         it('should run hermione tests', () => {
-            sandbox.spy(hermioneStub, 'runTest');
+            const hermione = Hermione.create();
+
             process.on.onFirstCall().callsFake(sendMessageToInit);
             process.on.onSecondCall().callsFake(sendMessageToSync);
 
             return hermioneFacade.runTest('arg1', 'arg2').then(() => {
-                assert.calledWith(hermioneStub.runTest, 'arg1', 'arg2');
+                assert.calledWith(hermione.runTest, 'arg1', 'arg2');
             });
         });
     });
