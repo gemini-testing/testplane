@@ -2,10 +2,11 @@
 
 const _ = require('lodash');
 const eventsUtils = require('gemini-core').events.utils;
-const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
-const EventEmitter = require('events').EventEmitter;
+const {AsyncEmitter} = require('gemini-core').events;
+const {EventEmitter} = require('events');
 const pluginsLoader = require('plugins-loader');
 const q = require('q');
+const proxyquire = require('proxyquire').noCallThru();
 
 const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
@@ -15,7 +16,7 @@ const signalHandler = require('lib/signal-handler');
 const Runner = require('lib/runner');
 const sets = require('lib/sets');
 const logger = require('lib/utils/logger');
-const makeConfigStub = require('../utils').makeConfigStub;
+const {makeConfigStub} = require('../utils');
 
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
@@ -156,6 +157,73 @@ describe('hermione', () => {
 
                 return hermione.run()
                     .then(() => assert.callOrder(afterInit, Runner.prototype.run));
+            });
+
+            it('should send INIT event only once', () => {
+                const onInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.run().then(hermione.run()).then(() => {
+                    assert.calledOnce(onInit);
+                });
+            });
+        });
+
+        describe('reporters', () => {
+            let HermioneQuire;
+            let attachRunner;
+            let runner;
+
+            const createReporter = () => {
+                return function Reporter() {
+                    this.attachRunner = attachRunner;
+                };
+            };
+
+            beforeEach(() => {
+                HermioneQuire = proxyquire('lib/hermione', {
+                    './reporters/reporter': createReporter()
+                });
+
+                runner = mkRunnerStub_();
+                attachRunner = sandbox.stub();
+            });
+
+            it('should accept reporter as string', () => {
+                const reporter = 'reporter';
+                const options = {reporters: [reporter]};
+
+                return HermioneQuire.create().run(null, options).then(() => {
+                    assert.calledOnceWith(attachRunner, runner);
+                });
+            });
+
+            it('should throw if reporter is not found', () => {
+                const reporter = 'unknown-reporter';
+                const options = {reporters: [reporter]};
+
+                const run = () => HermioneQuire.create().run(null, options);
+
+                assert.throws(run, 'No such reporter: unknown-reporter');
+            });
+
+            it('should accept reporter as function', () => {
+                const reporter = createReporter();
+                const options = {reporters: [reporter]};
+
+                return HermioneQuire.create().run(null, options).then(() => {
+                    assert.calledOnceWith(attachRunner, runner);
+                });
+            });
+
+            it('should throw if reporter is nor string or function', () => {
+                const reporter = 1234;
+                const options = {reporters: [reporter]};
+
+                const run = () => HermioneQuire.create().run(null, options);
+
+                assert.throws(run, TypeError, 'Reporter must be a string or a function');
             });
         });
 
@@ -430,6 +498,15 @@ describe('hermione', () => {
 
                 return hermione.readTests(null, null, {silent: true})
                     .then(() => assert.notCalled(onInit));
+            });
+
+            it('should send INIT event only once', () => {
+                const onInit = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.readTests().then(hermione.readTests())
+                    .then(() => assert.calledOnce(onInit));
             });
         });
 
