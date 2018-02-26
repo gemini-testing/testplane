@@ -60,4 +60,14 @@ describe('camera', () => {
                 .then((img) => assert.deepEqual(img, imageStub));
         });
     });
+
+    describe('calibration', () => {
+        it('should return calibration', () => {
+            const camera = mkCamera();
+
+            camera.calibrate({top: 6, left: 4});
+
+            assert.deepEqual(camera.calibration, {top: 6, left: 4});
+        });
+    });
 });

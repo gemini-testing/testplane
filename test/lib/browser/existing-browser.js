@@ -1,6 +1,6 @@
 'use strict';
 
-const {Calibrator} = require('gemini-core');
+const {Calibrator, clientBridge} = require('gemini-core');
 const webdriverio = require('webdriverio');
 const Camera = require('lib/browser/camera');
 const Browser = require('lib/browser/existing-browser');
@@ -16,6 +16,7 @@ describe('NewBrowser', () => {
         sandbox.stub(webdriverio, 'remote');
         webdriverio.remote.returns(session);
         sandbox.stub(logger, 'warn');
+        sandbox.stub(clientBridge, 'build').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -68,9 +69,8 @@ describe('NewBrowser', () => {
             it('should add last url to meta-info and replace path if it starts from /', () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org/root'});
 
-                session
-                    .url('/some/url')
-                    .url('/foo/bar?baz=qux');
+                session.url('/some/url');
+                session.url('/foo/bar?baz=qux');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/foo/bar?baz=qux');
             });
@@ -192,6 +192,92 @@ describe('NewBrowser', () => {
                     .init(null, calibrator)
                     .then(() => assert.callOrder(Browser.prototype.attach, calibrator.calibrate));
             });
+        });
+
+        it('should build client scripts', () => {
+            const calibrator = sinon.createStubInstance(Calibrator);
+            calibrator.calibrate.resolves({foo: 'bar'});
+
+            const browser = mkBrowser_({calibrate: true});
+
+            return browser.init(null, calibrator)
+                .then(() => assert.calledOnceWith(clientBridge.build, browser, {calibration: {foo: 'bar'}}));
+        });
+    });
+
+    describe('prepareScreenshot', () => {
+        const stubClientBridge_ = () => {
+            const bridge = {call: sandbox.stub().resolves()};
+
+            clientBridge.build.resolves(bridge);
+
+            return bridge;
+        };
+
+        it('should prepare screenshot', () => {
+            const clientBridge = stubClientBridge_();
+
+            clientBridge.call.withArgs('prepareScreenshot').resolves({foo: 'bar'});
+
+            const browser = mkBrowser_();
+
+            return browser.init()
+                .then(() => assert.becomes(browser.prepareScreenshot(), {foo: 'bar'}));
+        });
+
+        it('should prepare screenshot for passed selectors', () => {
+            const clientBridge = stubClientBridge_();
+            const browser = mkBrowser_();
+
+            return browser.init()
+                .then(() => browser.prepareScreenshot(['.foo', '.bar']))
+                .then(() => {
+                    const selectors = clientBridge.call.lastCall.args[1][0];
+
+                    assert.deepEqual(selectors, ['.foo', '.bar']);
+                });
+        });
+
+        it('should prepare screenshot using passed options', () => {
+            const clientBridge = stubClientBridge_();
+            const browser = mkBrowser_();
+
+            return browser.init()
+                .then(() => browser.prepareScreenshot([], {foo: 'bar'}))
+                .then(() => {
+                    const opts = clientBridge.call.lastCall.args[1][1];
+
+                    assert.propertyVal(opts, 'foo', 'bar');
+                });
+        });
+
+        it('should extend options by calibration results', () => {
+            const clientBridge = stubClientBridge_();
+            const calibrator = sinon.createStubInstance(Calibrator);
+            calibrator.calibrate.resolves({usePixelRatio: false});
+
+            const browser = mkBrowser_({calibrate: true});
+
+            return browser.init(null, calibrator)
+                .then(() => browser.prepareScreenshot())
+                .then(() => {
+                    const opts = clientBridge.call.lastCall.args[1][1];
+
+                    assert.propertyVal(opts, 'usePixelRatio', false);
+                });
+        });
+
+        it('should use pixel ratio by default if calibration was not met', () => {
+            const clientBridge = stubClientBridge_();
+            const browser = mkBrowser_({calibrate: false});
+
+            return browser.init()
+                .then(() => browser.prepareScreenshot())
+                .then(() => {
+                    const opts = clientBridge.call.lastCall.args[1][1];
+
+                    assert.propertyVal(opts, 'usePixelRatio', true);
+                });
         });
     });
 
