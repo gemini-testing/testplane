@@ -46,6 +46,7 @@ exports.mkSessionStub_ = (sandbox) => {
     session.execute = sandbox.stub().named('execute').resolves({});
     session.windowHandleSize = sandbox.stub().named('windowHandleSize').resolves({value: {}});
     session.requestHandler = {defaultOptions: {}};
+    session.screenshot = sandbox.stub().named('screenshot').resolves({value: {}});
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
