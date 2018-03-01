@@ -7,6 +7,10 @@ module.exports = class Test extends Runnable {
     constructor(parent, options) {
         options = options || {};
 
+        if (_.isFunction(options)) {
+            options = {fn: options};
+        }
+
         super(parent, options);
 
         this.type = 'test';
