@@ -182,6 +182,14 @@ describe('NewBrowser', () => {
                 });
         });
 
+        it('should use http timeout for initializing of a session if session request timeout not set', () => {
+            return mkBrowser_({sessionRequestTimeout: null, httpTimeout: 500100})
+                .init()
+                .then(() => {
+                    assert.calledWithMatch(session.extendOptions.secondCall, {connectionRetryTimeout: 500100});
+                });
+        });
+
         it('should set option "screenshotOnReject" to "false" before initializing of a session', () => {
             return mkBrowser_()
                 .init()
