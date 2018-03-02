@@ -18,7 +18,7 @@
     "url": "git://github.com/gemini-testing/hermione.git"
   },
   "engines": {
-    "node": ">= 6.4.0"
+    "node": ">= 8.0.0"
   },
   "keywords": [
     "hermione",
