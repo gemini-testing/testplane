@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.63.0"></a>
+# [0.63.0](https://github.com/gemini-testing/hermione/compare/v0.62.0...v0.63.0) (2018-03-02)
+
+
+### Bug Fixes
+
+* optional timeouts by default does not equal to httpTimeout ([aa670d9](https://github.com/gemini-testing/hermione/commit/aa670d9))
+
+
+### Features
+
+* assert view by selectors ([b090a5f](https://github.com/gemini-testing/hermione/commit/b090a5f))
+* do not use webdriverio screenshotOnReject option ([326a8d0](https://github.com/gemini-testing/hermione/commit/326a8d0))
+* drop node versions previous to 8 ([5136865](https://github.com/gemini-testing/hermione/commit/5136865))
+* take screenshot on test or hook fail ([ec47808](https://github.com/gemini-testing/hermione/commit/ec47808))
+
+
+
 <a name="0.62.0"></a>
 # [0.62.0](https://github.com/gemini-testing/hermione/compare/v0.61.0...v0.62.0) (2018-02-20)
 
