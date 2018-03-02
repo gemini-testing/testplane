@@ -7,7 +7,7 @@ module.exports = class Runnable {
         this.title = options.title || 'some-runnable';
         this.fn = options.fn;
         this.parent = parent;
-        this.ctx = {};
+        this.ctx = parent && parent.ctx || {};
     }
 
     static create(parent, options) {
@@ -19,7 +19,7 @@ module.exports = class Runnable {
     }
 
     run() {
-        return this.fn();
+        return this.fn.call(this.ctx);
     }
 
     enableTimeouts(val) {

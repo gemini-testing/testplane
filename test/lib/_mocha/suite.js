@@ -7,7 +7,7 @@ const Runnable = require('./runnable');
 const Test = require('./test');
 
 const EVENTS = {
-    TEST_BEGIN: 'test',
+    TEST_BEGIN: 'test begin',
     FAIL: 'fail'
 };
 

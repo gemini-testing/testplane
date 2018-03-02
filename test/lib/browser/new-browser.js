@@ -32,7 +32,6 @@ describe('NewBrowser', () => {
                     logLevel: 'verbose',
                     coloredLogs: true,
                     screenshotPath: 'path/to/screenshots',
-                    screenshotOnReject: {connectionRetryTimeout: 3000},
                     connectionRetryTimeout: 3000,
                     connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
@@ -52,15 +51,6 @@ describe('NewBrowser', () => {
                     .then(() => {
                         session.extendOptions({newOption: 'foo'});
                         assert.propertyVal(session.requestHandler.defaultOptions, 'newOption', 'foo');
-                    });
-            });
-
-            it('should override "requestHandler" option', () => {
-                return mkBrowser_({screenshotOnReject: true})
-                    .init()
-                    .then(() => {
-                        session.extendOptions({screenshotOnReject: false});
-                        assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false);
                     });
             });
         });
@@ -137,24 +127,6 @@ describe('NewBrowser', () => {
         });
     });
 
-    describe('screenshotOnReject option', () => {
-        it('should set screenshotOnReject as false if option is disabled', () => {
-            return mkBrowser_({screenshotOnReject: false})
-                .init()
-                .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
-        });
-
-        it('should set screenshotOnReject as object with timeout if option is enabled', () => {
-            const browser = mkBrowser_({screenshotOnReject: true, screenshotOnRejectTimeout: 666});
-
-            return browser
-                .init()
-                .then(() => {
-                    assert.equal(session.requestHandler.defaultOptions.screenshotOnReject.connectionRetryTimeout, 666);
-                });
-        });
-    });
-
     describe('init', () => {
         it('should initialize webdriver.io session', () => {
             return mkBrowser_()
@@ -178,7 +150,7 @@ describe('NewBrowser', () => {
             return mkBrowser_({sessionRequestTimeout: 100500, httpTimeout: 500100})
                 .init()
                 .then(() => {
-                    assert.calledWithMatch(session.extendOptions.secondCall, {connectionRetryTimeout: 100500});
+                    assert.calledWithMatch(session.extendOptions.firstCall, {connectionRetryTimeout: 100500});
                 });
         });
 
@@ -188,12 +160,6 @@ describe('NewBrowser', () => {
                 .then(() => {
                     assert.calledWithMatch(session.extendOptions.secondCall, {connectionRetryTimeout: 500100});
                 });
-        });
-
-        it('should set option "screenshotOnReject" to "false" before initializing of a session', () => {
-            return mkBrowser_()
-                .init()
-                .then(() => assert.calledWithMatch(session.extendOptions.firstCall, {screenshotOnReject: false}));
         });
 
         it('should set browser window size from config', () => {
@@ -216,12 +182,6 @@ describe('NewBrowser', () => {
                 .then(() => {
                     assert.propertyVal(session.requestHandler.defaultOptions, 'connectionRetryTimeout', 500100);
                 });
-        });
-
-        it('should set option "screenshotOnReject" after initializing of a session', () => {
-            return mkBrowser_({screenshotOnReject: true})
-                .init()
-                .then(() => assert.isObject(session.requestHandler.defaultOptions.screenshotOnReject));
         });
     });
 
@@ -302,13 +262,6 @@ describe('NewBrowser', () => {
                 .then(() => {
                     assert.propertyVal(session.requestHandler.defaultOptions, 'connectionRetryTimeout', 100500);
                 });
-        });
-
-        it('should not take screenshot if finalizing of a session rejects', () => {
-            return mkBrowser_()
-                .init()
-                .then((browser) => browser.quit())
-                .then(() => assert.propertyVal(session.requestHandler.defaultOptions, 'screenshotOnReject', false));
         });
     });
 
