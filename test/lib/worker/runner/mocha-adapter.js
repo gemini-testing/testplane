@@ -5,6 +5,7 @@ const proxyquire = require('proxyquire');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const RunnerEvents = require('lib/constants/runner-events');
 const Browser = require('lib/browser/existing-browser');
+const logger = require('lib/utils/logger');
 const MochaStub = require('../../_mocha');
 
 describe('worker/mocha-adapter', () => {
@@ -51,6 +52,8 @@ describe('worker/mocha-adapter', () => {
         MochaAdapter = proxyquire(require.resolve('lib/worker/runner/mocha-adapter'), {
             'mocha': MochaStub
         });
+
+        sandbox.stub(logger);
     });
 
     afterEach(() => sandbox.restore());
@@ -223,7 +226,7 @@ describe('worker/mocha-adapter', () => {
             assert.notProperty(err, 'screenshot');
         });
 
-        it('should set timeout if screenshotOnRejectTimout option is set', async () => {
+        it('should set timeout if screenshotOnRejectTimeout option is set', async () => {
             const mochaAdapter = mkMochaAdapter_({screenshotOnRejectTimeout: 100500});
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
@@ -236,7 +239,7 @@ describe('worker/mocha-adapter', () => {
             assert.callOrder(browser.setHttpTimeout, browser.publicAPI.screenshot);
         });
 
-        it('should restore httpTimout', async () => {
+        it('should restore httpTimeout', async () => {
             const mochaAdapter = mkMochaAdapter_({screenshotOnRejectTimeout: 100500});
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
@@ -249,7 +252,7 @@ describe('worker/mocha-adapter', () => {
             assert.callOrder(browser.publicAPI.screenshot, browser.restoreHttpTimeout);
         });
 
-        it('should restore httpTimout even if screenshot call failed', async () => {
+        it('should restore httpTimeout even if screenshot call failed', async () => {
             const mochaAdapter = mkMochaAdapter_({screenshotOnRejectTimeout: 100500});
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
