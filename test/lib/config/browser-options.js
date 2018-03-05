@@ -870,4 +870,77 @@ describe('config browser-options', () => {
             });
         });
     });
+
+    describe('screenshotMode', () => {
+        it('should throw an error if option is not a string', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({screenshotMode: {not: 'string'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"screenshotMode" must be a string/);
+        });
+
+        it('should throw an error if option value is not "fullpage", "viewport" or "auto"', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({screenshotMode: 'foo bar'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"screenshotMode" must be "fullpage", "viewport" or "auto"/);
+        });
+
+        describe('should not throw an error if option value is', () => {
+            ['fullpage', 'viewport', 'auto'].forEach((value) => {
+                it(`${value}`, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({screenshotMode: value})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.screenshotMode, defaults.screenshotMode);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                screenshotMode: 'fullpage',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({screenshotMode: 'viewport'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.screenshotMode, 'fullpage');
+            assert.equal(config.browsers.b2.screenshotMode, 'viewport');
+        });
+    });
 });

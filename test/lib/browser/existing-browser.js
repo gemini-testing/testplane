@@ -1,8 +1,7 @@
 'use strict';
 
-const {Calibrator, clientBridge} = require('gemini-core');
+const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('webdriverio');
-const Camera = require('lib/browser/camera');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
@@ -116,6 +115,28 @@ describe('NewBrowser', () => {
             });
         });
 
+        describe('Camera', () => {
+            beforeEach(() => {
+                sandbox.spy(Camera, 'create');
+            });
+
+            it('should create a camera instance', () => {
+                mkBrowser_({screenshotMode: 'foo bar'});
+
+                assert.calledOnceWith(Camera.create, 'foo bar');
+            });
+
+            it('should pass to a camera a function for taking of screenshots', () => {
+                session.screenshot.resolves({value: 'foo bar'});
+
+                mkBrowser_();
+
+                const takeScreenshot = Camera.create.lastCall.args[1];
+
+                return assert.becomes(takeScreenshot(), 'foo bar');
+            });
+        });
+
         it('should add "assertView" command', () => {
             mkBrowser_();
 
@@ -169,16 +190,6 @@ describe('NewBrowser', () => {
 
             it('should not perform calibration if `calibrate` is turn off', () => {
                 return mkBrowser_({calibrate: false})
-                    .init(null, calibrator)
-                    .then(() => {
-                        assert.notCalled(Camera.prototype.calibrate);
-                    });
-            });
-
-            it('should not perform calibration if camera is already calibrated', () => {
-                Camera.prototype.isCalibrated.returns(true);
-
-                return mkBrowser_({calibrate: true})
                     .init(null, calibrator)
                     .then(() => {
                         assert.notCalled(Camera.prototype.calibrate);
@@ -307,13 +318,10 @@ describe('NewBrowser', () => {
         });
 
         it('should delegate actual capturing to camera object', () => {
-            Camera.prototype.captureViewportImage.resolves({some: 'image'});
+            Camera.prototype.captureViewportImage.withArgs({foo: 'bar'}).resolves({some: 'image'});
 
-            return mkBrowser_().captureViewportImage()
-                .then((image) => {
-                    assert.calledOnce(Camera.prototype.captureViewportImage);
-                    assert.deepEqual(image, {some: 'image'});
-                });
+            return mkBrowser_().captureViewportImage({foo: 'bar'})
+                .then((image) => assert.deepEqual(image, {some: 'image'}));
         });
     });
 });

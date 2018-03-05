@@ -38,7 +38,7 @@
     "commander": "^2.12.2",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.0",
-    "gemini-core": "^2.6.2",
+    "gemini-core": "^2.7.1",
     "glob-extra": "^3.0.0",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
