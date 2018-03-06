@@ -3,7 +3,7 @@
 const fs = require('fs');
 const fsExtra = require('fs-extra');
 const webdriverio = require('webdriverio');
-const {Image, temp, Viewport} = require('gemini-core');
+const {Image, temp, ScreenShooter} = require('gemini-core');
 const RuntimeConfig = require('lib/config/runtime-config');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
@@ -47,9 +47,8 @@ describe('assertView command', () => {
         sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
         sandbox.stub(fsExtra, 'copy');
 
-        sandbox.spy(Viewport, 'create');
-        sandbox.stub(Viewport.prototype, 'validate');
-        sandbox.stub(Viewport.prototype, 'crop').resolves(stubImage_());
+        sandbox.spy(ScreenShooter, 'create');
+        sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
     });
 
     afterEach(() => sandbox.restore());
@@ -71,54 +70,19 @@ describe('assertView command', () => {
     });
 
     describe('take screenshot', () => {
-        it('should capture viewport image', () => {
+        it('should create an instance of a screen shooter', () => {
+            const browser = stubBrowser_();
+
+            assert.calledOnceWith(ScreenShooter.create, browser);
+        });
+
+        it('should capture a screenshot image', () => {
             const browser = stubBrowser_();
 
             browser.prepareScreenshot.resolves({foo: 'bar'});
 
             return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(browser.captureViewportImage, {foo: 'bar'}));
-        });
-
-        it('should create a viewport instance from a captured viewport image', () => {
-            const browser = stubBrowser_();
-            const page = {viewport: 'foo', pixelRatio: 'bar'};
-            const viewportImage = {baz: 'qux'};
-
-            browser.prepareScreenshot.resolves(page);
-            browser.captureViewportImage.withArgs(page).resolves(viewportImage);
-
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(Viewport.create, page.viewport, viewportImage, page.pixelRatio));
-        });
-
-        it('should validate a capture area to be in a viewport', () => {
-            const browser = stubBrowser_();
-            const page = {captureArea: 'foo bar'};
-
-            browser.prepareScreenshot.resolves(page);
-
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(Viewport.prototype.validate, page.captureArea, browser));
-        });
-
-        it('should fail if a capture area is not in a viewport', () => {
-            const browser = stubBrowser_();
-            const error = new Error('foo bar');
-
-            Viewport.prototype.validate.throws(error);
-
-            return assert.isRejected(browser.publicAPI.assertView(), error);
-        });
-
-        it('should crop image by capture area', () => {
-            const browser = stubBrowser_();
-            const page = {captureArea: 'foo'};
-
-            browser.prepareScreenshot.resolves(page);
-
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(Viewport.prototype.crop, page.captureArea));
+                .then(() => assert.calledOnceWith(ScreenShooter.prototype.capture, {foo: 'bar'}));
         });
 
         it('should save a captured screenshot', () => {
@@ -127,7 +91,7 @@ describe('assertView command', () => {
             const browser = stubBrowser_();
             const image = stubImage_();
 
-            Viewport.prototype.crop.resolves(image);
+            ScreenShooter.prototype.capture.resolves(image);
 
             return browser.publicAPI.assertView()
                 .then(() => assert.calledOnceWith(image.save, '/curr/path'));
