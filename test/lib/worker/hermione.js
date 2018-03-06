@@ -101,6 +101,25 @@ describe('worker/hermione', () => {
         });
     });
 
+    describe('init', () => {
+        it('should emit "INIT"', () => {
+            const hermione = Hermione.create();
+
+            const onInit = sinon.spy();
+            hermione.on(WorkerRunnerEvents.INIT, onInit);
+
+            return hermione.init()
+                .then(() => assert.calledOnce(onInit));
+        });
+
+        it('should reject on "INIT" handler fail', () => {
+            const hermione = Hermione.create()
+                .on(WorkerRunnerEvents.INIT, () => Promise.reject('o.O'));
+
+            return assert.isRejected(hermione.init(), /o.O/);
+        });
+    });
+
     describe('runTest', () => {
         it('should run test', () => {
             Runner.prototype.runTest.withArgs('fullTitle', {some: 'options'}).returns(q('foo bar'));

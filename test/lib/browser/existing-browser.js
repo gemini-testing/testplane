@@ -177,7 +177,6 @@ describe('NewBrowser', () => {
                 calibrator.calibrate.resolves();
 
                 sandbox.stub(Camera.prototype, 'calibrate');
-                sandbox.stub(Camera.prototype, 'isCalibrated');
             });
 
             it('should perform calibration if `calibrate` is turn on', () => {
