@@ -67,6 +67,20 @@ describe('assertView command', () => {
             return browser.publicAPI.assertView('plain', ['.selector1', '.selector2'])
                 .then(() => assert.calledOnceWith(browser.prepareScreenshot, ['.selector1', '.selector2']));
         });
+
+        it('should handle ignore elements option passed as an array', () => {
+            const browser = stubBrowser_();
+
+            return browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']})
+                .then(() => assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo', 'bar']}));
+        });
+
+        it('should handle ignore elements option passed as a string', () => {
+            const browser = stubBrowser_();
+
+            return browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'})
+                .then(() => assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo bar']}));
+        });
     });
 
     describe('take screenshot', () => {
