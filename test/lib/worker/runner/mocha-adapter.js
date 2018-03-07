@@ -61,13 +61,12 @@ describe('worker/mocha-adapter', () => {
     it('TODO');
 
     describe('inject contexts', () => {
-        it('should extend test with hermione context', async () => {
-            const mochaAdapter = mkMochaAdapter_();
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+        it('should extend test with hermione context before run', async () => {
+            mkMochaAdapter_();
+            const test = new MochaStub.Test();
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            const data = await mochaAdapter.runInSession();
-
-            assert.property(data, 'hermioneCtx');
+            assert.property(test, 'hermioneCtx');
         });
     });
 
