@@ -40,6 +40,7 @@ function makeConfigStub(opts) {
     config.forBrowser = (browserId) => config.browsers[browserId];
     config.getBrowserIds = () => _.keys(config.browsers);
     config.serialize = sinon.stub().returns(config);
+    config.mergeWith = sinon.stub();
 
     return config;
 }
