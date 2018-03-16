@@ -18,6 +18,7 @@ describe('worker/hermione-facade', () => {
             // TODO: think about how to make it easier
             '../utils/ipc': {on: ipc.on.bind(ipc), emit: ipc.emit.bind(ipc)}
         });
+        sandbox.spy(HermioneFacade.prototype, 'syncConfig');
 
         config = makeConfigStub();
 
@@ -37,19 +38,39 @@ describe('worker/hermione-facade', () => {
 
     afterEach(() => sandbox.restore());
 
-    it('should init hermione', () => {
-        const hermioneFacade = HermioneFacade.create();
+    describe('init', () => {
+        it('should init hermione', () => {
+            const hermioneFacade = HermioneFacade.create();
 
-        return hermioneFacade.init()
-            .then(() => assert.calledOnce(hermione.init));
+            return hermioneFacade.init()
+                .then(() => assert.calledOnce(hermione.init));
+        });
+
+        it('should not sync config', () => {
+            const hermioneFacade = HermioneFacade.create();
+
+            return hermioneFacade.init()
+                .then(() => assert.notCalled(HermioneFacade.prototype.syncConfig));
+        });
     });
 
-    it('should init hermione before running tests', () => {
-        hermione.runTest = sandbox.spy().named('hermioneRunTest');
+    describe('runTest', () => {
+        beforeEach(() => {
+            hermione.runTest = sandbox.spy().named('hermioneRunTest');
+        });
 
-        const hermioneFacade = HermioneFacade.create();
+        it('should init hermione before running test', () => {
+            const hermioneFacade = HermioneFacade.create();
 
-        return hermioneFacade.runTest()
-            .then(() => assert.callOrder(hermione.init, hermione.runTest));
+            return hermioneFacade.runTest()
+                .then(() => assert.callOrder(hermione.init, hermione.runTest));
+        });
+
+        it('should sync config before running test', () => {
+            const hermioneFacade = HermioneFacade.create();
+
+            return hermioneFacade.runTest()
+                .then(() => assert.callOrder(HermioneFacade.prototype.syncConfig, hermione.runTest));
+        });
     });
 });
