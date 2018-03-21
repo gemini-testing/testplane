@@ -40,6 +40,24 @@ describe('Plain reporter', () => {
 
     afterEach(() => sandbox.restore());
 
+    describe('success tests report', () => {
+        it('should log correct info about test', () => {
+            test = mkTestStub_({
+                fullTitle: () => 'some test title',
+                title: 'test title',
+                browserId: 'bro',
+                duration: '100'
+            });
+
+            emit(RunnerEvents.TEST_PASS, test);
+
+            assert.match(
+                getDeserializedResult(stdout),
+                /some test title \[bro\] - 100ms/
+            );
+        });
+    });
+
     const testStates = {
         RETRY: 'retried',
         TEST_FAIL: 'failed'
