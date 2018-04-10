@@ -45,6 +45,19 @@ describe('NewBrowser', () => {
 
                 assert.deepEqual(browser.meta, {k1: 'v1'});
             });
+
+            describe('getMeta', () => {
+                it('should get all meta if no key provided', async () => {
+                    mkBrowser_();
+
+                    await session.setMeta('foo', 'bar');
+                    await session.setMeta('baz', 'qux');
+
+                    const meta = await session.getMeta();
+
+                    assert.deepEqual(meta, {foo: 'bar', baz: 'qux'});
+                });
+            });
         });
 
         describe('url decorator', () => {
