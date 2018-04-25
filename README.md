@@ -508,7 +508,7 @@ By default is `Infinity` (no limit, all tests will be run in the same session). 
 ### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
 
-## shouldRetry
+### shouldRetry
 Function that determines whether to make a retry. Must return boolean value. By default returns `true` if retry attempts are available otherwise returns `false`.
 Argument of this function is object with fields:
   * `retriesLeft {Number}` — number of available retries

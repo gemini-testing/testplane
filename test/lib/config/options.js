@@ -313,4 +313,30 @@ describe('config options', () => {
             );
         });
     });
+
+    describe('shouldRetry', () => {
+        it('should throw error if shouldRetry is not a function', () => {
+            const readConfig = _.set({}, 'shouldRetry', 'shouldRetry');
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"shouldRetry" must be a function');
+        });
+
+        it('should set default shouldRetry option if it does not set in config file', () => {
+            const config = createConfig();
+
+            assert.equal(config.shouldRetry, null);
+        });
+
+        it('should override shouldRetry option', () => {
+            const shouldRetry = () => {};
+            const readConfig = _.set({}, 'shouldRetry', shouldRetry);
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.shouldRetry, shouldRetry);
+        });
+    });
 });
