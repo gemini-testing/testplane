@@ -388,7 +388,7 @@ hermione
 ```
 
 ## .hermione.conf.js
-`hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--conf` option to specify a path to the configuration file.
+`hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
 There is only one required field – `browsers`.
 ```javascript
