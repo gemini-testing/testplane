@@ -455,4 +455,33 @@ describe('Runner', () => {
             assert.calledOnceWith(MochaRunner.prototype.buildSuiteTree, ['some/path/file1.js', 'other/path/file2.js']);
         });
     });
+
+    describe('cancel', () => {
+        let cancelStub;
+
+        beforeEach(() => {
+            cancelStub = sandbox.stub();
+            BrowserPool.create.returns({cancel: cancelStub});
+        });
+
+        it('should cancel browser pool', () => {
+            const runner = new Runner(makeConfigStub());
+
+            runner.cancel();
+
+            assert.calledOnce(cancelStub);
+        });
+
+        it('should disable retries for all browsers', () => {
+            const config = makeConfigStub({
+                browsers: ['bro1', 'bro2']
+            });
+            const runner = new Runner(config);
+
+            runner.cancel();
+
+            assert.isFalse(config.forBrowser('bro1').shouldRetry());
+            assert.isFalse(config.forBrowser('bro2').shouldRetry());
+        });
+    });
 });
