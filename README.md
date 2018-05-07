@@ -61,6 +61,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [readTests](#readtests)
   - [isFailed](#isfailed)
   - [isWorker](#isworker)
+  - [halt](#halt)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
 
@@ -856,6 +857,13 @@ module.exports = (hermione) => {
     }
 };
 ```
+
+### halt
+```js
+hermione.halt(error, [timeout=60000ms]);
+```
+
+Method for abnormal termination of the test run in case of a terminal error. If process fails to gracefully shutdown in `timeout` milliseconds, it would be forcibly terminated (unless `timeout` is explicitly set to `0`).
 
 ## Environment variables
 

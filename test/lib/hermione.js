@@ -6,6 +6,7 @@ const {AsyncEmitter} = require('gemini-core').events;
 const {EventEmitter} = require('events');
 const pluginsLoader = require('plugins-loader');
 const q = require('q');
+const Promise = require('bluebird');
 const proxyquire = require('proxyquire').noCallThru();
 
 const Config = require('lib/config');
@@ -593,6 +594,79 @@ describe('hermione', () => {
             const hermione = Hermione.create();
 
             assert.isFalse(hermione.isWorker());
+        });
+    });
+
+    describe('halt', () => {
+        let hermione;
+
+        beforeEach(() => {
+            hermione = Hermione.create();
+
+            sandbox.stub(logger, 'error');
+            sandbox.stub(process, 'exit');
+            sandbox.stub(Runner.prototype, 'run').callsFake(() => hermione.emitAndWait(RunnerEvents.RUNNER_START));
+            sandbox.stub(Runner.prototype, 'cancel');
+        });
+
+        it('should log provided error', () => {
+            hermione.on(RunnerEvents.RUNNER_START, () => {
+                hermione.halt(new Error('test error'));
+            });
+
+            return hermione.run()
+                .finally(() => {
+                    assert.calledOnceWith(logger.error, sinon.match(/Error: test error/));
+                });
+        });
+
+        it('should cancel test runner', () => {
+            hermione.on(RunnerEvents.RUNNER_START, () => {
+                hermione.halt(new Error('test error'));
+            });
+
+            return hermione.run()
+                .finally(() => {
+                    assert.calledOnce(Runner.prototype.cancel);
+                });
+        });
+
+        it('should mark test run as failed', () => {
+            hermione.on(RunnerEvents.RUNNER_START, () => {
+                hermione.halt(new Error('test error'));
+            });
+
+            return hermione.run()
+                .finally(() => {
+                    assert.isTrue(hermione.isFailed());
+                });
+        });
+
+        describe('shutdown timeout', () => {
+            it('should force exit if timeout is reached', () => {
+                hermione.on(RunnerEvents.RUNNER_START, () => {
+                    hermione.halt(new Error('test error'), 250);
+                });
+
+                return hermione.run()
+                    .finally(() => Promise.delay(300))
+                    .then(() => {
+                        assert.calledWithMatch(logger.error, /Forcing shutdown.../);
+                        assert.calledOnceWith(process.exit, 1);
+                    });
+            });
+
+            it('should do nothing if timeout is set to zero', () => {
+                sandbox.spy(global, 'setTimeout');
+                hermione.on(RunnerEvents.RUNNER_START, () => {
+                    hermione.halt(new Error('test error'), 0);
+                });
+
+                return hermione.run()
+                    .finally(() => {
+                        assert.notCalled(global.setTimeout);
+                    });
+            });
         });
     });
 });
