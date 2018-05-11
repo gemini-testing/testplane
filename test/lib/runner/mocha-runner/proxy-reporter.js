@@ -31,7 +31,7 @@ describe('mocha-runner/proxy-reporter', () => {
     };
 
      // slow will be called by Mocha.BaseReporter inside
-    const stubTest = (opts) => _.extend({}, opts, {type: 'test', slow: sinon.stub()});
+    const stubTest = (opts) => _.extend({}, opts, {type: 'test', slow: sinon.stub(), hermioneCtx: {}});
 
     beforeEach(() => {
         runner = new EventEmitter();
@@ -80,6 +80,17 @@ describe('mocha-runner/proxy-reporter', () => {
 
             assert.calledWithMatch(emit, 'passTest', {duration: 500100});
             assert.notProperty(test, 'time');
+        });
+
+        it('should translate event "pass" to event "failTest" in case of assert view errors', () => {
+            const test = stubTest();
+            test.hermioneCtx.assertViewResults = {
+                hasFails: sandbox.stub().returns(true)
+            };
+
+            runner.emit('pass', test);
+
+            assert.calledOnceWith(emit, 'failTest', test);
         });
     });
 
@@ -190,7 +201,7 @@ describe('mocha-runner/proxy-reporter', () => {
         const meta = {url: '/some/url'};
         createReporter_({meta});
 
-        runner.emit('pass', {slow: sinon.stub()});
+        runner.emit('pass', stubTest());
 
         assert.calledWithMatch(emit, 'passTest', {meta});
         assert.notStrictEqual(emit.firstCall.args[1].meta, meta);

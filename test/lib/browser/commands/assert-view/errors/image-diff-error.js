@@ -1,11 +1,20 @@
 'use strict';
 
-const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
+const {Image} = require('gemini-core');
+const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 
 describe('ImageDiffError', () => {
-    it('should be an instance of "AssertViewError"', () => {
-        assert.instanceOf(new ImageDiffError(), AssertViewError);
+    const sandbox = sinon.sandbox.create();
+
+    beforeEach(() => {
+        sandbox.stub(Image, 'buildDiff').resolves();
+    });
+
+    afterEach(() => sandbox.restore());
+
+    it('should be an instance of "BaseStateError"', () => {
+        assert.instanceOf(new ImageDiffError(), BaseStateError);
     });
 
     it('should be eventually an instance of Error', () => {
@@ -40,5 +49,20 @@ describe('ImageDiffError', () => {
         const error = new ImageDiffError('', '', '', {some: 'opts'});
 
         assert.deepEqual(error.diffOpts, {some: 'opts'});
+    });
+
+    it('should create an instance of error from object', () => {
+        const error = ImageDiffError.fromObject({stateName: 'name', currentImagePath: 'curr/path', refImagePath: 'ref/path', diffOpts: {foo: 'bar'}});
+
+        assert.instanceOf(error, ImageDiffError);
+        assert.deepInclude(Object.assign({}, error), {stateName: 'name', currentImagePath: 'curr/path', refImagePath: 'ref/path', diffOpts: {foo: 'bar'}});
+    });
+
+    it('should provide the ability to save diff image', () => {
+        const error = new ImageDiffError('', '', '', {some: 'opts'});
+
+        Image.buildDiff.withArgs({some: 'opts', diff: 'diff/path'}).resolves({foo: 'bar'});
+
+        return assert.becomes(error.saveDiffTo('diff/path'), {foo: 'bar'});
     });
 });

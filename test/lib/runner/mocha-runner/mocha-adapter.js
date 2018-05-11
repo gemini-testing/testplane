@@ -1,14 +1,13 @@
 'use strict';
 
 const path = require('path');
-const q = require('q');
 const _ = require('lodash');
 const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
 const {Image} = require('gemini-core');
+const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
 const logger = require('lib/utils/logger');
 const crypto = require('lib/utils/crypto');
-const errors = require('lib/constants/errors');
 const SkipBuilder = require('lib/runner/mocha-runner/skip/skip-builder');
 const OnlyBuilder = require('lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('lib/runner/mocha-runner/skip/');
@@ -39,8 +38,8 @@ describe('mocha-runner/mocha-adapter', () => {
     beforeEach(() => {
         testSkipper = sinon.createStubInstance(TestSkipper);
         browserAgent = sinon.createStubInstance(BrowserAgent);
-        browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-        browserAgent.freeBrowser.returns(q());
+        browserAgent.getBrowser.resolves(mkBrowserStub_());
+        browserAgent.freeBrowser.resolves();
 
         clearRequire = sandbox.stub().named('clear-require');
         proxyReporter = sandbox.stub().named('proxy-reporter');
@@ -53,6 +52,9 @@ describe('mocha-runner/mocha-adapter', () => {
             'mocha': MochaStub,
             './proxy-reporter': proxyReporter
         });
+
+        sandbox.spy(AssertViewResults, 'fromRawObject');
+        sandbox.stub(AssertViewResults.prototype, 'get').returns([]);
     });
 
     afterEach(() => sandbox.restore());
@@ -210,8 +212,8 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.getBrowser.returns(q(mkBrowserStub_()));
-            browserAgent.freeBrowser.returns(q());
+            browserAgent.getBrowser.resolves(mkBrowserStub_());
+            browserAgent.freeBrowser.resolves();
             sandbox.stub(Skip.prototype, 'handleEntity');
 
             mochaAdapter = mkMochaAdapter_();
@@ -425,7 +427,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should pass to proxy reporter getter for requested browser', () => {
             const browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.getBrowser.resolves(browser);
             passthroughMochaEvents_();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
@@ -439,7 +441,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         it('should reset browser on reinit', () => {
             const browser = mkBrowserStub_();
-            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.getBrowser.resolves(browser);
 
             passthroughMochaEvents_();
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
@@ -526,7 +528,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
         function stubWorkers() {
             return {
-                runTest: sandbox.stub().resolves({})
+                runTest: sandbox.stub().resolves({hermioneCtx: {}})
             };
         }
 
@@ -544,7 +546,7 @@ describe('mocha-runner/mocha-adapter', () => {
             const testFailSpy = sinon.spy();
             const error = new Error();
 
-            browserAgent.getBrowser.returns(q.reject(error));
+            browserAgent.getBrowser.rejects(error);
 
             MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
                 return rootSuite
@@ -574,8 +576,8 @@ describe('mocha-runner/mocha-adapter', () => {
         it('should not be rejected if freeBrowser failed', () => {
             const browser = mkBrowserStub_();
 
-            browserAgent.getBrowser.returns(q(browser));
-            browserAgent.freeBrowser.returns(q.reject('some-error'));
+            browserAgent.getBrowser.resolves(browser);
+            browserAgent.freeBrowser.rejects('some-error');
 
             const mochaAdapter = mkMochaAdapter_();
 
@@ -591,8 +593,8 @@ describe('mocha-runner/mocha-adapter', () => {
         describe('should release browser', () => {
             it('after suite execution', () => {
                 const browser = mkBrowserStub_();
-                browserAgent.getBrowser.returns(q(browser));
-                browserAgent.freeBrowser.returns(q());
+                browserAgent.getBrowser.resolves(browser);
+                browserAgent.freeBrowser.resolves();
 
                 const mochaAdapter = mkMochaAdapter_();
 
@@ -621,7 +623,7 @@ describe('mocha-runner/mocha-adapter', () => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
                 const workers = stubWorkers();
-                workers.runTest.rejects(new Error('some-error'));
+                workers.runTest.rejects({message: 'some-error', hermioneCtx: {}});
 
                 return mochaAdapter.run(workers)
                     .then(() => {
@@ -634,7 +636,7 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaAdapter = mkMochaAdapter_();
             const workers = stubWorkers();
 
-            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
+            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500'});
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title', file: 'some/file'}));
 
@@ -646,12 +648,12 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaAdapter = mkMochaAdapter_();
             const test = MochaStub.Test.create();
 
-            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}}));
+            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
             const workers = stubWorkers();
-            workers.runTest.resolves({meta: {some: 'meta'}});
+            workers.runTest.resolves({meta: {some: 'meta'}, hermioneCtx: {}});
 
             return mochaAdapter.run(workers)
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
@@ -661,7 +663,7 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaAdapter = mkMochaAdapter_();
             const test = MochaStub.Test.create();
 
-            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}}));
+            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
@@ -669,20 +671,40 @@ describe('mocha-runner/mocha-adapter', () => {
             workers.runTest.resolves({hermioneCtx: {some: 'data'}});
 
             return mochaAdapter.run(workers)
-                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', hermioneCtx: {some: 'data'}}));
+                .then(() => assert.include(test, {browserId: 'bro-id', sessionId: '100-500'}))
+                .then(() => assert.propertyVal(test.hermioneCtx, 'some', 'data'));
+        });
+
+        it('should extend test with assert view results', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const test = MochaStub.Test.create();
+
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            const workers = stubWorkers();
+            workers.runTest.resolves({hermioneCtx: {assertViewResults: [{foo: 'bar'}]}});
+
+            AssertViewResults.prototype.get.returns({baz: 'qux'});
+
+            return mochaAdapter.run(workers)
+                .then(() => {
+                    assert.calledOnceWith(AssertViewResults.fromRawObject, [{foo: 'bar'}]);
+                    assert.deepEqual(test.assertViewResults, {baz: 'qux'});
+                });
         });
 
         it('should update browser state', () => {
             const mochaAdapter = mkMochaAdapter_();
             const browser = mkBrowserStub_();
 
-            browserAgent.getBrowser.returns(q(browser));
+            browserAgent.getBrowser.resolves(browser);
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
 
             const workers = stubWorkers();
             workers.runTest.resolves({
                 meta: {some: 'meta'},
-                changes: {originWindowSize: {width: 1, height: 1}}
+                changes: {originWindowSize: {width: 1, height: 1}},
+                hermioneCtx: {}
             });
 
             return mochaAdapter.run(workers)
@@ -700,7 +722,7 @@ describe('mocha-runner/mocha-adapter', () => {
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
 
             const workers = stubWorkers();
-            workers.runTest.rejects({some: 'err'});
+            workers.runTest.rejects({some: 'err', hermioneCtx: {}});
 
             return mochaAdapter.run(workers)
                 .then(() => {
@@ -709,71 +731,16 @@ describe('mocha-runner/mocha-adapter', () => {
                 });
         });
 
-        describe('extend test error on "ImageDiffError"', () => {
-            it('should extend image diff error by saving diff function', () => {
-                const mochaAdapter = mkMochaAdapter_();
-                const testFailSpy = sinon.spy();
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
-
-                const workers = stubWorkers();
-                workers.runTest.rejects({type: errors.IMAGE_DIFF_ERROR});
-
-                return mochaAdapter.run(workers)
-                    .then(() => {
-                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
-
-                        assert.isFunction(saveDiffTo);
-                    });
-            });
-
-            it('should extend image diff error by saving diff function with diff options', () => {
-                const mochaAdapter = mkMochaAdapter_();
-                const testFailSpy = sinon.spy();
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
-
-                const workers = stubWorkers();
-                workers.runTest.rejects({type: errors.IMAGE_DIFF_ERROR, diffOpts: {some: 'opts'}});
-
-                return mochaAdapter.run(workers)
-                    .then(() => {
-                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error || sandbox.stub();
-
-                        saveDiffTo('some/path');
-
-                        assert.calledWith(Image.buildDiff, {some: 'opts', diff: 'some/path'});
-                    });
-            });
-
-            it('should extend image diff error by saving diff function if test did not fail with image diff error', () => {
-                const mochaAdapter = mkMochaAdapter_();
-                const testFailSpy = sinon.spy();
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
-
-                const workers = stubWorkers();
-                workers.runTest.rejects({type: 'some-error'});
-
-                return mochaAdapter.run(workers)
-                    .then(() => {
-                        const {saveDiffTo} = testFailSpy.firstCall.args[0].error;
-
-                        assert.isUndefined(saveDiffTo);
-                    });
-            });
-        });
-
         it('should extend test with browser data even if running of test in subprocess fails', () => {
             const mochaAdapter = mkMochaAdapter_();
             const test = MochaStub.Test.create();
 
-            browserAgent.getBrowser.returns(q({id: 'bro-id', sessionId: '100-500'}));
+            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500'});
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
             const workers = stubWorkers();
-            workers.runTest.rejects({meta: {some: 'meta'}});
+            workers.runTest.rejects({meta: {some: 'meta'}, hermioneCtx: {}});
 
             return mochaAdapter.run(workers)
                 .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));

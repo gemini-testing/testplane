@@ -5,6 +5,7 @@ const pluginsLoader = require('plugins-loader');
 const q = require('q');
 const Config = require('lib/config');
 const RunnerEvents = require('lib/constants/runner-events');
+const Errors = require('lib/errors');
 const WorkerRunnerEvents = require('lib/worker/constants/runner-events');
 const Hermione = require('lib/worker/hermione');
 const Runner = require('lib/worker/runner');
@@ -98,6 +99,10 @@ describe('worker/hermione', () => {
             Config.create.returns(config);
 
             assert.deepEqual(Hermione.create().config, config);
+        });
+
+        it('hermione errors', () => {
+            assert.deepEqual(Hermione.create().errors, Errors);
         });
     });
 
