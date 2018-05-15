@@ -415,15 +415,18 @@ describe('hermione', () => {
     describe('readTests', () => {
         beforeEach(() => sandbox.stub(Runner.prototype, 'buildSuiteTree'));
 
-        it('should read test files using specified paths, browsers and config', () => {
+        it('should read test files using specified paths, browsers and ignore patterns', () => {
             const config = makeConfigStub();
             Config.create.returns(config);
 
             return Hermione
                 .create(config)
-                .readTests(['some/path'], ['bro1', 'bro2'])
+                .readTests(['some/path'], ['bro1', 'bro2'], {ignore: 'exclude/path'})
                 .then(() => {
-                    assert.calledWith(sets.reveal, config.sets, {paths: ['some/path'], browsers: ['bro1', 'bro2']});
+                    assert.calledWith(
+                        sets.reveal, config.sets,
+                        {paths: ['some/path'], browsers: ['bro1', 'bro2'], ignore: 'exclude/path'}
+                    );
                 });
         });
 

@@ -828,6 +828,7 @@ hermione.readTests(testPaths, browsers, options).done();
 * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
 * **options** (optional) `Object`:
   * **silent** (optional) `Boolean` – flag to disable events emitting while reading tests; default is `false`.
+  * **ignore** (optional) `String|Glob|Array<String|Glob>` - patterns to exclude paths from the test search.
 
 ### isFailed
 
