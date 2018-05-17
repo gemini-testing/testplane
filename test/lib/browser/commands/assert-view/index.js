@@ -4,9 +4,9 @@ const fs = require('fs');
 const fsExtra = require('fs-extra');
 const webdriverio = require('webdriverio');
 const {Image, temp, ScreenShooter} = require('gemini-core');
-const RuntimeConfig = require('lib/config/runtime-config');
-const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
+const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
+const RuntimeConfig = require('lib/config/runtime-config');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
 
 describe('assertView command', () => {
@@ -26,7 +26,7 @@ describe('assertView command', () => {
 
     const stubBrowser_ = (config) => {
         const session = mkSessionStub_(sandbox);
-        session.executionContext = {};
+        session.executionContext = {hermioneCtx: {}};
         sandbox.stub(webdriverio, 'remote').returns(session);
 
         const browser = mkBrowser_(config);
@@ -45,7 +45,7 @@ describe('assertView command', () => {
         sandbox.stub(temp, 'attach');
 
         sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
-        sandbox.stub(fsExtra, 'copy');
+        sandbox.stub(fsExtra, 'copy').resolves();
 
         sandbox.spy(ScreenShooter, 'create');
         sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
@@ -119,12 +119,25 @@ describe('assertView command', () => {
         });
     });
 
-    describe('assert refs', () => {
-        it('should fail with "NoRefImageError" error if there is no reference image', () => {
-            fs.existsSync.returns(false);
+    it('should not fail if there is no reference image', () => {
+        fs.existsSync.returns(false);
 
-            return assert.isRejected(stubBrowser_().publicAPI.assertView(), NoRefImageError);
-        });
+        return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+    });
+
+    it('should remember several "NoRefImageError" errors', () => {
+        fs.existsSync.returns(false);
+
+        const browser = stubBrowser_();
+
+        return browser.publicAPI.assertView()
+            .then(() => browser.publicAPI.assertView())
+            .then(() => {
+                const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+                assert.instanceOf(firstError, NoRefImageError);
+                assert.instanceOf(secondError, NoRefImageError);
+                assert.notEqual(firstError, secondError);
+            });
     });
 
     describe('update refs', () => {
@@ -145,6 +158,14 @@ describe('assertView command', () => {
 
             return browser.publicAPI.assertView()
                 .then(() => assert.calledOnceWith(fsExtra.copy, '/curr/path', '/ref/path'));
+        });
+
+        it('should reject on reference update fail', () => {
+            fs.existsSync.returns(false);
+
+            fsExtra.copy.throws();
+
+            return assert.isRejected(stubBrowser_().publicAPI.assertView());
         });
     });
 
@@ -183,21 +204,36 @@ describe('assertView command', () => {
         describe('if images are not equal', () => {
             beforeEach(() => {
                 Image.compare.resolves(false);
-                sandbox.stub(Image, 'buildDiff');
             });
 
             describe('assert refs', () => {
-                it('should fail with "ImageDiffError" error', () => {
-                    return assert.isRejected(stubBrowser_().publicAPI.assertView(), ImageDiffError);
+                it('should not reject', () => {
+                    return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                });
+
+                it('should remember several "ImageDiffError" errors', () => {
+                    const browser = stubBrowser_();
+
+                    return browser.publicAPI.assertView()
+                        .then(() => browser.publicAPI.assertView())
+                        .then(() => {
+                            const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+                            assert.instanceOf(firstError, ImageDiffError);
+                            assert.instanceOf(secondError, ImageDiffError);
+                            assert.notEqual(firstError, secondError);
+                        });
                 });
 
                 describe('passing diff options', () => {
                     it('should pass diff options for passed image paths', () => {
                         const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
+                        const browser = stubBrowser_(config);
                         temp.path.returns('/current/path');
 
-                        return stubBrowser_(config).publicAPI.assertView()
-                            .catch((e) => {
+                        return browser.publicAPI.assertView()
+                            .then(() => {
+                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
                                 assert.match(e.diffOpts, {
                                     current: '/current/path',
                                     reference: '/reference/path'
@@ -210,9 +246,14 @@ describe('assertView command', () => {
                             tolerance: 100,
                             system: {diffColor: '#111111'}
                         };
+                        const browser = stubBrowser_(config);
 
-                        return stubBrowser_(config).publicAPI.assertView()
-                            .catch((e) => assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'}));
+                        return browser.publicAPI.assertView()
+                            .then(() => {
+                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
+                                assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
+                            });
                     });
                 });
             });
@@ -232,5 +273,24 @@ describe('assertView command', () => {
                 });
             });
         });
+    });
+
+    it('should remember several success assert view calls', () => {
+        const getScreenshotPath = sandbox.stub();
+
+        getScreenshotPath
+            .withArgs(sinon.match.any, 'plain').returns('/ref/path/plain')
+            .withArgs(sinon.match.any, 'complex').returns('/ref/path/complex');
+
+        const browser = stubBrowser_({getScreenshotPath});
+
+        return browser.publicAPI.assertView('plain')
+            .then(() => browser.publicAPI.assertView('complex'))
+            .then(() => {
+                assert.deepEqual(browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get(), [
+                    {stateName: 'plain', refImagePath: '/ref/path/plain'},
+                    {stateName: 'complex', refImagePath: '/ref/path/complex'}
+                ]);
+            });
     });
 });

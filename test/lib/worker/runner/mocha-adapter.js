@@ -423,6 +423,17 @@ describe('worker/mocha-adapter', () => {
 
             return assert.isRejected(mochaAdapter.runInSession(), /test fail/);
         });
+
+        it('should return assert view results from hermione ctx', () => {
+            const mochaAdapter = mkMochaAdapter_();
+            const test = new MochaStub.Test();
+
+            mochaAdapter.suite.addTest(test);
+            test.hermioneCtx.assertViewResults = {toRawObject: sandbox.stub().returns(['foo', 'bar'])};
+
+            return mochaAdapter.runInSession()
+                .then((res) => assert.deepEqual(res.hermioneCtx.assertViewResults, ['foo', 'bar']));
+        });
     });
 
     describe('screenshotOnReject', () => {

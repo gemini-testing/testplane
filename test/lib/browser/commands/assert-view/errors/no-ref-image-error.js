@@ -1,11 +1,11 @@
 'use strict';
 
-const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
+const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 
 describe('NoRefImageError', () => {
-    it('should be an instance of "AssertViewError"', () => {
-        assert.instanceOf(new NoRefImageError(), AssertViewError);
+    it('should be an instance of "BaseStateError"', () => {
+        assert.instanceOf(new NoRefImageError(), BaseStateError);
     });
 
     it('should be eventually an instance of Error', () => {
@@ -27,6 +27,13 @@ describe('NoRefImageError', () => {
     it('should contain state name and reference image path in an error message', () => {
         const error = new NoRefImageError('plain', '', 'refPath');
 
-        assert.match(error.message, /reference image at refPath for "plain" state./);
+        assert.match(error.message, /reference image at refPath for "plain" state/);
+    });
+
+    it('should create an instance of error from object', () => {
+        const error = NoRefImageError.fromObject({stateName: 'name', currentImagePath: 'curr/path', refImagePath: 'ref/path'});
+
+        assert.instanceOf(error, NoRefImageError);
+        assert.deepInclude(Object.assign({}, error), {stateName: 'name', currentImagePath: 'curr/path', refImagePath: 'ref/path'});
     });
 });

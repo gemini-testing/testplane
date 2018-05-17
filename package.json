@@ -59,7 +59,7 @@
     "conventional-changelog-lint": "^1.0.1",
     "doctoc": "^1.0.0",
     "eslint": "^3.9.0",
-    "eslint-config-gemini-testing": "^2.4.0",
+    "eslint-config-gemini-testing": "^2.8.0",
     "husky": "^0.11.4",
     "istanbul": "^0.4.1",
     "proxyquire": "^1.7.3",

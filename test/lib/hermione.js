@@ -11,6 +11,7 @@ const proxyquire = require('proxyquire').noCallThru();
 
 const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
+const Errors = require('lib/errors');
 const Hermione = require('lib/hermione');
 const RunnerEvents = require('lib/constants/runner-events');
 const signalHandler = require('lib/signal-handler');
@@ -547,6 +548,10 @@ describe('hermione', () => {
             Config.create.returns(config);
 
             assert.deepEqual(Hermione.create().config, config);
+        });
+
+        it('hermione errors', () => {
+            assert.deepEqual(Hermione.create().errors, Errors);
         });
     });
 
