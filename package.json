@@ -38,7 +38,7 @@
     "commander": "gemini-testing/commander.js#fix-general-command",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.0",
-    "gemini-core": "^2.9.0",
+    "gemini-core": "^2.9.1",
     "glob-extra": "^3.0.0",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
