@@ -636,7 +636,7 @@ describe('mocha-runner/mocha-adapter', () => {
             const mochaAdapter = mkMochaAdapter_();
             const workers = stubWorkers();
 
-            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500'});
+            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title', file: 'some/file'}));
 
