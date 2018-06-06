@@ -17,20 +17,26 @@ function makeConfigStub(opts) {
         retry: 0,
         sessionsPerBrowser: 1,
         testsPerSession: Infinity,
-        configPath: 'some-default-config-path'
+        configPath: 'some-default-config-path',
+        system: {
+            mochaOpts: {},
+            patternsOnReject: []
+        },
+        sets: {}
     });
 
     const config = {
         browsers: {},
         plugins: opts.plugins,
-        system: opts.system || {mochaOpts: {}},
-        sets: opts.sets || {},
+        system: opts.system,
+        sets: opts.sets,
         configPath: opts.configPath
     };
 
     opts.browsers.forEach(function(browserId) {
         config.browsers[browserId] = {
             retry: opts.retry,
+            shouldRetry: opts.shouldRetry,
             sessionsPerBrowser: opts.sessionsPerBrowser,
             testsPerSession: opts.testsPerSession,
             desiredCapabilities: {browserName: browserId}
@@ -59,7 +65,8 @@ function makeTest(opts = {}) {
     return _.defaults(opts, {
         parent: makeSuite(),
         title: 'default-test',
-        browserId: 'yabro'
+        browserId: 'yabro',
+        fullTitle: () => 'default-test'
     });
 }
 

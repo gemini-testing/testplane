@@ -8,7 +8,8 @@ const Test = require('./test');
 
 const EVENTS = {
     TEST_BEGIN: 'test begin',
-    FAIL: 'fail'
+    FAIL: 'fail',
+    TEST_END: 'test end'
 };
 
 module.exports = class Suite extends EventEmitter {
@@ -32,6 +33,10 @@ module.exports = class Suite extends EventEmitter {
 
     static create(parent, title) {
         return new this(parent, title);
+    }
+
+    get root() {
+        return !this.parent;
     }
 
     get tests() {
@@ -143,7 +148,7 @@ module.exports = class Suite extends EventEmitter {
         this.suites.forEach((suite) => suite.eachTest(fn));
     }
 
-    run() {
+    run(runner) {
         return q()
             .then(this._execRunnables(this.beforeAllHooks))
             .then(() => this.tests.reduce((acc, test) => {
@@ -163,7 +168,8 @@ module.exports = class Suite extends EventEmitter {
                         return test.run();
                     })
                     .catch((error) => this.emit(EVENTS.FAIL, {error, test}))
-                    .then(this._execRunnables(this.afterEachHooks));
+                    .then(this._execRunnables(this.afterEachHooks))
+                    .finally(() => runner.emit(EVENTS.TEST_END, test));
             }, q()))
             .then(this._execRunnables(this.suites))
             .then(this._execRunnables(this.afterAllHooks));
