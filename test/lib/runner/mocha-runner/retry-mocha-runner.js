@@ -2,8 +2,9 @@
 
 const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
-const RunnerEvents = require('../../../../lib/constants/runner-events');
-const RetryMochaRunner = require('../../../../lib/runner/mocha-runner/retry-mocha-runner');
+const RunnerEvents = require('lib/constants/runner-events');
+const RetryMochaRunner = require('lib/runner/mocha-runner/retry-mocha-runner');
+const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const TestStub = require('../../_mocha/test');
 const Runnable = require('../../_mocha/runnable');
 
@@ -97,6 +98,16 @@ describe('mocha-runner/retry-mocha-runner', () => {
                 const retryMochaRunner = createRetryMochaRunner({retry: 10, shouldRetry: () => false});
 
                 mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL));
+
+                return retryMochaRunner.run({some: 'workers'})
+                    .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
+            });
+
+            it('should not retry if there are no reference image for test', () => {
+                const retryMochaRunner = createRetryMochaRunner({retry: 10});
+                const test = {assertViewResults: [{foo: 'bar'}, new NoRefImageError()]};
+
+                mochaAdapter.run.callsFake(emitEvent(RunnerEvents.TEST_FAIL, test));
 
                 return retryMochaRunner.run({some: 'workers'})
                     .then(() => assert.calledOnceWith(mochaAdapter.run, {some: 'workers'}));
