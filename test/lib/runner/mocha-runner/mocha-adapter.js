@@ -2,59 +2,41 @@
 
 const path = require('path');
 const _ = require('lodash');
-const BrowserAgent = require('gemini-core').BrowserAgent;
 const proxyquire = require('proxyquire').noCallThru();
-const {Image} = require('gemini-core');
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const logger = require('lib/utils/logger');
 const crypto = require('lib/utils/crypto');
 const SkipBuilder = require('lib/runner/mocha-runner/skip/skip-builder');
 const OnlyBuilder = require('lib/runner/mocha-runner/skip/only-builder');
 const Skip = require('lib/runner/mocha-runner/skip/');
 const TestSkipper = require('lib/runner/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
+const SuiteSubset = require('lib/runner/mocha-runner/suite-subset');
 const MochaStub = require('../../_mocha');
 
 describe('mocha-runner/mocha-adapter', () => {
     const sandbox = sinon.sandbox.create();
 
     let MochaAdapter;
-    let browserAgent;
     let clearRequire;
     let testSkipper;
-    let proxyReporter;
 
-    const mkMochaAdapter_ = (config) => {
-        return MochaAdapter.create(browserAgent, _.extend({patternsOnReject: []}, config));
-    };
+    const mkMochaAdapter_ = (opts = {}) => {
+        const browserId = opts.browserId || 'default-bro';
+        const config = opts.config || {};
 
-    const mkBrowserStub_ = (opts) => {
-        return _.defaults(opts || {}, {
-            publicAPI: Object.create({}),
-            updateChanges: sinon.stub()
-        });
+        return MochaAdapter.create(browserId, config);
     };
 
     beforeEach(() => {
         testSkipper = sinon.createStubInstance(TestSkipper);
-        browserAgent = sinon.createStubInstance(BrowserAgent);
-        browserAgent.getBrowser.resolves(mkBrowserStub_());
-        browserAgent.freeBrowser.resolves();
 
         clearRequire = sandbox.stub().named('clear-require');
-        proxyReporter = sandbox.stub().named('proxy-reporter');
 
-        sandbox.stub(logger);
         sandbox.stub(crypto, 'getShortMD5');
 
         MochaAdapter = proxyquire('../../../../lib/runner/mocha-runner/mocha-adapter', {
             'clear-require': clearRequire,
-            'mocha': MochaStub,
-            './proxy-reporter': proxyReporter
+            'mocha': MochaStub
         });
-
-        sandbox.spy(AssertViewResults, 'fromRawObject');
-        sandbox.stub(AssertViewResults.prototype, 'get').returns([]);
     });
 
     afterEach(() => sandbox.restore());
@@ -79,7 +61,11 @@ describe('mocha-runner/mocha-adapter', () => {
 
     describe('constructor', () => {
         it('should pass shared opts to mocha instance', () => {
-            mkMochaAdapter_({mochaOpts: {grep: 'foo'}});
+            mkMochaAdapter_({
+                config: {
+                    mochaOpts: {grep: 'foo'}
+                }
+            });
 
             assert.deepEqual(MochaStub.lastInstance.constructorArgs, {grep: 'foo'});
         });
@@ -88,12 +74,6 @@ describe('mocha-runner/mocha-adapter', () => {
             mkMochaAdapter_();
 
             assert.called(MochaStub.lastInstance.fullTrace);
-        });
-
-        it('should disable timeouts', () => {
-            mkMochaAdapter_();
-
-            assert.calledOnceWith(MochaStub.lastInstance.suite.enableTimeouts, false);
         });
     });
 
@@ -145,6 +125,36 @@ describe('mocha-runner/mocha-adapter', () => {
 
             assert.deepEqual(MochaStub.lastInstance.files, []);
         });
+
+        it('should throw in case of duplicate test titles in different files', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.loadFiles.callsFake(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => {
+                    return suite
+                        .addTest({title: 'some test', file: 'first file'})
+                        .addTest({title: 'some test', file: 'second file'});
+                });
+            });
+
+            assert.throws(() => mochaAdapter.loadFiles([]),
+                'Tests with the same title \'some test\' in files \'first file\' and \'second file\' can\'t be used');
+        });
+
+        it('should throw in case of duplicate test titles in the same file', () => {
+            const mochaAdapter = mkMochaAdapter_();
+
+            MochaStub.lastInstance.loadFiles.callsFake(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => {
+                    return suite
+                        .addTest({title: 'some test', file: 'some file'})
+                        .addTest({title: 'some test', file: 'some file'});
+                });
+            });
+
+            assert.throws(() => mochaAdapter.loadFiles([]),
+                'Tests with the same title \'some test\' in file \'some file\' can\'t be used');
+        });
     });
 
     describe('hermione global', () => {
@@ -164,7 +174,11 @@ describe('mocha-runner/mocha-adapter', () => {
         });
 
         it('hermione.ctx should return passed ctx', () => {
-            mkMochaAdapter_({ctx: {some: 'ctx'}});
+            mkMochaAdapter_({
+                config: {
+                    ctx: {some: 'ctx'}
+                }
+            });
 
             assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
         });
@@ -193,7 +207,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeEach(beforeEach).addTest());
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => assert.notCalled(beforeEach));
         });
 
@@ -203,7 +217,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterEach(afterEach).addTest());
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => assert.notCalled(afterEach));
         });
     });
@@ -212,8 +226,6 @@ describe('mocha-runner/mocha-adapter', () => {
         let mochaAdapter;
 
         beforeEach(() => {
-            browserAgent.getBrowser.resolves(mkBrowserStub_());
-            browserAgent.freeBrowser.resolves();
             sandbox.stub(Skip.prototype, 'handleEntity');
 
             mochaAdapter = mkMochaAdapter_();
@@ -224,7 +236,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => {
                     assert.called(Skip.prototype.handleEntity);
                     assert.calledWith(Skip.prototype.handleEntity, test);
@@ -236,7 +248,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => {
                     assert.called(Skip.prototype.handleEntity);
                     assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
@@ -280,8 +292,7 @@ describe('mocha-runner/mocha-adapter', () => {
 
     describe('applySkip', () => {
         it('should skip suite using test skipper', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            browserAgent.browserId = 'some-browser';
+            const mochaAdapter = mkMochaAdapter_({browserId: 'some-browser'});
 
             mochaAdapter.applySkip(testSkipper);
 
@@ -310,7 +321,7 @@ describe('mocha-runner/mocha-adapter', () => {
                     .onTestBegin(testSpy);
             });
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => {
                     assert.calledTwice(testSpy);
                     assert.calledWithMatch(testSpy.firstCall, {title: 'test1'});
@@ -334,7 +345,7 @@ describe('mocha-runner/mocha-adapter', () => {
                     .onTestBegin(testSpy);
             });
 
-            return mochaAdapter.run()
+            return mochaAdapter.parse()
                 .then(() => {
                     assert.calledOnce(testSpy);
                     assert.calledWithMatch(testSpy.firstCall, {title: 'test1'});
@@ -382,368 +393,113 @@ describe('mocha-runner/mocha-adapter', () => {
 
             assert.deepEqual(mochaAdapter.tests, [test1]);
         });
-
-        it('should restore tests storage after reinit', () => {
-            const mochaAdapter = mkMochaAdapter_();
-
-            mochaAdapter.attachTestFilter(sandbox.stub().returns(true));
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(new MochaStub.Test()));
-
-            mochaAdapter.reinit();
-
-            assert.deepEqual(mochaAdapter.tests, []);
-        });
     });
 
-    describe('passthrough mocha events', () => {
-        let mochaAdapter;
-
+    describe('passthrough mocha file events', () => {
         beforeEach(() => {
-            mochaAdapter = mkMochaAdapter_();
-            sandbox.spy(mochaAdapter, 'emit').named('emit');
+            MochaAdapter.init();
         });
 
-        function passthroughMochaEvents_() {
-            const Reporter = MochaStub.lastInstance.reporter.lastCall.args[0];
-            new Reporter(); // eslint-disable-line no-new
-        }
+        afterEach(() => delete global.hermione);
 
-        it('should set mocha reporter as proxy reporter in order to proxy events to emit fn', () => {
-            passthroughMochaEvents_();
+        _.forEach({
+            'pre-require': 'BEFORE_FILE_READ',
+            'post-require': 'AFTER_FILE_READ'
+        }, (hermioneEvent, mochaEvent) => {
+            it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, () => {
+                const onEvent = sinon.stub().named(`on${hermioneEvent}`);
+                mkMochaAdapter_({browserId: 'bro'})
+                    .on(RunnerEvents[hermioneEvent], onEvent);
 
-            assert.calledOnce(proxyReporter);
-            assert.calledWithNew(proxyReporter);
-        });
+                MochaStub.lastInstance.suite.emit(mochaEvent, {}, '/some/file.js');
 
-        it('should pass to proxy reporter emit fn', () => {
-            passthroughMochaEvents_();
-
-            const emit_ = proxyReporter.firstCall.args[0];
-            emit_('some-event', {some: 'data'});
-
-            assert.calledOnceWith(mochaAdapter.emit, 'some-event', sinon.match({some: 'data'}));
-        });
-
-        it('should pass to proxy reporter getter for requested browser', () => {
-            const browser = mkBrowserStub_();
-            browserAgent.getBrowser.resolves(browser);
-            passthroughMochaEvents_();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => {
-                    const getBrowser = proxyReporter.lastCall.args[1];
-                    assert.equal(browser, getBrowser());
-                });
-        });
-
-        it('should reset browser on reinit', () => {
-            const browser = mkBrowserStub_();
-            browserAgent.getBrowser.resolves(browser);
-
-            passthroughMochaEvents_();
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => mochaAdapter.reinit())
-                .then(() => {
-                    const getBrowser = proxyReporter.lastCall.args[1];
-                    assert.notDeepEqual(getBrowser(), browser);
-                });
-        });
-
-        it('should pass to proxy reporter getter for browser id if browser not requested', () => {
-            browserAgent.browserId = 'some-browser';
-
-            passthroughMochaEvents_();
-
-            const getBrowser = proxyReporter.lastCall.args[1];
-            assert.deepEqual(getBrowser(), {id: 'some-browser'});
-        });
-
-        describe('if event handler throws', () => {
-            const initBadHandler_ = (event, handler) => {
-                mochaAdapter.on(event, handler);
-
-                passthroughMochaEvents_();
-                return proxyReporter.firstCall.args[0];
-            };
-
-            it('proxy should rethrow error', () => {
-                const emit_ = initBadHandler_('foo', () => {
-                    throw new Error(new Error('bar'));
-                });
-
-                assert.throws(() => emit_('foo'), /bar/);
-            });
-
-            it('run should be rejected', () => {
-                const emit_ = initBadHandler_('foo', () => {
-                    throw new Error('bar');
-                });
-
-                const promise = mochaAdapter.run();
-
-                try {
-                    emit_('foo');
-                } catch (e) {
-                    // eslint иди лесом
-                }
-
-                return assert.isRejected(promise, /bar/);
+                assert.calledOnceWith(onEvent, sinon.match({
+                    file: '/some/file.js',
+                    hermione: global.hermione,
+                    browser: 'bro'
+                }));
             });
         });
 
-        describe('file events', () => {
-            beforeEach(() => MochaAdapter.init());
-            afterEach(() => delete global.hermione);
+        it('should emit BEFORE_FILE_READ with mocha root suite subset', () => {
+            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
+            const mochaAdapter = mkMochaAdapter_()
+                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
 
-            _.forEach({
-                'pre-require': 'BEFORE_FILE_READ',
-                'post-require': 'AFTER_FILE_READ'
-            }, (hermioneEvent, mochaEvent) => {
-                it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, () => {
-                    browserAgent.browserId = 'bro';
+            const suiteSubset = SuiteSubset.create(mochaAdapter.suite, '/some/file.js');
+            sandbox.stub(SuiteSubset, 'create')
+                .withArgs(mochaAdapter.suite, '/some/file.js').returns(suiteSubset);
 
-                    MochaStub.lastInstance.suite.emit(mochaEvent, {}, '/some/file.js');
+            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
 
-                    assert.calledOnce(mochaAdapter.emit);
-                    assert.calledWith(mochaAdapter.emit, RunnerEvents[hermioneEvent], {
-                        file: '/some/file.js',
-                        hermione: global.hermione,
-                        browser: 'bro',
-                        suite: mochaAdapter.suite
-                    });
-                });
-            });
+            assert.calledOnceWith(onBeforeFileRead, sinon.match({
+                suite: suiteSubset
+            }));
+        });
+
+        it('should emit BEFORE_FILE_READ and AFTER_FILE_READ with the same mocha root suite subset', () => {
+            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
+            const onAfterFileRead = sinon.stub().named('onAfterFileRead');
+            mkMochaAdapter_()
+                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead)
+                .on(RunnerEvents.AFTER_FILE_READ, onAfterFileRead);
+
+            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+            MochaStub.lastInstance.suite.emit('post-require', {}, '/some/file.js');
+
+            assert.equal(
+                onBeforeFileRead.firstCall.args[0].suite,
+                onAfterFileRead.firstCall.args[0].suite
+            );
+        });
+
+        it('should emit different mocha root suite subsets for different files', () => {
+            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
+            mkMochaAdapter_()
+                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
+
+            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+            MochaStub.lastInstance.suite.emit('pre-require', {}, '/other/file.js');
+
+            assert.notEqual(
+                onBeforeFileRead.firstCall.args[0].suite,
+                onBeforeFileRead.secondCall.args[0].suite
+            );
         });
     });
 
     describe('run', () => {
-        beforeEach(() => {
-            sandbox.stub(Image, 'buildDiff');
-        });
-
-        function stubWorkers() {
-            return {
-                runTest: sandbox.stub().resolves({hermioneCtx: {}})
-            };
-        }
-
-        it('should request browser before suite execution', () => {
+        it('should resolve with test list', async () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(browserAgent.getBrowser));
-        });
-
-        it('should fail test if requesting of a browser fails', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const testFailSpy = sinon.spy();
-            const error = new Error();
-
-            browserAgent.getBrowser.rejects(error);
-
-            MochaStub.lastInstance.updateSuiteTree((rootSuite) => {
-                return rootSuite
-                    .addSuite(MochaStub.Suite.create(rootSuite).addTest({title: 'some-test'}).onFail(testFailSpy));
-            });
-
-            return mochaAdapter.run()
-                .then(() => {
-                    assert.calledOnce(testFailSpy);
-                    assert.calledWithMatch(testFailSpy, {error, test: {title: 'some-test'}});
-                });
-        });
-
-        it('should request browsers for suite with at least one non-skipped test', () => {
-            const mochaAdapter = mkMochaAdapter_();
+            const test1 = new MochaStub.Test();
+            const test2 = new MochaStub.Test();
 
             MochaStub.lastInstance.updateSuiteTree((suite) => {
                 return suite
-                    .addTest({pending: true})
-                    .addTest();
+                    .addTest(test1)
+                    .addTest(test2);
             });
 
-            return mochaAdapter.run()
-                .then(() => assert.calledOnce(browserAgent.getBrowser));
+            const tests = await mochaAdapter.parse();
+
+            assert.deepEqual(tests, [test1, test2]);
         });
 
-        it('should not be rejected if freeBrowser failed', () => {
-            const browser = mkBrowserStub_();
-
-            browserAgent.getBrowser.resolves(browser);
-            browserAgent.freeBrowser.rejects('some-error');
-
+        it('should resolve also with pending tests', async () => {
             const mochaAdapter = mkMochaAdapter_();
 
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
+            const test = new MochaStub.Test();
+            test.pending = true;
 
-            return mochaAdapter.run(stubWorkers())
-                .then(() => {
-                    assert.calledOnce(logger.warn);
-                    assert.calledWithMatch(logger.warn, /some-error/);
-                });
-        });
-
-        describe('should release browser', () => {
-            it('after suite execution', () => {
-                const browser = mkBrowserStub_();
-                browserAgent.getBrowser.resolves(browser);
-                browserAgent.freeBrowser.resolves();
-
-                const mochaAdapter = mkMochaAdapter_();
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-                return mochaAdapter.run(stubWorkers()).then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, browser, {force: false});
-                });
+            MochaStub.lastInstance.updateSuiteTree((suite) => {
+                return suite
+                    .addTest(test);
             });
 
-            it('conditionally if test error does not matches on patterns on reject', () => {
-                const patternsOnReject = [/some-error/i];
-                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
+            const tests = await mochaAdapter.parse();
 
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-                return mochaAdapter.run(stubWorkers()).then(() => {
-                    assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: false});
-                });
-            });
-
-            it('unconditionally if test error matches on patterns on reject', () => {
-                const patternsOnReject = [/some-error/i];
-                const mochaAdapter = mkMochaAdapter_({patternsOnReject});
-
-                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-                const workers = stubWorkers();
-                workers.runTest.rejects({message: 'some-error', hermioneCtx: {}});
-
-                return mochaAdapter.run(workers)
-                    .then(() => {
-                        assert.calledOnceWith(browserAgent.freeBrowser, sinon.match.any, {force: true});
-                    });
-            });
-        });
-
-        it('should run a test in subprocess using passed workers', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const workers = stubWorkers();
-
-            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest({title: 'test-title', file: 'some/file'}));
-
-            return mochaAdapter.run(workers)
-                .then(() => assert.calledOnceWith(workers.runTest, 'test-title', {browserId: 'bro-id', sessionId: '100-500', file: 'some/file'}));
-        });
-
-        it('should extend test with browser data', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const test = MochaStub.Test.create();
-
-            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            const workers = stubWorkers();
-            workers.runTest.resolves({meta: {some: 'meta'}, hermioneCtx: {}});
-
-            return mochaAdapter.run(workers)
-                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
-        });
-
-        it('should extend test with hermione context', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const test = MochaStub.Test.create();
-
-            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500', updateChanges: () => {}});
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            const workers = stubWorkers();
-            workers.runTest.resolves({hermioneCtx: {some: 'data'}});
-
-            return mochaAdapter.run(workers)
-                .then(() => assert.include(test, {browserId: 'bro-id', sessionId: '100-500'}))
-                .then(() => assert.propertyVal(test.hermioneCtx, 'some', 'data'));
-        });
-
-        it('should extend test with assert view results', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const test = MochaStub.Test.create();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            const workers = stubWorkers();
-            workers.runTest.resolves({hermioneCtx: {assertViewResults: [{foo: 'bar'}]}});
-
-            AssertViewResults.prototype.get.returns({baz: 'qux'});
-
-            return mochaAdapter.run(workers)
-                .then(() => {
-                    assert.calledOnceWith(AssertViewResults.fromRawObject, [{foo: 'bar'}]);
-                    assert.deepEqual(test.assertViewResults, {baz: 'qux'});
-                });
-        });
-
-        it('should update browser state', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const browser = mkBrowserStub_();
-
-            browserAgent.getBrowser.resolves(browser);
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest());
-
-            const workers = stubWorkers();
-            workers.runTest.resolves({
-                meta: {some: 'meta'},
-                changes: {originWindowSize: {width: 1, height: 1}},
-                hermioneCtx: {}
-            });
-
-            return mochaAdapter.run(workers)
-                .then(() => {
-                    assert.calledWith(browser.updateChanges, {
-                        originWindowSize: {width: 1, height: 1}
-                    });
-                });
-        });
-
-        it('should fail test if running of test in subprocess fails', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const testFailSpy = sinon.spy();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest().onFail(testFailSpy));
-
-            const workers = stubWorkers();
-            workers.runTest.rejects({some: 'err', hermioneCtx: {}});
-
-            return mochaAdapter.run(workers)
-                .then(() => {
-                    assert.calledOnce(testFailSpy);
-                    assert.calledWithMatch(testFailSpy, {error: {some: 'err'}});
-                });
-        });
-
-        it('should extend test with browser data even if running of test in subprocess fails', () => {
-            const mochaAdapter = mkMochaAdapter_();
-            const test = MochaStub.Test.create();
-
-            browserAgent.getBrowser.resolves({id: 'bro-id', sessionId: '100-500'});
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            const workers = stubWorkers();
-            workers.runTest.rejects({meta: {some: 'meta'}, hermioneCtx: {}});
-
-            return mochaAdapter.run(workers)
-                .then(() => assert.deepInclude(test, {browserId: 'bro-id', sessionId: '100-500', meta: {some: 'meta'}}));
+            assert.deepEqual(tests, [test]);
         });
     });
 });

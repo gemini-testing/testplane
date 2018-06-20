@@ -14,8 +14,8 @@ class Mocha extends EventEmitter {
         this.files = [];
         sinon.spy(this, 'addFile');
         this.loadFiles = sinon.stub();
-        this.reporter = sinon.stub();
         this.fullTrace = sinon.stub();
+        this.reporter = sinon.stub().callsFake((fn) => this._reporter = fn);
 
         this.constructorArgs = options;
     }
@@ -33,7 +33,11 @@ class Mocha extends EventEmitter {
     }
 
     run(cb) {
-        return this.suite.run().then(cb);
+        const runner = new EventEmitter();
+        if (this._reporter) {
+            new this._reporter(runner); // eslint-disable-line no-new
+        }
+        return this.suite.run(runner).then(cb);
     }
 
     get suite() {

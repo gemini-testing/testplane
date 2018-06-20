@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 const EventEmitter = require('events').EventEmitter;
-const ProxyReporter = require('../../../../lib/runner/mocha-runner/proxy-reporter');
+const ProxyReporter = require('lib/worker/runner/proxy-reporter');
 
 describe('mocha-runner/proxy-reporter', () => {
     const sandbox = sinon.sandbox.create();

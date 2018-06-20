@@ -66,7 +66,7 @@ describe('worker/mocha-adapter', () => {
         MochaAdapter = proxyquire(require.resolve('lib/worker/runner/mocha-adapter'), {
             'mocha': MochaStub,
             'clear-require': clearRequire,
-            '../../runner/mocha-runner/proxy-reporter': proxyReporter
+            './proxy-reporter': proxyReporter
         });
     });
 
