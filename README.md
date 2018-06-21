@@ -34,9 +34,11 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [sessionQuitTimeout](#sessionquittimeout)
   - [waitTimeout](#waittimeout)
   - [sessionsPerBrowser](#sessionsperbrowser)
+  - [screenshotOnReject](#screenshotonreject)
+  - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
   - [testsPerSession](#testspersession)
   - [retry](#retry)
-  - [shouldRetry](#shouldRetry)
+  - [shouldRetry](#shouldretry)
   - [calibrate](#calibrate)
   - [meta](#meta)
   - [windowSize](#windowsize)
@@ -64,6 +66,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [halt](#halt)
 - [Environment variables](#environment-variables)
   - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
+- [Test Collection](#test-collection)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -821,14 +824,16 @@ hermione.run(testPaths, options)
 ### readTests
 
 ```js
-hermione.readTests(testPaths, browsers, options).done();
+hermione.readTests(testPaths, options).done();
 ```
 
 * **testPaths** (required) `String[]` – Paths to tests relative to `process.cwd`.
-* **browsers** (optional) `String[]` – Read tests only for the specified browsers.
 * **options** (optional) `Object`:
+  * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
   * **silent** (optional) `Boolean` – flag to disable events emitting while reading tests; default is `false`.
   * **ignore** (optional) `String|Glob|Array<String|Glob>` - patterns to exclude paths from the test search.
+
+Returns promise which resolves to the instance of `TestCollection` initialized by parsed tests
 
 ### isFailed
 
@@ -876,3 +881,13 @@ For example,
 ```
 HERMIONE_SKIP_BROWSERS=ie10,ie11 hermione
 ```
+
+## Test Collection
+
+TestCollection object is returned by `hermione.readTests` method.
+
+TestCollection API:
+
+* `getBrowsers()` — returns list of browsers for which there are tests in collection.
+
+* `mapTests(browserId, (test) => ...)` - maps over tests for passed browser.

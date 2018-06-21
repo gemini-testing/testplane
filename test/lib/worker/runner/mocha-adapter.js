@@ -8,7 +8,7 @@ const {BrowserAgent} = require('gemini-core');
 const RunnerEvents = require('lib/constants/runner-events');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
-const Skip = require('lib/runner/mocha-runner/skip/');
+const Skip = require('lib/test-reader/skip/');
 const MochaStub = require('../../_mocha');
 const crypto = require('lib/utils/crypto');
 

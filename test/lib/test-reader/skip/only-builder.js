@@ -1,8 +1,8 @@
 'use strict';
 
-const Skip = require('../../../../../lib/runner/mocha-runner/skip/');
-const SkipBuilder = require('../../../../../lib/runner/mocha-runner/skip/skip-builder');
-const OnlyBuilder = require('../../../../../lib/runner/mocha-runner/skip/only-builder');
+const Skip = require('lib/test-reader/skip/');
+const SkipBuilder = require('lib/test-reader/skip/skip-builder');
+const OnlyBuilder = require('lib/test-reader/skip/only-builder');
 
 describe('OnlyBuilder', () => {
     const sandbox = sinon.sandbox.create();
