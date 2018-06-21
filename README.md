@@ -890,4 +890,6 @@ TestCollection API:
 
 * `getBrowsers()` — returns list of browsers for which there are tests in collection.
 
-* `mapTests(browserId, (test) => ...)` - maps over tests for passed browser.
+* `mapTests(browserId, (test, browserId) => ...)` - maps over tests for passed browser. If first argument (`browserId`) is omitted than method will map over tests for all browsers.
+
+* `eachTest(browserId, (test, browserId) => ...)` - iterates over tests for passed browser. If first argument (`browserId`) is omitted than method will iterate over tests for all browsers.
