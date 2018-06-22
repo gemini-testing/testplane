@@ -179,26 +179,28 @@ describe('assertView command', () => {
         });
 
         it('should compare a current image with a reference', () => {
-            const config = mkConfig_({
-                getScreenshotPath: () => '/ref/path',
-                tolerance: 100
-            });
+            const config = mkConfig_({getScreenshotPath: () => '/ref/path'});
             Image.compare.resolves(true);
             temp.path.returns('/curr/path');
 
             return stubBrowser_(config).publicAPI.assertView()
                 .then(() => {
-                    assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path', sinon.match({tolerance: 100}));
+                    assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path');
                 });
         });
 
-        it('should pass "canHaveCaret" option to compare function', () => {
-            const browser = stubBrowser_();
+        it('should compare images with given set of parameters', () => {
+            const config = mkConfig_({tolerance: 100});
+            const browser = stubBrowser_(config);
 
-            browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar'});
+            browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 200});
 
             return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(Image.compare, sinon.match.any, sinon.match.any, sinon.match({canHaveCaret: 'foo bar'})));
+                .then(() => assert.calledOnceWith(
+                    Image.compare,
+                    sinon.match.any, sinon.match.any,
+                    {canHaveCaret: 'foo bar', tolerance: 100, pixelRatio: 200}
+                ));
         });
 
         describe('if images are not equal', () => {
