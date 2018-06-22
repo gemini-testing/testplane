@@ -1,7 +1,7 @@
 'use strict';
 
-const Suite = require('../../_mocha/suite');
-const SuiteSubset = require('lib/runner/mocha-runner/suite-subset');
+const Suite = require('../_mocha/suite');
+const SuiteSubset = require('lib/test-reader/suite-subset');
 
 class RootSuite extends Suite {
     addSuite(suite) {
@@ -15,7 +15,7 @@ class RootSuite extends Suite {
     }
 }
 
-describe('runner/mocha-runner/suite-subset', () => {
+describe('test-reader/suite-subset', () => {
     [
         'on',
         'prependListener'

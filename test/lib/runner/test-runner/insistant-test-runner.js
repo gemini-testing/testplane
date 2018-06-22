@@ -277,6 +277,21 @@ describe('runner/test-runner/insistant-test-runner', () => {
                         assert.calledOnce(onTestFail);
                     });
                 });
+
+                describe('if cancel called at runtime', () => {
+                    it('shold not retry test', async () => {
+                        const runner = mkRunnerWithRetries_();
+
+                        onFirstTestRun_((innerRunner) => {
+                            runner.cancel();
+                            innerRunner.emit(Events.TEST_FAIL, makeFailedTest_());
+                        });
+
+                        await run_({runner});
+
+                        assert.calledOnce(RegularTestRunner.prototype.run);
+                    });
+                });
             });
         });
 

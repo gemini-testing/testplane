@@ -15,6 +15,7 @@ class Mocha extends EventEmitter {
         sinon.spy(this, 'addFile');
         this.loadFiles = sinon.stub();
         this.fullTrace = sinon.stub();
+        this.grep = sinon.stub();
         this.reporter = sinon.stub().callsFake((fn) => this._reporter = fn);
 
         this.constructorArgs = options;

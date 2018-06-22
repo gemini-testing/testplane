@@ -13,10 +13,11 @@ const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
 const Errors = require('lib/errors');
 const Hermione = require('lib/hermione');
+const TestReader = require('lib/test-reader');
+const TestCollection = require('lib/test-collection');
 const RunnerEvents = require('lib/constants/runner-events');
 const signalHandler = require('lib/signal-handler');
 const Runner = require('lib/runner');
-const sets = require('lib/sets');
 const logger = require('lib/utils/logger');
 const {makeConfigStub} = require('../utils');
 
@@ -32,14 +33,14 @@ describe('hermione', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(sets, 'reveal').returns(q());
-
         sandbox.stub(logger, 'warn');
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
         sandbox.stub(pluginsLoader, 'load').returns([]);
 
         sandbox.stub(RuntimeConfig, 'getInstance').returns({extend: sandbox.stub()});
+
+        sandbox.stub(TestReader.prototype, 'read').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -98,6 +99,10 @@ describe('hermione', () => {
 
     describe('run', () => {
         const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
+
+        beforeEach(() => {
+            sandbox.stub(TestCollection.prototype, 'getBrowsers').returns([]);
+        });
 
         it('should create runner', () => {
             mkRunnerStub_();
@@ -208,50 +213,34 @@ describe('hermione', () => {
                     .then(() => assert.calledOnceWith(attachRunner, runner));
             });
 
-            it('should throw if reporter was not found for given identifier', () => {
+            it('should fail if reporter was not found for given identifier', () => {
                 const options = {reporters: ['unknown-reporter']};
 
-                const run = () => Hermione.create().run(null, options);
+                const hermione = Hermione.create();
 
-                assert.throws(run, 'No such reporter: unknown-reporter');
+                return assert.isRejected(hermione.run(null, options), 'No such reporter: unknown-reporter');
             });
 
-            it('should throw if reporter is not string or function', () => {
+            it('should fail if reporter is not string or function', () => {
                 const options = {reporters: [1234]};
 
-                const run = () => Hermione.create().run(null, options);
+                const hermione = Hermione.create();
 
-                assert.throws(run, TypeError, 'Reporter must be a string or a function');
+                return assert.isRejected(hermione.run(null, options), 'Reporter must be a string or a function');
             });
         });
 
-        describe('sets revealing', () => {
-            beforeEach(() => mkRunnerStub_());
+        it('should read tests', async () => {
+            const testPaths = ['foo/bar'];
+            const browsers = ['bro1', 'bro2'];
+            const grep = 'baz.*';
+            const sets = ['set1', 'set2'];
 
-            it('should reveal sets', () => {
-                return runHermione()
-                    .then(() => assert.calledOnce(sets.reveal));
-            });
+            sandbox.spy(Hermione.prototype, 'readTests');
 
-            it('should reveal sets using passed paths', () => {
-                return runHermione(['first.js', 'second.js'])
-                    .then(() => {
-                        assert.calledWith(sets.reveal, sinon.match.any, sinon.match({paths: ['first.js', 'second.js']}));
-                    });
-            });
+            await runHermione(testPaths, {browsers, grep, sets});
 
-            it('should reveal sets using passed browsers', () => {
-                return runHermione(null, {browsers: ['bro1', 'bro2']})
-                    .then(() => assert.calledWithMatch(sets.reveal, sinon.match.any, {browsers: ['bro1', 'bro2']}));
-            });
-
-            it('should reveal sets using passed sets from config', () => {
-                const config = makeConfigStub({sets: {all: {}}});
-                Config.create.returns(config);
-
-                return runHermione()
-                    .then(() => assert.calledWith(sets.reveal, config.sets));
-            });
+            assert.calledOnceWith(Hermione.prototype.readTests, testPaths, {browsers, grep, sets});
         });
 
         describe('running of tests', () => {
@@ -262,13 +251,15 @@ describe('hermione', () => {
                     .then(() => assert.calledOnce(Runner.prototype.run));
             });
 
-            it('should use revealed sets', () => {
+            it('should use read tests', async () => {
                 mkRunnerStub_();
 
-                sets.reveal.returns(q({bro: ['some/path/file.js']}));
+                const testCollection = TestCollection.create();
+                sandbox.stub(Hermione.prototype, 'readTests').resolves(testCollection);
 
-                return runHermione()
-                    .then(() => assert.calledWith(Runner.prototype.run, {bro: ['some/path/file.js']}));
+                await runHermione();
+
+                assert.calledWith(Runner.prototype.run, testCollection);
             });
 
             it('should return "true" if there are no failed tests', () => {
@@ -413,128 +404,139 @@ describe('hermione', () => {
     });
 
     describe('readTests', () => {
-        beforeEach(() => sandbox.stub(Runner.prototype, 'buildSuiteTree'));
+        beforeEach(() => {
+            sandbox.spy(TestReader, 'create');
 
-        it('should read test files using specified paths, browsers and ignore patterns', () => {
+            sandbox.stub(TestCollection, 'create').returns(Object.create(TestCollection.prototype));
+        });
+
+        it('should create test reader', async () => {
             const config = makeConfigStub();
             Config.create.returns(config);
 
-            return Hermione
-                .create(config)
-                .readTests(['some/path'], ['bro1', 'bro2'], {ignore: 'exclude/path'})
-                .then(() => {
-                    assert.calledWith(
-                        sets.reveal, config.sets,
-                        {paths: ['some/path'], browsers: ['bro1', 'bro2'], ignore: 'exclude/path'}
-                    );
-                });
+            const hermione = Hermione.create(config);
+
+            await hermione.readTests();
+
+            assert.calledOnceWith(TestReader.create, config);
         });
 
-        it('should passthrough all synchronous runner events', () => {
-            const runner = mkRunnerStub_();
-            runner.buildSuiteTree = () => Promise.resolve({});
-            const hermione = Hermione.create(makeConfigStub());
+        [
+            'BEFORE_FILE_READ',
+            'AFTER_FILE_READ'
+        ].forEach((event) => {
+            it(`should passthrough ${event} event from test reader`, async () => {
+                const eventHandler = sandbox.stub();
+                const hermione = Hermione.create(makeConfigStub())
+                    .on(RunnerEvents[event], eventHandler);
 
-            return hermione.readTests()
-                .then(() => {
-                    _.forEach(RunnerEvents.getSync(), (event, name) => {
-                        const spy = sinon.spy().named(`${name} handler`);
-                        hermione.on(event, spy);
-
-                        runner.emit(event);
-
-                        assert.calledOnce(spy);
-                    });
+                TestReader.prototype.read.callsFake(function() {
+                    this.emit(RunnerEvents[event], {foo: 'bar'});
                 });
+
+                await hermione.readTests();
+
+                assert.calledOnceWith(eventHandler, {foo: 'bar'});
+            });
+
+            it(`should not passthrough ${event} event from test reader with silent option`, async () => {
+                const eventHandler = sandbox.stub();
+                const hermione = Hermione.create(makeConfigStub())
+                    .on(RunnerEvents[event], eventHandler);
+
+                TestReader.prototype.read.callsFake(function() {
+                    this.emit(RunnerEvents[event]);
+                });
+
+                await hermione.readTests(null, {silent: true});
+
+                assert.notCalled(eventHandler);
+            });
         });
 
-        it('should not passthrough runner events on silent read', () => {
-            const runner = mkRunnerStub_();
-            runner.buildSuiteTree = () => Promise.resolve({});
+        it('should read passed test files', async () => {
             const hermione = Hermione.create(makeConfigStub());
 
-            return hermione.readTests(null, null, {silent: true})
-                .then(() => {
-                    _.forEach(RunnerEvents.getSync(), (event, name) => {
-                        const spy = sinon.spy().named(`${name} handler`);
-                        hermione.on(event, spy);
+            await hermione.readTests(
+                ['foo/bar'],
+                {
+                    browsers: ['bro'],
+                    ignore: 'baz/qux',
+                    sets: ['s1', 's2'],
+                    grep: 'grep'
+                }
+            );
 
-                        runner.emit(event);
+            assert.calledOnceWith(TestReader.prototype.read, {
+                paths: ['foo/bar'],
+                browsers: ['bro'],
+                ignore: 'baz/qux',
+                sets: ['s1', 's2'],
+                grep: 'grep'
+            });
+        });
 
-                        assert.notCalled(spy);
-                    });
-                });
+        it('should return TestCollection', async () => {
+            const tests = {someBro: ['test', 'otherTest']};
+
+            TestReader.prototype.read.returns(tests);
+            const testCollection = TestCollection.create();
+            TestCollection.create.withArgs(tests).returns(testCollection);
+
+            const hermione = Hermione.create(makeConfigStub());
+            const result = await hermione.readTests();
+
+            assert.equal(result, testCollection);
         });
 
         describe('INIT', () => {
-            it('should emit INIT on read', () => {
+            it('should emit INIT on read', async () => {
                 const onInit = sinon.spy();
                 const hermione = Hermione.create()
                     .on(RunnerEvents.INIT, onInit);
 
-                return hermione.readTests()
-                    .then(() => assert.calledOnce(onInit));
+                await hermione.readTests();
+
+                assert.calledOnce(onInit);
             });
 
             it('should reject on INIT handler fail', () => {
                 const hermione = Hermione.create()
-                    .on(RunnerEvents.INIT, () => q.reject('o.O'));
+                    .on(RunnerEvents.INIT, () => Promise.reject('o.O'));
 
                 return assert.isRejected(hermione.readTests(), /o.O/);
             });
 
-            it('should wait INIT handler before reading tests', () => {
+            it('should wait INIT handler before reading tests', async () => {
                 const afterInit = sinon.spy();
                 const hermione = Hermione.create()
-                    .on(RunnerEvents.INIT, () => q.delay(20).then(afterInit));
+                    .on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
 
-                return hermione.readTests()
-                    .then(() => assert.callOrder(afterInit, Runner.prototype.buildSuiteTree));
+                await hermione.readTests();
+
+                assert.callOrder(afterInit, TestReader.prototype.read);
             });
 
-            it('should not emit INIT on silent read', () => {
+            it('should not emit INIT on silent read', async () => {
                 const onInit = sinon.spy();
                 const hermione = Hermione.create()
                     .on(RunnerEvents.INIT, onInit);
 
-                return hermione.readTests(null, null, {silent: true})
-                    .then(() => assert.notCalled(onInit));
+                await hermione.readTests(null, {silent: true});
+
+                assert.notCalled(onInit);
             });
 
-            it('should send INIT event only once', () => {
+            it('should send INIT event only once', async () => {
                 const onInit = sinon.spy();
                 const hermione = Hermione.create();
                 hermione.on(RunnerEvents.INIT, onInit);
 
-                return hermione.readTests()
-                    .then(() => hermione.readTests())
-                    .then(() => assert.calledOnce(onInit));
+                await hermione.readTests();
+                await hermione.readTests();
+
+                assert.calledOnce(onInit);
             });
-        });
-
-        it('should build suite tree using tests', () => {
-            const config = makeConfigStub();
-            Config.create.returns(config);
-
-            sets.reveal.returns(q(['some/path/file.js']));
-
-            return Hermione
-                .create(makeConfigStub())
-                .readTests()
-                .then(() => {
-                    assert.calledOnce(Runner.prototype.buildSuiteTree);
-                    assert.calledWith(Runner.prototype.buildSuiteTree, ['some/path/file.js']);
-                });
-        });
-
-        it('should return suite tree for specified browsers', () => {
-            const suiteTreeStub = {};
-            Runner.prototype.buildSuiteTree.returns({bro: suiteTreeStub});
-
-            return Hermione
-                .create()
-                .readTests()
-                .then((suiteTree) => assert.deepEqual(suiteTree, {bro: suiteTreeStub}));
         });
     });
 

@@ -1,6 +1,6 @@
 'use strict';
 
-const TestSkipper = require('lib/runner/test-skipper');
+const TestSkipper = require('lib/test-reader/test-skipper');
 const logger = require('lib/utils/logger');
 
 describe('test-skipper', () => {
