@@ -814,7 +814,7 @@ hermione.run(testPaths, options)
     .done();
 ```
 
-* **testPaths** (optional) `String[]` – Paths to tests relative to `process.cwd`.
+* **testPaths** (optional) `String[]|TestCollection` – Paths to tests relative to `process.cwd`. Also accepts test collection returned by `readTests`.
 * **options** (optional) `Object`
   * **reporters** (optional) `String[]` – Test result reporters.
   * **browsers** (optional) `String[]` – Browsers to run tests in.
