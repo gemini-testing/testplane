@@ -230,17 +230,37 @@ describe('hermione', () => {
             });
         });
 
-        it('should read tests', async () => {
-            const testPaths = ['foo/bar'];
-            const browsers = ['bro1', 'bro2'];
-            const grep = 'baz.*';
-            const sets = ['set1', 'set2'];
+        describe('reading the tests', () => {
+            it('should read tests', async () => {
+                const testPaths = ['foo/bar'];
+                const browsers = ['bro1', 'bro2'];
+                const grep = 'baz.*';
+                const sets = ['set1', 'set2'];
 
-            sandbox.spy(Hermione.prototype, 'readTests');
+                sandbox.spy(Hermione.prototype, 'readTests');
 
-            await runHermione(testPaths, {browsers, grep, sets});
+                await runHermione(testPaths, {browsers, grep, sets});
 
-            assert.calledOnceWith(Hermione.prototype.readTests, testPaths, {browsers, grep, sets});
+                assert.calledOnceWith(Hermione.prototype.readTests, testPaths, {browsers, grep, sets});
+            });
+
+            it('should accept test collection as first parameter', async () => {
+                const testCollection = Object.create(TestCollection.prototype);
+                sandbox.stub(Runner.prototype, 'run');
+
+                await runHermione(testCollection);
+
+                assert.calledOnceWith(Runner.prototype.run, testCollection);
+            });
+
+            it('should not read tests if test collection passed instead of paths', async () => {
+                const testCollection = Object.create(TestCollection.prototype);
+                sandbox.spy(Hermione.prototype, 'readTests');
+
+                await runHermione(testCollection);
+
+                assert.notCalled(Hermione.prototype.readTests);
+            });
         });
 
         describe('running of tests', () => {
