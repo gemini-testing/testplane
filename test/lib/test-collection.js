@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const TestCollection = require('lib/test-collection');
 
 describe('test-collection', () => {
@@ -380,6 +381,63 @@ describe('test-collection', () => {
             const collection = TestCollection.create({});
 
             assert.equal(collection.enableTest(), collection);
+        });
+    });
+
+    describe('getRootSuite', () => {
+        it('should return root suite for browser', () => {
+            const root1 = {title: 'root1', root: true};
+            const root2 = {title: 'root2', root: true};
+            const test1 = {title: 'test1', parent: root1};
+            const test2 = {title: 'test2', parent: {parent: root2}};
+
+            const collection = TestCollection.create({
+                'bro1': [test1],
+                'bro2': [test2]
+            });
+
+            assert.deepEqual(collection.getRootSuite('bro1'), root1);
+            assert.deepEqual(collection.getRootSuite('bro2'), root2);
+        });
+
+        it('should return undefined if there are no tests for browser', () => {
+            const collection = TestCollection.create({
+                'bro': []
+            });
+
+            assert.isUndefined(collection.getRootSuite('bro'));
+        });
+    });
+
+    describe('backwards compatibility', () => {
+        it('root suite should be awailable by property with browser id', () => {
+            const root1 = {title: 'root1', root: true};
+            const root2 = {title: 'root2', root: true};
+            const test1 = {title: 'test1', parent: root1};
+            const test2 = {title: 'test2', parent: {parent: root2}};
+
+            const collection = TestCollection.create({
+                'bro1': [test1],
+                'bro2': [test2]
+            });
+
+            assert.deepEqual(collection.bro1, root1);
+            assert.deepEqual(collection.bro2, root2);
+        });
+
+        it('should iterate only through browsers', () => {
+            const root1 = {title: 'root1', root: true};
+            const root2 = {title: 'root2', root: true};
+            const test1 = {title: 'test1', parent: root1};
+            const test2 = {title: 'test2', parent: {parent: {parent: root2}}};
+
+            const collection = TestCollection.create({
+                'bro1': [test1],
+                'bro2': [test2]
+            });
+
+            const result = _.mapValues(collection, (s) => s);
+            assert.deepEqual(result, {bro1: root1, bro2: root2});
         });
     });
 });
