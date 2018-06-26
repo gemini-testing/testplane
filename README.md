@@ -903,3 +903,7 @@ TestCollection API:
 * `disableTest(fullTitle, [browserId])` - disables test with passed full title. Disables test only in specific browser if `browserId` passed. Returns current test collection instance.
 
 * `enableTest(fullTitle, [browserId])` - enables test with passed full title. Enables test only in specific browser if `browserId` passed. Returns current test collection instance.
+
+* `getRootSuite(browserId)` - returns root suite for passed browser. Returns `undefined` if there are no tests in collection for passed browser.
+
+* `eachRootSuite((root, browserId) => ...)` - iterates over all root suites in collection which have some tests.
