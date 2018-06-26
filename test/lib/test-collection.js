@@ -409,6 +409,40 @@ describe('test-collection', () => {
         });
     });
 
+    describe('eachRootSuite', () => {
+        it('should iterate over all root suites', () => {
+            const root1 = {title: 'root1', root: true};
+            const root2 = {title: 'root2', root: true};
+            const test1 = {title: 'test1', parent: root1};
+            const test2 = {title: 'test2', parent: {parent: root2}};
+
+            const collection = TestCollection.create({
+                'bro1': [test1],
+                'bro2': [test2]
+            });
+
+            const rootSuites = {};
+            collection.eachRootSuite((root, browser) => rootSuites[browser] = root);
+
+            assert.deepEqual(rootSuites, {bro1: root1, bro2: root2});
+        });
+
+        it('should ignore root suites without tests', () => {
+            const root = {title: 'root', root: true};
+            const test = {title: 'test', parent: root};
+
+            const collection = TestCollection.create({
+                'bro1': [test],
+                'bro2': []
+            });
+
+            const rootSuites = {};
+            collection.eachRootSuite((root, browser) => rootSuites[browser] = root);
+
+            assert.deepEqual(rootSuites, {bro1: root});
+        });
+    });
+
     describe('backwards compatibility', () => {
         it('root suite should be awailable by property with browser id', () => {
             const root1 = {title: 'root1', root: true};
