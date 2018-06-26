@@ -558,6 +558,38 @@ describe('hermione', () => {
                 assert.calledOnce(onInit);
             });
         });
+
+        describe('AFTER_TESTS_READ', () => {
+            it('should emit AFTER_TESTS_READ on read', async () => {
+                const onAfterTestsRead = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+
+                await hermione.readTests();
+
+                assert.calledOnce(onAfterTestsRead);
+            });
+
+            it('should pass test collection with AFTER_TESTS_READ event', async () => {
+                const onAfterTestsRead = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+
+                const collection = await hermione.readTests();
+
+                assert.calledWith(onAfterTestsRead, collection);
+            });
+
+            it('should not emit AFTER_TESTS_READ in silent mode', async () => {
+                const onAfterTestsRead = sinon.spy();
+                const hermione = Hermione.create()
+                    .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+
+                await hermione.readTests(null, {silent: true});
+
+                assert.notCalled(onAfterTestsRead);
+            });
+        });
     });
 
     describe('should provide access to', () => {
