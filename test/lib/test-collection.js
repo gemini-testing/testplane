@@ -425,6 +425,18 @@ describe('test-collection', () => {
             assert.deepEqual(collection.bro2, root2);
         });
 
+        it('should not add browser if there are no tests for it', () => {
+            const root = {title: 'root', root: true};
+            const test = {title: 'test', parent: root};
+
+            const collection = TestCollection.create({
+                'bro1': [test],
+                'bro2': []
+            });
+
+            assert.notProperty(collection, 'bro2');
+        });
+
         it('should iterate only through browsers', () => {
             const root1 = {title: 'root1', root: true};
             const root2 = {title: 'root2', root: true};
