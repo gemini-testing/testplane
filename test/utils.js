@@ -57,7 +57,8 @@ function makeSuite(opts = {}) {
         id: () => 'default-id',
         parent: {root: true},
         title: 'default-suite',
-        fullTitle: () => 'default-suite'
+        fullTitle: () => 'default-suite',
+        eachTest: () => {}
     });
 }
 
