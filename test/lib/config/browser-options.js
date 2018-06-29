@@ -529,7 +529,10 @@ describe('config browser-options', () => {
         });
     });
 
-    ['retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout', 'screenshotOnRejectTimeout'].forEach((option) => {
+    [
+        'retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout',
+        'screenshotOnRejectTimeout', 'screenshotDelay'
+    ].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {
                 const readConfig = {

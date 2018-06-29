@@ -1,5 +1,6 @@
 'use strict';
 
+const Promise = require('bluebird');
 const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('webdriverio');
 const Browser = require('lib/browser/existing-browser');
@@ -327,6 +328,17 @@ describe('NewBrowser', () => {
     describe('captureViewportImage', () => {
         beforeEach(() => {
             sandbox.stub(Camera.prototype, 'captureViewportImage');
+            sandbox.stub(Promise, 'delay').returns(Promise.resolve());
+        });
+
+        it('should delay capturing by the configured amount of time', () => {
+            Camera.prototype.captureViewportImage.withArgs({foo: 'bar'}).resolves({some: 'image'});
+
+            return mkBrowser_({screenshotDelay: 100500}).captureViewportImage({foo: 'bar'})
+                .then(() => {
+                    assert.calledOnceWith(Promise.delay, 100500);
+                    assert.callOrder(Promise.delay, Camera.prototype.captureViewportImage);
+                });
         });
 
         it('should delegate actual capturing to camera object', () => {
