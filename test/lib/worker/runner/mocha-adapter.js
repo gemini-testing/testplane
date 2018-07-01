@@ -6,10 +6,12 @@ const q = require('q');
 const proxyquire = require('proxyquire');
 const {BrowserAgent} = require('gemini-core');
 const RunnerEvents = require('lib/constants/runner-events');
+const ParserEvents = require('lib/test-reader/parser-events');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
 const Skip = require('lib/test-reader/skip/');
 const MochaStub = require('../../_mocha');
+const TestParserAPI = require('lib/test-reader/test-parser-api');
 const crypto = require('lib/utils/crypto');
 
 describe('worker/mocha-adapter', () => {
@@ -71,6 +73,17 @@ describe('worker/mocha-adapter', () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    describe('constructor', () => {
+        it('should create test parser API object', () => {
+            sandbox.spy(TestParserAPI, 'create');
+            global.hermione = {foo: 'bar'};
+
+            const testParser = mkMochaAdapter_();
+
+            assert.calledOnceWith(TestParserAPI.create, testParser, global.hermione);
+        });
+    });
 
     describe('timeouts', () => {
         let mochaAdapter;
@@ -282,13 +295,25 @@ describe('worker/mocha-adapter', () => {
                     MochaStub.lastInstance.suite.emit(mochaEvent, {}, '/some/file.js');
 
                     assert.calledOnce(mochaAdapter.emit);
-                    assert.calledWith(mochaAdapter.emit, RunnerEvents[hermioneEvent], {
+                    assert.calledWith(mochaAdapter.emit, RunnerEvents[hermioneEvent], sinon.match({
                         file: '/some/file.js',
                         hermione: global.hermione,
                         browser: 'bro',
                         suite: mochaAdapter.suite
-                    });
+                    }));
                 });
+            });
+
+            it('should emit BEFORE_FILE_READ with test parser API', () => {
+                const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
+                mkMochaAdapter_()
+                    .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
+
+                MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+
+                assert.calledOnceWith(onBeforeFileRead, sinon.match({
+                    testParser: sinon.match.instanceOf(TestParserAPI)
+                }));
             });
         });
     });
@@ -388,6 +413,38 @@ describe('worker/mocha-adapter', () => {
             mochaAdapter.loadFiles(['path/to/file']);
 
             assert.deepEqual(MochaStub.lastInstance.files, []);
+        });
+
+        it('should emit TEST event on test creation', () => {
+            const onTest = sinon.spy().named('onTest');
+            const mochaTestParser = mkMochaAdapter_()
+                .on(ParserEvents.TEST, onTest);
+
+            const test = MochaStub.Test.create();
+
+            MochaStub.lastInstance.loadFiles.callsFake(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+            });
+
+            mochaTestParser.loadFiles([]);
+
+            assert.calledOnceWith(onTest, test);
+        });
+
+        it('should emit SUITE event on suite creation', () => {
+            const onSuite = sinon.spy().named('onSuite');
+            const mochaTestParser = mkMochaAdapter_()
+                .on(ParserEvents.SUITE, onSuite);
+
+            const nestedSuite = MochaStub.Suite.create();
+
+            MochaStub.lastInstance.loadFiles.callsFake(() => {
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
+            });
+
+            mochaTestParser.loadFiles([]);
+
+            assert.calledOnceWith(onSuite, nestedSuite);
         });
     });
 
