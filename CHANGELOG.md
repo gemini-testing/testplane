@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.76.0"></a>
+# [0.76.0](https://github.com/gemini-testing/hermione/compare/v0.75.0...v0.76.0) (2018-07-02)
+
+
+### Features
+
+* ability to add test controllers on BEFORE_FILE_READ ([1c5082e](https://github.com/gemini-testing/hermione/commit/1c5082e))
+
+
+
 <a name="0.75.0"></a>
 # [0.75.0](https://github.com/gemini-testing/hermione/compare/v0.74.0...v0.75.0) (2018-06-29)
 
