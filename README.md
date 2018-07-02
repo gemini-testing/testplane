@@ -6,69 +6,70 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 
-- [Hermione](#hermione)
-    - [Why you should choose hermione](#why-you-should-choose-hermione)
-        - [Easy to use](#easy-to-use)
-        - [Runs tests in parallel](#runs-tests-in-parallel)
-        - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
-        - [Extensible](#extensible)
-        - [Retries failed tests](#retries-failed-tests)
-        - [Executes separate tests](#executes-separate-tests)
-        - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
-        - [Offers flexible test configuration](#offers-flexible-test-configuration)
-        - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
-    - [Prerequisites](#prerequisites)
-    - [Hooks](#hooks)
-    - [Skip](#skip)
-    - [Only](#only)
-    - [WebdriverIO extensions](#webdriverio-extensions)
-        - [Sharable meta info](#sharable-meta-info)
-        - [Execution context](#execution-context)
-    - [Quick start](#quick-start)
-    - [.hermione.conf.js](#hermioneconfjs)
-        - [sets](#sets)
-        - [browsers](#browsers)
-        - [gridUrl](#gridurl)
-        - [baseUrl](#baseurl)
-        - [httpTimeout](#httptimeout)
-        - [sessionRequestTimeout](#sessionrequesttimeout)
-        - [sessionQuitTimeout](#sessionquittimeout)
-        - [waitTimeout](#waittimeout)
-        - [sessionsPerBrowser](#sessionsperbrowser)
-        - [screenshotOnReject](#screenshotonreject)
-        - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
-        - [testsPerSession](#testspersession)
-        - [retry](#retry)
-        - [shouldRetry](#shouldretry)
-        - [calibrate](#calibrate)
-        - [meta](#meta)
-        - [windowSize](#windowsize)
-        - [screenshotDelay](#screenshotdelay)
-        - [system](#system)
-            - [debug](#debug)
-            - [mochaOpts](#mochaopts)
-            - [ctx](#ctx)
-            - [patternsOnReject](#patternsonreject)
-            - [workers](#workers)
-            - [testsPerWorker](#testsperworker)
-        - [plugins](#plugins)
-        - [prepareBrowser](#preparebrowser)
-        - [prepareEnvironment](#prepareenvironment)
-    - [CLI](#cli)
-    - [Reporters](#reporters)
-    - [Overriding settings](#overriding-settings)
-    - [Tests API](#tests-api)
-        - [AssertView](#assertview)
-    - [Programmatic API](#programmatic-api)
-        - [init](#init)
-        - [run](#run)
-        - [readTests](#readtests)
-        - [isFailed](#isfailed)
-        - [isWorker](#isworker)
-        - [halt](#halt)
-    - [Environment variables](#environment-variables)
-        - [HERMIONE_SKIP_BROWSERS](#hermione-skip-browsers)
-    - [Test Collection](#test-collection)
+- [Why you should choose hermione](#why-you-should-choose-hermione)
+  - [Easy to use](#easy-to-use)
+  - [Runs tests in parallel](#runs-tests-in-parallel)
+  - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
+  - [Extensible](#extensible)
+  - [Retries failed tests](#retries-failed-tests)
+  - [Executes separate tests](#executes-separate-tests)
+  - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
+  - [Offers flexible test configuration](#offers-flexible-test-configuration)
+  - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
+- [Prerequisites](#prerequisites)
+- [Hooks](#hooks)
+- [Skip](#skip)
+- [Only](#only)
+- [WebdriverIO extensions](#webdriverio-extensions)
+  - [Sharable meta info](#sharable-meta-info)
+  - [Execution context](#execution-context)
+- [Quick start](#quick-start)
+- [.hermione.conf.js](#hermioneconfjs)
+  - [sets](#sets)
+  - [browsers](#browsers)
+  - [gridUrl](#gridurl)
+  - [baseUrl](#baseurl)
+  - [httpTimeout](#httptimeout)
+  - [sessionRequestTimeout](#sessionrequesttimeout)
+  - [sessionQuitTimeout](#sessionquittimeout)
+  - [waitTimeout](#waittimeout)
+  - [sessionsPerBrowser](#sessionsperbrowser)
+  - [screenshotOnReject](#screenshotonreject)
+  - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
+  - [testsPerSession](#testspersession)
+  - [retry](#retry)
+  - [shouldRetry](#shouldretry)
+  - [calibrate](#calibrate)
+  - [meta](#meta)
+  - [windowSize](#windowsize)
+  - [screenshotDelay](#screenshotdelay)
+  - [system](#system)
+    - [debug](#debug)
+    - [mochaOpts](#mochaopts)
+    - [ctx](#ctx)
+    - [patternsOnReject](#patternsonreject)
+    - [workers](#workers)
+    - [testsPerWorker](#testsperworker)
+  - [plugins](#plugins)
+  - [prepareBrowser](#preparebrowser)
+  - [prepareEnvironment](#prepareenvironment)
+- [CLI](#cli)
+- [Reporters](#reporters)
+- [Overriding settings](#overriding-settings)
+- [Tests API](#tests-api)
+  - [AssertView](#assertview)
+- [Programmatic API](#programmatic-api)
+  - [init](#init)
+  - [run](#run)
+  - [readTests](#readtests)
+  - [isFailed](#isfailed)
+  - [isWorker](#isworker)
+  - [halt](#halt)
+- [Environment variables](#environment-variables)
+  - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
+- [Test Collection](#test-collection)
+- [Test Parser API](#test-parser-api)
+  - [setController(name, methods)](#setcontrollername-methods)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -642,7 +643,7 @@ Property name             | Description
 Event                     | Description
 ------------------------- | -------------
 `INIT`                    | Will be triggered before any job start (`run` or `readTests`). If handler returns a promise then job will start only after the promise will be resolved. Emitted only once no matter how many times job will be performed.
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and !!DEPRECATED!! `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file), `testParser` (`TestParserAPI` object) and !!DEPRECATED!! `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and !!DEPRECATED!! `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read via `readTests` or `run` methods with `TestCollection` object.
 `RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
@@ -667,7 +668,7 @@ Event                     | Description
 
 Event                     | Description
 ------------------------- | -------------
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file), `testParser` (`TestParserAPI` object) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `suite` (collection of tests in a file; provides the ability to subscribe on `test` and `suite` events) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read each time some file is being reading during test run.
 `NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
@@ -913,3 +914,35 @@ TestCollection API:
 * `getRootSuite(browserId)` - returns root suite for passed browser. Returns `undefined` if there are no tests in collection for passed browser.
 
 * `eachRootSuite((root, browserId) => ...)` - iterates over all root suites in collection which have some tests.
+
+## Test Parser API
+
+`TestParserAPI` object is emitted on `BEFORE_FILE_READ` event. It provides the ability to customize test parsing process.
+
+### setController(name, methods)
+Adds controller to `hermione` object in test files.
+* `name` - controller name
+* `methods` - an object with names as keys and callbacks as values describing controller methods. Each callback will be called on corresponding test or suite.
+
+Example:
+```js
+// in plugin
+hermione.on(hermione.events.BEFORE_FILE_READ, ({file, browser, testParser}) => {
+    testParser.setController('logger', {
+        log: function(prefix) {
+            console.log(`${prefix}: Just parsed ${this.fullTitle()} from file ${file} for browser ${browser}`);
+        }
+    });
+});
+
+// in test file
+describe('foo', () => {
+    hermione.logger.log('some-prefix');
+    it('bar', function() {
+        // ...
+    });
+});
+
+```
+
+**Note**: controller will be removed as soon as current file will be parsed
