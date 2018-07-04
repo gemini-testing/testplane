@@ -18,5 +18,6 @@ module.exports = class Test extends Runnable {
         this.fn = options.fn || _.noop;
         this.file = options.file || '';
         this.pending = options.pending || false;
+        this.silentSkip = options.silentSkip || false;
     }
 };
