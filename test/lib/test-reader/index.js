@@ -168,11 +168,11 @@ describe('test-reader', () => {
 
             TestParser.prototype.loadFiles
                 .withArgs(['file1']).callsFake(function() {
-                    TestParser.prototype.parse.resolves([test1, test2]);
+                    TestParser.prototype.parse.returns([test1, test2]);
                     return this;
                 })
                 .withArgs(['file2']).callsFake(function() {
-                    TestParser.prototype.parse.resolves([test3, test4]);
+                    TestParser.prototype.parse.returns([test3, test4]);
                     return this;
                 });
 

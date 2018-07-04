@@ -252,8 +252,9 @@ describe('test-reader/mocha-test-parser', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeEach(beforeEach).addTest());
 
-            return mochaTestParser.parse()
-                .then(() => assert.notCalled(beforeEach));
+            mochaTestParser.parse();
+
+            assert.notCalled(beforeEach);
         });
 
         it('should remove "afterEach" hooks', () => {
@@ -262,8 +263,8 @@ describe('test-reader/mocha-test-parser', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterEach(afterEach).addTest());
 
-            return mochaTestParser.parse()
-                .then(() => assert.notCalled(afterEach));
+            mochaTestParser.parse();
+            assert.notCalled(afterEach);
         });
     });
 
@@ -281,11 +282,10 @@ describe('test-reader/mocha-test-parser', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            return mochaTestParser.parse()
-                .then(() => {
-                    assert.called(Skip.prototype.handleEntity);
-                    assert.calledWith(Skip.prototype.handleEntity, test);
-                });
+            mochaTestParser.parse();
+
+            assert.called(Skip.prototype.handleEntity);
+            assert.calledWith(Skip.prototype.handleEntity, test);
         });
 
         it('should apply skip to suite', () => {
@@ -293,11 +293,10 @@ describe('test-reader/mocha-test-parser', () => {
 
             MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
 
-            return mochaTestParser.parse()
-                .then(() => {
-                    assert.called(Skip.prototype.handleEntity);
-                    assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
-                });
+            mochaTestParser.parse();
+
+            assert.called(Skip.prototype.handleEntity);
+            assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
         });
     });
 
@@ -485,7 +484,7 @@ describe('test-reader/mocha-test-parser', () => {
     });
 
     describe('parse', () => {
-        it('should resolve with test list', async () => {
+        it('should resolve with test list', () => {
             const mochaTestParser = mkMochaTestParser_();
 
             const test1 = new MochaStub.Test();
@@ -497,12 +496,12 @@ describe('test-reader/mocha-test-parser', () => {
                     .addTest(test2);
             });
 
-            const tests = await mochaTestParser.parse();
+            const tests = mochaTestParser.parse();
 
             assert.deepEqual(tests, [test1, test2]);
         });
 
-        it('should resolve also with pending tests', async () => {
+        it('should resolve also with pending tests', () => {
             const mochaTestParser = mkMochaTestParser_();
 
             const test = new MochaStub.Test();
@@ -513,9 +512,60 @@ describe('test-reader/mocha-test-parser', () => {
                     .addTest(test);
             });
 
-            const tests = await mochaTestParser.parse();
+            const tests = mochaTestParser.parse();
 
             assert.deepEqual(tests, [test]);
+        });
+
+        describe('grep', () => {
+            it('should disable tests not matching to grep pattern', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {title: 'test title'});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('foo')
+                    .parse();
+
+                assert.isTrue(Boolean(tests[0].pending));
+                assert.isTrue(Boolean(tests[0].silentSkip));
+            });
+
+            it('should not disable tests matching to grep pattern', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {title: 'test title'});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('test title')
+                    .parse();
+
+                assert.isFalse(Boolean(tests[0].pending));
+                assert.isFalse(Boolean(tests[0].silentSkip));
+            });
+
+            it('should not enable disabled tests', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {
+                    title: 'test title',
+                    pending: true,
+                    silentSkip: true
+                });
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('test title')
+                    .parse();
+
+                assert.isTrue(Boolean(tests[0].pending));
+                assert.isTrue(Boolean(tests[0].silentSkip));
+            });
         });
     });
 });
