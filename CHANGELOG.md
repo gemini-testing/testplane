@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.76.1"></a>
+## [0.76.1](https://github.com/gemini-testing/hermione/compare/v0.76.0...v0.76.1) (2018-07-04)
+
+
+### Bug Fixes
+
+* extend runnables api on parser events ([85dbc7b](https://github.com/gemini-testing/hermione/commit/85dbc7b))
+
+
+
 <a name="0.76.0"></a>
 # [0.76.0](https://github.com/gemini-testing/hermione/compare/v0.75.0...v0.76.0) (2018-07-02)
 
