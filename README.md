@@ -907,9 +907,9 @@ TestCollection API:
 
 * `enableAll([browserId])` - enables all previously disabled tests. Enables tests for specific browser if `browserId` passed. Returns current test collection instance.
 
-* `disableTest(fullTitle, [browserId])` - disables test with passed full title. Disables test only in specific browser if `browserId` passed. Returns current test collection instance.
+* `disableTest(test, [browserId])` - disables test with passed test instance or full title. Disables test only in specific browser if `browserId` passed. Returns current test collection instance.
 
-* `enableTest(fullTitle, [browserId])` - enables test with passed full title. Enables test only in specific browser if `browserId` passed. Returns current test collection instance.
+* `enableTest(test, [browserId])` - enables test with passed test instance or full title. Enables test only in specific browser if `browserId` passed. Returns current test collection instance.
 
 * `getRootSuite(browserId)` - returns root suite for passed browser. Returns `undefined` if there are no tests in collection for passed browser.
 

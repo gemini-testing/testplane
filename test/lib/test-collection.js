@@ -293,10 +293,44 @@ describe('test-collection', () => {
             collection.eachTest('bro2', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
         });
 
-        it('should be chainable', () => {
-            const collection = TestCollection.create({});
+        describe('with passed test instance', () => {
+            it('should disable passed test', () => {
+                const collection = TestCollection.create({
+                    'bro': [{fullTitle: () => 'foo bar'}]
+                });
 
-            assert.equal(collection.disableTest(), collection);
+                collection.enableAll().eachTest('bro', (test) => collection.disableTest(test));
+
+                collection.eachTest((test) => assert.include(test, {pending: true, silentSkip: true}));
+            });
+
+            it('should not disable test for each browser', () => {
+                sinon.spy(TestCollection.prototype, 'disableTest');
+
+                const collection = TestCollection.create({
+                    'bro1': [{fullTitle: () => 'foo bar'}],
+                    'bro2': [{fullTitle: () => 'baz qux'}]
+                });
+
+                collection.enableAll().eachTest('bro1', (test) => collection.disableTest(test));
+
+                assert.calledOnce(TestCollection.prototype.disableTest);
+            });
+        });
+
+        describe('should be chainable', () => {
+            it('if passed test instance', () => {
+                const collection = TestCollection.create({});
+                const test = {};
+
+                assert.equal(collection.disableTest(test), collection);
+            });
+
+            it('if passed test full title', () => {
+                const collection = TestCollection.create({});
+
+                assert.equal(collection.disableTest('foo bar'), collection);
+            });
         });
     });
 
@@ -377,10 +411,44 @@ describe('test-collection', () => {
             collection.eachTest('bro2', (test) => assert.include(test, {pending: true, silentSkip: true}));
         });
 
-        it('should be chainable', () => {
-            const collection = TestCollection.create({});
+        describe('with passed test instance', () => {
+            it('should enable passed test', () => {
+                const collection = TestCollection.create({
+                    'bro': [{fullTitle: () => 'foo bar'}]
+                });
 
-            assert.equal(collection.enableTest(), collection);
+                collection.disableAll().eachTest('bro', (test) => collection.enableTest(test));
+
+                collection.eachTest((test) => assert.include(test, {pending: false, silentSkip: false}));
+            });
+
+            it('should not enable test for each browser', () => {
+                sinon.spy(TestCollection.prototype, 'enableTest');
+
+                const collection = TestCollection.create({
+                    'bro1': [{fullTitle: () => 'foo bar'}],
+                    'bro2': [{fullTitle: () => 'baz qux'}]
+                });
+
+                collection.disableAll().eachTest('bro1', (test) => collection.enableTest(test));
+
+                assert.calledOnce(TestCollection.prototype.enableTest);
+            });
+        });
+
+        describe('should be chainable', () => {
+            it('if passed test instance', () => {
+                const collection = TestCollection.create({});
+                const test = {};
+
+                assert.equal(collection.enableTest(test), collection);
+            });
+
+            it('if passed test full title', () => {
+                const collection = TestCollection.create({});
+
+                assert.equal(collection.enableTest('foo bar'), collection);
+            });
         });
     });
 
