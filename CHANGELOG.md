@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.77.0"></a>
+# [0.77.0](https://github.com/gemini-testing/hermione/compare/v0.76.1...v0.77.0) (2018-07-06)
+
+
+### Features
+
+* silently skip disabled tests ([e0c37eb](https://github.com/gemini-testing/hermione/commit/e0c37eb))
+
+
+
 <a name="0.76.1"></a>
 ## [0.76.1](https://github.com/gemini-testing/hermione/compare/v0.76.0...v0.76.1) (2018-07-04)
 
