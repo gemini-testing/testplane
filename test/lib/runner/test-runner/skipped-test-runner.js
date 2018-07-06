@@ -23,6 +23,18 @@ describe('runner/test-runner/skipped-test-runner', () => {
                 assert.calledOnceWith(onEvent, sinon.match(test));
             });
 
+            it(`should not emit ${event} if test is disabled`, async () => {
+                const onEvent = sinon.stub().named(`on${event}`);
+                const test = makeTest({disabled: true});
+
+                const runner = SkippedTestRunner.create(test)
+                    .on(Events[event], onEvent);
+
+                await runner.run();
+
+                assert.notCalled(onEvent);
+            });
+
             it(`should not emit ${event} if test silently skipped`, async () => {
                 const onEvent = sinon.stub().named(`on${event}`);
                 const test = makeTest({silentSkip: true});
