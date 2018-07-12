@@ -53,6 +53,31 @@ describe('Workers', () => {
                 ['runTest']
             );
         });
+
+        it('should init worker farm in debug mode', () => {
+            RuntimeConfig.getInstance.returns({inspectMode: {inspect: '9229'}});
+
+            mkWorkers_({
+                system: {
+                    workers: 100500,
+                    testsPerWorker: 500100
+                }
+            });
+
+            assert.calledOnceWith(workerFarm,
+                {
+                    workerOptions: {execArgv: ['--inspect=9229']},
+                    maxConcurrentWorkers: 1,
+                    maxCallsPerWorker: Infinity,
+                    maxConcurrentCallsPerWorker: Infinity,
+                    autoStart: true,
+                    maxRetries: 0,
+                    onChild: sinon.match.func
+                },
+                sinon.match('lib/worker/index.js'),
+                ['runTest']
+            );
+        });
     });
 
     describe('communication with worker', () => {
