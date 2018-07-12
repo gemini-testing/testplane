@@ -205,4 +205,22 @@ describe('cli', () => {
 
         assert.calledWith(logger.error, 'some-error');
     });
+
+    it('should turn on debug mode from cli', async () => {
+        onParse((parser) => parser.inspect = true);
+
+        hermioneCli.run();
+        await actionPromise;
+
+        assert.calledWithMatch(Hermione.prototype.run, any, {inspectMode: {inspect: true}});
+    });
+
+    it('should turn on debug mode from cli with params', async () => {
+        onParse((parser) => parser.inspectBrk = '9229');
+
+        hermioneCli.run();
+        await actionPromise;
+
+        assert.calledWithMatch(Hermione.prototype.run, any, {inspectMode: {inspectBrk: '9229'}});
+    });
 });

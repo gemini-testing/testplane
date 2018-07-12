@@ -76,6 +76,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Test Collection](#test-collection)
 - [Test Parser API](#test-parser-api)
   - [setController(name, methods)](#setcontrollername-methods)
+- [Debug mode](#debug-mode)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -767,6 +768,8 @@ Configuration data can be changed depending on extra conditions in the `prepareE
     -r, --reporter <reporter>  Test reporter
     -b, --browser <browser>    Run tests only in specified browser
     --grep <grep>              Run only tests matching string or regexp
+    --inspect[=[host:]port]    Run tests in debug mode
+    --inspect-brk[=[host:]port]    Run tests in debug mode with break at the start
 ```
 
 For example,
@@ -1001,3 +1004,15 @@ describe('foo', () => {
 ```
 
 **Note**: controller will be removed as soon as current file will be parsed
+
+## Debug mode
+
+In order to understand what is going on in the test step by step, there is a debug mode. You can run tests in this mode using these options: --inspect and --inspect-brk. The difference between them is that the second one stops before executing the code.
+
+Example:
+```
+hermione path/to/mytest.js --inspect
+```
+
+**Note**: In the debugging mode, only one worker is started and all tests are performed only in it.
+Use this mode with option `sessionsPerBrowser=1` in order to debug tests one at a time.
