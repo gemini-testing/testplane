@@ -4,6 +4,7 @@ module.exports = class Runnable {
     constructor(parent, options) {
         options = options || {};
 
+        this.type = options.type;
         this.title = options.title || 'some-runnable';
         this.fn = options.fn;
         this.parent = parent;

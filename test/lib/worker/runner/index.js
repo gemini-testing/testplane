@@ -2,27 +2,30 @@
 
 const Runner = require('lib/worker/runner');
 const BrowserPool = require('lib/worker/runner/browser-pool');
-const MochaAdapter = require('lib/worker/runner/mocha-adapter');
+const CachingTestParser = require('lib/worker/runner/caching-test-parser');
 const BrowserAgent = require('lib/worker/runner/browser-agent');
-const EventEmitter = require('events').EventEmitter;
-const WorkerRunnerEvents = require('lib/worker/constants/runner-events');
+const RunnerEvents = require('lib/worker/constants/runner-events');
+const TestRunner = require('lib/worker/runner/test-runner');
+const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner', () => {
     const sandbox = sinon.sandbox.create();
 
-    const mkMochaAdapterStub = () => {
-        const mocha = new EventEmitter();
-        mocha.attachTestFilter = sandbox.stub();
-        mocha.loadFiles = sandbox.stub();
-        mocha.runInSession = sandbox.stub();
-
-        sandbox.stub(MochaAdapter, 'create').returns(mocha);
-        return mocha;
+    const mkRunner_ = (opts = {}) => {
+        const config = opts.config || makeConfigStub();
+        return Runner.create(config);
     };
 
     beforeEach(() => {
         sandbox.stub(BrowserPool, 'create').returns({browser: 'pool'});
-        sandbox.stub(MochaAdapter, 'prepare');
+
+        sandbox.stub(CachingTestParser, 'create').returns(Object.create(CachingTestParser.prototype));
+        sandbox.stub(CachingTestParser.prototype, 'parse').returns([]);
+
+        sandbox.stub(TestRunner, 'create').returns(Object.create(TestRunner.prototype));
+        sandbox.stub(TestRunner.prototype, 'run').resolves();
+
+        sandbox.stub(BrowserAgent, 'create').returns(Object.create(BrowserAgent.prototype));
     });
 
     afterEach(() => sandbox.restore());
@@ -34,79 +37,103 @@ describe('worker/runner', () => {
             assert.calledOnceWith(BrowserPool.create, {foo: 'bar'});
         });
 
-        it('should prepare Mocha', () => {
-            Runner.create();
+        it('should create caching test parser', () => {
+            const config = makeConfigStub({
+                system: {foo: 'bar'}
+            });
 
-            assert.calledOnce(MochaAdapter.prepare);
+            Runner.create(config);
+
+            assert.calledOnceWith(CachingTestParser.create, {foo: 'bar'});
+        });
+
+        [
+            'BEFORE_FILE_READ',
+            'AFTER_FILE_READ',
+            'AFTER_TESTS_READ'
+        ].forEach((event) => {
+            it(`should passthrough ${event} event from caching test parser`, () => {
+                const testParser = Object.create(CachingTestParser.prototype);
+                CachingTestParser.create.returns(testParser);
+
+                const onEvent = sinon.spy().named(`on${event}`);
+                mkRunner_()
+                    .on(RunnerEvents[event], onEvent);
+
+                testParser.emit(RunnerEvents[event], {foo: 'bar'});
+
+                assert.calledOnceWith(onEvent, {foo: 'bar'});
+            });
         });
     });
 
     describe('runTest', () => {
-        let runner;
-        let option;
-        let mochaAdapter;
+        it('should parse passed file in passed browser', () => {
+            const runner = mkRunner_();
 
-        beforeEach(() => {
-            sandbox.stub(BrowserAgent, 'create')
-                .withArgs('chrome', {browser: 'pool'})
-                .returns({browser: 'agent'});
-            mochaAdapter = mkMochaAdapterStub();
+            runner.runTest(null, {file: 'some/file.js', browserId: 'bro'});
 
-            const config = {
-                system: {system: 'sys'},
-                forBrowser: () => ({baz: 'qux'})
-            };
-            runner = Runner.create(config);
-            option = {file: 'file.js', browserId: 'chrome', sessionId: '1234'};
+            assert.calledOnceWith(CachingTestParser.prototype.parse, {file: 'some/file.js', browserId: 'bro'});
         });
 
-        it('should create mocha adapter with merged system and browser config', () => {
-            runner.runTest(null, {});
+        it('should create test runner for parsed test', () => {
+            const runner = mkRunner_();
 
-            assert.calledOnceWith(MochaAdapter.create, sinon.match.any, {
-                system: 'sys',
-                baz: 'qux'
-            });
+            const test = makeTest({fullTitle: () => 'some test'});
+            CachingTestParser.prototype.parse.returns([test]);
+
+            runner.runTest('some test', {});
+
+            assert.calledOnceWith(TestRunner.create, test);
         });
 
-        it('should filter tests by fullTitle', () => {
-            runner.runTest('world', option);
+        it('should pass browser config to test runner', () => {
+            const config = makeConfigStub({browsers: ['bro']});
+            const runner = mkRunner_({config});
 
-            const tests = ['hello', 'world', 'test'].map((value) => {
-                return {fullTitle: () => value};
-            });
-            const filter = mochaAdapter.attachTestFilter.getCall(0).args[0];
-            const result = tests.filter(filter).map((test) => test.fullTitle());
+            const test = makeTest({fullTitle: () => 'some test'});
+            CachingTestParser.prototype.parse.returns([test]);
 
-            assert.deepEqual(result, ['world']);
+            runner.runTest('some test', {browserId: 'bro'});
+
+            assert.calledOnceWith(TestRunner.create, test, config.forBrowser('bro'));
         });
 
-        it('should load files', () => {
-            runner.runTest('title', option);
+        it('should create browser agent for test runner', () => {
+            const runner = mkRunner_();
 
-            assert.calledOnceWith(mochaAdapter.loadFiles, 'file.js');
+            const test = makeTest({fullTitle: () => 'some test'});
+            CachingTestParser.prototype.parse.returns([test]);
+
+            const browserAgent = Object.create(BrowserAgent.prototype);
+            BrowserAgent.create.withArgs('bro').returns(browserAgent);
+
+            runner.runTest('some test', {browserId: 'bro'});
+
+            assert.calledOnceWith(TestRunner.create, test, sinon.match.any, browserAgent);
         });
 
-        it('should run test is session', () => {
-            runner.runTest('title', option);
+        it('should create test runner only for passed test', () => {
+            const runner = mkRunner_();
 
-            assert.calledOnceWith(mochaAdapter.runInSession, '1234');
+            const test1 = makeTest({fullTitle: () => 'some test'});
+            const test2 = makeTest({fullTitle: () => 'other test'});
+            CachingTestParser.prototype.parse.returns([test1, test2]);
+
+            runner.runTest('other test', {});
+
+            assert.calledOnceWith(TestRunner.create, test2);
         });
 
-        it('should passthrough mochaAdapter events', () => {
-            runner.runTest('title', option);
+        it('should run test in passed session', () => {
+            const runner = mkRunner_();
 
-            [
-                WorkerRunnerEvents.BEFORE_FILE_READ,
-                WorkerRunnerEvents.AFTER_FILE_READ
-            ].forEach((event) => {
-                const spy = sandbox.spy().named(`${event} handler`);
-                runner.on(event, spy);
+            const test = makeTest({fullTitle: () => 'some test'});
+            CachingTestParser.prototype.parse.returns([test]);
 
-                mochaAdapter.emit(event);
+            runner.runTest('some test', {sessionId: '100500'});
 
-                assert.calledOnce(spy);
-            });
+            assert.calledOnceWith(TestRunner.prototype.run, {sessionId: '100500'});
         });
     });
 });
