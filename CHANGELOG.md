@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.78.0"></a>
+# [0.78.0](https://github.com/gemini-testing/hermione/compare/v0.77.0...v0.78.0) (2018-07-15)
+
+
+### Features
+
+* use own runner instead of mocha in workers ([dad7707](https://github.com/gemini-testing/hermione/commit/dad7707))
+
+
+
 <a name="0.77.0"></a>
 # [0.77.0](https://github.com/gemini-testing/hermione/compare/v0.76.1...v0.77.0) (2018-07-06)
 
