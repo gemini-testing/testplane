@@ -12,7 +12,7 @@ describe('NewBrowser', () => {
     let session;
 
     beforeEach(() => {
-        session = mkSessionStub_(sandbox);
+        session = mkSessionStub_();
         sandbox.stub(webdriverio, 'remote');
         webdriverio.remote.returns(session);
         sandbox.stub(logger, 'warn');

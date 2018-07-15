@@ -47,6 +47,7 @@ describe('worker/hermione', () => {
             _.forEach({
                 [WorkerRunnerEvents.BEFORE_FILE_READ]: {suite: makeSuite()},
                 [WorkerRunnerEvents.AFTER_FILE_READ]: {suite: makeSuite()},
+                [WorkerRunnerEvents.AFTER_TESTS_READ]: Object.create(TestCollection.prototype),
                 [WorkerRunnerEvents.NEW_BROWSER]: {id: 'someBro'}
             }, (data, event) => {
                 const spy = sinon.spy();
@@ -134,60 +135,6 @@ describe('worker/hermione', () => {
 
             return hermione.runTest('fullTitle', {some: 'options'})
                 .then((result) => assert.equal(result, 'foo bar'));
-        });
-
-        describe('AFTER_TESTS_READ', () => {
-            const makeSuiteWithTests_ = (tests) => {
-                return makeSuite({eachTest: (cb) => tests.forEach(cb)});
-            };
-
-            beforeEach(() => {
-                sandbox.stub(TestCollection, 'create').returns(Object.create(TestCollection.prototype));
-            });
-
-            it('should emit AFTER_TESTS_READ on test run', async () => {
-                const onAfterTestsRead = sinon.spy();
-                const hermione = Hermione.create()
-                    .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
-
-                Runner.prototype.runTest.callsFake(function() {
-                    this.emit(RunnerEvents.AFTER_FILE_READ, {browser: 'bro', suite: makeSuite()});
-                    return Promise.resolve();
-                });
-
-                await hermione.runTest();
-
-                assert.calledOnce(onAfterTestsRead);
-            });
-
-            it('should create test collection with parsed tests', async () => {
-                const hermione = Hermione.create();
-
-                Runner.prototype.runTest.callsFake(function() {
-                    const suite = makeSuiteWithTests_([{title: 'some test'}]);
-                    this.emit(RunnerEvents.AFTER_FILE_READ, {browser: 'bro', suite});
-                    return Promise.resolve();
-                });
-
-                await hermione.runTest();
-
-                assert.calledOnceWith(TestCollection.create, {bro: [{title: 'some test'}]});
-            });
-
-            it('should pass test collection with AFTER_TESTS_READ event', async () => {
-                const onAfterTestsRead = sinon.spy();
-                const hermione = Hermione.create()
-                    .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
-
-                Runner.prototype.runTest.callsFake(function() {
-                    this.emit(RunnerEvents.AFTER_FILE_READ, {browser: 'bro', suite: makeSuite()});
-                    return Promise.resolve();
-                });
-
-                await hermione.runTest();
-
-                assert.calledOnceWith(onAfterTestsRead, sinon.match.instanceOf(TestCollection));
-            });
         });
     });
 

@@ -25,7 +25,7 @@ describe('assertView command', () => {
     const stubImage_ = () => ({save: sandbox.stub().named('save')});
 
     const stubBrowser_ = (config) => {
-        const session = mkSessionStub_(sandbox);
+        const session = mkSessionStub_();
         session.executionContext = {hermioneCtx: {}};
         sandbox.stub(webdriverio, 'remote').returns(session);
 

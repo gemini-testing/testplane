@@ -3,6 +3,7 @@
 const EventEmitter = require('events').EventEmitter;
 const Suite = require('./suite');
 const Test = require('./test');
+const Runnable = require('./runnable');
 
 class Mocha extends EventEmitter {
     constructor(options) {
@@ -33,6 +34,10 @@ class Mocha extends EventEmitter {
 
     static get Suite() {
         return Suite;
+    }
+
+    static get Runnable() {
+        return Runnable;
     }
 
     run(cb) {

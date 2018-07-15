@@ -396,6 +396,15 @@ describe('test-reader/mocha-test-parser', () => {
 
             assert.equal(test.id(), '12345');
         });
+
+        it('shold set browserId property to test', () => {
+            mkMochaTestParser_({browserId: 'bro'});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(new MochaStub.Test()));
+
+            const test = MochaStub.lastInstance.suite.tests[0];
+
+            assert.equal(test.browserId, 'bro');
+        });
     });
 
     describe('passthrough mocha file events', () => {

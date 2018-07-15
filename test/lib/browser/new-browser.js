@@ -11,7 +11,7 @@ describe('NewBrowser', () => {
     let session;
 
     beforeEach(() => {
-        session = mkSessionStub_(sandbox);
+        session = mkSessionStub_();
         sandbox.stub(webdriverio, 'remote');
         sandbox.stub(logger);
         webdriverio.remote.returns(session);

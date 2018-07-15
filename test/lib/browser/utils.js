@@ -39,19 +39,19 @@ exports.mkExistingBrowser_ = (opts) => {
     return ExistingBrowser.create(createBrowserConfig_(opts), 'browser');
 };
 
-exports.mkSessionStub_ = (sandbox) => {
+exports.mkSessionStub_ = () => {
     const session = q();
-    session.init = sandbox.stub().named('init').returns(session);
-    session.end = sandbox.stub().named('end').resolves();
-    session.url = sandbox.stub().named('url').returns(session);
-    session.execute = sandbox.stub().named('execute').resolves({});
-    session.windowHandleSize = sandbox.stub().named('windowHandleSize').resolves({value: {}});
+    session.init = sinon.stub().named('init').returns(session);
+    session.end = sinon.stub().named('end').resolves();
+    session.url = sinon.stub().named('url').returns(session);
+    session.execute = sinon.stub().named('execute').resolves({});
+    session.windowHandleSize = sinon.stub().named('windowHandleSize').resolves({value: {}});
     session.requestHandler = {defaultOptions: {}};
-    session.screenshot = sandbox.stub().named('screenshot').resolves({value: {}});
+    session.screenshot = sinon.stub().named('screenshot').resolves({value: {}});
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
-        sandbox.spy(session, name);
+        sinon.spy(session, name);
     });
 
     return session;
