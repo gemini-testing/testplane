@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.78.1"></a>
+## [0.78.1](https://github.com/gemini-testing/hermione/compare/v0.78.0...v0.78.1) (2018-07-17)
+
+
+### Bug Fixes
+
+* tests do not fail on assert view fails ([1a5ed83](https://github.com/gemini-testing/hermione/commit/1a5ed83))
+
+
+
 <a name="0.78.0"></a>
 # [0.78.0](https://github.com/gemini-testing/hermione/compare/v0.77.0...v0.78.0) (2018-07-15)
 
