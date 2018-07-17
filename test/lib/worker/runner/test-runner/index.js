@@ -6,6 +6,8 @@ const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
 const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
 const BrowserAgent = require('lib/worker/runner/browser-agent');
+const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
+const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
 const {makeConfigStub} = require('../../../../utils');
 const {Suite, Test} = require('../../../_mocha');
 
@@ -234,9 +236,7 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should convert assert view results to raw object', async () => {
-                const assertViewResults = {
-                    toRawObject: () => [{foo: 'bar'}]
-                };
+                const assertViewResults = AssertViewResults.create([{foo: 'bar'}]);
 
                 ExecutionThread.create.callsFake(({hermioneCtx}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
@@ -249,6 +249,20 @@ describe('worker/runner/test-runner', () => {
                 const result = await run_();
 
                 assert.match(result.hermioneCtx, {assertViewResults: [{foo: 'bar'}]});
+            });
+
+            it('should fail if assert view results have fails', async () => {
+                const assertViewResults = AssertViewResults.create([new Error()]);
+
+                ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        hermioneCtx.assertViewResults = assertViewResults;
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                await assert.isRejected(run_(), AssertViewError);
             });
 
             it('should resolve with browser meta and changes', async () => {
@@ -291,9 +305,7 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should convert assert view results to raw object', async () => {
-                const assertViewResults = {
-                    toRawObject: () => [{foo: 'bar'}]
-                };
+                const assertViewResults = AssertViewResults.create([{foo: 'bar'}]);
 
                 ExecutionThread.create.callsFake(({hermioneCtx}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
