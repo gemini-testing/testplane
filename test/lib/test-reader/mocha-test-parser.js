@@ -245,29 +245,6 @@ describe('test-reader/mocha-test-parser', () => {
         });
     });
 
-    describe('remove test hooks', () => {
-        it('should remove "beforeEach" hooks', () => {
-            const mochaTestParser = mkMochaTestParser_();
-            const beforeEach = sandbox.spy().named('beforeEach');
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeEach(beforeEach).addTest());
-
-            mochaTestParser.parse();
-
-            assert.notCalled(beforeEach);
-        });
-
-        it('should remove "afterEach" hooks', () => {
-            const mochaTestParser = mkMochaTestParser_();
-            const afterEach = sandbox.spy().named('afterEach');
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterEach(afterEach).addTest());
-
-            mochaTestParser.parse();
-            assert.notCalled(afterEach);
-        });
-    });
-
     describe('inject skip', () => {
         let mochaTestParser;
 
@@ -404,6 +381,26 @@ describe('test-reader/mocha-test-parser', () => {
             const test = MochaStub.lastInstance.suite.tests[0];
 
             assert.equal(test.browserId, 'bro');
+        });
+    });
+
+    describe('extend hook API', () => {
+        it('shold set browserId property to beforeEach hook', () => {
+            mkMochaTestParser_({browserId: 'bro'});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.beforeEach(() => {}));
+
+            const hook = MochaStub.lastInstance.suite.beforeEachHooks[0];
+
+            assert.propertyVal(hook, 'browserId', 'bro');
+        });
+
+        it('shold set browserId property to afterEach hook', () => {
+            mkMochaTestParser_({browserId: 'bro'});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterEach(() => {}));
+
+            const hook = MochaStub.lastInstance.suite.afterEachHooks[0];
+
+            assert.propertyVal(hook, 'browserId', 'bro');
         });
     });
 
