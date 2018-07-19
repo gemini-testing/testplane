@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.78.3"></a>
+## [0.78.3](https://github.com/gemini-testing/hermione/compare/v0.78.2...v0.78.3) (2018-07-19)
+
+
+### Bug Fixes
+
+* .only does not work for all browsers ([fb855ca](https://github.com/gemini-testing/hermione/commit/fb855ca))
+
+
+
 <a name="0.78.2"></a>
 ## [0.78.2](https://github.com/gemini-testing/hermione/compare/v0.78.1...v0.78.2) (2018-07-18)
 
