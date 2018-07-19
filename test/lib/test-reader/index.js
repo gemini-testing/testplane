@@ -125,7 +125,7 @@ describe('test-reader', () => {
             assert.callOrder(TestParser.prepare, TestParser.create);
         });
 
-        it('should create parser for each browser', async () => {
+        it('should create parser for each browser with the same config object', async () => {
             const groupByBrowser = sinon.stub().returns({
                 bro1: [],
                 bro2: []
@@ -140,7 +140,7 @@ describe('test-reader', () => {
             assert.calledWith(TestParser.create, 'bro2', config.system);
         });
 
-        it('should parse files for each browser', async () => {
+        it('should load files for each browser', async () => {
             const groupByBrowser = sinon.stub().returns({
                 bro1: ['common/file', 'file1'],
                 bro2: ['common/file', 'file2']
@@ -168,13 +168,17 @@ describe('test-reader', () => {
 
             TestParser.prototype.loadFiles
                 .withArgs(['file1']).callsFake(function() {
-                    TestParser.prototype.parse.returns([test1, test2]);
+                    this._tests = [test1, test2];
                     return this;
                 })
                 .withArgs(['file2']).callsFake(function() {
-                    TestParser.prototype.parse.returns([test3, test4]);
+                    this._tests = [test3, test4];
                     return this;
                 });
+
+            TestParser.prototype.parse.callsFake(function() {
+                return this._tests;
+            });
 
             const specs = await readTests_();
 
@@ -182,6 +186,50 @@ describe('test-reader', () => {
                 bro1: [test1, test2],
                 bro2: [test3, test4]
             });
+        });
+
+        it('should apply grep for all browsers before loading any file', async () => {
+            const groupByBrowser = sinon.stub().returns({
+                bro1: [],
+                bro2: []
+            });
+            SetsBuilder.prototype.build.resolves({groupByBrowser});
+
+            const calls = [];
+            TestParser.prototype.applyGrep.reset();
+            TestParser.prototype.applyGrep.callsFake(function() {
+                calls.push('applyGrep');
+                return this;
+            });
+            TestParser.prototype.loadFiles.reset();
+            TestParser.prototype.loadFiles.callsFake(function() {
+                calls.push('loadFiles');
+                return this;
+            });
+
+            await readTests_();
+
+            assert.deepEqual(calls, ['applyGrep', 'applyGrep', 'loadFiles', 'loadFiles']);
+        });
+
+        it('should load files for all browsers before parsing any', async () => {
+            const groupByBrowser = sinon.stub().returns({
+                bro1: [],
+                bro2: []
+            });
+            SetsBuilder.prototype.build.resolves({groupByBrowser});
+
+            const calls = [];
+            TestParser.prototype.loadFiles.reset();
+            TestParser.prototype.loadFiles.callsFake(function() {
+                calls.push('loadFiles');
+                return this;
+            });
+            TestParser.prototype.parse.callsFake(() => calls.push('parse'));
+
+            await readTests_();
+
+            assert.deepEqual(calls, ['loadFiles', 'loadFiles', 'parse', 'parse']);
         });
 
         describe('for each browser', () => {
