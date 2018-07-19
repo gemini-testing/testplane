@@ -23,7 +23,7 @@ describe('test-reader/mocha-test-parser', () => {
 
     const mkMochaTestParser_ = (opts = {}) => {
         const browserId = opts.browserId || 'default-bro';
-        const config = opts.config || {};
+        const config = opts.config || {mochaOpts: {}};
 
         return MochaTestParser.create(browserId, config);
     };
@@ -39,12 +39,17 @@ describe('test-reader/mocha-test-parser', () => {
             'clear-require': clearRequire,
             'mocha': MochaStub
         });
+
+        MochaTestParser.prepare();
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        delete global.hermione;
+        sandbox.restore();
+    });
 
     describe('prepare', () => {
-        afterEach(() => delete global.hermione);
+        beforeEach(() => delete global.hermione);
 
         it('should add an empty hermione object to global', () => {
             MochaTestParser.prepare();
@@ -62,8 +67,6 @@ describe('test-reader/mocha-test-parser', () => {
     });
 
     describe('constructor', () => {
-        afterEach(() => delete global.hermione);
-
         it('should pass shared opts to mocha instance', () => {
             mkMochaTestParser_({
                 config: {
@@ -200,32 +203,58 @@ describe('test-reader/mocha-test-parser', () => {
 
             assert.calledOnceWith(onSuite, nestedSuite);
         });
-    });
-
-    describe('hermione global', () => {
-        beforeEach(() => MochaTestParser.prepare());
-        afterEach(() => delete global.hermione);
-
-        it('hermione.skip should return SkipBuilder instance', () => {
-            mkMochaTestParser_();
-
-            assert.instanceOf(global.hermione.skip, SkipBuilder);
-        });
-
-        it('hermione.only should return OnlyBuilder instance', () => {
-            mkMochaTestParser_();
-
-            assert.instanceOf(global.hermione.only, OnlyBuilder);
-        });
 
         it('hermione.ctx should return passed ctx', () => {
-            mkMochaTestParser_({
+            const mochaTestParser = mkMochaTestParser_({
                 config: {
                     ctx: {some: 'ctx'}
                 }
             });
 
+            mochaTestParser.loadFiles([]);
+
             assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
+        });
+
+        describe('inject skip', () => {
+            let mochaTestParser;
+
+            beforeEach(() => {
+                sandbox.stub(Skip.prototype, 'handleEntity');
+
+                mochaTestParser = mkMochaTestParser_();
+                mochaTestParser.loadFiles([]);
+            });
+
+            it('hermione.skip should return SkipBuilder instance', () => {
+                assert.instanceOf(global.hermione.skip, SkipBuilder);
+            });
+
+            it('hermione.only should return OnlyBuilder instance', () => {
+                assert.instanceOf(global.hermione.only, OnlyBuilder);
+            });
+
+            it('should apply skip to test', () => {
+                const test = new MochaStub.Test();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                mochaTestParser.parse();
+
+                assert.called(Skip.prototype.handleEntity);
+                assert.calledWith(Skip.prototype.handleEntity, test);
+            });
+
+            it('should apply skip to suite', () => {
+                const nestedSuite = MochaStub.Suite.create();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
+
+                mochaTestParser.parse();
+
+                assert.called(Skip.prototype.handleEntity);
+                assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
+            });
         });
     });
 
@@ -242,38 +271,6 @@ describe('test-reader/mocha-test-parser', () => {
             assert.throw(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterAll(() => {}));
             }, '"before" and "after" hooks are forbidden, use "beforeEach" and "afterEach" hooks instead');
-        });
-    });
-
-    describe('inject skip', () => {
-        let mochaTestParser;
-
-        beforeEach(() => {
-            sandbox.stub(Skip.prototype, 'handleEntity');
-
-            mochaTestParser = mkMochaTestParser_();
-        });
-
-        it('should apply skip to test', () => {
-            const test = new MochaStub.Test();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
-
-            mochaTestParser.parse();
-
-            assert.called(Skip.prototype.handleEntity);
-            assert.calledWith(Skip.prototype.handleEntity, test);
-        });
-
-        it('should apply skip to suite', () => {
-            const nestedSuite = MochaStub.Suite.create();
-
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
-
-            mochaTestParser.parse();
-
-            assert.called(Skip.prototype.handleEntity);
-            assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
         });
     });
 
@@ -408,8 +405,6 @@ describe('test-reader/mocha-test-parser', () => {
         beforeEach(() => {
             MochaTestParser.init();
         });
-
-        afterEach(() => delete global.hermione);
 
         _.forEach({
             'pre-require': 'BEFORE_FILE_READ',
