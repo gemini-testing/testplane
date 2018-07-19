@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.78.4"></a>
+## [0.78.4](https://github.com/gemini-testing/hermione/compare/v0.78.3...v0.78.4) (2018-07-19)
+
+
+### Bug Fixes
+
+* hermione.skip skips always for one browser ([8c6de4b](https://github.com/gemini-testing/hermione/commit/8c6de4b))
+
+
+
 <a name="0.78.3"></a>
 ## [0.78.3](https://github.com/gemini-testing/hermione/compare/v0.78.2...v0.78.3) (2018-07-19)
 
