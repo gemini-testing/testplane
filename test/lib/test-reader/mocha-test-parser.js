@@ -10,7 +10,6 @@ const Skip = require('lib/test-reader/skip/');
 const TestSkipper = require('lib/test-reader/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
 const ParserEvents = require('lib/test-reader/parser-events');
-const SuiteSubset = require('lib/test-reader/suite-subset');
 const TestParserAPI = require('lib/test-reader/test-parser-api');
 const MochaStub = require('../_mocha');
 
@@ -423,52 +422,6 @@ describe('test-reader/mocha-test-parser', () => {
                     browser: 'bro'
                 }));
             });
-        });
-
-        it('should emit BEFORE_FILE_READ with mocha root suite subset', () => {
-            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
-            const mochaTestParser = mkMochaTestParser_()
-                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
-
-            const suiteSubset = SuiteSubset.create(mochaTestParser.suite, '/some/file.js');
-            sandbox.stub(SuiteSubset, 'create')
-                .withArgs(mochaTestParser.suite, '/some/file.js').returns(suiteSubset);
-
-            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
-
-            assert.calledOnceWith(onBeforeFileRead, sinon.match({
-                suite: suiteSubset
-            }));
-        });
-
-        it('should emit BEFORE_FILE_READ and AFTER_FILE_READ with the same mocha root suite subset', () => {
-            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
-            const onAfterFileRead = sinon.stub().named('onAfterFileRead');
-            mkMochaTestParser_()
-                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead)
-                .on(RunnerEvents.AFTER_FILE_READ, onAfterFileRead);
-
-            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
-            MochaStub.lastInstance.suite.emit('post-require', {}, '/some/file.js');
-
-            assert.equal(
-                onBeforeFileRead.firstCall.args[0].suite,
-                onAfterFileRead.firstCall.args[0].suite
-            );
-        });
-
-        it('should emit different mocha root suite subsets for different files', () => {
-            const onBeforeFileRead = sinon.stub().named('onBeforeFileRead');
-            mkMochaTestParser_()
-                .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
-
-            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
-            MochaStub.lastInstance.suite.emit('pre-require', {}, '/other/file.js');
-
-            assert.notEqual(
-                onBeforeFileRead.firstCall.args[0].suite,
-                onBeforeFileRead.secondCall.args[0].suite
-            );
         });
 
         it('should emit BEFORE_FILE_READ with test parser API', () => {
