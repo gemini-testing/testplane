@@ -1,6 +1,5 @@
 'use strict';
 
-const _ = require('lodash');
 const TestCollection = require('lib/test-collection');
 
 describe('test-collection', () => {
@@ -125,9 +124,9 @@ describe('test-collection', () => {
             assert.deepEqual(
                 collection.mapTests((t) => t),
                 [
-                    {title: 'test1', pending: true, silentSkip: true},
-                    {title: 'test2', pending: true, silentSkip: true},
-                    {title: 'test3', pending: true, silentSkip: true}
+                    {title: 'test1', disabled: true},
+                    {title: 'test2', disabled: true},
+                    {title: 'test3', disabled: true}
                 ]
             );
         });
@@ -147,7 +146,7 @@ describe('test-collection', () => {
             assert.deepEqual(
                 collection.mapTests('bro1', (t) => t),
                 [
-                    {title: 'test1', pending: true, silentSkip: true}
+                    {title: 'test1', disabled: true}
                 ]
             );
             assert.deepEqual(
@@ -168,12 +167,10 @@ describe('test-collection', () => {
 
     describe('enableAll', () => {
         it('should do nothing for tests which were not disabled', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2', pending: true};
+            const test = {title: 'test'};
 
             const collection = TestCollection.create({
-                'bro1': [test1],
-                'bro2': [test2]
+                'bro': [test]
             });
 
             collection.enableAll();
@@ -181,8 +178,7 @@ describe('test-collection', () => {
             assert.deepEqual(
                 collection.mapTests((t) => t),
                 [
-                    {title: 'test1'},
-                    {title: 'test2', pending: true}
+                    {title: 'test'}
                 ]
             );
         });
@@ -209,7 +205,7 @@ describe('test-collection', () => {
         });
 
         it('should not enable tests which were originally disabled', () => {
-            const test = {title: 'test', pending: true, silentSkip: true};
+            const test = {title: 'test', disabled: true};
 
             const collection = TestCollection.create({
                 'bro': [test]
@@ -221,7 +217,7 @@ describe('test-collection', () => {
             assert.deepEqual(
                 collection.mapTests((t) => t),
                 [
-                    {title: 'test', pending: true, silentSkip: true}
+                    {title: 'test', disabled: true}
                 ]
             );
         });
@@ -241,7 +237,7 @@ describe('test-collection', () => {
             assert.deepEqual(
                 collection.mapTests((t) => t),
                 [
-                    {title: 'test1', pending: true, silentSkip: true},
+                    {title: 'test1', disabled: true},
                     {title: 'test2'}
                 ]
             );
@@ -265,7 +261,7 @@ describe('test-collection', () => {
 
             collection.eachTest((test) => {
                 assert.equal(test.fullTitle(), 'foo bar');
-                assert.include(test, {pending: true, silentSkip: true});
+                assert.include(test, {disabled: true});
             });
         });
 
@@ -277,8 +273,8 @@ describe('test-collection', () => {
 
             collection.disableTest('foo bar', 'bro1');
 
-            collection.eachTest('bro1', (test) => assert.include(test, {pending: true, silentSkip: true}));
-            collection.eachTest('bro2', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
+            collection.eachTest('bro1', (test) => assert.include(test, {disabled: true}));
+            collection.eachTest('bro2', (test) => assert.notInclude(test, {disabled: true}));
         });
 
         it('should disable test in all browsers where it exists', () => {
@@ -289,8 +285,8 @@ describe('test-collection', () => {
 
             collection.disableTest('foo bar');
 
-            collection.eachTest('bro1', (test) => assert.include(test, {pending: true, silentSkip: true}));
-            collection.eachTest('bro2', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
+            collection.eachTest('bro1', (test) => assert.include(test, {disabled: true}));
+            collection.eachTest('bro2', (test) => assert.notInclude(test, {disabled: true}));
         });
 
         it('should be chainable', () => {
@@ -303,22 +299,16 @@ describe('test-collection', () => {
     describe('enableTest', () => {
         it('should do nothing for tests which were not disabled', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'baz qux', pending: true}]
+                'bro': [{fullTitle: () => 'foo bar'}]
             });
 
             collection
                 .enableTest('foo bar')
                 .enableTest('baz qux');
 
-            collection.eachTest('bro1', (test) => {
+            collection.eachTest('bro', (test) => {
                 assert.equal(test.fullTitle(), 'foo bar');
-                assert.notInclude(test, {pending: true, silentSkip: true});
-            });
-            collection.eachTest('bro2', (test) => {
-                assert.equal(test.fullTitle(), 'baz qux');
-                assert.include(test, {pending: true});
-                assert.notInclude(test, {silentSkip: true});
+                assert.notInclude(test, {disabled: true});
             });
         });
 
@@ -334,7 +324,7 @@ describe('test-collection', () => {
 
             collection.eachTest((test) => {
                 assert.equal(test.fullTitle(), 'foo bar');
-                assert.notInclude(test, {pending: true, silentSkip: true});
+                assert.notInclude(test, {disabled: true});
             });
         });
 
@@ -347,7 +337,7 @@ describe('test-collection', () => {
                 .disableTest('foo bar')
                 .enableTest('foo bar');
 
-            collection.eachTest('bro', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
+            collection.eachTest('bro', (test) => assert.notInclude(test, {disabled: true}));
         });
 
         it('should enable test even if it was disabled twice', () => {
@@ -360,7 +350,7 @@ describe('test-collection', () => {
                 .disableTest('foo bar')
                 .enableTest('foo bar');
 
-            collection.eachTest('bro', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
+            collection.eachTest('bro', (test) => assert.notInclude(test, {disabled: true}));
         });
 
         it('should enable test in specified browser', () => {
@@ -373,8 +363,8 @@ describe('test-collection', () => {
                 .disableAll()
                 .enableTest('foo bar', 'bro1');
 
-            collection.eachTest('bro1', (test) => assert.notInclude(test, {pending: true, silentSkip: true}));
-            collection.eachTest('bro2', (test) => assert.include(test, {pending: true, silentSkip: true}));
+            collection.eachTest('bro1', (test) => assert.notInclude(test, {disabled: true}));
+            collection.eachTest('bro2', (test) => assert.include(test, {disabled: true}));
         });
 
         it('should be chainable', () => {
@@ -440,50 +430,6 @@ describe('test-collection', () => {
             collection.eachRootSuite((root, browser) => rootSuites[browser] = root);
 
             assert.deepEqual(rootSuites, {bro1: root});
-        });
-    });
-
-    describe('backwards compatibility', () => {
-        it('root suite should be awailable by property with browser id', () => {
-            const root1 = {title: 'root1', root: true};
-            const root2 = {title: 'root2', root: true};
-            const test1 = {title: 'test1', parent: root1};
-            const test2 = {title: 'test2', parent: {parent: root2}};
-
-            const collection = TestCollection.create({
-                'bro1': [test1],
-                'bro2': [test2]
-            });
-
-            assert.deepEqual(collection.bro1, root1);
-            assert.deepEqual(collection.bro2, root2);
-        });
-
-        it('should not add browser if there are no tests for it', () => {
-            const root = {title: 'root', root: true};
-            const test = {title: 'test', parent: root};
-
-            const collection = TestCollection.create({
-                'bro1': [test],
-                'bro2': []
-            });
-
-            assert.notProperty(collection, 'bro2');
-        });
-
-        it('should iterate only through browsers', () => {
-            const root1 = {title: 'root1', root: true};
-            const root2 = {title: 'root2', root: true};
-            const test1 = {title: 'test1', parent: root1};
-            const test2 = {title: 'test2', parent: {parent: {parent: root2}}};
-
-            const collection = TestCollection.create({
-                'bro1': [test1],
-                'bro2': [test2]
-            });
-
-            const result = _.mapValues(collection, (s) => s);
-            assert.deepEqual(result, {bro1: root1, bro2: root2});
         });
     });
 });
