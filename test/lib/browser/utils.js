@@ -47,7 +47,9 @@ exports.mkSessionStub_ = () => {
     session.execute = sinon.stub().named('execute').resolves({});
     session.windowHandleSize = sinon.stub().named('windowHandleSize').resolves({value: {}});
     session.requestHandler = {defaultOptions: {}};
+    session.options = {deprecationWarnings: true};
     session.screenshot = sinon.stub().named('screenshot').resolves({value: {}});
+    session.moveToObject = sinon.stub().named('moveToObject').returns({value: {}});
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
