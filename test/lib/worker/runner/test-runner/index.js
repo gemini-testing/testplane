@@ -107,10 +107,36 @@ describe('worker/runner/test-runner', () => {
             assert.calledOnceWith(ExecutionThread.create, sinon.match({browser}));
         });
 
-        it('should create execution thread with empty hermioneCtx', async () => {
+        it('should create execution thread with empty hermioneCtx by default', async () => {
             await run_({});
 
             assert.calledOnceWith(ExecutionThread.create, sinon.match({hermioneCtx: {}}));
+        });
+
+        it('should create execution thread with test hermioneCtx', async () => {
+            const test = mkTest_();
+            test.hermioneCtx = {foo: 'bar'};
+
+            await run_({test});
+
+            assert.calledOnceWith(ExecutionThread.create, sinon.match({hermioneCtx: {foo: 'bar'}}));
+        });
+
+        it('test hermioneCtx should be protected from modification during run', async () => {
+            ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                ExecutionThread.prototype.run.callsFake(() => {
+                    hermioneCtx.baz = 'qux';
+                });
+
+                return Object.create(ExecutionThread.prototype);
+            });
+
+            const test = mkTest_();
+            test.hermioneCtx = {foo: 'bar'};
+
+            await run_({test});
+
+            assert.deepEqual(test.hermioneCtx, {foo: 'bar'});
         });
 
         it('should create execution thread with screenshooter', async () => {
