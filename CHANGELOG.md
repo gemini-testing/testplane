@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.79.0"></a>
+# [0.79.0](https://github.com/gemini-testing/hermione/compare/v0.78.4...v0.79.0) (2018-07-25)
+
+
+### Bug Fixes
+
+* test.hermioneCtx not acceptable inside test callback ([c069f57](https://github.com/gemini-testing/hermione/commit/c069f57))
+
+
+### Features
+
+* remove backwards compatibility layer in TestCollection ([dfd9e72](https://github.com/gemini-testing/hermione/commit/dfd9e72))
+* remove suite field in *_FILE_READ events ([91c0799](https://github.com/gemini-testing/hermione/commit/91c0799))
+* reset cursor position to 0, 0 before running test ([45a11e7](https://github.com/gemini-testing/hermione/commit/45a11e7))
+* set default browser orientation before each test ([990a210](https://github.com/gemini-testing/hermione/commit/990a210))
+
+
+
 <a name="0.78.4"></a>
 ## [0.78.4](https://github.com/gemini-testing/hermione/compare/v0.78.3...v0.78.4) (2018-07-19)
 
