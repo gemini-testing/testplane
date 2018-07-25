@@ -3,6 +3,7 @@
 build
 
 .idea
+.vscode
 *.swo
 *.swp
 *.iml
