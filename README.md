@@ -43,6 +43,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [meta](#meta)
   - [windowSize](#windowsize)
   - [screenshotDelay](#screenshotdelay)
+  - [orientation](#orientation)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -481,6 +482,7 @@ Option name               | Description
 `meta`                    | Additional data that can be obtained via .getMeta() method
 `windowSize`              | Browser window dimensions. Default value is `null`.
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
+`orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
 
 ### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -549,6 +551,9 @@ are the same.
 
 ### screenshotDelay
 Allows to specify a delay (in milliseconds) before making any screenshot. This is useful when the page has elements which are animated or if you do not want to screen a scrollbar. Default value is `0`.
+
+### orientation
+Browser orientation (`landscape`, `portrait`) that will be set before each test run. It is necessary in order to return the browser orientation to the default state after test execution in which orientation is changed. Default value is `null`.
 
 ### system
 

@@ -50,6 +50,7 @@ exports.mkSessionStub_ = () => {
     session.options = {deprecationWarnings: true};
     session.screenshot = sinon.stub().named('screenshot').resolves({value: {}});
     session.moveToObject = sinon.stub().named('moveToObject').returns({value: {}});
+    session.setOrientation = sinon.stub().named('setOrientation').resolves({value: {}});
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;

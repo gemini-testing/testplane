@@ -946,4 +946,77 @@ describe('config browser-options', () => {
             assert.equal(config.browsers.b2.screenshotMode, 'viewport');
         });
     });
+
+    describe('orientation', () => {
+        it('should throw an error if option value is not string', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({orientation: {not: 'string'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"orientation" must be a string/);
+        });
+
+        it('should throw an error if option value is not "landscape" or "portrait"', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({orientation: 'foo bar'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"orientation" must be "landscape" or "portrait"/);
+        });
+
+        describe('should not throw an error if option value is', () => {
+            ['landscape', 'portrait'].forEach((value) => {
+                it(`${value}`, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({orientation: value})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.orientation, defaults.orientation);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                orientation: 'landscape',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({orientation: 'portrait'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.orientation, 'landscape');
+            assert.equal(config.browsers.b2.orientation, 'portrait');
+        });
+    });
 });

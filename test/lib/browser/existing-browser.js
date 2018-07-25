@@ -182,6 +182,20 @@ describe('ExistingBrowser', () => {
                 .then(() => assert.equal(browser.sessionId, '100-500'));
         });
 
+        describe('set browser orientation', () => {
+            it('should not set orientation if it is not specified in config', async () => {
+                await mkBrowser_().init();
+
+                assert.notCalled(session.setOrientation);
+            });
+
+            it('should set orientation that specified in config', async () => {
+                await mkBrowser_({orientation: 'portrait'}).init();
+
+                assert.calledOnceWith(session.setOrientation, 'portrait');
+            });
+        });
+
         describe('cursor position', () => {
             it('should reset cursor position', async () => {
                 await mkBrowser_().init();
