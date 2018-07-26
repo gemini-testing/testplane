@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.79.1"></a>
+## [0.79.1](https://github.com/gemini-testing/hermione/compare/v0.79.0...v0.79.1) (2018-07-26)
+
+
+### Reverts
+
+* reset cursor position to 0, 0 before running test ([33decf1](https://github.com/gemini-testing/hermione/commit/33decf1))
+
+
+
 <a name="0.79.0"></a>
 # [0.79.0](https://github.com/gemini-testing/hermione/compare/v0.78.4...v0.79.0) (2018-07-25)
 
