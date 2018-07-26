@@ -35,7 +35,7 @@
     "bluebird-q": "^2.1.1",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
-    "commander": "gemini-testing/commander.js#fix-general-command",
+    "commander": "^2.16.0",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.0",
     "gemini-core": "^2.9.1",
@@ -48,8 +48,8 @@
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "gemini-testing/webdriverio#fix.opera",
-    "worker-farm": "git://github.com/gemini-testing/node-worker-farm.git#release/feat/on.child.start"
+    "webdriverio": "4.9.11",
+    "worker-farm": "git://github.com/gemini-testing/node-worker-farm#642da108e7d937fb02f5edfc9e04261ba9936eef"
   },
   "devDependencies": {
     "app-module-path": "^2.2.0",
