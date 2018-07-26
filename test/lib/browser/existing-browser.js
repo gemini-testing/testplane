@@ -196,42 +196,6 @@ describe('ExistingBrowser', () => {
             });
         });
 
-        describe('cursor position', () => {
-            it('should reset cursor position', async () => {
-                await mkBrowser_().init();
-
-                assert.calledOnceWith(session.moveToObject, 'body', 0, 0);
-            });
-
-            it('should disable deprecation warnings when resetting position of the cursor', async () => {
-                let deprecationWarnings;
-                session.moveToObject.callsFake(() => ({deprecationWarnings} = session.options));
-
-                await mkBrowser_().init();
-
-                assert.isFalse(deprecationWarnings);
-            });
-
-            describe('should restore deprecation warnings', () => {
-                it('after session is raised', async () => {
-                    session.options.deprecationWarnings = true;
-
-                    await mkBrowser_().init();
-
-                    assert.isTrue(session.options.deprecationWarnings);
-                });
-
-                it('if reset position of the cursor is failed', async () => {
-                    session.options.deprecationWarnings = true;
-                    session.moveToObject.rejects(new Error());
-
-                    await mkBrowser_().init().catch(() => {});
-
-                    assert.isTrue(session.options.deprecationWarnings);
-                });
-            });
-        });
-
         describe('camera calibration', () => {
             let calibrator;
 
