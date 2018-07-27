@@ -48,7 +48,7 @@
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "4.9.11",
+    "webdriverio": "git://github.com/gemini-testing/webdriverio#580414f09c54eb2e1dcd5079c5223d4f08bc492c",
     "worker-farm": "git://github.com/gemini-testing/node-worker-farm#642da108e7d937fb02f5edfc9e04261ba9936eef"
   },
   "devDependencies": {
