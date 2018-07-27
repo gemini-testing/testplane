@@ -35,7 +35,7 @@
     "bluebird-q": "^2.1.1",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
-    "commander": "^2.16.0",
+    "commander": "gemini-testing/commander.js#fix-general-command",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.0",
     "gemini-core": "^2.9.1",
