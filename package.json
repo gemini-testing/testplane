@@ -48,8 +48,8 @@
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "git://github.com/gemini-testing/webdriverio#580414f09c54eb2e1dcd5079c5223d4f08bc492c",
-    "worker-farm": "git://github.com/gemini-testing/node-worker-farm#642da108e7d937fb02f5edfc9e04261ba9936eef"
+    "webdriverio": "git://github.com/gemini-testing/webdriverio#fix.opera",
+    "forker-farm": "1.6.0"
   },
   "devDependencies": {
     "app-module-path": "^2.2.0",
