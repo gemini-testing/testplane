@@ -15,7 +15,7 @@ describe('Workers', () => {
             system: {}
         });
 
-        const Workers = proxyquire('../../../lib/runner/workers', {'forker-farm': workerFarm});
+        const Workers = proxyquire('../../../lib/runner/workers', {'@gemini-testing/worker-farm': workerFarm});
 
         return Workers.create(config);
     };

@@ -1,7 +1,7 @@
 'use strict';
 
 const q = require('q');
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');

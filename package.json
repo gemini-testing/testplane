@@ -31,11 +31,13 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@gemini-testing/commander": "2.15.2",
+    "@gemini-testing/webdriverio": "4.9.11",
+    "@gemini-testing/worker-farm": "1.6.0",
     "bluebird": "^3.5.1",
     "bluebird-q": "^2.1.1",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
-    "commander": "gemini-testing/commander.js#fix-general-command",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.0",
     "gemini-core": "^2.9.1",
@@ -47,9 +49,7 @@
     "q": "^2.0.0",
     "q-promise-utils": "^1.0.0",
     "teamcity-service-messages": "^0.1.6",
-    "urijs": "^1.17.0",
-    "webdriverio": "git://github.com/gemini-testing/webdriverio#fix.opera",
-    "forker-farm": "1.6.0"
+    "urijs": "^1.17.0"
   },
   "devDependencies": {
     "app-module-path": "^2.2.0",
