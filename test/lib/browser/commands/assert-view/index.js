@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const fsExtra = require('fs-extra');
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const {Image, temp, ScreenShooter} = require('gemini-core');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');

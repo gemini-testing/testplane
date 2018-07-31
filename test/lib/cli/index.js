@@ -1,6 +1,6 @@
 'use strict';
 
-const {Command} = require('commander');
+const {Command} = require('@gemini-testing/commander');
 const q = require('q');
 const _ = require('lodash');
 const hermioneCli = require('lib/cli');

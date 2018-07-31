@@ -2,7 +2,7 @@
 
 const Promise = require('bluebird');
 const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
