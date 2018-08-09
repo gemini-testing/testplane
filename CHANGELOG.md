@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.81.1"></a>
+## [0.81.1](https://github.com/gemini-testing/hermione/compare/v0.81.0...v0.81.1) (2018-08-09)
+
+
+
 <a name="0.81.0"></a>
 # [0.81.0](https://github.com/gemini-testing/hermione/compare/v0.79.2...v0.81.0) (2018-08-09)
 
