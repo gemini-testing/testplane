@@ -43,6 +43,7 @@ describe('worker/runner/test-runner', () => {
 
     beforeEach(() => {
         sandbox.stub(BrowserAgent.prototype, 'getBrowser').resolves(mkBrowser_());
+        sandbox.stub(BrowserAgent.prototype, 'freeBrowser');
 
         sandbox.stub(ExecutionThread, 'create').returns(Object.create(ExecutionThread.prototype));
         sandbox.stub(ExecutionThread.prototype, 'run').callsFake((runnable) => runnable.fn());
@@ -355,6 +356,35 @@ describe('worker/runner/test-runner', () => {
                 assert.match(result.meta, {foo: 'bar'});
                 assert.match(result.changes, {baz: 'qux'});
             });
+
+            it('should release browser', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
+            });
+
+            it('should release browser after all browser data has been used', async () => {
+                ExecutionThread.create.callsFake(({browser}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        browser.meta.foo = 'bar';
+                        browser.changes.baz = 'qux';
+                    });
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                BrowserAgent.prototype.freeBrowser.callsFake((browser) => {
+                    browser.meta = null;
+                    browser.changes = null;
+                });
+
+                const result = await run_();
+
+                assert.match(result.meta, {foo: 'bar'});
+                assert.match(result.changes, {baz: 'qux'});
+            });
         });
 
         describe('on fail', () => {
@@ -413,6 +443,17 @@ describe('worker/runner/test-runner', () => {
 
                 assert.match(error.meta, {foo: 'bar'});
                 assert.match(error.changes, {baz: 'qux'});
+            });
+
+            it('should release browser', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                ExecutionThread.prototype.run.rejects(new Error());
+
+                await run_().catch((e) => e);
+
+                assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
             });
         });
     });
