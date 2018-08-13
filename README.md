@@ -794,7 +794,33 @@ hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
 
 ### AssertView
 
-Under development.
+Command that adds ability to take screenshot for test state. Each state should have his own unique name. For example:
+
+```js
+it('some test', function() {
+    return this.browser
+        .url('some/url')
+        .assertView('plain', '.button')
+        .click('.button')
+        .assertView('clicked', '.button');
+});
+```
+
+Parameters:
+ - state (required) `String` – state name
+ - selector (required) `String|String[]` – DOM-node selector that you need to capture
+ - opts (optional) `Object`:
+   - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
+
+Full example:
+
+```js
+it('some test', function() {
+    return this.browser
+        .url('some/url')
+        .assertView('plain', '.form', {ignoreElements: ['.link']});
+});
+```
 
 ## Programmatic API
 
