@@ -2,6 +2,7 @@
 
 const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
 const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
+const HighPriorityBrowserAgent = require('lib/runner/test-runner/high-priority-browser-agent');
 const Events = require('lib/constants/runner-events');
 const Workers = require('lib/runner/workers');
 const {BrowserAgent} = require('gemini-core');
@@ -18,7 +19,8 @@ describe('runner/test-runner/insistant-test-runner', () => {
         const config = opts.config || makeConfigStub();
 
         const browserId = Object.keys(config.browsers)[0];
-        const browserAgent = opts.browserAgent || BrowserAgent.create(browserId);
+        const browserAgent = opts.browserAgent || BrowserAgent.create();
+        browserAgent.browserId = browserId;
 
         return InsistantTestRunner.create(test, config, browserAgent);
     };
@@ -51,6 +53,8 @@ describe('runner/test-runner/insistant-test-runner', () => {
     beforeEach(() => {
         sandbox.spy(RegularTestRunner, 'create');
         sandbox.stub(RegularTestRunner.prototype, 'run').resolves();
+
+        sandbox.stub(HighPriorityBrowserAgent, 'create').returns(HighPriorityBrowserAgent.prototype);
     });
 
     afterEach(() => sandbox.restore());
@@ -128,8 +132,9 @@ describe('runner/test-runner/insistant-test-runner', () => {
         });
 
         describe('if retries set', () => {
-            const mkRunnerWithRetries_ = () => {
+            const mkRunnerWithRetries_ = (opts = {}) => {
                 return mkRunner_({
+                    ...opts,
                     config: makeConfigStub({retry: 1})
                 });
             };
@@ -157,6 +162,21 @@ describe('runner/test-runner/insistant-test-runner', () => {
                     await run_({runner: mkRunnerWithRetries_()});
 
                     assert.calledTwice(RegularTestRunner.create);
+                });
+
+                it('should create test runner with high priority browser agent', async () => {
+                    onFirstTestRun_((innerRunner) => innerRunner.emit(Events.TEST_FAIL, makeFailedTest_()));
+
+                    const browserAgent = Object.create(BrowserAgent.prototype);
+                    const highPriorityBrowserAgent = Object.create(HighPriorityBrowserAgent.prototype);
+                    HighPriorityBrowserAgent.create
+                        .withArgs(browserAgent).returns(highPriorityBrowserAgent);
+                    const runner = mkRunnerWithRetries_({browserAgent});
+
+                    await run_({runner});
+
+                    assert.calledWith(RegularTestRunner.create, sinon.match.any, sinon.match.any,
+                        highPriorityBrowserAgent);
                 });
 
                 it('should emit RETRY event', async () => {
