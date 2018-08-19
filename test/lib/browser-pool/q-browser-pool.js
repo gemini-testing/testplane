@@ -26,12 +26,13 @@ describe('browser-pool/q-browser-pool', () => {
     afterEach(() => sandbox.restore());
 
     describe('getBrowser', () => {
-        it('should get a browser', () => {
+        it('should get a browser', async () => {
             const browserPool = stubBrowserPool();
             const qBrowserPool = QBrowserPool.create(browserPool);
 
-            return qBrowserPool.getBrowser('bro')
-                .then(() => assert.calledOnceWith(browserPool.getBrowser, 'bro'));
+            await qBrowserPool.getBrowser('bro', {some: 'opt'});
+
+            assert.calledOnceWith(browserPool.getBrowser, 'bro', {some: 'opt'});
         });
 
         it('should wrap a result into "q" promises', () => {
