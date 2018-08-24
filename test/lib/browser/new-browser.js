@@ -2,6 +2,7 @@
 
 const q = require('q');
 const webdriverio = require('@gemini-testing/webdriverio');
+const {keys} = require('gemini-core');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
@@ -36,6 +37,12 @@ describe('NewBrowser', () => {
                     connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
                 }));
+        });
+
+        it('should add "keys" constants to public API', () => {
+            const browser = mkBrowser_();
+
+            assert.deepEqual(browser.publicAPI.keys, keys);
         });
 
         describe('extendOptions command', () => {
