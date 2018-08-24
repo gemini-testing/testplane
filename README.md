@@ -23,6 +23,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [WebdriverIO extensions](#webdriverio-extensions)
   - [Sharable meta info](#sharable-meta-info)
   - [Execution context](#execution-context)
+  - [keys](#keys)
 - [Quick start](#quick-start)
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
@@ -345,6 +346,19 @@ test: {
   "meta": {},
   "timer": {}
 }
+```
+
+### keys
+
+Codes of some base keys.
+
+Example:
+```js
+it('some test', function() {
+    return this.browser
+        .url('/foo/bar')
+        .keys(this.browser.TAB);
+});
 ```
 
 ## Quick start
