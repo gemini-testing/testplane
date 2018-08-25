@@ -103,46 +103,48 @@ describe('config options', () => {
             });
         });
 
-        describe('patternsOnReject', () => {
-            it('should be empty by default', () => {
-                const config = createConfig();
+        ['patternsOnReject', 'patternsOnSkipAfterEachHooks'].forEach((option) => {
+            describe(`${option}`, () => {
+                it('should be empty by default', () => {
+                    const config = createConfig();
 
-                assert.deepEqual(config.system.patternsOnReject, []);
-            });
-
-            it('should throw error if "patternsOnReject" is not an array', () => {
-                const readConfig = _.set({}, 'system.patternsOnReject', {});
-
-                Config.read.returns(readConfig);
-
-                assert.throws(() => createConfig(), Error, '"patternsOnReject" must be an array');
-            });
-
-            it('should override "patternsOnReject" option', () => {
-                const readConfig = _.set({}, 'system.patternsOnReject', ['some-pattern']);
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.deepEqual(config.system.patternsOnReject, ['some-pattern']);
-            });
-
-            it('should parse "patternsOnReject" option from environment', () => {
-                const result = parse_({
-                    options: {system: {patternsOnReject: []}},
-                    env: {'hermione_system_patterns_on_reject': '["some-pattern"]'}
+                    assert.deepEqual(config.system[option], []);
                 });
 
-                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
-            });
+                it(`should throw error if "${option}" is not an array`, () => {
+                    const readConfig = _.set({}, `system.${option}`, {});
 
-            it('should parse "patternsOnReject" options from cli', () => {
-                const result = parse_({
-                    options: {system: {patternsOnReject: []}},
-                    argv: ['--system-patterns-on-reject', '["some-pattern"]']
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `"${option}" must be an array`);
                 });
 
-                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
+                it(`should override "${option}" option`, () => {
+                    const readConfig = _.set({}, `system.${option}`, ['some-pattern']);
+                    Config.read.returns(readConfig);
+
+                    const config = createConfig();
+
+                    assert.deepEqual(config.system[option], ['some-pattern']);
+                });
+
+                it(`should parse "${option}" option from environment`, () => {
+                    const result = parse_({
+                        options: {system: {[option]: []}},
+                        env: {[`hermione_system_${_.snakeCase(option)}`]: '["some-pattern"]'}
+                    });
+
+                    assert.deepEqual(result.system[option], ['some-pattern']);
+                });
+
+                it(`should parse "${option}" options from cli`, () => {
+                    const result = parse_({
+                        options: {system: {[option]: []}},
+                        argv: [`--system-${_.kebabCase(option)}`, '["some-pattern"]']
+                    });
+
+                    assert.deepEqual(result.system[option], ['some-pattern']);
+                });
             });
         });
 
