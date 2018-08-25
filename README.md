@@ -49,6 +49,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [mochaOpts](#mochaopts)
     - [ctx](#ctx)
     - [patternsOnReject](#patternsonreject)
+    - [patternsOnSkipAfterEachHooks](#patternsOnSkipAfterEachHooks)
     - [workers](#workers)
     - [testsPerWorker](#testsperworker)
   - [plugins](#plugins)
@@ -586,7 +587,16 @@ it('awesome test', function() {
 **Recommendation**: use `ctx` in your tests in favor of global variables.
 
 #### patternsOnReject
-Session would be rejected if test has been faile with error message which matches to specified patterns:
+Session would be rejected if test has been failed with error message which matches to specified patterns:
+```javascript
+patternsOnReject: [
+    /some-pattern/,
+    'other-pattern'
+]
+```
+
+#### patternsOnSkipAfterEachHooks
+`afterEach` hook would be skipped if test or `beforeEach` hook has been failed with error message which matches to specified patterns:
 ```javascript
 patternsOnReject: [
     /some-pattern/,
