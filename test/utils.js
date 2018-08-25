@@ -20,7 +20,8 @@ function makeConfigStub(opts = {}) {
         configPath: 'some-default-config-path',
         system: {
             mochaOpts: {},
-            patternsOnReject: []
+            patternsOnReject: [],
+            patternsOnSkipAfterEachHooks: []
         },
         sets: {}
     });

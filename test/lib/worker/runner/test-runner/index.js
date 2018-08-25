@@ -210,6 +210,31 @@ describe('worker/runner/test-runner', () => {
         });
 
         describe('afterEach hooks', () => {
+            it('should not be called if session is broken in beforeEach hook', async () => {
+                const config = makeConfigStub({
+                    system: {patternsOnSkipAfterEachHooks: ['FOO_BAR']}
+                });
+                const runner = mkRunner_({config});
+
+                HookRunner.prototype.runBeforeEachHooks.rejects(new Error('FOO_BAR'));
+
+                await run_({runner}).catch(() => {});
+
+                assert.notCalled(HookRunner.prototype.runAfterEachHooks);
+            });
+
+            it('should not be called if session is broken in test', async () => {
+                const config = makeConfigStub({
+                    system: {patternsOnSkipAfterEachHooks: ['FOO_BAR']}
+                });
+                const test = mkTest_({fn: sinon.stub().rejects(new Error('FOO_BAR'))});
+                const runner = mkRunner_({config, test});
+
+                await run_({runner}).catch(() => {});
+
+                assert.notCalled(HookRunner.prototype.runAfterEachHooks);
+            });
+
             it('should be called if beforeEach hook failed', async () => {
                 HookRunner.prototype.runBeforeEachHooks.rejects(new Error());
 
