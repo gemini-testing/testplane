@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const Promise = require('bluebird');
 const TestRunner = require('lib/worker/runner/test-runner');
 const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
@@ -28,8 +29,13 @@ describe('worker/runner/test-runner', () => {
     };
 
     const mkBrowser_ = (prototype = {}) => {
+        const publicAPI = _.defaults(prototype, {
+            moveToObject: sandbox.stub(),
+            options: {deprecationWarnings: true}
+        });
+
         return {
-            publicAPI: Object.create(prototype),
+            publicAPI,
             meta: {},
             changes: {}
         };
@@ -100,7 +106,7 @@ describe('worker/runner/test-runner', () => {
         });
 
         it('should create execution thread with requested browser', async () => {
-            const browser = {id: 'bro'};
+            const browser = mkBrowser_();
             BrowserAgent.prototype.getBrowser.resolves(browser);
 
             await run_();
@@ -174,6 +180,50 @@ describe('worker/runner/test-runner', () => {
             await run_({test});
 
             assert.notProperty(test, 'foo');
+        });
+
+        describe('cursor position', () => {
+            it('should reset cursor position', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.calledOnceWith(browser.publicAPI.moveToObject, 'body', 0, 0);
+            });
+
+            it('should disable deprecation warnings when resetting position of the cursor', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                let deprecationWarnings;
+                browser.publicAPI.moveToObject.callsFake(() => ({deprecationWarnings} = browser.publicAPI.options));
+
+                await run_();
+
+                assert.isFalse(deprecationWarnings);
+            });
+
+            describe('should restore deprecation warnings', () => {
+                it('after session is raised', async () => {
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.isTrue(browser.publicAPI.options.deprecationWarnings);
+                });
+
+                it('if reset position of the cursor is failed', async () => {
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    browser.publicAPI.moveToObject.rejects(new Error());
+
+                    await run_().catch(() => {});
+
+                    assert.isTrue(browser.publicAPI.options.deprecationWarnings);
+                });
+            });
         });
 
         describe('beforeEach hooks', () => {
