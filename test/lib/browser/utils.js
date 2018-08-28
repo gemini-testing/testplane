@@ -39,11 +39,13 @@ exports.mkExistingBrowser_ = (opts) => {
     return ExistingBrowser.create(createBrowserConfig_(opts), 'browser');
 };
 
-exports.mkSessionStub_ = () => {
+exports.mkSessionStub_ = (options = {}) => {
     const session = q();
+    session.options = options;
     session.init = sinon.stub().named('init').returns(session);
     session.end = sinon.stub().named('end').resolves();
     session.url = sinon.stub().named('url').returns(session);
+    session.moveToObject = sinon.stub().named('moveToObject').returns(session);
     session.execute = sinon.stub().named('execute').resolves({});
     session.windowHandleSize = sinon.stub().named('windowHandleSize').resolves({value: {}});
     session.requestHandler = {defaultOptions: {}};

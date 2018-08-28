@@ -68,62 +68,110 @@ describe('ExistingBrowser', () => {
                 assert.calledWith(session.addCommand, 'url', sinon.match.func, true);
             });
 
-            it('should call base `url` method', () => {
+            it('should call base `url` method', async () => {
                 const baseUrlFn = session.url;
 
                 mkBrowser_();
 
-                session.url('/foo/bar?baz=qux');
+                await session.url('/foo/bar?baz=qux');
 
                 assert.calledWith(baseUrlFn, 'http://base_url/foo/bar?baz=qux');
                 assert.calledOn(baseUrlFn, session);
             });
 
-            it('should add last url to meta-info and replace path if it starts from /', () => {
+            it('should move cursor to position "0,0"', async () => {
+                mkBrowser_();
+
+                await session.url('/some/url');
+
+                assert.calledOnceWith(session.moveToObject, 'body', 0, 0);
+            });
+
+            it('should disable deprecation warnings before cursor moving', async () => {
+                session = mkSessionStub_({deprecationWarnings: true});
+                webdriverio.remote.returns(session);
+
+                mkBrowser_();
+
+                let deprecationWarnings;
+                session.moveToObject.callsFake(() => deprecationWarnings = session.options.deprecationWarnings);
+
+                await session.url('/some/url');
+
+                assert.isFalse(deprecationWarnings);
+            });
+
+            describe('should restore deprecation warnings', () => {
+                it('after cursor moving', async () => {
+                    session = mkSessionStub_({deprecationWarnings: true});
+                    webdriverio.remote.returns(session);
+
+                    mkBrowser_();
+
+                    await session.url('/some/url');
+
+                    assert.isTrue(session.options.deprecationWarnings);
+                });
+
+                it('if cursor moving is failed', async () => {
+                    session = mkSessionStub_({deprecationWarnings: true});
+                    webdriverio.remote.returns(session);
+
+                    session.moveToObject.rejects(new Error());
+
+                    mkBrowser_();
+
+                    await session.url('/some/url').catch(() => {});
+
+                    assert.isTrue(session.options.deprecationWarnings);
+                });
+            });
+
+            it('should add last url to meta-info and replace path if it starts from /', async () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org/root'});
 
-                session.url('/some/url');
-                session.url('/foo/bar?baz=qux');
+                await session.url('/some/url');
+                await session.url('/foo/bar?baz=qux');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/foo/bar?baz=qux');
             });
 
-            it('should add last url to meta-info if it contains only query part', () => {
+            it('should add last url to meta-info if it contains only query part', async () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org/root'});
 
-                session.url('?baz=qux');
+                await session.url('?baz=qux');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/root?baz=qux');
             });
 
-            it('should concat url without slash at the beginning to the base url', () => {
+            it('should concat url without slash at the beginning to the base url', async () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org'});
 
-                session.url('some/url');
+                await session.url('some/url');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
             });
 
-            it('should not remove the last slash from meta url', () => {
+            it('should not remove the last slash from meta url', async () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org'});
 
-                session.url('/some/url/');
+                await session.url('/some/url/');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/some/url/');
             });
 
-            it('should remove consecutive slashes in meta url', () => {
+            it('should remove consecutive slashes in meta url', async () => {
                 const browser = mkBrowser_({baseUrl: 'http://some.domain.org/'});
 
-                session.url('/some/url');
+                await session.url('/some/url');
 
                 assert.equal(browser.meta.url, 'http://some.domain.org/some/url');
             });
 
-            it('should not save any url if `url` called as getter', () => {
+            it('should not save any url if `url` called as getter', async () => {
                 const browser = mkBrowser_();
 
-                session.url();
+                await session.url();
 
                 assert.notProperty(browser.meta, 'url');
             });
