@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.83.0"></a>
+# [0.83.0](https://github.com/gemini-testing/hermione/compare/v0.82.0...v0.83.0) (2018-08-28)
+
+
+### Features
+
+* reset cursor position to (0, 0) before open the url ([cab14ee](https://github.com/gemini-testing/hermione/commit/cab14ee))
+
+
+
 <a name="0.82.0"></a>
 # [0.82.0](https://github.com/gemini-testing/hermione/compare/v0.81.2...v0.82.0) (2018-08-19)
 
