@@ -87,6 +87,16 @@ describe('ExistingBrowser', () => {
                 assert.calledOnceWith(session.moveToObject, 'body', 0, 0);
             });
 
+            it('should move cursor to position "0,0" before open the page', async () => {
+                const baseUrlFn = session.url;
+
+                mkBrowser_();
+
+                await session.url('/foo/bar?baz=qux');
+
+                assert.callOrder(session.moveToObject, baseUrlFn);
+            });
+
             it('should disable deprecation warnings before cursor moving', async () => {
                 session = mkSessionStub_({deprecationWarnings: true});
                 webdriverio.remote.returns(session);
