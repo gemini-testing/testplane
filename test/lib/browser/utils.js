@@ -20,8 +20,7 @@ function createBrowserConfig_(opts = {}) {
         screenshotDelay: 0,
         windowSize: null,
         getScreenshotPath: () => '/some/path',
-        system: opts.system || {},
-        resetCursor: true
+        system: opts.system || {}
     });
 
     return {

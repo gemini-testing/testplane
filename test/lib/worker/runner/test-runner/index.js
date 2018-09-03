@@ -1,5 +1,6 @@
 'use strict';
 
+const _ = require('lodash');
 const Promise = require('bluebird');
 const TestRunner = require('lib/worker/runner/test-runner');
 const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
@@ -27,9 +28,17 @@ describe('worker/runner/test-runner', () => {
         return TestRunner.create(test, config, browserAgent);
     };
 
-    const mkBrowser_ = (prototype = {}) => {
+    const mkBrowser_ = ({prototype, config} = {}) => {
+        const publicAPI = _.defaults(prototype, {
+            moveToObject: sandbox.stub().named('moveToObject').resolves(),
+            scroll: sandbox.stub().named('scroll').resolves(),
+            options: {deprecationWarnings: true}
+        });
+        config = _.defaults(config, {resetCursor: true});
+
         return {
-            publicAPI: Object.create(prototype),
+            publicAPI,
+            config,
             meta: {},
             changes: {}
         };
@@ -100,7 +109,7 @@ describe('worker/runner/test-runner', () => {
         });
 
         it('should create execution thread with requested browser', async () => {
-            const browser = {id: 'bro'};
+            const browser = mkBrowser_();
             BrowserAgent.prototype.getBrowser.resolves(browser);
 
             await run_();
@@ -174,6 +183,96 @@ describe('worker/runner/test-runner', () => {
             await run_({test});
 
             assert.notProperty(test, 'foo');
+        });
+
+        describe('cursor position', () => {
+            it('should not scroll to position "0,0" if option "resetCursor" is disabled', async () => {
+                const browser = mkBrowser_({config: {resetCursor: false}});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.notCalled(browser.publicAPI.scroll);
+            });
+
+            it('should not move cursor to position "0,0" if option "resetCursor" is disabled', async () => {
+                const browser = mkBrowser_({config: {resetCursor: false}});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.notCalled(browser.publicAPI.moveToObject);
+            });
+
+            it('should scroll to position "0,0" if option "resetCursor is enabled', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.calledOnceWith(browser.publicAPI.scroll, 'body', 0, 0);
+            });
+
+            it('should move cursor to position "0,0" if option "resetCursor is enabled', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.calledOnceWith(browser.publicAPI.moveToObject, 'body', 0, 0);
+            });
+
+            it('should scroll before moving cursor', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.callOrder(browser.publicAPI.scroll, browser.publicAPI.moveToObject);
+            });
+
+            it('should disable deprecation warnings before scroll', async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                let deprecationWarnings;
+                browser.publicAPI.scroll.callsFake(() => ({deprecationWarnings} = browser.publicAPI.options));
+
+                await run_();
+
+                assert.isFalse(deprecationWarnings);
+            });
+
+            describe('should restore deprecation warnings', () => {
+                it('after cursor moving', async () => {
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.isTrue(browser.publicAPI.options.deprecationWarnings);
+                });
+
+                it('if scroll is failed', async () => {
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    browser.publicAPI.scroll.rejects(new Error());
+
+                    await run_().catch(() => {});
+
+                    assert.isTrue(browser.publicAPI.options.deprecationWarnings);
+                });
+
+                it('if cursor moving is failed', async () => {
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    browser.publicAPI.moveToObject.rejects(new Error());
+
+                    await run_().catch(() => {});
+
+                    assert.isTrue(browser.publicAPI.options.deprecationWarnings);
+                });
+            });
         });
 
         describe('beforeEach hooks', () => {
