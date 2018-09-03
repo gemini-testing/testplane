@@ -44,6 +44,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [windowSize](#windowsize)
   - [screenshotDelay](#screenshotdelay)
   - [orientation](#orientation)
+  - [resetCursor](#resetcursor)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -483,6 +484,7 @@ Option name               | Description
 `windowSize`              | Browser window dimensions. Default value is `null`.
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
 `orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
+`resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` after each `url` command.
 
 ### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -554,6 +556,9 @@ Allows to specify a delay (in milliseconds) before making any screenshot. This i
 
 ### orientation
 Browser orientation (`landscape`, `portrait`) that will be set before each test run. It is necessary in order to return the browser orientation to the default state after test execution in which orientation is changed. Default value is `null`.
+
+### resetCursor
+Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` after each `url` command. This can be useful to escape cases when a default position of a cursor affects your tests. We recomend to set this option *truthy* value for desktop browsers and *falsey* for mobile devices. Default value is `true`.
 
 ### system
 
