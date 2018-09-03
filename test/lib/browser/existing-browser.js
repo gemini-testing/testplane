@@ -79,7 +79,15 @@ describe('ExistingBrowser', () => {
                 assert.calledOn(baseUrlFn, session);
             });
 
-            it('should move cursor to position "0,0"', async () => {
+            it('should not move cursor to position "0,0" if option "resetCursor" is disabled', async () => {
+                mkBrowser_({resetCursor: false});
+
+                await session.url('/some/url/');
+
+                assert.notCalled(session.moveToObject);
+            });
+
+            it('should move cursor to position "0,0" if option "resetCursor" is enabled', async () => {
                 mkBrowser_();
 
                 await session.url('/some/url');
