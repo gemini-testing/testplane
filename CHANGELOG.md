@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.85.0"></a>
+# [0.85.0](https://github.com/gemini-testing/hermione/compare/v0.84.0...v0.85.0) (2018-09-04)
+
+
+### Features
+
+* move mouse cursor to "body" coordinates 0,0 before each run test ([2c16f81](https://github.com/gemini-testing/hermione/commit/2c16f81))
+
+
+### Reverts
+
+* reset cursor position to (0, 0) before open the url ([4af3771](https://github.com/gemini-testing/hermione/commit/4af3771))
+
+
+
 <a name="0.84.0"></a>
 # [0.84.0](https://github.com/gemini-testing/hermione/compare/v0.82.0...v0.84.0) (2018-09-04)
 
