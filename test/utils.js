@@ -18,6 +18,7 @@ function makeConfigStub(opts = {}) {
         sessionsPerBrowser: 1,
         testsPerSession: Infinity,
         configPath: 'some-default-config-path',
+        resetCursor: true,
         system: {
             mochaOpts: {},
             patternsOnReject: []
