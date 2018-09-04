@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.84.0"></a>
+# [0.84.0](https://github.com/gemini-testing/hermione/compare/v0.82.0...v0.84.0) (2018-09-04)
+
+
+### Features
+
+* 'orientation' command waits for screen rotate ([2e23fe4](https://github.com/gemini-testing/hermione/commit/2e23fe4))
+* add option 'resetCursor' ([0e6f767](https://github.com/gemini-testing/hermione/commit/0e6f767))
+* reset cursor position to (0, 0) before open the url ([cab14ee](https://github.com/gemini-testing/hermione/commit/cab14ee))
+
+
+
 <a name="0.83.0"></a>
 # [0.83.0](https://github.com/gemini-testing/hermione/compare/v0.82.0...v0.83.0) (2018-08-28)
 
