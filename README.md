@@ -16,6 +16,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
   - [Offers flexible test configuration](#offers-flexible-test-configuration)
   - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
+  - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
 - [Prerequisites](#prerequisites)
 - [Hooks](#hooks)
 - [Skip](#skip)
@@ -179,6 +180,9 @@ See [sets](#sets) for more details.
 
 ### Automatically initializes and closes grid sessions
 All work with the grid client is encapsulated in hermione. Forget about `client.init` and `client.end` in your tests ;)
+
+### Fairly waits for screen rotate
+Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but `Hermione` solves this problem.
 
 ## Prerequisites
 Because `hermione` is based on `WebdriverIO`, you need to set up [Selenium](http://www.seleniumhq.org/) before proceeding further.
