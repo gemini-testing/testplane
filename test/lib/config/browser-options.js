@@ -765,74 +765,76 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('tolerance', () => {
-        describe('should throw an error', () => {
-            it('if value is not number', () => {
+    ['tolerance', 'antialiasingTolerance'].forEach((option) => {
+        describe(`${option}`, () => {
+            describe('should throw an error', () => {
+                it('if value is not number', () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({[option]: []})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `"${option}" must be a number`);
+                });
+
+                it('if value is negative', () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({[option]: -1})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `"${option}" must be non-negative`);
+                });
+            });
+
+            it('should set a default value if it is not set in config', () => {
                 const readConfig = {
                     browsers: {
-                        b1: mkBrowser_({tolerance: []})
+                        b1: mkBrowser_()
                     }
                 };
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, '"tolerance" must be a number');
+                const config = createConfig();
+
+                assert.equal(config[option], defaults[option]);
             });
 
-            it('if value is negative', () => {
+            it('should does not throw if value is 0', () => {
                 const readConfig = {
                     browsers: {
-                        b1: mkBrowser_({tolerance: -1})
+                        b1: mkBrowser_({[option]: 0})
                     }
                 };
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, '"tolerance" must be non-negative');
+                assert.doesNotThrow(createConfig);
             });
-        });
 
-        it('should set a default value if it is not set in config', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_()
-                }
-            };
+            it('should override option for browser', () => {
+                const readConfig = {
+                    [option]: 100,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[option]: 200})
+                    }
+                };
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            const config = createConfig();
+                const config = createConfig();
 
-            assert.equal(config.tolerance, defaults.tolerance);
-        });
-
-        it('should does not throw if value is 0', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_({tolerance: 0})
-                }
-            };
-
-            Config.read.returns(readConfig);
-
-            assert.doesNotThrow(createConfig);
-        });
-
-        it('should override option for browser', () => {
-            const readConfig = {
-                tolerance: 100,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({tolerance: 200})
-                }
-            };
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.deepEqual(config.browsers.b1.tolerance, 100);
-            assert.deepEqual(config.browsers.b2.tolerance, 200);
+                assert.deepEqual(config.browsers.b1[option], 100);
+                assert.deepEqual(config.browsers.b2[option], 200);
+            });
         });
     });
 
