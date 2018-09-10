@@ -386,4 +386,39 @@ describe('ExistingBrowser', () => {
                 .then((image) => assert.deepEqual(image, {some: 'image'}));
         });
     });
+
+    describe('markAsBroken', () => {
+        it('should not be marked as broken by default', () => {
+            const browser = mkBrowser_();
+
+            assert.equal(browser.state.isBroken, false);
+        });
+
+        it('should mark browser as broken', () => {
+            const browser = mkBrowser_();
+
+            browser.markAsBroken();
+
+            assert.equal(browser.state.isBroken, true);
+        });
+
+        ['addCommand', 'end', 'session'].forEach((commandName) => {
+            it(`should not stub "${commandName}" session command`, () => {
+                session[commandName] = () => commandName;
+
+                mkBrowser_().markAsBroken();
+
+                assert.equal(session[commandName](), commandName);
+            });
+        });
+
+        it('should stub session commands', async () => {
+            session.foo = () => 'foo';
+
+            mkBrowser_().markAsBroken();
+
+            const result = await session.foo();
+            assert.isUndefined(result);
+        });
+    });
 });

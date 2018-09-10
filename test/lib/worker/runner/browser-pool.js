@@ -28,7 +28,7 @@ describe('worker/browser-pool', () => {
 
     const stubBrowser = (opts) => {
         const bro = _.defaults(opts || {}, {
-            updateChanges: () => {}
+            state: {isBroken: false}
         });
 
         bro.init = sandbox.stub().resolves();
@@ -40,10 +40,7 @@ describe('worker/browser-pool', () => {
 
     beforeEach(() => {
         sandbox.stub(logger, 'warn');
-
-        sandbox.stub(Browser, 'create').returns({
-            updateChanges: () => {}
-        });
+        sandbox.stub(Browser, 'create');
     });
 
     afterEach(() => sandbox.restore());
@@ -135,6 +132,21 @@ describe('worker/browser-pool', () => {
     });
 
     describe('freeBrowser', () => {
+        it('should create a new browser if there is a broken browser in a cache', () => {
+            const browserPool = createPool();
+
+            Browser.create.returns(stubBrowser({id: 'bro-id', state: {isBroken: true}}));
+
+            return browserPool.getBrowser('bro-id', '100-500')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
+                    Browser.create.resetHistory();
+
+                    return browserPool.getBrowser('bro-id', '500-100')
+                        .then(() => assert.calledOnce(Browser.create));
+                });
+        });
+
         it('should set session id to "null"', () => {
             const browserPool = createPool();
 

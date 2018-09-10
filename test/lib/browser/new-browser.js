@@ -83,7 +83,10 @@ describe('NewBrowser', () => {
                     .then((browser) => {
                         return session
                             .windowHandleSize({width: 10, height: 10})
-                            .then(() => assert.deepEqual(browser.changes.originWindowSize, {width: 5, height: 10}));
+                            .then(() => assert.deepEqual(
+                                browser.state.originWindowSize,
+                                {width: 5, height: 10})
+                            );
                     });
             });
 
@@ -91,7 +94,7 @@ describe('NewBrowser', () => {
                 it('by default', () => {
                     return mkBrowser_({windowSize: {width: 5, height: 10}})
                         .init()
-                        .then((browser) => assert.isNull(browser.changes.originWindowSize));
+                        .then((browser) => assert.isNull(browser.state.originWindowSize));
                 });
 
                 it('if "windowHandleSize" was called as getter', () => {
@@ -100,7 +103,7 @@ describe('NewBrowser', () => {
                         .then((browser) => {
                             session.windowHandleSize();
 
-                            assert.isNull(browser.changes.originWindowSize);
+                            assert.isNull(browser.state.originWindowSize);
                         });
                 });
 
@@ -110,7 +113,7 @@ describe('NewBrowser', () => {
                         .then((browser) => {
                             session.windowHandleSize('session-id');
 
-                            assert.isNull(browser.changes.originWindowSize);
+                            assert.isNull(browser.state.originWindowSize);
                         });
                 });
 
@@ -120,7 +123,7 @@ describe('NewBrowser', () => {
                         .then((browser) => {
                             session.windowHandleSize({width: 5, height: 10});
 
-                            assert.isNull(browser.changes.originWindowSize);
+                            assert.isNull(browser.state.originWindowSize);
                         });
                 });
             });

@@ -70,7 +70,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
             await runner.run(workers);
 
-            assert.calledOnceWith(RegularTestRunner.create, test, config, browserAgent);
+            assert.calledOnceWith(RegularTestRunner.create, test, browserAgent);
             assert.calledOnceWith(RegularTestRunner.prototype.run, workers);
         });
 
@@ -175,8 +175,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
                     await run_({runner});
 
-                    assert.calledWith(RegularTestRunner.create, sinon.match.any, sinon.match.any,
-                        highPriorityBrowserAgent);
+                    assert.calledWith(RegularTestRunner.create, sinon.match.any, highPriorityBrowserAgent);
                 });
 
                 it('should emit RETRY event', async () => {
