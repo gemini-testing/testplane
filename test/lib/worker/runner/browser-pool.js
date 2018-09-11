@@ -32,7 +32,7 @@ describe('worker/browser-pool', () => {
         });
 
         bro.init = sandbox.stub().resolves();
-        bro.attach = sandbox.stub().resolves(bro);
+        bro.reinit = sandbox.stub().resolves(bro);
         bro.quit = sandbox.stub();
 
         return bro;
@@ -99,7 +99,7 @@ describe('worker/browser-pool', () => {
                 });
         });
 
-        it('should attach a given session  to a free browser in a cache', () => {
+        it('should reinit a given session to a free browser in a cache', () => {
             const browserPool = createPool();
 
             Browser.create.returns(stubBrowser());
@@ -109,7 +109,7 @@ describe('worker/browser-pool', () => {
                     browserPool.freeBrowser(browser);
 
                     return browserPool.getBrowser('bro-id', '500-100')
-                        .then((anotherBrowser) => assert.calledOnceWith(anotherBrowser.attach, '500-100'));
+                        .then((anotherBrowser) => assert.calledOnceWith(anotherBrowser.reinit, '500-100'));
                 });
         });
 

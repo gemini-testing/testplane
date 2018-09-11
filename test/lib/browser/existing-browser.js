@@ -183,13 +183,13 @@ describe('ExistingBrowser', () => {
         });
 
         describe('set browser orientation', () => {
-            it('should not set orientation if it is not specified in config', async () => {
+            it('should not set orientation if it is not specified in a config', async () => {
                 await mkBrowser_().init();
 
                 assert.notCalled(session.setOrientation);
             });
 
-            it('should set orientation that specified in config', async () => {
+            it('should set orientation which is specified in a config', async () => {
                 await mkBrowser_({orientation: 'portrait'}).init();
 
                 assert.calledOnceWith(session.setOrientation, 'portrait');
@@ -224,11 +224,12 @@ describe('ExistingBrowser', () => {
             });
 
             it('should perform calibration after attaching of a session id', () => {
-                sandbox.spy(Browser.prototype, 'attach');
-
                 return mkBrowser_({calibrate: true})
-                    .init(null, calibrator)
-                    .then(() => assert.callOrder(Browser.prototype.attach, calibrator.calibrate));
+                    .init('100-500', calibrator)
+                    .then(() => {
+                        const browser = calibrator.calibrate.lastCall.args[0];
+                        assert.equal(browser.sessionId, '100-500');
+                    });
             });
         });
 
@@ -240,6 +241,29 @@ describe('ExistingBrowser', () => {
 
             return browser.init(null, calibrator)
                 .then(() => assert.calledOnceWith(clientBridge.build, browser, {calibration: {foo: 'bar'}}));
+        });
+    });
+
+    describe('reinit', () => {
+        it('should attach a browser to a provided session', () => {
+            const browser = mkBrowser_();
+
+            return browser.reinit('100-500')
+                .then(() => assert.equal(browser.sessionId, '100-500'));
+        });
+
+        describe('set browser orientation', () => {
+            it('should not set orientation if it is not specified in a config', async () => {
+                await mkBrowser_().reinit();
+
+                assert.notCalled(session.setOrientation);
+            });
+
+            it('should set orientation which is specified in a config', async () => {
+                await mkBrowser_({orientation: 'portrait'}).reinit();
+
+                assert.calledOnceWith(session.setOrientation, 'portrait');
+            });
         });
     });
 
