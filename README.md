@@ -489,42 +489,44 @@ Option name               | Description
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
 `orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
 `resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run.
+`tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
+`antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
 
-### gridUrl
+#### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
-### baseUrl
+#### baseUrl
 Base service-under-test URL. Default value is `http://localhost`.
 
-### httpTimeout
+#### httpTimeout
 Timeout for any requests to Selenium server. Default value is `90000` ms.
 
-### sessionRequestTimeout
+#### sessionRequestTimeout
 Timeout for getting a browser session. Default value is `httpTimeout`.
 
-### sessionQuitTimeout
+#### sessionQuitTimeout
 Timeout for quitting a session. Default value is `httpTimeout`.
 
-### waitTimeout
+#### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
 
-### sessionsPerBrowser
+#### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
 
-### screenshotOnReject
+#### screenshotOnReject
 Allows to attach a screenshot of a current page on test fail. Default value is `true`.
 
-### screenshotOnRejectTimeout
+#### screenshotOnRejectTimeout
 Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
 
-### testsPerSession
+#### testsPerSession
 Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
 By default is `Infinity` (no limit, all tests will be run in the same session). Set to smaller number in case of problems with stability.
 
-### retry
+#### retry
 How many times a test should be retried if it fails. Global value for all browsers. Default value is `0`.
 
-### shouldRetry
+#### shouldRetry
 Function that determines whether to make a retry. Must return boolean value. By default returns `true` if retry attempts are available otherwise returns `false`.
 Argument of this function is object with fields:
   * `retriesLeft {Number}` — number of available retries
@@ -532,13 +534,13 @@ Argument of this function is object with fields:
   * `[error]` — error type (available only in case of ERROR)
 
 
-### calibrate
+#### calibrate
 Does this browser need to perform the calibration procedure. This procedure allows to correctly capture the image in case the particular WebDriver implementation captures browser UI along with web page. Default value is `false`.
 
-### meta
+#### meta
 Additional data that can be obtained via .getMeta() method
 
-### windowSize
+#### windowSize
 Browser window dimensions (i.e. `1600x1200`). If not specified, the size of the window depends on WebDriver. Can be specified as string with pattern `800x1000` or object with `width` and `height` keys (both keys should be number). For example,
 
 ```javascript
@@ -555,14 +557,20 @@ are the same.
 
 :warning: You can't set specific resolutions for browser Opera or mobile platforms. They use only full-screen resolution.
 
-### screenshotDelay
+#### screenshotDelay
 Allows to specify a delay (in milliseconds) before making any screenshot. This is useful when the page has elements which are animated or if you do not want to screen a scrollbar. Default value is `0`.
 
-### orientation
+#### orientation
 Browser orientation (`landscape`, `portrait`) that will be set before each test run. It is necessary in order to return the browser orientation to the default state after test execution in which orientation is changed. Default value is `null`.
 
-### resetCursor
+#### resetCursor
 Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run. This can be useful to escape cases when a default position of a cursor affects your tests. We recommend to set this option *truthy* value for desktop browsers and *falsey* for mobile devices. Default value is `true`.
+
+#### tolerance
+Indicates maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Used only in non-strict mode. By default it's 2.3 which should be enough for the most cases. Increasing global default is not recommended, prefer changing tolerance for particular suites or states instead.
+
+#### antialiasingTolerance
+Read more about this option in [looks-same](https://github.com/gemini-testing/looks-same#comparing-images-with-ignoring-antialiasing).
 
 ### system
 

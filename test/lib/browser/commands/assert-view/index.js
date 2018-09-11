@@ -190,16 +190,16 @@ describe('assertView command', () => {
         });
 
         it('should compare images with given set of parameters', () => {
-            const config = mkConfig_({tolerance: 100});
+            const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200});
             const browser = stubBrowser_(config);
 
-            browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 200});
+            browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
 
             return browser.publicAPI.assertView()
                 .then(() => assert.calledOnceWith(
                     Image.compare,
                     sinon.match.any, sinon.match.any,
-                    {canHaveCaret: 'foo bar', tolerance: 100, pixelRatio: 200}
+                    {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300}
                 ));
         });
 
