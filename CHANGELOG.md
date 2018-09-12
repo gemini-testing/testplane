@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.87.0"></a>
+# [0.87.0](https://github.com/gemini-testing/hermione/compare/v0.85.0...v0.87.0) (2018-09-12)
+
+
+### Bug Fixes
+
+* set orientation before each test ([5dee565](https://github.com/gemini-testing/hermione/commit/5dee565))
+
+
+### Features
+
+* add "antialiasingTolerance" option ([88d1d1c](https://github.com/gemini-testing/hermione/commit/88d1d1c))
+
+
+
 <a name="0.86.0"></a>
 # [0.86.0](https://github.com/gemini-testing/hermione/compare/v0.85.0...v0.86.0) (2018-09-11)
 
