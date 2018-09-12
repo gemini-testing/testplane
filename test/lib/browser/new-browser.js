@@ -186,6 +186,18 @@ describe('NewBrowser', () => {
                     assert.propertyVal(session.requestHandler.defaultOptions, 'connectionRetryTimeout', 500100);
                 });
         });
+
+        it('should not set page load timeout if it is not specified in a config', () => {
+            return mkBrowser_({pageLoadTimeout: null})
+                .init()
+                .then(() => assert.notCalled(session.timeouts));
+        });
+
+        it('should set page load timeout if it is specified in a config', () => {
+            return mkBrowser_({pageLoadTimeout: 100500})
+                .init()
+                .then(() => assert.calledOnceWith(session.timeouts, 'page load', 100500));
+        });
     });
 
     describe('reset', () => {

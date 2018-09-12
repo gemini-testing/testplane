@@ -13,6 +13,7 @@ function createBrowserConfig_(opts = {}) {
         waitTimeout: 100,
         screenshotPath: 'path/to/screenshots',
         httpTimeout: 3000,
+        pageLoadTimeout: null,
         sessionRequestTimeout: null,
         sessionQuitTimeout: null,
         screenshotOnReject: true,
@@ -51,6 +52,7 @@ exports.mkSessionStub_ = () => {
     session.setOrientation = sinon.stub().named('setOrientation').resolves({value: {}});
     session.orientation = sinon.stub().named('orientation').resolves({value: ''});
     session.waitUntil = sinon.stub().named('waitUntil').resolves();
+    session.timeouts = sinon.stub().named('timeouts').resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
