@@ -421,4 +421,15 @@ describe('ExistingBrowser', () => {
             assert.isUndefined(result);
         });
     });
+
+    describe('quit', () => {
+        it('should overwrite state field', () => {
+            const browser = mkBrowser_();
+            const state = browser.state;
+
+            browser.quit();
+
+            assert.notEqual(state, browser.state);
+        });
+    });
 });
