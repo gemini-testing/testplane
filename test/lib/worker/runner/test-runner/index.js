@@ -40,7 +40,8 @@ describe('worker/runner/test-runner', () => {
             publicAPI,
             config,
             meta: {},
-            changes: {}
+            state: {},
+            markAsBroken: sandbox.stub()
         };
     };
 
@@ -343,6 +344,74 @@ describe('worker/runner/test-runner', () => {
             });
         });
 
+        describe('mark browser as broken', () => {
+            describe('in "beforeEach" hook', () => {
+                it('should not mark if session is not broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const runner = mkRunner_({config});
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.runBeforeEachHooks.rejects(new Error());
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.notCalled(browser.markAsBroken);
+                });
+
+                it('should mark if session is broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const runner = mkRunner_({config});
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.runBeforeEachHooks.rejects(new Error('FOO_BAR'));
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.calledOnce(browser.markAsBroken);
+                });
+            });
+
+            describe('in "test" execution', () => {
+                it('should not mark if session is not broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const test = mkTest_({fn: sinon.stub().rejects(new Error())});
+                    const runner = mkRunner_({config, test});
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.notCalled(browser.markAsBroken);
+                });
+
+                it('should mark if session is broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const test = mkTest_({fn: sinon.stub().rejects(new Error('FOO_BAR'))});
+                    const runner = mkRunner_({config, test});
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.calledOnce(browser.markAsBroken);
+                });
+            });
+
+            describe('in "afterEach" hook', () => {
+                it('should not mark even if session is broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const runner = mkRunner_({config});
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.runAfterEachHooks.rejects(new Error('FOO_BAR'));
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.notCalled(browser.markAsBroken);
+                });
+            });
+        });
+
         describe('on success', () => {
             it('should resolve with hermioneCtx object passed to execution thread', async () => {
                 ExecutionThread.create.callsFake(({hermioneCtx}) => {
@@ -391,11 +460,11 @@ describe('worker/runner/test-runner', () => {
                 await assert.isRejected(run_(), AssertViewError);
             });
 
-            it('should resolve with browser meta and changes', async () => {
+            it('should resolve with browser meta and state', async () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.changes.baz = 'qux';
+                        browser.state.baz = 'qux';
                     });
                     return Object.create(ExecutionThread.prototype);
                 });
@@ -403,7 +472,7 @@ describe('worker/runner/test-runner', () => {
                 const result = await run_();
 
                 assert.match(result.meta, {foo: 'bar'});
-                assert.match(result.changes, {baz: 'qux'});
+                assert.match(result.browserState, {baz: 'qux'});
             });
 
             it('should release browser', async () => {
@@ -419,20 +488,20 @@ describe('worker/runner/test-runner', () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.changes.baz = 'qux';
+                        browser.state.baz = 'qux';
                     });
                     return Object.create(ExecutionThread.prototype);
                 });
 
                 BrowserAgent.prototype.freeBrowser.callsFake((browser) => {
                     browser.meta = null;
-                    browser.changes = null;
+                    browser.browserState = null;
                 });
 
                 const result = await run_();
 
                 assert.match(result.meta, {foo: 'bar'});
-                assert.match(result.changes, {baz: 'qux'});
+                assert.match(result.browserState, {baz: 'qux'});
             });
         });
 
@@ -476,11 +545,11 @@ describe('worker/runner/test-runner', () => {
                 assert.match(error.hermioneCtx, {assertViewResults: [{foo: 'bar'}]});
             });
 
-            it('should extend error with browser meta and changes', async () => {
+            it('should extend error with browser meta and state', async () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.changes.baz = 'qux';
+                        browser.state.baz = 'qux';
 
                         return Promise.reject(new Error());
                     });
@@ -491,7 +560,7 @@ describe('worker/runner/test-runner', () => {
                 const error = await run_().catch((e) => e);
 
                 assert.match(error.meta, {foo: 'bar'});
-                assert.match(error.changes, {baz: 'qux'});
+                assert.match(error.browserState, {baz: 'qux'});
             });
 
             it('should release browser', async () => {

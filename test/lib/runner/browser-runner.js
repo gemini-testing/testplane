@@ -1,6 +1,8 @@
 'use strict';
 
+const Promise = require('bluebird');
 const BrowserRunner = require('lib/runner/browser-runner');
+const BrowserAgent = require('lib/runner/browser-agent');
 const BrowserPool = require('lib/browser-pool');
 const TestRunnerFabric = require('lib/runner/test-runner');
 const TestRunner = require('lib/runner/test-runner/insistant-test-runner');
@@ -9,8 +11,6 @@ const Test = require('lib/test');
 const Workers = require('lib/runner/workers');
 const SuiteMonitor = require('lib/runner/suite-monitor');
 const Events = require('lib/constants/runner-events');
-const {BrowserAgent} = require('gemini-core');
-const Promise = require('bluebird');
 
 const {makeConfigStub} = require('../../utils');
 
@@ -50,7 +50,9 @@ describe('runner/browser-runner', () => {
         sandbox.stub(SuiteMonitor.prototype, 'testEnd');
         sandbox.stub(SuiteMonitor.prototype, 'testRetry');
 
-        sandbox.stub(BrowserAgent, 'create').returns(Object.create(BrowserAgent.prototype));
+        const browserAgent = Object.create(BrowserAgent.prototype);
+        sandbox.stub(browserAgent, 'browserId').get(() => 'default-bro-id');
+        sandbox.stub(BrowserAgent, 'create').returns(browserAgent);
 
         stubTestCollection_([Test.create({title: 'defaultTitle'})]);
     });

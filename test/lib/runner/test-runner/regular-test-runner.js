@@ -10,17 +10,16 @@ const Events = require('lib/constants/runner-events');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
 const Promise = require('bluebird');
 
-const {makeConfigStub, makeTest} = require('../../../utils');
+const {makeTest} = require('../../../utils');
 
 describe('runner/test-runner/regular-test-runner', () => {
     const sandbox = sinon.sandbox.create();
 
     const mkRunner_ = (opts = {}) => {
         const test = opts.test || makeTest({title: 'defaultTest'});
-        const config = opts.config || makeConfigStub();
         const browserAgent = opts.browserAgent || BrowserAgent.create();
 
-        return RegularTestRunner.create(test, config, browserAgent);
+        return RegularTestRunner.create(test, browserAgent);
     };
 
     const run_ = (opts = {}) => {
@@ -33,14 +32,17 @@ describe('runner/test-runner/regular-test-runner', () => {
     const stubBrowser_ = (opts = {}) => {
         return {
             id: opts.id || 'default-id',
+            state: opts.state || {isBroken: false},
             sessionId: opts.sessionId || 'default-session-id',
-            updateChanges: sinon.stub()
+            applyState: sinon.stub().callsFake(function(state) {
+                this.state = state;
+            })
         };
     };
 
     const stubTestResult_ = (opts = {}) => {
         return _.defaults(opts, {
-            changes: {},
+            browserState: {},
             meta: {},
             hermioneCtx: {}
         });
@@ -391,29 +393,29 @@ describe('runner/test-runner/regular-test-runner', () => {
             });
         });
 
-        describe('browser changes', () => {
-            it('should update browser changes after test finished', async () => {
+        describe('browser state', () => {
+            it('should apply browser state after test finished', async () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
                 Workers.prototype.runTest.resolves(stubTestResult_({
-                    changes: {foo: 'bar'}
+                    browserState: {isBroken: true}
                 }));
 
                 await run_();
 
-                assert.calledOnceWith(browser.updateChanges, {foo: 'bar'});
+                assert.calledOnceWith(browser.applyState, {isBroken: true});
             });
 
-            it('should update browser changes on test fail', async () => {
+            it('should apply browser state on test fail', async () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                Workers.prototype.runTest.rejects({changes: {foo: 'bar'}});
+                Workers.prototype.runTest.rejects({browserState: {isBroken: true}});
 
                 await run_();
 
-                assert.calledOnceWith(browser.updateChanges, {foo: 'bar'});
+                assert.calledOnceWith(browser.applyState, {isBroken: true});
             });
         });
 
@@ -433,20 +435,6 @@ describe('runner/test-runner/regular-test-runner', () => {
                 await run_();
 
                 assert.calledOnce(BrowserAgent.prototype.freeBrowser);
-            });
-
-            it('should force browser release if session is broken', async () => {
-                const config = makeConfigStub({
-                    system: {
-                        patternsOnReject: ['FOO_BAR']
-                    }
-                });
-                const runner = mkRunner_({config});
-                Workers.prototype.runTest.rejects(new Error('FOO_BAR'));
-
-                await run_({runner});
-
-                assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, sinon.match.any, {force: true});
             });
 
             it('should wait until browser is released', async () => {
