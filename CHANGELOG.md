@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.88.0"></a>
+# [0.88.0](https://github.com/gemini-testing/hermione/compare/v0.87.0...v0.88.0) (2018-09-13)
+
+
+### Features
+
+* stub browser commands in broken session ([c61c927](https://github.com/gemini-testing/hermione/commit/c61c927))
+
+
+
 <a name="0.87.0"></a>
 # [0.87.0](https://github.com/gemini-testing/hermione/compare/v0.85.0...v0.87.0) (2018-09-12)
 
