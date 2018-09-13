@@ -28,24 +28,27 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
-  - [gridUrl](#gridurl)
-  - [baseUrl](#baseurl)
-  - [httpTimeout](#httptimeout)
-  - [sessionRequestTimeout](#sessionrequesttimeout)
-  - [sessionQuitTimeout](#sessionquittimeout)
-  - [waitTimeout](#waittimeout)
-  - [sessionsPerBrowser](#sessionsperbrowser)
-  - [screenshotOnReject](#screenshotonreject)
-  - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
-  - [testsPerSession](#testspersession)
-  - [retry](#retry)
-  - [shouldRetry](#shouldretry)
-  - [calibrate](#calibrate)
-  - [meta](#meta)
-  - [windowSize](#windowsize)
-  - [screenshotDelay](#screenshotdelay)
-  - [orientation](#orientation)
-  - [resetCursor](#resetcursor)
+    - [gridUrl](#gridurl)
+    - [baseUrl](#baseurl)
+    - [httpTimeout](#httptimeout)
+    - [pageLoadTimeout](#pageloadtimeout)
+    - [sessionRequestTimeout](#sessionrequesttimeout)
+    - [sessionQuitTimeout](#sessionquittimeout)
+    - [waitTimeout](#waittimeout)
+    - [sessionsPerBrowser](#sessionsperbrowser)
+    - [screenshotOnReject](#screenshotonreject)
+    - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
+    - [testsPerSession](#testspersession)
+    - [retry](#retry)
+    - [shouldRetry](#shouldretry)
+    - [calibrate](#calibrate)
+    - [meta](#meta)
+    - [windowSize](#windowsize)
+    - [screenshotDelay](#screenshotdelay)
+    - [orientation](#orientation)
+    - [resetCursor](#resetcursor)
+    - [tolerance](#tolerance)
+    - [antialiasingTolerance](#antialiasingtolerance)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -474,6 +477,7 @@ Option name               | Description
 `baseUrl`                 | Base service-under-test URL. Default value is `http://localhost`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `httpTimeout`             | Timeout for any requests to Selenium server. Default value is `90000` ms.
+`pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `300000` ms.
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
 `sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
@@ -500,6 +504,9 @@ Base service-under-test URL. Default value is `http://localhost`.
 
 #### httpTimeout
 Timeout for any requests to Selenium server. Default value is `90000` ms.
+
+#### pageLoadTimeout
+Timeout for the page loading to complete. Default value is `300000` ms.
 
 #### sessionRequestTimeout
 Timeout for getting a browser session. Default value is `httpTimeout`.
