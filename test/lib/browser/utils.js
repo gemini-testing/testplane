@@ -42,6 +42,7 @@ exports.mkExistingBrowser_ = (opts) => {
 
 exports.mkSessionStub_ = () => {
     const session = q();
+    session.commandList = [];
     session.init = sinon.stub().named('init').returns(session);
     session.end = sinon.stub().named('end').resolves();
     session.url = sinon.stub().named('url').returns(session);
