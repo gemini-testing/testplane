@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.90.0"></a>
+# [0.90.0](https://github.com/gemini-testing/hermione/compare/v0.89.0...v0.90.0) (2018-09-17)
+
+
+### Bug Fixes
+
+* reset window size on default before the test is started ([8357206](https://github.com/gemini-testing/hermione/commit/8357206))
+
+
+### Features
+
+* add debug mode ([aaa42b7](https://github.com/gemini-testing/hermione/commit/aaa42b7))
+
+
+
 <a name="0.89.1"></a>
 ## [0.89.1](https://github.com/gemini-testing/hermione/compare/v0.89.0...v0.89.1) (2018-09-14)
 
