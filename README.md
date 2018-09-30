@@ -49,6 +49,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [resetCursor](#resetcursor)
     - [tolerance](#tolerance)
     - [antialiasingTolerance](#antialiasingtolerance)
+    - [screenshotsDir](#screenshotsdir)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -496,6 +497,7 @@ Option name               | Description
 `resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run.
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
+`screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 
 #### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -579,6 +581,10 @@ Indicates maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_differe
 
 #### antialiasingTolerance
 Read more about this option in [looks-same](https://github.com/gemini-testing/looks-same#comparing-images-with-ignoring-antialiasing).
+
+#### screenshotsDir
+
+Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
 
 ### system
 
@@ -758,18 +764,28 @@ The `browser` argument is a `WebdriverIO` session.
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
 
 ## CLI
+
 ```
-  Usage: hermione [options]
+hermione --help
+```
+
+shows the following
+
+```
+  Usage: hermione [options] [paths...]
 
   Options:
 
-    -h, --help                 Output usage information
-    -c, --config <path>        Path to configuration file
-    -r, --reporter <reporter>  Test reporter
-    -b, --browser <browser>    Run tests only in specified browser
-    --grep <grep>              Run only tests matching string or regexp
-    --inspect[=[host:]port]    Run tests in debug mode
-    --inspect-brk[=[host:]port]    Run tests in debug mode with break at the start
+    -V, --version                output the version number
+    -c, --config <path>          path to configuration file
+    -r, --reporter <reporter>    test reporters
+    -b, --browser <browser>      run tests only in specified browser
+    -s, --set <set>              run tests only in the specified set
+    --grep <grep>                run only tests matching the pattern
+    --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
+    --inspect [inspect]          nodejs inspector on [=[host:]port]
+    --inspect-brk [inspect-brk]  nodejs inspector with break at the start
+    -h, --help                   output usage information
 ```
 
 For example,
@@ -848,6 +864,8 @@ it('some test', function() {
         .assertView('plain', '.form', {ignoreElements: ['.link']});
 });
 ```
+
+For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
 
 ## Programmatic API
 
