@@ -1,4 +1,4 @@
-Hermione
+Hermione!
 ========
 Hermione is a utility for integration testing of web pages using [WebdriverIO](http://webdriver.io/) and [Mocha](https://mochajs.org).
 
