@@ -754,7 +754,7 @@ module.exports = (hermione, opts) => {
 Prepare the browser session before tests are run. For example, add custom user commands.
 ```js
 prepareBrowser: function(browser) {
-    // do setup here
+    browser.addCommand('commandName', require('./path/to/commands/commandName.js'));
 }
 ```
 
