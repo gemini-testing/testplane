@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.90.2"></a>
+## [0.90.2](https://github.com/gemini-testing/hermione/compare/v0.90.1...v0.90.2) (2018-10-27)
+
+
+### Bug Fixes
+
+* avoid hermioneCtx sharing between different test runs ([2917922](https://github.com/gemini-testing/hermione/commit/2917922))
+
+
+
 <a name="0.90.1"></a>
 ## [0.90.1](https://github.com/gemini-testing/hermione/compare/v0.89.0...v0.90.1) (2018-10-02)
 
