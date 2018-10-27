@@ -134,9 +134,10 @@ describe('worker/runner/test-runner', () => {
         });
 
         it('test hermioneCtx should be protected from modification during run', async () => {
-            ExecutionThread.create.callsFake(({hermioneCtx}) => {
+            ExecutionThread.create.callsFake(({test, hermioneCtx}) => {
                 ExecutionThread.prototype.run.callsFake(() => {
                     hermioneCtx.baz = 'qux';
+                    test.hermioneCtx.baaz = 'quux';
                 });
 
                 return Object.create(ExecutionThread.prototype);
@@ -148,6 +149,22 @@ describe('worker/runner/test-runner', () => {
             await run_({test});
 
             assert.deepEqual(test.hermioneCtx, {foo: 'bar'});
+        });
+
+        it('test parent should be shared between runs', async () => {
+            ExecutionThread.create.callsFake(({test}) => {
+                ExecutionThread.prototype.run.callsFake(() => {
+                    test.parent.foo = 'bar';
+                });
+
+                return Object.create(ExecutionThread.prototype);
+            });
+
+            const test = mkTest_();
+
+            await run_({test});
+
+            assert.propertyVal(test.parent, 'foo', 'bar');
         });
 
         it('should create execution thread with screenshooter', async () => {
