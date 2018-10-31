@@ -295,4 +295,12 @@ describe('assertView command', () => {
                 ]);
             });
     });
+
+    it('should resolve with assertViewResults', async () => {
+        const browser = stubBrowser_();
+
+        const result = await browser.publicAPI.assertView();
+
+        assert.deepEqual(result, browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get());
+    });
 });
