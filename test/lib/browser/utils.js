@@ -50,6 +50,7 @@ exports.mkSessionStub_ = () => {
     session.requestHandler = {defaultOptions: {}};
     session.screenshot = sinon.stub().named('screenshot').resolves({value: {}});
     session.setOrientation = sinon.stub().named('setOrientation').resolves({value: {}});
+    session.windowHandleSize = sinon.stub().named('windowHandleSize').resolves({value: {}});
     session.orientation = sinon.stub().named('orientation').resolves({value: ''});
     session.waitUntil = sinon.stub().named('waitUntil').resolves();
     session.timeouts = sinon.stub().named('timeouts').resolves();

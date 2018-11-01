@@ -196,6 +196,20 @@ describe('ExistingBrowser', () => {
             });
         });
 
+        describe('set winidow size', () => {
+            it('should not set window size if it is not specified in a config', async () => {
+                await mkBrowser_().init();
+
+                assert.notCalled(session.windowHandleSize);
+            });
+
+            it('should set window size from config', async () => {
+                await mkBrowser_({windowSize: {width: 100500, height: 500100}}).init();
+
+                assert.calledOnceWith(session.windowHandleSize, {width: 100500, height: 500100});
+            });
+        });
+
         describe('camera calibration', () => {
             let calibrator;
 
@@ -263,6 +277,38 @@ describe('ExistingBrowser', () => {
                 await mkBrowser_({orientation: 'portrait'}).reinit();
 
                 assert.calledOnceWith(session.setOrientation, 'portrait');
+            });
+
+            it('should set orientation again after init', async () => {
+                const browser = mkBrowser_({orientation: 'portrait'});
+                await browser.init();
+
+                await browser.reinit();
+
+                assert.calledTwice(session.setOrientation);
+            });
+        });
+
+        describe('set winidow size', () => {
+            it('should not set window size if it is not specified in a config', async () => {
+                await mkBrowser_().reinit();
+
+                assert.notCalled(session.windowHandleSize);
+            });
+
+            it('should set window size from config', async () => {
+                await mkBrowser_({windowSize: {width: 100500, height: 500100}}).reinit();
+
+                assert.calledOnceWith(session.windowHandleSize, {width: 100500, height: 500100});
+            });
+
+            it('should set window size again after init', async () => {
+                const browser = mkBrowser_({windowSize: {width: 100500, height: 500100}});
+                await browser.init();
+
+                await browser.reinit();
+
+                assert.calledTwice(session.windowHandleSize);
             });
         });
     });
