@@ -54,80 +54,6 @@ describe('NewBrowser', () => {
                     });
             });
         });
-
-        describe('windowHandleSize decorator', () => {
-            it('should force rewrite base "windowHandleSize" method', () => {
-                return mkBrowser_()
-                    .init()
-                    .then(() => assert.calledWith(session.addCommand, 'windowHandleSize', sinon.match.func, true));
-            });
-
-            it('should call base `windowHandleSize` method', () => {
-                const baseFn = session.windowHandleSize;
-
-                return mkBrowser_()
-                    .init()
-                    .then(() => {
-                        session.windowHandleSize('some-id');
-
-                        assert.calledWith(baseFn, 'some-id');
-                        assert.calledOn(baseFn, session);
-                    });
-            });
-
-            it('should save origin browser window size if it will be changed', () => {
-                session.windowHandleSize.withArgs({width: 10, height: 10}).returns(session);
-
-                return mkBrowser_({windowSize: {width: 5, height: 10}})
-                    .init()
-                    .then((browser) => {
-                        return session
-                            .windowHandleSize({width: 10, height: 10})
-                            .then(() => assert.deepEqual(
-                                browser.state.originWindowSize,
-                                {width: 5, height: 10})
-                            );
-                    });
-            });
-
-            describe('should not mark browser as needed to restore', () => {
-                it('by default', () => {
-                    return mkBrowser_({windowSize: {width: 5, height: 10}})
-                        .init()
-                        .then((browser) => assert.isNull(browser.state.originWindowSize));
-                });
-
-                it('if "windowHandleSize" was called as getter', () => {
-                    return mkBrowser_()
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize();
-
-                            assert.isNull(browser.state.originWindowSize);
-                        });
-                });
-
-                it('if "windowHandleSize" was called with session id', () => {
-                    return mkBrowser_()
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize('session-id');
-
-                            assert.isNull(browser.state.originWindowSize);
-                        });
-                });
-
-                it('if "windowHandleSize" was called with the same size as in the config', () => {
-                    return mkBrowser_({windowSize: {width: 5, height: 10}})
-                        .init()
-                        .then((browser) => {
-                            session.windowHandleSize({width: 5, height: 10});
-
-                            assert.isNull(browser.state.originWindowSize);
-                        });
-                });
-            });
-        });
     });
 
     describe('init', () => {
@@ -165,14 +91,6 @@ describe('NewBrowser', () => {
                 });
         });
 
-        it('should set browser window size from config', () => {
-            return mkBrowser_({windowSize: {width: 10, height: 20}})
-                .init()
-                .then(() => {
-                    assert.calledWithMatch(session.windowHandleSize.firstCall, {width: 10, height: 20});
-                });
-        });
-
         it('should reset options to default after initializing of a session', () => {
             return mkBrowser_()
                 .init()
@@ -202,50 +120,6 @@ describe('NewBrowser', () => {
 
     describe('reset', () => {
         it('should be fulfilled', () => assert.isFulfilled(mkBrowser_().reset()));
-
-        it('should not reset browser window size if it was not changed', () => {
-            return mkBrowser_({windowSize: {width: 10, height: 5}})
-                .init()
-                .then((browser) => browser.reset())
-                .then(() => {
-                    // call "windowHandleSize" on init
-                    assert.calledOnceWith(session.windowHandleSize, {width: 10, height: 5});
-                });
-        });
-
-        it('should reset browser window size to value from config if it was changed in test', () => {
-            return mkBrowser_({windowSize: {width: 10, height: 5}})
-                .init()
-                .then((browser) => {
-                    session.windowHandleSize({width: 1, height: 1});
-                    return browser;
-                })
-                .then((browser) => browser.reset())
-                .then(() => {
-                    assert.calledThrice(session.windowHandleSize);
-                    assert.calledWithMatch(session.windowHandleSize.firstCall, {width: 10, height: 5});
-                    assert.calledWithMatch(session.windowHandleSize.secondCall, {width: 1, height: 1});
-                    assert.calledWithMatch(session.windowHandleSize.thirdCall, {width: 10, height: 5});
-                });
-        });
-
-        it('should reset browser to origin window size if it was changed in test', () => {
-            session.windowHandleSize.withArgs().returns(q({value: {width: 5, height: 5}}));
-
-            return mkBrowser_()
-                .init()
-                .then((browser) => {
-                    session.windowHandleSize({width: 1, height: 1});
-                    return browser;
-                })
-                .then((browser) => browser.reset())
-                .then(() => {
-                    assert.calledThrice(session.windowHandleSize);
-                    assert.calledWithMatch(session.windowHandleSize.firstCall, {width: 1, height: 1});
-                    assert.calledWithExactly(session.windowHandleSize.secondCall); // getting current browser size
-                    assert.calledWithMatch(session.windowHandleSize.thirdCall, {width: 5, height: 5});
-                });
-        });
     });
 
     describe('quit', () => {
