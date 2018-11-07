@@ -324,19 +324,6 @@ describe('worker/runner/test-runner', () => {
 
                 await assert.isRejected(run_(), /foo/);
             });
-
-            it('should assign err property on the test object if an error occurred', async (done) => {
-                const e = new Error();
-
-                HookRunner.create.restore();
-                HookRunner.prototype.runBeforeEachHooks.rejects(e);
-                HookRunner.prototype.runAfterEachHooks.callsFake(function() {
-                    assert.equal(this._test.err, e);
-                    done();
-                });
-
-                await run_().catch(() => {});
-            });
         });
 
         describe('afterEach hooks', () => {
