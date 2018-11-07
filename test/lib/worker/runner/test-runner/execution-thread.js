@@ -51,15 +51,6 @@ describe('worker/runner/test-runner/execution-thread', () => {
             await assert.isRejected(executionThread.run(runnable), /foo/);
         });
 
-        it('should store err on runnable reject', async () => {
-            const runnable = mkRunnable_({
-                fn: () => Promise.reject(new Error('foo'))
-            });
-
-            const e = await mkExecutionThread_().run(runnable).catch((e) => e);
-            assert.equal(runnable.err, e);
-        });
-
         it('should set browser public API to runnable fn context', async () => {
             const browser = mkBrowser_();
             const runnable = mkRunnable_();
@@ -93,6 +84,17 @@ describe('worker/runner/test-runner/execution-thread', () => {
             await executionThread.run(runnable);
 
             assert.calledOn(runnable.fn, sinon.match({currentTest: {title: 'some test'}}));
+        });
+
+        it('should store error in current test on runnable reject', async () => {
+            const test = mkTest_();
+            const runnable = mkRunnable_({
+                fn: () => Promise.reject(new Error('foo'))
+            });
+
+            const e = await mkExecutionThread_({test}).run(runnable).catch((e) => e);
+
+            assert.equal(test.err, e);
         });
 
         it('should set runnable as browser execution context', async () => {
