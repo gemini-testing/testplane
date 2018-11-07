@@ -97,6 +97,18 @@ describe('worker/runner/test-runner/execution-thread', () => {
             assert.equal(test.err, e);
         });
 
+        it('should not override error in current test on runnable reject', async () => {
+            const origError = new Error('bar');
+            const test = mkTest_({err: origError});
+            const runnable = mkRunnable_({
+                fn: () => Promise.reject(new Error('foo'))
+            });
+
+            await mkExecutionThread_({test}).run(runnable).catch((e) => e);
+
+            assert.equal(test.err, origError);
+        });
+
         it('should set runnable as browser execution context', async () => {
             let executionContext;
             const runnable = mkRunnable_({

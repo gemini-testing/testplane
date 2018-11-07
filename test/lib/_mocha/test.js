@@ -19,5 +19,9 @@ module.exports = class Test extends Runnable {
         this.file = options.file || '';
         this.pending = options.pending || false;
         this.silentSkip = options.silentSkip || false;
+
+        if (options.err) {
+            this.err = options.err;
+        }
     }
 };
