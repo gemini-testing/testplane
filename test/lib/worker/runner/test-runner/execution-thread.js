@@ -86,6 +86,29 @@ describe('worker/runner/test-runner/execution-thread', () => {
             assert.calledOn(runnable.fn, sinon.match({currentTest: {title: 'some test'}}));
         });
 
+        it('should store error in current test on runnable reject', async () => {
+            const test = mkTest_();
+            const runnable = mkRunnable_({
+                fn: () => Promise.reject(new Error('foo'))
+            });
+
+            const e = await mkExecutionThread_({test}).run(runnable).catch((e) => e);
+
+            assert.equal(test.err, e);
+        });
+
+        it('should not override error in current test on runnable reject', async () => {
+            const origError = new Error('bar');
+            const test = mkTest_({err: origError});
+            const runnable = mkRunnable_({
+                fn: () => Promise.reject(new Error('foo'))
+            });
+
+            await mkExecutionThread_({test}).run(runnable).catch((e) => e);
+
+            assert.equal(test.err, origError);
+        });
+
         it('should set runnable as browser execution context', async () => {
             let executionContext;
             const runnable = mkRunnable_({
