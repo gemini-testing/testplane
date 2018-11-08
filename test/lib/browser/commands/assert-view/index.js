@@ -54,39 +54,44 @@ describe('assertView command', () => {
     afterEach(() => sandbox.restore());
 
     describe('prepare screenshot', () => {
-        it('should prepare screenshot for one selector', () => {
+        it('should prepare screenshot for one selector', async () => {
             const browser = stubBrowser_();
 
-            return browser.publicAPI.assertView('plain', '.selector')
-                .then(() => assert.calledOnceWith(browser.prepareScreenshot, ['.selector']));
+            await browser.publicAPI.assertView('plain', '.selector');
+
+            assert.calledOnceWith(browser.prepareScreenshot, ['.selector']);
         });
 
-        it('should prepare screenshot for several selectors', () => {
+        it('should prepare screenshot for several selectors', async () => {
             const browser = stubBrowser_();
 
-            return browser.publicAPI.assertView('plain', ['.selector1', '.selector2'])
-                .then(() => assert.calledOnceWith(browser.prepareScreenshot, ['.selector1', '.selector2']));
+            await browser.publicAPI.assertView('plain', ['.selector1', '.selector2']);
+
+            assert.calledOnceWith(browser.prepareScreenshot, ['.selector1', '.selector2']);
         });
 
-        it('should handle ignore elements option passed as an array', () => {
+        it('should handle ignore elements option passed as an array', async () => {
             const browser = stubBrowser_();
 
-            return browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']})
-                .then(() => assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo', 'bar']}));
+            await browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']});
+
+            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo', 'bar']});
         });
 
-        it('should handle ignore elements option passed as a string', () => {
+        it('should handle ignore elements option passed as a string', async () => {
             const browser = stubBrowser_();
 
-            return browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'})
-                .then(() => assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo bar']}));
+            await browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'});
+
+            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo bar']});
         });
 
-        it('should handle cases when ignore elements option is not passed', () => {
+        it('should handle cases when ignore elements option is not passed', async () => {
             const browser = stubBrowser_();
 
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: []}));
+            await browser.publicAPI.assertView();
+
+            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: []});
         });
     });
 
@@ -97,16 +102,16 @@ describe('assertView command', () => {
             assert.calledOnceWith(ScreenShooter.create, browser);
         });
 
-        it('should capture a screenshot image', () => {
+        it('should capture a screenshot image', async () => {
             const browser = stubBrowser_();
-
             browser.prepareScreenshot.resolves({foo: 'bar'});
 
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(ScreenShooter.prototype.capture, {foo: 'bar'}));
+            await browser.publicAPI.assertView();
+
+            assert.calledOnceWith(ScreenShooter.prototype.capture, {foo: 'bar'});
         });
 
-        it('should save a captured screenshot', () => {
+        it('should save a captured screenshot', async () => {
             temp.path.returns('/curr/path');
 
             const browser = stubBrowser_();
@@ -114,93 +119,94 @@ describe('assertView command', () => {
 
             ScreenShooter.prototype.capture.resolves(image);
 
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(image.save, '/curr/path'));
+            await browser.publicAPI.assertView();
+
+            assert.calledOnceWith(image.save, '/curr/path');
         });
     });
 
-    it('should not fail if there is no reference image', () => {
+    it('should not fail if there is no reference image', async () => {
         fs.existsSync.returns(false);
 
-        return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+        await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
     });
 
-    it('should remember several "NoRefImageError" errors', () => {
+    it('should remember several "NoRefImageError" errors', async () => {
         fs.existsSync.returns(false);
 
         const browser = stubBrowser_();
 
-        return browser.publicAPI.assertView()
-            .then(() => browser.publicAPI.assertView())
-            .then(() => {
-                const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
-                assert.instanceOf(firstError, NoRefImageError);
-                assert.instanceOf(secondError, NoRefImageError);
-                assert.notEqual(firstError, secondError);
-            });
+        await browser.publicAPI.assertView();
+        await browser.publicAPI.assertView();
+
+        const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+        assert.instanceOf(firstError, NoRefImageError);
+        assert.instanceOf(secondError, NoRefImageError);
+        assert.notEqual(firstError, secondError);
     });
 
     describe('update refs', () => {
         beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
-        it('should be fulfilled if there is not reference image', () => {
+        it('should be fulfilled if there is not reference image', async () => {
             fs.existsSync.returns(false);
 
-            return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+            await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
         });
 
-        it('should update reference image if it does not exist', () => {
+        it('should update reference image if it does not exist', async () => {
             temp.path.returns('/curr/path');
-
             fs.existsSync.withArgs('/ref/path').returns(false);
 
             const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
 
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(fsExtra.copy, '/curr/path', '/ref/path'));
+            await browser.publicAPI.assertView();
+
+            assert.calledOnceWith(fsExtra.copy, '/curr/path', '/ref/path');
         });
 
-        it('should reject on reference update fail', () => {
+        it('should reject on reference update fail', async () => {
             fs.existsSync.returns(false);
 
             fsExtra.copy.throws();
 
-            return assert.isRejected(stubBrowser_().publicAPI.assertView());
+            await assert.isRejected(stubBrowser_().publicAPI.assertView());
         });
     });
 
     describe('image compare', () => {
-        it('should add opts from runtime config to temp', () => {
+        it('should add opts from runtime config to temp', async () => {
             Image.compare.resolves(true);
             RuntimeConfig.getInstance.returns({tempOpts: {some: 'opts'}});
 
-            return stubBrowser_().publicAPI.assertView()
-                .then(() => assert.calledOnceWith(temp.attach, {some: 'opts', suffix: '.png'}));
+            await stubBrowser_().publicAPI.assertView();
+
+            assert.calledOnceWith(temp.attach, {some: 'opts', suffix: '.png'});
         });
 
-        it('should compare a current image with a reference', () => {
+        it('should compare a current image with a reference', async () => {
             const config = mkConfig_({getScreenshotPath: () => '/ref/path'});
             Image.compare.resolves(true);
             temp.path.returns('/curr/path');
 
-            return stubBrowser_(config).publicAPI.assertView()
-                .then(() => {
-                    assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path');
-                });
+            await stubBrowser_(config).publicAPI.assertView();
+
+            assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path');
         });
 
-        it('should compare images with given set of parameters', () => {
+        it('should compare images with given set of parameters', async () => {
             const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200});
             const browser = stubBrowser_(config);
 
             browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
 
-            return browser.publicAPI.assertView()
-                .then(() => assert.calledOnceWith(
-                    Image.compare,
-                    sinon.match.any, sinon.match.any,
-                    {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300}
-                ));
+            await browser.publicAPI.assertView();
+
+            assert.calledOnceWith(
+                Image.compare,
+                sinon.match.any, sinon.match.any,
+                {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300}
+            );
         });
 
         describe('if images are not equal', () => {
@@ -209,53 +215,45 @@ describe('assertView command', () => {
             });
 
             describe('assert refs', () => {
-                it('should not reject', () => {
-                    return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                it('should not reject', async () => {
+                    await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
                 });
 
-                it('should remember several "ImageDiffError" errors', () => {
+                it('should remember several "ImageDiffError" errors', async () => {
                     const browser = stubBrowser_();
 
-                    return browser.publicAPI.assertView()
-                        .then(() => browser.publicAPI.assertView())
-                        .then(() => {
-                            const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
-                            assert.instanceOf(firstError, ImageDiffError);
-                            assert.instanceOf(secondError, ImageDiffError);
-                            assert.notEqual(firstError, secondError);
-                        });
+                    await browser.publicAPI.assertView();
+                    await browser.publicAPI.assertView();
+
+                    const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+                    assert.instanceOf(firstError, ImageDiffError);
+                    assert.instanceOf(secondError, ImageDiffError);
+                    assert.notEqual(firstError, secondError);
                 });
 
                 describe('passing diff options', () => {
-                    it('should pass diff options for passed image paths', () => {
+                    it('should pass diff options for passed image paths', async () => {
                         const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
                         const browser = stubBrowser_(config);
                         temp.path.returns('/current/path');
 
-                        return browser.publicAPI.assertView()
-                            .then(() => {
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                        await browser.publicAPI.assertView();
+                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
 
-                                assert.match(e.diffOpts, {
-                                    current: '/current/path',
-                                    reference: '/reference/path'
-                                });
-                            });
+                        assert.match(e.diffOpts, {current: '/current/path', reference: '/reference/path'});
                     });
 
-                    it('should pass diff options with passed compare options', () => {
+                    it('should pass diff options with passed compare options', async () => {
                         const config = {
                             tolerance: 100,
                             system: {diffColor: '#111111'}
                         };
                         const browser = stubBrowser_(config);
 
-                        return browser.publicAPI.assertView()
-                            .then(() => {
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                        await browser.publicAPI.assertView();
+                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
 
-                                assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
-                            });
+                        assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
                     });
                 });
             });
@@ -263,21 +261,22 @@ describe('assertView command', () => {
             describe('update refs', () => {
                 beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
-                it('should be fulfilled', () => {
-                    return assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                it('should be fulfilled', async () => {
+                    await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
                 });
 
-                it('should update reference image by a current image', () => {
+                it('should update reference image by a current image', async () => {
                     temp.path.returns('/cur/path');
 
-                    return stubBrowser_({getScreenshotPath: () => '/ref/path'}).publicAPI.assertView()
-                        .then(() => assert.calledOnceWith(fsExtra.copy, '/cur/path', '/ref/path'));
+                    await stubBrowser_({getScreenshotPath: () => '/ref/path'}).publicAPI.assertView();
+
+                    assert.calledOnceWith(fsExtra.copy, '/cur/path', '/ref/path');
                 });
             });
         });
     });
 
-    it('should remember several success assert view calls', () => {
+    it('should remember several success assert view calls', async () => {
         const getScreenshotPath = sandbox.stub();
 
         getScreenshotPath
@@ -286,13 +285,12 @@ describe('assertView command', () => {
 
         const browser = stubBrowser_({getScreenshotPath});
 
-        return browser.publicAPI.assertView('plain')
-            .then(() => browser.publicAPI.assertView('complex'))
-            .then(() => {
-                assert.deepEqual(browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get(), [
-                    {stateName: 'plain', refImagePath: '/ref/path/plain'},
-                    {stateName: 'complex', refImagePath: '/ref/path/complex'}
-                ]);
-            });
+        await browser.publicAPI.assertView('plain');
+        await browser.publicAPI.assertView('complex');
+
+        assert.deepEqual(browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get(), [
+            {stateName: 'plain', refImagePath: '/ref/path/plain'},
+            {stateName: 'complex', refImagePath: '/ref/path/complex'}
+        ]);
     });
 });
