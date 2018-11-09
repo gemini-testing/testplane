@@ -1,7 +1,7 @@
 'use strict';
 
-const fs = require('fs');
-const fsExtra = require('fs-extra');
+const _ = require('lodash');
+const fs = require('fs-extra');
 const webdriverio = require('@gemini-testing/webdriverio');
 const {Image, temp, ScreenShooter} = require('gemini-core');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
@@ -22,7 +22,16 @@ describe('assertView command', () => {
         }, opts);
     };
 
-    const stubImage_ = () => ({save: sandbox.stub().named('save')});
+    const stubImage_ = (opts = {}) => {
+        opts = _.defaults(opts, {
+            size: {width: 100500, height: 500100}
+        });
+
+        return {
+            save: sandbox.stub().named('save'),
+            getSize: sandbox.stub().named('getSize').returns(opts.size)
+        };
+    };
 
     const stubBrowser_ = (config) => {
         const session = mkSessionStub_();
@@ -38,14 +47,16 @@ describe('assertView command', () => {
 
     beforeEach(() => {
         sandbox.stub(Image, 'compare').resolves(true);
+        sandbox.stub(Image, 'fromBase64').returns(stubImage_());
 
+        sandbox.stub(fs, 'readFileSync');
         sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'copy').resolves();
 
         sandbox.stub(temp, 'path');
         sandbox.stub(temp, 'attach');
 
         sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
-        sandbox.stub(fsExtra, 'copy').resolves();
 
         sandbox.spy(ScreenShooter, 'create');
         sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
@@ -131,8 +142,28 @@ describe('assertView command', () => {
         await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
     });
 
+    it('should create "NoRefImageError" error with given parameters', async () => {
+        sandbox.stub(NoRefImageError, 'create').returns(Object.create(NoRefImageError.prototype));
+        fs.existsSync.returns(false);
+        temp.path.returns('/curr/path');
+
+        const currImage = stubImage_({size: {width: 100, height: 200}});
+        ScreenShooter.prototype.capture.resolves(currImage);
+
+        const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
+
+        await browser.publicAPI.assertView('state');
+
+        assert.calledOnceWith(NoRefImageError.create,
+            'state',
+            {path: '/curr/path', size: {width: 100, height: 200}},
+            {path: '/ref/path', size: null}
+        );
+    });
+
     it('should remember several "NoRefImageError" errors', async () => {
         fs.existsSync.returns(false);
+        temp.path.returns('/curr/path');
 
         const browser = stubBrowser_();
 
@@ -162,13 +193,13 @@ describe('assertView command', () => {
 
             await browser.publicAPI.assertView();
 
-            assert.calledOnceWith(fsExtra.copy, '/curr/path', '/ref/path');
+            assert.calledOnceWith(fs.copy, '/curr/path', '/ref/path');
         });
 
         it('should reject on reference update fail', async () => {
             fs.existsSync.returns(false);
 
-            fsExtra.copy.throws();
+            fs.copy.throws();
 
             await assert.isRejected(stubBrowser_().publicAPI.assertView());
         });
@@ -217,6 +248,27 @@ describe('assertView command', () => {
             describe('assert refs', () => {
                 it('should not reject', async () => {
                     await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                });
+
+                it('should create "ImageDiffError" error with given parameters', async () => {
+                    sandbox.stub(ImageDiffError, 'create').returns(Object.create(ImageDiffError.prototype));
+
+                    temp.path.returns('/curr/path');
+
+                    const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
+                    const currImage = stubImage_({size: {width: 100, height: 200}});
+                    const refImage = stubImage_({size: {width: 300, height: 400}});
+
+                    ScreenShooter.prototype.capture.resolves(currImage);
+                    Image.fromBase64.returns(refImage);
+
+                    await browser.publicAPI.assertView('state');
+
+                    assert.calledOnceWith(ImageDiffError.create,
+                        'state',
+                        {path: '/curr/path', size: {width: 100, height: 200}},
+                        {path: '/ref/path', size: {width: 300, height: 400}}
+                    );
                 });
 
                 it('should remember several "ImageDiffError" errors', async () => {
@@ -270,7 +322,7 @@ describe('assertView command', () => {
 
                     await stubBrowser_({getScreenshotPath: () => '/ref/path'}).publicAPI.assertView();
 
-                    assert.calledOnceWith(fsExtra.copy, '/cur/path', '/ref/path');
+                    assert.calledOnceWith(fs.copy, '/cur/path', '/ref/path');
                 });
             });
         });
@@ -283,14 +335,28 @@ describe('assertView command', () => {
             .withArgs(sinon.match.any, 'plain').returns('/ref/path/plain')
             .withArgs(sinon.match.any, 'complex').returns('/ref/path/complex');
 
+        const bufferPlain = new Buffer('plain-data', 'base64');
+        const bufferComplex = new Buffer('complex-data', 'base64');
+
+        fs.readFileSync
+            .withArgs('/ref/path/plain').returns(bufferPlain)
+            .withArgs('/ref/path/complex').returns(bufferComplex);
+
+        const imagePlain = stubImage_({size: {width: 100, height: 200}});
+        const imageComplex = stubImage_({size: {width: 300, height: 400}});
+
+        Image.fromBase64
+            .withArgs(bufferPlain).returns(imagePlain)
+            .withArgs(bufferComplex).returns(imageComplex);
+
         const browser = stubBrowser_({getScreenshotPath});
 
         await browser.publicAPI.assertView('plain');
         await browser.publicAPI.assertView('complex');
 
         assert.deepEqual(browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get(), [
-            {stateName: 'plain', refImagePath: '/ref/path/plain'},
-            {stateName: 'complex', refImagePath: '/ref/path/complex'}
+            {stateName: 'plain', refImg: {path: '/ref/path/plain', size: {width: 100, height: 200}}},
+            {stateName: 'complex', refImg: {path: '/ref/path/complex', size: {width: 300, height: 400}}}
         ]);
     });
 });
