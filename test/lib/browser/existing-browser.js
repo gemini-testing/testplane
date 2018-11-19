@@ -23,6 +23,12 @@ describe('ExistingBrowser', () => {
 
     describe('constructor', () => {
         describe('meta-info access commands', () => {
+            it('should set meta-info with process pid by default', () => {
+                const browser = mkBrowser_();
+
+                assert.deepEqual(browser.meta, {pid: process.pid});
+            });
+
             it('should add meta-info access commands', () => {
                 const browser = mkBrowser_();
 
@@ -32,19 +38,13 @@ describe('ExistingBrowser', () => {
                 session.setMeta('foo', 'bar');
 
                 assert.equal(session.getMeta('foo'), 'bar');
-                assert.deepEqual(browser.meta, {foo: 'bar'});
-            });
-
-            it('should set empty meta-info by default', () => {
-                const browser = mkBrowser_();
-
-                assert.deepEqual(browser.meta, {});
+                assert.include(browser.meta, {foo: 'bar'});
             });
 
             it('should set meta-info with provided meta option', () => {
                 const browser = mkBrowser_({meta: {k1: 'v1'}});
 
-                assert.deepEqual(browser.meta, {k1: 'v1'});
+                assert.propertyVal(browser.meta, 'k1', 'v1');
             });
 
             describe('getMeta', () => {
@@ -56,7 +56,7 @@ describe('ExistingBrowser', () => {
 
                     const meta = await session.getMeta();
 
-                    assert.deepEqual(meta, {foo: 'bar', baz: 'qux'});
+                    assert.include(meta, {foo: 'bar', baz: 'qux'});
                 });
             });
         });
