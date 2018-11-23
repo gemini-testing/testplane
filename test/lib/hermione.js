@@ -102,6 +102,7 @@ describe('hermione', () => {
 
         beforeEach(() => {
             sandbox.stub(TestCollection.prototype, 'getBrowsers').returns([]);
+            sandbox.stub(Hermione.prototype, 'halt');
         });
 
         it('should create runner', () => {
@@ -119,6 +120,25 @@ describe('hermione', () => {
 
             return Hermione.create(config)
                 .run(() => assert.calledWith(Runner.create, config));
+        });
+
+        it('should create runner with interceptors', async () => {
+            mkRunnerStub_();
+
+            const hermione = Hermione.create();
+            const fooHandler = () => {};
+            const barHandler = () => {};
+
+            hermione
+                .intercept('foo', fooHandler)
+                .intercept('bar', barHandler);
+
+            await hermione.run();
+
+            assert.calledWith(Runner.create, sinon.match.any, [
+                {event: 'foo', handler: fooHandler},
+                {event: 'bar', handler: barHandler}
+            ]);
         });
 
         it('should warn about unknown browsers from cli', () => {
@@ -299,11 +319,14 @@ describe('hermione', () => {
                     .then((success) => assert.isFalse(success));
             }) ;
 
-            it('should return "false" if there were some errors', () => {
-                mkRunnerStub_((runner) => runner.emit(RunnerEvents.ERROR));
+            it('should halt if there were some errors', () => {
+                const hermione = Hermione.create();
+                const err = new Error();
 
-                return runHermione()
-                    .then((success) => assert.isFalse(success));
+                mkRunnerStub_((runner) => runner.emit(RunnerEvents.ERROR, err));
+
+                return hermione.run()
+                    .then(() => assert.calledOnceWith(hermione.halt, err));
             });
         });
 
@@ -627,18 +650,6 @@ describe('hermione', () => {
 
             return hermione.run()
                 .then(() => assert.isFalse(hermione.isFailed()));
-        });
-
-        it('should return "true" after some error', () => {
-            const hermione = Hermione.create(makeConfigStub());
-
-            mkRunnerStub_((runner) => {
-                runner.emit(RunnerEvents.ERROR);
-
-                assert.isTrue(hermione.isFailed());
-            });
-
-            return hermione.run();
         });
 
         it('should return "true" after some test fail', () => {
