@@ -838,7 +838,7 @@ describe('config browser-options', () => {
         });
     });
 
-    ['calibrate', 'screenshotOnReject', 'compositeImage', 'resetCursor', 'stopOnFirstFail'].forEach((option) => {
+    ['calibrate', 'screenshotOnReject', 'compositeImage', 'resetCursor', 'bail'].forEach((option) => {
         describe(`${option}`, () => {
             it('should throw an error if value is not a boolean', () => {
                 const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'foo'}));

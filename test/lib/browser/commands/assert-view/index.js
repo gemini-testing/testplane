@@ -190,7 +190,7 @@ describe('assertView command', () => {
         });
 
         it('should compare images with given set of parameters', () => {
-            const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200, stopOnFirstFail: false});
+            const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200, bail: false});
             const browser = stubBrowser_(config);
 
             browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
@@ -199,7 +199,7 @@ describe('assertView command', () => {
                 .then(() => assert.calledOnceWith(
                     Image.compare,
                     sinon.match.any, sinon.match.any,
-                    {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300, stopOnFirstFail: false}
+                    {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300, bail: false}
                 ));
         });
 
@@ -265,7 +265,7 @@ describe('assertView command', () => {
                             .then(() => {
                                 const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
 
-                                assert.deepEqual(e.diffOpts.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
+                                assert.deepEqual(e.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
                             });
                     });
                 });

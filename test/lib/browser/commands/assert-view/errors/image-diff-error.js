@@ -46,7 +46,7 @@ describe('ImageDiffError', () => {
     });
 
     it('should contain options for image diff building', () => {
-        const error = new ImageDiffError('', '', '', {some: 'opts'});
+        const error = new ImageDiffError('', '', '', {}, {some: 'opts'});
 
         assert.deepEqual(error.diffOpts, {some: 'opts'});
     });
@@ -59,7 +59,7 @@ describe('ImageDiffError', () => {
     });
 
     it('should provide the ability to save diff image', () => {
-        const error = new ImageDiffError('', '', '', {some: 'opts'});
+        const error = new ImageDiffError('', '', '', {}, {some: 'opts'});
 
         Image.buildDiff.withArgs({some: 'opts', diff: 'diff/path'}).resolves({foo: 'bar'});
 
