@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.93.0"></a>
+# [0.93.0](https://github.com/gemini-testing/hermione/compare/v0.92.0...v0.93.0) (2018-11-26)
+
+
+### Features
+
+* add 'pid' in which test is executed to meta info ([e530784](https://github.com/gemini-testing/hermione/commit/e530784))
+* implement events interceptor API for plugins ([d8a4199](https://github.com/gemini-testing/hermione/commit/d8a4199))
+
+
+
 <a name="0.92.0"></a>
 # [0.92.0](https://github.com/gemini-testing/hermione/compare/v0.91.0...v0.92.0) (2018-11-08)
 
