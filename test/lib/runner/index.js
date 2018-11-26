@@ -30,7 +30,7 @@ describe('Runner', () => {
         sandbox.stub(Workers.prototype);
         sandbox.stub(Workers, 'create').returns(Object.create(Workers.prototype));
 
-        sandbox.stub(BrowserPool, 'create').returns({cancel: sandbox.spy()});
+        sandbox.stub(BrowserPool, 'create').returns({cancel: () => {}});
 
         sandbox.stub(temp, 'init');
         sandbox.stub(temp, 'serialize');
@@ -42,7 +42,6 @@ describe('Runner', () => {
 
         sandbox.spy(BrowserRunner, 'create');
         sandbox.stub(BrowserRunner.prototype, 'run').resolves();
-        sandbox.stub(BrowserRunner.prototype, 'addTestToRun').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -340,37 +339,45 @@ describe('Runner', () => {
 
     describe('addTestToRun', () => {
         beforeEach(() => {
-            TestCollection.prototype.getBrowsers.returns([]);
+            TestCollection.prototype.getBrowsers.returns(['bro']);
+            sandbox.stub(TestCollection, 'create');
         });
 
-        it('should pass test to the browser runner', async () => {
+        it('should pass added tests to the browser runner', async () => {
+            const test = makeTest();
+            const testCollection = Object.create(TestCollection.prototype);
+            const addedTests = Object.create(TestCollection.prototype);
+
+            TestCollection.create.returns(testCollection);
+            TestCollection.create.withArgs({'bro2': [test]}).returns(addedTests);
+
             const runner = new Runner(makeConfigStub());
-            const test = {};
-            run_({runner});
+            const result = run_({runner});
+            runner.addTestToRun(test, 'bro2');
 
-            runner.addTestToRun(test);
-
-            assert.calledWith(BrowserRunner.prototype.addTestToRun, test);
+            await result;
+            assert.callOrder(
+                BrowserRunner.prototype.run.withArgs(testCollection, sinon.match.any),
+                BrowserRunner.prototype.run.withArgs(addedTests, sinon.match.any)
+            );
         });
 
-        it('should return false when runner is not running', async () => {
+        it('should return false when runner is not running', () => {
             const runner = new Runner(makeConfigStub());
 
-            const added = runner.addTestToRun({});
+            const added = runner.addTestToRun(makeTest(), 'bro');
 
             assert.isFalse(added);
-            assert.notCalled(BrowserRunner.prototype.addTestToRun);
         });
 
-        it('should return false when runner is cancelled', async () => {
+        it('should return false when runner is cancelled', () => {
             const runner = new Runner(makeConfigStub());
             run_({runner});
-
             runner.cancel();
-            const added = runner.addTestToRun({});
+
+            const added = runner.addTestToRun(makeTest(), 'bro');
 
             assert.isFalse(added);
-            assert.notCalled(BrowserRunner.prototype.addTestToRun);
         });
     });
 

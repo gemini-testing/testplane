@@ -19,7 +19,7 @@ const RunnerEvents = require('lib/constants/runner-events');
 const signalHandler = require('lib/signal-handler');
 const Runner = require('lib/runner');
 const logger = require('lib/utils/logger');
-const {makeConfigStub} = require('../utils');
+const {makeConfigStub, makeTest} = require('../utils');
 
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
@@ -438,7 +438,7 @@ describe('hermione', () => {
             const hermione = Hermione.create();
             await hermione.run();
 
-            hermione.addTestToRun({});
+            hermione.addTestToRun(makeTest());
 
             assert.calledOnce(runner.addTestToRun);
         });
@@ -447,7 +447,7 @@ describe('hermione', () => {
             const runner = mkRunnerStub_();
             const hermione = Hermione.create();
 
-            const added = hermione.addTestToRun({});
+            const added = hermione.addTestToRun(makeTest());
 
             assert.isFalse(added);
             assert.notCalled(runner.addTestToRun);

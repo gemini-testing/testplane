@@ -83,36 +83,6 @@ describe('runner/browser-runner', () => {
         });
     });
 
-    describe('addTestToRun', async () => {
-        it('should add test to the list of the tests to execute', async () => {
-            const test1 = Test.create({title: 'foo'});
-            const test2 = Test.create({title: 'bar'});
-            const afterRun = sinon.stub().named('afterRun');
-            stubTestCollection_([test1]);
-
-            const pool = BrowserPool.create(makeConfigStub());
-            const runner = mkRunner_({browserId: 'bro', browserPool: pool});
-
-            const runPromise = run_({runner}).then(afterRun);
-            runner.addTestToRun(test2);
-            await runPromise;
-
-            assert.callOrder(
-                TestRunnerFabric.create.withArgs(test1),
-                TestRunnerFabric.create.withArgs(test2),
-                afterRun
-            );
-        });
-
-        it('should return false when runner is not running', async () => {
-            const runner = mkRunner_();
-
-            const added = runner.addTestToRun(Test.create({title: 'foo'}));
-
-            assert.isFalse(added);
-        });
-    });
-
     describe('run', () => {
         it('should process only tests for specified browser', async () => {
             const runner = mkRunner_({browserId: 'bro'});
