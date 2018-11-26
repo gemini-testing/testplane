@@ -26,6 +26,13 @@ describe('Runner', () => {
         return runner.run(opts.testCollection || TestCollection.create());
     };
 
+    const onRun = (fn) => {
+        BrowserRunner.prototype.run.callsFake(function() {
+            fn(this);
+            return Promise.resolve();
+        });
+    };
+
     beforeEach(() => {
         sandbox.stub(Workers.prototype);
         sandbox.stub(Workers, 'create').returns(Object.create(Workers.prototype));
@@ -247,12 +254,9 @@ describe('Runner', () => {
             assert.calledOnce(secondResolveMarker);
         });
 
-        _.forEach(RunnerEvents.getSync(), (event, name) => {
+        _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
             it(`should passthrough ${name} event from browser runner`, async () => {
-                BrowserRunner.prototype.run.callsFake(function() {
-                    this.emit(event, {foo: 'bar'});
-                    return Promise.resolve();
-                });
+                onRun((browserRunner) => browserRunner.emit(event, {foo: 'bar'}));
 
                 sandbox.stub(RunnerStats.prototype, 'attachRunner');
 
@@ -263,6 +267,154 @@ describe('Runner', () => {
                 await run_({runner});
 
                 assert.calledOnceWith(onEvent, {foo: 'bar'});
+            });
+        });
+
+        describe('interceptors', () => {
+            beforeEach(() => {
+                sandbox.stub(RunnerStats.prototype, 'attachRunner');
+            });
+
+            _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
+                it(`should call interceptor for ${name} with event name and event data`, async () => {
+                    onRun((browserRunner) => browserRunner.emit(event, {foo: 'bar'}));
+
+                    const handler = sandbox.stub();
+                    const runner = new Runner(makeConfigStub(), [{event, handler}]);
+
+                    await run_({runner});
+
+                    assert.calledOnceWith(handler, {event, data: {foo: 'bar'}});
+                });
+
+                it(`should intecept ${name} from browser runner`, async () => {
+                    onRun((browserRunner) => browserRunner.emit(event));
+
+                    const onEvent = sinon.stub().named(`on${name}`);
+                    const onFoo = sinon.stub().named('onFoo');
+                    const handler = sandbox.stub().returns({event: 'foo', data: {baz: 'qux'}});
+                    const runner = new Runner(makeConfigStub(), [{event, handler}])
+                        .on(event, onEvent)
+                        .on('foo', onFoo);
+
+                    await run_({runner});
+
+                    assert.notCalled(onEvent);
+                    assert.calledOnceWith(onFoo, {baz: 'qux'});
+                });
+            });
+
+            it('should passthrough event if interceptor returns falsey value', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName', {foo: 'bar'}));
+
+                const onEvent = sinon.stub().named('onEvent');
+                const interceptor = {event: 'eventName', handler: sandbox.stub().returns()};
+                const runner = new Runner(makeConfigStub(), [interceptor])
+                    .on('eventName', onEvent);
+
+                await run_({runner});
+
+                assert.calledOnceWith(onEvent, {foo: 'bar'});
+            });
+
+            it('should passthrough event if interceptor returns the same event', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName', {foo: 'bar'}));
+
+                const onEvent = sinon.stub().named(`onEvent`);
+                const handler = sandbox.stub().returns({event: 'eventName', data: {baz: 'qux'}});
+                const interceptor = {event: 'eventName', handler};
+                const runner = new Runner(makeConfigStub(), [interceptor])
+                    .on('eventName', onEvent);
+
+                await run_({runner});
+
+                assert.calledOnceWith(onEvent, {baz: 'qux'});
+            });
+
+            it('should apply all event interceptors', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named(`onEvent`);
+                const onFoo = sinon.stub().named('onFoo');
+                const interceptor1 = {event: 'eventName', handler: sandbox.stub().returns({event: 'eventName'})};
+                const interceptor2 = {event: 'eventName', handler: sandbox.stub().returns({event: 'foo'})};
+                const runner = new Runner(makeConfigStub(), [interceptor1, interceptor2])
+                    .on('eventName', onEvent)
+                    .on('foo', onFoo);
+
+                await run_({runner});
+
+                assert.notCalled(onEvent);
+                assert.calledOnce(onFoo);
+            });
+
+            it('should apply appropriate event interceptors from the list of all ones', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named(`onEvent`);
+                const onFoo = sinon.stub().named('onFoo');
+                const interceptor1 = {event: 'eventName', handler: sandbox.stub().returns({event: 'onFoo'})};
+                const interceptor2 = {event: 'anotherEvent', handler: sandbox.stub()};
+                const runner = new Runner(makeConfigStub(), [interceptor1, interceptor2])
+                    .on('eventName', onEvent)
+                    .on('onFoo', onFoo);
+
+                await run_({runner});
+
+                assert.notCalled(onEvent);
+                assert.calledOnce(onFoo);
+            });
+
+            it('should pass events between interceptors', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named(`onEvent`);
+                const onFoo = sinon.stub().named('onFoo');
+                const onBar = sinon.stub().named('onBar');
+                const interceptor1 = {event: 'eventName', handler: sandbox.stub().returns({event: 'foo'})};
+                const interceptor2 = {event: 'foo', handler: sandbox.stub().returns({event: 'bar'})};
+                const runner = new Runner(makeConfigStub(), [interceptor1, interceptor2])
+                    .on('eventName', onEvent)
+                    .on('foo', onFoo)
+                    .on('bar', onBar);
+
+                await run_({runner});
+
+                assert.notCalled(onEvent);
+                assert.notCalled(onFoo);
+                assert.calledOnce(onBar);
+            });
+
+            it('should handle cycles when passing events between interceptors', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named(`onEvent`);
+                const onFoo = sinon.stub().named('onFoo');
+                const interceptor1 = {event: 'eventName', handler: sandbox.stub().returns({event: 'onFoo'})};
+                const interceptor2 = {event: 'onFoo', handler: sandbox.stub().returns({event: 'eventName'})};
+                const runner = new Runner(makeConfigStub(), [interceptor1, interceptor2])
+                    .on('eventName', onEvent)
+                    .on('foo', onFoo);
+
+                await run_({runner});
+
+                assert.notCalled(onFoo);
+                assert.calledOnce(onEvent);
+            });
+
+            it('should handle errors from interceptor callback', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named('onEvent');
+                const onError = sinon.stub().named('onError');
+                const err = new Error();
+                const runner = new Runner(makeConfigStub(), [{event: 'eventName', handler: sandbox.stub().throws(err)}])
+                    .on('eventName', onEvent)
+                    .on(RunnerEvents.ERROR, onError);
+
+                await run_({runner});
+
+                assert.calledOnceWith(onError, err);
             });
         });
 

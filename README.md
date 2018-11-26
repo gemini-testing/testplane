@@ -750,6 +750,58 @@ module.exports = (hermione, opts) => {
 };
 ```
 
+Besides, you have the ability to intercept events in plugins and translate them to other events:
+
+```js
+module.exports = (hermione) => {
+    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+        const test = Object.create(data);
+        test.pending = true;
+        test.skipReason = 'intercepted failure';
+
+        return {event: hermione.events.TEST_PENDING, data: test};
+    });
+
+    hermione.on(hermione.events.TEST_FAIL, (test) => {
+        // this event handler will never be called
+    });
+
+    hermione.on(hermione.evenst.TEST_PENDING, (test) => {
+        // this event handler will always be called instead of 'TEST_FAIL' one
+    });
+};
+```
+
+If for some reason interceptor should not translate passed event to another one you can return the same object or some falsey value:
+
+```js
+module.exports = (hermione) => {
+    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+        return {event, data};
+        // return;
+        // return null;
+        // return false;
+    });
+
+    hermione.on(hermione.events.TEST_FAIL, (test) => {
+        // this event handler will be called as usual because interceptor does not change event
+    });
+};
+```
+
+**Available events which can be intercepted**
+
+Event                     |
+------------------------- |
+`SUITE_BEGIN`             |
+`SUITE_END`               |
+`TEST_BEGIN`              |
+`TEST_END`                |
+`TEST_PASS`               |
+`TEST_FAIL`               |
+`RETRY`                   |
+
+
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
 ```js
