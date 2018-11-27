@@ -33,8 +33,8 @@ describe('runner/browser-runner', () => {
     };
 
     const stubTestCollection_ = (tests = []) => {
-        TestCollection.prototype.mapTests.callsFake((browserId, cb) => {
-            return tests.map(cb);
+        TestCollection.prototype.eachTest.callsFake((browserId, cb) => {
+            return tests.forEach(cb);
         });
     };
 
@@ -43,7 +43,7 @@ describe('runner/browser-runner', () => {
         sandbox.stub(TestRunner.prototype, 'run').resolves();
         sandbox.stub(TestRunner.prototype, 'cancel');
 
-        sandbox.stub(TestCollection.prototype, 'mapTests').returns([]);
+        sandbox.stub(TestCollection.prototype, 'eachTest');
 
         sandbox.spy(SuiteMonitor, 'create');
         sandbox.stub(SuiteMonitor.prototype, 'testBegin');
@@ -98,8 +98,8 @@ describe('runner/browser-runner', () => {
             await runPromise;
 
             assert.callOrder(
-                TestRunnerFabric.create.withArgs(test1),
-                TestRunnerFabric.create.withArgs(test2),
+                TestRunnerFabric.create.withArgs(test1).named('test1'),
+                TestRunnerFabric.create.withArgs(test2).named('test2'),
                 afterRun
             );
         });
@@ -119,7 +119,7 @@ describe('runner/browser-runner', () => {
 
             await run_({runner});
 
-            assert.calledOnceWith(TestCollection.prototype.mapTests, 'bro');
+            assert.calledOnceWith(TestCollection.prototype.eachTest, 'bro');
         });
 
         it('should create browser agent for each test in collection', async () => {

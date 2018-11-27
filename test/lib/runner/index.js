@@ -41,6 +41,7 @@ describe('Runner', () => {
         sandbox.stub(TestCollection.prototype);
 
         sandbox.spy(BrowserRunner, 'create');
+        sandbox.stub(BrowserRunner.prototype, 'browserId');
         sandbox.stub(BrowserRunner.prototype, 'run').resolves();
         sandbox.stub(BrowserRunner.prototype, 'addTestToRun').resolves();
     });
@@ -343,12 +344,28 @@ describe('Runner', () => {
             TestCollection.prototype.getBrowsers.returns([]);
         });
 
+        it('should create new browser runner if there is no active one', async () => {
+            const runner = new Runner(makeConfigStub());
+            const test = {};
+            await run_({runner});
+
+            runner.addTestToRun(test, 'bro');
+
+            assert.calledWith(BrowserRunner.create, 'bro', sinon.match.any, sinon.match.any);
+            assert.calledWith(BrowserRunner.prototype.run, TestCollection.create({bro: [test]}), sinon.match.any);
+        });
+
         it('should pass test to the browser runner', async () => {
             const runner = new Runner(makeConfigStub());
             const test = {};
-            run_({runner});
 
-            runner.addTestToRun(test);
+            BrowserRunner.prototype.browserId.returns('bro');
+            BrowserRunner.prototype.run.callsFake(() => {
+                runner.addTestToRun(test, 'bro');
+            });
+            TestCollection.prototype.getBrowsers.returns(['bro']);
+
+            await run_({runner});
 
             assert.calledWith(BrowserRunner.prototype.addTestToRun, test);
         });
