@@ -68,6 +68,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Programmatic API](#programmatic-api)
   - [init](#init)
   - [run](#run)
+  - [addTestToRun](#addtesttorun)
   - [readTests](#readtests)
   - [isFailed](#isfailed)
   - [isWorker](#isworker)
@@ -905,6 +906,19 @@ hermione.run(testPaths, options)
   * **browsers** (optional) `String[]` – Browsers to run tests in.
   * **sets** (optional) `String[]`– Sets to run tests in.
   * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
+
+### addTestToRun
+
+```js
+hermione.addTestToRun(test, browser);
+```
+
+Adds test to the current run.
+
+* **test** `Test` – Test to run.
+* **browser** `String` – Browser to run test in.
+
+Returns `false` if current run is ended or cancelled, `true` otherwise.
 
 ### readTests
 
