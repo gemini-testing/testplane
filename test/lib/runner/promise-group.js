@@ -1,5 +1,7 @@
 'use strict';
 
+const Promise = require('bluebird');
+
 const PromiseGroup = require('lib/runner/promise-group');
 
 describe('runner/promise-group', () => {
@@ -57,12 +59,19 @@ describe('runner/promise-group', () => {
     describe('done', () => {
         it('returns promise which will be resolved after all added promises', async () => {
             const group = new PromiseGroup();
+            const afterFirst = sandbox.stub().named('afterFirst');
+            const afterSecond = sandbox.stub().named('afterSecond');
+            const afterAll = sandbox.stub().named('afterAll');
 
-            let resolved = false;
-            group.add(new Promise(r => r())).then(() => resolved = true);
-            await group.done();
+            group.add(Promise.delay(1)).then(afterFirst);
+            group.add(Promise.delay(10)).then(afterSecond);
+            await group.done().then(afterAll);
 
-            assert.isTrue(resolved);
+            assert.callOrder(
+                afterFirst,
+                afterSecond,
+                afterAll
+            );
         });
     });
 });

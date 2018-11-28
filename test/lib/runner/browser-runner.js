@@ -33,9 +33,7 @@ describe('runner/browser-runner', () => {
     };
 
     const stubTestCollection_ = (tests = []) => {
-        TestCollection.prototype.eachTest.callsFake((browserId, cb) => {
-            return tests.forEach(cb);
-        });
+        TestCollection.prototype.eachTest.callsFake((browserId, cb) => tests.forEach(cb));
     };
 
     beforeEach(() => {
@@ -89,9 +87,7 @@ describe('runner/browser-runner', () => {
             const test2 = Test.create({title: 'bar'});
             const afterRun = sinon.stub().named('afterRun');
             stubTestCollection_([test1]);
-
-            const pool = BrowserPool.create(makeConfigStub());
-            const runner = mkRunner_({browserId: 'bro', browserPool: pool});
+            const runner = mkRunner_({browserId: 'bro'});
 
             const runPromise = run_({runner}).then(afterRun);
             runner.addTestToRun(test2);
@@ -104,12 +100,41 @@ describe('runner/browser-runner', () => {
             );
         });
 
+        it('should run added test', async () => {
+            const runner = mkRunner_({browserId: 'bro'});
+            const test1 = Test.create({title: 'foo'});
+            const test2 = Test.create({title: 'bar'});
+            const addedTestRunner = sandbox.stub();
+            stubTestCollection_([test1]);
+            TestRunner.prototype.run.onFirstCall().callsFake(() => runner.addTestToRun(test2));
+            TestRunner.prototype.run.onSecondCall().callsFake(addedTestRunner);
+
+            await run_({runner});
+
+            assert.calledTwice(TestRunner.prototype.run);
+            assert.calledOnce(addedTestRunner);
+        });
+
         it('should return false when runner is not running', async () => {
             const runner = mkRunner_();
 
             const added = runner.addTestToRun(Test.create({title: 'foo'}));
 
             assert.isFalse(added);
+            assert.notCalled(TestRunner.prototype.run);
+        });
+
+        it('should return false when workers are ended', async () => {
+            stubTestCollection_([]);
+            const runner = mkRunner_();
+            const workers = sinon.createStubInstance(Workers);
+            await run_({runner, workers});
+            workers.isEnded.returns(true);
+
+            const added = runner.addTestToRun(Test.create({title: 'foo'}));
+
+            assert.isFalse(added);
+            assert.notCalled(TestRunner.prototype.run);
         });
     });
 

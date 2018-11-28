@@ -28,7 +28,7 @@ describe('hermione', () => {
         const runner = new AsyncEmitter();
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
-        runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun').callsFake();
+        runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
 
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
@@ -429,18 +429,15 @@ describe('hermione', () => {
     });
 
     describe('addTestToRun', () => {
-        beforeEach(() => {
-            sandbox.stub(TestCollection.prototype, 'getBrowsers').returns([]);
-        });
-
         it('should pass test to the existing runner', async () => {
             const runner = mkRunnerStub_();
             const hermione = Hermione.create();
+            const test = {};
+
             await hermione.run();
+            hermione.addTestToRun(test, 'bro');
 
-            hermione.addTestToRun({});
-
-            assert.calledOnce(runner.addTestToRun);
+            assert.calledOnceWith(runner.addTestToRun, test, 'bro');
         });
 
         it('should return false when hermione is not running', () => {

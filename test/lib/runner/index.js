@@ -345,14 +345,19 @@ describe('Runner', () => {
         });
 
         it('should create new browser runner if there is no active one', async () => {
-            const runner = new Runner(makeConfigStub());
+            const config = makeConfigStub({browser: ['bro1']});
+            const pool = {};
+            BrowserPool.create.returns(pool);
+            const workers = Object.create(Workers.prototype);
+            Workers.create.returns(workers);
+            const runner = new Runner(config);
             const test = {};
             await run_({runner});
 
-            runner.addTestToRun(test, 'bro');
+            runner.addTestToRun(test, 'bro2');
 
-            assert.calledWith(BrowserRunner.create, 'bro', sinon.match.any, sinon.match.any);
-            assert.calledWith(BrowserRunner.prototype.run, TestCollection.create({bro: [test]}), sinon.match.any);
+            assert.calledOnceWith(BrowserRunner.create, 'bro2', config, pool);
+            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}), workers);
         });
 
         it('should pass test to the browser runner', async () => {
@@ -360,9 +365,7 @@ describe('Runner', () => {
             const test = {};
 
             BrowserRunner.prototype.browserId.returns('bro');
-            BrowserRunner.prototype.run.callsFake(() => {
-                runner.addTestToRun(test, 'bro');
-            });
+            BrowserRunner.prototype.run.callsFake(() => runner.addTestToRun(test, 'bro'));
             TestCollection.prototype.getBrowsers.returns(['bro']);
 
             await run_({runner});
@@ -377,6 +380,19 @@ describe('Runner', () => {
 
             assert.isFalse(added);
             assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
+        });
+
+        it('should return false when workers is ended', async () => {
+            const runner = new Runner(makeConfigStub());
+            await run_({runner});
+            Workers.prototype.isEnded.returns(true);
+
+            const added = runner.addTestToRun({});
+
+            assert.isFalse(added);
+            assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
         });
 
         it('should return false when runner is cancelled', async () => {
@@ -388,6 +404,7 @@ describe('Runner', () => {
 
             assert.isFalse(added);
             assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
         });
     });
 
