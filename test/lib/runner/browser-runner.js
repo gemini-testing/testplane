@@ -82,21 +82,16 @@ describe('runner/browser-runner', () => {
         });
     });
 
-    describe('addTestsToRun', async () => {
-        beforeEach(() => {
-            TestCollection.prototype.eachTest.restore();
-        });
-
-        it('should add tests to the list of the tests to execute', async () => {
-            const runner = mkRunner_({browserId: 'bro'});
+    describe('addTestToRun', async () => {
+        it('should add test to the list of the tests to execute', async () => {
             const test1 = Test.create({title: 'foo'});
             const test2 = Test.create({title: 'bar'});
-            const collection1 = TestCollection.create({bro: [test1]});
-            const collection2 = TestCollection.create({bro: [test2]});
             const afterRun = sinon.stub().named('afterRun');
+            stubTestCollection_([test1]);
+            const runner = mkRunner_({browserId: 'bro'});
 
-            const runPromise = run_({runner, testCollection: collection1}).then(afterRun);
-            runner.addTestsToRun(collection2);
+            const runPromise = run_({runner}).then(afterRun);
+            runner.addTestToRun(test2);
             await runPromise;
 
             assert.callOrder(
@@ -106,31 +101,29 @@ describe('runner/browser-runner', () => {
             );
         });
 
-        it('should run added tests', async () => {
+        it('should run added test', async () => {
             const runner = mkRunner_({browserId: 'bro'});
             const test1 = Test.create({title: 'foo'});
             const test2 = Test.create({title: 'bar'});
-            const collection1 = TestCollection.create({bro: [test1]});
-            const collection2 = TestCollection.create({bro: [test2]});
-            const addedTestRunnerRun = sandbox.stub();
-            TestRunner.prototype.run.onFirstCall().callsFake(() => runner.addTestsToRun(collection2));
-            TestRunner.prototype.run.onSecondCall().callsFake(addedTestRunnerRun);
+            const addedTestRunner = sandbox.stub();
+            stubTestCollection_([test1]);
+            TestRunner.prototype.run.onFirstCall().callsFake(() => runner.addTestToRun(test2));
+            TestRunner.prototype.run.onSecondCall().callsFake(addedTestRunner);
 
-            await run_({runner, testCollection: collection1});
+            await run_({runner});
 
             assert.calledTwice(TestRunner.prototype.run);
-            assert.calledOnce(addedTestRunnerRun);
+            assert.calledOnce(addedTestRunner);
         });
 
         it('should return false when workers are ended', async () => {
+            stubTestCollection_([]);
             const workers = sinon.createStubInstance(Workers);
-            const runner = mkRunner_({browserId: 'bro', workers});
-            const collection1 = TestCollection.create({bro: []});
-            const collection2 = TestCollection.create({bro: [{}]});
-
-            await run_({runner, testCollection: collection1});
+            const runner = mkRunner_({workers});
+            await run_({runner});
             workers.isEnded.returns(true);
-            const added = runner.addTestsToRun(collection2);
+
+            const added = runner.addTestToRun(Test.create({title: 'foo'}));
 
             assert.isFalse(added);
             assert.notCalled(TestRunner.prototype.run);

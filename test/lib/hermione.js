@@ -28,7 +28,7 @@ describe('hermione', () => {
         const runner = new AsyncEmitter();
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
-        runner.addTestsToRun = sandbox.stub(Runner.prototype, 'addTestsToRun');
+        runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
 
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
@@ -428,26 +428,26 @@ describe('hermione', () => {
         });
     });
 
-    describe('addTestsToRun', () => {
-        it('should pass tests collection to the existing runner', async () => {
+    describe('addTestToRun', () => {
+        it('should pass test to the existing runner', async () => {
             const runner = mkRunnerStub_();
             const hermione = Hermione.create();
-            const collection = {};
+            const test = {};
 
             await hermione.run();
-            hermione.addTestsToRun(collection);
+            hermione.addTestToRun(test, 'bro');
 
-            assert.calledOnceWith(runner.addTestsToRun, collection);
+            assert.calledOnceWith(runner.addTestToRun, test, 'bro');
         });
 
         it('should return false when hermione is not running', () => {
             const runner = mkRunnerStub_();
             const hermione = Hermione.create();
 
-            const added = hermione.addTestsToRun({});
+            const added = hermione.addTestToRun({});
 
             assert.isFalse(added);
-            assert.notCalled(runner.addTestsToRun);
+            assert.notCalled(runner.addTestToRun);
         });
     });
 
