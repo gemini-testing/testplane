@@ -21,15 +21,16 @@ describe('runner/browser-runner', () => {
         const browserId = opts.browserId || 'defaultBro';
         const config = opts.config || makeConfigStub();
         const browserPool = opts.browserPool || BrowserPool.create(config);
-        return BrowserRunner.create(browserId, config, browserPool);
+        const workers = opts.workers || sinon.createStubInstance(Workers);
+
+        return BrowserRunner.create(browserId, config, browserPool, workers);
     };
 
     const run_ = (opts = {}) => {
         const runner = opts.runner || mkRunner_();
         const testCollection = opts.testCollection || TestCollection.create();
-        const workers = opts.workers || sinon.createStubInstance(Workers);
 
-        return runner.run(testCollection, workers);
+        return runner.run(testCollection);
     };
 
     const stubTestCollection_ = (tests = []) => {
@@ -115,20 +116,11 @@ describe('runner/browser-runner', () => {
             assert.calledOnce(addedTestRunner);
         });
 
-        it('should return false when runner is not running', async () => {
-            const runner = mkRunner_();
-
-            const added = runner.addTestToRun(Test.create({title: 'foo'}));
-
-            assert.isFalse(added);
-            assert.notCalled(TestRunner.prototype.run);
-        });
-
         it('should return false when workers are ended', async () => {
             stubTestCollection_([]);
-            const runner = mkRunner_();
             const workers = sinon.createStubInstance(Workers);
-            await run_({runner, workers});
+            const runner = mkRunner_({workers});
+            await run_({runner});
             workers.isEnded.returns(true);
 
             const added = runner.addTestToRun(Test.create({title: 'foo'}));
@@ -186,14 +178,6 @@ describe('runner/browser-runner', () => {
             await run_({runner});
 
             assert.calledOnceWith(TestRunnerFabric.create, sinon.match.any, config, browserAgent);
-        });
-
-        it('should pass workers to test runner', async () => {
-            const workers = sinon.createStubInstance(Workers);
-
-            await run_({workers});
-
-            assert.calledOnceWith(TestRunner.prototype.run, workers);
         });
 
         it('should wait for all test runners', async () => {

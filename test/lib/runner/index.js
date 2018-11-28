@@ -108,7 +108,7 @@ describe('Runner', () => {
                 TestCollection.prototype.getBrowsers.returns(['bro1', 'bro2']);
                 await run_();
 
-                assert.alwaysCalledWith(BrowserRunner.prototype.run, sinon.match.any, workers);
+                assert.alwaysCalledWith(BrowserRunner.create, sinon.match.any, sinon.match.any, sinon.match.any, workers);
             });
 
             it('should end workers after work is done', async () => {
@@ -356,15 +356,15 @@ describe('Runner', () => {
 
             runner.addTestToRun(test, 'bro2');
 
-            assert.calledOnceWith(BrowserRunner.create, 'bro2', config, pool);
-            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}), workers);
+            assert.calledOnceWith(BrowserRunner.create, 'bro2', config, pool, workers);
+            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}));
         });
 
         it('should pass test to the browser runner', async () => {
             const runner = new Runner(makeConfigStub());
             const test = {};
 
-            BrowserRunner.prototype.browserId.returns('bro');
+            sandbox.stub(BrowserRunner.prototype, 'browserId').get(() => 'bro');
             BrowserRunner.prototype.run.callsFake(() => runner.addTestToRun(test, 'bro'));
             TestCollection.prototype.getBrowsers.returns(['bro']);
 
