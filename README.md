@@ -192,10 +192,19 @@ Request `/session/:sessionId/orientation` is not a part of the official Webdrive
 ## Prerequisites
 Because `hermione` is based on `WebdriverIO`, you need to set up [Selenium](http://www.seleniumhq.org/) before proceeding further.
 
-The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). After installing it (globally), you can run your server by executing:
+The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). After installing it (globally), you can install drivers by command
+
+```
+selenium-standalone install
+```
+
+and run your server by executing
+
 ```
 selenium-standalone start
 ```
+
+:warning: If you will get error like `No Java runtime present, requesting install.` you should install [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) for your OS.
 
 ## Hooks
 
@@ -362,7 +371,7 @@ First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
 
 Install the package.
 ```
-npm install -g hermione
+npm install hermione chai
 ```
 
 Then put `.hermione.conf.js` in the project root.
@@ -377,16 +386,16 @@ module.exports = {
     browsers: {
         chrome: {
             desiredCapabilities: {
-                browserName: 'chrome'
+                browserName: 'chrome' // this browser should be installed on your OS
             }
         }
     }
 };
 ```
 
-Write your first test.
+Write your first test in `tests/desktop/github.js` file.
 ```javascript
-var assert = require('chai').assert;
+const assert = require('chai').assert;
 
 describe('github', function() {
     it('should find hermione', function() {
@@ -400,9 +409,9 @@ describe('github', function() {
 });
 ```
 
-Finally, run tests.
+Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
 ```
-hermione
+node_modules/.bin/hermione
 ```
 
 ## .hermione.conf.js
