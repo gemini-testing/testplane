@@ -41,7 +41,6 @@ describe('Runner', () => {
         sandbox.stub(TestCollection.prototype);
 
         sandbox.spy(BrowserRunner, 'create');
-        sandbox.stub(BrowserRunner.prototype, 'browserId');
         sandbox.stub(BrowserRunner.prototype, 'run').resolves();
         sandbox.stub(BrowserRunner.prototype, 'addTestToRun').resolves();
     });
@@ -383,7 +382,7 @@ describe('Runner', () => {
             assert.notCalled(BrowserRunner.prototype.run);
         });
 
-        it('should return false when workers is ended', async () => {
+        it('should return false when workers are ended', async () => {
             const runner = new Runner(makeConfigStub());
             await run_({runner});
             Workers.prototype.isEnded.returns(true);
