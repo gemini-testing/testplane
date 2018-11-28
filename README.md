@@ -915,8 +915,8 @@ hermione.addTestToRun(test, browser);
 
 Adds test to the current run.
 
-* **test** `Test` – Test to run.
-* **browser** `String` – Browser to run test in.
+* **test** (required) `Test` – Test to run.
+* **browserId** (required) `String` – Browser to run test in.
 
 Returns `false` if current run is ended or cancelled, `true` otherwise.
 
