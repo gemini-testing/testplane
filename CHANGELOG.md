@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.0.0"></a>
+# [1.0.0](https://github.com/gemini-testing/hermione/compare/v0.94.0...v1.0.0) (2018-11-29)
+
+
+### Features
+
+* add image sizes to "assertViewResults" ([e84ce6d](https://github.com/gemini-testing/hermione/commit/e84ce6d))
+
+
+### BREAKING CHANGES
+
+* now "assertViewResults" contains image path and size instead of only path
+
+
+
 <a name="0.94.0"></a>
 # [0.94.0](https://github.com/gemini-testing/hermione/compare/v0.93.0...v0.94.0) (2018-11-29)
 
