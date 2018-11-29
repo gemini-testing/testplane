@@ -2,6 +2,7 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
+const {Image} = require('gemini-core');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
 const {mkSessionStub_} = require('../../../browser/utils');
 
@@ -27,6 +28,16 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
         return OneTimeScreenshooter.create(config, browser);
     };
 
+    const stubImage_ = (size = {width: 100500, height: 500100}) => {
+        return {
+            getSize: sandbox.stub().named('getSize').returns(size)
+        };
+    };
+
+    beforeEach(() => {
+        sandbox.stub(Image, 'fromBase64').returns(stubImage_());
+    });
+
     afterEach(() => sandbox.restore());
 
     describe('extendWithPageScreenshot', () => {
@@ -38,15 +49,16 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             assert.equal(result, error);
         });
 
-        it('should extend passed error with page screenshot', async () => {
+        it('should extend passed error with page screenshot data', async () => {
             const browser = mkBrowser_({
                 screenshot: () => Promise.resolve({value: 'base64img'})
             });
             const screenshooter = mkScreenshooter_({browser});
+            Image.fromBase64.withArgs('base64img').returns(stubImage_({width: 100, height: 200}));
 
             const error = await screenshooter.extendWithPageScreenshot(new Error());
 
-            assert.propertyVal(error, 'screenshot', 'base64img');
+            assert.deepPropertyVal(error, 'screenshot', {base64: 'base64img', size: {width: 100, height: 200}});
         });
 
         it('should resolve with unmodified error if failed to take screenshot', async () => {
