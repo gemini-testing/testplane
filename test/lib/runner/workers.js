@@ -137,4 +137,20 @@ describe('Workers', () => {
             assert.calledOnceWith(workerFarm.end, workersImpl);
         });
     });
+
+    describe('isEnded', () => {
+        it('should return false when worker farm is not ended', () => {
+            const workers = mkWorkers_();
+
+            assert.isFalse(workers.isEnded());
+        });
+
+        it('should return true when worker farm is ended', () => {
+            const workers = mkWorkers_();
+
+            workers.end();
+
+            assert.isTrue(workers.isEnded());
+        });
+    });
 });

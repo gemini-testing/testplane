@@ -28,6 +28,8 @@ describe('hermione', () => {
         const runner = new AsyncEmitter();
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
+        runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
+
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
     };
@@ -446,6 +448,29 @@ describe('hermione', () => {
                         assert.callOrder(eventsUtils.passthroughEventAsync, runner.run);
                     });
             });
+        });
+    });
+
+    describe('addTestToRun', () => {
+        it('should pass test to the existing runner', async () => {
+            const runner = mkRunnerStub_();
+            const hermione = Hermione.create();
+            const test = {};
+
+            await hermione.run();
+            hermione.addTestToRun(test, 'bro');
+
+            assert.calledOnceWith(runner.addTestToRun, test, 'bro');
+        });
+
+        it('should return false when hermione is not running', () => {
+            const runner = mkRunnerStub_();
+            const hermione = Hermione.create();
+
+            const added = hermione.addTestToRun({});
+
+            assert.isFalse(added);
+            assert.notCalled(runner.addTestToRun);
         });
     });
 

@@ -21,21 +21,20 @@ describe('runner/browser-runner', () => {
         const browserId = opts.browserId || 'defaultBro';
         const config = opts.config || makeConfigStub();
         const browserPool = opts.browserPool || BrowserPool.create(config);
-        return BrowserRunner.create(browserId, config, browserPool);
+        const workers = opts.workers || sinon.createStubInstance(Workers);
+
+        return BrowserRunner.create(browserId, config, browserPool, workers);
     };
 
     const run_ = (opts = {}) => {
         const runner = opts.runner || mkRunner_();
         const testCollection = opts.testCollection || TestCollection.create();
-        const workers = opts.workers || sinon.createStubInstance(Workers);
 
-        return runner.run(testCollection, workers);
+        return runner.run(testCollection);
     };
 
     const stubTestCollection_ = (tests = []) => {
-        TestCollection.prototype.mapTests.callsFake((browserId, cb) => {
-            return tests.map(cb);
-        });
+        TestCollection.prototype.eachTest.callsFake((browserId, cb) => tests.forEach(cb));
     };
 
     beforeEach(() => {
@@ -43,7 +42,7 @@ describe('runner/browser-runner', () => {
         sandbox.stub(TestRunner.prototype, 'run').resolves();
         sandbox.stub(TestRunner.prototype, 'cancel');
 
-        sandbox.stub(TestCollection.prototype, 'mapTests').returns([]);
+        sandbox.stub(TestCollection.prototype, 'eachTest');
 
         sandbox.spy(SuiteMonitor, 'create');
         sandbox.stub(SuiteMonitor.prototype, 'testBegin');
@@ -83,13 +82,61 @@ describe('runner/browser-runner', () => {
         });
     });
 
+    describe('addTestToRun', async () => {
+        it('should add test to the list of the tests to execute', async () => {
+            const test1 = Test.create({title: 'foo'});
+            const test2 = Test.create({title: 'bar'});
+            const afterRun = sinon.stub().named('afterRun');
+            stubTestCollection_([test1]);
+            const runner = mkRunner_({browserId: 'bro'});
+
+            const runPromise = run_({runner}).then(afterRun);
+            runner.addTestToRun(test2);
+            await runPromise;
+
+            assert.callOrder(
+                TestRunnerFabric.create.withArgs(test1).named('test1'),
+                TestRunnerFabric.create.withArgs(test2).named('test2'),
+                afterRun
+            );
+        });
+
+        it('should run added test', async () => {
+            const runner = mkRunner_({browserId: 'bro'});
+            const test1 = Test.create({title: 'foo'});
+            const test2 = Test.create({title: 'bar'});
+            const addedTestRunner = sandbox.stub();
+            stubTestCollection_([test1]);
+            TestRunner.prototype.run.onFirstCall().callsFake(() => runner.addTestToRun(test2));
+            TestRunner.prototype.run.onSecondCall().callsFake(addedTestRunner);
+
+            await run_({runner});
+
+            assert.calledTwice(TestRunner.prototype.run);
+            assert.calledOnce(addedTestRunner);
+        });
+
+        it('should return false when workers are ended', async () => {
+            stubTestCollection_([]);
+            const workers = sinon.createStubInstance(Workers);
+            const runner = mkRunner_({workers});
+            await run_({runner});
+            workers.isEnded.returns(true);
+
+            const added = runner.addTestToRun(Test.create({title: 'foo'}));
+
+            assert.isFalse(added);
+            assert.notCalled(TestRunner.prototype.run);
+        });
+    });
+
     describe('run', () => {
         it('should process only tests for specified browser', async () => {
             const runner = mkRunner_({browserId: 'bro'});
 
             await run_({runner});
 
-            assert.calledOnceWith(TestCollection.prototype.mapTests, 'bro');
+            assert.calledOnceWith(TestCollection.prototype.eachTest, 'bro');
         });
 
         it('should create browser agent for each test in collection', async () => {
@@ -131,14 +178,6 @@ describe('runner/browser-runner', () => {
             await run_({runner});
 
             assert.calledOnceWith(TestRunnerFabric.create, sinon.match.any, config, browserAgent);
-        });
-
-        it('should pass workers to test runner', async () => {
-            const workers = sinon.createStubInstance(Workers);
-
-            await run_({workers});
-
-            assert.calledOnceWith(TestRunner.prototype.run, workers);
         });
 
         it('should wait for all test runners', async () => {

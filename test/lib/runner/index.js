@@ -37,7 +37,7 @@ describe('Runner', () => {
         sandbox.stub(Workers.prototype);
         sandbox.stub(Workers, 'create').returns(Object.create(Workers.prototype));
 
-        sandbox.stub(BrowserPool, 'create');
+        sandbox.stub(BrowserPool, 'create').returns({cancel: sandbox.spy()});
 
         sandbox.stub(temp, 'init');
         sandbox.stub(temp, 'serialize');
@@ -49,6 +49,7 @@ describe('Runner', () => {
 
         sandbox.spy(BrowserRunner, 'create');
         sandbox.stub(BrowserRunner.prototype, 'run').resolves();
+        sandbox.stub(BrowserRunner.prototype, 'addTestToRun').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -113,7 +114,7 @@ describe('Runner', () => {
                 TestCollection.prototype.getBrowsers.returns(['bro1', 'bro2']);
                 await run_();
 
-                assert.alwaysCalledWith(BrowserRunner.prototype.run, sinon.match.any, workers);
+                assert.alwaysCalledWith(BrowserRunner.create, sinon.match.any, sinon.match.any, sinon.match.any, workers);
             });
 
             it('should end workers after work is done', async () => {
@@ -486,6 +487,75 @@ describe('Runner', () => {
 
                 return assert.isRejected(run_({runner}), /run-error/);
             });
+        });
+    });
+
+    describe('addTestToRun', () => {
+        beforeEach(() => {
+            TestCollection.prototype.getBrowsers.returns([]);
+        });
+
+        it('should create new browser runner if there is no active one', async () => {
+            const config = makeConfigStub({browser: ['bro1']});
+            const pool = {};
+            BrowserPool.create.returns(pool);
+            const workers = Object.create(Workers.prototype);
+            Workers.create.returns(workers);
+            const runner = new Runner(config);
+            const test = {};
+            await run_({runner});
+
+            runner.addTestToRun(test, 'bro2');
+
+            assert.calledOnceWith(BrowserRunner.create, 'bro2', config, pool, workers);
+            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}));
+        });
+
+        it('should pass test to the browser runner', async () => {
+            const runner = new Runner(makeConfigStub());
+            const test = {};
+
+            sandbox.stub(BrowserRunner.prototype, 'browserId').get(() => 'bro');
+            BrowserRunner.prototype.run.callsFake(() => runner.addTestToRun(test, 'bro'));
+            TestCollection.prototype.getBrowsers.returns(['bro']);
+
+            await run_({runner});
+
+            assert.calledWith(BrowserRunner.prototype.addTestToRun, test);
+        });
+
+        it('should return false when runner is not running', async () => {
+            const runner = new Runner(makeConfigStub());
+
+            const added = runner.addTestToRun({});
+
+            assert.isFalse(added);
+            assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
+        });
+
+        it('should return false when workers are ended', async () => {
+            const runner = new Runner(makeConfigStub());
+            await run_({runner});
+            Workers.prototype.isEnded.returns(true);
+
+            const added = runner.addTestToRun({});
+
+            assert.isFalse(added);
+            assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
+        });
+
+        it('should return false when runner is cancelled', async () => {
+            const runner = new Runner(makeConfigStub());
+            run_({runner});
+
+            runner.cancel();
+            const added = runner.addTestToRun({});
+
+            assert.isFalse(added);
+            assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.run);
         });
     });
 
