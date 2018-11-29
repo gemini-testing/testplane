@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="0.94.0"></a>
+# [0.94.0](https://github.com/gemini-testing/hermione/compare/v0.93.0...v0.94.0) (2018-11-29)
+
+
+### Features
+
+* Ability to add test to current run ([#335](https://github.com/gemini-testing/hermione/issues/335)) ([33900b3](https://github.com/gemini-testing/hermione/commit/33900b3))
+
+
+
 <a name="0.93.0"></a>
 # [0.93.0](https://github.com/gemini-testing/hermione/compare/v0.92.0...v0.93.0) (2018-11-26)
 
