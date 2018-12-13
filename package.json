@@ -64,6 +64,6 @@
     "proxyquire": "^1.7.3",
     "sinon": "^4.4.2",
     "sinon-chai": "^2.12.0",
-    "standard-version": "^3.0.0"
+    "standard-version": "^4.4.0"
   }
 }
