@@ -46,8 +46,9 @@ describe('assertView command', () => {
     };
 
     beforeEach(() => {
+        sandbox.stub(Image, 'create').returns(Object.create(Image.prototype));
         sandbox.stub(Image, 'compare').resolves(true);
-        sandbox.stub(Image, 'fromBase64').returns(stubImage_());
+        sandbox.stub(Image.prototype, 'getSize');
 
         sandbox.stub(fs, 'readFileSync');
         sandbox.stub(fs, 'existsSync').returns(true);
@@ -260,7 +261,7 @@ describe('assertView command', () => {
                     const refImage = stubImage_({size: {width: 300, height: 400}});
 
                     ScreenShooter.prototype.capture.resolves(currImage);
-                    Image.fromBase64.returns(refImage);
+                    Image.create.returns(refImage);
 
                     await browser.publicAPI.assertView('state');
 
@@ -345,7 +346,7 @@ describe('assertView command', () => {
         const imagePlain = stubImage_({size: {width: 100, height: 200}});
         const imageComplex = stubImage_({size: {width: 300, height: 400}});
 
-        Image.fromBase64
+        Image.create
             .withArgs(bufferPlain).returns(imagePlain)
             .withArgs(bufferComplex).returns(imageComplex);
 
