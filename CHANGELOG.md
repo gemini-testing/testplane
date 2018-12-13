@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.0.1"></a>
+## [1.0.1](https://github.com/gemini-testing/hermione/compare/v1.0.0...v1.0.1) (2018-12-13)
+
+
+### Bug Fixes
+
+* do not convert ref image file to base64 to get size ([b1b8ef8](https://github.com/gemini-testing/hermione/commit/b1b8ef8))
+
+
+
 <a name="1.0.0"></a>
 # [1.0.0](https://github.com/gemini-testing/hermione/compare/v0.94.0...v1.0.0) (2018-11-29)
 
