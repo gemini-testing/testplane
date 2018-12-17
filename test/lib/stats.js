@@ -13,8 +13,7 @@ describe('Stats', () => {
 
     beforeEach(() => {
         runner = new EventEmitter();
-        stats = Stats.create();
-        stats.attachRunner(runner);
+        stats = Stats.create(runner);
     });
 
     afterEach(() => sandbox.restore());

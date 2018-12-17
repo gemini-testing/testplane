@@ -259,7 +259,7 @@ describe('Runner', () => {
             it(`should passthrough ${name} event from browser runner`, async () => {
                 onRun((browserRunner) => browserRunner.emit(event, {foo: 'bar'}));
 
-                sandbox.stub(RunnerStats.prototype, 'attachRunner');
+                sandbox.stub(RunnerStats, 'create').returns(sandbox.createStubInstance(RunnerStats));
 
                 const onEvent = sinon.stub().named(`on${name}`);
                 const runner = new Runner(makeConfigStub())
@@ -272,10 +272,6 @@ describe('Runner', () => {
         });
 
         describe('interceptors', () => {
-            beforeEach(() => {
-                sandbox.stub(RunnerStats.prototype, 'attachRunner');
-            });
-
             _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
                 it(`should call interceptor for ${name} with event name and event data`, async () => {
                     onRun((browserRunner) => browserRunner.emit(event, {foo: 'bar'}));
