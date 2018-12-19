@@ -316,7 +316,7 @@ Implemented via two commands:
 * setMeta(key, value)
 * getMeta([key])
 
-These methods allow you to store some information between webdriver calls and it can then be used in custom commands, for instance. This meta information will be shown in the [allure report](https://github.com/gemini-testing/hermione-allure-reporter).
+These methods allow you to store some information between webdriver calls and it can then be used in custom commands, for instance. This meta information will be shown in the [html-reporter](https://github.com/gemini-testing/html-reporter).
 
 **Note**: hermione saves the last URL opened in the browser in meta info.
 
