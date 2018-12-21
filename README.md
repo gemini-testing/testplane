@@ -508,6 +508,7 @@ Option name               | Description
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
+`w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 
 #### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.

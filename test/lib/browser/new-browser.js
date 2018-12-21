@@ -111,10 +111,16 @@ describe('NewBrowser', () => {
                 .then(() => assert.notCalled(session.timeouts));
         });
 
-        it('should set page load timeout if it is specified in a config', () => {
-            return mkBrowser_({pageLoadTimeout: 100500})
+        it('should set page load timeout if it is specified in a config for w3c incompatible browser', () => {
+            return mkBrowser_({pageLoadTimeout: 100500, w3cCompatible: false})
                 .init()
                 .then(() => assert.calledOnceWith(session.timeouts, 'page load', 100500));
+        });
+
+        it('should set page load timeout if it is specified in a config for w3c compatible browser', () => {
+            return mkBrowser_({pageLoadTimeout: 100500, w3cCompatible: true})
+                .init()
+                .then(() => assert.calledOnceWith(session.timeouts, {'pageLoad': 100500}));
         });
     });
 
