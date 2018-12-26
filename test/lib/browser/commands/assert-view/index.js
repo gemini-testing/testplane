@@ -208,7 +208,7 @@ describe('assertView command', () => {
 
     describe('image compare', () => {
         it('should add opts from runtime config to temp', async () => {
-            Image.compare.resolves(true);
+            Image.compare.resolves({equal: true});
             RuntimeConfig.getInstance.returns({tempOpts: {some: 'opts'}});
 
             await stubBrowser_().publicAPI.assertView();
@@ -218,7 +218,7 @@ describe('assertView command', () => {
 
         it('should compare a current image with a reference', async () => {
             const config = mkConfig_({getScreenshotPath: () => '/ref/path'});
-            Image.compare.resolves(true);
+            Image.compare.resolves({equal: true});
             temp.path.returns('/curr/path');
 
             await stubBrowser_(config).publicAPI.assertView();
@@ -227,7 +227,7 @@ describe('assertView command', () => {
         });
 
         it('should compare images with given set of parameters', async () => {
-            const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200});
+            const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200, compareOpts: {stopOnFirstFail: true}});
             const browser = stubBrowser_(config);
 
             browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
@@ -237,13 +237,13 @@ describe('assertView command', () => {
             assert.calledOnceWith(
                 Image.compare,
                 sinon.match.any, sinon.match.any,
-                {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300}
+                {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300, compareOpts: {stopOnFirstFail: true}}
             );
         });
 
         describe('if images are not equal', () => {
             beforeEach(() => {
-                Image.compare.resolves(false);
+                Image.compare.resolves({equal: false});
             });
 
             describe('assert refs', () => {
@@ -308,6 +308,17 @@ describe('assertView command', () => {
 
                         assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
                     });
+
+                    it('should pass diff bounds to error', () => {
+                        Image.compare.resolves({diffBounds: {left: 0, top: 0, right: 10, bottom: 10}});
+                        const browser = stubBrowser_();
+                        return browser.publicAPI.assertView()
+                            .then(() => {
+                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
+                                assert.deepEqual(e.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
+                            });
+                    });
                 });
             });
 
@@ -330,6 +341,7 @@ describe('assertView command', () => {
     });
 
     it('should remember several success assert view calls', async () => {
+        Image.compare.resolves({equal: true});
         const getScreenshotPath = sandbox.stub();
 
         getScreenshotPath
