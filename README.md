@@ -591,7 +591,7 @@ Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` 
 #### compareOpts
 Extra options for images comparing. See [looks-same](https://github.com/gemini-testing/looks-same#comparing-images) documentation for the list of options. Default values are:
 ```javascript
-mochaOpts: {
+compareOpts: {
     stopOnFirstFail: true // Only first pixel will be found if this option is true
 }
 ```
