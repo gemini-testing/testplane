@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.2.2"></a>
+## [1.2.2](https://github.com/gemini-testing/hermione/compare/v1.2.1...v1.2.2) (2019-01-10)
+
+
+### Bug Fixes
+
+* correct documentation about compare options ([543d165](https://github.com/gemini-testing/hermione/commit/543d165))
+* do not fall by memory in looks-same ([6f11eda](https://github.com/gemini-testing/hermione/commit/6f11eda))
+
+
+
 <a name="1.2.1"></a>
 ## [1.2.1](https://github.com/gemini-testing/hermione/compare/v1.2.0...v1.2.1) (2018-12-26)
 
