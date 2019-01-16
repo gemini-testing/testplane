@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.2.3"></a>
+## [1.2.3](https://github.com/gemini-testing/hermione/compare/v1.2.2...v1.2.3) (2019-01-16)
+
+
+### Bug Fixes
+
+* test meta from worker totally redefines test meta from master ([df2b97e](https://github.com/gemini-testing/hermione/commit/df2b97e))
+
+
+
 <a name="1.2.2"></a>
 ## [1.2.2](https://github.com/gemini-testing/hermione/compare/v1.2.1...v1.2.2) (2019-01-10)
 
