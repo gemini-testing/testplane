@@ -183,6 +183,20 @@ describe('runner/test-runner/regular-test-runner', () => {
                 }));
             });
 
+            it('should extend test meta from master process by test meta from worker', async () => {
+                const onPass = sinon.stub().named('onPass');
+                const runner = mkRunner_({test: makeTest({meta: {foo: 'bar'}})})
+                    .on(Events.TEST_PASS, onPass);
+
+                Workers.prototype.runTest.resolves(stubTestResult_({meta: {baz: 'qux'}}));
+
+                await run_({runner});
+
+                assert.calledOnceWith(onPass, sinon.match({
+                    meta: {foo: 'bar', baz: 'qux'}
+                }));
+            });
+
             it('should be emitted with assert view results', async () => {
                 const onPass = sinon.stub().named('onPass');
                 const runner = mkRunner_()
