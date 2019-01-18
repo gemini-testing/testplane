@@ -477,5 +477,14 @@ describe('ExistingBrowser', () => {
 
             assert.notEqual(state, browser.state);
         });
+
+        it('should keep process id in meta', () => {
+            const browser = mkBrowser_();
+            const pid = browser.meta.pid;
+
+            browser.quit();
+
+            assert.equal(browser.meta.pid, pid);
+        });
     });
 });
