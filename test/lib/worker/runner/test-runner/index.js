@@ -545,7 +545,25 @@ describe('worker/runner/test-runner', () => {
                 assert.match(error.hermioneCtx, {assertViewResults: []});
             });
 
-            it('should convert assert view results to raw object', async () => {
+            it('should convert assert view results to raw object if it has error', async () => {
+                const stubError = new Error();
+                stubError.foo = 'bar';
+                const assertViewResults = AssertViewResults.create([stubError]);
+
+                ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        hermioneCtx.assertViewResults = assertViewResults;
+                        return Promise.resolve();
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                const error = await run_().catch((e) => e);
+                assert.match(error.hermioneCtx, {assertViewResults: [{foo: 'bar'}]});
+            });
+
+            it('should ignore assert view results if it has no error', async () => {
                 const assertViewResults = AssertViewResults.create([{foo: 'bar'}]);
 
                 ExecutionThread.create.callsFake(({hermioneCtx}) => {
@@ -558,8 +576,7 @@ describe('worker/runner/test-runner', () => {
                 });
 
                 const error = await run_().catch((e) => e);
-
-                assert.match(error.hermioneCtx, {assertViewResults: [{foo: 'bar'}]});
+                assert.match(error.hermioneCtx, {assertViewResults: []});
             });
 
             it('should extend error with browser meta and state', async () => {
