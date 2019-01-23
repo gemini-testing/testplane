@@ -838,6 +838,50 @@ describe('config browser-options', () => {
         });
     });
 
+    describe('buildDiffOpts', () => {
+        it('should throw error if "buildDiffOpts" is not a object', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({buildDiffOpts: 'some-string'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"buildDiffOpts" must be an object');
+        });
+
+        ['ignoreAntialiasing', 'ignoreCaret'].forEach((option) => {
+            it(`should set "${option}" to "true" by default`, () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1.buildDiffOpts[option], true);
+            });
+        });
+
+        it('should set provided value', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({buildDiffOpts: {k1: 'v1', k2: 'v2'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.buildDiffOpts, {k1: 'v1', k2: 'v2'});
+        });
+    });
+
     ['calibrate', 'screenshotOnReject', 'compositeImage', 'resetCursor'].forEach((option) => {
         describe(`${option}`, () => {
             it('should throw an error if value is not a boolean', () => {

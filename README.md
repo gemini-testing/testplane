@@ -51,6 +51,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [antialiasingTolerance](#antialiasingtolerance)
     - [screenshotsDir](#screenshotsdir)
     - [compareOpts](#compareopts)
+    - [buildDiffOpts](#builddiffopts)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -509,6 +510,7 @@ Option name               | Description
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
 `compareOpts`             | Options for comparing images.
+`buildDiffOpts`           | Options for building diff image.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 
@@ -600,6 +602,15 @@ Extra options for comparing images. See [looks-same](https://github.com/gemini-t
 ```javascript
 compareOpts: {
     stopOnFirstFail: false
+}
+```
+
+#### buildDiffOpts
+Extra options for building diff image. See [looks-same](https://github.com/gemini-testing/looks-same#building-diff-image) documentation for the list of available options. Default values are:
+```javascript
+buildDiffOpts: {
+    ignoreAntialiasing: true,
+    ignoreCaret: true
 }
 ```
 
