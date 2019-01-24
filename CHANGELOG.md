@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.3.0"></a>
+# [1.3.0](https://github.com/gemini-testing/hermione/compare/v1.2.4...v1.3.0) (2019-01-24)
+
+
+### Features
+
+* use ref image from looks-same ([ff4635a](https://github.com/gemini-testing/hermione/commit/ff4635a))
+
+
+
 <a name="1.2.4"></a>
 ## [1.2.4](https://github.com/gemini-testing/hermione/compare/v1.2.3...v1.2.4) (2019-01-18)
 
