@@ -258,10 +258,9 @@ describe('assertView command', () => {
 
                     const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
                     const currImage = stubImage_({size: {width: 100, height: 200}});
-                    const refImage = stubImage_({size: {width: 300, height: 400}});
 
                     ScreenShooter.prototype.capture.resolves(currImage);
-                    Image.create.returns(refImage);
+                    Image.compare.resolves({equal: false, metaInfo: {refImg: {size: {width: 300, height: 400}}}});
 
                     await browser.publicAPI.assertView('state');
 
@@ -341,7 +340,9 @@ describe('assertView command', () => {
     });
 
     it('should remember several success assert view calls', async () => {
-        Image.compare.resolves({equal: true});
+        Image.compare
+            .onFirstCall().resolves({equal: true, metaInfo: {refImg: {size: {height: 200, width: 100}}}})
+            .onSecondCall().resolves({equal: true, metaInfo: {refImg: {size: {height: 400, width: 300}}}});
         const getScreenshotPath = sandbox.stub();
 
         getScreenshotPath
