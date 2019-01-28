@@ -314,6 +314,19 @@ describe('Runner', () => {
                 assert.calledOnceWith(onEvent, {foo: 'bar'});
             });
 
+            it('should not emit event if interceptor returns an empty object', async () => {
+                onRun((browserRunner) => browserRunner.emit('eventName'));
+
+                const onEvent = sinon.stub().named('onEvent');
+                const interceptor = {event: 'eventName', handler: sandbox.stub().returns({})};
+                const runner = new Runner(makeConfigStub(), [interceptor])
+                    .on('eventName', onEvent);
+
+                await run_({runner});
+
+                assert.notCalled(onEvent);
+            });
+
             it('should passthrough event if interceptor returns the same event', async () => {
                 onRun((browserRunner) => browserRunner.emit('eventName', {foo: 'bar'}));
 

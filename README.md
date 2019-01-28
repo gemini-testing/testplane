@@ -809,6 +809,20 @@ module.exports = (hermione) => {
 };
 ```
 
+If for some reason interceptor should ignore passed event and do not translate it to any other listeners you can return an empty object:
+
+```js
+module.exports = (hermione) => {
+    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+        return {};
+    });
+
+    hermione.on(hermione.events.TEST_FAIL, (test) => {
+        // this event handler will NEVER be called because interceptor ignores it
+    });
+};
+```
+
 **Available events which can be intercepted**
 
 Event                     |
