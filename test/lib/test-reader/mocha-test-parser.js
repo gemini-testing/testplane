@@ -328,9 +328,9 @@ describe('test-reader/mocha-test-parser', () => {
         it('should add grep to mocha', () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.applyGrep('foo bar');
+            mochaTestParser.applyGrep('(foo|bar)');
 
-            assert.calledOnceWith(MochaStub.lastInstance.grep, 'foo bar');
+            assert.calledOnceWith(MochaStub.lastInstance.grep, new RegExp('(foo|bar)'));
         });
 
         it('should not add empty grep to mocha', () => {
