@@ -50,6 +50,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [tolerance](#tolerance)
     - [antialiasingTolerance](#antialiasingtolerance)
     - [screenshotsDir](#screenshotsdir)
+    - [compareOpts](#compareopts)
+    - [buildDiffOpts](#builddiffopts)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -505,9 +507,10 @@ Option name               | Description
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
 `orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
 `resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run.
-`compareOpts`             | Options for images comparing.
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
+`compareOpts`             | Options for comparing images.
+`buildDiffOpts`           | Options for building diff image.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 
@@ -588,19 +591,28 @@ Browser orientation (`landscape`, `portrait`) that will be set before each test 
 #### resetCursor
 Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run. This can be useful to escape cases when a default position of a cursor affects your tests. We recommend to set this option *truthy* value for desktop browsers and *falsey* for mobile devices. Default value is `true`.
 
-#### compareOpts
-Extra options for images comparing. See [looks-same](https://github.com/gemini-testing/looks-same#comparing-images) documentation for the list of options. Default values are:
-```javascript
-compareOpts: {
-    stopOnFirstFail: true // Only first pixel will be found if this option is true
-}
-```
-
 #### tolerance
 Indicates maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Used only in non-strict mode. By default it's 2.3 which should be enough for the most cases. Increasing global default is not recommended, prefer changing tolerance for particular suites or states instead.
 
 #### antialiasingTolerance
 Read more about this option in [looks-same](https://github.com/gemini-testing/looks-same#comparing-images-with-ignoring-antialiasing).
+
+#### compareOpts
+Extra options for comparing images. See [looks-same](https://github.com/gemini-testing/looks-same#comparing-images) documentation for the list of available options. Default values are:
+```javascript
+compareOpts: {
+    stopOnFirstFail: false
+}
+```
+
+#### buildDiffOpts
+Extra options for building diff image. See [looks-same](https://github.com/gemini-testing/looks-same#building-diff-image) documentation for the list of available options. Default values are:
+```javascript
+buildDiffOpts: {
+    ignoreAntialiasing: true,
+    ignoreCaret: true
+}
+```
 
 #### screenshotsDir
 
