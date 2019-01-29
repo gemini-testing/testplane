@@ -428,6 +428,56 @@ describe('Runner', () => {
             });
         });
 
+        describe('END event', () => {
+            it('should be emitted after browser runners finish', async () => {
+                const onEnd = sinon.spy().named('onEnd');
+
+                const runner = new Runner(makeConfigStub())
+                    .on(RunnerEvents.END, onEnd);
+
+                await run_({runner});
+
+                assert.callOrder(BrowserRunner.prototype.run, onEnd);
+            });
+
+            it('should be emitted even if some browser runner failed', async () => {
+                const onEnd = sinon.spy().named('onEnd');
+                const runner = new Runner(makeConfigStub())
+                    .on(RunnerEvents.RUNNER_END, onEnd);
+
+                BrowserRunner.prototype.run.callsFake(() => Promise.reject());
+
+                await run_({runner}).catch(() => {});
+
+                assert.calledOnce(onEnd);
+            });
+
+            it('should pass test statistic to an END handler', async () => {
+                sandbox.stub(RunnerStats.prototype, 'getResult').returns({foo: 'bar'});
+
+                const onEnd = sinon.stub().named('onEnd');
+                const runner = new Runner(makeConfigStub())
+                    .on(RunnerEvents.END, onEnd);
+
+                await run_({runner});
+
+                assert.calledOnceWith(onEnd, {foo: 'bar'});
+            });
+
+            it('should be emitted before RUNNER_END event', async () => {
+                const onEnd = sinon.spy().named('onEnd');
+                const onRunnerEnd = sinon.spy().named('onRunnerEnd');
+
+                const runner = new Runner(makeConfigStub())
+                    .on(RunnerEvents.END, onEnd)
+                    .on(RunnerEvents.RUNNER_END, onRunnerEnd);
+
+                await run_({runner});
+
+                assert.callOrder(onEnd, onRunnerEnd);
+            });
+        });
+
         describe('RUNNER_END event', () => {
             it('should be emitted after browser runners finish', async () => {
                 const onRunnerEnd = sinon.spy().named('onRunnerEnd');

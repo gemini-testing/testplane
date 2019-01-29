@@ -707,6 +707,7 @@ Event                     | Description
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SESSION_END`             | Will be triggered after the browser session ends. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `BEGIN`                   | Will be triggered before test execution, but after all the runners are initialized.
+`END`                     | Will be triggered after test execution, but exactly before all the runners are down. The handler accepts a stats of tests execution.
 `SUITE_BEGIN`             | Test suite is about to execute.
 `SUITE_END`               | Test suite execution is finished.
 `TEST_BEGIN`              | Test is about to execute.
