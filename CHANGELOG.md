@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.4.0"></a>
+# [1.4.0](https://github.com/gemini-testing/hermione/compare/v1.3.1...v1.4.0) (2019-01-29)
+
+
+### Features
+
+* add 'END' event ([4491eb1](https://github.com/gemini-testing/hermione/commit/4491eb1))
+* add ability not to translate events via interceptors ([243aeab](https://github.com/gemini-testing/hermione/commit/243aeab))
+
+
+
 <a name="1.3.1"></a>
 ## [1.3.1](https://github.com/gemini-testing/hermione/compare/v1.3.0...v1.3.1) (2019-01-28)
 
