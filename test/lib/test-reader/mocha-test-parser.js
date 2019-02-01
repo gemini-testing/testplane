@@ -304,6 +304,35 @@ describe('test-reader/mocha-test-parser', () => {
                 assert.equal(suite1.id(), '123450');
                 assert.equal(suite2.id(), '123451');
             });
+
+            it('"id" getter results should not be dependent on suite parsing order', () => {
+                crypto.getShortMD5.withArgs('/some/file.js').returns('12345');
+                crypto.getShortMD5.withArgs('/other/file.js').returns('67890');
+
+                mkMochaTestParser_();
+
+                MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+                MochaStub.lastInstance.updateSuiteTree((suite) => {
+                    return suite
+                        .addSuite(MochaStub.Suite.create());
+                });
+
+                let suite1 = MochaStub.lastInstance.suite.suites[0];
+
+                assert.equal(suite1.id(), '123450');
+
+                MochaStub.lastInstance.suite.emit('pre-require', {}, '/other/file.js');
+                MochaStub.lastInstance.updateSuiteTree((suite) => {
+                    return suite
+                        .addSuite(MochaStub.Suite.create());
+                });
+
+                suite1 = MochaStub.lastInstance.suite.suites[0];
+                const suite2 = MochaStub.lastInstance.suite.suites[1];
+
+                assert.equal(suite1.id(), '123450');
+                assert.equal(suite2.id(), '678901');
+            });
         });
     });
 
