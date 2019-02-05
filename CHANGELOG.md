@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.6.0"></a>
+# [1.6.0](https://github.com/gemini-testing/hermione/compare/v1.5.1...v1.6.0) (2019-02-05)
+
+
+### Features
+
+* add ability to emit test result events from plugins ([d9e2ad7](https://github.com/gemini-testing/hermione/commit/d9e2ad7))
+
+
+
 <a name="1.5.1"></a>
 ## [1.5.1](https://github.com/gemini-testing/hermione/compare/v1.5.0...v1.5.1) (2019-02-01)
 
