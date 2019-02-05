@@ -13,6 +13,7 @@ const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
 const Errors = require('lib/errors');
 const Hermione = require('lib/hermione');
+const RunnerStats = require('lib/stats');
 const TestReader = require('lib/test-reader');
 const TestCollection = require('lib/test-collection');
 const RunnerEvents = require('lib/constants/runner-events');
@@ -43,6 +44,8 @@ describe('hermione', () => {
         sandbox.stub(RuntimeConfig, 'getInstance').returns({extend: sandbox.stub()});
 
         sandbox.stub(TestReader.prototype, 'read').resolves();
+
+        sandbox.stub(RunnerStats, 'create');
     });
 
     afterEach(() => sandbox.restore());
@@ -205,7 +208,6 @@ describe('hermione', () => {
         describe('reporters', () => {
             let Hermione;
             let attachRunner;
-            let runner;
 
             const createReporter = () => {
                 return function Reporter() {
@@ -218,44 +220,55 @@ describe('hermione', () => {
                     './reporters/reporter': createReporter()
                 });
 
-                runner = mkRunnerStub_();
                 attachRunner = sandbox.stub();
+
+                mkRunnerStub_();
             });
 
-            it('should accept reporter specified as string', () => {
+            it('should accept reporter specified as string', async () => {
                 const options = {reporters: ['reporter']};
+                const hermione = Hermione.create();
 
-                return Hermione.create()
-                    .run(null, options)
-                    .then(() => assert.calledOnceWith(attachRunner, runner));
+                await hermione.run(null, options);
+
+                assert.calledOnceWith(attachRunner, hermione);
             });
 
-            it('should accept reporter specified as function', () => {
+            it('should accept reporter specified as function', async () => {
                 const options = {reporters: [createReporter()]};
+                const hermione = Hermione.create();
 
-                return Hermione.create()
-                    .run(null, options)
-                    .then(() => assert.calledOnceWith(attachRunner, runner));
+                await hermione.run(null, options);
+
+                assert.calledOnceWith(attachRunner, hermione);
             });
 
-            it('should fail if reporter was not found for given identifier', () => {
+            it('should fail if reporter was not found for given identifier', async () => {
                 const options = {reporters: ['unknown-reporter']};
-
                 const hermione = Hermione.create();
 
-                return assert.isRejected(hermione.run(null, options), 'No such reporter: unknown-reporter');
+                try {
+                    await hermione.run(null, options);
+                } catch (e) {
+                    assert.equal(e.message, 'No such reporter: unknown-reporter');
+                }
             });
 
-            it('should fail if reporter is not string or function', () => {
+            it('should fail if reporter is not string or function', async () => {
                 const options = {reporters: [1234]};
-
                 const hermione = Hermione.create();
 
-                return assert.isRejected(hermione.run(null, options), 'Reporter must be a string or a function');
+                try {
+                    await hermione.run(null, options);
+                } catch (e) {
+                    assert.equal(e.message, 'Reporter must be a string or a function');
+                }
             });
         });
 
         describe('reading the tests', () => {
+            beforeEach(() => mkRunnerStub_());
+
             it('should read tests', async () => {
                 const testPaths = ['foo/bar'];
                 const browsers = ['bro1', 'bro2'];
@@ -271,7 +284,6 @@ describe('hermione', () => {
 
             it('should accept test collection as first parameter', async () => {
                 const testCollection = Object.create(TestCollection.prototype);
-                sandbox.stub(Runner.prototype, 'run');
 
                 await runHermione(testCollection);
 
@@ -305,6 +317,26 @@ describe('hermione', () => {
                 await runHermione();
 
                 assert.calledWith(Runner.prototype.run, testCollection);
+            });
+
+            it('should create runner stats', async () => {
+                mkRunnerStub_();
+
+                const hermione = Hermione.create();
+
+                await hermione.run();
+
+                assert.calledOnceWith(RunnerStats.create, hermione);
+            });
+
+            it('should use created runner stats ', async () => {
+                mkRunnerStub_();
+
+                RunnerStats.create.returns('foo bar');
+
+                await runHermione();
+
+                assert.calledWith(Runner.prototype.run, sinon.match.any, 'foo bar');
             });
 
             it('should return "true" if there are no failed tests', () => {

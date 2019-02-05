@@ -14,7 +14,7 @@ const Runner = require('lib/runner');
 const BrowserRunner = require('lib/runner/browser-runner');
 const TestCollection = require('lib/test-collection');
 
-const {makeConfigStub, makeTest} = require('../../utils');
+const {makeConfigStub} = require('../../utils');
 
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
@@ -22,8 +22,9 @@ describe('Runner', () => {
     const run_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
         const runner = opts.runner || new Runner(config);
+        const stats = opts.stats || sinon.createStubInstance(RunnerStats);
 
-        return runner.run(opts.testCollection || TestCollection.create());
+        return runner.run(opts.testCollection || TestCollection.create(), stats);
     };
 
     const onRun = (fn) => {
@@ -220,26 +221,6 @@ describe('Runner', () => {
             assert.calledOnceWith(BrowserRunner.prototype.run, testCollection);
         });
 
-        it('should aggregate statistic for all browsers', async () => {
-            const emitTestResult = (title) => function() {
-                this.emit(RunnerEvents.TEST_PASS, makeTest({title}));
-                return Promise.resolve();
-            };
-
-            TestCollection.prototype.getBrowsers.returns(['foo', 'bar']);
-            BrowserRunner.prototype.run
-                .onFirstCall().callsFake(emitTestResult('test1'))
-                .onSecondCall().callsFake(emitTestResult('test2'));
-
-            const onRunnerEnd = sinon.stub().named('onRunnerEnd');
-            const runner = new Runner(makeConfigStub())
-                .on(RunnerEvents.RUNNER_END, onRunnerEnd);
-
-            await run_({runner});
-
-            assert.equal(onRunnerEnd.firstCall.args[0].total, 2);
-        });
-
         it('should wait until all browser runners will finish', async () => {
             const firstResolveMarker = sandbox.stub().named('First resolve marker');
             const secondResolveMarker = sandbox.stub().named('Second resolve marker');
@@ -258,8 +239,6 @@ describe('Runner', () => {
         _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
             it(`should passthrough ${name} event from browser runner`, async () => {
                 onRun((browserRunner) => browserRunner.emit(event, {foo: 'bar'}));
-
-                sandbox.stub(RunnerStats, 'create').returns(sandbox.createStubInstance(RunnerStats));
 
                 const onEvent = sinon.stub().named(`on${name}`);
                 const runner = new Runner(makeConfigStub())
@@ -453,13 +432,14 @@ describe('Runner', () => {
             });
 
             it('should pass test statistic to an END handler', async () => {
-                sandbox.stub(RunnerStats.prototype, 'getResult').returns({foo: 'bar'});
+                const stats = sinon.createStubInstance(RunnerStats);
+                stats.getResult.returns({foo: 'bar'});
 
                 const onEnd = sinon.stub().named('onEnd');
                 const runner = new Runner(makeConfigStub())
                     .on(RunnerEvents.END, onEnd);
 
-                await run_({runner});
+                await run_({runner, stats});
 
                 assert.calledOnceWith(onEnd, {foo: 'bar'});
             });
@@ -527,13 +507,14 @@ describe('Runner', () => {
             });
 
             it('should pass test statistic to a RUNNER_END handler', async () => {
-                sandbox.stub(RunnerStats.prototype, 'getResult').returns({foo: 'bar'});
+                const stats = sinon.createStubInstance(RunnerStats);
+                stats.getResult.returns({foo: 'bar'});
 
                 const onRunnerEnd = sinon.stub().named('onRunnerEnd');
                 const runner = new Runner(makeConfigStub())
                     .on(RunnerEvents.RUNNER_END, onRunnerEnd);
 
-                await run_({runner});
+                await run_({runner, stats});
 
                 assert.calledOnceWith(onRunnerEnd, {foo: 'bar'});
             });
