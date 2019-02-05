@@ -719,7 +719,7 @@ Event                     | Description
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SESSION_END`             | Will be triggered after the browser session ends. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `BEGIN`                   | Will be triggered before test execution, but after all the runners are initialized.
-`END`                     | Will be triggered after test execution, but exactly before all the runners are down. The handler accepts a stats of tests execution.
+`END`                     | Will be triggered just before `RUNNER_END` event. The handler accepts a stats of tests execution.
 `SUITE_BEGIN`             | Test suite is about to execute.
 `SUITE_END`               | Test suite execution is finished.
 `TEST_BEGIN`              | Test is about to execute.
@@ -832,6 +832,23 @@ module.exports = (hermione) => {
 
     hermione.on(hermione.events.TEST_FAIL, (test) => {
         // this event handler will NEVER be called because interceptor ignores it
+    });
+};
+```
+
+The above feature can be used to delay triggering of some events, for example:
+
+```js
+module.exports = (hermione) => {
+  const intercepted = [];
+
+  hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+        intercepted.push({event, data});
+        return {};
+    });
+
+    hermione.on(hermione.events.END, () => {
+        intercepted.forEach(({event, data}) => hermione.emit(event, data));
     });
 };
 ```
