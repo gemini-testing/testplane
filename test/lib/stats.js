@@ -186,5 +186,17 @@ describe('Stats', () => {
             assert.equal(stats.getResult().perBrowser.bro.failed, 1);
             assert.equal(stats.getResult().perBrowser.ebro.failed, 1);
         });
+
+        it('should correctly handle events emitted after getResult call', () => {
+            runner.emit(RunnerEvents.TEST_PASS, makeTest({title: 'foo', browserId: 'bro'}));
+            assert.equal(stats.getResult().perBrowser.bro.passed, 1);
+
+            runner.emit(RunnerEvents.TEST_PASS, makeTest({title: 'bar', browserId: 'bro'}));
+            assert.equal(stats.getResult().perBrowser.bro.passed, 2);
+        });
+
+        it('should correctly handle zero test events', () => {
+            assert.deepEqual(stats.getResult().perBrowser, {});
+        });
     });
 });
