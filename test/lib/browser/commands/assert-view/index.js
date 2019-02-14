@@ -241,6 +241,21 @@ describe('assertView command', () => {
             );
         });
 
+        it('should compare images with given tolerance', async () => {
+            const config = mkConfig_({tolerance: 100});
+            const browser = stubBrowser_(config);
+
+            browser.prepareScreenshot.resolves({});
+
+            await browser.publicAPI.assertView(null, null, {tolerance: 500});
+
+            assert.calledOnceWith(
+                Image.compare,
+                sinon.match.any, sinon.match.any,
+                sinon.match({tolerance: 500})
+            );
+        });
+
         describe('if images are not equal', () => {
             beforeEach(() => {
                 Image.compare.resolves({equal: false});
