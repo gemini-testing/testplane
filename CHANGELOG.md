@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.8.0"></a>
+# [1.8.0](https://github.com/gemini-testing/hermione/compare/v1.7.2...v1.8.0) (2019-02-15)
+
+
+### Bug Fixes
+
+* AssertViewError should not replace runtime error ([7e6aca4](https://github.com/gemini-testing/hermione/commit/7e6aca4))
+
+
+### Features
+
+* add sortTests for TestCollection ([02f7da8](https://github.com/gemini-testing/hermione/commit/02f7da8))
+* add tolerance option to assert view command ([d87acda](https://github.com/gemini-testing/hermione/commit/d87acda))
+
+
+
 <a name="1.7.2"></a>
 ## [1.7.2](https://github.com/gemini-testing/hermione/compare/v1.7.1...v1.7.2) (2019-02-12)
 
