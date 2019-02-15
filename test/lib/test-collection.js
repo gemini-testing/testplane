@@ -61,6 +61,68 @@ describe('test-collection', () => {
         });
     });
 
+    describe('sortTests', () => {
+        it('should sort all tests for the specified browser', () => {
+            const test1 = {title: 'test1'};
+            const test2 = {title: 'test2'};
+            const test3 = {title: 'test3'};
+
+            const collection = TestCollection.create({
+                'bro1': [test1, test2, test3],
+                'bro2': [test1, test2, test3]
+            });
+
+            collection.sortTests('bro1', (a, b) => a.title < b.title);
+
+            assert.deepEqual(
+                collection.mapTests('bro1', (test, browser) => ({test, browser})),
+                [
+                    {test: test3, browser: 'bro1'},
+                    {test: test2, browser: 'bro1'},
+                    {test: test1, browser: 'bro1'}
+                ]
+            );
+            assert.deepEqual(
+                collection.mapTests('bro2', (test, browser) => ({test, browser})),
+                [
+                    {test: test1, browser: 'bro2'},
+                    {test: test2, browser: 'bro2'},
+                    {test: test3, browser: 'bro2'}
+                ]
+            );
+        });
+
+        it('should sort all tests for all browsers if browser not specified', () => {
+            const test1 = {title: 'test1'};
+            const test2 = {title: 'test2'};
+            const test3 = {title: 'test3'};
+
+            const collection = TestCollection.create({
+                'bro1': [test1, test2, test3],
+                'bro2': [test1, test2, test3]
+            });
+
+            collection.sortTests((a, b) => a.title < b.title);
+
+            assert.deepEqual(
+                collection.mapTests('bro1', (test, browser) => ({test, browser})),
+                [
+                    {test: test3, browser: 'bro1'},
+                    {test: test2, browser: 'bro1'},
+                    {test: test1, browser: 'bro1'}
+                ]
+            );
+            assert.deepEqual(
+                collection.mapTests('bro2', (test, browser) => ({test, browser})),
+                [
+                    {test: test3, browser: 'bro2'},
+                    {test: test2, browser: 'bro2'},
+                    {test: test1, browser: 'bro2'}
+                ]
+            );
+        });
+    });
+
     describe('eachTest', () => {
         it('should iterate over tests for passed browser', () => {
             const test1 = {title: 'test1'};

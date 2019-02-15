@@ -1106,6 +1106,8 @@ TestCollection API:
 
 * `mapTests(browserId, (test, browserId) => ...)` - maps over tests for passed browser. If first argument (`browserId`) is omitted than method will map over tests for all browsers.
 
+* `sortTests(browserId, (currentTest, nextTest) => ...)` - sorts over tests for passed browser. If first argument (`browserId`) is omitted than method will sort over tests for all browsers.
+
 * `eachTest(browserId, (test, browserId) => ...)` - iterates over tests for passed browser. If first argument (`browserId`) is omitted than method will iterate over tests for all browsers.
 
 * `disableAll([browserId])` - disables all tests. Disables tests for specific browser if `browserId` passed. Returns current test collection instance.
