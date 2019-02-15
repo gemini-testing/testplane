@@ -562,6 +562,21 @@ describe('worker/runner/test-runner', () => {
                 assert.match(error.hermioneCtx, {assertViewResults: [{foo: 'bar'}]});
             });
 
+            it('should not throw AssertViewError if runtime error exist', async () => {
+                const assertViewResults = AssertViewResults.create([new Error()]);
+
+                ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        hermioneCtx.assertViewResults = assertViewResults;
+                        return Promise.reject(new Error('runtime error'));
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                await assert.isRejected(run_(), 'runtime error');
+            });
+
             it('should extend error with browser meta and state', async () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
