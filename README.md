@@ -970,6 +970,7 @@ Parameters:
  - selector (required) `String|String[]` – DOM-node selector that you need to capture
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
+   - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
 
 Full example:
 
@@ -977,7 +978,7 @@ Full example:
 it('some test', function() {
     return this.browser
         .url('some/url')
-        .assertView('plain', '.form', {ignoreElements: ['.link']});
+        .assertView('plain', '.form', {ignoreElements: ['.link'], tolerance: 5});
 });
 ```
 
