@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.9.0"></a>
+# [1.9.0](https://github.com/gemini-testing/hermione/compare/v1.8.0...v1.9.0) (2019-02-19)
+
+
+### Features
+
+* **wdio:** update wdio version ([613d31a](https://github.com/gemini-testing/hermione/commit/613d31a))
+
+
+
 <a name="1.8.0"></a>
 # [1.8.0](https://github.com/gemini-testing/hermione/compare/v1.7.2...v1.8.0) (2019-02-15)
 
