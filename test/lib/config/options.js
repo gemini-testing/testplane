@@ -227,6 +227,56 @@ describe('config options', () => {
                 assert.throws(() => createConfig(), Error, '"tempDir" must be a string');
             });
         });
+
+        describe('parallelLimit', () => {
+            it('should throw error in case of not positive integer', () => {
+                [0, -1, '10', 10.15, {foo: 'bar'}].forEach((parallelLimit) => {
+                    Config.read.returns({system: {parallelLimit}});
+
+                    assert.throws(() => createConfig(), '"parallelLimit" must be a positive integer');
+                });
+            });
+
+            it('should be able to pass value is Infinity', () => {
+                Config.read.returns({system: {parallelLimit: Infinity}});
+
+                const config = createConfig();
+
+                assert.equal(config.system.parallelLimit, Infinity);
+            });
+
+            it('should set default parallelLimit option if it does not set in config file', () => {
+                const config = createConfig();
+
+                assert.equal(config.system.parallelLimit, defaults.parallelLimit);
+            });
+
+            it('should be overriden from a config', () => {
+                Config.read.returns({system: {parallelLimit: 5}});
+
+                const config = createConfig();
+
+                assert.equal(config.system.parallelLimit, 5);
+            });
+
+            it('should parse option from environment', () => {
+                const result = parse_({
+                    options: {system: {mochaOpts: {}}},
+                    env: {'hermione_system_parallel_limit': 10}
+                });
+
+                assert.equal(result.system.parallelLimit, 10);
+            });
+
+            it('should parse option from cli', () => {
+                const result = parse_({
+                    options: {system: {parallelLimit: 1}},
+                    argv: ['--system-parallel-limit', 15]
+                });
+
+                assert.equal(result.system.parallelLimit, 15);
+            });
+        });
     });
 
     describe('prepareEnvironment', () => {
