@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.10.0"></a>
+# [1.10.0](https://github.com/gemini-testing/hermione/compare/v1.9.0...v1.10.0) (2019-02-25)
+
+
+### Features
+
+* **config:** add parallelLimit option ([e116e91](https://github.com/gemini-testing/hermione/commit/e116e91))
+
+
+
 <a name="1.9.0"></a>
 # [1.9.0](https://github.com/gemini-testing/hermione/compare/v1.8.0...v1.9.0) (2019-02-19)
 
