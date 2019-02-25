@@ -663,6 +663,9 @@ Hermione runs all tests in subprocesses in order to decrease the main process CP
 #### testsPerWorker
 The maximum number of tests to be run in one worker before it will be restarted.
 
+#### parallelLimit
+By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers `hermione` will try to run in parallel. Default value is `Infinity`.
+
 ### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
 
