@@ -4,6 +4,7 @@ const _ = require('lodash');
 const fs = require('fs-extra');
 const webdriverio = require('@gemini-testing/webdriverio');
 const {Image, temp, ScreenShooter} = require('gemini-core');
+const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const RuntimeConfig = require('lib/config/runtime-config');
@@ -64,6 +65,19 @@ describe('assertView command', () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    it('should fail on duplicate name of the state', async () => {
+        const browser = stubBrowser_();
+
+        await browser.publicAPI.assertView('plain');
+
+        try {
+            await browser.publicAPI.assertView('plain');
+        } catch (e) {
+            assert.instanceOf(e, AssertViewError);
+            assert.equal(e.message, 'duplicate name for "plain" state');
+        }
+    });
 
     describe('prepare screenshot', () => {
         it('should prepare screenshot for one selector', async () => {
@@ -168,8 +182,8 @@ describe('assertView command', () => {
 
         const browser = stubBrowser_();
 
-        await browser.publicAPI.assertView();
-        await browser.publicAPI.assertView();
+        await browser.publicAPI.assertView('foo');
+        await browser.publicAPI.assertView('bar');
 
         const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
         assert.instanceOf(firstError, NoRefImageError);
@@ -289,8 +303,8 @@ describe('assertView command', () => {
                 it('should remember several "ImageDiffError" errors', async () => {
                     const browser = stubBrowser_();
 
-                    await browser.publicAPI.assertView();
-                    await browser.publicAPI.assertView();
+                    await browser.publicAPI.assertView('foo');
+                    await browser.publicAPI.assertView('bar');
 
                     const [firstError, secondError] = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
                     assert.instanceOf(firstError, ImageDiffError);

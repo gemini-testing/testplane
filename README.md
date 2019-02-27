@@ -969,7 +969,7 @@ it('some test', function() {
 ```
 
 Parameters:
- - state (required) `String` – state name
+ - state (required) `String` – state name; should be unique within one test
  - selector (required) `String|String[]` – DOM-node selector that you need to capture
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
