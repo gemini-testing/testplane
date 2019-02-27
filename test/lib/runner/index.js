@@ -431,19 +431,6 @@ describe('Runner', () => {
                 assert.calledOnce(onEnd);
             });
 
-            it('should pass test statistic to an END handler', async () => {
-                const stats = sinon.createStubInstance(RunnerStats);
-                stats.getResult.returns({foo: 'bar'});
-
-                const onEnd = sinon.stub().named('onEnd');
-                const runner = new Runner(makeConfigStub())
-                    .on(RunnerEvents.END, onEnd);
-
-                await run_({runner, stats});
-
-                assert.calledOnceWith(onEnd, {foo: 'bar'});
-            });
-
             it('should be emitted before RUNNER_END event', async () => {
                 const onEnd = sinon.spy().named('onEnd');
                 const onRunnerEnd = sinon.spy().named('onRunnerEnd');
