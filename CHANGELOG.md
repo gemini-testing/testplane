@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.0.0"></a>
+# [2.0.0](https://github.com/gemini-testing/hermione/compare/v1.10.0...v2.0.0) (2019-02-27)
+
+
+### Bug Fixes
+
+* forbid duplicate state names in 'assertView' within one test ([68600ff](https://github.com/gemini-testing/hermione/commit/68600ff))
+
+
+### Features
+
+* do not pass tests' statistic on 'END' event ([437aef7](https://github.com/gemini-testing/hermione/commit/437aef7))
+
+
+### BREAKING CHANGES
+
+* 'END' event handler will not recieve tests' statistic as the first argument
+* test with duplicate state names in 'assertView' calls will fail with 'AssertViewError'
+
+
+
 <a name="1.10.0"></a>
 # [1.10.0](https://github.com/gemini-testing/hermione/compare/v1.9.0...v1.10.0) (2019-02-25)
 
