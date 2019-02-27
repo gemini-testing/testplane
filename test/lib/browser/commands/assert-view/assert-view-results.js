@@ -55,6 +55,28 @@ describe('AssertViewResults', () => {
         });
     });
 
+    describe('hasState', () => {
+        it('should return "true" if state exists', () => {
+            const assertViewResults = AssertViewResults.create();
+
+            assertViewResults.add({stateName: 'foo'});
+            assertViewResults.add({stateName: 'bar'});
+
+            assert.isTrue(assertViewResults.hasState('foo'));
+            assert.isTrue(assertViewResults.hasState('bar'));
+        });
+
+        it('should return "false" if state does not exist', () => {
+            const assertViewResults = AssertViewResults.create();
+
+            assertViewResults.add({stateName: 'foo'});
+            assertViewResults.add({stateName: 'bar'});
+
+            assert.isFalse(assertViewResults.hasState('baz'));
+            assert.isFalse(assertViewResults.hasState('qux'));
+        });
+    });
+
     describe('toRawObject', () => {
         it('should transform result to raw object', () => {
             const assertViewResults = AssertViewResults.create();
