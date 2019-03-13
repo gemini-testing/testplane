@@ -347,6 +347,17 @@ describe('assertView command', () => {
                                 assert.deepEqual(e.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
                             });
                     });
+
+                    it('should pass diff clusters to error', () => {
+                        Image.compare.resolves({diffClusters: [{left: 0, top: 0, right: 10, bottom: 10}]});
+                        const browser = stubBrowser_();
+                        return browser.publicAPI.assertView()
+                            .then(() => {
+                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
+                                assert.deepEqual(e.diffClusters, [{left: 0, top: 0, right: 10, bottom: 10}]);
+                            });
+                    });
                 });
             });
 
