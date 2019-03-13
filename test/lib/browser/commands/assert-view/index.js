@@ -149,6 +149,27 @@ describe('assertView command', () => {
 
             assert.calledOnceWith(image.save, '/curr/path');
         });
+
+        describe('should pass allowViewportOverflow to #ScreenShooter.capture()', () => {
+            let browser;
+
+            beforeEach(() => {
+                browser = stubBrowser_();
+                browser.prepareScreenshot.resolves({foo: 'bar'});
+            });
+
+            it('option is false by default', async () => {
+                await browser.publicAPI.assertView();
+
+                assert.calledWith(ScreenShooter.prototype.capture, {foo: 'bar'}, {allowViewportOverflow: false});
+            });
+
+            it('option is set in test', async () => {
+                await browser.publicAPI.assertView('plain', '.selector', {allowViewportOverflow: true});
+
+                assert.calledWith(ScreenShooter.prototype.capture, {foo: 'bar'}, {allowViewportOverflow: true});
+            });
+        });
     });
 
     it('should not fail if there is no reference image', async () => {
