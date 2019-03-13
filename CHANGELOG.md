@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.1.0"></a>
+# [2.1.0](https://github.com/gemini-testing/hermione/compare/v2.0.0...v2.1.0) (2019-03-13)
+
+
+### Features
+
+* add diff clusters ([1b71aae](https://github.com/gemini-testing/hermione/commit/1b71aae))
+
+
+
 <a name="2.0.0"></a>
 # [2.0.0](https://github.com/gemini-testing/hermione/compare/v1.10.0...v2.0.0) (2019-02-27)
 
