@@ -974,6 +974,7 @@ Parameters:
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
+   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport's bounds, this option disables such check and makes command to screenshot the visible part of the element
 
 Full example:
 
@@ -981,7 +982,7 @@ Full example:
 it('some test', function() {
     return this.browser
         .url('some/url')
-        .assertView('plain', '.form', {ignoreElements: ['.link'], tolerance: 5});
+        .assertView('plain', '.form', {ignoreElements: ['.link'], tolerance: 5, allowViewportOverflow: true});
 });
 ```
 
