@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.2.0"></a>
+# [2.2.0](https://github.com/gemini-testing/hermione/compare/v2.1.0...v2.2.0) (2019-03-15)
+
+
+### Features
+
+* add allowViewportOverflow option to assertView ([47bfc9f](https://github.com/gemini-testing/hermione/commit/47bfc9f))
+
+
+
 <a name="2.1.0"></a>
 # [2.1.0](https://github.com/gemini-testing/hermione/compare/v2.0.0...v2.1.0) (2019-03-13)
 
