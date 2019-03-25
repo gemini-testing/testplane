@@ -40,7 +40,8 @@ function makeConfigStub(opts = {}) {
             shouldRetry: opts.shouldRetry,
             sessionsPerBrowser: opts.sessionsPerBrowser,
             testsPerSession: opts.testsPerSession,
-            desiredCapabilities: {browserName: browserId}
+            desiredCapabilities: {browserName: browserId},
+            system: opts.system
         };
     });
 

@@ -513,6 +513,7 @@ Option name               | Description
 `buildDiffOpts`           | Options for building diff image.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
+`mochaOpts`               | Extra options for [Mocha](https://mochajs.org/), overrides `system.mochaOpts` for each browser. For more info look at [system.mochaOpts](#mochaOpts)
 
 #### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -615,7 +616,6 @@ buildDiffOpts: {
 ```
 
 #### screenshotsDir
-
 Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
 
 ### system

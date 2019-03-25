@@ -1065,4 +1065,49 @@ describe('config browser-options', () => {
             assert.equal(config.browsers.b2.orientation, 'portrait');
         });
     });
+
+    describe('mochaOpts', () => {
+        it('should throw an error if option is not a null or object', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({mochaOpts: ['Array']})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"mochaOpts" must be an object');
+        });
+
+        it('should set a default value if it does not set in config file', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.mochaOpts, defaults.mochaOpts);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                mochaOpts: {timeout: 111, slow: 333},
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({mochaOpts: {timeout: 100500, slow: 500100}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.mochaOpts, {timeout: 111, slow: 333});
+            assert.deepEqual(config.browsers.b2.mochaOpts, {timeout: 100500, slow: 500100});
+        });
+    });
 });

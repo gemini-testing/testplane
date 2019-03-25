@@ -59,10 +59,49 @@ describe('config', () => {
             assert.instanceOf(config.forBrowser('bro1'), BrowserConfig);
         });
 
-        it('should extend browser config with its id', () => {
-            const config = initConfig({configParserReturns: {browsers: {bro: {some: 'option'}}}});
+        describe('should extend browser config by', () => {
+            it('its id', () => {
+                const config = initConfig({configParserReturns: {browsers: {bro: {some: 'option'}}}});
 
-            assert.include(config.forBrowser('bro'), {id: 'bro'});
+                assert.include(config.forBrowser('bro'), {id: 'bro'});
+            });
+
+            it('common "system" option', () => {
+                const system = {mochaOpts: {}, common: 'option'};
+                const bro = {some: 'option'};
+
+                const config = initConfig({
+                    configParserReturns: {browsers: {bro}, system}
+                });
+
+                assert.deepEqual(config.forBrowser('bro').system, system);
+            });
+
+            it('common "system" option with modified "mochaOpts" option from browser config', () => {
+                const system = {mochaOpts: {foo: 1, bar: 2}, common: 'option'};
+                const bro = {mochaOpts: {foo: 3}};
+
+                const config = initConfig({
+                    configParserReturns: {browsers: {bro}, system}
+                });
+
+                assert.deepEqual(config.forBrowser('bro').system, {
+                    mochaOpts: {foo: 3, bar: 2}, common: 'option'
+                });
+            });
+        });
+
+        it('should not modify common "system" option when extending browser config', () => {
+            const system = {mochaOpts: {foo: 1, bar: 2}};
+            const bro = {mochaOpts: {foo: 3}};
+
+            const config = initConfig({
+                configParserReturns: {
+                    browsers: {bro}, system: Object.assign({}, system)
+                }
+            });
+
+            assert.deepEqual(config.system, system);
         });
     });
 

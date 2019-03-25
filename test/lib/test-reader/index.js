@@ -119,25 +119,26 @@ describe('test-reader', () => {
             });
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
-            await readTests_();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config});
 
             assert.calledOnce(TestParser.prepare);
             assert.callOrder(TestParser.prepare, TestParser.create);
         });
 
-        it('should create parser for each browser with the same config object', async () => {
+        it('should create parser for each browser with its config object', async () => {
             const groupByBrowser = sinon.stub().returns({
                 bro1: [],
                 bro2: []
             });
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
-            const config = makeConfigStub();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
             await readTests_({config});
 
             assert.calledTwice(TestParser.create);
-            assert.calledWith(TestParser.create, 'bro1', config.system);
-            assert.calledWith(TestParser.create, 'bro2', config.system);
+            assert.calledWith(TestParser.create, 'bro1', config.forBrowser('bro1').system);
+            assert.calledWith(TestParser.create, 'bro2', config.forBrowser('bro2').system);
         });
 
         it('should load files for each browser', async () => {
@@ -147,7 +148,8 @@ describe('test-reader', () => {
             });
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
-            await readTests_();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config});
 
             assert.calledTwice(TestParser.prototype.loadFiles);
             assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file1']);
@@ -180,7 +182,8 @@ describe('test-reader', () => {
                 return this._tests;
             });
 
-            const specs = await readTests_();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            const specs = await readTests_({config});
 
             assert.deepEqual(specs, {
                 bro1: [test1, test2],
@@ -207,7 +210,8 @@ describe('test-reader', () => {
                 return this;
             });
 
-            await readTests_();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config});
 
             assert.deepEqual(calls, ['applyGrep', 'applyGrep', 'loadFiles', 'loadFiles']);
         });
@@ -227,7 +231,8 @@ describe('test-reader', () => {
             });
             TestParser.prototype.parse.callsFake(() => calls.push('parse'));
 
-            await readTests_();
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config});
 
             assert.deepEqual(calls, ['loadFiles', 'loadFiles', 'parse', 'parse']);
         });
@@ -245,7 +250,7 @@ describe('test-reader', () => {
             ].forEach((event) => {
                 it(`should passthrough ${event} event from test reader`, async () => {
                     const onEvent = sinon.spy().named(`on${event}`);
-                    const reader = TestReader.create(makeConfigStub())
+                    const reader = TestReader.create(makeConfigStub({browsers: ['bro']}))
                         .on(Events[event], onEvent);
 
                     TestParser.prototype.parse.callsFake(function() {
@@ -259,7 +264,7 @@ describe('test-reader', () => {
             });
 
             it('should create test skipper', async () => {
-                const config = makeConfigStub();
+                const config = makeConfigStub({browsers: ['bro']});
 
                 await readTests_({config});
 
@@ -274,7 +279,8 @@ describe('test-reader', () => {
                     })
                 });
 
-                await readTests_();
+                const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+                await readTests_({config});
 
                 assert.calledTwice(TestParser.prototype.applySkip);
                 assert.equal(
@@ -284,20 +290,26 @@ describe('test-reader', () => {
             });
 
             it('should apply grep to test parser', async () => {
-                await readTests_({grep: 'foo bar'});
+                const config = makeConfigStub({browsers: ['bro']});
+
+                await readTests_({config, grep: 'foo bar'});
 
                 assert.calledOnceWith(TestParser.prototype.applyGrep, 'foo bar');
             });
 
             it('should apply all props before loading files', async () => {
-                await readTests_();
+                const config = makeConfigStub({browsers: ['bro']});
+
+                await readTests_({config});
 
                 assert.callOrder(TestParser.prototype.applySkip, TestParser.prototype.loadFiles);
                 assert.callOrder(TestParser.prototype.applyGrep, TestParser.prototype.loadFiles);
             });
 
             it('should load files before parsing', async () => {
-                await readTests_();
+                const config = makeConfigStub({browsers: ['bro']});
+
+                await readTests_({config});
 
                 assert.callOrder(TestParser.prototype.loadFiles, TestParser.prototype.parse);
             });
