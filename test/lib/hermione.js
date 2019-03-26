@@ -163,6 +163,10 @@ describe('hermione', () => {
                         RuntimeConfig.getInstance.lastCall.returnValue.extend,
                         {updateRefs: true, inspectMode: {inspect: true}}
                     );
+                    assert.callOrder(
+                        RuntimeConfig.getInstance,
+                        Runner.create,
+                    );
                 });
         });
 
