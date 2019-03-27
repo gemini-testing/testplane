@@ -531,7 +531,7 @@ describe('config browser-options', () => {
 
     [
         'retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout',
-        'screenshotOnRejectTimeout', 'screenshotDelay', 'pageLoadTimeout'
+        'screenshotOnRejectTimeout', 'screenshotDelay', 'pageLoadTimeout', 'testTimeout'
     ].forEach((option) => {
         describe(`${option}`, () => {
             it(`should throw error if ${option} is not a number`, () => {

@@ -38,13 +38,11 @@ describe('worker/runner', () => {
         });
 
         it('should create caching test parser', () => {
-            const config = makeConfigStub({
-                system: {foo: 'bar'}
-            });
+            const config = makeConfigStub();
 
             Runner.create(config);
 
-            assert.calledOnceWith(CachingTestParser.create, {foo: 'bar'});
+            assert.calledOnceWith(CachingTestParser.create, config);
         });
 
         [

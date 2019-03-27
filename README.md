@@ -494,6 +494,7 @@ Option name               | Description
 `pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `300000` ms.
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
 `sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
+`testTimeout`             | Timeout for test execution (in milliseconds). Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `screenshotOnReject`      | Allows to attach a screenshot of a current page on test fail. Default value is `true`.
 `screenshotOnRejectTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
@@ -531,6 +532,9 @@ Timeout for getting a browser session. Default value is `httpTimeout`.
 
 #### sessionQuitTimeout
 Timeout for quitting a session. Default value is `httpTimeout`.
+
+#### testTimeout
+Timeout for test execution (in milliseconds). Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 
 #### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
