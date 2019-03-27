@@ -11,7 +11,7 @@ describe('worker/runner/caching-test-parser', () => {
 
     const mkCachingParser_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
-        return CachingTestParser.create(config.system);
+        return CachingTestParser.create(config);
     };
 
     beforeEach(() => {
@@ -33,14 +33,12 @@ describe('worker/runner/caching-test-parser', () => {
 
     describe('parse', () => {
         it('should create test parser', () => {
-            const config = makeConfigStub({
-                system: {foo: 'bar'}
-            });
+            const config = makeConfigStub();
             const cachingParser = mkCachingParser_({config});
 
             cachingParser.parse({browserId: 'bro'});
 
-            assert.calledOnceWith(TestParser.create, 'bro', {foo: 'bar'});
+            assert.calledOnceWith(TestParser.create, 'bro', config);
         });
 
         [

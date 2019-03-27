@@ -12,6 +12,7 @@ const RunnerEvents = require('lib/constants/runner-events');
 const ParserEvents = require('lib/test-reader/parser-events');
 const TestParserAPI = require('lib/test-reader/test-parser-api');
 const MochaStub = require('../_mocha');
+const {makeConfigStub} = require('../../utils');
 
 describe('test-reader/mocha-test-parser', () => {
     const sandbox = sinon.sandbox.create();
@@ -22,7 +23,7 @@ describe('test-reader/mocha-test-parser', () => {
 
     const mkMochaTestParser_ = (opts = {}) => {
         const browserId = opts.browserId || 'default-bro';
-        const config = opts.config || {mochaOpts: {}};
+        const config = opts.config || makeConfigStub({browsers: [browserId]});
 
         return MochaTestParser.create(browserId, config);
     };
@@ -67,11 +68,10 @@ describe('test-reader/mocha-test-parser', () => {
 
     describe('constructor', () => {
         it('should pass shared opts to mocha instance', () => {
-            mkMochaTestParser_({
-                config: {
-                    mochaOpts: {grep: 'foo'}
-                }
-            });
+            const system = {mochaOpts: {grep: 'foo'}};
+            const config = makeConfigStub({browsers: ['bro'], system});
+
+            mkMochaTestParser_({browserId: 'bro', config});
 
             assert.deepEqual(MochaStub.lastInstance.constructorArgs, {grep: 'foo'});
         });
@@ -204,11 +204,9 @@ describe('test-reader/mocha-test-parser', () => {
         });
 
         it('hermione.ctx should return passed ctx', () => {
-            const mochaTestParser = mkMochaTestParser_({
-                config: {
-                    ctx: {some: 'ctx'}
-                }
-            });
+            const system = {ctx: {some: 'ctx'}};
+            const config = makeConfigStub({browsers: ['bro'], system});
+            const mochaTestParser = mkMochaTestParser_({browserId: 'bro', config});
 
             mochaTestParser.loadFiles([]);
 
@@ -270,6 +268,32 @@ describe('test-reader/mocha-test-parser', () => {
             assert.throw(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.afterAll(() => {}));
             }, '"before" and "after" hooks are forbidden, use "beforeEach" and "afterEach" hooks instead');
+        });
+    });
+
+    describe('set timeout', () => {
+        it('should not set timeout if option "testTimeout" is not specified in config', () => {
+            const config = makeConfigStub({browsers: ['bro'], testTimeout: null});
+
+            mkMochaTestParser_({browserId: 'bro', config});
+
+            assert.notCalled(MochaStub.lastInstance.timeout);
+        });
+
+        it('should set timeout if option "testTimeout" is specified in config', () => {
+            const config = makeConfigStub({browsers: ['bro'], testTimeout: 100500});
+
+            mkMochaTestParser_({browserId: 'bro', config});
+
+            assert.calledOnceWith(MochaStub.lastInstance.timeout, 100500);
+        });
+
+        it('should reset timeout if option "testTimeout" is specified as zero in config', () => {
+            const config = makeConfigStub({browsers: ['bro'], testTimeout: 0});
+
+            mkMochaTestParser_({browserId: 'bro', config});
+
+            assert.calledOnceWith(MochaStub.lastInstance.timeout, 0);
         });
     });
 

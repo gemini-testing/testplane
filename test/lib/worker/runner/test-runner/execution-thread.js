@@ -214,7 +214,7 @@ describe('worker/runner/test-runner/execution-thread', () => {
                 assert.calledOnce(afterScreenshot);
             });
 
-            it('runnable should not faile with timeout while taking screenshot', async () => {
+            it('runnable should not fail with timeout while taking screenshot', async () => {
                 const runnable = mkRunnable_({
                     fn: () => Promise.reject(new Error('foo'))
                 });
