@@ -3,3 +3,4 @@
 .sublime-project*
 test/
 coverage/
+.nyc_output/

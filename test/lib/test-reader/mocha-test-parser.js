@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const escapeRe = require('escape-string-regexp');
 const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
 const crypto = require('lib/utils/crypto');
@@ -11,6 +12,7 @@ const TestSkipper = require('lib/test-reader/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
 const ParserEvents = require('lib/test-reader/parser-events');
 const TestParserAPI = require('lib/test-reader/test-parser-api');
+const logger = require('lib/utils/logger');
 const MochaStub = require('../_mocha');
 const {makeConfigStub} = require('../../utils');
 
@@ -29,6 +31,8 @@ describe('test-reader/mocha-test-parser', () => {
     };
 
     beforeEach(() => {
+        sandbox.stub(logger, 'warn');
+
         testSkipper = sinon.createStubInstance(TestSkipper);
 
         clearRequire = sandbox.stub().named('clear-require');
@@ -383,7 +387,23 @@ describe('test-reader/mocha-test-parser', () => {
 
             mochaTestParser.applyGrep('(foo|bar)');
 
-            assert.calledOnceWith(MochaStub.lastInstance.grep, new RegExp('(foo|bar)'));
+            assert.calledOnceWith(MochaStub.lastInstance.grep, new RegExp(`((foo|bar))|(${escapeRe('(foo|bar)')})`));
+        });
+
+        it('should add invalid regex as string grep to mocha', () => {
+            const mochaTestParser = mkMochaTestParser_();
+
+            mochaTestParser.applyGrep('(foo|bar');
+
+            assert.calledOnceWith(MochaStub.lastInstance.grep, new RegExp(escapeRe('(foo|bar')));
+        });
+
+        it('should warn about invalid regex', () => {
+            const mochaTestParser = mkMochaTestParser_();
+
+            mochaTestParser.applyGrep('(foo|bar');
+
+            assert.calledOnceWith(logger.warn, 'Invalid regexp provided to grep, searching by its string representation. SyntaxError: Invalid regular expression: /((foo|bar)|(\\(foo\\|bar)/: Unterminated group');
         });
 
         it('should not add empty grep to mocha', () => {
@@ -549,6 +569,51 @@ describe('test-reader/mocha-test-parser', () => {
 
                 const tests = mochaTestParser
                     .applyGrep('test title')
+                    .parse();
+
+                assert.isFalse(Boolean(tests[0].pending));
+                assert.isFalse(Boolean(tests[0].silentSkip));
+            });
+
+            it('should not disable tests matching to grep regexp pattern', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {title: 'test title'});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('test tit+le')
+                    .parse();
+
+                assert.isFalse(Boolean(tests[0].pending));
+                assert.isFalse(Boolean(tests[0].silentSkip));
+            });
+
+            it('should not disable tests matching to grep regexp-like pattern', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {title: 'test (title)'});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('test (title)')
+                    .parse();
+
+                assert.isFalse(Boolean(tests[0].pending));
+                assert.isFalse(Boolean(tests[0].silentSkip));
+            });
+
+            it('should not disable tests matching to grep regexp-like pattern', () => {
+                const mochaTestParser = mkMochaTestParser_();
+
+                const test = new MochaStub.Test(null, {title: 'test title with { or ('});
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                const tests = mochaTestParser
+                    .applyGrep('test title with { or (')
                     .parse();
 
                 assert.isFalse(Boolean(tests[0].pending));
