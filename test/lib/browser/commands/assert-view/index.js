@@ -155,19 +155,47 @@ describe('assertView command', () => {
 
             beforeEach(() => {
                 browser = stubBrowser_();
-                browser.prepareScreenshot.resolves({foo: 'bar'});
             });
 
             it('option is false by default', async () => {
                 await browser.publicAPI.assertView();
 
-                assert.calledWith(ScreenShooter.prototype.capture, {foo: 'bar'}, {allowViewportOverflow: false});
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    allowViewportOverflow: false
+                });
             });
 
             it('option is set in test', async () => {
                 await browser.publicAPI.assertView('plain', '.selector', {allowViewportOverflow: true});
 
-                assert.calledWith(ScreenShooter.prototype.capture, {foo: 'bar'}, {allowViewportOverflow: true});
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    allowViewportOverflow: true
+                });
+            });
+        });
+
+        describe('should pass screenshotDelay to #ScreenShooter.capture()', () => {
+            let config, browser;
+
+            beforeEach(() => {
+                config = mkConfig_({screenshotDelay: 100500});
+                browser = stubBrowser_(config);
+            });
+
+            it('option is equal the configured value by default', async () => {
+                await browser.publicAPI.assertView();
+
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    screenshotDelay: 100500
+                });
+            });
+
+            it('option is set in test', async () => {
+                await browser.publicAPI.assertView('plain', '.selector', {screenshotDelay: 2000});
+
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    screenshotDelay: 2000
+                });
             });
         });
     });

@@ -415,12 +415,12 @@ describe('ExistingBrowser', () => {
             sandbox.stub(Promise, 'delay').returns(Promise.resolve());
         });
 
-        it('should delay capturing by the configured amount of time', () => {
+        it('should delay capturing on the passed time', () => {
             Camera.prototype.captureViewportImage.withArgs({foo: 'bar'}).resolves({some: 'image'});
 
-            return mkBrowser_({screenshotDelay: 100500}).captureViewportImage({foo: 'bar'})
+            return mkBrowser_({screenshotDelay: 100500}).captureViewportImage({foo: 'bar'}, 2000)
                 .then(() => {
-                    assert.calledOnceWith(Promise.delay, 100500);
+                    assert.calledOnceWith(Promise.delay, 2000);
                     assert.callOrder(Promise.delay, Camera.prototype.captureViewportImage);
                 });
         });
