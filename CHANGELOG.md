@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.3.1"></a>
+## [2.3.1](https://github.com/gemini-testing/hermione/compare/v2.3.0...v2.3.1) (2019-04-03)
+
+
+### Bug Fixes
+
+* grep finds tests by regex and regex-like strings ([acab128](https://github.com/gemini-testing/hermione/commit/acab128))
+* update runtime config before creating runner ([fc22e05](https://github.com/gemini-testing/hermione/commit/fc22e05))
+
+
+
 <a name="2.3.0"></a>
 # [2.3.0](https://github.com/gemini-testing/hermione/compare/v2.2.1...v2.3.0) (2019-03-27)
 
