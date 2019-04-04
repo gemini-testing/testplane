@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.4.0"></a>
+# [2.4.0](https://github.com/gemini-testing/hermione/compare/v2.3.1...v2.4.0) (2019-04-04)
+
+
+### Features
+
+* add screenshotDelay option for assertView ([0907c1b](https://github.com/gemini-testing/hermione/commit/0907c1b))
+
+
+
 <a name="2.3.1"></a>
 ## [2.3.1](https://github.com/gemini-testing/hermione/compare/v2.3.0...v2.3.1) (2019-04-03)
 
