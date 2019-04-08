@@ -1,14 +1,25 @@
 'use strict';
 
+const proxyquire = require('proxyquire');
 const _ = require('lodash');
-const {handleImageDiff} = require('lib/browser/commands/assert-view/capture-processors/assert-refs');
+
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 
 describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
     const sandbox = sinon.createSandbox();
+    let assertRefs;
+    let handleImageDiff;
+    let saveDiffStub;
 
     beforeEach(() => {
         sandbox.stub(ImageDiffError, 'create');
+        saveDiffStub = sandbox.stub().resolves();
+        assertRefs = proxyquire('lib/browser/commands/assert-view/capture-processors/assert-refs', {
+            './save-diff': {
+                saveDiff: saveDiffStub
+            }
+        });
+        handleImageDiff = assertRefs.handleImageDiff;
     });
 
     afterEach(() => sandbox.restore());
@@ -24,9 +35,10 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
         };
 
         const handleImageDiff_ = (opts = {}) => {
-            const {currImg, refImg, state, diffOpts} = _.defaultsDeep(opts, {
+            const {currImg, refImg, diffImg, state, diffOpts} = _.defaultsDeep(opts, {
                 currImg: {path: '/default-curr/path'},
                 refImg: {path: '/default-ref/path'},
+                diffImg: {path: '/default-diff/path'},
                 state: 'default-state',
                 diffOpts: {
                     diffBounds: 'default-bounds',
@@ -34,7 +46,7 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                 }
             });
 
-            return handleImageDiff(currImg, refImg, state, diffOpts);
+            return handleImageDiff(currImg, refImg, diffImg, state, diffOpts);
         };
 
         describe('should create instace of "ImageDiffError" with', () => {
@@ -46,7 +58,7 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                 await handleImageDiff_({config})
                     .catch(() => {
                         assert.calledOnceWith(
-                            ImageDiffError.create,
+                            saveDiffStub,
                             sinon.match.any, sinon.match.any, sinon.match.any,
                             sinon.match({foo: 'bar', baz: 'qux'})
                         );
@@ -62,7 +74,7 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                 await handleImageDiff_({config})
                     .catch(() => {
                         assert.calledOnceWith(
-                            ImageDiffError.create,
+                            saveDiffStub,
                             sinon.match.any, sinon.match.any, sinon.match.any,
                             sinon.match({tolerance: 100500})
                         );

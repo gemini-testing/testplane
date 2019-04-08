@@ -1,7 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const {Image} = require('gemini-core');
 const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 
@@ -9,22 +8,13 @@ const mkImageDiffError = (opts = {}) => {
     const {stateName, currImg, refImg, diffOpts} = _.defaults(opts, {
         stateName: 'default-name',
         currImg: {path: '/default-curr/path'},
-        refImg: {path: '/default-ref/path'},
-        diffOpts: {foo: 'bar'}
+        refImg: {path: '/default-ref/path'}
     });
 
     return new ImageDiffError(stateName, currImg, refImg, diffOpts);
 };
 
 describe('ImageDiffError', () => {
-    const sandbox = sinon.sandbox.create();
-
-    beforeEach(() => {
-        sandbox.stub(Image, 'buildDiff').resolves();
-    });
-
-    afterEach(() => sandbox.restore());
-
     it('should be an instance of "BaseStateError"', () => {
         assert.instanceOf(mkImageDiffError(), BaseStateError);
     });
@@ -57,34 +47,18 @@ describe('ImageDiffError', () => {
         assert.deepEqual(error.refImg, {path: '/ref/path'});
     });
 
-    it('should contain options for image diff building', () => {
-        const error = mkImageDiffError({diffOpts: {some: 'opts'}});
-
-        assert.deepEqual(error.diffOpts, {some: 'opts'});
-    });
-
     it('should create an instance of error from object', () => {
         const error = ImageDiffError.fromObject({
             stateName: 'name',
             currImg: {path: 'curr/path'},
-            refImg: {path: 'ref/path'},
-            diffOpts: {foo: 'bar'}
+            refImg: {path: 'ref/path'}
         });
 
         assert.instanceOf(error, ImageDiffError);
         assert.deepInclude(Object.assign({}, error), {
             stateName: 'name',
             currImg: {path: 'curr/path'},
-            refImg: {path: 'ref/path'},
-            diffOpts: {foo: 'bar'}
+            refImg: {path: 'ref/path'}
         });
-    });
-
-    it('should provide the ability to save diff image', () => {
-        const error = mkImageDiffError({diffOpts: {some: 'opts'}});
-
-        Image.buildDiff.withArgs({some: 'opts', diff: 'diff/path'}).resolves({foo: 'bar'});
-
-        return assert.becomes(error.saveDiffTo('diff/path'), {foo: 'bar'});
     });
 });

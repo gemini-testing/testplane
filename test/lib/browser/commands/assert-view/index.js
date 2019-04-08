@@ -9,6 +9,7 @@ const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-di
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const RuntimeConfig = require('lib/config/runtime-config');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
+const saveDiffModule = require('lib/browser/commands/assert-view/capture-processors/save-diff');
 
 describe('assertView command', () => {
     const sandbox = sinon.sandbox.create();
@@ -51,8 +52,8 @@ describe('assertView command', () => {
         sandbox.stub(Image, 'compare').resolves(true);
         sandbox.stub(Image.prototype, 'getSize');
 
-        sandbox.stub(fs, 'readFileSync');
-        sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'readFile').resolves();
+        sandbox.stub(fs, 'exists').resolves(true);
         sandbox.stub(fs, 'copy').resolves();
 
         sandbox.stub(temp, 'path');
@@ -62,6 +63,8 @@ describe('assertView command', () => {
 
         sandbox.spy(ScreenShooter, 'create');
         sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
+
+        sandbox.stub(saveDiffModule, 'saveDiff').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -201,14 +204,14 @@ describe('assertView command', () => {
     });
 
     it('should not fail if there is no reference image', async () => {
-        fs.existsSync.returns(false);
+        fs.exists.resolves(false);
 
         await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
     });
 
     it('should create "NoRefImageError" error with given parameters', async () => {
         sandbox.stub(NoRefImageError, 'create').returns(Object.create(NoRefImageError.prototype));
-        fs.existsSync.returns(false);
+        fs.exists.resolves(false);
         temp.path.returns('/curr/path');
 
         const currImage = stubImage_({size: {width: 100, height: 200}});
@@ -226,7 +229,7 @@ describe('assertView command', () => {
     });
 
     it('should remember several "NoRefImageError" errors', async () => {
-        fs.existsSync.returns(false);
+        fs.exists.resolves(false);
         temp.path.returns('/curr/path');
 
         const browser = stubBrowser_();
@@ -244,14 +247,14 @@ describe('assertView command', () => {
         beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
         it('should be fulfilled if there is not reference image', async () => {
-            fs.existsSync.returns(false);
+            fs.exists.resolves(false);
 
             await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
         });
 
         it('should update reference image if it does not exist', async () => {
             temp.path.returns('/curr/path');
-            fs.existsSync.withArgs('/ref/path').returns(false);
+            fs.exists.withArgs('/ref/path').resolves(false);
 
             const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
 
@@ -261,7 +264,7 @@ describe('assertView command', () => {
         });
 
         it('should reject on reference update fail', async () => {
-            fs.existsSync.returns(false);
+            fs.exists.resolves(false);
 
             fs.copy.throws();
 
@@ -362,30 +365,6 @@ describe('assertView command', () => {
                 });
 
                 describe('passing diff options', () => {
-                    it('should pass diff options for passed image paths', async () => {
-                        const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
-                        const browser = stubBrowser_(config);
-                        temp.path.returns('/current/path');
-
-                        await browser.publicAPI.assertView();
-                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
-
-                        assert.match(e.diffOpts, {current: '/current/path', reference: '/reference/path'});
-                    });
-
-                    it('should pass diff options with passed compare options', async () => {
-                        const config = {
-                            tolerance: 100,
-                            system: {diffColor: '#111111'}
-                        };
-                        const browser = stubBrowser_(config);
-
-                        await browser.publicAPI.assertView();
-                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
-
-                        assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
-                    });
-
                     it('should pass diff bounds to error', () => {
                         Image.compare.resolves({diffBounds: {left: 0, top: 0, right: 10, bottom: 10}});
                         const browser = stubBrowser_();
@@ -441,9 +420,9 @@ describe('assertView command', () => {
         const bufferPlain = new Buffer('plain-data', 'base64');
         const bufferComplex = new Buffer('complex-data', 'base64');
 
-        fs.readFileSync
-            .withArgs('/ref/path/plain').returns(bufferPlain)
-            .withArgs('/ref/path/complex').returns(bufferComplex);
+        fs.readFile
+            .withArgs('/ref/path/plain').resolves(bufferPlain)
+            .withArgs('/ref/path/complex').resolves(bufferComplex);
 
         const imagePlain = stubImage_({size: {width: 100, height: 200}});
         const imageComplex = stubImage_({size: {width: 300, height: 400}});
