@@ -46,6 +46,18 @@ describe('worker/browser-pool', () => {
     afterEach(() => sandbox.restore());
 
     describe('getBrowser', () => {
+        it('should create browser with correct args', async () => {
+            const config = stubConfig();
+            const emitter = new EventEmitter();
+            const browserPool = createPool({config, emitter});
+            const browser = stubBrowser({browserId: 'bro-id'});
+            Browser.create.withArgs(config, 'bro-id', emitter).returns(browser);
+
+            await browserPool.getBrowser('bro-id');
+
+            assert.calledOnceWith(Browser.create, config, 'bro-id', emitter);
+        });
+
         it('should create a new browser if there are no free browsers in a cache', () => {
             const config = stubConfig();
             const browserPool = createPool({config});

@@ -32,12 +32,12 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkNewBrowser_ = (opts) => {
-    return NewBrowser.create(createBrowserConfig_(opts), 'browser');
+exports.mkNewBrowser_ = (opts, browser = 'browser') => {
+    return NewBrowser.create(createBrowserConfig_(opts), browser);
 };
 
-exports.mkExistingBrowser_ = (opts) => {
-    return ExistingBrowser.create(createBrowserConfig_(opts), 'browser');
+exports.mkExistingBrowser_ = (opts, browser = 'browser', emitter = 'emitter') => {
+    return ExistingBrowser.create(createBrowserConfig_(opts), 'browser', emitter);
 };
 
 exports.mkSessionStub_ = () => {

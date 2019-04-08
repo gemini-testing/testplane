@@ -1,5 +1,6 @@
 'use strict';
 
+const {EventEmitter} = require('events');
 const Promise = require('bluebird');
 const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('@gemini-testing/webdriverio');
@@ -22,6 +23,14 @@ describe('ExistingBrowser', () => {
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
+        it('should set emitter', () => {
+            const emitter = new EventEmitter();
+
+            const browser = mkBrowser_({}, 'bro', emitter);
+
+            assert.deepEqual(browser.emitter, emitter);
+        });
+
         describe('meta-info access commands', () => {
             it('should set meta-info with process pid by default', () => {
                 const browser = mkBrowser_();

@@ -438,10 +438,11 @@ describe('hermione', () => {
             it('all runner events with passed event data', () => {
                 const runner = mkRunnerStub_();
                 const hermione = Hermione.create(makeConfigStub());
+                const omitEvents = ['EXIT', 'NEW_BROWSER', 'UPDATE_REFERENCE'];
 
                 return hermione.run()
                     .then(() => {
-                        _.forEach(_.omit(hermione.events, ['EXIT', 'NEW_BROWSER']), (event, name) => {
+                        _.forEach(_.omit(hermione.events, omitEvents), (event, name) => {
                             const spy = sinon.spy().named(`${name} handler`);
                             hermione.on(event, spy);
 
@@ -681,7 +682,10 @@ describe('hermione', () => {
 
     describe('should provide access to', () => {
         it('hermione events', () => {
-            const expectedEvents = _.extend({NEW_BROWSER: 'newBrowser'}, RunnerEvents);
+            const expectedEvents = _.extend(
+                {NEW_BROWSER: 'newBrowser', UPDATE_REFERENCE: 'updateReference'},
+                RunnerEvents
+            );
 
             assert.deepEqual(Hermione.create(makeConfigStub()).events, expectedEvents);
         });
