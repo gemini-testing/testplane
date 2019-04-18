@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.5.0"></a>
+# [2.5.0](https://github.com/gemini-testing/hermione/compare/v2.4.0...v2.5.0) (2019-04-18)
+
+
+### Features
+
+* add "UPDATE_REFERENCE" event ([8c30e0f](https://github.com/gemini-testing/hermione/commit/8c30e0f))
+
+
+
 <a name="2.4.0"></a>
 # [2.4.0](https://github.com/gemini-testing/hermione/compare/v2.3.1...v2.4.0) (2019-04-04)
 
