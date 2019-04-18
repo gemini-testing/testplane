@@ -1,5 +1,6 @@
 'use strict';
 
+const {EventEmitter} = require('events');
 const _ = require('lodash');
 const fs = require('fs-extra');
 const webdriverio = require('@gemini-testing/webdriverio');
@@ -8,6 +9,7 @@ const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 const RuntimeConfig = require('lib/config/runtime-config');
+const updateRefs = require('lib/browser/commands/assert-view/capture-processors/update-refs');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
 
 describe('assertView command', () => {
@@ -42,6 +44,7 @@ describe('assertView command', () => {
         const browser = mkBrowser_(config);
         sandbox.stub(browser, 'prepareScreenshot').resolves({});
         sandbox.stub(browser, 'captureViewportImage').resolves(stubImage_());
+        sandbox.stub(browser, 'emitter').get(() => new EventEmitter());
 
         return browser;
     };
@@ -53,7 +56,6 @@ describe('assertView command', () => {
 
         sandbox.stub(fs, 'readFileSync');
         sandbox.stub(fs, 'existsSync').returns(true);
-        sandbox.stub(fs, 'copy').resolves();
 
         sandbox.stub(temp, 'path');
         sandbox.stub(temp, 'attach');
@@ -62,6 +64,9 @@ describe('assertView command', () => {
 
         sandbox.spy(ScreenShooter, 'create');
         sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
+
+        sandbox.stub(updateRefs, 'handleNoRefImage').resolves();
+        sandbox.stub(updateRefs, 'handleImageDiff').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -249,23 +254,24 @@ describe('assertView command', () => {
             await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
         });
 
-        it('should update reference image if it does not exist', async () => {
-            temp.path.returns('/curr/path');
-            fs.existsSync.withArgs('/ref/path').returns(false);
-
-            const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
-
-            await browser.publicAPI.assertView();
-
-            assert.calledOnceWith(fs.copy, '/curr/path', '/ref/path');
-        });
-
         it('should reject on reference update fail', async () => {
             fs.existsSync.returns(false);
 
-            fs.copy.throws();
+            updateRefs.handleNoRefImage.throws();
 
             await assert.isRejected(stubBrowser_().publicAPI.assertView());
+        });
+
+        it('should pass browser emitter to "handleNoRefImage" handler', async () => {
+            fs.existsSync.returns(false);
+            const browser = stubBrowser_();
+
+            await browser.publicAPI.assertView();
+
+            assert.calledWith(
+                updateRefs.handleNoRefImage,
+                sinon.match.any, sinon.match.any, sinon.match.any, {emitter: browser.emitter}
+            );
         });
     });
 
@@ -417,12 +423,16 @@ describe('assertView command', () => {
                     await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
                 });
 
-                it('should update reference image by a current image', async () => {
-                    temp.path.returns('/cur/path');
+                it('should pass browser emitter to "handleImageDiff" handler', async () => {
+                    const browser = stubBrowser_();
 
-                    await stubBrowser_({getScreenshotPath: () => '/ref/path'}).publicAPI.assertView();
+                    await browser.publicAPI.assertView();
 
-                    assert.calledOnceWith(fs.copy, '/cur/path', '/ref/path');
+                    assert.calledOnceWith(
+                        updateRefs.handleImageDiff,
+                        sinon.match.any, sinon.match.any, sinon.match.any,
+                        {config: sinon.match.any, diffAreas: sinon.match.any, emitter: browser.emitter}
+                    );
                 });
             });
         });

@@ -748,6 +748,7 @@ Event                     | Description
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read each time some file is being reading during test run.
 `NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
+`UPDATE_REFERENCE`        | Will be triggered after updating reference image.
 
 **REMARK!**
 

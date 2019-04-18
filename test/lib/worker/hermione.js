@@ -48,7 +48,8 @@ describe('worker/hermione', () => {
                 [WorkerRunnerEvents.BEFORE_FILE_READ]: {suite: makeSuite()},
                 [WorkerRunnerEvents.AFTER_FILE_READ]: {suite: makeSuite()},
                 [WorkerRunnerEvents.AFTER_TESTS_READ]: Object.create(TestCollection.prototype),
-                [WorkerRunnerEvents.NEW_BROWSER]: {id: 'someBro'}
+                [WorkerRunnerEvents.NEW_BROWSER]: {id: 'someBro'},
+                [WorkerRunnerEvents.UPDATE_REFERENCE]: {path: '/ref/path'}
             }, (data, event) => {
                 const spy = sinon.spy();
                 hermione.on(event, spy);
