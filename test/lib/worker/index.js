@@ -28,7 +28,7 @@ describe('worker', () => {
             HermioneFacade.prototype.runTest.resolves();
 
             const worker = require('lib/worker');
-            runTest = Promise.promisify(worker.runTest);
+            runTest = worker.runTest;
         });
 
         it('should delegate runTest call to hermione facade', () => {

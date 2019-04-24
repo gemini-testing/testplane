@@ -4,7 +4,6 @@ const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
 const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
 const HighPriorityBrowserAgent = require('lib/runner/test-runner/high-priority-browser-agent');
 const Events = require('lib/constants/runner-events');
-const Workers = require('lib/runner/workers');
 const {BrowserAgent} = require('gemini-core');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
@@ -13,6 +12,12 @@ const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('runner/test-runner/insistant-test-runner', () => {
     const sandbox = sinon.sandbox.create();
+
+    const mkWorkers_ = () => {
+        return {
+            runTest: sandbox.stub().resolves()
+        };
+    };
 
     const mkRunner_ = (opts = {}) => {
         const test = opts.test || makeTest({title: 'defaultTest'});
@@ -27,7 +32,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
     const run_ = (opts = {}) => {
         const runner = opts.runner || mkRunner_();
-        const workers = opts.workers || sinon.createStubInstance(Workers);
+        const workers = opts.workers || mkWorkers_();
 
         return runner.run(workers);
     };
@@ -66,7 +71,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
             const browserAgent = BrowserAgent.create();
 
             const runner = InsistantTestRunner.create(test, config, browserAgent);
-            const workers = sinon.createStubInstance(Workers);
+            const workers = mkWorkers_();
 
             await runner.run(workers);
 
