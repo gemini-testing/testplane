@@ -62,6 +62,18 @@ describe('test-collection', () => {
     });
 
     describe('sortTests', () => {
+        it('should do nothing if there are no tests for the specified browser', () => {
+            const collection = TestCollection.create({
+                'bro1': [],
+                'bro2': []
+            });
+
+            collection.sortTests('bro1', (a, b) => a.title < b.title);
+
+            assert.deepEqual(collection.mapTests('bro1', (t) => t), []);
+            assert.deepEqual(collection.mapTests('bro2', (t) => t), []);
+        });
+
         it('should sort all tests for the specified browser', () => {
             const test1 = {title: 'test1'};
             const test2 = {title: 'test2'};
