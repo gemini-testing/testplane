@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.6.1"></a>
+## [2.6.1](https://github.com/gemini-testing/hermione/compare/v2.6.0...v2.6.1) (2019-05-06)
+
+
+### Bug Fixes
+
+* empty test-collection sorting ([#403](https://github.com/gemini-testing/hermione/issues/403)) ([fb87508](https://github.com/gemini-testing/hermione/commit/fb87508))
+
+
+
 <a name="2.6.0"></a>
 # [2.6.0](https://github.com/gemini-testing/hermione/compare/v2.5.0...v2.6.0) (2019-04-30)
 
