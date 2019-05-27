@@ -5,28 +5,26 @@ const {EventEmitter} = require('events');
 const _ = require('lodash');
 const RuntimeConfig = require('lib/config/runtime-config');
 
-describe('Workers', () => {
+describe('WorkersRegistry', () => {
     const sandbox = sinon.sandbox.create();
 
     let workersImpl, workerFarm;
 
-    const mkWorkers_ = (config = {}) => {
+    const mkWorkersRegistry_ = (config = {}) => {
         config = _.defaults(config, {
             system: {}
         });
 
-        const Workers = proxyquire('../../../lib/runner/workers', {'worker-farm': workerFarm});
+        const WorkersRegistry = proxyquire('../../../lib/utils/workers-registry', {'worker-farm': workerFarm});
 
-        return Workers.create(config);
+        return WorkersRegistry.create(config);
     };
 
     beforeEach(() => {
-        workersImpl = {
-            runTest: sandbox.stub().yields()
-        };
-
+        workersImpl = sandbox.stub().yieldsRight();
         workerFarm = sandbox.stub().returns(workersImpl);
-        workerFarm.end = sandbox.stub();
+
+        workerFarm.end = sandbox.stub().yieldsRight();
 
         sandbox.stub(RuntimeConfig, 'getInstance');
     });
@@ -35,7 +33,7 @@ describe('Workers', () => {
 
     describe('constructor', () => {
         it('should init worker farm', () => {
-            mkWorkers_({system: {
+            mkWorkersRegistry_({system: {
                 workers: 100500,
                 testsPerWorker: 500100
             }});
@@ -49,15 +47,14 @@ describe('Workers', () => {
                     maxRetries: 0,
                     onChild: sinon.match.func
                 },
-                sinon.match('lib/worker/index.js'),
-                ['runTest']
+                sinon.match('lib/utils/processor.js')
             );
         });
 
         it('should init worker farm in debug mode', () => {
             RuntimeConfig.getInstance.returns({inspectMode: {inspect: '9229'}});
 
-            mkWorkers_({
+            mkWorkersRegistry_({
                 system: {
                     workers: 100500,
                     testsPerWorker: 500100
@@ -74,8 +71,7 @@ describe('Workers', () => {
                     maxRetries: 0,
                     onChild: sinon.match.func
                 },
-                sinon.match('lib/worker/index.js'),
-                ['runTest']
+                sinon.match('lib/utils/processor.js')
             );
         });
     });
@@ -93,7 +89,7 @@ describe('Workers', () => {
 
         it('should reply to worker init request', () => {
             RuntimeConfig.getInstance.returns({baz: 'qux'});
-            mkWorkers_({configPath: 'foo/bar'});
+            mkWorkersRegistry_({configPath: 'foo/bar'});
 
             const child = initChild_();
 
@@ -107,7 +103,7 @@ describe('Workers', () => {
         });
 
         it('should reply to worker sync config request', () => {
-            mkWorkers_({
+            mkWorkersRegistry_({
                 serialize: () => ({foo: 'bar'})
             });
 
@@ -122,17 +118,20 @@ describe('Workers', () => {
         });
     });
 
-    describe('runTest', () => {
+    describe('execute worker\'s method', () => {
         it('should run test in worker', () => {
-            return mkWorkers_()
+            const workersRegistry = mkWorkersRegistry_();
+            const workers = workersRegistry.register('worker.js', ['runTest']);
+
+            return workers
                 .runTest('foo', {bar: 'baz'})
-                .then(() => assert.calledOnceWith(workersImpl.runTest, 'foo', {bar: 'baz'}));
+                .then(() => assert.calledOnceWith(workersImpl, 'worker.js', 'runTest', ['foo', {bar: 'baz'}]));
         });
     });
 
     describe('end', () => {
-        it('should end created worker farm', () => {
-            mkWorkers_().end();
+        it('should end created worker farm', async () => {
+            await mkWorkersRegistry_().end();
 
             assert.calledOnceWith(workerFarm.end, workersImpl);
         });
@@ -140,17 +139,19 @@ describe('Workers', () => {
 
     describe('isEnded', () => {
         it('should return false when worker farm is not ended', () => {
-            const workers = mkWorkers_();
+            const workersRegistry = mkWorkersRegistry_();
+            workersRegistry.register('worker.js', ['runTest']);
 
-            assert.isFalse(workers.isEnded());
+            assert.isFalse(workersRegistry.isEnded());
         });
 
-        it('should return true when worker farm is ended', () => {
-            const workers = mkWorkers_();
+        it('should return true when worker farm is ended', async () => {
+            const workersRegistry = mkWorkersRegistry_();
+            workersRegistry.register('worker.js', ['runTest']);
 
-            workers.end();
+            await workersRegistry.end();
 
-            assert.isTrue(workers.isEnded());
+            assert.isTrue(workersRegistry.isEnded());
         });
     });
 });

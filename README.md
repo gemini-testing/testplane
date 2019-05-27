@@ -60,6 +60,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [workers](#workers)
     - [testsPerWorker](#testsperworker)
   - [plugins](#plugins)
+    - [parallel execution plugin code](#parallel-execution-plugin-code)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
@@ -721,8 +722,8 @@ Event                     | Description
 `BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read via `readTests` or `run` methods with `TestCollection` object.
-`RUNNER_START`            | Will be triggered before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
-`RUNNER_END`              | Will be triggered after test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts a stats of tests execution.
+`RUNNER_START`            | Will be triggered after worker farm initialization and before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
+`RUNNER_END`              | Will be triggered after test execution and before worker farm ends. If a handler returns a promise, worker farm will be ended only after the promise is resolved. The handler accepts an object with tests execution statistics.
 `SESSION_START`           | Will be triggered after browser session initialization. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `SESSION_END`             | Will be triggered after the browser session ends. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
 `BEGIN`                   | Will be triggered before test execution, but after all the runners are initialized.
@@ -873,6 +874,39 @@ Event                     |
 `TEST_FAIL`               |
 `RETRY`                   |
 
+#### Parallel execution plugin code
+
+Runner has a method `registerWorkers` which register plugin's code for parallel execution in Hermione's worker farm. The method accepts parameters `workerFilepath` (string, absolute path), `exportedMethods` (array of string) and return object which contains async functions with names from `exportedMethods`. File with path `workerFilepath` should export object which contains async functions with names from `exportedMethods`.
+
+*Example*
+```js
+// plugin code
+let workers;
+
+module.exports = (hermione) => {
+    hermione.on(hermione.events.RUNNER_START, async (runner) => {
+        const workerFilepath = require.resolve('./worker');
+        const exportedMethods = ['foo'];
+        workers = runner.registerWorkers(workerFilepath, exportedMethods);
+        
+        // outputs `FOO_RUNNER_START`
+        console.log(await workers.foo('RUNNER_START'));
+    });
+
+    hermione.on(hermione.events.RUNNER_END, async () => {
+        // outputs `FOO_RUNNER_END`
+        console.log(await workers.foo('RUNNER_END'));
+    });
+};
+
+// worker.js
+module.exports = {
+    foo: async function(event) {
+        return 'FOO_' + event; 
+    }
+};
+
+```
 
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.

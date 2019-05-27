@@ -4,7 +4,7 @@ const _ = require('lodash');
 
 const {BrowserAgent} = require('gemini-core');
 const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
-const Workers = require('lib/runner/workers');
+const WorkersRegistry = require('lib/utils/workers-registry');
 const logger = require('lib/utils/logger');
 const Events = require('lib/constants/runner-events');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
@@ -15,6 +15,20 @@ const {makeTest} = require('../../../utils');
 describe('runner/test-runner/regular-test-runner', () => {
     const sandbox = sinon.sandbox.create();
 
+    const stubTestResult_ = (opts = {}) => {
+        return _.defaults(opts, {
+            browserState: {},
+            meta: {},
+            hermioneCtx: {}
+        });
+    };
+
+    const mkWorkers_ = () => {
+        return {
+            runTest: sandbox.stub().resolves(stubTestResult_())
+        };
+    };
+
     const mkRunner_ = (opts = {}) => {
         const test = opts.test || makeTest({title: 'defaultTest'});
         const browserAgent = opts.browserAgent || BrowserAgent.create();
@@ -24,7 +38,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
     const run_ = (opts = {}) => {
         const runner = opts.runner || mkRunner_();
-        const workers = opts.workers || Object.create(Workers.prototype);
+        const workers = opts.workers || mkWorkers_();
 
         return runner.run(workers);
     };
@@ -40,19 +54,11 @@ describe('runner/test-runner/regular-test-runner', () => {
         };
     };
 
-    const stubTestResult_ = (opts = {}) => {
-        return _.defaults(opts, {
-            browserState: {},
-            meta: {},
-            hermioneCtx: {}
-        });
-    };
-
     beforeEach(() => {
         sandbox.stub(BrowserAgent.prototype, 'getBrowser').resolves(stubBrowser_());
         sandbox.stub(BrowserAgent.prototype, 'freeBrowser').resolves();
 
-        sandbox.stub(Workers.prototype, 'runTest').resolves(stubTestResult_());
+        sandbox.stub(WorkersRegistry.prototype, 'register').returns(mkWorkers_());
 
         sandbox.stub(AssertViewResults, 'fromRawObject').returns(Object.create(AssertViewResults.prototype));
         sandbox.stub(AssertViewResults.prototype, 'get').returns({});
@@ -68,10 +74,11 @@ describe('runner/test-runner/regular-test-runner', () => {
                 id: 'bro',
                 sessionId: '100500'
             }));
+            const workers = mkWorkers_();
 
-            await run_();
+            await run_({workers});
 
-            assert.calledOnceWith(Workers.prototype.runTest, sinon.match.any, sinon.match({
+            assert.calledOnceWith(workers.runTest, sinon.match.any, sinon.match({
                 browserId: 'bro',
                 sessionId: '100500'
             }));
@@ -83,11 +90,12 @@ describe('runner/test-runner/regular-test-runner', () => {
                 fullTitle: () => 'baz qux'
             });
 
+            const workers = mkWorkers_();
             const runner = mkRunner_({test});
 
-            await run_({runner});
+            await run_({runner, workers});
 
-            assert.calledOnceWith(Workers.prototype.runTest, 'baz qux', sinon.match({file: 'foo/bar'}));
+            assert.calledOnceWith(workers.runTest, 'baz qux', sinon.match({file: 'foo/bar'}));
         });
 
         describe('TEST_BEGIN event', () => {
@@ -170,12 +178,13 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_PASS, onPass);
 
-                Workers.prototype.runTest.resolves(stubTestResult_({
+                const workers = mkWorkers_();
+                workers.runTest.resolves(stubTestResult_({
                     meta: {foo: 'bar'},
                     hermioneCtx: {baz: 'qux'}
                 }));
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onPass, sinon.match({
                     meta: {foo: 'bar'},
@@ -188,9 +197,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_({test: makeTest({meta: {foo: 'bar'}})})
                     .on(Events.TEST_PASS, onPass);
 
-                Workers.prototype.runTest.resolves(stubTestResult_({meta: {baz: 'qux'}}));
+                const workers = mkWorkers_();
+                workers.runTest.resolves(stubTestResult_({meta: {baz: 'qux'}}));
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onPass, sinon.match({
                     meta: {foo: 'bar', baz: 'qux'}
@@ -216,7 +226,8 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_PASS, onPass);
 
-                Workers.prototype.runTest.resolves(stubTestResult_({
+                const workers = mkWorkers_();
+                workers.runTest.resolves(stubTestResult_({
                     hermioneCtx: {
                         assertViewResults: ['foo', 'bar']
                     }
@@ -225,7 +236,7 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const assertViewResults = Object.create(AssertViewResults.prototype);
                 AssertViewResults.fromRawObject.withArgs(['foo', 'bar']).returns(assertViewResults);
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 const data = onPass.firstCall.args[0];
                 assert.strictEqual(data.hermioneCtx.assertViewResults, assertViewResults);
@@ -239,9 +250,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_({test})
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects(new Error());
+                const workers = mkWorkers_();
+                workers.runTest.rejects(new Error());
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match(test));
             });
@@ -252,9 +264,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                     .on(Events.TEST_FAIL, onFail);
 
                 const err = new Error();
-                Workers.prototype.runTest.rejects(err);
+                const workers = mkWorkers_();
+                workers.runTest.rejects(err);
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({err}));
             });
@@ -264,11 +277,12 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects(new Error());
+                const workers = mkWorkers_();
+                workers.runTest.rejects(new Error());
 
                 BrowserAgent.prototype.getBrowser.resolves(stubBrowser_({sessionId: '100500'}));
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({sessionId: '100500'}));
             });
@@ -282,9 +296,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects(new Error());
+                const workers = mkWorkers_();
+                workers.runTest.rejects(new Error());
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({duration: 2}));
             });
@@ -307,12 +322,13 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects({
+                const workers = mkWorkers_();
+                workers.runTest.rejects({
                     meta: {foo: 'bar'},
                     hermioneCtx: {baz: 'qux'}
                 });
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({
                     meta: {foo: 'bar'},
@@ -325,10 +341,11 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects(new Error());
+                const workers = mkWorkers_();
+                workers.runTest.rejects(new Error());
                 AssertViewResults.prototype.get.returns({foo: 'bar'});
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({
                     assertViewResults: {foo: 'bar'}
@@ -340,7 +357,8 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
 
-                Workers.prototype.runTest.rejects({
+                const workers = mkWorkers_();
+                workers.runTest.rejects({
                     hermioneCtx: {
                         assertViewResults: ['foo', 'bar']
                     }
@@ -349,7 +367,7 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const assertViewResults = Object.create(AssertViewResults.prototype);
                 AssertViewResults.fromRawObject.withArgs(['foo', 'bar']).returns(assertViewResults);
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 const data = onFail.firstCall.args[0];
                 assert.strictEqual(data.hermioneCtx.assertViewResults, assertViewResults);
@@ -399,9 +417,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events.TEST_END, onTestEnd);
 
-                Workers.prototype.runTest.rejects();
+                const workers = mkWorkers_();
+                workers.runTest.rejects();
 
-                await run_({runner});
+                await run_({runner, workers});
 
                 assert.calledOnce(onTestEnd);
             });
@@ -412,11 +431,12 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                Workers.prototype.runTest.resolves(stubTestResult_({
+                const workers = mkWorkers_();
+                workers.runTest.resolves(stubTestResult_({
                     browserState: {isBroken: true}
                 }));
 
-                await run_();
+                await run_({workers});
 
                 assert.calledOnceWith(browser.applyState, {isBroken: true});
             });
@@ -425,9 +445,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                Workers.prototype.runTest.rejects({browserState: {isBroken: true}});
+                const workers = mkWorkers_();
+                workers.runTest.rejects({browserState: {isBroken: true}});
 
-                await run_();
+                await run_({workers});
 
                 assert.calledOnceWith(browser.applyState, {isBroken: true});
             });
@@ -444,9 +465,10 @@ describe('runner/test-runner/regular-test-runner', () => {
             });
 
             it('should release browser even if test fails', async () => {
-                Workers.prototype.runTest.rejects();
+                const workers = mkWorkers_();
+                workers.runTest.rejects();
 
-                await run_();
+                await run_({workers});
 
                 assert.calledOnce(BrowserAgent.prototype.freeBrowser);
             });

@@ -9,7 +9,7 @@ const RuntimeConfig = require('lib/config/runtime-config');
 const RunnerStats = require('lib/stats');
 const RunnerEvents = require('lib/constants/runner-events');
 const logger = require('lib/utils/logger');
-const Workers = require('lib/runner/workers');
+const WorkersRegistry = require('lib/utils/workers-registry');
 const Runner = require('lib/runner');
 const BrowserRunner = require('lib/runner/browser-runner');
 const TestCollection = require('lib/test-collection');
@@ -18,6 +18,12 @@ const {makeConfigStub} = require('../../utils');
 
 describe('Runner', () => {
     const sandbox = sinon.sandbox.create();
+
+    const mkWorkers_ = () => {
+        return {
+            runTest: sandbox.stub().resolves()
+        };
+    };
 
     const run_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
@@ -35,8 +41,8 @@ describe('Runner', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(Workers.prototype);
-        sandbox.stub(Workers, 'create').returns(Object.create(Workers.prototype));
+        sandbox.stub(WorkersRegistry.prototype);
+        sandbox.stub(WorkersRegistry, 'create').returns(Object.create(WorkersRegistry.prototype));
 
         sandbox.stub(BrowserPool, 'create').returns({cancel: sandbox.spy()});
 
@@ -95,7 +101,7 @@ describe('Runner', () => {
 
                 await run_({runner});
 
-                assert.calledOnceWith(Workers.create, config);
+                assert.calledOnceWith(WorkersRegistry.create, config);
             });
 
             it('should create workers before RUNNER_START event', async () => {
@@ -105,12 +111,12 @@ describe('Runner', () => {
 
                 await run_({runner});
 
-                assert.callOrder(Workers.create, onRunnerStart);
+                assert.callOrder(WorkersRegistry.create, onRunnerStart);
             });
 
             it('should pass workers to each browser runner', async () => {
-                const workers = Object.create(Workers.prototype);
-                Workers.create.returns(workers);
+                const workers = mkWorkers_();
+                WorkersRegistry.prototype.register.returns(workers);
 
                 TestCollection.prototype.getBrowsers.returns(['bro1', 'bro2']);
                 await run_();
@@ -121,7 +127,7 @@ describe('Runner', () => {
             it('should end workers after work is done', async () => {
                 await run_();
 
-                assert.calledOnce(Workers.prototype.end);
+                assert.calledOnce(WorkersRegistry.prototype.end);
             });
 
             it('should end workers on fail', async () => {
@@ -130,7 +136,7 @@ describe('Runner', () => {
 
                 await run_({runner}).catch(() => {});
 
-                assert.calledOnce(Workers.prototype.end);
+                assert.calledOnce(WorkersRegistry.prototype.end);
             });
         });
 
@@ -526,8 +532,10 @@ describe('Runner', () => {
             const config = makeConfigStub({browser: ['bro1']});
             const pool = {};
             BrowserPool.create.returns(pool);
-            const workers = Object.create(Workers.prototype);
-            Workers.create.returns(workers);
+
+            const workers = mkWorkers_();
+            WorkersRegistry.prototype.register.returns(workers);
+
             const runner = new Runner(config);
             const test = {};
             await run_({runner});
@@ -561,21 +569,9 @@ describe('Runner', () => {
             assert.notCalled(BrowserRunner.prototype.run);
         });
 
-        it('should return false when workers are ended', async () => {
-            const runner = new Runner(makeConfigStub());
-            await run_({runner});
-            Workers.prototype.isEnded.returns(true);
-
-            const added = runner.addTestToRun({});
-
-            assert.isFalse(added);
-            assert.notCalled(BrowserRunner.prototype.addTestToRun);
-            assert.notCalled(BrowserRunner.prototype.run);
-        });
-
         it('should return false when runner is cancelled', async () => {
             const runner = new Runner(makeConfigStub());
-            run_({runner});
+            await run_({runner});
 
             runner.cancel();
             const added = runner.addTestToRun({});

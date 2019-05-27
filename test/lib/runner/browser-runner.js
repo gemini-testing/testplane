@@ -8,7 +8,6 @@ const TestRunnerFabric = require('lib/runner/test-runner');
 const TestRunner = require('lib/runner/test-runner/insistant-test-runner');
 const TestCollection = require('lib/test-collection');
 const Test = require('lib/test');
-const Workers = require('lib/runner/workers');
 const SuiteMonitor = require('lib/runner/suite-monitor');
 const Events = require('lib/constants/runner-events');
 
@@ -17,11 +16,17 @@ const {makeConfigStub} = require('../../utils');
 describe('runner/browser-runner', () => {
     const sandbox = sinon.sandbox.create();
 
+    const mkWorkers_ = () => {
+        return {
+            runTest: sandbox.stub().resolves()
+        };
+    };
+
     const mkRunner_ = (opts = {}) => {
         const browserId = opts.browserId || 'defaultBro';
         const config = opts.config || makeConfigStub();
         const browserPool = opts.browserPool || BrowserPool.create(config);
-        const workers = opts.workers || sinon.createStubInstance(Workers);
+        const workers = opts.workers || mkWorkers_();
 
         return BrowserRunner.create(browserId, config, browserPool, workers);
     };
@@ -114,19 +119,6 @@ describe('runner/browser-runner', () => {
 
             assert.calledTwice(TestRunner.prototype.run);
             assert.calledOnce(addedTestRunner);
-        });
-
-        it('should return false when workers are ended', async () => {
-            stubTestCollection_([]);
-            const workers = sinon.createStubInstance(Workers);
-            const runner = mkRunner_({workers});
-            await run_({runner});
-            workers.isEnded.returns(true);
-
-            const added = runner.addTestToRun(Test.create({title: 'foo'}));
-
-            assert.isFalse(added);
-            assert.notCalled(TestRunner.prototype.run);
         });
     });
 
