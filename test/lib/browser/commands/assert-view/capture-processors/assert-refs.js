@@ -30,7 +30,8 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                 state: 'default-state',
                 diffOpts: {
                     diffBounds: 'default-bounds',
-                    config: mkConfig_(opts.config)
+                    config: mkConfig_(opts.config),
+                    canHaveCaret: opts.canHaveCaret
                 }
             });
 
@@ -53,7 +54,7 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                     });
             });
 
-            it('with overriden diff option from "buildDiffOpts"', async () => {
+            it('overriden diff option from "buildDiffOpts"', async () => {
                 const config = {
                     buildDiffOpts: {tolerance: 100500},
                     tolerance: 500100
@@ -65,6 +66,53 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                             ImageDiffError.create,
                             sinon.match.any, sinon.match.any, sinon.match.any,
                             sinon.match({tolerance: 100500})
+                        );
+                    });
+            });
+
+            describe('not ignore caret if', () => {
+                it('none of the editable elements are in focus', async () => {
+                    const config = {
+                        buildDiffOpts: {ignoreCaret: true}
+                    };
+
+                    await handleImageDiff_({config, canHaveCaret: false})
+                        .catch(() => {
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({ignoreCaret: false})
+                            );
+                        });
+                });
+
+                it('in config is explicitly set not to ignore it', async () => {
+                    const config = {
+                        buildDiffOpts: {ignoreCaret: false}
+                    };
+
+                    await handleImageDiff_({config, canHaveCaret: true})
+                        .catch(() => {
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({ignoreCaret: false})
+                            );
+                        });
+                });
+            });
+
+            it('ignore caret if one of the editable elements are in focus', async () => {
+                const config = {
+                    buildDiffOpts: {ignoreCaret: true}
+                };
+
+                await handleImageDiff_({config, canHaveCaret: true})
+                    .catch(() => {
+                        assert.calledOnceWith(
+                            ImageDiffError.create,
+                            sinon.match.any, sinon.match.any, sinon.match.any,
+                            sinon.match({ignoreCaret: true})
                         );
                     });
             });
