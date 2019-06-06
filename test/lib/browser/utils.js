@@ -21,7 +21,10 @@ function createBrowserConfig_(opts = {}) {
         screenshotDelay: 0,
         windowSize: null,
         getScreenshotPath: () => '/some/path',
-        system: opts.system || {}
+        system: opts.system || {},
+        buildDiffOpts: {
+            ignoreCaret: true
+        }
     });
 
     return {

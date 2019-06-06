@@ -425,13 +425,14 @@ describe('assertView command', () => {
 
                 it('should pass browser emitter to "handleImageDiff" handler', async () => {
                     const browser = stubBrowser_();
+                    browser.prepareScreenshot.resolves({canHaveCaret: true});
 
                     await browser.publicAPI.assertView();
 
                     assert.calledOnceWith(
                         updateRefs.handleImageDiff,
                         sinon.match.any, sinon.match.any, sinon.match.any,
-                        {config: sinon.match.any, diffAreas: sinon.match.any, emitter: browser.emitter}
+                        {canHaveCaret: true, config: sinon.match.any, diffAreas: sinon.match.any, emitter: browser.emitter}
                     );
                 });
             });
