@@ -195,14 +195,7 @@ describe('test-collection', () => {
 
             collection.disableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1', disabled: true},
-                    {title: 'test2', disabled: true},
-                    {title: 'test3', disabled: true}
-                ]
-            );
+            collection.eachTest((test) => assert.propertyVal(test, 'disabled', true));
         });
 
         it('should disable all tests for specified browser', () => {
@@ -217,19 +210,8 @@ describe('test-collection', () => {
 
             collection.disableAll('bro1');
 
-            assert.deepEqual(
-                collection.mapTests('bro1', (t) => t),
-                [
-                    {title: 'test1', disabled: true}
-                ]
-            );
-            assert.deepEqual(
-                collection.mapTests('bro2', (t) => t),
-                [
-                    {title: 'test2'},
-                    {title: 'test3'}
-                ]
-            );
+            collection.eachTest('bro1', (test) => assert.propertyVal(test, 'disabled', true));
+            collection.eachTest('bro2', (test) => assert.notProperty(test, 'disabled'));
         });
 
         it('should be chainable', () => {
@@ -249,12 +231,7 @@ describe('test-collection', () => {
 
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test'}
-                ]
-            );
+            collection.eachTest((test) => assert.notProperty(test, 'disabled'));
         });
 
         it('should enable all previously disabled tests', () => {
@@ -269,13 +246,7 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1'},
-                    {title: 'test2'}
-                ]
-            );
+            collection.eachTest((test) => assert.notProperty(test, 'disabled'));
         });
 
         it('should not enable tests which were originally disabled', () => {
@@ -288,12 +259,7 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test', disabled: true}
-                ]
-            );
+            collection.eachTest((test) => assert.propertyVal(test, 'disabled', true));
         });
 
         it('should enable all previously disabled tests for passed browser', () => {
@@ -308,13 +274,8 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll('bro2');
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1', disabled: true},
-                    {title: 'test2'}
-                ]
-            );
+            collection.eachTest('bro1', (test) => assert.propertyVal(test, 'disabled', true));
+            collection.eachTest('bro2', (test) => assert.notProperty(test, 'disabled'));
         });
 
         it('should be chainable', () => {
@@ -367,6 +328,15 @@ describe('test-collection', () => {
             const collection = TestCollection.create({});
 
             assert.equal(collection.disableTest(), collection);
+        });
+
+        it('should disable passed test directly', () => {
+            const test = {};
+            const collection = TestCollection.create({});
+
+            collection.disableTest(test);
+
+            assert.propertyVal(test, 'disabled', true);
         });
     });
 
@@ -445,6 +415,16 @@ describe('test-collection', () => {
             const collection = TestCollection.create({});
 
             assert.equal(collection.enableTest(), collection);
+        });
+
+        it('should enable passed test directly', () => {
+            const test = {};
+            const collection = TestCollection.create({});
+
+            collection.disableTest(test);
+            collection.enableTest(test);
+
+            assert.notProperty(test, 'disabled');
         });
     });
 
