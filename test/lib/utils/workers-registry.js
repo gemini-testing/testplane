@@ -20,6 +20,16 @@ describe('WorkersRegistry', () => {
         return WorkersRegistry.create(config);
     };
 
+    const initChild_ = () => {
+        const {onChild} = workerFarm.firstCall.args[0];
+
+        const child = new EventEmitter();
+        child.send = sandbox.stub();
+        onChild(child);
+
+        return child;
+    };
+
     beforeEach(() => {
         workersImpl = sandbox.stub().yieldsRight();
         workerFarm = sandbox.stub().returns(workersImpl);
@@ -77,16 +87,6 @@ describe('WorkersRegistry', () => {
     });
 
     describe('communication with worker', () => {
-        const initChild_ = () => {
-            const {onChild} = workerFarm.firstCall.args[0];
-
-            const child = new EventEmitter();
-            child.send = sandbox.stub();
-            onChild(child);
-
-            return child;
-        };
-
         it('should reply to worker init request', () => {
             RuntimeConfig.getInstance.returns({baz: 'qux'});
             mkWorkersRegistry_({configPath: 'foo/bar'});
@@ -152,6 +152,17 @@ describe('WorkersRegistry', () => {
             await workersRegistry.end();
 
             assert.isTrue(workersRegistry.isEnded());
+        });
+    });
+
+    describe('getWorkers', () => {
+        it('should return child processes', () => {
+            const wr = mkWorkersRegistry_();
+
+            const child1 = initChild_();
+            const child2 = initChild_();
+
+            assert.deepEqual(wr.getWorkers(), [child1, child2]);
         });
     });
 });

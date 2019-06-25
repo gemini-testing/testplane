@@ -30,6 +30,7 @@ describe('hermione', () => {
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
         runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
+        runner.getWorkers = sandbox.stub(Runner.prototype, 'getWorkers');
 
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
@@ -735,6 +736,25 @@ describe('hermione', () => {
             const hermione = Hermione.create();
 
             assert.isFalse(hermione.isWorker());
+        });
+    });
+
+    describe('getWorkers', () => {
+        it('should return empty array when hermione is not running', () => {
+            const hermione = Hermione.create();
+
+            assert.deepEqual(hermione.getWorkers(), []);
+        });
+
+        it('should return child processes from main runner', async () => {
+            mkRunnerStub_();
+            const hermione = Hermione.create();
+            const worker = {};
+            Runner.prototype.getWorkers.returns([worker]);
+
+            await hermione.run();
+
+            assert.deepEqual(hermione.getWorkers(), [worker]);
         });
     });
 
