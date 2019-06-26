@@ -4,6 +4,8 @@ const proxyquire = require('proxyquire');
 const {EventEmitter} = require('events');
 const _ = require('lodash');
 const RuntimeConfig = require('lib/config/runtime-config');
+const Events = require('lib/constants/runner-events');
+const WorkerProcess = require('lib/utils/worker-process');
 
 describe('WorkersRegistry', () => {
     const sandbox = sinon.sandbox.create();
@@ -18,6 +20,16 @@ describe('WorkersRegistry', () => {
         const WorkersRegistry = proxyquire('../../../lib/utils/workers-registry', {'worker-farm': workerFarm});
 
         return WorkersRegistry.create(config);
+    };
+
+    const initChild_ = () => {
+        const {onChild} = workerFarm.firstCall.args[0];
+
+        const child = new EventEmitter();
+        child.send = sandbox.stub();
+        onChild(child);
+
+        return child;
     };
 
     beforeEach(() => {
@@ -77,16 +89,6 @@ describe('WorkersRegistry', () => {
     });
 
     describe('communication with worker', () => {
-        const initChild_ = () => {
-            const {onChild} = workerFarm.firstCall.args[0];
-
-            const child = new EventEmitter();
-            child.send = sandbox.stub();
-            onChild(child);
-
-            return child;
-        };
-
         it('should reply to worker init request', () => {
             RuntimeConfig.getInstance.returns({baz: 'qux'});
             mkWorkersRegistry_({configPath: 'foo/bar'});
@@ -152,6 +154,21 @@ describe('WorkersRegistry', () => {
             await workersRegistry.end();
 
             assert.isTrue(workersRegistry.isEnded());
+        });
+    });
+
+    describe('NEW_WORKER_PROCESS event', () => {
+        it('should pass a worker process instance', () => {
+            const onNewWorkerProcess = sinon.stub().named('onNewWorkerProcess');
+            const workersRegistry = mkWorkersRegistry_();
+            workersRegistry.on(Events.NEW_WORKER_PROCESS, onNewWorkerProcess);
+            const workerProcessStub = sinon.stub().named('workerProcess');
+            sinon.stub(WorkerProcess, 'create').returns(workerProcessStub);
+
+            const child = initChild_();
+
+            assert.calledOnceWith(onNewWorkerProcess, workerProcessStub);
+            assert.calledOnceWith(WorkerProcess.create, child);
         });
     });
 });

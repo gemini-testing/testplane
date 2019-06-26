@@ -104,6 +104,21 @@ describe('Runner', () => {
                 assert.calledOnceWith(WorkersRegistry.create, config);
             });
 
+            it('should passthrough NEW_WORKER_PROCESS events from workers registry', async () => {
+                const workersRegistry = WorkersRegistry.create();
+                workersRegistry.emit.restore();
+                workersRegistry.on.restore();
+                WorkersRegistry.create.returns(workersRegistry);
+                const runner = new Runner(makeConfigStub());
+
+                const newWorkerProcess = sinon.stub().named('newWorkerProcess');
+                runner.on(RunnerEvents.NEW_WORKER_PROCESS, newWorkerProcess);
+
+                workersRegistry.emit(RunnerEvents.NEW_WORKER_PROCESS);
+
+                assert.calledOnce(newWorkerProcess);
+            });
+
             it('should create workers before RUNNER_START event', async () => {
                 const onRunnerStart = sinon.stub().named('onRunnerStart').resolves();
                 const runner = new Runner(makeConfigStub())
