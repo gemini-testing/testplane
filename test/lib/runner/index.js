@@ -27,8 +27,9 @@ describe('Runner', () => {
 
     const run_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
-        const runner = opts.runner || new Runner(config);
         const stats = opts.stats || sinon.createStubInstance(RunnerStats);
+        const runner = opts.runner || new Runner(config);
+        runner.init();
 
         return runner.run(opts.testCollection || TestCollection.create(), stats);
     };
@@ -105,16 +106,19 @@ describe('Runner', () => {
             });
 
             it('should passthrough NEW_WORKER_PROCESS events from workers registry', async () => {
-                const workersRegistry = WorkersRegistry.create();
+                const workersRegistry = new WorkersRegistry();
                 workersRegistry.emit.restore();
                 workersRegistry.on.restore();
+                workersRegistry.init.callsFake(() => {
+                    workersRegistry.emit(RunnerEvents.NEW_WORKER_PROCESS);
+                });
                 WorkersRegistry.create.returns(workersRegistry);
-                const runner = new Runner(makeConfigStub());
 
+                const runner = new Runner(makeConfigStub());
                 const newWorkerProcess = sinon.stub().named('newWorkerProcess');
                 runner.on(RunnerEvents.NEW_WORKER_PROCESS, newWorkerProcess);
 
-                workersRegistry.emit(RunnerEvents.NEW_WORKER_PROCESS);
+                await run_({runner});
 
                 assert.calledOnce(newWorkerProcess);
             });

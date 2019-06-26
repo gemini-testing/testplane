@@ -30,6 +30,7 @@ describe('hermione', () => {
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
         runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
+        runner.init = sandbox.stub(Runner.prototype, 'init');
 
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;

@@ -18,8 +18,10 @@ describe('WorkersRegistry', () => {
         });
 
         const WorkersRegistry = proxyquire('../../../lib/utils/workers-registry', {'worker-farm': workerFarm});
+        const workersRegistry = WorkersRegistry.create(config);
+        workersRegistry.init();
 
-        return WorkersRegistry.create(config);
+        return workersRegistry;
     };
 
     const initChild_ = () => {
