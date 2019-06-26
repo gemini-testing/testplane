@@ -4,6 +4,8 @@ const proxyquire = require('proxyquire');
 const {EventEmitter} = require('events');
 const _ = require('lodash');
 const RuntimeConfig = require('lib/config/runtime-config');
+const Events = require('lib/constants/runner-events');
+const WorkerProcess = require('lib/utils/worker-process');
 
 describe('WorkersRegistry', () => {
     const sandbox = sinon.sandbox.create();
@@ -155,14 +157,18 @@ describe('WorkersRegistry', () => {
         });
     });
 
-    describe('getWorkers', () => {
-        it('should return child processes', () => {
-            const wr = mkWorkersRegistry_();
+    describe('NEW_WORKER_PROCESS event', () => {
+        it('should pass a worker process instance', () => {
+            const onNewWorkerProcess = sinon.stub().named('onNewWorkerProcess');
+            const workersRegistry = mkWorkersRegistry_();
+            workersRegistry.on(Events.NEW_WORKER_PROCESS, onNewWorkerProcess);
+            const workerProcessStub = sinon.stub().named('workerProcess');
+            sinon.stub(WorkerProcess, 'create').returns(workerProcessStub);
 
-            const child1 = initChild_();
-            const child2 = initChild_();
+            const child = initChild_();
 
-            assert.deepEqual(wr.getWorkers(), [child1, child2]);
+            assert.calledOnceWith(onNewWorkerProcess, workerProcessStub);
+            assert.calledOnceWith(WorkerProcess.create, child);
         });
     });
 });
