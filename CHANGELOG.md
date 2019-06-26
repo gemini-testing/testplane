@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.8.0"></a>
+# [2.8.0](https://github.com/gemini-testing/hermione/compare/v2.7.1...v2.8.0) (2019-06-26)
+
+
+### Features
+
+* add newWorkerProcess event ([#416](https://github.com/gemini-testing/hermione/issues/416)) ([3183352](https://github.com/gemini-testing/hermione/commit/3183352))
+
+
+
 <a name="2.7.1"></a>
 ## [2.7.1](https://github.com/gemini-testing/hermione/compare/v2.7.0...v2.7.1) (2019-06-06)
 
