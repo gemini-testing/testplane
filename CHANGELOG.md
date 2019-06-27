@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.8.1"></a>
+## [2.8.1](https://github.com/gemini-testing/hermione/compare/v2.8.0...v2.8.1) (2019-06-27)
+
+
+### Bug Fixes
+
+* proxy events before workers init ([#417](https://github.com/gemini-testing/hermione/issues/417)) ([8b2456a](https://github.com/gemini-testing/hermione/commit/8b2456a))
+
+
+
 <a name="2.8.0"></a>
 # [2.8.0](https://github.com/gemini-testing/hermione/compare/v2.7.1...v2.8.0) (2019-06-26)
 
