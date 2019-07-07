@@ -38,9 +38,10 @@ describe('browser-pool', () => {
 
         describe('browser manager', () => {
             const getBrowserManager = () => CoreBrowserPool.create.lastCall.args[0];
-            const stubBrowser = (id, publicAPI) => {
+            const stubBrowser = ({id, sessionId, publicAPI} = {}) => {
                 return {
                     id,
+                    sessionId,
                     publicAPI,
                     init: sandbox.stub(),
                     quit: sandbox.stub()
@@ -76,8 +77,14 @@ describe('browser-pool', () => {
 
                         emitter.on(event, onEvent);
 
-                        return BrowserManager[method](stubBrowser('bro', {public: 'api'}))
-                            .then(() => assert.calledOnceWith(onEvent, {public: 'api'}, {browserId: 'bro'}));
+                        const browser = stubBrowser({
+                            id: 'bro',
+                            sessionId: '100500',
+                            publicAPI: {public: 'api'}
+                        });
+
+                        return BrowserManager[method](browser)
+                            .then(() => assert.calledOnceWith(onEvent, {public: 'api'}, {browserId: 'bro', sessionId: '100500'}));
                     });
 
                     it('should wait all async listeners', () => {
