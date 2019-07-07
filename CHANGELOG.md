@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.9.0"></a>
+# [2.9.0](https://github.com/gemini-testing/hermione/compare/v2.8.1...v2.9.0) (2019-07-07)
+
+
+### Features
+
+* send session id on browser session events ([189faff](https://github.com/gemini-testing/hermione/commit/189faff))
+
+
+
 <a name="2.8.1"></a>
 ## [2.8.1](https://github.com/gemini-testing/hermione/compare/v2.8.0...v2.8.1) (2019-06-27)
 
