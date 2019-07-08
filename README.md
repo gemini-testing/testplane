@@ -447,7 +447,8 @@ sets: {
         files: [
             'tests/desktop/*.hermione.js',
             'tests/common/*.hermione.js'
-        ]
+        ],
+        ignoreFiles: ['tests/desktop/fixtures/**'], // exclude directories from reading while test finding
         browsers: ['browser'] // run tests which match the specified masks in the browser with the `browser` id
     }
 }
@@ -455,6 +456,8 @@ sets: {
 
 * `files` – A list of test files or directories with test files. This can be a string if you want to specify just one file or directory. Also, you can use
 masks for this property.
+
+* `ignoreFiles` - A list of paths or masks to ignore from reading while test finding. When you write `!**/some-dir/**` it means that the directory will be read, but all the entries will not be included in the results. So using `ignoreFiles` you can speed up test reading for your project.
 
 * `browsers` – A list of browser IDs to run the tests specified in `files`. All browsers by default.
 
@@ -889,7 +892,7 @@ module.exports = (hermione) => {
         const workerFilepath = require.resolve('./worker');
         const exportedMethods = ['foo'];
         workers = runner.registerWorkers(workerFilepath, exportedMethods);
-        
+
         // outputs `FOO_RUNNER_START`
         console.log(await workers.foo('RUNNER_START'));
     });
@@ -903,7 +906,7 @@ module.exports = (hermione) => {
 // worker.js
 module.exports = {
     foo: async function(event) {
-        return 'FOO_' + event; 
+        return 'FOO_' + event;
     }
 };
 
