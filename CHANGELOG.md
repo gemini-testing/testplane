@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.10.0"></a>
+# [2.10.0](https://github.com/gemini-testing/hermione/compare/v2.9.0...v2.10.0) (2019-07-09)
+
+
+### Features
+
+* **sets:** add set.ignoreFiles option to ignore dirs while test finding ([53749c8](https://github.com/gemini-testing/hermione/commit/53749c8))
+
+
+
 <a name="2.9.0"></a>
 # [2.9.0](https://github.com/gemini-testing/hermione/compare/v2.8.1...v2.9.0) (2019-07-07)
 
