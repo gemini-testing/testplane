@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.10.1"></a>
+## [2.10.1](https://github.com/gemini-testing/hermione/compare/v2.10.0...v2.10.1) (2019-07-15)
+
+
+### Bug Fixes
+
+* scrollBy using scrollTo ([95d7b06](https://github.com/gemini-testing/hermione/commit/95d7b06))
+
+
+
 <a name="2.10.0"></a>
 # [2.10.0](https://github.com/gemini-testing/hermione/compare/v2.9.0...v2.10.0) (2019-07-09)
 
