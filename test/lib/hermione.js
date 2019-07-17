@@ -25,6 +25,11 @@ const {makeConfigStub} = require('../utils');
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
 
+    const mkHermione_ = (config) => {
+        Config.create.returns(config || makeConfigStub());
+        return Hermione.create();
+    };
+
     const mkRunnerStub_ = (runFn) => {
         const runner = new AsyncEmitter();
 
@@ -91,7 +96,7 @@ describe('hermione', () => {
 
     describe('extendCli', () => {
         it ('should emit CLI event with passed parser', () => {
-            const hermione = Hermione.create();
+            const hermione = mkHermione_();
             const onCli = sinon.spy().named('onCli');
             const parser = {foo: 'bar'};
 
@@ -104,7 +109,7 @@ describe('hermione', () => {
     });
 
     describe('run', () => {
-        const runHermione = (paths, opts) => Hermione.create().run(paths, opts);
+        const runHermione = (paths, opts) => mkHermione_().run(paths, opts);
 
         beforeEach(() => {
             sandbox.stub(TestCollection.prototype, 'getBrowsers').returns([]);
@@ -124,14 +129,14 @@ describe('hermione', () => {
             const config = makeConfigStub();
             Config.create.returns(config);
 
-            return Hermione.create(config)
+            return mkHermione_(config)
                 .run(() => assert.calledWith(Runner.create, config));
         });
 
         it('should create runner with interceptors', async () => {
             mkRunnerStub_();
 
-            const hermione = Hermione.create();
+            const hermione = mkHermione_();
             const fooHandler = () => {};
             const barHandler = () => {};
 
@@ -176,7 +181,7 @@ describe('hermione', () => {
 
             it('should emit INIT on run', () => {
                 const onInit = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, onInit);
 
                 return hermione.run()
@@ -184,7 +189,7 @@ describe('hermione', () => {
             });
 
             it('should reject on INIT handler fail', () => {
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, () => q.reject('o.O'));
 
                 return assert.isRejected(hermione.run(), /o.O/);
@@ -192,7 +197,7 @@ describe('hermione', () => {
 
             it('should wait INIT handler before running tests', () => {
                 const afterInit = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, () => q.delay(20).then(afterInit));
 
                 return hermione.run()
@@ -201,7 +206,7 @@ describe('hermione', () => {
 
             it('should send INIT event only once', () => {
                 const onInit = sinon.spy().named('onInit');
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
                 hermione.on(RunnerEvents.INIT, onInit);
 
                 return hermione.run()
@@ -232,6 +237,7 @@ describe('hermione', () => {
 
             it('should accept reporter specified as string', async () => {
                 const options = {reporters: ['reporter']};
+                Config.create.returns(makeConfigStub());
                 const hermione = Hermione.create();
 
                 await hermione.run(null, options);
@@ -241,7 +247,7 @@ describe('hermione', () => {
 
             it('should accept reporter specified as function', async () => {
                 const options = {reporters: [createReporter()]};
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
 
                 await hermione.run(null, options);
 
@@ -250,7 +256,7 @@ describe('hermione', () => {
 
             it('should fail if reporter was not found for given identifier', async () => {
                 const options = {reporters: ['unknown-reporter']};
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
 
                 try {
                     await hermione.run(null, options);
@@ -261,7 +267,7 @@ describe('hermione', () => {
 
             it('should fail if reporter is not string or function', async () => {
                 const options = {reporters: [1234]};
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
 
                 try {
                     await hermione.run(null, options);
@@ -327,7 +333,7 @@ describe('hermione', () => {
             it('should create runner stats', async () => {
                 mkRunnerStub_();
 
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
 
                 await hermione.run();
 
@@ -359,7 +365,7 @@ describe('hermione', () => {
             }) ;
 
             it('should halt if there were some errors', () => {
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
                 const err = new Error();
 
                 mkRunnerStub_((runner) => runner.emit(RunnerEvents.ERROR, err));
@@ -372,7 +378,7 @@ describe('hermione', () => {
         describe('should passthrough', () => {
             it('all synchronous runner events', () => {
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
 
                 return hermione.run()
                     .then(() => {
@@ -390,7 +396,7 @@ describe('hermione', () => {
             it('synchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, 'passthroughEvent');
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
 
                 return hermione.run()
                     .then(() => {
@@ -405,7 +411,7 @@ describe('hermione', () => {
 
             it('all asynchronous runner events', () => {
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
 
                 return hermione.run()
                     .then(() => {
@@ -423,7 +429,7 @@ describe('hermione', () => {
             it('asynchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, 'passthroughEventAsync');
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
 
                 return hermione.run()
                     .then(() => {
@@ -438,7 +444,7 @@ describe('hermione', () => {
 
             it('all runner events with passed event data', () => {
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
                 const omitEvents = ['EXIT', 'NEW_BROWSER', 'UPDATE_REFERENCE'];
 
                 return hermione.run()
@@ -457,7 +463,7 @@ describe('hermione', () => {
             it('exit event from signalHandler', () => {
                 mkRunnerStub_();
 
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
                 const onExit = sinon.spy().named('onExit');
 
                 return hermione.run()
@@ -474,7 +480,7 @@ describe('hermione', () => {
                 sandbox.stub(eventsUtils, 'passthroughEventAsync');
 
                 const runner = mkRunnerStub_();
-                const hermione = Hermione.create(makeConfigStub());
+                const hermione = mkHermione_();
 
                 return hermione.run()
                     .then(() => {
@@ -492,7 +498,7 @@ describe('hermione', () => {
     describe('addTestToRun', () => {
         it('should pass test to the existing runner', async () => {
             const runner = mkRunnerStub_();
-            const hermione = Hermione.create();
+            const hermione = mkHermione_();
             const test = {};
 
             await hermione.run();
@@ -503,7 +509,7 @@ describe('hermione', () => {
 
         it('should return false when hermione is not running', () => {
             const runner = mkRunnerStub_();
-            const hermione = Hermione.create();
+            const hermione = mkHermione_();
 
             const added = hermione.addTestToRun({});
 
@@ -517,13 +523,14 @@ describe('hermione', () => {
             sandbox.spy(TestReader, 'create');
 
             sandbox.stub(TestCollection, 'create').returns(Object.create(TestCollection.prototype));
+            sandbox.stub(TestCollection.prototype, 'sortTests');
+            sandbox.stub(TestCollection.prototype, 'getBrowsers').returns([]);
         });
 
         it('should create test reader', async () => {
             const config = makeConfigStub();
-            Config.create.returns(config);
 
-            const hermione = Hermione.create(config);
+            const hermione = mkHermione_(config);
 
             await hermione.readTests();
 
@@ -536,7 +543,7 @@ describe('hermione', () => {
         ].forEach((event) => {
             it(`should passthrough ${event} event from test reader`, async () => {
                 const eventHandler = sandbox.stub();
-                const hermione = Hermione.create(makeConfigStub())
+                const hermione = mkHermione_()
                     .on(RunnerEvents[event], eventHandler);
 
                 TestReader.prototype.read.callsFake(function() {
@@ -550,7 +557,7 @@ describe('hermione', () => {
 
             it(`should not passthrough ${event} event from test reader with silent option`, async () => {
                 const eventHandler = sandbox.stub();
-                const hermione = Hermione.create(makeConfigStub())
+                const hermione = mkHermione_()
                     .on(RunnerEvents[event], eventHandler);
 
                 TestReader.prototype.read.callsFake(function() {
@@ -564,7 +571,7 @@ describe('hermione', () => {
         });
 
         it('should read passed test files', async () => {
-            const hermione = Hermione.create(makeConfigStub());
+            const hermione = mkHermione_();
 
             await hermione.readTests(
                 ['foo/bar'],
@@ -592,16 +599,45 @@ describe('hermione', () => {
             const testCollection = TestCollection.create();
             TestCollection.create.withArgs(tests).returns(testCollection);
 
-            const hermione = Hermione.create(makeConfigStub());
+            const hermione = mkHermione_();
             const result = await hermione.readTests();
 
             assert.equal(result, testCollection);
         });
 
+        it('should sort tests if corresponding config option set', async () => {
+            const browsers = ['foo', 'bar'];
+            const config = makeConfigStub({browsers});
+            config.forBrowser('bar').strictTestsOrder = true;
+
+            const hermione = mkHermione_(config);
+            TestCollection.prototype.getBrowsers.returns(browsers);
+
+            await hermione.readTests();
+
+            assert.calledOnceWith(TestCollection.prototype.sortTests, 'bar', sinon.match.func);
+        });
+
+        it('should sort tests by id', async () => {
+            const browsers = ['foo'];
+            const config = makeConfigStub({browsers});
+            config.forBrowser('foo').strictTestsOrder = true;
+
+            const hermione = mkHermione_(config);
+            TestCollection.prototype.getBrowsers.returns(browsers);
+
+            await hermione.readTests();
+            const sortFn = TestCollection.prototype.sortTests.firstCall.args[1];
+
+            assert.equal(sortFn({id: 'a'}, {id: 'b'}), -1);
+            assert.equal(sortFn({id: 'a'}, {id: 'a'}), 1);
+            assert.equal(sortFn({id: 'b'}, {id: 'a'}), 1);
+        });
+
         describe('INIT', () => {
             it('should emit INIT on read', async () => {
                 const onInit = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, onInit);
 
                 await hermione.readTests();
@@ -610,7 +646,7 @@ describe('hermione', () => {
             });
 
             it('should reject on INIT handler fail', () => {
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, () => Promise.reject('o.O'));
 
                 return assert.isRejected(hermione.readTests(), /o.O/);
@@ -618,7 +654,7 @@ describe('hermione', () => {
 
             it('should wait INIT handler before reading tests', async () => {
                 const afterInit = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
 
                 await hermione.readTests();
@@ -628,7 +664,7 @@ describe('hermione', () => {
 
             it('should not emit INIT on silent read', async () => {
                 const onInit = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.INIT, onInit);
 
                 await hermione.readTests(null, {silent: true});
@@ -638,7 +674,7 @@ describe('hermione', () => {
 
             it('should send INIT event only once', async () => {
                 const onInit = sinon.spy();
-                const hermione = Hermione.create();
+                const hermione = mkHermione_();
                 hermione.on(RunnerEvents.INIT, onInit);
 
                 await hermione.readTests();
@@ -651,7 +687,7 @@ describe('hermione', () => {
         describe('AFTER_TESTS_READ', () => {
             it('should emit AFTER_TESTS_READ on read', async () => {
                 const onAfterTestsRead = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 await hermione.readTests();
@@ -661,7 +697,7 @@ describe('hermione', () => {
 
             it('should pass test collection with AFTER_TESTS_READ event', async () => {
                 const onAfterTestsRead = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 const collection = await hermione.readTests();
@@ -671,7 +707,7 @@ describe('hermione', () => {
 
             it('should not emit AFTER_TESTS_READ in silent mode', async () => {
                 const onAfterTestsRead = sinon.spy();
-                const hermione = Hermione.create()
+                const hermione = mkHermione_()
                     .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 await hermione.readTests(null, {silent: true});
@@ -688,38 +724,36 @@ describe('hermione', () => {
                 RunnerEvents
             );
 
-            assert.deepEqual(Hermione.create(makeConfigStub()).events, expectedEvents);
+            assert.deepEqual(mkHermione_().events, expectedEvents);
         });
 
         it('hermione configuration', () => {
             const config = {foo: 'bar'};
 
-            Config.create.returns(config);
-
-            assert.deepEqual(Hermione.create().config, config);
+            assert.deepEqual(mkHermione_(config).config, config);
         });
 
         it('hermione errors', () => {
-            assert.deepEqual(Hermione.create().errors, Errors);
+            assert.deepEqual(mkHermione_().errors, Errors);
         });
     });
 
     describe('isFailed', () => {
         it('should return "false" by default', () => {
-            assert.isFalse(Hermione.create(makeConfigStub()).isFailed());
+            assert.isFalse(mkHermione_().isFailed());
         });
 
         it('should return "false" if there are no failed tests or errors', () => {
             mkRunnerStub_();
 
-            const hermione = Hermione.create(makeConfigStub());
+            const hermione = mkHermione_();
 
             return hermione.run()
                 .then(() => assert.isFalse(hermione.isFailed()));
         });
 
         it('should return "true" after some test fail', () => {
-            const hermione = Hermione.create(makeConfigStub());
+            const hermione = mkHermione_();
 
             mkRunnerStub_((runner) => {
                 runner.emit(RunnerEvents.TEST_FAIL);
@@ -733,7 +767,7 @@ describe('hermione', () => {
 
     describe('isWorker', () => {
         it('should return "false"', () => {
-            const hermione = Hermione.create();
+            const hermione = mkHermione_();
 
             assert.isFalse(hermione.isWorker());
         });
@@ -743,7 +777,7 @@ describe('hermione', () => {
         let hermione;
 
         beforeEach(() => {
-            hermione = Hermione.create();
+            hermione = mkHermione_();
 
             sandbox.stub(logger, 'error');
             sandbox.stub(process, 'exit');

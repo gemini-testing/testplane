@@ -518,6 +518,7 @@ Option name               | Description
 `buildDiffOpts`           | Options for building diff image.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
+`strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 
 #### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
