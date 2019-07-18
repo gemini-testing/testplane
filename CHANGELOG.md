@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.11.0"></a>
+# [2.11.0](https://github.com/gemini-testing/hermione/compare/v2.10.1...v2.11.0) (2019-07-18)
+
+
+### Features
+
+* ability to guarantee tests order after reading ([e14faef](https://github.com/gemini-testing/hermione/commit/e14faef))
+
+
+
 <a name="2.10.1"></a>
 ## [2.10.1](https://github.com/gemini-testing/hermione/compare/v2.10.0...v2.10.1) (2019-07-15)
 
