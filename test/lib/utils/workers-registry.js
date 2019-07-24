@@ -120,6 +120,32 @@ describe('WorkersRegistry', () => {
                 config: {foo: 'bar'}
             });
         });
+
+        it('should emit other events through workers object', () => {
+            const workersRegistry = mkWorkersRegistry_();
+            const workers = workersRegistry.register(null, []);
+
+            const onEvent = sandbox.stub().named('onEvent');
+            workers.on('foo', onEvent);
+
+            const child = initChild_();
+            child.emit('message', {event: 'foo', bar: 'baz'});
+
+            assert.calledOnceWith(onEvent, {bar: 'baz'});
+        });
+
+        it('should not emit unknown events (without event field) through workers object', () => {
+            const workersRegistry = mkWorkersRegistry_();
+            const workers = workersRegistry.register(null, []);
+
+            const onEvent = sandbox.stub().named('onEvent');
+            workers.on('foo', onEvent);
+
+            const child = initChild_();
+            child.emit('message', {foo: 'bar'});
+
+            assert.notCalled(onEvent);
+        });
     });
 
     describe('execute worker\'s method', () => {
