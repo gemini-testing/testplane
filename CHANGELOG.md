@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.12.0"></a>
+# [2.12.0](https://github.com/gemini-testing/hermione/compare/v2.11.2...v2.12.0) (2019-07-24)
+
+
+### Features
+
+* release browser before firing any test finish event ([876510a](https://github.com/gemini-testing/hermione/commit/876510a))
+
+
+
 <a name="2.11.2"></a>
 ## [2.11.2](https://github.com/gemini-testing/hermione/compare/v2.11.1...v2.11.2) (2019-07-23)
 
