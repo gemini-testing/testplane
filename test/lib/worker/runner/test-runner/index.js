@@ -9,6 +9,7 @@ const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-scr
 const BrowserAgent = require('lib/worker/runner/browser-agent');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
+const ipc = require('lib/utils/ipc');
 const {makeConfigStub} = require('../../../../utils');
 const {Suite, Test} = require('../../../_mocha');
 
@@ -57,6 +58,8 @@ describe('worker/runner/test-runner', () => {
         sandbox.stub(HookRunner.prototype, 'runAfterEachHooks').resolves();
 
         sandbox.stub(OneTimeScreenshooter, 'create').returns(Object.create(OneTimeScreenshooter.prototype));
+
+        sandbox.stub(ipc, 'emit');
     });
 
     afterEach(() => sandbox.restore());
@@ -477,11 +480,10 @@ describe('worker/runner/test-runner', () => {
                 await assert.isRejected(run_(), AssertViewError);
             });
 
-            it('should resolve with browser meta and state', async () => {
+            it('should resolve with browser meta', async () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.state.baz = 'qux';
                     });
                     return Object.create(ExecutionThread.prototype);
                 });
@@ -489,7 +491,6 @@ describe('worker/runner/test-runner', () => {
                 const result = await run_();
 
                 assert.match(result.meta, {foo: 'bar'});
-                assert.match(result.browserState, {baz: 'qux'});
             });
 
             it('should release browser', async () => {
@@ -505,7 +506,6 @@ describe('worker/runner/test-runner', () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.state.baz = 'qux';
                     });
                     return Object.create(ExecutionThread.prototype);
                 });
@@ -518,7 +518,15 @@ describe('worker/runner/test-runner', () => {
                 const result = await run_();
 
                 assert.match(result.meta, {foo: 'bar'});
-                assert.match(result.browserState, {baz: 'qux'});
+            });
+
+            it('should send test related freeBrowser event on browser release', async () => {
+                const test = mkTest_({id: 'foo'});
+                const runner = mkRunner_({test});
+
+                await run_({runner});
+
+                assert.calledOnceWith(ipc.emit, `worker.foo.freeBrowser`);
             });
         });
 
@@ -577,11 +585,10 @@ describe('worker/runner/test-runner', () => {
                 await assert.isRejected(run_(), 'runtime error');
             });
 
-            it('should extend error with browser meta and state', async () => {
+            it('should extend error with browser meta', async () => {
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.meta.foo = 'bar';
-                        browser.state.baz = 'qux';
 
                         return Promise.reject(new Error());
                     });
@@ -592,7 +599,6 @@ describe('worker/runner/test-runner', () => {
                 const error = await run_().catch((e) => e);
 
                 assert.match(error.meta, {foo: 'bar'});
-                assert.match(error.browserState, {baz: 'qux'});
             });
 
             it('should release browser', async () => {
@@ -604,6 +610,25 @@ describe('worker/runner/test-runner', () => {
                 await run_().catch((e) => e);
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
+            });
+
+            it('should send test related freeBrowser event on browser release', async () => {
+                const test = mkTest_({id: 'foo'});
+                const runner = mkRunner_({test});
+
+                ExecutionThread.create.callsFake(({browser}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        browser.state.bar = 'baz';
+
+                        return Promise.reject(new Error());
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                await run_({runner}).catch((e) => e);
+
+                assert.calledOnceWith(ipc.emit, `worker.foo.freeBrowser`, {bar: 'baz'});
             });
         });
     });
