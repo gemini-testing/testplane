@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.12.2"></a>
+## [2.12.2](https://github.com/gemini-testing/hermione/compare/v2.12.1...v2.12.2) (2019-07-25)
+
+
+### Bug Fixes
+
+* make test.id looks like a property ([9964432](https://github.com/gemini-testing/hermione/commit/9964432))
+
+
+
 <a name="2.12.1"></a>
 ## [2.12.1](https://github.com/gemini-testing/hermione/compare/v2.12.0...v2.12.1) (2019-07-25)
 
