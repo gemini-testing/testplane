@@ -331,6 +331,9 @@ describe('test-reader/mocha-test-parser', () => {
 
                 assert.equal(suite1.id(), '123450');
                 assert.equal(suite2.id(), '123451');
+
+                assert.equal(suite1.id, '123450');
+                assert.equal(suite2.id, '123451');
             });
 
             it('"id" getter results should not be dependent on suite parsing order', () => {
@@ -441,6 +444,7 @@ describe('test-reader/mocha-test-parser', () => {
             const test = MochaStub.lastInstance.suite.tests[0];
 
             assert.equal(test.id(), '12345');
+            assert.equal(test.id, '12345');
         });
 
         it('shold set browserId property to test', () => {
