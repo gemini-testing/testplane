@@ -16,6 +16,7 @@ module.exports = class Test extends Runnable {
         this.type = 'test';
         this.title = options.title || 'some-test';
         this.id = options.id || 'some-id';
+        this.browserId = options.browserId || 'some-browser-id';
         this.fn = options.fn || _.noop;
         this.file = options.file || '';
         this.pending = options.pending || false;

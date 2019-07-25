@@ -428,30 +428,39 @@ describe('runner/test-runner/regular-test-runner', () => {
         });
 
         describe('freeBrowser', () => {
+            const runTest_ = async ({onRun, onTestFail}) => {
+                const test = makeTest({id: 'foo', browserId: 'bar'});
+                const runner = mkRunner_({test});
+
+                if (onTestFail) {
+                    runner.on(Events.TEST_FAIL, onTestFail);
+                }
+
+                const workers = mkWorkers_();
+                workers.runTest.callsFake(() => {
+                    onRun({workers, test});
+                    return stubTestResult_();
+                });
+
+                await run_({runner, workers});
+            };
+
             it('should release browser on related event from worker', async () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    return stubTestResult_();
-                });
-
-                await run_({workers});
+                await runTest_({onRun: ({workers, test}) => {
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                }});
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
             });
 
             it('should release browser only once', async () => {
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    return stubTestResult_();
-                });
-
-                await run_({workers});
+                await runTest_({onRun: ({workers, test}) => {
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                }});
 
                 assert.calledOnce(BrowserAgent.prototype.freeBrowser);
             });
@@ -460,13 +469,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const browser = stubBrowser_();
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`, {foo: 'bar'});
+                await runTest_({onRun: ({workers, test}) => {
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`, {foo: 'bar'});
                     return stubTestResult_();
-                });
-
-                await run_({workers});
+                }});
 
                 assert.calledOnceWith(browser.applyState, {foo: 'bar'});
                 assert.callOrder(browser.applyState, BrowserAgent.prototype.freeBrowser);
@@ -478,13 +484,10 @@ describe('runner/test-runner/regular-test-runner', () => {
 
                 BrowserAgent.prototype.freeBrowser.callsFake(() => Promise.delay(10).then(afterBrowserFree));
 
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    return stubTestResult_();
-                });
+                await runTest_({onRun: ({workers, test}) => {
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                }});
 
-                await run_({workers});
                 afterRun();
 
                 assert.callOrder(afterBrowserFree, afterRun);
@@ -493,30 +496,23 @@ describe('runner/test-runner/regular-test-runner', () => {
             it('should not reject on browser release fail', async () => {
                 BrowserAgent.prototype.freeBrowser.rejects();
 
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    return stubTestResult_();
-                });
+                const res = runTest_({onRun: ({workers, test}) => {
+                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                }});
 
-                await assert.isFulfilled(run_({workers}));
+                await assert.isFulfilled(res);
             });
 
             it('should not fail test on browser release fail', async () => {
                 const onTestFail = sinon.stub().named('onTestFail');
-
-                const runner = mkRunner_()
-                    .on(Events.TEST_FAIL, onTestFail);
-
                 BrowserAgent.prototype.freeBrowser.rejects();
 
-                const workers = mkWorkers_();
-                workers.runTest.callsFake((test) => {
-                    workers.emit(`worker.${test.id}.freeBrowser`);
-                    return stubTestResult_();
-                });
-
-                await run_({runner, workers}).catch((e) => e);
+                await runTest_({
+                    onRun: ({workers, test}) => {
+                        workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                    },
+                    onTestFail
+                }).catch((e) => e);
 
                 assert.notCalled(onTestFail);
             });
