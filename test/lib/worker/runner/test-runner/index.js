@@ -29,7 +29,7 @@ describe('worker/runner/test-runner', () => {
         return TestRunner.create(test, config, browserAgent);
     };
 
-    const mkBrowser_ = ({prototype, config} = {}) => {
+    const mkBrowser_ = ({prototype, config, id} = {}) => {
         const publicAPI = _.defaults(prototype, {
             moveToObject: sandbox.stub().named('moveToObject').resolves(),
             scroll: sandbox.stub().named('scroll').resolves(),
@@ -38,6 +38,7 @@ describe('worker/runner/test-runner', () => {
         config = _.defaults(config, {resetCursor: true});
 
         return {
+            id,
             publicAPI,
             config,
             meta: {},
@@ -521,12 +522,12 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should send test related freeBrowser event on browser release', async () => {
-                const test = mkTest_({id: 'foo'});
+                const test = mkTest_({id: 'foo', browserId: 'bar'});
                 const runner = mkRunner_({test});
 
                 await run_({runner});
 
-                assert.calledOnceWith(ipc.emit, `worker.foo.freeBrowser`);
+                assert.calledOnceWith(ipc.emit, `worker.foo.bar.freeBrowser`);
             });
         });
 
@@ -613,12 +614,12 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should send test related freeBrowser event on browser release', async () => {
-                const test = mkTest_({id: 'foo'});
+                const test = mkTest_({id: 'foo', browserId: 'bar'});
                 const runner = mkRunner_({test});
 
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        browser.state.bar = 'baz';
+                        browser.state.baz = 'qux';
 
                         return Promise.reject(new Error());
                     });
@@ -628,7 +629,7 @@ describe('worker/runner/test-runner', () => {
 
                 await run_({runner}).catch((e) => e);
 
-                assert.calledOnceWith(ipc.emit, `worker.foo.freeBrowser`, {bar: 'baz'});
+                assert.calledOnceWith(ipc.emit, `worker.foo.bar.freeBrowser`, {baz: 'qux'});
             });
         });
     });
