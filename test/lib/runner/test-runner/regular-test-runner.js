@@ -516,6 +516,28 @@ describe('runner/test-runner/regular-test-runner', () => {
 
                 assert.notCalled(onTestFail);
             });
+
+            it('should release browser even if no event from worker', async () => {
+                const browser = stubBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await runTest_({
+                    onRun: () => {}
+                });
+
+                assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
+            });
+
+            it('should release browser only once on late event', async () => {
+                let delayedEmit;
+
+                await runTest_({onRun: ({workers, test}) => {
+                    delayedEmit = () => workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                }});
+                delayedEmit();
+
+                assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+            });
         });
     });
 });
