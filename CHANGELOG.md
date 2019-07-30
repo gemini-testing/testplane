@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.12.3"></a>
+## [2.12.3](https://github.com/gemini-testing/hermione/compare/v2.12.2...v2.12.3) (2019-07-30)
+
+
+### Bug Fixes
+
+* always release browser ([cdbb742](https://github.com/gemini-testing/hermione/commit/cdbb742))
+
+
+
 <a name="2.12.2"></a>
 ## [2.12.2](https://github.com/gemini-testing/hermione/compare/v2.12.1...v2.12.2) (2019-07-25)
 
