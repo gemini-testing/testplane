@@ -366,6 +366,32 @@ describe('worker/runner/test-runner', () => {
         });
 
         describe('mark browser as broken', () => {
+            describe('on browser prepare', () => {
+                it('should not mark if session is not broken', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const runner = mkRunner_({config});
+                    const browser = mkBrowser_({config: {resetCursor: true}});
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    browser.publicAPI.moveToObject.rejects(new Error());
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.notCalled(browser.markAsBroken);
+                });
+
+                it('should mark if cursor resetting was failed', async () => {
+                    const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
+                    const runner = mkRunner_({config});
+                    const browser = mkBrowser_({config: {resetCursor: true}});
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    browser.publicAPI.moveToObject.rejects(new Error('FOO_BAR'));
+
+                    await run_({runner}).catch(() => {});
+
+                    assert.calledOnce(browser.markAsBroken);
+                });
+            });
+
             describe('in "beforeEach" hook', () => {
                 it('should not mark if session is not broken', async () => {
                     const config = makeConfigStub({system: {patternsOnReject: ['FOO_BAR']}});
