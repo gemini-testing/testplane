@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.12.4"></a>
+## [2.12.4](https://github.com/gemini-testing/hermione/compare/v2.12.3...v2.12.4) (2019-08-08)
+
+
+### Bug Fixes
+
+* mark session as broken on cursor reset error ([9083e8d](https://github.com/gemini-testing/hermione/commit/9083e8d))
+
+
+
 <a name="2.12.3"></a>
 ## [2.12.3](https://github.com/gemini-testing/hermione/compare/v2.12.2...v2.12.3) (2019-07-30)
 
