@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.12.5"></a>
+## [2.12.5](https://github.com/gemini-testing/hermione/compare/v2.12.4...v2.12.5) (2019-08-19)
+
+
+
 <a name="2.12.4"></a>
 ## [2.12.4](https://github.com/gemini-testing/hermione/compare/v2.12.3...v2.12.4) (2019-08-08)
 
