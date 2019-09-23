@@ -19,6 +19,7 @@ function createBrowserConfig_(opts = {}) {
         screenshotOnReject: true,
         screenshotOnRejectTimeout: 3000,
         screenshotDelay: 0,
+        ignoreStyle: 'none',
         windowSize: null,
         getScreenshotPath: () => '/some/path',
         system: opts.system || {},
