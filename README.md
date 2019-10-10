@@ -22,6 +22,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
   - [Hooks](#hooks)
   - [Skip](#skip)
   - [Only](#only)
+  - [Config overriding](#config-overriding)
+    - [testTimeout](#testtimeout)
   - [WebdriverIO extensions](#webdriverio-extensions)
     - [Sharable meta info](#sharable-meta-info)
     - [Execution context](#execution-context)
@@ -36,7 +38,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [pageLoadTimeout](#pageloadtimeout)
       - [sessionRequestTimeout](#sessionrequesttimeout)
       - [sessionQuitTimeout](#sessionquittimeout)
-      - [testTimeout](#testtimeout)
+      - [testTimeout](#testtimeout-1)
       - [waitTimeout](#waittimeout)
       - [sessionsPerBrowser](#sessionsperbrowser)
       - [screenshotOnReject](#screenshotonreject)
@@ -315,6 +317,19 @@ it('should work another way', function() {
 ```
 The test will be processed in all browsers and **silently** skipped in `ie9`.
 
+## Config overriding
+You can override some config settings for specific test, suite or hook via `hermione.config.*` notation.
+
+### testTimeout
+Overrides [testTimeout](#testtimeout-1) config setting. Can be set for tests and suites.
+
+```js
+hermione.config.testTimeout(100500);
+it('some test', function() {
+    return doSomething();
+});
+```
+
 ## WebdriverIO extensions
 `Hermione` adds some useful methods and properties to the `webdriverio` session after its initialization.
 
@@ -577,7 +592,9 @@ Timeout for getting a browser session. Default value is `httpTimeout`.
 Timeout for quitting a session. Default value is `httpTimeout`.
 
 #### testTimeout
-Timeout for test execution (in milliseconds). Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
+Timeout for test execution (in milliseconds).
+If applied to suite then timeout will be set for all tests and hooks inside this suite.
+Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 
 #### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
@@ -1167,11 +1184,11 @@ TestCollection API:
 
 * `getBrowsers()` — returns list of browsers for which there are tests in collection.
 
-* `mapTests(browserId, (test, browserId) => ...)` - maps over tests for passed browser. If first argument (`browserId`) is omitted than method will map over tests for all browsers.
+* `mapTests(browserId, (test, browserId) => ...)` - maps over tests for passed browser. If first argument (`browserId`) is omitted then method will map over tests for all browsers.
 
-* `sortTests(browserId, (currentTest, nextTest) => ...)` - sorts over tests for passed browser. If first argument (`browserId`) is omitted than method will sort over tests for all browsers.
+* `sortTests(browserId, (currentTest, nextTest) => ...)` - sorts over tests for passed browser. If first argument (`browserId`) is omitted then method will sort over tests for all browsers.
 
-* `eachTest(browserId, (test, browserId) => ...)` - iterates over tests for passed browser. If first argument (`browserId`) is omitted than method will iterate over tests for all browsers.
+* `eachTest(browserId, (test, browserId) => ...)` - iterates over tests for passed browser. If first argument (`browserId`) is omitted then method will iterate over tests for all browsers.
 
 * `disableAll([browserId])` - disables all tests. Disables tests for specific browser if `browserId` passed. Returns current test collection instance.
 
