@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.0"></a>
+# [2.13.0](https://github.com/gemini-testing/hermione/compare/v2.12.6...v2.13.0) (2019-10-10)
+
+
+### Features
+
+* allow override testTimeout for specific tests ([3d3e3d1](https://github.com/gemini-testing/hermione/commit/3d3e3d1))
+
+
+
 <a name="2.12.6"></a>
 ## [2.12.6](https://github.com/gemini-testing/hermione/compare/v2.12.5...v2.12.6) (2019-08-20)
 
