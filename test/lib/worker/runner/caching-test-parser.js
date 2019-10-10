@@ -17,6 +17,7 @@ describe('worker/runner/caching-test-parser', () => {
     beforeEach(() => {
         sandbox.stub(TestParser, 'prepare');
         sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
+        sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
         sandbox.stub(TestParser.prototype, 'loadFiles').returnsThis();
         sandbox.stub(TestParser.prototype, 'parse').returns([]);
     });
@@ -59,6 +60,17 @@ describe('worker/runner/caching-test-parser', () => {
 
                 assert.calledOnceWith(onEvent, {foo: 'bar'});
             });
+        });
+
+        it('should apply config controller before loading file', () => {
+            const cachingParser = mkCachingParser_();
+
+            cachingParser.parse({});
+
+            assert.callOrder(
+                TestParser.prototype.applyConfigController,
+                TestParser.prototype.loadFiles
+            );
         });
 
         it('should load file', () => {

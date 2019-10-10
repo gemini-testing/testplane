@@ -12,6 +12,7 @@ const TestSkipper = require('lib/test-reader/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
 const ParserEvents = require('lib/test-reader/parser-events');
 const TestParserAPI = require('lib/test-reader/test-parser-api');
+const configController = require('lib/test-reader/config-controller');
 const logger = require('lib/utils/logger');
 const MochaStub = require('../_mocha');
 const {makeConfigStub} = require('../../utils');
@@ -381,6 +382,21 @@ describe('test-reader/mocha-test-parser', () => {
             const mochaInstance = mochaTestParser.applySkip(testSkipper);
 
             assert.instanceOf(mochaInstance, MochaTestParser);
+        });
+    });
+
+    describe('applyConfigController', () => {
+        beforeEach(() => {
+            sandbox.stub(TestParserAPI.prototype, 'setController');
+        });
+
+        it('should set config controller on before test file read event', () => {
+            const mochaTestParser = mkMochaTestParser_();
+
+            mochaTestParser.applyConfigController();
+            MochaStub.lastInstance.suite.emit('pre-require');
+
+            assert.calledOnceWith(TestParserAPI.prototype.setController, 'config', configController);
         });
     });
 

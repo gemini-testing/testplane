@@ -36,6 +36,7 @@ describe('test-reader', () => {
         sandbox.stub(TestParser, 'prepare');
         sandbox.spy(TestParser, 'create');
         sandbox.stub(TestParser.prototype, 'applySkip').returnsThis();
+        sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
         sandbox.stub(TestParser.prototype, 'applyGrep').returnsThis();
         sandbox.stub(TestParser.prototype, 'loadFiles').returnsThis();
         sandbox.stub(TestParser.prototype, 'parse');
@@ -189,6 +190,31 @@ describe('test-reader', () => {
                 bro1: [test1, test2],
                 bro2: [test3, test4]
             });
+        });
+
+        it('should apply config controller for all browsers before loading any file', async () => {
+            const groupByBrowser = sinon.stub().returns({
+                bro1: [],
+                bro2: []
+            });
+            SetsBuilder.prototype.build.resolves({groupByBrowser});
+
+            const calls = [];
+            TestParser.prototype.applyConfigController.reset();
+            TestParser.prototype.applyConfigController.callsFake(function() {
+                calls.push('applyConfigController');
+                return this;
+            });
+            TestParser.prototype.loadFiles.reset();
+            TestParser.prototype.loadFiles.callsFake(function() {
+                calls.push('loadFiles');
+                return this;
+            });
+
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config});
+
+            assert.deepEqual(calls, ['applyConfigController', 'applyConfigController', 'loadFiles', 'loadFiles']);
         });
 
         it('should apply grep for all browsers before loading any file', async () => {
