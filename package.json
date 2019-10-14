@@ -42,6 +42,7 @@
     "gemini-core": "^3.8.2",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
+    "log-prefix": "^0.1.1",
     "mocha": "~2.4.5",
     "plugins-loader": "^1.1.0",
     "q": "^2.0.0",
