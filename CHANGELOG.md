@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.1"></a>
+## [2.13.1](https://github.com/gemini-testing/hermione/compare/v2.13.0...v2.13.1) (2019-10-15)
+
+
+### Bug Fixes
+
+* **assert-view:** missed hermioneCtx on assertView execution ([8facf53](https://github.com/gemini-testing/hermione/commit/8facf53))
+
+
+
 <a name="2.13.0"></a>
 # [2.13.0](https://github.com/gemini-testing/hermione/compare/v2.12.6...v2.13.0) (2019-10-10)
 
