@@ -205,11 +205,11 @@ describe('assertView command', () => {
             });
         });
 
-        describe('should pass ignoreStyle to #ScreenShooter.capture()', () => {
+        describe('should pass ignoreElementsStyle to #ScreenShooter.capture()', () => {
             let config, browser;
 
             beforeEach(() => {
-                config = mkConfig_({system: {ignoreStyle: 'none'}});
+                config = mkConfig_({system: {ignoreElementsStyle: 'none'}});
                 browser = stubBrowser_(config);
             });
 
@@ -217,15 +217,15 @@ describe('assertView command', () => {
                 await browser.publicAPI.assertView();
 
                 assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    ignoreStyle: 'none'
+                    ignoreElementsStyle: 'none'
                 });
             });
 
             it('option is set in test', async () => {
-                await browser.publicAPI.assertView('plain', '.selector', {ignoreStyle: 'border'});
+                await browser.publicAPI.assertView('plain', '.selector', {ignoreElementsStyle: 'border'});
 
                 assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    ignoreStyle: 'border'
+                    ignoreElementsStyle: 'border'
                 });
             });
         });

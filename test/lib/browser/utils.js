@@ -20,7 +20,7 @@ function createBrowserConfig_(opts = {}) {
         screenshotOnRejectTimeout: 3000,
         screenshotDelay: 0,
         compareOpts: {
-            ignoreStyle: 'none'
+            ignoreElementsStyle: 'none'
         },
         windowSize: null,
         getScreenshotPath: () => '/some/path',
