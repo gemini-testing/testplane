@@ -610,6 +610,7 @@ Read more about this option in [looks-same](https://github.com/gemini-testing/lo
 Extra options for comparing images. See [looks-same](https://github.com/gemini-testing/looks-same#comparing-images) documentation for the list of available options. Default values are:
 ```javascript
 compareOpts: {
+    ignoreElementsStyle: 'solid',
     stopOnFirstFail: false
 }
 ```
