@@ -222,10 +222,10 @@ describe('assertView command', () => {
             });
 
             it('option is set in test', async () => {
-                await browser.publicAPI.assertView('plain', '.selector', {ignoreElementsStyle: 'border'});
+                await browser.publicAPI.assertView('plain', '.selector', {ignoreElementsStyle: 'solid'});
 
                 assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    ignoreElementsStyle: 'border'
+                    ignoreElementsStyle: 'solid'
                 });
             });
         });
