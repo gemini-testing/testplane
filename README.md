@@ -615,6 +615,11 @@ compareOpts: {
 }
 ```
 
+##### ignoreElementsStyle
+How ignore elements will be represented on the screenshot.
+- `solid` – black rectangles
+- `none` – no visual hint on screenshots, composited on diff
+
 #### buildDiffOpts
 Extra options for building diff image. See [looks-same](https://github.com/gemini-testing/looks-same#building-diff-image) documentation for the list of available options. Default values are:
 ```javascript
@@ -1018,6 +1023,7 @@ Parameters:
  - selector (required) `String|String[]` – DOM-node selector that you need to capture
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
+   - ignoreElementsStyle (optional) `'solid'|'none'` – representation of ignoreElements on the screenshot. `solid` – black rectangles, `none` – no visual hint on screenshots, composited on diff
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
    - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport's bounds, this option disables such check and makes command to screenshot the visible part of the element
 
