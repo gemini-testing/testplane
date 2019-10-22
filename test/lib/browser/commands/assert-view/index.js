@@ -32,7 +32,8 @@ describe('assertView command', () => {
 
         return {
             save: sandbox.stub().named('save'),
-            getSize: sandbox.stub().named('getSize').returns(opts.size)
+            getSize: sandbox.stub().named('getSize').returns(opts.size),
+            getIgnoreAreas: sandbox.stub().named('getIgnoreAreas').returns(opts.ignoreAreas || [])
         };
     };
 
@@ -203,6 +204,31 @@ describe('assertView command', () => {
                 });
             });
         });
+
+        describe('should pass ignoreElementsStyle to #ScreenShooter.capture()', () => {
+            let config, browser;
+
+            beforeEach(() => {
+                config = mkConfig_({system: {ignoreElementsStyle: 'none'}});
+                browser = stubBrowser_(config);
+            });
+
+            it('option is equal the configured value by default', async () => {
+                await browser.publicAPI.assertView();
+
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    ignoreElementsStyle: 'none'
+                });
+            });
+
+            it('option is set in test', async () => {
+                await browser.publicAPI.assertView('plain', '.selector', {ignoreElementsStyle: 'solid'});
+
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                    ignoreElementsStyle: 'solid'
+                });
+            });
+        });
     });
 
     it('should not fail if there is no reference image', async () => {
@@ -299,6 +325,17 @@ describe('assertView command', () => {
             const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200, compareOpts: {stopOnFirstFail: true}});
             const browser = stubBrowser_(config);
 
+            const currImage = stubImage_({
+                ignoreAreas: [{
+                    top: 5,
+                    left: 10,
+                    width: 40,
+                    height: 30
+                }]
+            });
+
+            ScreenShooter.prototype.capture.resolves(currImage);
+
             browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
 
             await browser.publicAPI.assertView();
@@ -306,7 +343,21 @@ describe('assertView command', () => {
             assert.calledOnceWith(
                 Image.compare,
                 sinon.match.any, sinon.match.any,
-                {canHaveCaret: 'foo bar', tolerance: 100, antialiasingTolerance: 200, pixelRatio: 300, compareOpts: {stopOnFirstFail: true}}
+                {
+                    canHaveCaret: 'foo bar',
+                    tolerance: 100,
+                    antialiasingTolerance: 200,
+                    pixelRatio: 300,
+                    compareOpts: {
+                        ignoreAreas: [{
+                            top: 5,
+                            left: 10,
+                            width: 40,
+                            height: 30
+                        }],
+                        stopOnFirstFail: true
+                    }
+                }
             );
         });
 
@@ -427,12 +478,33 @@ describe('assertView command', () => {
                     const browser = stubBrowser_();
                     browser.prepareScreenshot.resolves({canHaveCaret: true});
 
+                    const image = stubImage_({
+                        ignoreAreas: [{
+                            top: 5,
+                            left: 10,
+                            width: 20,
+                            height: 30
+                        }]
+                    });
+
+                    ScreenShooter.prototype.capture.resolves(image);
                     await browser.publicAPI.assertView();
 
                     assert.calledOnceWith(
                         updateRefs.handleImageDiff,
                         sinon.match.any, sinon.match.any, sinon.match.any,
-                        {canHaveCaret: true, config: sinon.match.any, diffAreas: sinon.match.any, emitter: browser.emitter}
+                        {
+                            canHaveCaret: true,
+                            config: sinon.match.any,
+                            ignoreAreas: [{
+                                top: 5,
+                                left: 10,
+                                width: 20,
+                                height: 30
+                            }],
+                            diffAreas: sinon.match.any,
+                            emitter: browser.emitter
+                        }
                     );
                 });
             });
