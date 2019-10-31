@@ -411,7 +411,9 @@ Parameters:
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
-   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport's bounds, this option disables such check and makes command to screenshot the visible part of the element
+   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top or right bounds, but not disables check that bottom bound of the element is outside of the viewport height. Second checker can be disabled by using browser option [compositeImage](#compositeimage) with `true` value. Therefore this option makes command to screenshot:
+     -  the visible part of the element if [compositeImage](#compositeimage) set to `false`
+     -  screenshot the visible part of the element and not visible parts of the element outside of the viewport height if [compositeImage](#compositeimage) set to `true`
 
 Full example:
 
