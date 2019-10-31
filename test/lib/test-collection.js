@@ -182,6 +182,34 @@ describe('test-collection', () => {
         });
     });
 
+    describe('eachTestAsync', () => {
+        it('should work with async functions ', async () => {
+            const test1 = {title: 'test1'};
+            const test2 = {title: 'test2'};
+            const collection = TestCollection.create({
+                'bro1': [test1, test2]
+            });
+
+            const tests = [];
+            await collection.eachTestAsync('bro1', async (test, browser) => {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        tests.push({test, browser});
+                        resolve();
+                    }, 100);
+                });
+            });
+
+            assert.deepEqual(
+                tests,
+                [
+                    {test: test1, browser: 'bro1'},
+                    {test: test2, browser: 'bro1'}
+                ]
+            );
+        });
+    });
+
     describe('disableAll', () => {
         it('should disable all tests', () => {
             const test1 = {title: 'test1'};
