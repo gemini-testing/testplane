@@ -57,6 +57,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [compareOpts](#compareopts)
       - [buildDiffOpts](#builddiffopts)
       - [screenshotsDir](#screenshotsdir)
+      - [screenshotMode](#screenshotmode)
+      - [compositeImage](#compositeimage)
   - [system](#system)
       - [debug](#debug)
       - [mochaOpts](#mochaopts)
@@ -681,6 +683,19 @@ buildDiffOpts: {
 #### screenshotsDir
 
 Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
+
+#### screenshotMode
+
+Image capture mode. There are 3 allowed values for this option:
+  * `auto` (default). Mode will be obtained automatically.
+  * `fullpage`. Hermione will deal with screenshot of full page.
+  * `viewport`. Only viewport area will be used.
+
+#### compositeImage
+
+Allows testing of regions which bottom bounds are outside of a viewport height (default: `false`). In the resulting screenshot the area which fits the viewport bounds will be **joined** with the area which is outside of the viewport height.
+
+:warning: Option does not work in Opera@12.16.
 
 ## system
 
