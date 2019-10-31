@@ -414,6 +414,7 @@ Parameters:
    - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top or right bounds, but not disables check that bottom bound of the element is outside of the viewport height. Second checker can be disabled by using browser option [compositeImage](#compositeimage) with `true` value. Therefore this option makes command to screenshot:
      -  the visible part of the element if [compositeImage](#compositeimage) set to `false`
      -  screenshot the visible part of the element and not visible parts of the element outside of the viewport height if [compositeImage](#compositeimage) set to `true`
+   - insideViewport (optional) `Boolean` - this option is similar to the `allowViewportOverflow` option but differs from it in that it is disables check that element is outside off any of viewport bounds. This option makes command to screenshot only the visible part of the element in the viewport even if browser config option [compositeImage](#compositeimage) is set to `true`.
 
 Full example:
 

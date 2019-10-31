@@ -101,28 +101,56 @@ describe('assertView command', () => {
             assert.calledOnceWith(browser.prepareScreenshot, ['.selector1', '.selector2']);
         });
 
-        it('should handle ignore elements option passed as an array', async () => {
-            const browser = stubBrowser_();
+        describe('with "ignoreElements" option', () => {
+            it('should handle if it not passed', async () => {
+                const browser = stubBrowser_();
 
-            await browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']});
+                await browser.publicAPI.assertView();
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo', 'bar']});
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors: []}));
+            });
+
+            it('should handle if it passed as an array', async () => {
+                const browser = stubBrowser_();
+
+                await browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']});
+
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors: ['foo', 'bar']}));
+            });
+
+            it('should handle if it passed as a string', async () => {
+                const browser = stubBrowser_();
+
+                await browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'});
+
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors: ['foo bar']}));
+            });
         });
 
-        it('should handle ignore elements option passed as a string', async () => {
-            const browser = stubBrowser_();
+        describe('with "allowViewportOverflow" option', () => {
+            it('should handle if it not passed', async () => {
+                const browser = stubBrowser_();
 
-            await browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'});
+                await browser.publicAPI.assertView();
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo bar']});
-        });
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({allowViewportOverflow: false}));
+            });
 
-        it('should handle cases when ignore elements option is not passed', async () => {
-            const browser = stubBrowser_();
+            it('should handle if it passed as a boolean', async () => {
+                const browser = stubBrowser_();
 
-            await browser.publicAPI.assertView();
+                await browser.publicAPI.assertView(null, null, {allowViewportOverflow: true});
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: []});
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({allowViewportOverflow: true}));
+            });
+
+            it('should use value from "insideViewport" option if "allowViewportOverflow" set to "false"', async () => {
+                const browser = stubBrowser_();
+
+                await browser.publicAPI.assertView(null, null, {allowViewportOverflow: false, insideViewport: true});
+
+                assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, sinon.match({allowViewportOverflow: true}));
+            });
         });
     });
 
@@ -155,26 +183,31 @@ describe('assertView command', () => {
             assert.calledOnceWith(image.save, '/curr/path');
         });
 
-        describe('should pass allowViewportOverflow to #ScreenShooter.capture()', () => {
-            let browser;
+        [
+            {method: 'allowViewportOverflow'},
+            {method: 'insideViewport'}
+        ].forEach(({method}) => {
+            describe(`should pass ${method} to #ScreenShooter.capture()`, () => {
+                let browser;
 
-            beforeEach(() => {
-                browser = stubBrowser_();
-            });
-
-            it('option is false by default', async () => {
-                await browser.publicAPI.assertView();
-
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    allowViewportOverflow: false
+                beforeEach(() => {
+                    browser = stubBrowser_();
                 });
-            });
 
-            it('option is set in test', async () => {
-                await browser.publicAPI.assertView('plain', '.selector', {allowViewportOverflow: true});
+                it('option is false by default', async () => {
+                    await browser.publicAPI.assertView();
 
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    allowViewportOverflow: true
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                        [method]: false
+                    });
+                });
+
+                it('option is set in test', async () => {
+                    await browser.publicAPI.assertView('plain', '.selector', {[method]: true});
+
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                        [method]: true
+                    });
                 });
             });
         });
