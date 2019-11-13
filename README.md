@@ -32,6 +32,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
+      - [desiredCapabilities](#desiredcapabilities)
       - [gridUrl](#gridurl)
       - [baseUrl](#baseurl)
       - [httpTimeout](#httptimeout)
@@ -57,6 +58,9 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [compareOpts](#compareopts)
       - [buildDiffOpts](#builddiffopts)
       - [screenshotsDir](#screenshotsdir)
+      - [w3cCompatible](#w3ccompatible)
+      - [strictTestsOrder](#stricttestsorder)
+      - [compositeImage](#compositeimage)
   - [system](#system)
       - [debug](#debug)
       - [mochaOpts](#mochaopts)
@@ -572,6 +576,20 @@ Option name               | Description
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
+`compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
+
+#### desiredCapabilities
+**Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
+
+```js
+'chrome': {
+  desiredCapabilities: {
+    browserName: 'chrome',
+    version: '75.0',
+    chromeOptions: {...}
+  }
+}
+```
 
 #### gridUrl
 Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
@@ -681,6 +699,17 @@ buildDiffOpts: {
 #### screenshotsDir
 
 Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
+
+#### w3cCompatible
+Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
+
+#### strictTestsOrder
+
+`hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
+
+#### compositeImage
+
+Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 
 ## system
 
