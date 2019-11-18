@@ -4,8 +4,9 @@
   "description": "Tests framework based on mocha and wdio",
   "main": "lib/hermione.js",
   "scripts": {
+    "coverage": "nyc --reporter=text npm run test-unit",
     "lint": "eslint .",
-    "test-unit": "nyc --reporter=text _mocha -- test/",
+    "test-unit": "_mocha -- test/",
     "test": "npm run test-unit && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
