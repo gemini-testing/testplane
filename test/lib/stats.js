@@ -76,15 +76,22 @@ describe('Stats', () => {
         });
     });
 
-    it('should handle cases when several events were emitted for the same test', () => {
-        runner.emit(RunnerEvents.SKIP_STATE, makeTest({title: 'some-name'}));
-        runner.emit(RunnerEvents.TEST_FAIL, makeTest({title: 'some-name'}));
+    it('should count each test event for the same title and browser', () => {
+        const test = makeTest({
+            browserId: 'test_browser',
+            title: 'test_title'
+        });
 
-        assert.equal(stats.getResult().skipped, 0);
+        runner.emit(RunnerEvents.TEST_PENDING, test);
+        runner.emit(RunnerEvents.TEST_FAIL, test);
+        runner.emit(RunnerEvents.TEST_PASS, test);
+
+        assert.equal(stats.getResult().skipped, 1);
         assert.equal(stats.getResult().failed, 1);
+        assert.equal(stats.getResult().passed, 1);
     });
 
-    it('should not count test result twice for the same title and browser', () => {
+    it('should count "total" of tests once for the same title and browser', () => {
         const test = makeTest({
             browserId: 'test_browser',
             title: 'test_title'
@@ -94,7 +101,6 @@ describe('Stats', () => {
         runner.emit(RunnerEvents.TEST_PASS, test);
 
         assert.equal(stats.getResult().total, 1);
-        assert.equal(stats.getResult().passed, 1);
     });
 
     it('should correctly handle tests with the similar titles', () => {
@@ -147,15 +153,22 @@ describe('Stats', () => {
             assert.equal(stats.getResult().perBrowser.bro.total, 3);
         });
 
-        it('should handle cases when several events were emitted for the same test', () => {
-            runner.emit(RunnerEvents.SKIP_STATE, makeTest({browserId: 'bro', title: 'some-name'}));
-            runner.emit(RunnerEvents.TEST_FAIL, makeTest({browserId: 'bro', title: 'some-name'}));
+        it('should count each test event for the same title and browser', () => {
+            const test = makeTest({
+                browserId: 'bro',
+                title: 'test_title'
+            });
 
-            assert.equal(stats.getResult().perBrowser.bro.skipped, 0);
+            runner.emit(RunnerEvents.TEST_PENDING, test);
+            runner.emit(RunnerEvents.TEST_FAIL, test);
+            runner.emit(RunnerEvents.TEST_PASS, test);
+
+            assert.equal(stats.getResult().perBrowser.bro.skipped, 1);
             assert.equal(stats.getResult().perBrowser.bro.failed, 1);
+            assert.equal(stats.getResult().perBrowser.bro.passed, 1);
         });
 
-        it('should not count test result twice for the same title and browser', () => {
+        it('should count "total" of tests once for the same title and browser', () => {
             const test = makeTest({
                 browserId: 'bro',
                 title: 'test_title'
@@ -165,7 +178,6 @@ describe('Stats', () => {
             runner.emit(RunnerEvents.TEST_PASS, test);
 
             assert.equal(stats.getResult().perBrowser.bro.total, 1);
-            assert.equal(stats.getResult().perBrowser.bro.passed, 1);
         });
 
         it('should correctly handle tests with the similar titles', () => {
