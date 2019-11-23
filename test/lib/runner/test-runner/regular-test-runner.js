@@ -438,7 +438,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
                 const workers = mkWorkers_();
                 workers.runTest.callsFake(() => {
-                    onRun({workers, test});
+                    onRun({workers});
                     return stubTestResult_();
                 });
 
@@ -446,31 +446,34 @@ describe('runner/test-runner/regular-test-runner', () => {
             };
 
             it('should release browser on related event from worker', async () => {
-                const browser = stubBrowser_();
+                const browser = stubBrowser_({sessionId: '100500'});
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                await runTest_({onRun: ({workers, test}) => {
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                await runTest_({onRun: ({workers}) => {
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                 }});
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
             });
 
             it('should release browser only once', async () => {
-                await runTest_({onRun: ({workers, test}) => {
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                const browser = stubBrowser_({sessionId: '100500'});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await runTest_({onRun: ({workers}) => {
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`);
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                 }});
 
                 assert.calledOnce(BrowserAgent.prototype.freeBrowser);
             });
 
             it('should apply browser state passed with free event before releasing browser', async () => {
-                const browser = stubBrowser_();
+                const browser = stubBrowser_({sessionId: '100500'});
                 BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                await runTest_({onRun: ({workers, test}) => {
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`, {foo: 'bar'});
+                await runTest_({onRun: ({workers}) => {
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`, {foo: 'bar'});
                     return stubTestResult_();
                 }});
 
@@ -479,13 +482,16 @@ describe('runner/test-runner/regular-test-runner', () => {
             });
 
             it('should wait until browser is released', async () => {
+                const browser = stubBrowser_({sessionId: '100500'});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
                 const afterBrowserFree = sinon.stub().named('afterBrowserFree');
                 const afterRun = sinon.stub().named('afterRun');
 
                 BrowserAgent.prototype.freeBrowser.callsFake(() => Promise.delay(10).then(afterBrowserFree));
 
-                await runTest_({onRun: ({workers, test}) => {
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                await runTest_({onRun: ({workers}) => {
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                 }});
 
                 afterRun();
@@ -494,22 +500,27 @@ describe('runner/test-runner/regular-test-runner', () => {
             });
 
             it('should not reject on browser release fail', async () => {
+                const browser = stubBrowser_({sessionId: '100500'});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
                 BrowserAgent.prototype.freeBrowser.rejects();
 
-                const res = runTest_({onRun: ({workers, test}) => {
-                    workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                const res = runTest_({onRun: ({workers}) => {
+                    workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                 }});
 
                 await assert.isFulfilled(res);
             });
 
             it('should not fail test on browser release fail', async () => {
+                const browser = stubBrowser_({sessionId: '100500'});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
                 const onTestFail = sinon.stub().named('onTestFail');
                 BrowserAgent.prototype.freeBrowser.rejects();
 
                 await runTest_({
-                    onRun: ({workers, test}) => {
-                        workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                    onRun: ({workers}) => {
+                        workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                     },
                     onTestFail
                 }).catch((e) => e);
@@ -530,9 +541,11 @@ describe('runner/test-runner/regular-test-runner', () => {
 
             it('should release browser only once on late event', async () => {
                 let delayedEmit;
+                const browser = stubBrowser_({sessionId: '100500'});
+                BrowserAgent.prototype.getBrowser.resolves(browser);
 
-                await runTest_({onRun: ({workers, test}) => {
-                    delayedEmit = () => workers.emit(`worker.${test.id}.${test.browserId}.freeBrowser`);
+                await runTest_({onRun: ({workers}) => {
+                    delayedEmit = () => workers.emit(`worker.${browser.sessionId}.freeBrowser`);
                 }});
                 delayedEmit();
 
