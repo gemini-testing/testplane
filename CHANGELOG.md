@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.2"></a>
+## [2.13.2](https://github.com/gemini-testing/hermione/compare/v2.13.1...v2.13.2) (2019-11-25)
+
+
+### Bug Fixes
+
+* use sessionId in the name of free browser event ([782305e](https://github.com/gemini-testing/hermione/commit/782305e))
+
+
+
 <a name="2.13.1"></a>
 ## [2.13.1](https://github.com/gemini-testing/hermione/compare/v2.13.0...v2.13.1) (2019-10-15)
 
