@@ -69,8 +69,9 @@ describe('worker/runner/test-runner', () => {
         const run_ = (opts = {}) => {
             const test = opts.test || mkTest_();
             const runner = opts.runner || mkRunner_({test});
+            const sessionId = opts.sessionId || 'default-sessionId';
 
-            return runner.run({});
+            return runner.run({sessionId});
         };
 
         it('should request browser for passed session', async () => {
@@ -548,12 +549,9 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should send test related freeBrowser event on browser release', async () => {
-                const test = mkTest_({id: 'foo', browserId: 'bar'});
-                const runner = mkRunner_({test});
+                await run_({sessionId: '100500'});
 
-                await run_({runner});
-
-                assert.calledOnceWith(ipc.emit, `worker.foo.bar.freeBrowser`);
+                assert.calledOnceWith(ipc.emit, `worker.100500.freeBrowser`);
             });
         });
 
@@ -640,9 +638,6 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should send test related freeBrowser event on browser release', async () => {
-                const test = mkTest_({id: 'foo', browserId: 'bar'});
-                const runner = mkRunner_({test});
-
                 ExecutionThread.create.callsFake(({browser}) => {
                     ExecutionThread.prototype.run.callsFake(() => {
                         browser.state.baz = 'qux';
@@ -653,9 +648,9 @@ describe('worker/runner/test-runner', () => {
                     return Object.create(ExecutionThread.prototype);
                 });
 
-                await run_({runner}).catch((e) => e);
+                await run_({sessionId: '100500'}).catch((e) => e);
 
-                assert.calledOnceWith(ipc.emit, `worker.foo.bar.freeBrowser`, {baz: 'qux'});
+                assert.calledOnceWith(ipc.emit, `worker.100500.freeBrowser`, {baz: 'qux'});
             });
         });
     });
