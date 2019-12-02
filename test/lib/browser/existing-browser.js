@@ -324,7 +324,7 @@ describe('ExistingBrowser', () => {
 
     describe('prepareScreenshot', () => {
         const stubClientBridge_ = () => {
-            const bridge = {call: sandbox.stub().resolves()};
+            const bridge = {call: sandbox.stub().resolves({})};
 
             clientBridge.build.resolves(bridge);
 
@@ -395,6 +395,16 @@ describe('ExistingBrowser', () => {
 
                     assert.propertyVal(opts, 'usePixelRatio', true);
                 });
+        });
+
+        it('should throw error from browser', async () => {
+            const clientBridge = stubClientBridge_();
+            clientBridge.call.withArgs('prepareScreenshot').resolves({error: 'JS', message: 'stub error'});
+
+            const browser = mkBrowser_();
+            await browser.init();
+
+            await assert.isRejected(browser.prepareScreenshot(), 'Prepare screenshot failed with error type \'JS\' and error message: stub error');
         });
     });
 
