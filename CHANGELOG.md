@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.4"></a>
+## [2.13.4](https://github.com/gemini-testing/hermione/compare/v2.13.3...v2.13.4) (2019-12-03)
+
+
+### Bug Fixes
+
+* prepareScreenshot method should throw error from browser ([10164db](https://github.com/gemini-testing/hermione/commit/10164db))
+
+
+
 <a name="2.13.3"></a>
 ## [2.13.3](https://github.com/gemini-testing/hermione/compare/v2.13.2...v2.13.3) (2019-11-25)
 
