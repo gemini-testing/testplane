@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.5"></a>
+## [2.13.5](https://github.com/gemini-testing/hermione/compare/v2.13.4...v2.13.5) (2019-12-17)
+
+
+### Bug Fixes
+
+* never use browser session again if it fails on initializition ([1036969](https://github.com/gemini-testing/hermione/commit/1036969))
+
+
+
 <a name="2.13.4"></a>
 ## [2.13.4](https://github.com/gemini-testing/hermione/compare/v2.13.3...v2.13.4) (2019-12-03)
 
