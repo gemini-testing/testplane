@@ -7,6 +7,7 @@ const Browser = require('lib/browser/existing-browser');
 const BrowserPool = require('lib/worker/runner/browser-pool');
 const RunnerEvents = require('lib/worker/constants/runner-events');
 const logger = require('lib/utils/logger');
+const ipc = require('lib/utils/ipc');
 
 describe('worker/browser-pool', () => {
     const sandbox = sinon.sandbox.create();
@@ -34,6 +35,7 @@ describe('worker/browser-pool', () => {
         bro.init = sandbox.stub().resolves();
         bro.reinit = sandbox.stub().resolves(bro);
         bro.quit = sandbox.stub();
+        bro.markAsBroken = sandbox.stub();
 
         return bro;
     };
@@ -41,6 +43,7 @@ describe('worker/browser-pool', () => {
     beforeEach(() => {
         sandbox.stub(logger, 'warn');
         sandbox.stub(Browser, 'create');
+        sandbox.stub(ipc, 'emit');
     });
 
     afterEach(() => sandbox.restore());
@@ -141,6 +144,137 @@ describe('worker/browser-pool', () => {
                         .then(() => assert.notCalled(onNewBrowser));
                 });
         });
+
+        describe('getting of browser fails', () => {
+            beforeEach(() => {
+                sandbox.spy(BrowserPool.prototype, 'freeBrowser');
+            });
+
+            it('should be rejected if instance of browser was not created', () => {
+                Browser.create.throws(new Error('foo bar'));
+
+                return assert.isRejected(createPool().getBrowser(), /foo bar/);
+            });
+
+            describe('init fails', () => {
+                const stubBrowserWhichRejectsOnInit = (params = {}) => {
+                    const browser = stubBrowser(params);
+                    Browser.create.returns(browser);
+
+                    browser.init.rejects();
+
+                    return browser;
+                };
+
+                it('should mark browser as broken', async () => {
+                    const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id'});
+
+                    await createPool().getBrowser('bro-id').catch((e) => e);
+
+                    assert.calledOnceWith(browser.markAsBroken);
+                });
+
+                it('should extend browser with session id', async () => {
+                    const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id'});
+
+                    await createPool().getBrowser('bro-id', '100500').catch((e) => e);
+
+                    assert.equal(browser.sessionId, '100500');
+                });
+
+                it('should free browser', async () => {
+                    const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id'});
+
+                    await createPool().getBrowser('bro-id').catch((e) => e);
+
+                    assert.calledOnceWith(BrowserPool.prototype.freeBrowser, browser);
+                });
+
+                it('should free browser after marking browser as broken', async () => {
+                    const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id'});
+
+                    await createPool().getBrowser('bro-id').catch((e) => e);
+
+                    assert.callOrder(browser.markAsBroken, BrowserPool.prototype.freeBrowser);
+                });
+
+                it('should be rejected with error extended by browser meta', async () => {
+                    stubBrowserWhichRejectsOnInit({id: 'bro-id', meta: {foo: 'bar'}});
+
+                    const error = await createPool().getBrowser('bro-id').catch((e) => e);
+
+                    assert.deepEqual(error.meta, {foo: 'bar'});
+                });
+            });
+
+            describe('reinit fails', () => {
+                const stubBrowserWhichRejectsOnReinit = (params = {}) => {
+                    const browser = stubBrowser(params);
+                    Browser.create.returns(browser);
+
+                    browser.reinit.rejects();
+
+                    return browser;
+                };
+
+                it('should mark browser as broken', async () => {
+                    const browser = stubBrowserWhichRejectsOnReinit({id: 'bro-id'});
+                    const browserPool = createPool();
+
+                    await browserPool.getBrowser('bro-id');
+                    await browserPool.freeBrowser(browser);
+                    await browserPool.getBrowser('bro-id').catch((e) => e);
+
+                    assert.calledOnce(browser.markAsBroken);
+                });
+
+                it('should extend browser with session id', async () => {
+                    const browser = stubBrowserWhichRejectsOnReinit({id: 'bro-id'});
+                    const browserPool = createPool();
+
+                    await browserPool.getBrowser('bro-id');
+                    await browserPool.freeBrowser(browser);
+                    await browserPool.getBrowser('bro-id', '100500').catch((e) => e);
+
+                    assert.equal(browser.sessionId, '100500');
+                });
+
+                it('should free browser', async () => {
+                    const browser = stubBrowserWhichRejectsOnReinit({id: 'bro-id'});
+                    const browserPool = createPool();
+
+                    await browserPool.getBrowser('bro-id');
+                    await browserPool.freeBrowser(browser);
+                    browserPool.freeBrowser.resetHistory();
+                    await browserPool.getBrowser('bro-id').catch((e) => e);
+
+                    assert.calledOnceWith(browserPool.freeBrowser, browser);
+                });
+
+                it('should free browser after marking browser as broken', async () => {
+                    const browser = stubBrowserWhichRejectsOnReinit({id: 'bro-id'});
+                    const browserPool = createPool();
+
+                    await browserPool.getBrowser('bro-id');
+                    await browserPool.freeBrowser(browser);
+                    browserPool.freeBrowser.resetHistory();
+                    await browserPool.getBrowser('bro-id').catch((e) => e);
+
+                    assert.callOrder(browser.markAsBroken, browserPool.freeBrowser);
+                });
+
+                it('should be rejected with error extended by browser meta', async () => {
+                    const browser = stubBrowserWhichRejectsOnReinit({id: 'bro-id', meta: {foo: 'bar'}});
+                    const browserPool = createPool();
+
+                    await browserPool.getBrowser('bro-id');
+                    await browserPool.freeBrowser(browser);
+                    const error = await browserPool.getBrowser('bro-id').catch((e) => e);
+
+                    assert.deepEqual(error.meta, {foo: 'bar'});
+                });
+            });
+        });
     });
 
     describe('freeBrowser', () => {
@@ -170,6 +304,12 @@ describe('worker/browser-pool', () => {
 
                     assert.calledOnce(browser.quit);
                 });
+        });
+
+        it('should send test related freeBrowser event on browser release', async () => {
+            createPool().freeBrowser(stubBrowser({sessionId: '100500', state: {foo: 'bar'}}));
+
+            assert.calledOnceWith(ipc.emit, 'worker.100500.freeBrowser', {foo: 'bar'});
         });
     });
 });

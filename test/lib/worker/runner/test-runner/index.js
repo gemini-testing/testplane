@@ -9,7 +9,6 @@ const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-scr
 const BrowserAgent = require('lib/worker/runner/browser-agent');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const ipc = require('lib/utils/ipc');
 const {makeConfigStub} = require('../../../../utils');
 const {Suite, Test} = require('../../../_mocha');
 
@@ -59,8 +58,6 @@ describe('worker/runner/test-runner', () => {
         sandbox.stub(HookRunner.prototype, 'runAfterEachHooks').resolves();
 
         sandbox.stub(OneTimeScreenshooter, 'create').returns(Object.create(OneTimeScreenshooter.prototype));
-
-        sandbox.stub(ipc, 'emit');
     });
 
     afterEach(() => sandbox.restore());
@@ -295,6 +292,25 @@ describe('worker/runner/test-runner', () => {
 
                     assert.isTrue(browser.publicAPI.options.deprecationWarnings);
                 });
+            });
+        });
+
+        describe('getting of browser fails', () => {
+            it('should be rejected', () => {
+                BrowserAgent.prototype.getBrowser.rejects(new Error('foo bar'));
+
+                return assert.isRejected(run_(), /foo bar/);
+            });
+
+            it('should extend error with hermioneCtx', async () => {
+                BrowserAgent.prototype.getBrowser.rejects(new Error());
+
+                const test = mkTest_();
+                test.hermioneCtx = {foo: 'bar'};
+
+                const error = await run_({test}).catch((e) => e);
+
+                assert.deepEqual(error.hermioneCtx, test.hermioneCtx);
             });
         });
 
@@ -547,12 +563,6 @@ describe('worker/runner/test-runner', () => {
 
                 assert.match(result.meta, {foo: 'bar'});
             });
-
-            it('should send test related freeBrowser event on browser release', async () => {
-                await run_({sessionId: '100500'});
-
-                assert.calledOnceWith(ipc.emit, `worker.100500.freeBrowser`);
-            });
         });
 
         describe('on fail', () => {
@@ -635,22 +645,6 @@ describe('worker/runner/test-runner', () => {
                 await run_().catch((e) => e);
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
-            });
-
-            it('should send test related freeBrowser event on browser release', async () => {
-                ExecutionThread.create.callsFake(({browser}) => {
-                    ExecutionThread.prototype.run.callsFake(() => {
-                        browser.state.baz = 'qux';
-
-                        return Promise.reject(new Error());
-                    });
-
-                    return Object.create(ExecutionThread.prototype);
-                });
-
-                await run_({sessionId: '100500'}).catch((e) => e);
-
-                assert.calledOnceWith(ipc.emit, `worker.100500.freeBrowser`, {baz: 'qux'});
             });
         });
     });
