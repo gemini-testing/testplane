@@ -16,8 +16,6 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
     describe('handleImageDiff', () => {
         const mkConfig_ = (opts = {}) => {
             return _.defaultsDeep(opts, {
-                tolerance: 111,
-                antialiasingTolerance: 222,
                 buildDiffOpts: {},
                 system: {diffColor: 'default-color'}
             });
@@ -29,9 +27,11 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                 refImg: {path: '/default-ref/path'},
                 state: 'default-state',
                 diffOpts: {
-                    diffBounds: 'default-bounds',
-                    config: mkConfig_(opts.config),
-                    canHaveCaret: opts.canHaveCaret
+                    tolerance: opts.tolerance,
+                    antialiasingTolerance: opts.antialiasingTolerance,
+                    canHaveCaret: opts.canHaveCaret,
+                    diffAreas: opts.diffAreas,
+                    config: mkConfig_(opts.config)
                 }
             });
 
@@ -54,20 +54,32 @@ describe('browser/commands/assert-view/capture-processors/assert-refs', () => {
                     });
             });
 
-            it('overriden diff option from "buildDiffOpts"', async () => {
-                const config = {
-                    buildDiffOpts: {tolerance: 100500},
-                    tolerance: 500100
-                };
+            ['tolerance', 'antialiasingTolerance'].forEach((option) => {
+                it(`"${option}" option`, async () => {
+                    await handleImageDiff_({[option]: 1})
+                        .catch(() => {
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({[option]: 1})
+                            );
+                        });
+                });
 
-                await handleImageDiff_({config})
-                    .catch(() => {
-                        assert.calledOnceWith(
-                            ImageDiffError.create,
-                            sinon.match.any, sinon.match.any, sinon.match.any,
-                            sinon.match({tolerance: 100500})
-                        );
-                    });
+                it(`overridden "${option}" option from "buildDiffOpts"`, async () => {
+                    const config = {
+                        buildDiffOpts: {[option]: 1}
+                    };
+
+                    await handleImageDiff_({[option]: 2, config})
+                        .catch(() => {
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({[option]: 1})
+                            );
+                        });
+                });
             });
 
             describe('not ignore caret if', () => {

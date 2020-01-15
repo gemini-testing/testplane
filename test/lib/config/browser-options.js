@@ -882,6 +882,61 @@ describe('config browser-options', () => {
         });
     });
 
+    describe('assertViewOpts', () => {
+        it('should throw error if "assertViewOpts" is not an object', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({assertViewOpts: 'some-string'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"assertViewOpts" must be an object');
+        });
+
+        ['ignoreElements', 'captureElementFromTop', 'allowViewportOverflow'].forEach((option) => {
+            it(`should set "${option}" option to default value if it is not set in config`, () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_()
+                    }
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.browsers.b1.assertViewOpts[option], defaults.assertViewOpts[option]);
+            });
+
+            it(`should overridde only "${option}" and use others from defaults`, () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({assertViewOpts: {[option]: 100500}})
+                    }
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.browsers.b1.assertViewOpts, {...defaults.assertViewOpts, [option]: 100500});
+            });
+        });
+
+        it('should set provided values and use others from defaults', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({assertViewOpts: {k1: 'v1', k2: 'v2'}})
+                }
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.assertViewOpts, {...defaults.assertViewOpts, k1: 'v1', k2: 'v2'});
+        });
+    });
+
     [
         'calibrate',
         'screenshotOnReject',
