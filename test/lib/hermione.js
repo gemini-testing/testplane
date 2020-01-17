@@ -35,7 +35,7 @@ describe('hermione', () => {
 
         runner.run = sandbox.stub(Runner.prototype, 'run').callsFake(runFn && runFn.bind(null, runner));
         runner.addTestToRun = sandbox.stub(Runner.prototype, 'addTestToRun');
-        runner.init = sandbox.stub(Runner.prototype, 'init');
+        runner.init = sandbox.stub(Runner.prototype, 'init').named('RunnerInit');
 
         sandbox.stub(Runner, 'create').returns(runner);
         return runner;
@@ -202,6 +202,15 @@ describe('hermione', () => {
 
                 return hermione.run()
                     .then(() => assert.callOrder(afterInit, Runner.prototype.run));
+            });
+
+            it('should init runner after emit INIT', () => {
+                const onInit = sinon.spy();
+                const hermione = mkHermione_()
+                    .on(RunnerEvents.INIT, onInit);
+
+                return hermione.run()
+                    .then(() => assert.callOrder(onInit, Runner.prototype.init));
             });
 
             it('should send INIT event only once', () => {
