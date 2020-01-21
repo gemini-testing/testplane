@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="2.13.6"></a>
+## [2.13.6](https://github.com/gemini-testing/hermione/compare/v2.13.5...v2.13.6) (2020-01-21)
+
+
+### Bug Fixes
+
+* create browser pool after emit INIT event ([4518b30](https://github.com/gemini-testing/hermione/commit/4518b30))
+
+
+
 <a name="2.13.5"></a>
 ## [2.13.5](https://github.com/gemini-testing/hermione/compare/v2.13.4...v2.13.5) (2019-12-17)
 
