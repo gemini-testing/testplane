@@ -63,13 +63,6 @@ describe('Runner', () => {
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
-        it('should create browser pool', () => {
-            const config = makeConfigStub();
-            const runner = new Runner(config);
-
-            assert.calledOnceWith(BrowserPool.create, config, runner);
-        });
-
         it('should init temp with dir from config', () => {
             const config = makeConfigStub({system: {tempDir: 'some/dir'}});
 
@@ -87,6 +80,19 @@ describe('Runner', () => {
             Runner.create(makeConfigStub());
 
             assert.calledOnceWith(extend, {tempOpts: {some: 'opts'}});
+        });
+    });
+
+    describe('init', () => {
+        it('should create browser pool exactly on init', () => {
+            const config = makeConfigStub();
+            const runner = new Runner(config);
+
+            assert.notCalled(BrowserPool.create);
+
+            runner.init();
+
+            assert.calledOnceWith(BrowserPool.create, config, runner);
         });
     });
 
@@ -614,6 +620,7 @@ describe('Runner', () => {
         it('should cancel browser pool', () => {
             const runner = new Runner(makeConfigStub());
 
+            runner.init();
             runner.cancel();
 
             assert.calledOnce(cancelStub);
