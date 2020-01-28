@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.0.0"></a>
+# [3.0.0](https://github.com/gemini-testing/hermione/compare/v2.13.6...v3.0.0) (2020-01-28)
+
+
+### Features
+
+* change options in "assertView" command ([763be83](https://github.com/gemini-testing/hermione/commit/763be83))
+
+
+### BREAKING CHANGES
+
+* option "allowViewportOverflow" now allows to overflow bottom viewport bound
+
+- add browser option "assertViewOpts" which is used as default options inside "assertView"
+- add ability to set "compositeImage"
+- add ability to set "antialiasingTolerance"
+- add ability to set "captureElementFromTop" in order for more precise control of capture image
+- update gemini-core from 4.0.0 to 5.0.0
+
+
+
 <a name="2.13.6"></a>
 ## [2.13.6](https://github.com/gemini-testing/hermione/compare/v2.13.5...v2.13.6) (2020-01-21)
 
