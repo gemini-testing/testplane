@@ -161,7 +161,7 @@ describe('config options', () => {
                 assert.equal(config.system.workers, 1);
             });
 
-            it('should be overriden from a config', () => {
+            it('should be overridden from a config', () => {
                 Config.read.returns({system: {workers: 100500}});
 
                 const config = createConfig();
@@ -251,7 +251,7 @@ describe('config options', () => {
                 assert.equal(config.system.parallelLimit, defaults.parallelLimit);
             });
 
-            it('should be overriden from a config', () => {
+            it('should be overridden from a config', () => {
                 Config.read.returns({system: {parallelLimit: 5}});
 
                 const config = createConfig();

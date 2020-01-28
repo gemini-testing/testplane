@@ -57,10 +57,12 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [antialiasingTolerance](#antialiasingtolerance)
       - [compareOpts](#compareopts)
       - [buildDiffOpts](#builddiffopts)
+      - [assertViewOpts](#assertViewOpts)
       - [screenshotsDir](#screenshotsdir)
       - [w3cCompatible](#w3ccompatible)
       - [strictTestsOrder](#stricttestsorder)
       - [compositeImage](#compositeimage)
+      - [screenshotMode](#screenshotMode)
   - [system](#system)
       - [debug](#debug)
       - [mochaOpts](#mochaopts)
@@ -413,7 +415,13 @@ Parameters:
  - opts (optional) `Object`:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
-   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport's bounds, this option disables such check and makes command to screenshot the visible part of the element
+   - antialiasingTolerance (optional) `Number` – overrides config [browsers](#browsers).[antialiasingTolerance](#antialiasingTolerance) value
+   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. In this case only visible part of the element will be captured. But if set browser option [compositeImage](#compositeimage) with `true` value, then in the resulting screenshot will appear the whole element with not visible parts outside of the viewport.
+   - captureElementFromTop (optional) `Boolean` - ability to set capture element from the top area or from current position. In the first case viewport will be scrolled to the top of the element. Default value is `true`
+   - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
+   - screenshotDelay (optional) `Number` - overrides config [browsers](#browsers).[screenshotDelay](#screenshotDelay) value
+
+All options inside `assertView` command override the same options in the [browsers](#browsers).[assertViewOpts](#assertViewOpts).
 
 Full example:
 
@@ -421,7 +429,18 @@ Full example:
 it('some test', function() {
     return this.browser
         .url('some/url')
-        .assertView('plain', '.form', {ignoreElements: ['.link'], tolerance: 5, allowViewportOverflow: true});
+        .assertView(
+            'plain', '.form',
+            {
+                ignoreElements: ['.link'],
+                tolerance: 5,
+                antialiasingTolerance: 4,
+                allowViewportOverflow: true,
+                captureElementFromTop: true,
+                compositeImage: true,
+                screenshotDelay: 10
+            }
+        );
 });
 ```
 
@@ -573,10 +592,12 @@ Option name               | Description
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
 `compareOpts`             | Options for comparing images.
 `buildDiffOpts`           | Options for building diff image.
+`assertViewOpts`          | Options for `assertView` command, used by default.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
+`screenshotMode`          | Image capture mode
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -696,6 +717,14 @@ buildDiffOpts: {
 }
 ```
 
+#### assertViewOpts
+Default options used when calling [assertView](https://github.com/gemini-testing/hermione/#assertview), can be overridden by `assertView` options. Default values are:
+```javascript
+    ignoreElements: [],
+    captureElementFromTop: true,
+    allowViewportOverflow: false
+```
+
 #### screenshotsDir
 
 Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
@@ -710,6 +739,13 @@ Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Defa
 #### compositeImage
 
 Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
+
+#### screenshotMode
+
+Image capture mode. There are 3 allowed values for this option:
+  * `auto` (default). Mode will be obtained automatically;
+  * `fullpage`. Hermione will deal with screenshot of full page;
+  * `viewport`. Only viewport area will be used.
 
 ## system
 

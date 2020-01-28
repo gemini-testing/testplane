@@ -101,28 +101,78 @@ describe('assertView command', () => {
             assert.calledOnceWith(browser.prepareScreenshot, ['.selector1', '.selector2']);
         });
 
-        it('should handle ignore elements option passed as an array', async () => {
-            const browser = stubBrowser_();
+        describe('should prepare screenshot with ignore elements', () => {
+            [
+                {
+                    name: 'array',
+                    ignoreElements: ['.foo', '#bar'],
+                    ignoreSelectors: ['.foo', '#bar']
+                },
+                {
+                    name: 'string',
+                    ignoreElements: '.foo .bar',
+                    ignoreSelectors: ['.foo .bar']
+                }
+            ].forEach(({name, ignoreElements, ignoreSelectors}) => {
+                it(`passed as ${name} using "assertView" options`, async () => {
+                    const browser = stubBrowser_();
 
-            await browser.publicAPI.assertView(null, null, {ignoreElements: ['foo', 'bar']});
+                    await browser.publicAPI.assertView(null, null, {ignoreElements});
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo', 'bar']});
+                    assert.calledOnceWith(
+                        browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors})
+                    );
+                });
+            });
+
+            it('from config option "assertViewOpts"', async () => {
+                const config = mkConfig_({assertViewOpts: {ignoreElements: ['foo', 'bar']}});
+                const browser = stubBrowser_(config);
+
+                await browser.publicAPI.assertView();
+
+                assert.calledOnceWith(
+                    browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors: ['foo', 'bar']})
+                );
+            });
+
+            it('from "assertView" even if it is set in "assertViewOpts"', async () => {
+                const config = mkConfig_({assertViewOpts: {ignoreElements: ['foo', 'bar']}});
+                const browser = stubBrowser_(config);
+
+                await browser.publicAPI.assertView(null, null, {ignoreElements: ['baz', 'qux']});
+
+                assert.calledOnceWith(
+                    browser.prepareScreenshot, sinon.match.any, sinon.match({ignoreSelectors: ['baz', 'qux']})
+                );
+            });
         });
 
-        it('should handle ignore elements option passed as a string', async () => {
-            const browser = stubBrowser_();
+        ['allowViewportOverflow', 'captureElementFromTop'].forEach((option) => {
+            describe(`should prepare screenshot with "${option}" option`, () => {
+                let browser;
 
-            await browser.publicAPI.assertView(null, null, {ignoreElements: 'foo bar'});
+                beforeEach(() => {
+                    const config = mkConfig_({assertViewOpts: {[option]: false}});
+                    browser = stubBrowser_(config);
+                });
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: ['foo bar']});
-        });
+                it('from config option "assertViewOpts"', async () => {
+                    await browser.publicAPI.assertView();
 
-        it('should handle cases when ignore elements option is not passed', async () => {
-            const browser = stubBrowser_();
+                    assert.calledOnceWith(
+                        browser.prepareScreenshot, sinon.match.any, sinon.match({[option]: false})
+                    );
+                });
 
-            await browser.publicAPI.assertView();
+                it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
+                    await browser.publicAPI.assertView(null, null, {[option]: true});
 
-            assert.calledOnceWith(browser.prepareScreenshot, sinon.match.any, {ignoreSelectors: []});
+                    assert.calledOnceWith(
+                        browser.prepareScreenshot, sinon.match.any, sinon.match({[option]: true})
+                    );
+                });
+            });
         });
     });
 
@@ -155,51 +205,70 @@ describe('assertView command', () => {
             assert.calledOnceWith(image.save, '/curr/path');
         });
 
-        describe('should pass allowViewportOverflow to #ScreenShooter.capture()', () => {
+        describe('should capture screenshot with "allowViewportOverflow" option', () => {
             let browser;
 
             beforeEach(() => {
-                browser = stubBrowser_();
-            });
-
-            it('option is false by default', async () => {
-                await browser.publicAPI.assertView();
-
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    allowViewportOverflow: false
-                });
-            });
-
-            it('option is set in test', async () => {
-                await browser.publicAPI.assertView('plain', '.selector', {allowViewportOverflow: true});
-
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    allowViewportOverflow: true
-                });
-            });
-        });
-
-        describe('should pass screenshotDelay to #ScreenShooter.capture()', () => {
-            let config, browser;
-
-            beforeEach(() => {
-                config = mkConfig_({screenshotDelay: 100500});
+                const config = mkConfig_({assertViewOpts: {allowViewportOverflow: false}});
                 browser = stubBrowser_(config);
             });
 
-            it('option is equal the configured value by default', async () => {
+            it('from config option "assertViewOpts"', async () => {
                 await browser.publicAPI.assertView();
 
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    screenshotDelay: 100500
-                });
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {allowViewportOverflow: false});
             });
 
-            it('option is set in test', async () => {
-                await browser.publicAPI.assertView('plain', '.selector', {screenshotDelay: 2000});
+            it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
+                await browser.publicAPI.assertView(null, null, {allowViewportOverflow: true});
 
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                    screenshotDelay: 2000
+                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {allowViewportOverflow: true});
+            });
+        });
+
+        ['compositeImage', 'screenshotDelay'].forEach((option) => {
+            describe(`should capture screenshot with "${option}" option`, () => {
+                it(`from config option "${option}"`, async () => {
+                    const config = mkConfig_({[option]: 'value-1'});
+                    const browser = stubBrowser_(config);
+
+                    await browser.publicAPI.assertView();
+
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                        [option]: 'value-1'
+                    });
+                });
+
+                it(`from config option "assertViewOpts" even if it is set in "${option}"`, async () => {
+                    const config = mkConfig_({
+                        [option]: 'value-1',
+                        assertViewOpts: {
+                            [option]: 'value-2'
+                        }
+                    });
+                    const browser = stubBrowser_(config);
+
+                    await browser.publicAPI.assertView();
+
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                        [option]: 'value-2'
+                    });
+                });
+
+                it(`from "assertView" command even if it is set in "assertViewOpts" and "${option}"`, async () => {
+                    const config = mkConfig_({
+                        [option]: 'value-1',
+                        assertViewOpts: {
+                            [option]: 'value-2'
+                        }
+                    });
+                    const browser = stubBrowser_(config);
+
+                    await browser.publicAPI.assertView(null, null, {[option]: 'value-3'});
+
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                        [option]: 'value-3'
+                    });
                 });
             });
         });
@@ -310,19 +379,21 @@ describe('assertView command', () => {
             );
         });
 
-        it('should compare images with given tolerance', async () => {
-            const config = mkConfig_({tolerance: 100});
-            const browser = stubBrowser_(config);
+        ['tolerance', 'antialiasingTolerance'].forEach((option) => {
+            it(`should compare images with given "${option}"`, async () => {
+                const config = mkConfig_({[option]: 100});
+                const browser = stubBrowser_(config);
 
-            browser.prepareScreenshot.resolves({});
+                browser.prepareScreenshot.resolves({});
 
-            await browser.publicAPI.assertView(null, null, {tolerance: 500});
+                await browser.publicAPI.assertView(null, null, {[option]: 500});
 
-            assert.calledOnceWith(
-                Image.compare,
-                sinon.match.any, sinon.match.any,
-                sinon.match({tolerance: 500})
-            );
+                assert.calledOnceWith(
+                    Image.compare,
+                    sinon.match.any, sinon.match.any,
+                    sinon.match({[option]: 500})
+                );
+            });
         });
 
         describe('if images are not equal', () => {
@@ -423,6 +494,59 @@ describe('assertView command', () => {
                     await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
                 });
 
+                ['tolerance', 'antialiasingTolerance'].forEach((option) => {
+                    describe(`should update with "${option}" option`, () => {
+                        it(`from config option "${option}"`, async () => {
+                            const config = mkConfig_({[option]: 1});
+                            const browser = stubBrowser_(config);
+
+                            await browser.publicAPI.assertView();
+
+                            assert.calledOnceWith(
+                                updateRefs.handleImageDiff,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({[option]: 1})
+                            );
+                        });
+
+                        it(`from config option "assertViewOpts" even if it is set in "${option}"`, async () => {
+                            const config = mkConfig_({
+                                [option]: 1,
+                                assertViewOpts: {
+                                    [option]: 2
+                                }
+                            });
+                            const browser = stubBrowser_(config);
+
+                            await browser.publicAPI.assertView();
+
+                            assert.calledOnceWith(
+                                updateRefs.handleImageDiff,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({[option]: 2})
+                            );
+                        });
+
+                        it(`from "assertView" command even if it is set in "assertViewOpts" and "${option}"`, async () => {
+                            const config = mkConfig_({
+                                [option]: 1,
+                                assertViewOpts: {
+                                    [option]: 2
+                                }
+                            });
+                            const browser = stubBrowser_(config);
+
+                            await browser.publicAPI.assertView(null, null, {[option]: 3});
+
+                            assert.calledOnceWith(
+                                updateRefs.handleImageDiff,
+                                sinon.match.any, sinon.match.any, sinon.match.any,
+                                sinon.match({[option]: 3})
+                            );
+                        });
+                    });
+                });
+
                 it('should pass browser emitter to "handleImageDiff" handler', async () => {
                     const browser = stubBrowser_();
                     browser.prepareScreenshot.resolves({canHaveCaret: true});
@@ -432,7 +556,7 @@ describe('assertView command', () => {
                     assert.calledOnceWith(
                         updateRefs.handleImageDiff,
                         sinon.match.any, sinon.match.any, sinon.match.any,
-                        {canHaveCaret: true, config: sinon.match.any, diffAreas: sinon.match.any, emitter: browser.emitter}
+                        sinon.match({emitter: browser.emitter})
                     );
                 });
             });
