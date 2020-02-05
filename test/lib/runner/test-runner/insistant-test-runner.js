@@ -379,6 +379,42 @@ describe('runner/test-runner/insistant-test-runner', () => {
                     retriesLeft: 100500
                 });
             });
+
+            describe('do not decrement "retriesLeft" to negative value', () => {
+                beforeEach(() => {
+                    const test = makeFailedTest_();
+
+                    RegularTestRunner.prototype.run.callsFake(function() {
+                        this.emit(Events.TEST_FAIL, test);
+                        return Promise.resolve();
+                    });
+                    RegularTestRunner.prototype.run.onThirdCall().resolves();
+                });
+
+                it('should pass to RETRY event', async () => {
+                    const config = makeConfigStub({retry: 0, shouldRetry: () => true});
+                    const onRetry = sinon.spy().named('onRetry');
+                    const runner = mkRunner_({config}).on(Events.RETRY, onRetry);
+
+                    await run_({runner});
+
+                    assert.calledWith(onRetry.firstCall, sinon.match({retriesLeft: 0}));
+                    assert.calledWith(onRetry.secondCall, sinon.match({retriesLeft: 0}));
+                    assert.calledTwice(onRetry);
+                });
+
+                it('should pass to shouldRetry config function', async () => {
+                    const shouldRetry = sinon.stub().returns(true);
+                    const config = makeConfigStub({retry: 0, shouldRetry});
+                    const runner = mkRunner_({config});
+
+                    await run_({runner});
+
+                    assert.calledWith(shouldRetry.firstCall, sinon.match({retriesLeft: 0}));
+                    assert.calledWith(shouldRetry.secondCall, sinon.match({retriesLeft: 0}));
+                    assert.calledTwice(shouldRetry);
+                });
+            });
         });
     });
 });
