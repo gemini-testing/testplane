@@ -639,7 +639,7 @@ describe('hermione', () => {
             const sortFn = TestCollection.prototype.sortTests.firstCall.args[1];
 
             assert.equal(sortFn({id: 'a'}, {id: 'b'}), -1);
-            assert.equal(sortFn({id: 'a'}, {id: 'a'}), 1);
+            assert.equal(sortFn({id: 'a'}, {id: 'a'}), 0);
             assert.equal(sortFn({id: 'b'}, {id: 'a'}), 1);
         });
 

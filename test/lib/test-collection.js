@@ -68,7 +68,15 @@ describe('test-collection', () => {
                 'bro2': []
             });
 
-            collection.sortTests('bro1', (a, b) => a.title < b.title);
+            collection.sortTests('bro1', (a, b) => {
+                if (a.title < b.title) {
+                    return 1;
+                } else if (a.title > b.title) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
 
             assert.deepEqual(collection.mapTests('bro1', (t) => t), []);
             assert.deepEqual(collection.mapTests('bro2', (t) => t), []);
@@ -84,7 +92,15 @@ describe('test-collection', () => {
                 'bro2': [test1, test2, test3]
             });
 
-            collection.sortTests('bro1', (a, b) => a.title < b.title);
+            collection.sortTests('bro1', (a, b) => {
+                if (a.title < b.title) {
+                    return 1;
+                } else if (a.title > b.title) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
 
             assert.deepEqual(
                 collection.mapTests('bro1', (test, browser) => ({test, browser})),
@@ -114,7 +130,15 @@ describe('test-collection', () => {
                 'bro2': [test1, test2, test3]
             });
 
-            collection.sortTests((a, b) => a.title < b.title);
+            collection.sortTests((a, b) => {
+                if (a.title < b.title) {
+                    return 1;
+                } else if (a.title > b.title) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            });
 
             assert.deepEqual(
                 collection.mapTests('bro1', (test, browser) => ({test, browser})),
