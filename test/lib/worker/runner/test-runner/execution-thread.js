@@ -20,9 +20,12 @@ describe('worker/runner/test-runner/execution-thread', () => {
         return Runnable.create(Suite.create(), opts);
     };
 
-    const mkBrowser_ = () => {
+    const mkBrowser_ = (config = {}) => {
         return {
-            publicAPI: Object.create({})
+            config,
+            publicAPI: Object.create({
+                getCommandHistory: sinon.stub()
+            })
         };
     };
 
@@ -156,17 +159,83 @@ describe('worker/runner/test-runner/execution-thread', () => {
             assert.deepEqual(hermioneCtx, {foo: 'bar', baz: 'qux'});
         });
 
-        it('should fail with timeout error on timeout', async () => {
-            const runnable = mkRunnable_({
-                type: 'test',
-                title: 'bla bla',
-                fn: () => Promise.delay(20)
+        describe('on timeout', () => {
+            const mkTimedoutRunnable_ = () => {
+                const runnable = mkRunnable_({
+                    type: 'test',
+                    title: 'bla bla',
+                    fn: () => Promise.delay(20)
+                });
+                runnable.timeout(10);
+
+                return runnable;
+            };
+
+            it('should fail with timeout error', async () => {
+                const runnable = mkTimedoutRunnable_();
+
+                const executionThread = mkExecutionThread_();
+
+                await assert.isRejected(executionThread.run(runnable), /test '.* bla bla' timed out/);
             });
-            runnable.timeout(10);
 
-            const executionThread = mkExecutionThread_();
+            describe('if option "saveHistoryOnTestTimeout" is disabled in config', () => {
+                it('should not save command history in error', async () => {
+                    const runnable = mkTimedoutRunnable_();
+                    const browser = mkBrowser_({saveHistoryOnTestTimeout: false});
 
-            await assert.isRejected(executionThread.run(runnable), /test '.* bla bla' timed out/);
+                    const executionThread = mkExecutionThread_({browser});
+
+                    try {
+                        await executionThread.run(runnable);
+                    } catch (e) {
+                        assert.isUndefined(e.history);
+                    }
+                });
+            });
+
+            describe('if option "saveHistoryOnTestTimeout" is enabled in config', () => {
+                it('should store only "name", "args" and "stack" of command history in error', async () => {
+                    const runnable = mkTimedoutRunnable_();
+
+                    const browser = mkBrowser_({saveHistoryOnTestTimeout: true});
+                    browser.publicAPI.getCommandHistory.resolves([{
+                        name: 'foo',
+                        args: ['bar'],
+                        stack: 'foo("bar") (foo-file:100:500)',
+                        timestamp: 100500,
+                        result: 'some-result'
+                    }]);
+
+                    const executionThread = mkExecutionThread_({browser});
+
+                    try {
+                        await executionThread.run(runnable);
+                    } catch (e) {
+                        assert.deepEqual(e.history, [{
+                            name: 'foo',
+                            args: ['bar'],
+                            stack: 'foo("bar") (foo-file:100:500)'
+                        }]);
+                    }
+                });
+
+                it('should log failure message if failed to get command history', async () => {
+                    sandbox.stub(console, 'error');
+                    const runnable = mkTimedoutRunnable_();
+                    const browser = mkBrowser_({saveHistoryOnTestTimeout: true});
+                    browser.publicAPI.getCommandHistory.throws(new Error('some-error-message'));
+
+                    const executionThread = mkExecutionThread_({browser});
+
+                    try {
+                        await executionThread.run(runnable);
+                    } catch (e) {
+                        assert.isUndefined(e.history);
+                        assert.calledWith(console.error, 'Failed to get command history: some-error-message');
+                    }
+                });
+            });
         });
 
         it('should not set timeout if timeouts are disabled', async () => {
