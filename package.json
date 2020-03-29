@@ -1,6 +1,6 @@
 {
   "name": "hermione",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Tests framework based on mocha and wdio",
   "main": "lib/hermione.js",
   "scripts": {

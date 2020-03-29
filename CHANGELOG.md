@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.1.0"></a>
+# [3.1.0](https://github.com/gemini-testing/hermione/compare/v3.0.1...v3.1.0) (2020-03-29)
+
+
+### Features
+
+* add command history to error for timedout tests ([8023d48](https://github.com/gemini-testing/hermione/commit/8023d48))
+
+
+
 <a name="3.0.1"></a>
 ## [3.0.1](https://github.com/gemini-testing/hermione/compare/v3.0.0...v3.0.1) (2020-03-11)
 
