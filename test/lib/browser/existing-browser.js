@@ -505,5 +505,14 @@ describe('ExistingBrowser', () => {
 
             assert.equal(browser.meta.pid, pid);
         });
+
+        it('should clear command history', () => {
+            const browser = mkBrowser_();
+            session.commandList = [{name: 'foo', args: ['bar'], stack: 'file', result: {}, timestamp: 100500}];
+
+            browser.quit();
+
+            assert.lengthOf(session.commandList, 0, 'command history is empty');
+        });
     });
 });

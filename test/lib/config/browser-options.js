@@ -942,7 +942,8 @@ describe('config browser-options', () => {
         'screenshotOnReject',
         'compositeImage',
         'resetCursor',
-        'strictTestsOrder'
+        'strictTestsOrder',
+        'saveHistoryOnTestTimeout'
     ].forEach((option) => {
         describe(option, () => {
             it('should throw an error if value is not a boolean', () => {

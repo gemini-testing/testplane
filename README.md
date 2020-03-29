@@ -63,6 +63,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [strictTestsOrder](#stricttestsorder)
       - [compositeImage](#compositeimage)
       - [screenshotMode](#screenshotMode)
+      - [saveHistoryOnTestTimeout](#saveHistoryOnTestTimeout)
   - [system](#system)
       - [debug](#debug)
       - [mochaOpts](#mochaopts)
@@ -583,7 +584,7 @@ Option name               | Description
 `shouldRetry`             | Function that determines whether to make a retry. By default returns `true `if retry attempts are available otherwise returns `false`.
 `calibrate`               | Allows to correctly capture the image. Default value is `false`.
 `screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
-`meta`                    | Additional data that can be obtained via .getMeta() method
+`meta`                    | Additional data that can be obtained via .getMeta() method.
 `windowSize`              | Browser window dimensions. Default value is `null`.
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
 `orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
@@ -597,7 +598,8 @@ Option name               | Description
 `w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
-`screenshotMode`          | Image capture mode
+`screenshotMode`          | Image capture mode.
+`saveHistoryOnTestTimeout`| Save history of all executed commands in the error on test timeout.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
