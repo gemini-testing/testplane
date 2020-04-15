@@ -72,6 +72,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [workers](#workers)
       - [testsPerWorker](#testsperworker)
       - [parallelLimit](#parallellimit)
+      - [fileExtensions](#fileExtensions)
   - [plugins](#plugins)
       - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [prepareBrowser](#preparebrowser)
@@ -798,6 +799,9 @@ The maximum number of tests to be run in one worker before it will be restarted.
 
 #### parallelLimit
 By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers `hermione` will try to run in parallel. Default value is `Infinity`.
+
+#### fileExtensions
+Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
 
 ## plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).

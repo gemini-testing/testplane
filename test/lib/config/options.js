@@ -277,6 +277,53 @@ describe('config options', () => {
                 assert.equal(result.system.parallelLimit, 15);
             });
         });
+
+        describe('fileExtensions', () => {
+            it('should set default extension', () => {
+                const config = createConfig();
+
+                assert.deepEqual(config.system.fileExtensions, defaults.fileExtensions);
+            });
+
+            describe('should throw error if "fileExtensions" option', () => {
+                it('is not an array', () => {
+                    const value = {};
+                    const readConfig = _.set({}, 'system.fileExtensions', value);
+
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `"fileExtensions" must be an array of strings but got ${JSON.stringify(value)}`);
+                });
+
+                it('is not an array of strings', () => {
+                    const value = ['string', 100500];
+                    const readConfig = _.set({}, 'system.fileExtensions', value);
+
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `fileExtensions" must be an array of strings but got ${JSON.stringify(value)}`);
+                });
+
+                it('has strings that do not start with dot symbol', () => {
+                    const value = ['.foo', 'bar'];
+                    const readConfig = _.set({}, 'system.fileExtensions', value);
+
+                    Config.read.returns(readConfig);
+
+                    assert.throws(() => createConfig(), Error, `Each extension from "fileExtensions" must start with dot symbol but got ${JSON.stringify(value)}`);
+                });
+            });
+
+            it('should set "fileExtensions" option', () => {
+                const fileExtensions = ['.foo', '.bar'];
+                const readConfig = _.set({}, 'system.fileExtensions', fileExtensions);
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.system.fileExtensions, fileExtensions);
+            });
+        });
     });
 
     describe('prepareEnvironment', () => {
