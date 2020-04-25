@@ -92,6 +92,18 @@ describe('test-reader', () => {
             assert.calledOnceWith(SetsBuilder.prototype.build, sinon.match.any, {ignore: 'foo/bar'});
         });
 
+        it('should pass file extensions to build from config', async () => {
+            const fileExtensions = ['.foo', '.bar'];
+
+            await readTests_({
+                config: makeConfigStub({
+                    system: {fileExtensions}
+                })
+            });
+
+            assert.calledOnceWith(SetsBuilder.prototype.build, sinon.match.any, sinon.match.any, fileExtensions);
+        });
+
         it('should call set-builder methods in rigth order', async () => {
             await readTests_();
 
