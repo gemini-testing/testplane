@@ -1072,6 +1072,7 @@ shows the following
     -r, --reporter <reporter>    test reporters
     -b, --browser <browser>      run tests only in specified browser
     -s, --set <set>              run tests only in the specified set
+    --require <module>           require a module before running hermione
     --grep <grep>                run only tests matching the pattern
     --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
     --inspect [inspect]          nodejs inspector on [=[host:]port]
@@ -1092,6 +1093,12 @@ You can choose `flat` or `plain` reporter by option `-r, --reporter`. Default is
 * `flat` – all information about failed and retried tests would be grouped by browsers at the end of the report.
 
 * `plain` – information about fails and retries would be placed after each test.
+
+## Require modules
+
+Using `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
+- compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
+- loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
 
 ## Overriding settings
 

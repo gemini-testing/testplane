@@ -3,6 +3,7 @@
 const {Command} = require('@gemini-testing/commander');
 const q = require('q');
 const _ = require('lodash');
+const proxyquire = require('proxyquire');
 const hermioneCli = require('lib/cli');
 const info = require('lib/cli/info');
 const defaults = require('lib/config/defaults');
@@ -61,6 +62,21 @@ describe('cli', () => {
         await actionPromise;
 
         assert.calledOnce(Hermione.create);
+    });
+
+    it('should require modules specified in "require" option', async () => {
+        const fooRequire = sandbox.stub().returns({});
+
+        const stubHermioneCli = proxyquire('lib/cli', {
+            foo: (() => fooRequire())()
+        });
+
+        onParse((parser) => parser.require = ['foo']);
+
+        stubHermioneCli.run();
+        await actionPromise;
+
+        assert.calledOnce(fooRequire);
     });
 
     it('should create Hermione without config by default', async () => {
