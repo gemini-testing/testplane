@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.3.0"></a>
+# [3.3.0](https://github.com/gemini-testing/hermione/compare/v3.2.0...v3.3.0) (2020-04-29)
+
+
+### Features
+
+* add cli option "--require" to load external modules ([c93e652](https://github.com/gemini-testing/hermione/commit/c93e652))
+
+
+
 <a name="3.2.0"></a>
 # [3.2.0](https://github.com/gemini-testing/hermione/compare/v3.1.0...v3.2.0) (2020-04-25)
 
