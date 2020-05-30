@@ -24,7 +24,8 @@ function createBrowserConfig_(opts = {}) {
         system: opts.system || {},
         buildDiffOpts: {
             ignoreCaret: true
-        }
+        },
+        waitOrientationChange: true
     });
 
     return {
