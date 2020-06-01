@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.4.0"></a>
+# [3.4.0](https://github.com/gemini-testing/hermione/compare/v3.3.1...v3.4.0) (2020-06-01)
+
+
+### Features
+
+* add browser option "waitOrientationChange" ([e15b3c1](https://github.com/gemini-testing/hermione/commit/e15b3c1))
+
+
+
 <a name="3.3.1"></a>
 ## [3.3.1](https://github.com/gemini-testing/hermione/compare/v3.3.0...v3.3.1) (2020-05-09)
 
