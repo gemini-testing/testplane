@@ -52,6 +52,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [windowSize](#windowsize)
       - [screenshotDelay](#screenshotdelay)
       - [orientation](#orientation)
+      - [waitOrientationChange](#waitOrientationChange)
       - [resetCursor](#resetcursor)
       - [tolerance](#tolerance)
       - [antialiasingTolerance](#antialiasingtolerance)
@@ -589,6 +590,7 @@ Option name               | Description
 `windowSize`              | Browser window dimensions. Default value is `null`.
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
 `orientation`             | Browser orientation that will be set before each test run. Default value is `null`.
+`waitOrientationChange`   | Allows to wait until screen orientation is changed. Default value is `true`.
 `resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run.
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
 `antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
@@ -693,6 +695,9 @@ Allows to specify a delay (in milliseconds) before making any screenshot. This i
 
 #### orientation
 Browser orientation (`landscape`, `portrait`) that will be set before each test run. It is necessary in order to return the browser orientation to the default state after test execution in which orientation is changed. Default value is `null`.
+
+#### waitOrientationChange
+Allows to wait until screen orientation is changed. Works inside `webdriverio` commands `orientation` and `setOrientation`. This option guarantee that screen rotated before the next command will start to execute. Default value is `true`.
 
 #### resetCursor
 Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run. This can be useful to escape cases when a default position of a cursor affects your tests. We recommend to set this option *truthy* value for desktop browsers and *falsey* for mobile devices. Default value is `true`.

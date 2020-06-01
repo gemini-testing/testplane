@@ -31,6 +31,15 @@ describe('orientation command', () => {
         assert.equal(baseOrientationFn.lastCall.args.length, 0);
     });
 
+    it('should not throw if orientation does not return current state', async () => {
+        const baseOrientationFn = session.orientation;
+        baseOrientationFn.resolves({value: null});
+
+        mkBrowser_();
+
+        await assert.isFulfilled(session.orientation('portrait'));
+    });
+
     it('should return current orientation if command was called without arguments', async () => {
         const baseOrientationFn = session.orientation;
         baseOrientationFn.resolves({value: 'portrait'});
@@ -73,6 +82,17 @@ describe('orientation command', () => {
         const orientation = await session.orientation('portrait');
 
         assert.deepEqual(orientation, {value: 'portrait'});
+    });
+
+    it('should not wait for orientation change if option "waitOrientationChange" set to false', async () => {
+        const baseOrientationFn = session.orientation;
+        baseOrientationFn.resolves({value: 'portrait'});
+
+        mkBrowser_({waitOrientationChange: false});
+
+        await session.orientation('portrait');
+
+        assert.notCalled(session.waitUntil);
     });
 
     it('should wait for orientation change', async () => {
