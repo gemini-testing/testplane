@@ -26,7 +26,7 @@ describe('ExistingBrowser', () => {
         it('should set emitter', () => {
             const emitter = new EventEmitter();
 
-            const browser = mkBrowser_({}, 'bro', emitter);
+            const browser = mkBrowser_({}, 'bro', null, emitter);
 
             assert.deepEqual(browser.emitter, emitter);
         });

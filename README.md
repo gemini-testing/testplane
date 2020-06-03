@@ -887,7 +887,7 @@ Event                     | Description
 `BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
 `AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read each time some file is being reading during test run.
-`NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier as the second.
+`NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier and version as the second.
 `UPDATE_REFERENCE`        | Will be triggered after updating reference image.
 
 **REMARK!**
@@ -1275,6 +1275,8 @@ TestCollection API:
 * `sortTests(browserId, (currentTest, nextTest) => ...)` - sorts over tests for passed browser. If first argument (`browserId`) is omitted then method will sort over tests for all browsers.
 
 * `eachTest(browserId, (test, browserId) => ...)` - iterates over tests for passed browser. If first argument (`browserId`) is omitted then method will iterate over tests for all browsers.
+
+* `eachTestByVersion(browserId, (test, browserId, version) => ...)` - iterates over tests and over browser versions for passed browser. Implicitly sets browser version for each test in `browserVersion` property.
 
 * `disableAll([browserId])` - disables all tests. Disables tests for specific browser if `browserId` passed. Returns current test collection instance.
 

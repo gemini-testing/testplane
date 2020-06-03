@@ -10,15 +10,21 @@ describe('worker/browser-agent', () => {
 
     describe('getBrowser', () => {
         it('should get a browser from the pool', () => {
-            browserPool.getBrowser.withArgs('bro-id', '100-500').returns({some: 'browser'});
+            browserPool.getBrowser.withArgs('bro-id', null, '100-500').returns({some: 'browser'});
 
-            assert.deepEqual(BrowserAgent.create('bro-id', browserPool).getBrowser('100-500'), {some: 'browser'});
+            assert.deepEqual(BrowserAgent.create('bro-id', null, browserPool).getBrowser('100-500'), {some: 'browser'});
+        });
+
+        it('should get a browser with specific version from the pool', () => {
+            browserPool.getBrowser.withArgs('bro-id', '10.1', '100-500').returns({some: 'browser'});
+
+            assert.deepEqual(BrowserAgent.create('bro-id', '10.1', browserPool).getBrowser('100-500'), {some: 'browser'});
         });
     });
 
     describe('freeBrowser', () => {
         it('should free the browser in the pool', () => {
-            BrowserAgent.create(null, browserPool).freeBrowser({some: 'browser'});
+            BrowserAgent.create(null, null, browserPool).freeBrowser({some: 'browser'});
 
             assert.calledOnceWith(browserPool.freeBrowser, {some: 'browser'});
         });

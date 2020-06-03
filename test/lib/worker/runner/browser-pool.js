@@ -54,11 +54,23 @@ describe('worker/browser-pool', () => {
             const emitter = new EventEmitter();
             const browserPool = createPool({config, emitter});
             const browser = stubBrowser({browserId: 'bro-id'});
-            Browser.create.withArgs(config, 'bro-id', emitter).returns(browser);
+            Browser.create.withArgs(config, 'bro-id', undefined, emitter).returns(browser);
 
             await browserPool.getBrowser('bro-id');
 
-            assert.calledOnceWith(Browser.create, config, 'bro-id', emitter);
+            assert.calledOnceWith(Browser.create, config, 'bro-id', undefined, emitter);
+        });
+
+        it('should create specific version of browser with correct args', async () => {
+            const config = stubConfig();
+            const emitter = new EventEmitter();
+            const browserPool = createPool({config, emitter});
+            const browser = stubBrowser({browserId: 'bro-id'});
+            Browser.create.withArgs(config, 'bro-id', '10.1', emitter).returns(browser);
+
+            await browserPool.getBrowser('bro-id', '10.1');
+
+            assert.calledOnceWith(Browser.create, config, 'bro-id', '10.1', emitter);
         });
 
         it('should create a new browser if there are no free browsers in a cache', () => {
@@ -71,12 +83,22 @@ describe('worker/browser-pool', () => {
             return assert.becomes(browserPool.getBrowser('bro-id'), browser);
         });
 
+        it('should create a new browser with specific version if there are no free browsers in a cache', () => {
+            const config = stubConfig();
+            const browserPool = createPool({config});
+            const browser = stubBrowser({browserId: 'bro-id'});
+
+            Browser.create.withArgs(config, 'bro-id', '10.1').returns(browser);
+
+            return assert.becomes(browserPool.getBrowser('bro-id', '10.1'), browser);
+        });
+
         it('should init a new created browser if there are no free browsers in a cache', () => {
             const browser = stubBrowser({browserId: 'bro-id'});
 
             Browser.create.returns(browser);
 
-            return createPool().getBrowser('bro-id', '100-500')
+            return createPool().getBrowser('bro-id', null, '100-500')
                 .then(() => assert.calledOnceWith(browser.init, '100-500', sinon.match.instanceOf(Calibrator)));
         });
 
@@ -89,8 +111,8 @@ describe('worker/browser-pool', () => {
 
             Browser.create.returns(stubBrowser({id: 'bro-id', publicAPI: {some: 'api'}}));
 
-            return browserPool.getBrowser()
-                .then(() => assert.calledOnceWith(onNewBrowser, {some: 'api'}, {browserId: 'bro-id'}));
+            return browserPool.getBrowser('bro-id', '10.1')
+                .then(() => assert.calledOnceWith(onNewBrowser, {some: 'api'}, {browserId: 'bro-id', browserVersion: '10.1'}));
         });
 
         it('should not create a new browser if there is a free browser in a cache', () => {
@@ -116,11 +138,11 @@ describe('worker/browser-pool', () => {
 
             Browser.create.returns(stubBrowser());
 
-            return browserPool.getBrowser('bro-id', '100-500')
+            return browserPool.getBrowser('bro-id', null, '100-500')
                 .then((browser) => {
                     browserPool.freeBrowser(browser);
 
-                    return browserPool.getBrowser('bro-id', '500-100')
+                    return browserPool.getBrowser('bro-id', null, '500-100')
                         .then((anotherBrowser) => assert.calledOnceWith(anotherBrowser.reinit, '500-100'));
                 });
         });
@@ -177,9 +199,17 @@ describe('worker/browser-pool', () => {
                 it('should extend browser with session id', async () => {
                     const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id'});
 
-                    await createPool().getBrowser('bro-id', '100500').catch((e) => e);
+                    await createPool().getBrowser('bro-id', null, '100500').catch((e) => e);
 
                     assert.equal(browser.sessionId, '100500');
+                });
+
+                it('should extend browser with session id and browser version', async () => {
+                    const browser = stubBrowserWhichRejectsOnInit({id: 'bro-id', version: '10.1'});
+
+                    await createPool().getBrowser('bro-id', '10.1', '100500').catch((e) => e);
+
+                    assert.equal(browser.version, '10.1');
                 });
 
                 it('should free browser', async () => {
@@ -234,7 +264,7 @@ describe('worker/browser-pool', () => {
 
                     await browserPool.getBrowser('bro-id');
                     await browserPool.freeBrowser(browser);
-                    await browserPool.getBrowser('bro-id', '100500').catch((e) => e);
+                    await browserPool.getBrowser('bro-id', null, '100500').catch((e) => e);
 
                     assert.equal(browser.sessionId, '100500');
                 });

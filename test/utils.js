@@ -14,6 +14,7 @@ function browserWithId(id) {
 function makeConfigStub(opts = {}) {
     opts = _.defaults(opts, {
         browsers: ['some-default-browser'],
+        version: '1.0',
         retry: 0,
         sessionsPerBrowser: 1,
         testsPerSession: Infinity,
@@ -40,7 +41,7 @@ function makeConfigStub(opts = {}) {
             shouldRetry: opts.shouldRetry,
             sessionsPerBrowser: opts.sessionsPerBrowser,
             testsPerSession: opts.testsPerSession,
-            desiredCapabilities: {browserName: browserId},
+            desiredCapabilities: {browserName: browserId, version: opts.version},
             testTimeout: opts.testTimeout,
             system: opts.system
         };

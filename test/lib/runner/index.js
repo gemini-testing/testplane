@@ -568,7 +568,7 @@ describe('Runner', () => {
             runner.addTestToRun(test, 'bro2');
 
             assert.calledOnceWith(BrowserRunner.create, 'bro2', config, pool, workers);
-            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}));
+            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({bro2: [test]}, config));
         });
 
         it('should pass test to the browser runner', async () => {

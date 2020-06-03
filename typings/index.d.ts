@@ -632,8 +632,10 @@ declare namespace Hermione {
         sortTests(callback: SortTestsCallback): TestCollection;
         sortTests(browserId: string, callback: SortTestsCallback): TestCollection;
 
-        eachTest(callback: TestsCallback<unknown>): void;
-        eachTest(browserId: string, callback: TestsCallback<unknown>): void;
+        eachTest(callback: TestsCallback<void>): void;
+        eachTest(browserId: string, callback: TestsCallback<void>): void;
+
+        eachTestByVersions(browserId: string, callback: (test: Test, browserId: string, browserVersion: string) => void): void;
 
         disableAll(browserId: string): TestCollection;
         disableTest(fullTitle: string, browserId?: string): TestCollection;
@@ -656,7 +658,7 @@ declare namespace Hermione {
     };
 
     export type AsyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: BrowserInfo) => Promise<void> | void;
-    export type SyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: { browserId: string }) => void;
+    export type SyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: { browserId: string, browserVersion: string}) => void;
     export type TestEventCallback = (test: Test) => void;
 };
 

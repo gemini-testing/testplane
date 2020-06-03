@@ -27,7 +27,7 @@ describe('NewBrowser', () => {
                     host: 'test_host',
                     port: '4444',
                     path: '/wd/hub',
-                    desiredCapabilities: {browserName: 'browser'},
+                    desiredCapabilities: {browserName: 'browser', version: '1.0'},
                     waitforTimeout: 100,
                     logLevel: 'verbose',
                     coloredLogs: true,
@@ -35,6 +35,14 @@ describe('NewBrowser', () => {
                     connectionRetryTimeout: 3000,
                     connectionRetryCount: 0,
                     baseUrl: 'http://base_url'
+                }));
+        });
+
+        it('should create webdriver.io session with passed version in desiredCapabilities', () => {
+            return mkBrowser_({}, 'browser', '2.0')
+                .init()
+                .then(() => assert.calledWithMatch(webdriverio.remote, {
+                    desiredCapabilities: {browserName: 'browser', version: '2.0'}
                 }));
         });
 
