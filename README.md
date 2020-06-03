@@ -95,6 +95,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
   - [Test Collection](#test-collection)
   - [Test Parser API](#test-parser-api)
     - [setController(name, methods)](#setcontrollername-methods)
+    - [events](#events)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1292,6 +1293,7 @@ TestCollection API:
 `TestParserAPI` object is emitted on `BEFORE_FILE_READ` event. It provides the ability to customize test parsing process.
 
 ### setController(name, methods)
+
 Adds controller to `hermione` object in test files.
 * `name` - controller name
 * `methods` - an object with names as keys and callbacks as values describing controller methods. Each callback will be called on corresponding test or suite.
@@ -1314,7 +1316,28 @@ describe('foo', () => {
         // ...
     });
 });
-
 ```
 
 **Note**: controller will be removed as soon as current file will be parsed
+
+### events
+
+Parser events list for subscription.
+
+**Available events which are triggered in the TestParserAPI**
+
+Event             | Description
+----------------- | -------------
+`TEST`            | Will be triggered on test parsing. The handler accepts test instance.
+`SUITE`           | Will be triggered on suite parsing. The handler accepts suite instance.
+`HOOK`            | Will be triggered on hook parsing. The handler accepts hook instance.
+
+Example:
+```js
+// in plugin
+hermione.on(hermione.events.BEFORE_FILE_READ, ({testParser}) => {
+    testParser.on(testParser.events.TEST, (test) => {
+        console.log('my awesome test:', test);
+    });
+});
+```
