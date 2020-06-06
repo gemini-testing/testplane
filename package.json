@@ -3,6 +3,7 @@
   "version": "3.5.1",
   "description": "Tests framework based on mocha and wdio",
   "main": "lib/hermione.js",
+  "types": "./typings/index.d.ts",
   "scripts": {
     "coverage": "nyc --reporter=text npm run test-unit",
     "lint": "eslint .",
@@ -32,8 +33,11 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@gemini-testing/commander": "2.15.2",
+    "@gemini-testing/commander": "2.15.3",
     "@gemini-testing/webdriverio": "4.16.2",
+    "@types/mocha": "^2.2.48",
+    "@types/node": "^8.5.10",
+    "@types/webdriverio": "^4.13.3",
     "bluebird": "^3.5.1",
     "bluebird-q": "^2.1.1",
     "chalk": "^1.1.1",
