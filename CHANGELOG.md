@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.5.0"></a>
+# [3.5.0](https://github.com/gemini-testing/hermione/compare/v3.4.0...v3.5.0) (2020-06-16)
+
+
+### Features
+
+* add subscriptions to parser events for TestParserAPI ([1be789a](https://github.com/gemini-testing/hermione/commit/1be789a))
+
+
+
 <a name="3.4.0"></a>
 # [3.4.0](https://github.com/gemini-testing/hermione/compare/v3.3.1...v3.4.0) (2020-06-01)
 
