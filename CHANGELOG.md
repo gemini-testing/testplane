@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.5.3"></a>
+## [3.5.3](https://github.com/gemini-testing/hermione/compare/v3.5.2...v3.5.3) (2020-06-20)
+
+
+### Bug Fixes
+
+* hermione typings ([8a61ee6](https://github.com/gemini-testing/hermione/commit/8a61ee6))
+
+
+
 <a name="3.5.2"></a>
 ## [3.5.2](https://github.com/gemini-testing/hermione/compare/v3.5.1...v3.5.2) (2020-06-16)
 
