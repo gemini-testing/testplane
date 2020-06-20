@@ -211,7 +211,7 @@ declare namespace Hermione {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     };
 
-    type TestDefinitionCallback = (this: { browser: Browser<void> }, done: TestDone) => any;
+    type TestDefinitionCallback = (this: { browser: WebdriverIO.Client<void> }, done: TestDone) => any;
 
     interface TestDone {
         (error?: any): any;
@@ -320,7 +320,7 @@ declare namespace Hermione {
         saveHistoryOnTestTimeout: boolean;
         screenshotOnReject: boolean;
         screenshotOnRejectTimeout: number | null;
-        prepareBrowser(browser: Browser<void>): void | null;
+        prepareBrowser(browser: WebdriverIO.Client<void>): void | null;
         screenshotPath: string | null;
         screenshotsDir(test: Test): string;
         calibrate: boolean;
@@ -655,8 +655,8 @@ declare namespace Hermione {
         sessionId: string;
     };
 
-    export type AsyncSessionEventCallback = (browser: Browser<void>, browserInfo: BrowserInfo) => Promise<void> | void;
-    export type SyncSessionEventCallback = (browser: Browser<void>, browserInfo: { browserId: string }) => void;
+    export type AsyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: BrowserInfo) => Promise<void> | void;
+    export type SyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: { browserId: string }) => void;
     export type TestEventCallback = (test: Test) => void;
 };
 
