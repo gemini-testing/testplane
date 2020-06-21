@@ -944,6 +944,7 @@ describe('config browser-options', () => {
         'resetCursor',
         'strictTestsOrder',
         'saveHistoryOnTestTimeout',
+        'saveHistoryOnError',
         'waitOrientationChange'
     ].forEach((option) => {
         describe(option, () => {

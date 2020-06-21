@@ -603,7 +603,8 @@ Option name               | Description
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 `screenshotMode`          | Image capture mode.
-`saveHistoryOnTestTimeout`| Save history of all executed commands in the error on test timeout.
+`saveHistoryOnTestTimeout`| Save history of all executed commands in the error on test timeout. `false` by default.
+`saveHistoryOnError`      | Save history of all executed commands in the error on any error. `false` by default.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
