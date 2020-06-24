@@ -33,13 +33,19 @@ describe('runner/browser-runner', () => {
 
     const run_ = (opts = {}) => {
         const runner = opts.runner || mkRunner_();
-        const testCollection = opts.testCollection || TestCollection.create();
+        const config = makeConfigStub();
+        const specs = {'defaultBro': []};
+        const testCollection = opts.testCollection || TestCollection.create(specs, config);
 
         return runner.run(testCollection);
     };
 
-    const stubTestCollection_ = (tests = []) => {
-        TestCollection.prototype.eachTest.callsFake((browserId, cb) => tests.forEach(cb));
+    const stubTestCollection_ = (tests = [], browserVersion = '1.0') => {
+        TestCollection.prototype.eachTestByVersions.callsFake((browserId, cb) => tests.forEach((test) => {
+            test.browserVersion = browserVersion;
+
+            cb(test, browserId, browserVersion);
+        }));
     };
 
     beforeEach(() => {
@@ -47,7 +53,7 @@ describe('runner/browser-runner', () => {
         sandbox.stub(TestRunner.prototype, 'run').resolves();
         sandbox.stub(TestRunner.prototype, 'cancel');
 
-        sandbox.stub(TestCollection.prototype, 'eachTest');
+        sandbox.stub(TestCollection.prototype, 'eachTestByVersions');
 
         sandbox.spy(SuiteMonitor, 'create');
         sandbox.stub(SuiteMonitor.prototype, 'testBegin');
@@ -128,14 +134,14 @@ describe('runner/browser-runner', () => {
 
             await run_({runner});
 
-            assert.calledOnceWith(TestCollection.prototype.eachTest, 'bro');
+            assert.calledOnceWith(TestCollection.prototype.eachTestByVersions, 'bro');
         });
 
         it('should create browser agent for each test in collection', async () => {
             const test1 = Test.create({title: 'foo'});
             const test2 = Test.create({title: 'bar'});
 
-            stubTestCollection_([test1, test2]);
+            stubTestCollection_([test1, test2], '1.0');
 
             const pool = BrowserPool.create(makeConfigStub());
             const runner = mkRunner_({browserId: 'bro', browserPool: pool});
@@ -143,8 +149,8 @@ describe('runner/browser-runner', () => {
             await run_({runner});
 
             assert.calledTwice(BrowserAgent.create);
-            assert.calledWith(BrowserAgent.create, 'bro', pool);
-            assert.calledWith(BrowserAgent.create, 'bro', pool);
+            assert.calledWith(BrowserAgent.create.firstCall, 'bro', '1.0', pool);
+            assert.calledWith(BrowserAgent.create.secondCall, 'bro', '1.0', pool);
         });
 
         it('should create test runner for each test in collection', async () => {

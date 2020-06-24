@@ -7,7 +7,7 @@ const ExistingBrowser = require('lib/browser/existing-browser');
 
 function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
-        desiredCapabilities: {browserName: 'browser'},
+        desiredCapabilities: {browserName: 'browser', version: '1.0'},
         baseUrl: 'http://base_url',
         gridUrl: 'http://test_host:4444/wd/hub',
         waitTimeout: 100,
@@ -36,12 +36,12 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkNewBrowser_ = (opts, browser = 'browser') => {
-    return NewBrowser.create(createBrowserConfig_(opts), browser);
+exports.mkNewBrowser_ = (opts, browser = 'browser', version) => {
+    return NewBrowser.create(createBrowserConfig_(opts), browser, version);
 };
 
-exports.mkExistingBrowser_ = (opts, browser = 'browser', emitter = 'emitter') => {
-    return ExistingBrowser.create(createBrowserConfig_(opts), 'browser', emitter);
+exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter = 'emitter') => {
+    return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter);
 };
 
 exports.mkSessionStub_ = () => {

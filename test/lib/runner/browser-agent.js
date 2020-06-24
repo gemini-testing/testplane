@@ -34,7 +34,15 @@ describe('runner/browser-agent', () => {
 
             browserAgent.getBrowser({foo: 'bar'});
 
-            assert.calledOnceWith(BaseBrowserAgent.prototype.getBrowser, {foo: 'bar'});
+            assert.calledOnceWith(BaseBrowserAgent.prototype.getBrowser, sinon.match({foo: 'bar'}));
+        });
+
+        it('should call base browser agent "getBrowser" with specified version', () => {
+            const browserAgent = BrowserAgent.create('browser', '2.0');
+
+            browserAgent.getBrowser();
+
+            assert.calledOnceWith(BaseBrowserAgent.prototype.getBrowser, {version: '2.0'});
         });
 
         it('should return base browser agent "getBrowser" result', () => {
