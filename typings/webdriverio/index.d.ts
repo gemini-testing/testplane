@@ -7,6 +7,8 @@ declare namespace WebdriverIO {
 
         setMeta(key: string, value: unknown): Client<T>;
 
+        dataUrl(url?: string): Client<T>;
+
         extendOptions(opts: { [name: string]: unknown }): Client<T>;
 
         /**

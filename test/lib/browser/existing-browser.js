@@ -70,6 +70,35 @@ describe('ExistingBrowser', () => {
             });
         });
 
+        describe('dataUrl command', () => {
+            it('should throw when not data url is passed', () => {
+                mkBrowser_({baseUrl: 'http://some.domain.org/root'});
+
+                assert.throws(() => {
+                    session.dataUrl('/foo/bar?baz=qux');
+                }, '"dataUrl" command expects raw Data URLs (/foo/bar?baz=qux is passed)');
+            });
+
+            it('should call base `url` method without modifications', () => {
+                const baseUrlFn = session.url;
+
+                mkBrowser_({baseUrl: 'http://some.domain.org/root'});
+
+                session.dataUrl('data:,Hello%2C%20World!');
+
+                assert.calledWithExactly(baseUrlFn, 'data:,Hello%2C%20World!');
+                assert.calledOn(baseUrlFn, session);
+            });
+
+            it('should not modify browser meta', () => {
+                const browser = mkBrowser_({baseUrl: 'http://some.domain.org/root'});
+
+                session.dataUrl('data:,Hello%2C%20World!');
+
+                assert.equal(browser.meta.url, undefined);
+            });
+        });
+
         describe('url decorator', () => {
             it('should force rewrite base `url` method', () => {
                 mkBrowser_();
