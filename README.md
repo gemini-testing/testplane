@@ -14,6 +14,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [Retries failed tests](#retries-failed-tests)
     - [Executes separate tests](#executes-separate-tests)
     - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
+    - [Override browser configuration for test](#override-browser-configuration-for-test)
     - [Offers flexible test configuration](#offers-flexible-test-configuration)
     - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
     - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
@@ -183,6 +184,36 @@ hermione.only.notIn('ie8');
 
 `hermione.only.notIn` will run tests in all browsers except the specified ones.
 
+### Override browser configuration for test
+`Hermione` allows you to override a browser configuration for each test or a whole suite.
+Each method of `hermione.browser(<browserName>)` provide chaining.
+
+#### `version(<browserVersion>)`
+
+```js
+// change the browser version for all chindren
+hermione.browser('chrome').version('70.3');
+describe('suite', function() {
+    // ...
+});
+```
+
+```js
+// change the browser version for a specific test
+hermione.browser('chrome').version('70.3');
+it('test', function() {...});
+```
+
+```js
+hermione.browser('chrome').version('70.3');
+describe('suite', function() {
+    it('test 1', function() {...});
+
+    // this call will override the version only for test below
+    hermione.browser('chrome').version('70.1');
+    it('test 2', function() {...});
+});
+```
 
 ### Offers flexible test configuration
 `Hermione` lets you configure running some set of tests in specific browsers. For example,

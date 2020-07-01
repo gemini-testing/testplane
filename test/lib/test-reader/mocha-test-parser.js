@@ -8,6 +8,7 @@ const crypto = require('lib/utils/crypto');
 const SkipBuilder = require('lib/test-reader/skip/skip-builder');
 const OnlyBuilder = require('lib/test-reader/skip/only-builder');
 const Skip = require('lib/test-reader/skip/');
+const BrowserConfigurator = require('lib/test-reader/browser');
 const TestSkipper = require('lib/test-reader/test-skipper');
 const RunnerEvents = require('lib/constants/runner-events');
 const ParserEvents = require('lib/test-reader/parser-events');
@@ -23,6 +24,7 @@ describe('test-reader/mocha-test-parser', () => {
     let MochaTestParser;
     let clearRequire;
     let testSkipper;
+    let BrowserConfiguratorStubConstructor;
 
     const mkMochaTestParser_ = (opts = {}) => {
         const browserId = opts.browserId || 'default-bro';
@@ -35,6 +37,9 @@ describe('test-reader/mocha-test-parser', () => {
         sandbox.stub(logger, 'warn');
 
         testSkipper = sinon.createStubInstance(TestSkipper);
+        BrowserConfiguratorStubConstructor = sinon
+            .stub()
+            .returns(new BrowserConfigurator('bro-id', []));
 
         clearRequire = sandbox.stub().named('clear-require');
 
@@ -42,7 +47,8 @@ describe('test-reader/mocha-test-parser', () => {
 
         MochaTestParser = proxyquire('../../../lib/test-reader/mocha-test-parser', {
             'clear-require': clearRequire,
-            'mocha': MochaStub
+            'mocha': MochaStub,
+            './browser': BrowserConfiguratorStubConstructor
         });
 
         MochaTestParser.prepare();
@@ -256,6 +262,52 @@ describe('test-reader/mocha-test-parser', () => {
 
                 assert.called(Skip.prototype.handleEntity);
                 assert.calledWith(Skip.prototype.handleEntity, nestedSuite);
+            });
+        });
+
+        describe('inject browser configurator', () => {
+            let mochaTestParser;
+            const browserId = 'browser-id';
+            const api = {method: () => {}};
+            const config = makeConfigStub({browsers: [browserId]});
+            const configurator = new BrowserConfigurator(browserId, []);
+
+            beforeEach(() => {
+                BrowserConfiguratorStubConstructor.returns(configurator);
+                sandbox.stub(configurator, 'exposeAPI').returns(api);
+                sandbox.stub(configurator, 'handleTest');
+                sandbox.stub(configurator, 'handleSuite');
+
+                mochaTestParser = mkMochaTestParser_({config, browserId});
+                mochaTestParser.loadFiles([]);
+            });
+
+            it('should pass the config and the "browserId" param into the constructor', () => {
+                assert.calledWith(BrowserConfiguratorStubConstructor, browserId, [browserId]);
+            });
+
+            it('should inject API into "hermione.browser"', () => {
+                assert.equal(global.hermione.browser, api);
+            });
+
+            it('should handle "test"', () => {
+                const test = new MochaStub.Test();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                mochaTestParser.parse();
+
+                assert.calledWith(configurator.handleTest, test);
+            });
+
+            it('should handle "suite"', () => {
+                const nestedSuite = MochaStub.Suite.create();
+
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
+
+                mochaTestParser.parse();
+
+                assert.calledWith(configurator.handleSuite, nestedSuite);
             });
         });
     });
