@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.7.0"></a>
+# [3.7.0](https://github.com/gemini-testing/hermione/compare/v3.6.0...v3.7.0) (2020-07-02)
+
+
+### Features
+
+* allow to save command history on any error ([de078a3](https://github.com/gemini-testing/hermione/commit/de078a3))
+
+
+
 <a name="3.6.0"></a>
 # [3.6.0](https://github.com/gemini-testing/hermione/compare/v3.5.3...v3.6.0) (2020-06-24)
 
