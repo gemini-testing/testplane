@@ -32,10 +32,16 @@ describe('ExistingBrowser', () => {
         });
 
         describe('meta-info access commands', () => {
-            it('should set meta-info with process pid by default', () => {
+            it('should extend meta-info with process pid by default', () => {
                 const browser = mkBrowser_();
 
-                assert.deepEqual(browser.meta, {pid: process.pid});
+                assert.propertyVal(browser.meta, 'pid', process.pid);
+            });
+
+            it('should extend meta-info with browserVersion by default', () => {
+                const browser = mkBrowser_({}, 'bro-id', '10.1');
+
+                assert.propertyVal(browser.meta, 'browserVersion', '10.1');
             });
 
             it('should add meta-info access commands', () => {
