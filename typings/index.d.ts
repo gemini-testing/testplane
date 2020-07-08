@@ -280,6 +280,7 @@ declare namespace Hermione {
         ctx: { [name: string]: unknown };
         skip: SkipBuilder;
         only: OnlyBuilder;
+        browser: (browserName: string) => BrowserConfigurator
         config: ConfigController;
     };
 
@@ -291,6 +292,10 @@ declare namespace Hermione {
     export interface OnlyBuilder {
         in(browserMatcher: string | RegExp | Array<string | RegExp>): OnlyBuilder;
         notIn(browserMatcher: string | RegExp | Array<string | RegExp>): OnlyBuilder;
+    };
+
+    export interface BrowserConfigurator {
+        version(browserVersion: string): BrowserConfigurator;
     };
 
     export interface SkipOpts {
@@ -650,6 +655,7 @@ declare namespace Hermione {
 
     export interface BrowserMeta {
         pid: number;
+        browserVersion: string,
         [name: string]: unknown;
     };
 
