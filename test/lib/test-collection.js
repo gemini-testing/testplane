@@ -1,7 +1,6 @@
 'use strict';
 
 const TestCollection = require('lib/test-collection');
-const {makeConfigStub} = require('../utils');
 
 describe('test-collection', () => {
     describe('getBrowsers', () => {
@@ -184,118 +183,31 @@ describe('test-collection', () => {
     });
 
     describe('eachTestByVersions', () => {
-        describe('should iterate by columns over tests', () => {
-            it('according to browser version from config', () => {
-                const test1 = {title: 'test1'};
-                const test2 = {title: 'test2'};
-                const test3 = {title: 'test3'};
-                const test4 = {title: 'test4'};
+        it('should iterate by columns over tests', () => {
+            const test1 = {title: 'test1'};
+            const test2 = {title: 'test2', browserVersion: '1.0'};
+            const test3 = {title: 'test3', browserVersion: '1.0'};
+            const test4 = {title: 'test4', browserVersion: '2.0'};
 
-                const config = makeConfigStub({browsers: ['bro2'], version: '1.0'});
-                const collection = TestCollection.create({
-                    'bro1': [test1],
-                    'bro2': [test2, test3, test4]
-                }, config);
-
-                const tests = [];
-                collection.eachTestByVersions(
-                    'bro2',
-                    (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
-                );
-
-                assert.deepEqual(
-                    tests,
-                    [
-                        {test: test2, browserId: 'bro2', browserVersion: '1.0'},
-                        {test: test3, browserId: 'bro2', browserVersion: '1.0'},
-                        {test: test4, browserId: 'bro2', browserVersion: '1.0'}
-                    ]
-                );
+            const collection = TestCollection.create({
+                'bro': [test1, test2, test3, test4]
             });
 
-            it('according only to browser version from test', () => {
-                const test1 = {title: 'test1', browserVersion: '1.0'};
-                const test2 = {title: 'test2', browserVersion: '1.0'};
-                const test3 = {title: 'test3', browserVersion: '2.0'};
-                const test4 = {title: 'test4', browserVersion: '2.0'};
-                const test5 = {title: 'test5', browserVersion: '3.0'};
+            const tests = [];
+            collection.eachTestByVersions(
+                'bro',
+                (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
+            );
 
-                const config = makeConfigStub({browsers: ['bro'], version: '23.2'});
-                const collection = TestCollection.create({
-                    'bro': [test1, test2, test3, test4, test5]
-                }, config);
-
-                const tests = [];
-                collection.eachTestByVersions(
-                    'bro',
-                    (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
-                );
-
-                assert.deepEqual(
-                    tests,
-                    [
-                        {test: test1, browserId: 'bro', browserVersion: '1.0'},
-                        {test: test3, browserId: 'bro', browserVersion: '2.0'},
-                        {test: test5, browserId: 'bro', browserVersion: '3.0'},
-                        {test: test2, browserId: 'bro', browserVersion: '1.0'},
-                        {test: test4, browserId: 'bro', browserVersion: '2.0'}
-                    ]
-                );
-            });
-
-            it('according to browser version from both test and config', () => {
-                const test1 = {title: 'test1'};
-                const test2 = {title: 'test2'};
-                const test3 = {title: 'test3', browserVersion: '2.0'};
-                const test4 = {title: 'test4', browserVersion: '2.0'};
-
-                const config = makeConfigStub({browsers: ['bro'], version: '1.0'});
-                const collection = TestCollection.create({
-                    'bro': [test1, test2, test3, test4]
-                }, config);
-
-                const tests = [];
-                collection.eachTestByVersions(
-                    'bro',
-                    (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
-                );
-
-                assert.deepEqual(
-                    tests,
-                    [
-                        {test: test1, browserId: 'bro', browserVersion: '1.0'},
-                        {test: test3, browserId: 'bro', browserVersion: '2.0'},
-                        {test: test2, browserId: 'bro', browserVersion: '1.0'},
-                        {test: test4, browserId: 'bro', browserVersion: '2.0'}
-                    ]
-                );
-            });
-
-            it('if it\'s impossible to determine browser version', () => {
-                const test1 = {title: 'test1'};
-                const test2 = {title: 'test2'};
-                const test3 = {title: 'test3'};
-
-                const config = makeConfigStub({});
-                const collection = TestCollection.create({
-                    'bro': [test1, test2, test3]
-                }, config);
-
-                const tests = [];
-                collection.eachTestByVersions(
-                    'bro',
-                    (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
-                );
-
-                assert.deepEqual(
-                    tests,
-                    [
-                        {test: test1, browserId: 'bro', browserVersion: undefined},
-                        {test: test2, browserId: 'bro', browserVersion: undefined},
-                        {test: test3, browserId: 'bro', browserVersion: undefined}
-                    ]
-                );
-            });
+            assert.deepEqual(
+                tests,
+                [
+                    {test: test1, browserId: 'bro', browserVersion: undefined},
+                    {test: test2, browserId: 'bro', browserVersion: '1.0'},
+                    {test: test4, browserId: 'bro', browserVersion: '2.0'},
+                    {test: test3, browserId: 'bro', browserVersion: '1.0'}
+                ]
+            );
         });
     });
 
