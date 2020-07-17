@@ -523,6 +523,40 @@ describe('test-reader/mocha-test-parser', () => {
 
             assert.equal(test.browserId, 'bro');
         });
+
+        it('shold set browserVersion property from config', () => {
+            const config = makeConfigStub({browsers: ['bro'], version: '2.0'});
+            const test = new MochaStub.Test();
+
+            mkMochaTestParser_({browserId: 'bro', config});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            assert.equal(test.browserVersion, '2.0');
+        });
+
+        it('shold not override browserVersion property if it exists', () => {
+            const config = makeConfigStub({browsers: ['bro'], version: '2.0'});
+            const test = new MochaStub.Test();
+
+            test.browserVersion = '2.1';
+
+            mkMochaTestParser_({browserId: 'bro', config});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            assert.equal(test.browserVersion, '2.1');
+        });
+
+        it('shold not set browser version if it does not exists in config or test', () => {
+            const config = makeConfigStub({browsers: ['bro']});
+            const test = new MochaStub.Test();
+
+            delete config.browsers.bro.desiredCapabilities.version;
+
+            mkMochaTestParser_({browserId: 'bro', config});
+            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+            assert.equal(test.browserVersion, undefined);
+        });
     });
 
     describe('extend hook API', () => {
