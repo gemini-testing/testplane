@@ -66,6 +66,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
       - [compositeImage](#compositeimage)
       - [screenshotMode](#screenshotMode)
       - [saveHistoryOnTestTimeout](#saveHistoryOnTestTimeout)
+      - [saveHistoryOnError](#saveHistoryOnError)
   - [system](#system)
       - [debug](#debug)
       - [mochaOpts](#mochaopts)
@@ -634,8 +635,8 @@ Option name               | Description
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 `screenshotMode`          | Image capture mode.
-`saveHistoryOnTestTimeout`| Save history of all executed commands in the error on test timeout. `false` by default.
-`saveHistoryOnError`      | Save history of all executed commands in the error on any error. `false` by default.
+`saveHistoryOnTestTimeout`| Save history of all executed commands in the error object on test timeout. `false` by default.
+`saveHistoryOnError`      | Save history of all executed commands in the error object on any error. `false` by default.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -789,6 +790,14 @@ Image capture mode. There are 3 allowed values for this option:
   * `auto` (default). Mode will be obtained automatically;
   * `fullpage`. Hermione will deal with screenshot of full page;
   * `viewport`. Only viewport area will be used.
+
+#### saveHistoryOnTestTimeout
+
+Allows to save history of all executed commands in the error object on test timeout. `false` by default.
+
+#### saveHistoryOnError
+
+Allows to save history of all executed commands in the error object on any error. `false` by default.
 
 ## system
 
