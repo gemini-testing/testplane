@@ -5,6 +5,7 @@ const Promise = require('bluebird');
 const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
 const {Suite, Test, Runnable} = require('../../../_mocha');
+const historyUtils = require('lib/utils/history-utils');
 
 describe('worker/runner/test-runner/execution-thread', () => {
     const sandbox = sinon.sandbox.create();
@@ -174,6 +175,31 @@ describe('worker/runner/test-runner/execution-thread', () => {
                     } catch (e) {
                         assert.isUndefined(e.history);
                         assert.calledWith(console.error, 'Failed to get command history: some-error-message');
+                    }
+                });
+
+                it('should normalize arguments in history', async () => {
+                    const foo = {bar: {}};
+                    foo.bar.parent = foo;
+                    const strFoo = '{"foo":{"bar":{"parent":"[Circular ~.foo]"}}}';
+
+                    sandbox.stub(historyUtils, 'normalizeArg')
+                        .withArgs(foo).returns(strFoo)
+                        .withArgs('baz').returns('baz');
+
+                    const test = mkTest_();
+                    const runnable = makeRunnable();
+
+                    const browser = mkBrowser_({[option]: true});
+                    browser.publicAPI.getCommandHistory.resolves([{args: [foo, 'baz']}]);
+
+                    const executionThread = mkExecutionThread_({test, browser});
+
+                    try {
+                        await executionThread.run(runnable);
+                    } catch (e) {
+                        assert.calledWith(historyUtils.normalizeArg, foo);
+                        assert.calledWith(historyUtils.normalizeArg, 'baz');
                     }
                 });
             });
