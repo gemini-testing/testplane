@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.8.2"></a>
+## [3.8.2](https://github.com/gemini-testing/hermione/compare/v3.8.1...v3.8.2) (2020-08-07)
+
+
+### Bug Fixes
+
+* stringify safely object arguments in command history ([eb87464](https://github.com/gemini-testing/hermione/commit/eb87464))
+
+
+
 <a name="3.8.1"></a>
 ## [3.8.1](https://github.com/gemini-testing/hermione/compare/v3.8.0...v3.8.1) (2020-07-17)
 
