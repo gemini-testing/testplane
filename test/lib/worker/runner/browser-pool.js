@@ -120,12 +120,30 @@ describe('worker/browser-pool', () => {
 
             Browser.create.returns(stubBrowser());
 
-            return browserPool.getBrowser('bro-id', '100-500')
+            return browserPool.getBrowser('bro-id', null, '100-500')
                 .then((browser) => {
                     browserPool.freeBrowser(browser);
                     Browser.create.resetHistory();
 
-                    return browserPool.getBrowser('bro-id', '500-100')
+                    return browserPool.getBrowser('bro-id', null, '500-100')
+                        .then((anotherBrowser) => {
+                            assert.deepEqual(browser, anotherBrowser);
+                            assert.notCalled(Browser.create);
+                        });
+                });
+        });
+
+        it('should not create a new browser if there is a free browser in a cache with same version', () => {
+            const browserPool = createPool();
+
+            Browser.create.returns(stubBrowser({version: '1.1'}));
+
+            return browserPool.getBrowser('bro-id', '1.1', '100-500')
+                .then((browser) => {
+                    browserPool.freeBrowser(browser);
+                    Browser.create.resetHistory();
+
+                    return browserPool.getBrowser('bro-id', '1.1', '500-100')
                         .then((anotherBrowser) => {
                             assert.deepEqual(browser, anotherBrowser);
                             assert.notCalled(Browser.create);
