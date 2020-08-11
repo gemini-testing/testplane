@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.8.3"></a>
+## [3.8.3](https://github.com/gemini-testing/hermione/compare/v3.8.2...v3.8.3) (2020-08-11)
+
+
+### Bug Fixes
+
+* find browser in cache according to a browser version ([12df805](https://github.com/gemini-testing/hermione/commit/12df805))
+
+
+
 <a name="3.8.2"></a>
 ## [3.8.2](https://github.com/gemini-testing/hermione/compare/v3.8.1...v3.8.2) (2020-08-07)
 
