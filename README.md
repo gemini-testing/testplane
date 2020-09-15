@@ -1,5 +1,5 @@
-Hermione
-========
+# Hermione
+
 Hermione is a utility for integration testing of web pages using [WebdriverIO v4](http://v4.webdriver.io/api.html) and [Mocha](https://mochajs.org).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -7,17 +7,18 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
 
 
 - [Why you should choose hermione](#why-you-should-choose-hermione)
-    - [Easy to use](#easy-to-use)
-    - [Runs tests in parallel](#runs-tests-in-parallel)
-    - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
-    - [Extensible](#extensible)
-    - [Retries failed tests](#retries-failed-tests)
-    - [Executes separate tests](#executes-separate-tests)
-    - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
-    - [Override browser configuration for test](#override-browser-configuration-for-test)
-    - [Offers flexible test configuration](#offers-flexible-test-configuration)
-    - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
-    - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
+  - [Easy to use](#easy-to-use)
+  - [Runs tests in parallel](#runs-tests-in-parallel)
+  - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
+  - [Extensible](#extensible)
+  - [Retries failed tests](#retries-failed-tests)
+  - [Executes separate tests](#executes-separate-tests)
+  - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
+  - [Override browser configuration for test](#override-browser-configuration-for-test)
+    - [`version(<browserVersion>)`](#versionbrowserversion)
+  - [Offers flexible test configuration](#offers-flexible-test-configuration)
+  - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
+  - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
 - [Prerequisites](#prerequisites)
 - [Tests API](#tests-api)
   - [Hooks](#hooks)
@@ -33,55 +34,56 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
-      - [desiredCapabilities](#desiredcapabilities)
-      - [gridUrl](#gridurl)
-      - [baseUrl](#baseurl)
-      - [httpTimeout](#httptimeout)
-      - [pageLoadTimeout](#pageloadtimeout)
-      - [sessionRequestTimeout](#sessionrequesttimeout)
-      - [sessionQuitTimeout](#sessionquittimeout)
-      - [testTimeout](#testtimeout-1)
-      - [waitTimeout](#waittimeout)
-      - [sessionsPerBrowser](#sessionsperbrowser)
-      - [screenshotOnReject](#screenshotonreject)
-      - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
-      - [testsPerSession](#testspersession)
-      - [retry](#retry)
-      - [shouldRetry](#shouldretry)
-      - [calibrate](#calibrate)
-      - [meta](#meta)
-      - [windowSize](#windowsize)
-      - [screenshotDelay](#screenshotdelay)
-      - [orientation](#orientation)
-      - [waitOrientationChange](#waitOrientationChange)
-      - [resetCursor](#resetcursor)
-      - [tolerance](#tolerance)
-      - [antialiasingTolerance](#antialiasingtolerance)
-      - [compareOpts](#compareopts)
-      - [buildDiffOpts](#builddiffopts)
-      - [assertViewOpts](#assertViewOpts)
-      - [screenshotsDir](#screenshotsdir)
-      - [w3cCompatible](#w3ccompatible)
-      - [strictTestsOrder](#stricttestsorder)
-      - [compositeImage](#compositeimage)
-      - [screenshotMode](#screenshotMode)
-      - [saveHistoryOnTestTimeout](#saveHistoryOnTestTimeout)
-      - [saveHistoryOnError](#saveHistoryOnError)
+    - [desiredCapabilities](#desiredcapabilities)
+    - [gridUrl](#gridurl)
+    - [baseUrl](#baseurl)
+    - [httpTimeout](#httptimeout)
+    - [pageLoadTimeout](#pageloadtimeout)
+    - [sessionRequestTimeout](#sessionrequesttimeout)
+    - [sessionQuitTimeout](#sessionquittimeout)
+    - [testTimeout](#testtimeout-1)
+    - [waitTimeout](#waittimeout)
+    - [sessionsPerBrowser](#sessionsperbrowser)
+    - [screenshotOnReject](#screenshotonreject)
+    - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
+    - [testsPerSession](#testspersession)
+    - [retry](#retry)
+    - [shouldRetry](#shouldretry)
+    - [calibrate](#calibrate)
+    - [meta](#meta)
+    - [windowSize](#windowsize)
+    - [screenshotDelay](#screenshotdelay)
+    - [orientation](#orientation)
+    - [waitOrientationChange](#waitorientationchange)
+    - [resetCursor](#resetcursor)
+    - [tolerance](#tolerance)
+    - [antialiasingTolerance](#antialiasingtolerance)
+    - [compareOpts](#compareopts)
+    - [buildDiffOpts](#builddiffopts)
+    - [assertViewOpts](#assertviewopts)
+    - [screenshotsDir](#screenshotsdir)
+    - [w3cCompatible](#w3ccompatible)
+    - [strictTestsOrder](#stricttestsorder)
+    - [compositeImage](#compositeimage)
+    - [screenshotMode](#screenshotmode)
+    - [saveHistoryOnTestTimeout](#savehistoryontesttimeout)
+    - [saveHistoryOnError](#savehistoryonerror)
   - [system](#system)
-      - [debug](#debug)
-      - [mochaOpts](#mochaopts)
-      - [ctx](#ctx)
-      - [patternsOnReject](#patternsonreject)
-      - [workers](#workers)
-      - [testsPerWorker](#testsperworker)
-      - [parallelLimit](#parallellimit)
-      - [fileExtensions](#fileExtensions)
+    - [debug](#debug)
+    - [mochaOpts](#mochaopts)
+    - [ctx](#ctx)
+    - [patternsOnReject](#patternsonreject)
+    - [workers](#workers)
+    - [testsPerWorker](#testsperworker)
+    - [parallelLimit](#parallellimit)
+    - [fileExtensions](#fileextensions)
   - [plugins](#plugins)
-      - [Parallel execution plugin code](#parallel-execution-plugin-code)
+    - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
   - [Reporters](#reporters)
+  - [Require modules](#require-modules)
   - [Overriding settings](#overriding-settings)
   - [Environment variables](#environment-variables)
     - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
@@ -101,7 +103,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-# Why you should choose hermione
+## Why you should choose hermione
 `Hermione` provides several features that `WebdriverIO` doesn't, and makes the testing process easier.
 
 ### Easy to use
@@ -141,7 +143,7 @@ hermione --grep login
 
 or simply use the `mocha` `only()` API in the test
 
-```
+```js
 describe.only('user login', function() {...});
 ```
 
@@ -239,7 +241,7 @@ All work with the grid client is encapsulated in hermione. Forget about `client.
 ### Fairly waits for screen rotate
 Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but `Hermione` solves this problem.
 
-# Prerequisites
+## Prerequisites
 Because `hermione` is based on `WebdriverIO`, you need to set up [Selenium](http://www.seleniumhq.org/) before proceeding further.
 
 The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). After installing it (globally), you can install drivers by command
@@ -256,13 +258,13 @@ selenium-standalone start
 
 :warning: If you will get error like `No Java runtime present, requesting install.` you should install [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) for your OS.
 
-# Tests API
+## Tests API
 
-## Hooks
+### Hooks
 
 `before` and `after` hooks **are forbidden** in `hermione`, you should use `beforeEach` and `afterEach` hooks instead. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
 
-## Skip
+### Skip
 This feature allows you to ignore the specified suite or test in any browser, with an additional comment.
 You can do this by using the global `hermione.skip` helper. It supports the following methods:
 
@@ -330,7 +332,7 @@ it('test1', function() {
 
 If you need to skip a test in all browsers without a comment, you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
 
-## Only
+### Only
 This feature allows you to ignore the specified suite or test in any browser silently (without any messages in reports).
 You can do this by using the global `hermione.only` helper. It supports two methods:
 
@@ -359,10 +361,10 @@ it('should work another way', function() {
 ```
 The test will be processed in all browsers and **silently** skipped in `ie9`.
 
-## Config overriding
+### Config overriding
 You can override some config settings for specific test, suite or hook via `hermione.config.*` notation.
 
-### testTimeout
+#### testTimeout
 Overrides [testTimeout](#testtimeout-1) config setting. Can be set for tests and suites.
 
 ```js
@@ -372,10 +374,10 @@ it('some test', function() {
 });
 ```
 
-## WebdriverIO extensions
+### WebdriverIO extensions
 `Hermione` adds some useful methods and properties to the `webdriverio` session after its initialization.
 
-### Sharable meta info
+#### Sharable meta info
 Implemented via two commands:
 * setMeta(key, value)
 * getMeta([key])
@@ -399,7 +401,7 @@ it('test1', function() {
 });
 ```
 
-### Execution context
+#### Execution context
 The execution context can be accessed by the `browser.executionContext` property, which contains the current test/hook mocha object extended with the browser id.
 
 Example:
@@ -431,7 +433,7 @@ test: {
 }
 ```
 
-## AssertView
+### AssertView
 
 Command that adds ability to take screenshot for test state. Each state should have his own unique name. For example:
 
@@ -482,7 +484,7 @@ it('some test', function() {
 
 For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
 
-# Quick start
+## Quick start
 First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
 
 Install the package.
@@ -530,7 +532,7 @@ Finally, run tests (be sure that you have already run `selenium-standalone start
 node_modules/.bin/hermione
 ```
 
-# .hermione.conf.js
+## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
 There is only one required field – `browsers`.
@@ -546,7 +548,7 @@ module.exports = {
 };
 ```
 
-## sets
+### sets
 You can use sets to bind some set of tests to certain browsers.
 
 Format of the sets section:
@@ -584,7 +586,7 @@ Running tests using sets:
  hermione --set desktop
  ```
 
-## browsers
+### browsers
 **Required.** The list of browsers to use for running tests.
 
 The browser section has the following format
@@ -799,7 +801,7 @@ Allows to save history of all executed commands in the error object on test time
 
 Allows to save history of all executed commands in the error object on any error. `false` by default.
 
-## system
+### system
 
 #### debug
 Turn webdriver debug mode on. Default value is `false`.
@@ -850,7 +852,7 @@ By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. whe
 #### fileExtensions
 Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
 
-## plugins
+### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
 
 A plugin is a module that exports a single function. The function has two arguments:
@@ -1088,7 +1090,7 @@ module.exports = {
 
 ```
 
-## prepareBrowser
+### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
 ```js
 prepareBrowser: function(browser) {
@@ -1098,10 +1100,10 @@ prepareBrowser: function(browser) {
 
 The `browser` argument is a `WebdriverIO` session.
 
-## prepareEnvironment
+### prepareEnvironment
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
 
-# CLI
+## CLI
 
 ```
 hermione --help
@@ -1134,14 +1136,14 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 
 **Note.** All CLI options override config values.
 
-## Reporters
+### Reporters
 You can choose `flat` or `plain` reporter by option `-r, --reporter`. Default is `flat`.
 
 * `flat` – all information about failed and retried tests would be grouped by browsers at the end of the report.
 
 * `plain` – information about fails and retries would be placed after each test.
 
-## Require modules
+### Require modules
 
 Using `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
@@ -1149,7 +1151,7 @@ Using `--require` option you can load external modules, which exists in your loc
 
 Be sure to update [fileExtensions](#fileExtensions) apropriately, if you are planning to import anything other than `.js`.
 
-## Overriding settings
+### Overriding settings
 
 All options can also be overridden via command-line flags or environment variables. Priorities are the following:
 
@@ -1180,9 +1182,9 @@ hermione_base_url=http://example.com hermione path/to/mytest.js
 hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
 ```
 
-## Environment variables
+### Environment variables
 
-### HERMIONE_SKIP_BROWSERS
+#### HERMIONE_SKIP_BROWSERS
 Skip the browsers specified in the config by passing the browser IDs. Multiple browser IDs should be separated by commas
 (spaces after commas are allowed).
 
@@ -1191,7 +1193,7 @@ For example,
 HERMIONE_SKIP_BROWSERS=ie10,ie11 hermione
 ```
 
-## Debug mode
+### Debug mode
 
 In order to understand what is going on in the test step by step, there is a debug mode. You can run tests in this mode using these options: --inspect and --inspect-brk. The difference between them is that the second one stops before executing the code.
 
@@ -1203,7 +1205,7 @@ hermione path/to/mytest.js --inspect
 **Note**: In the debugging mode, only one worker is started and all tests are performed only in it.
 Use this mode with option `sessionsPerBrowser=1` in order to debug tests one at a time.
 
-# Programmatic API
+## Programmatic API
 
 With the API, you can use Hermione programmatically in your scripts or build tools.
 
@@ -1215,7 +1217,7 @@ const hermione = new Hermione(config);
 
 * **config** (required) `String` – Path to the configuration file that will be read relative to `process.cwd`.
 
-## init
+### init
 
 ```js
 hermione.init().done();
@@ -1223,7 +1225,7 @@ hermione.init().done();
 
 Initializes hermione instance, load all plugins ans so on.
 
-## run
+### run
 
 ```js
 hermione.run(testPaths, options)
@@ -1242,7 +1244,7 @@ hermione.run(testPaths, options)
   * **sets** (optional) `String[]`– Sets to run tests in.
   * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
 
-## addTestToRun
+### addTestToRun
 
 ```js
 hermione.addTestToRun(test, browser);
@@ -1255,7 +1257,7 @@ Adds test to the current run.
 
 Returns `false` if current run is ended or cancelled, `true` otherwise.
 
-## readTests
+### readTests
 
 ```js
 hermione.readTests(testPaths, options).done();
@@ -1269,7 +1271,7 @@ hermione.readTests(testPaths, options).done();
 
 Returns promise which resolves to the instance of `TestCollection` initialized by parsed tests
 
-## isFailed
+### isFailed
 
 ```js
 hermione.isFailed();
@@ -1278,7 +1280,7 @@ hermione.isFailed();
 Returns `true` or `false` depending on whether there has been an error or a test fail while running tests; can be useful in plugins to
 determine current Hermione status.
 
-## isWorker
+### isWorker
 
 ```js
 hermione.isWorker();
@@ -1298,14 +1300,14 @@ module.exports = (hermione) => {
 };
 ```
 
-## halt
+### halt
 ```js
 hermione.halt(error, [timeout=60000ms]);
 ```
 
 Method for abnormal termination of the test run in case of a terminal error. If process fails to gracefully shutdown in `timeout` milliseconds, it would be forcibly terminated (unless `timeout` is explicitly set to `0`).
 
-## Test Collection
+### Test Collection
 
 TestCollection object is returned by `hermione.readTests` method.
 
@@ -1333,11 +1335,11 @@ TestCollection API:
 
 * `eachRootSuite((root, browserId) => ...)` - iterates over all root suites in collection which have some tests.
 
-## Test Parser API
+### Test Parser API
 
 `TestParserAPI` object is emitted on `BEFORE_FILE_READ` event. It provides the ability to customize test parsing process.
 
-### setController(name, methods)
+#### setController(name, methods)
 
 Adds controller to `hermione` object in test files.
 * `name` - controller name
@@ -1365,7 +1367,7 @@ describe('foo', () => {
 
 **Note**: controller will be removed as soon as current file will be parsed
 
-### events
+#### events
 
 Parser events list for subscription.
 
