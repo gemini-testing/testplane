@@ -272,6 +272,7 @@ You can do this by using the global `hermione.skip` helper. It supports the foll
  - `.notIn` – `.in` method with the reverted value.
 
 Each of these methods takes the following arguments:
+
  - browser {String|RegExp|Array<String|RegExp>} – Matcher for browser(s) to skip.
  - [comment] {String} – Comment for skipped test.
  - [options] {Object} – Additional options.
@@ -340,6 +341,7 @@ You can do this by using the global `hermione.only` helper. It supports two meth
 - `.notIn` — The `hermione.skip.in` with the silent flag.
 
 These methods take the following arguments:
+
  - browser {String|RegExp|Array<String|RegExp>} — A matcher for browser(s) to skip.
 
 For example:
@@ -379,6 +381,7 @@ it('some test', function() {
 
 #### Sharable meta info
 Implemented via two commands:
+
 * setMeta(key, value)
 * getMeta([key])
 
@@ -448,6 +451,7 @@ it('some test', function() {
 ```
 
 Parameters:
+
  - state (required) `String` – state name; should be unique within one test
  - selector (required) `String|String[]` – DOM-node selector that you need to capture
  - opts (optional) `Object`:
@@ -856,6 +860,7 @@ Ability to set file extensions, which hermione will search on the file system. D
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
 
 A plugin is a module that exports a single function. The function has two arguments:
+
 * The hermione instance
 * Plugin options from the configuration file
 
@@ -1146,6 +1151,7 @@ You can choose `flat` or `plain` reporter by option `-r, --reporter`. Default is
 ### Require modules
 
 Using `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
+
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
 
@@ -1342,6 +1348,7 @@ TestCollection API:
 #### setController(name, methods)
 
 Adds controller to `hermione` object in test files.
+
 * `name` - controller name
 * `methods` - an object with names as keys and callbacks as values describing controller methods. Each callback will be called on corresponding test or suite.
 
