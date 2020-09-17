@@ -777,7 +777,11 @@ Default options used when calling [assertView](https://github.com/gemini-testing
 
 #### screenshotsDir
 
-Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called.
+Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called:
+
+```javascript
+    screenshotsDir: (test) => `tests/screenshots/${test.parent.title}`
+```
 
 #### w3cCompatible
 Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
