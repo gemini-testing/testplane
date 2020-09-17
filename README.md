@@ -702,6 +702,7 @@ How many times a test should be retried if it fails. Global value for all browse
 #### shouldRetry
 Function that determines whether to make a retry. Must return boolean value. By default returns `true` if retry attempts are available otherwise returns `false`.
 Argument of this function is object with fields:
+
   * `retriesLeft {Number}` — number of available retries
   * `ctx` — in case of test `TEST_FAIL` it would be bound data, in case of `ERROR` it would be link to `Runnable`
   * `[error]` — error type (available only in case of ERROR)
@@ -797,6 +798,7 @@ Allows testing of regions which bottom bounds are outside of a viewport height (
 #### screenshotMode
 
 Image capture mode. There are 3 allowed values for this option:
+
   * `auto` (default). Mode will be obtained automatically;
   * `fullpage`. Hermione will deal with screenshot of full page;
   * `viewport`. Only viewport area will be used.
