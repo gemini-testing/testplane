@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.8.6"></a>
+## [3.8.6](https://github.com/gemini-testing/hermione/compare/v3.8.5...v3.8.6) (2020-09-18)
+
+
+### Bug Fixes
+
+* even more proper lists ([4a078e8](https://github.com/gemini-testing/hermione/commit/4a078e8))
+* more proper lists ([afca4f4](https://github.com/gemini-testing/hermione/commit/afca4f4))
+* proper headers in readme ([ac49782](https://github.com/gemini-testing/hermione/commit/ac49782))
+
+
+
 <a name="3.8.5"></a>
 ## [3.8.5](https://github.com/gemini-testing/hermione/compare/v3.8.4...v3.8.5) (2020-08-23)
 
