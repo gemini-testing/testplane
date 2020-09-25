@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.8.7"></a>
+## [3.8.7](https://github.com/gemini-testing/hermione/compare/v3.8.6...v3.8.7) (2020-09-25)
+
+
+
 <a name="3.8.6"></a>
 ## [3.8.6](https://github.com/gemini-testing/hermione/compare/v3.8.5...v3.8.6) (2020-09-18)
 
