@@ -11,7 +11,7 @@ describe('VersionCommand', () => {
             command.execute('v1.2');
             command.handleTest(test);
 
-            assert.deepEqual(test, {browserVersion: 'v1.2'});
+            assert.deepEqual(test, {browserVersion: 'v1.2', hasBrowserVersionOverwritten: true});
         });
 
         it('should apply the version once', () => {
@@ -34,7 +34,7 @@ describe('VersionCommand', () => {
             command.execute('v1.3');
             command.handleTest(test);
 
-            assert.deepEqual(test, {browserVersion: 'v1.3'});
+            assert.deepEqual(test, {browserVersion: 'v1.3', hasBrowserVersionOverwritten: true});
         });
     });
 
@@ -49,8 +49,8 @@ describe('VersionCommand', () => {
             command.handleTest(test1);
             command.handleTest(test2);
 
-            assert.deepEqual(test1, {browserVersion: 'v1.2'});
-            assert.deepEqual(test2, {browserVersion: 'v1.2'});
+            assert.deepEqual(test1, {browserVersion: 'v1.2', hasBrowserVersionOverwritten: true});
+            assert.deepEqual(test2, {browserVersion: 'v1.2', hasBrowserVersionOverwritten: true});
         });
 
         it('should apply the version for a nested suite', () => {
@@ -63,7 +63,7 @@ describe('VersionCommand', () => {
             command.handleSuite();
             command.handleTest(test);
 
-            assert.deepEqual(test, {browserVersion: 'v1.2'});
+            assert.deepEqual(test, {browserVersion: 'v1.2', hasBrowserVersionOverwritten: true});
         });
 
         it('should apply the version for a suite after a test version has applied', () => {
@@ -76,7 +76,7 @@ describe('VersionCommand', () => {
             command.handleTest();
             command.handleTest(test);
 
-            assert.deepEqual(test, {browserVersion: 'v1.2'});
+            assert.deepEqual(test, {browserVersion: 'v1.2', hasBrowserVersionOverwritten: true});
         });
     });
 });
