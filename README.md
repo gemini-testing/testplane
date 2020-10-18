@@ -81,6 +81,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
+  - [reportStaleScreenshots](#reportstalescreenshots)
+  - [screenshotsRoot](#screenshotsroot)
 - [CLI](#cli)
   - [Reporters](#reporters)
   - [Require modules](#require-modules)
@@ -1113,6 +1115,12 @@ The `browser` argument is a `WebdriverIO` session.
 
 ### prepareEnvironment
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
+
+### reportStaleScreenshots
+Report screenshots that aren't used by any test. If `--update-refs` CLI otion is passed, the stale screenshots are removed. Ignored if tests are filtered with `--grep` CLI option.
+
+### screenshotsRoot
+Common parent directory of all screenshots. Required for [`reportStaleScreenshots`](#reportstalescreenshots) unless [`screenshotsDir`](#screenshotsdir) is defined on root level as a string.
 
 ## CLI
 
