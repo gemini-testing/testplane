@@ -1205,6 +1205,14 @@ For example,
 HERMIONE_SKIP_BROWSERS=ie10,ie11 hermione
 ```
 
+#### HERMIONE_SETS
+Specify sets to run using the environment variable as an alternative to using the CLI option `--set`.
+
+For example,
+```
+HERMIONE_SETS=desktop,touch hermione
+```
+
 ### Debug mode
 
 In order to understand what is going on in the test step by step, there is a debug mode. You can run tests in this mode using these options: --inspect and --inspect-brk. The difference between them is that the second one stops before executing the code.
