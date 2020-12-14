@@ -44,7 +44,11 @@ describe('test-reader', () => {
         sandbox.spy(TestSkipper, 'create');
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        sandbox.restore();
+
+        delete process.env.HERMIONE_SETS;
+    });
 
     describe('read', async () => {
         it('should create set-builder with sets from config and default directory', async () => {
@@ -68,10 +72,26 @@ describe('test-reader', () => {
             assert.calledOnceWith(SetsBuilder.prototype.useFiles, ['some/path']);
         });
 
-        it('should use pased sets', async () => {
+        it('should use passed sets', async () => {
             await readTests_({sets: ['set1']});
 
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1']);
+        });
+
+        it('should use sets from environment variable "HERMIONE_SETS"', async () => {
+            process.env.HERMIONE_SETS = 'set1,set2';
+
+            await readTests_();
+
+            assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1', 'set2']);
+        });
+
+        it('should concat passed sets with sets from environment variable "HERMIONE_SETS"', async () => {
+            process.env.HERMIONE_SETS = 'set2';
+
+            await readTests_({sets: ['set1']});
+
+            assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1', 'set2']);
         });
 
         it('should use pased browsers', async () => {
