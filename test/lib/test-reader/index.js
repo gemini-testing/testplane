@@ -81,7 +81,7 @@ describe('test-reader', () => {
         it('should use sets from environment variable "HERMIONE_SETS"', async () => {
             process.env.HERMIONE_SETS = 'set1,set2';
 
-            await readTests_();
+            await readTests_({sets: null});
 
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1', 'set2']);
         });
