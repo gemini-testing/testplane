@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.10.0"></a>
+# [3.10.0](https://github.com/gemini-testing/hermione/compare/v3.9.1...v3.10.0) (2020-12-14)
+
+
+### Features
+
+* add 'HERMIONE_SETS' environment variable ([eeca127](https://github.com/gemini-testing/hermione/commit/eeca127))
+
+
+
 <a name="3.9.1"></a>
 ## [3.9.1](https://github.com/gemini-testing/hermione/compare/v3.9.0...v3.9.1) (2020-11-13)
 
