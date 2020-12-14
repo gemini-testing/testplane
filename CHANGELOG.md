@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.10.1"></a>
+## [3.10.1](https://github.com/gemini-testing/hermione/compare/v3.10.0...v3.10.1) (2020-12-14)
+
+
+### Bug Fixes
+
+* handle cases when sets from 'CLI' were not been passed ([1054f67](https://github.com/gemini-testing/hermione/commit/1054f67))
+
+
+
 <a name="3.10.0"></a>
 # [3.10.0](https://github.com/gemini-testing/hermione/compare/v3.9.1...v3.10.0) (2020-12-14)
 
