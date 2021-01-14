@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.10.2"></a>
+## [3.10.2](https://github.com/gemini-testing/hermione/compare/v3.10.1...v3.10.2) (2021-01-14)
+
+
+
 <a name="3.10.1"></a>
 ## [3.10.1](https://github.com/gemini-testing/hermione/compare/v3.10.0...v3.10.1) (2020-12-14)
 
