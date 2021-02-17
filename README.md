@@ -38,6 +38,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [gridUrl](#gridurl)
     - [baseUrl](#baseurl)
     - [httpTimeout](#httptimeout)
+    - [urlHttpTimeout](#urlhttptimeout)
     - [pageLoadTimeout](#pageloadtimeout)
     - [sessionRequestTimeout](#sessionrequesttimeout)
     - [sessionQuitTimeout](#sessionquittimeout)
@@ -613,6 +614,7 @@ Option name               | Description
 `baseUrl`                 | Base service-under-test URL. Default value is `http://localhost`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `httpTimeout`             | Timeout for any requests to Selenium server. Default value is `90000` ms.
+`urlHttpTimeout`          | Timeout for `/url` request to Selenium server. Default value is `httpTimeout`.
 `pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `300000` ms.
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
 `sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
@@ -665,6 +667,10 @@ Base service-under-test URL. Default value is `http://localhost`.
 
 #### httpTimeout
 Timeout for any requests to Selenium server. Default value is `90000` ms.
+
+#### urlHttpTimeout
+Timeout for `/url` request to Selenium server. Default value is `httpTimeout`.
+It may be useful when opening url takes a long time (for example a lot of logic is executed in middlewares), and you don't want to increase timeout for other commands.
 
 #### pageLoadTimeout
 Timeout for the page loading to complete. Default value is `300000` ms.

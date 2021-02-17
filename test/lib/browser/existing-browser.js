@@ -142,6 +142,56 @@ describe('ExistingBrowser', () => {
 
                 assert.notProperty(browser.meta, 'url');
             });
+
+            describe('"urlHttpTimeout" is set', () => {
+                let browser;
+                let baseUrlFn;
+
+                beforeEach(() => {
+                    baseUrlFn = session.url;
+
+                    browser = mkBrowser_({urlHttpTimeout: 1234});
+                    browser.setHttpTimeout = sinon.stub().named('setHttpTimeout');
+                    browser.restoreHttpTimeout = sinon.stub().named('restoreHttpTimeout');
+                });
+
+                it('should set http timeout for url command before calling it', async () => {
+                    await session.url('/some/url');
+
+                    assert.calledOnceWith(browser.setHttpTimeout, 1234);
+                    assert.callOrder(browser.setHttpTimeout, baseUrlFn);
+                });
+
+                it('should restore http timeout after calling the url command', async () => {
+                    await session.url('/some/url');
+
+                    assert.calledOnce(browser.restoreHttpTimeout);
+                    assert.calledWithExactly(browser.restoreHttpTimeout);
+                    assert.callOrder(baseUrlFn, browser.restoreHttpTimeout);
+                });
+            });
+
+            describe('"urlHttpTimeout" is not set', () => {
+                let browser;
+
+                beforeEach(() => {
+                    browser = mkBrowser_();
+                    browser.setHttpTimeout = sinon.stub().named('setHttpTimeout');
+                    browser.restoreHttpTimeout = sinon.stub().named('restoreHttpTimeout');
+                });
+
+                it('should not set http timeout for url command', async () => {
+                    await session.url();
+
+                    assert.notCalled(browser.setHttpTimeout);
+                });
+
+                it('should not restore http timeout', async () => {
+                    await session.url();
+
+                    assert.notCalled(browser.restoreHttpTimeout);
+                });
+            });
         });
 
         describe('Camera', () => {
