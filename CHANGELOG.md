@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.10.4"></a>
+## [3.10.4](https://github.com/gemini-testing/hermione/compare/v3.10.3...v3.10.4) (2021-02-18)
+
+
+### Bug Fixes
+
+* set timeout for execution screenshot on reject ([dd73f3e](https://github.com/gemini-testing/hermione/commit/dd73f3e))
+
+
+
 <a name="3.10.3"></a>
 ## [3.10.3](https://github.com/gemini-testing/hermione/compare/v3.10.2...v3.10.3) (2021-02-03)
 
