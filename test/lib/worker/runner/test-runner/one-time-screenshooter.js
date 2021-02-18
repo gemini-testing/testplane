@@ -4,6 +4,7 @@ const _ = require('lodash');
 const Promise = require('bluebird');
 const {Image} = require('gemini-core');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
+const logger = require('lib/utils/logger');
 const {mkSessionStub_} = require('../../../browser/utils');
 
 describe('worker/runner/test-runner/one-time-screenshooter', () => {
@@ -36,6 +37,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
     beforeEach(() => {
         sandbox.stub(Image, 'fromBase64').returns(stubImage_());
+        sandbox.stub(logger, 'warn');
     });
 
     afterEach(() => sandbox.restore());
@@ -147,6 +149,16 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             await mkScreenshooter_({browser}).extendWithPageScreenshot(new Error());
 
             assert.calledOnce(browser.restoreHttpTimeout);
+        });
+
+        it('should fail with timeout error on long execution of "screenshot" command', async () => {
+            const config = {screenshotOnRejectTimeout: 10};
+            const browser = mkBrowser_({screenshot: () => Promise.delay(20)});
+            const screenshooter = mkScreenshooter_({config, browser});
+
+            await screenshooter.extendWithPageScreenshot(new Error());
+
+            assert.calledOnceWith(logger.warn, sinon.match(/timed out after 10 ms/));
         });
     });
 });
