@@ -524,14 +524,30 @@ describe('test-reader/mocha-test-parser', () => {
             assert.equal(test.browserId, 'bro');
         });
 
-        it('shold set browserVersion property from config', () => {
-            const config = makeConfigStub({browsers: ['bro'], version: '2.0'});
-            const test = new MochaStub.Test();
+        describe('should set "browserVersion" property from', () => {
+            it('"version" capability', () => {
+                const config = makeConfigStub({
+                    browsers: ['bro'], desiredCapabilities: {version: '2.0'}
+                });
+                const test = new MochaStub.Test();
 
-            mkMochaTestParser_({browserId: 'bro', config});
-            MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+                mkMochaTestParser_({browserId: 'bro', config});
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
 
-            assert.equal(test.browserVersion, '2.0');
+                assert.equal(test.browserVersion, '2.0');
+            });
+
+            it('"browserVersion" capability if it is already exists', () => {
+                const config = makeConfigStub({
+                    browsers: ['bro'], desiredCapabilities: {browserVersion: '3.0'}
+                });
+                const test = new MochaStub.Test();
+
+                mkMochaTestParser_({browserId: 'bro', config});
+                MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
+
+                assert.equal(test.browserVersion, '3.0');
+            });
         });
 
         it('shold not override browserVersion property if it exists', () => {

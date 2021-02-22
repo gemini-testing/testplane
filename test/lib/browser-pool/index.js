@@ -2,10 +2,9 @@
 
 const {BrowserPool: CoreBrowserPool} = require('gemini-core');
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
 const BrowserPool = require('../../../lib/browser-pool');
-const QBrowserPool = require('../../../lib/browser-pool/q-browser-pool');
 const Browser = require('../../../lib/browser/new-browser');
 const Events = require('../../../lib/constants/runner-events');
 const makeConfigStub = require('../../utils').makeConfigStub;
@@ -15,7 +14,6 @@ describe('browser-pool', () => {
 
     beforeEach(() => {
         sandbox.stub(CoreBrowserPool, 'create');
-        sandbox.stub(QBrowserPool, 'create');
         sandbox.stub(Browser, 'create');
     });
 
@@ -31,9 +29,8 @@ describe('browser-pool', () => {
 
         it('should wrap browser pool into "q" promises', () => {
             CoreBrowserPool.create.returns({foo: 'bar'});
-            QBrowserPool.create.withArgs({foo: 'bar'}).returns({baz: 'qux'});
 
-            assert.deepEqual(BrowserPool.create(), {baz: 'qux'});
+            assert.deepEqual(BrowserPool.create(), {foo: 'bar'});
         });
 
         describe('browser manager', () => {
@@ -60,7 +57,7 @@ describe('browser-pool', () => {
                 BrowserPool.create();
 
                 const browser = stubBrowser();
-                browser.init.returns(q({session: 'id'}));
+                browser.init.resolves({session: 'id'});
 
                 assert.becomes(getBrowserManager().start(browser), {session: 'id'});
             });
@@ -89,7 +86,7 @@ describe('browser-pool', () => {
 
                     it('should wait all async listeners', () => {
                         const emitter = new AsyncEmitter();
-                        const onEvent = sandbox.stub().callsFake(() => q.delay(1).then(() => ({foo: 'bar'})));
+                        const onEvent = sandbox.stub().callsFake(() => Promise.delay(1).then(() => ({foo: 'bar'})));
 
                         BrowserPool.create(null, emitter);
 
@@ -105,7 +102,7 @@ describe('browser-pool', () => {
             it('should quit a browser', () => {
                 const browser = stubBrowser();
 
-                browser.quit.returns(q({foo: 'bar'}));
+                browser.quit.resolves({foo: 'bar'});
 
                 BrowserPool.create();
 

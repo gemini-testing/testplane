@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
+const Promise = require('bluebird');
 const EventEmitter = require('events').EventEmitter;
 const Runnable = require('./runnable');
 const Test = require('./test');
@@ -149,7 +149,7 @@ module.exports = class Suite extends EventEmitter {
     }
 
     run(runner) {
-        return q()
+        return Promise.resolve()
             .then(this._execRunnables(this.beforeAllHooks))
             .then(() => this.tests.reduce((acc, test) => {
                 return acc
@@ -170,7 +170,7 @@ module.exports = class Suite extends EventEmitter {
                     .catch((error) => this.emit(EVENTS.FAIL, {error, test}))
                     .then(this._execRunnables(this.afterEachHooks))
                     .finally(() => runner.emit(EVENTS.TEST_END, test));
-            }, q()))
+            }, Promise.resolve()))
             .then(this._execRunnables(this.suites))
             .then(this._execRunnables(this.afterAllHooks));
     }
@@ -180,6 +180,6 @@ module.exports = class Suite extends EventEmitter {
             return acc
                 .then(() => runnable.run())
                 .catch((error) => this.emit(EVENTS.FAIL, {error, runnable}));
-        }, q());
+        }, Promise.resolve());
     }
 };

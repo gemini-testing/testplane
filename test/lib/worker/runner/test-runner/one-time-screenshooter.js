@@ -53,7 +53,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
         it('should extend passed error with page screenshot data', async () => {
             const browser = mkBrowser_({
-                screenshot: () => Promise.resolve({value: 'base64img'})
+                takeScreenshot: () => Promise.resolve('base64img')
             });
             const screenshooter = mkScreenshooter_({browser});
             Image.fromBase64.withArgs('base64img').returns(stubImage_({width: 100, height: 200}));
@@ -65,7 +65,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
         it('should resolve with unmodified error if failed to take screenshot', async () => {
             const browser = mkBrowser_({
-                screenshot: () => Promise.reject(new Error('foo'))
+                takeScreenshot: () => Promise.reject(new Error('foo'))
             });
             const screenshooter = mkScreenshooter_({browser});
 
@@ -83,7 +83,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             const browser = mkBrowser_();
             await mkScreenshooter_({browser}).extendWithPageScreenshot(error);
 
-            assert.notCalled(browser.publicAPI.screenshot);
+            assert.notCalled(browser.publicAPI.takeScreenshot);
         });
 
         it('should not try to take screenshot if already took one', async () => {
@@ -93,12 +93,12 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             await screenshooter.extendWithPageScreenshot(new Error());
             await screenshooter.extendWithPageScreenshot(new Error());
 
-            assert.calledOnce(browser.publicAPI.screenshot);
+            assert.calledOnce(browser.publicAPI.takeScreenshot);
         });
 
         it('should not try to take screenshot if already failed to take one', async () => {
             const browser = mkBrowser_({
-                screenshot: sinon.stub().rejects(new Error('foo'))
+                takeScreenshot: sinon.stub().rejects(new Error('foo'))
             });
             const screenshooter = mkScreenshooter_({browser});
 
@@ -106,7 +106,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             await screenshooter.extendWithPageScreenshot(error);
             await screenshooter.extendWithPageScreenshot(error);
 
-            assert.calledOnce(browser.publicAPI.screenshot);
+            assert.calledOnce(browser.publicAPI.takeScreenshot);
         });
 
         it('should not try to take screenshot if screenshotOnReject is disabled in config', async () => {
@@ -116,7 +116,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
             await screenshooter.extendWithPageScreenshot(new Error());
 
-            assert.notCalled(browser.publicAPI.screenshot);
+            assert.notCalled(browser.publicAPI.takeScreenshot);
         });
 
         it('should set custom http timeout for screenshot', async () => {
@@ -132,7 +132,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
         it('should restore session http timeout after taking screenshot', async () => {
             const afterScreenshot = sinon.stub().named('afterScreenshot').resolves({});
             const browser = mkBrowser_({
-                screenshot: () => Promise.delay(10).then(afterScreenshot)
+                takeScreenshot: () => Promise.delay(10).then(afterScreenshot)
             });
 
             await mkScreenshooter_({browser}).extendWithPageScreenshot(new Error());
@@ -143,7 +143,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
         it('should restore session http timeout even if failed to take screenshot', async () => {
             const browser = mkBrowser_({
-                screenshot: () => Promise.reject(new Error())
+                takeScreenshot: () => Promise.reject(new Error())
             });
 
             await mkScreenshooter_({browser}).extendWithPageScreenshot(new Error());
@@ -153,7 +153,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
 
         it('should fail with timeout error on long execution of "screenshot" command', async () => {
             const config = {screenshotOnRejectTimeout: 10};
-            const browser = mkBrowser_({screenshot: () => Promise.delay(20)});
+            const browser = mkBrowser_({takeScreenshot: () => Promise.delay(20)});
             const screenshooter = mkScreenshooter_({config, browser});
 
             await screenshooter.extendWithPageScreenshot(new Error());

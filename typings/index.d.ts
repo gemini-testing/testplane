@@ -332,7 +332,6 @@ declare namespace Hermione {
         screenshotsDir(test: Test): string;
         calibrate: boolean;
         compositeImage: boolean;
-        w3cCompatible: boolean;
         strictTestsOrder: boolean;
         screenshotMode: 'fullpage' | 'viewport' | 'auto';
         screenshotDelay: number;

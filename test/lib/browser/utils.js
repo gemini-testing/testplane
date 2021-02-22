@@ -1,7 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const q = require('q');
 const NewBrowser = require('lib/browser/new-browser');
 const ExistingBrowser = require('lib/browser/existing-browser');
 
@@ -9,9 +8,12 @@ function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
         desiredCapabilities: {browserName: 'browser', version: '1.0'},
         baseUrl: 'http://base_url',
-        gridUrl: 'http://test_host:4444/wd/hub',
+        gridUrl: 'http://test_host:4444/wd/hub?query=value',
+        automationProtocol: 'webdriver',
+        sessionEnvFlags: {},
+        outputDir: null,
         waitTimeout: 100,
-        screenshotPath: 'path/to/screenshots',
+        waitInterval: 50,
         httpTimeout: 3000,
         pageLoadTimeout: null,
         sessionRequestTimeout: null,
@@ -25,7 +27,16 @@ function createBrowserConfig_(opts = {}) {
         buildDiffOpts: {
             ignoreCaret: true
         },
-        waitOrientationChange: true
+        waitOrientationChange: true,
+        agent: null,
+        headers: null,
+        transformRequest: null,
+        transformResponse: null,
+        strictSSL: null,
+        user: null,
+        key: null,
+        region: null,
+        headless: null
     });
 
     return {
@@ -45,22 +56,29 @@ exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter
 };
 
 exports.mkSessionStub_ = () => {
-    const session = q();
+    const session = {};
+
+    session.options = {};
     session.commandList = [];
-    session.init = sinon.stub().named('init').returns(session);
-    session.end = sinon.stub().named('end').resolves();
-    session.url = sinon.stub().named('url').returns(session);
-    session.execute = sinon.stub().named('execute').resolves({});
-    session.requestHandler = {defaultOptions: {}};
-    session.screenshot = sinon.stub().named('screenshot').resolves({value: {}});
-    session.setOrientation = sinon.stub().named('setOrientation').resolves({value: {}});
-    session.windowHandleSize = sinon.stub().named('windowHandleSize').resolves({value: {}});
-    session.orientation = sinon.stub().named('orientation').resolves({value: ''});
+
+    session.deleteSession = sinon.stub().named('end').resolves();
+    session.url = sinon.stub().named('url').resolves();
+    session.execute = sinon.stub().named('execute').resolves();
+    session.takeScreenshot = sinon.stub().named('takeScreenshot').resolves('');
+    session.setWindowSize = sinon.stub().named('setWindowSize').resolves();
+    session.getOrientation = sinon.stub().named('orientation').resolves('');
+    session.setOrientation = sinon.stub().named('setOrientation').resolves();
     session.waitUntil = sinon.stub().named('waitUntil').resolves();
-    session.timeouts = sinon.stub().named('timeouts').resolves();
+    session.setTimeout = sinon.stub().named('setTimeout').resolves();
+    session.setTimeouts = sinon.stub().named('setTimeouts').resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
+        sinon.spy(session, name);
+    });
+
+    session.overwriteCommand = sinon.stub().callsFake((name, command) => {
+        session[name] = command.bind(session, session[name]);
         sinon.spy(session, name);
     });
 

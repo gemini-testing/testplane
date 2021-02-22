@@ -204,6 +204,164 @@ describe('config browser-options', () => {
         });
     });
 
+    describe('automationProtocol', () => {
+        it('should throw an error if option value is not string', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({automationProtocol: {not: 'string'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"automationProtocol" must be a string/);
+        });
+
+        it('should throw an error if option value is not "webdriver" or "devtools"', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({automationProtocol: 'foo bar'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"automationProtocol" must be "webdriver" or "devtools"/);
+        });
+
+        describe('should not throw an error if option value is', () => {
+            ['webdriver', 'devtools'].forEach((value) => {
+                it(`${value}`, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({automationProtocol: value})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.automationProtocol, defaults.automationProtocol);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                automationProtocol: 'webdriver',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({automationProtocol: 'devtools'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.automationProtocol, 'webdriver');
+            assert.equal(config.browsers.b2.automationProtocol, 'devtools');
+        });
+    });
+
+    describe('sessionEnvFlags', () => {
+        it('should throw an error if option value is not an object', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({sessionEnvFlags: 'string'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"sessionEnvFlags" must be an object/);
+        });
+
+        it('should throw an error if option value is not available', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({sessionEnvFlags: {a: 'b'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /keys of "sessionEnvFlags" must be one of:/);
+        });
+
+        it('should throw an error if value inside available option is not boolean', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({sessionEnvFlags: {isW3C: 'string'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /values of "sessionEnvFlags" must be boolean/);
+        });
+
+        describe('should not throw an error if option key is', () => {
+            ['isW3C', 'isChrome', 'isMobile', 'isIOS', 'isAndroid', 'isSauce', 'isSeleniumStandalone'].forEach((key) => {
+                it(`"${key}" and value is boolean`, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({sessionEnvFlags: {[key]: true}})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.sessionEnvFlags, defaults.sessionEnvFlags);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                sessionEnvFlags: {isW3C: true},
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({sessionEnvFlags: {isW3C: false}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.sessionEnvFlags, {isW3C: true});
+            assert.deepEqual(config.browsers.b2.sessionEnvFlags, {isW3C: false});
+        });
+    });
+
     describe('prepareBrowser', () => {
         it('should throw error if prepareBrowser is not a null or function', () => {
             const readConfig = {
@@ -253,60 +411,6 @@ describe('config browser-options', () => {
 
             assert.equal(config.browsers.b1.prepareBrowser, prepareBrowser);
             assert.equal(config.browsers.b2.prepareBrowser, newFunc);
-        });
-    });
-
-    describe('screenshotPath', () => {
-        beforeEach(() => sandbox.stub(process, 'cwd').returns('/default/path'));
-
-        it('should throw error if screenshotPath is not a null or string', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_({screenshotPath: ['Array']})
-                }
-            };
-
-            Config.read.returns(readConfig);
-
-            assert.throws(() => createConfig(), Error, '"screenshotPath" must be a string');
-        });
-
-        it('should set screenshotPath option to all browsers relative to project dir', () => {
-            const screenshotPath = 'default/path';
-            const readConfig = {
-                screenshotPath,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_()
-                }
-            };
-
-            process.cwd.returns('/project_dir');
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.screenshotPath, '/project_dir/default/path');
-            assert.equal(config.browsers.b2.screenshotPath, '/project_dir/default/path');
-        });
-
-        it('should override screenshotPath option relative to project dir', () => {
-            const screenshotPath = 'default/path';
-            const readConfig = {
-                screenshotPath,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({screenshotPath: './screens'})
-                }
-            };
-
-            process.cwd.returns('/project_dir');
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.screenshotPath, '/project_dir/default/path');
-            assert.equal(config.browsers.b2.screenshotPath, '/project_dir/screens');
         });
     });
 
@@ -1127,6 +1231,151 @@ describe('config browser-options', () => {
 
             assert.equal(config.browsers.b1.orientation, 'landscape');
             assert.equal(config.browsers.b2.orientation, 'portrait');
+        });
+    });
+
+    ['outputDir', 'user', 'key', 'region'].forEach((option) => {
+        describe(option, () => {
+            it('should throw an error if value is not a null or string', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: {some: 'object'}}));
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, `"${option}" must be a string`);
+            });
+
+            it('should set a default value if it is not set in config', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config[option], defaults[option]);
+            });
+
+            it('should override option for browser', () => {
+                const readConfig = {
+                    [option]: 'init-string',
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[option]: 'new-string'})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1[option], 'init-string');
+                assert.equal(config.browsers.b2[option], 'new-string');
+            });
+        });
+    });
+
+    ['agent', 'headers'].forEach((option) => {
+        describe(option, () => {
+            it(`should throw error if "${option}" is not an object`, () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'string'}));
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, `"${option}" must be an object`);
+            });
+
+            it('should set a default value if it is not set in config', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config[option], defaults[option]);
+            });
+
+            it('should set provided value', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: {k1: 'v1', k2: 'v2'}}));
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.deepEqual(config.browsers.b1[option], {k1: 'v1', k2: 'v2'});
+            });
+        });
+    });
+
+    ['transformRequest', 'transformResponse'].forEach((option) => {
+        describe(option, () => {
+            it(`should throw error if ${option} is not a null or function`, () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'string'}));
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, `"${option}" must be a function`);
+            });
+
+            it('should set a default value if it is not set in config', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config[option], defaults[option]);
+            });
+
+            it(`should override ${option} option`, () => {
+                const optionFn = () => { };
+                const newOptionFn = () => { };
+
+                const readConfig = {
+                    [option]: optionFn,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[option]: newOptionFn})
+                    }
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1[option], optionFn);
+                assert.equal(config.browsers.b2[option], newOptionFn);
+            });
+        });
+    });
+
+    ['strictSSL', 'headless'].forEach((option) => {
+        describe(option, () => {
+            it(`should throw error if ${option} is not a null or boolean`, () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'string'}));
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, `"${option}" must be a boolean`);
+            });
+
+            it('should set a default value if it is not set in config', () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config[option], defaults[option]);
+            });
+
+            it(`should override ${option} option`, () => {
+                const readConfig = {
+                    [option]: false,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[option]: true})
+                    }
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.isFalse(config.browsers.b1[option]);
+                assert.isTrue(config.browsers.b2[option]);
+            });
         });
     });
 });
