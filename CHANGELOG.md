@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.11.0"></a>
+# [3.11.0](https://github.com/gemini-testing/hermione/compare/v3.10.4...v3.11.0) (2021-02-25)
+
+
+### Features
+
+* added urlTimeout option to config ([82856d9](https://github.com/gemini-testing/hermione/commit/82856d9))
+
+
+
 <a name="3.10.4"></a>
 ## [3.10.4](https://github.com/gemini-testing/hermione/compare/v3.10.3...v3.10.4) (2021-02-18)
 
