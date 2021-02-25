@@ -317,6 +317,7 @@ declare namespace Hermione {
         retry: number;
         shouldRetry(testInfo: {ctx: Test, retriesLeft: number }): boolean | null;
         httpTimeout: number;
+        urlHttpTimeout: number | null;
         pageLoadTimeout: number | null;
         sessionRequestTimeout: number | null;
         sessionQuitTimeout: number | null;
