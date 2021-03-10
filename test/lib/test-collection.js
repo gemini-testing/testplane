@@ -84,7 +84,9 @@ describe('test-collection', () => {
                 'bro2': [test1, test2, test3]
             });
 
-            collection.sortTests('bro1', (a, b) => a.title < b.title);
+            collection.sortTests('bro1', (a, b) => {
+                return a.title < b.title ? 1 : -1;
+            });
 
             assert.deepEqual(
                 collection.mapTests('bro1', (test, browser) => ({test, browser})),
@@ -114,7 +116,7 @@ describe('test-collection', () => {
                 'bro2': [test1, test2, test3]
             });
 
-            collection.sortTests((a, b) => a.title < b.title);
+            collection.sortTests((a, b) => a.title < b.title ? 1 : -1);
 
             assert.deepEqual(
                 collection.mapTests('bro1', (test, browser) => ({test, browser})),

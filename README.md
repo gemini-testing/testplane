@@ -1,6 +1,6 @@
 # Hermione
 
-Hermione is a utility for integration testing of web pages using [WebdriverIO v4](http://v4.webdriver.io/api.html) and [Mocha](https://mochajs.org).
+Hermione is a utility for integration testing of web pages using [WebdriverIO v7](http://webdriver.io/api.html) and [Mocha](https://mochajs.org).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -63,7 +63,6 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [buildDiffOpts](#builddiffopts)
     - [assertViewOpts](#assertviewopts)
     - [screenshotsDir](#screenshotsdir)
-    - [w3cCompatible](#w3ccompatible)
     - [strictTestsOrder](#stricttestsorder)
     - [compositeImage](#compositeimage)
     - [screenshotMode](#screenshotmode)
@@ -612,7 +611,10 @@ Option name               | Description
 `desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 `gridUrl`                 | Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 `baseUrl`                 | Base service-under-test URL. Default value is `http://localhost`.
+`automationProtocol`      | Browser automation protocol. Default value is `webdriver`.
+`sessionEnvFlags`         | Environment flags that determine which protocol will be used in created browser session. Default value is `{}`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
+`waitInterval`            | Interval for web page event. Default value is `250` ms.
 `httpTimeout`             | Timeout for any requests to Selenium server. Default value is `90000` ms.
 `urlHttpTimeout`          | Timeout for `/url` request to Selenium server. Default value is `httpTimeout`.
 `pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `300000` ms.
@@ -626,7 +628,6 @@ Option name               | Description
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `shouldRetry`             | Function that determines whether to make a retry. By default returns `true `if retry attempts are available otherwise returns `false`.
 `calibrate`               | Allows to correctly capture the image. Default value is `false`.
-`screenshotPath`          | Directory to save screenshots by Webdriverio. Default value is `null`.
 `meta`                    | Additional data that can be obtained via .getMeta() method.
 `windowSize`              | Browser window dimensions. Default value is `null`.
 `screenshotDelay`         | Allows to specify a delay (in milliseconds) before making any screenshot.
@@ -639,12 +640,20 @@ Option name               | Description
 `buildDiffOpts`           | Options for building diff image.
 `assertViewOpts`          | Options for `assertView` command, used by default.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
-`w3cCompatible`           | Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 `screenshotMode`          | Image capture mode.
 `saveHistoryOnTestTimeout`| Save history of all executed commands in the error object on test timeout. `false` by default.
 `saveHistoryOnError`      | Save history of all executed commands in the error object on any error. `false` by default.
+`agent`                   | Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null`.
+`headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got#headers) to pass into every http-request. Default value is `null`.
+`transformRequest`        | Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`.
+`transformResponse`       | Allows to intercept [HTTP response object](https://github.com/sindresorhus/got#response) after a WebDriver response has arrived. Default value is `null`.
+`strictSSL`               | Whether it does require SSL certificate to be valid. Default value is `null` (it means that will be used [default value from wdio](https://webdriver.io/docs/options/#strictssl)).
+`user`                    | Cloud service username. Default value is `null`.
+`key`                     | Cloud service access key or secret key. Default value is `null`.
+`region`                  | Ability to choose different datacenters for run in cloud service. Default value is `null`.
+`headless`                | Ability to run headless browser in cloud service. Default value is `null`.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -653,7 +662,7 @@ Option name               | Description
 'chrome': {
   desiredCapabilities: {
     browserName: 'chrome',
-    version: '75.0',
+    version: '75.0', // or "browserVersion" if browser support w3c
     chromeOptions: {...}
   }
 }
@@ -664,6 +673,30 @@ Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
 #### baseUrl
 Base service-under-test URL. Default value is `http://localhost`.
+
+#### automationProtocol
+Browser automation protocol (`webdriver`, `devtools`) that will be used. Default value is `webdriver`.
+
+#### sessionEnvFlags
+Environment flags that determine which protocol will be used in created browser session. By default environment flags are set automatically according to the used `desiredCapabilities` but in rare cases they are determined inaccurately and using this option they can be overriden explicitly.
+
+Available flags:
+- isW3C - should apply [`WebDriverProtocol`](https://webdriver.io/docs/api/webdriver) or use default [`JsonWProtocol`](https://webdriver.io/docs/api/jsonwp);
+- isChrome - should apply [`ChromiumProtocol`](https://webdriver.io/docs/api/chromium);
+- isMobile - should apply [MJsonWProtocol](https://webdriver.io/docs/api/mjsonwp) and [AppiumProtocol](https://webdriver.io/docs/api/appium);
+- isSauce - should apply [Sauce Labs specific vendor commands](https://webdriver.io/docs/api/saucelabs);
+- isSeleniumStandalone - should apply [special commands when running tests using Selenium Grid or Selenium Standalone server](https://webdriver.io/docs/api/selenium);
+
+For example:
+
+```js
+'chrome': {
+    sessionEnvFlags: {
+        isW3C: true,
+        isChrome: true
+    }
+}
+```
 
 #### httpTimeout
 Timeout for any requests to Selenium server. Default value is `90000` ms.
@@ -688,6 +721,9 @@ Default value is `null`, in this case will be used common timeout for all browse
 
 #### waitTimeout
 Timeout for web page events. Default value is `1000` ms.
+
+#### waitInterval
+Interval for web page events. Default value is `250` ms.
 
 #### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.
@@ -790,9 +826,6 @@ Directory to save reference images for command `assertView`. Default dir is `her
     screenshotsDir: (test) => `tests/screenshots/${test.parent.title}`
 ```
 
-#### w3cCompatible
-Enable [w3c compatible](https://w3c.github.io/webdriver/) browsers support. Default value is `false`
-
 #### strictTestsOrder
 
 `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
@@ -816,6 +849,41 @@ Allows to save history of all executed commands in the error object on test time
 #### saveHistoryOnError
 
 Allows to save history of all executed commands in the error object on any error. `false` by default.
+
+#### agent
+Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null` (it means that will be used default http-agent from got).
+
+####  headers
+Allows to set custom [headers](https://github.com/sindresorhus/got#headers) to pass into every http-request. Default value is `null`.
+
+####  transformRequest
+Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`. If function is passed then it takes `RequestOptions` as the first argument and should return modified `RequestOptions`. Example:
+
+```javascript
+(RequestOptions) => RequestOptions
+```
+
+####  transformResponse
+Allows to intercept [HTTP response object](https://github.com/sindresorhus/got#response) after a WebDriver response has arrived. Default value is `null`. If function is passed then it takes `Response` (original response object) as the first and `RequestOptions` as the second argument. Should return modified `Response`. Example:
+
+```javascript
+(Response, RequestOptions) => Response
+````
+
+####  strictSSL
+Whether it does require SSL certificate to be valid. Default value is `null` (it means that will be used [default value from wdio](https://webdriver.io/docs/options/#strictssl)).
+
+####  user
+Cloud service username. Default value is `null`.
+
+####  key
+Cloud service access key or secret key. Default value is `null`.
+
+####  region
+Ability to choose different datacenters for run in cloud service. Default value is `null`.
+
+####  headless
+Ability to run headless browser in cloud service. Default value is `null`.
 
 ### system
 

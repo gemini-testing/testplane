@@ -5,7 +5,6 @@ const eventsUtils = require('gemini-core').events.utils;
 const {AsyncEmitter} = require('gemini-core').events;
 const {EventEmitter} = require('events');
 const pluginsLoader = require('plugins-loader');
-const q = require('q');
 const Promise = require('bluebird');
 const proxyquire = require('proxyquire').noCallThru();
 
@@ -190,7 +189,7 @@ describe('hermione', () => {
 
             it('should reject on INIT handler fail', () => {
                 const hermione = mkHermione_()
-                    .on(RunnerEvents.INIT, () => q.reject('o.O'));
+                    .on(RunnerEvents.INIT, () => Promise.reject('o.O'));
 
                 return assert.isRejected(hermione.run(), /o.O/);
             });
@@ -198,7 +197,7 @@ describe('hermione', () => {
             it('should wait INIT handler before running tests', () => {
                 const afterInit = sinon.spy();
                 const hermione = mkHermione_()
-                    .on(RunnerEvents.INIT, () => q.delay(20).then(afterInit));
+                    .on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
 
                 return hermione.run()
                     .then(() => assert.callOrder(afterInit, Runner.prototype.run));

@@ -1,7 +1,6 @@
 'use strict';
 
 const {Command} = require('@gemini-testing/commander');
-const q = require('q');
 const _ = require('lodash');
 const proxyquire = require('proxyquire');
 const hermioneCli = require('lib/cli');
@@ -215,11 +214,13 @@ describe('cli', () => {
     });
 
     it('should log an error on reject if stack does not exist', async () => {
-        Hermione.prototype.run.returns(q.reject('some-error'));
+        const err = new Error('some-error');
+        err.stack = undefined;
+        Hermione.prototype.run.rejects(err);
         hermioneCli.run();
         await actionPromise;
 
-        assert.calledWith(logger.error, 'some-error');
+        assert.calledWithMatch(logger.error, err);
     });
 
     it('should turn on debug mode from cli', async () => {

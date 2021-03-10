@@ -3,8 +3,8 @@
 const {EventEmitter} = require('events');
 const _ = require('lodash');
 const fs = require('fs-extra');
-const webdriverio = require('@gemini-testing/webdriverio');
-const {Image, temp, ScreenShooter} = require('gemini-core');
+const webdriverio = require('webdriverio');
+const {Image, temp, ScreenShooter, clientBridge} = require('gemini-core');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
@@ -39,7 +39,8 @@ describe('assertView command', () => {
     const stubBrowser_ = (config) => {
         const session = mkSessionStub_();
         session.executionContext = {hermioneCtx: {}};
-        sandbox.stub(webdriverio, 'remote').returns(session);
+        sandbox.stub(webdriverio, 'attach').resolves(session);
+        sandbox.stub(clientBridge, 'build').resolves();
 
         const browser = mkBrowser_(config);
         sandbox.stub(browser, 'prepareScreenshot').resolves({});
@@ -72,7 +73,7 @@ describe('assertView command', () => {
     afterEach(() => sandbox.restore());
 
     it('should fail on duplicate name of the state', async () => {
-        const browser = stubBrowser_();
+        const browser = await stubBrowser_().init();
 
         await browser.publicAPI.assertView('plain');
 
@@ -86,7 +87,7 @@ describe('assertView command', () => {
 
     describe('prepare screenshot', () => {
         it('should prepare screenshot for one selector', async () => {
-            const browser = stubBrowser_();
+            const browser = await stubBrowser_().init();
 
             await browser.publicAPI.assertView('plain', '.selector');
 
@@ -94,7 +95,7 @@ describe('assertView command', () => {
         });
 
         it('should prepare screenshot for several selectors', async () => {
-            const browser = stubBrowser_();
+            const browser = await stubBrowser_().init();
 
             await browser.publicAPI.assertView('plain', ['.selector1', '.selector2']);
 
@@ -115,7 +116,7 @@ describe('assertView command', () => {
                 }
             ].forEach(({name, ignoreElements, ignoreSelectors}) => {
                 it(`passed as ${name} using "assertView" options`, async () => {
-                    const browser = stubBrowser_();
+                    const browser = await stubBrowser_().init();
 
                     await browser.publicAPI.assertView(null, null, {ignoreElements});
 
@@ -127,7 +128,7 @@ describe('assertView command', () => {
 
             it('from config option "assertViewOpts"', async () => {
                 const config = mkConfig_({assertViewOpts: {ignoreElements: ['foo', 'bar']}});
-                const browser = stubBrowser_(config);
+                const browser = await stubBrowser_(config).init();
 
                 await browser.publicAPI.assertView();
 
@@ -138,7 +139,7 @@ describe('assertView command', () => {
 
             it('from "assertView" even if it is set in "assertViewOpts"', async () => {
                 const config = mkConfig_({assertViewOpts: {ignoreElements: ['foo', 'bar']}});
-                const browser = stubBrowser_(config);
+                const browser = await stubBrowser_(config).init();
 
                 await browser.publicAPI.assertView(null, null, {ignoreElements: ['baz', 'qux']});
 
@@ -152,9 +153,9 @@ describe('assertView command', () => {
             describe(`should prepare screenshot with "${option}" option`, () => {
                 let browser;
 
-                beforeEach(() => {
+                beforeEach(async () => {
                     const config = mkConfig_({assertViewOpts: {[option]: false}});
-                    browser = stubBrowser_(config);
+                    browser = await stubBrowser_(config).init();
                 });
 
                 it('from config option "assertViewOpts"', async () => {
@@ -177,14 +178,14 @@ describe('assertView command', () => {
     });
 
     describe('take screenshot', () => {
-        it('should create an instance of a screen shooter', () => {
-            const browser = stubBrowser_();
+        it('should create an instance of a screen shooter', async () => {
+            const browser = await stubBrowser_().init();
 
             assert.calledOnceWith(ScreenShooter.create, browser);
         });
 
         it('should capture a screenshot image', async () => {
-            const browser = stubBrowser_();
+            const browser = await stubBrowser_().init();
             browser.prepareScreenshot.resolves({foo: 'bar'});
 
             await browser.publicAPI.assertView();
@@ -195,7 +196,7 @@ describe('assertView command', () => {
         it('should save a captured screenshot', async () => {
             temp.path.returns('/curr/path');
 
-            const browser = stubBrowser_();
+            const browser = await stubBrowser_().init();
             const image = stubImage_();
 
             ScreenShooter.prototype.capture.resolves(image);
@@ -208,9 +209,9 @@ describe('assertView command', () => {
         describe('should capture screenshot with "allowViewportOverflow" option', () => {
             let browser;
 
-            beforeEach(() => {
+            beforeEach(async () => {
                 const config = mkConfig_({assertViewOpts: {allowViewportOverflow: false}});
-                browser = stubBrowser_(config);
+                browser = await stubBrowser_(config).init();
             });
 
             it('from config option "assertViewOpts"', async () => {
@@ -230,7 +231,7 @@ describe('assertView command', () => {
             describe(`should capture screenshot with "${option}" option`, () => {
                 it(`from config option "${option}"`, async () => {
                     const config = mkConfig_({[option]: 'value-1'});
-                    const browser = stubBrowser_(config);
+                    const browser = await stubBrowser_(config).init();
 
                     await browser.publicAPI.assertView();
 
@@ -246,7 +247,7 @@ describe('assertView command', () => {
                             [option]: 'value-2'
                         }
                     });
-                    const browser = stubBrowser_(config);
+                    const browser = await stubBrowser_(config).init();
 
                     await browser.publicAPI.assertView();
 
@@ -262,7 +263,7 @@ describe('assertView command', () => {
                             [option]: 'value-2'
                         }
                     });
-                    const browser = stubBrowser_(config);
+                    const browser = await stubBrowser_(config).init();
 
                     await browser.publicAPI.assertView(null, null, {[option]: 'value-3'});
 
@@ -276,8 +277,9 @@ describe('assertView command', () => {
 
     it('should not fail if there is no reference image', async () => {
         fs.existsSync.returns(false);
+        const browser = await stubBrowser_().init();
 
-        await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+        await assert.isFulfilled(browser.publicAPI.assertView());
     });
 
     it('should create "NoRefImageError" error with given parameters', async () => {
@@ -288,7 +290,7 @@ describe('assertView command', () => {
         const currImage = stubImage_({size: {width: 100, height: 200}});
         ScreenShooter.prototype.capture.resolves(currImage);
 
-        const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
+        const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
 
         await browser.publicAPI.assertView('state');
 
@@ -303,7 +305,7 @@ describe('assertView command', () => {
         fs.existsSync.returns(false);
         temp.path.returns('/curr/path');
 
-        const browser = stubBrowser_();
+        const browser = await stubBrowser_().init();
 
         await browser.publicAPI.assertView('foo');
         await browser.publicAPI.assertView('bar');
@@ -319,21 +321,22 @@ describe('assertView command', () => {
 
         it('should be fulfilled if there is not reference image', async () => {
             fs.existsSync.returns(false);
+            const browser = await stubBrowser_().init();
 
-            await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+            await assert.isFulfilled(browser.publicAPI.assertView());
         });
 
         it('should reject on reference update fail', async () => {
             fs.existsSync.returns(false);
-
             updateRefs.handleNoRefImage.throws();
+            const browser = await stubBrowser_().init();
 
-            await assert.isRejected(stubBrowser_().publicAPI.assertView());
+            await assert.isRejected(browser.publicAPI.assertView());
         });
 
         it('should pass browser emitter to "handleNoRefImage" handler', async () => {
             fs.existsSync.returns(false);
-            const browser = stubBrowser_();
+            const browser = await stubBrowser_().init();
 
             await browser.publicAPI.assertView();
 
@@ -348,8 +351,9 @@ describe('assertView command', () => {
         it('should add opts from runtime config to temp', async () => {
             Image.compare.resolves({equal: true});
             RuntimeConfig.getInstance.returns({tempOpts: {some: 'opts'}});
+            const browser = await stubBrowser_().init();
 
-            await stubBrowser_().publicAPI.assertView();
+            await browser.publicAPI.assertView();
 
             assert.calledOnceWith(temp.attach, {some: 'opts', suffix: '.png'});
         });
@@ -358,15 +362,16 @@ describe('assertView command', () => {
             const config = mkConfig_({getScreenshotPath: () => '/ref/path'});
             Image.compare.resolves({equal: true});
             temp.path.returns('/curr/path');
+            const browser = await stubBrowser_(config).init();
 
-            await stubBrowser_(config).publicAPI.assertView();
+            await browser.publicAPI.assertView();
 
             assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path');
         });
 
         it('should compare images with given set of parameters', async () => {
             const config = mkConfig_({tolerance: 100, antialiasingTolerance: 200, compareOpts: {stopOnFirstFail: true}});
-            const browser = stubBrowser_(config);
+            const browser = await stubBrowser_(config).init();
 
             browser.prepareScreenshot.resolves({canHaveCaret: 'foo bar', pixelRatio: 300});
 
@@ -382,7 +387,7 @@ describe('assertView command', () => {
         ['tolerance', 'antialiasingTolerance'].forEach((option) => {
             it(`should compare images with given "${option}"`, async () => {
                 const config = mkConfig_({[option]: 100});
-                const browser = stubBrowser_(config);
+                const browser = await stubBrowser_(config).init();
 
                 browser.prepareScreenshot.resolves({});
 
@@ -403,7 +408,9 @@ describe('assertView command', () => {
 
             describe('assert refs', () => {
                 it('should not reject', async () => {
-                    await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                    const browser = await stubBrowser_().init();
+
+                    await assert.isFulfilled(browser.publicAPI.assertView());
                 });
 
                 it('should create "ImageDiffError" error with given parameters', async () => {
@@ -411,7 +418,7 @@ describe('assertView command', () => {
 
                     temp.path.returns('/curr/path');
 
-                    const browser = stubBrowser_({getScreenshotPath: () => '/ref/path'});
+                    const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
                     const currImage = stubImage_({size: {width: 100, height: 200}});
 
                     ScreenShooter.prototype.capture.resolves(currImage);
@@ -427,7 +434,7 @@ describe('assertView command', () => {
                 });
 
                 it('should remember several "ImageDiffError" errors', async () => {
-                    const browser = stubBrowser_();
+                    const browser = await stubBrowser_().init();
 
                     await browser.publicAPI.assertView('foo');
                     await browser.publicAPI.assertView('bar');
@@ -441,7 +448,7 @@ describe('assertView command', () => {
                 describe('passing diff options', () => {
                     it('should pass diff options for passed image paths', async () => {
                         const config = mkConfig_({getScreenshotPath: () => '/reference/path'});
-                        const browser = stubBrowser_(config);
+                        const browser = await stubBrowser_(config).init();
                         temp.path.returns('/current/path');
 
                         await browser.publicAPI.assertView();
@@ -455,7 +462,7 @@ describe('assertView command', () => {
                             tolerance: 100,
                             system: {diffColor: '#111111'}
                         };
-                        const browser = stubBrowser_(config);
+                        const browser = await stubBrowser_(config).init();
 
                         await browser.publicAPI.assertView();
                         const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
@@ -463,26 +470,25 @@ describe('assertView command', () => {
                         assert.match(e.diffOpts, {tolerance: 100, diffColor: '#111111'});
                     });
 
-                    it('should pass diff bounds to error', () => {
+                    it('should pass diff bounds to error', async () => {
                         Image.compare.resolves({diffBounds: {left: 0, top: 0, right: 10, bottom: 10}});
-                        const browser = stubBrowser_();
-                        return browser.publicAPI.assertView()
-                            .then(() => {
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                        const browser = await stubBrowser_().init();
 
-                                assert.deepEqual(e.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
-                            });
+                        await browser.publicAPI.assertView();
+
+                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
+                        assert.deepEqual(e.diffBounds, {left: 0, top: 0, right: 10, bottom: 10});
                     });
 
-                    it('should pass diff clusters to error', () => {
+                    it('should pass diff clusters to error', async () => {
                         Image.compare.resolves({diffClusters: [{left: 0, top: 0, right: 10, bottom: 10}]});
-                        const browser = stubBrowser_();
-                        return browser.publicAPI.assertView()
-                            .then(() => {
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                        const browser = await stubBrowser_().init();
 
-                                assert.deepEqual(e.diffClusters, [{left: 0, top: 0, right: 10, bottom: 10}]);
-                            });
+                        await browser.publicAPI.assertView();
+                        const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+
+                        assert.deepEqual(e.diffClusters, [{left: 0, top: 0, right: 10, bottom: 10}]);
                     });
                 });
             });
@@ -491,14 +497,16 @@ describe('assertView command', () => {
                 beforeEach(() => RuntimeConfig.getInstance.returns({updateRefs: true, tempOpts: {}}));
 
                 it('should be fulfilled', async () => {
-                    await assert.isFulfilled(stubBrowser_().publicAPI.assertView());
+                    const browser = await stubBrowser_().init();
+
+                    await assert.isFulfilled(browser.publicAPI.assertView());
                 });
 
                 ['tolerance', 'antialiasingTolerance'].forEach((option) => {
                     describe(`should update with "${option}" option`, () => {
                         it(`from config option "${option}"`, async () => {
                             const config = mkConfig_({[option]: 1});
-                            const browser = stubBrowser_(config);
+                            const browser = await stubBrowser_(config).init();
 
                             await browser.publicAPI.assertView();
 
@@ -516,7 +524,7 @@ describe('assertView command', () => {
                                     [option]: 2
                                 }
                             });
-                            const browser = stubBrowser_(config);
+                            const browser = await stubBrowser_(config).init();
 
                             await browser.publicAPI.assertView();
 
@@ -534,7 +542,7 @@ describe('assertView command', () => {
                                     [option]: 2
                                 }
                             });
-                            const browser = stubBrowser_(config);
+                            const browser = await stubBrowser_(config).init();
 
                             await browser.publicAPI.assertView(null, null, {[option]: 3});
 
@@ -548,7 +556,7 @@ describe('assertView command', () => {
                 });
 
                 it('should pass browser emitter to "handleImageDiff" handler', async () => {
-                    const browser = stubBrowser_();
+                    const browser = await stubBrowser_().init();
                     browser.prepareScreenshot.resolves({canHaveCaret: true});
 
                     await browser.publicAPI.assertView();
@@ -573,8 +581,8 @@ describe('assertView command', () => {
             .withArgs(sinon.match.any, 'plain').returns('/ref/path/plain')
             .withArgs(sinon.match.any, 'complex').returns('/ref/path/complex');
 
-        const bufferPlain = new Buffer('plain-data', 'base64');
-        const bufferComplex = new Buffer('complex-data', 'base64');
+        const bufferPlain = Buffer.from('plain-data', 'base64');
+        const bufferComplex = Buffer.from('complex-data', 'base64');
 
         fs.readFileSync
             .withArgs('/ref/path/plain').returns(bufferPlain)
@@ -587,7 +595,7 @@ describe('assertView command', () => {
             .withArgs(bufferPlain).returns(imagePlain)
             .withArgs(bufferComplex).returns(imageComplex);
 
-        const browser = stubBrowser_({getScreenshotPath});
+        const browser = await stubBrowser_({getScreenshotPath}).init();
 
         await browser.publicAPI.assertView('plain');
         await browser.publicAPI.assertView('complex');

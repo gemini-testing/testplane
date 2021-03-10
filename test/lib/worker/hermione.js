@@ -2,7 +2,6 @@
 
 const _ = require('lodash');
 const pluginsLoader = require('plugins-loader');
-const q = require('q');
 const Config = require('lib/config');
 const RunnerEvents = require('lib/constants/runner-events');
 const Errors = require('lib/errors');
@@ -130,7 +129,7 @@ describe('worker/hermione', () => {
 
     describe('runTest', () => {
         it('should run test', () => {
-            Runner.prototype.runTest.withArgs('fullTitle', {some: 'options'}).returns(q('foo bar'));
+            Runner.prototype.runTest.withArgs('fullTitle', {some: 'options'}).resolves('foo bar');
 
             const hermione = Hermione.create();
 
