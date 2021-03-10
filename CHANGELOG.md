@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.0"></a>
+# [4.0.0-alpha.0](https://github.com/gemini-testing/hermione/compare/v3.11.0...v4.0.0-alpha.0) (2021-03-10)
+
+
+### Features
+
+* drop node versions less than 12 ([48fb22b](https://github.com/gemini-testing/hermione/commit/48fb22b))
+* update wdio[@4](https://github.com/4) to wdio[@7](https://github.com/7) ([66057b4](https://github.com/gemini-testing/hermione/commit/66057b4))
+
+
+### BREAKING CHANGES
+
+* node versions less than 12.0.0 are no longer supported
+* move to latest version of webdriverio (7.x) from our fork
+* remove browser options: "screenshotPath", "w3cCompatible"
+
+
+
 <a name="3.11.0"></a>
 # [3.11.0](https://github.com/gemini-testing/hermione/compare/v3.10.4...v3.11.0) (2021-02-25)
 
