@@ -63,6 +63,7 @@ exports.mkSessionStub_ = () => {
 
     session.deleteSession = sinon.stub().named('end').resolves();
     session.url = sinon.stub().named('url').resolves();
+    session.getUrl = sinon.stub().named('getUrl').resolves('');
     session.execute = sinon.stub().named('execute').resolves();
     session.takeScreenshot = sinon.stub().named('takeScreenshot').resolves('');
     session.setWindowSize = sinon.stub().named('setWindowSize').resolves();

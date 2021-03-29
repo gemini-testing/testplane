@@ -158,6 +158,16 @@ describe('ExistingBrowser', () => {
                 assert.calledWith(session.overwriteCommand, 'url', sinon.match.func);
             });
 
+            it('should call `getUrl` command if url is not passed', async () => {
+                const origUrlFn = session.url;
+                await mkBrowser_().init();
+
+                await session.url();
+
+                assert.calledOnceWithExactly(session.getUrl);
+                assert.notCalled(origUrlFn);
+            });
+
             it('should call original `url` method', async () => {
                 const origUrlFn = session.url;
                 await mkBrowser_().init();
