@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.1"></a>
+# [4.0.0-alpha.1](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.0...v4.0.0-alpha.1) (2021-03-29)
+
+
+### Bug Fixes
+
+* call "getUrl" if url is not passed in "url" wrapper ([24dbd18](https://github.com/gemini-testing/hermione/commit/24dbd18))
+* get body width only if it is necessary in "setOrientation" wrapper ([a75655b](https://github.com/gemini-testing/hermione/commit/a75655b))
+* removed temp hack with error catching on set page load timeout ([073cac7](https://github.com/gemini-testing/hermione/commit/073cac7))
+
+
+
 <a name="4.0.0-alpha.0"></a>
 # [4.0.0-alpha.0](https://github.com/gemini-testing/hermione/compare/v3.11.0...v4.0.0-alpha.0) (2021-03-10)
 
