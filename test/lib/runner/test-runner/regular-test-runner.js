@@ -45,14 +45,16 @@ describe('runner/test-runner/regular-test-runner', () => {
     };
 
     const stubBrowser_ = (opts = {}) => {
-        return {
-            id: opts.id || 'default-id',
-            state: opts.state || {isBroken: false},
-            sessionId: opts.sessionId || 'default-session-id',
+        return _.defaults(opts, {
+            id: 'default-id',
+            version: 'default-version',
+            capabilities: 'default-capabilities',
+            state: {isBroken: false},
+            sessionId: 'default-session-id',
             applyState: sinon.stub().callsFake(function(state) {
                 this.state = state;
             })
-        };
+        });
     };
 
     beforeEach(() => {
@@ -73,7 +75,9 @@ describe('runner/test-runner/regular-test-runner', () => {
         it('should get browser before running test', async () => {
             BrowserAgent.prototype.getBrowser.resolves(stubBrowser_({
                 id: 'bro',
-                sessionId: '100500'
+                version: '1.0',
+                sessionId: '100500',
+                capabilities: {browserName: 'bro'}
             }));
             const workers = mkWorkers_();
 
@@ -81,7 +85,9 @@ describe('runner/test-runner/regular-test-runner', () => {
 
             assert.calledOnceWith(workers.runTest, sinon.match.any, sinon.match({
                 browserId: 'bro',
-                sessionId: '100500'
+                browserVersion: '1.0',
+                sessionId: '100500',
+                sessionCaps: {browserName: 'bro'}
             }));
         });
 

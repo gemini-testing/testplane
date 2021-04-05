@@ -57,8 +57,10 @@ exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter
 
 exports.mkSessionStub_ = () => {
     const session = {};
+    session.isW3C = false;
 
     session.options = {};
+    session.capabilities = {};
     session.commandList = [];
 
     session.deleteSession = sinon.stub().named('end').resolves();

@@ -60,14 +60,6 @@ describe('"setOrientation" command', () => {
 
             assert.notCalled(session.waitUntil);
         });
-
-        it('should not get initial body width', async () => {
-            await mkBrowser_().init();
-
-            await session.setOrientation('portrait');
-
-            assert.notCalled(session.execute);
-        });
     });
 
     it('should return changed orientation if it differs from the current one', async () => {

@@ -118,10 +118,42 @@ describe('NewBrowser', () => {
             assert.notCalled(session.setTimeouts);
         });
 
-        it('should set page load timeout if it is specified in a config', async () => {
-            await mkBrowser_({pageLoadTimeout: 100500}).init();
+        describe('set page load timeout if it is specified in a config', () => {
+            let browser;
 
-            assert.calledOnceWith(session.setTimeout, {'pageLoad': 100500});
+            beforeEach(() => {
+                browser = mkBrowser_({pageLoadTimeout: 100500});
+            });
+
+            it('should set timeout', async () => {
+                await browser.init();
+
+                assert.calledOnceWith(session.setTimeout, {'pageLoad': 100500});
+            });
+
+            [
+                {name: 'not in edge browser without w3c support', browserName: 'yabro', isW3C: false},
+                {name: 'not in edge browser with w3c support', browserName: 'yabro', isW3C: true},
+                {name: 'in edge browser without w3c support', browserName: 'MicrosoftEdge', isW3C: false}
+            ].forEach(({name, browserName, isW3C}) => {
+                it(`should throw if set timeout failed ${name}`, async () => {
+                    session.capabilities = {browserName};
+                    session.isW3C = isW3C;
+                    session.setTimeout.withArgs({pageLoad: 100500}).throws(new Error('o.O'));
+
+                    await assert.isRejected(browser.init(), 'o.O');
+                    assert.notCalled(logger.warn);
+                });
+            });
+
+            it('should not throw if set timeout failed in edge browser with w3c support', async () => {
+                session.capabilities = {browserName: 'MicrosoftEdge'};
+                session.isW3C = true;
+                session.setTimeout.withArgs({pageLoad: 100500}).throws(new Error('o.O'));
+
+                await assert.isFulfilled(browser.init());
+                assert.calledOnceWith(logger.warn, 'WARNING: Can not set page load timeout: o.O');
+            });
         });
     });
 

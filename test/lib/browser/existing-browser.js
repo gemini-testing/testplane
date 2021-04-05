@@ -75,12 +75,16 @@ describe('ExistingBrowser', () => {
     describe('init', () => {
         it('should attach to browser with detected session environment flags', async () => {
             const desiredCapabilities = {browserName: 'yabro'};
-            const detectedSessionEnvFlags = {isW3C: false, isChrome: false, isMobile: false};
+            const detectedSessionEnvFlags = {isW3C: false, isMobile: false};
 
-            await mkBrowser_({desiredCapabilities}).init();
+            await mkBrowser_({desiredCapabilities}).init({
+                sessionCaps: {
+                    'goog:chromeOptions': {}
+                }
+            });
 
             assert.calledOnce(webdriverio.attach);
-            assert.calledWithMatch(webdriverio.attach, detectedSessionEnvFlags);
+            assert.calledWithMatch(webdriverio.attach, {...detectedSessionEnvFlags, isChrome: true});
         });
 
         it('should attach to browser with session environment flags from config', async () => {
@@ -300,7 +304,7 @@ describe('ExistingBrowser', () => {
         });
 
         it('should attach a browser to a provided session', async () => {
-            const browser = await mkBrowser_().init('100-500');
+            const browser = await mkBrowser_().init({sessionId: '100-500'});
 
             assert.equal(browser.sessionId, '100-500');
         });
@@ -347,19 +351,19 @@ describe('ExistingBrowser', () => {
             it('should perform calibration if `calibrate` is turn on', async () => {
                 calibrator.calibrate.withArgs(sinon.match.instanceOf(Browser)).resolves({foo: 'bar'});
 
-                await mkBrowser_({calibrate: true}).init(null, calibrator);
+                await mkBrowser_({calibrate: true}).init({}, calibrator);
 
                 assert.calledOnceWith(Camera.prototype.calibrate, {foo: 'bar'});
             });
 
             it('should not perform calibration if `calibrate` is turn off', async () => {
-                await mkBrowser_({calibrate: false}).init(null, calibrator);
+                await mkBrowser_({calibrate: false}).init({}, calibrator);
 
                 assert.notCalled(Camera.prototype.calibrate);
             });
 
-            it('should perform calibration after attaching of a session id', async () => {
-                await mkBrowser_({calibrate: true}).init('100-500', calibrator);
+            it('should perform calibration after attaching of a session', async () => {
+                await mkBrowser_({calibrate: true}).init({sessionId: '100-500'}, calibrator);
 
                 const browser = calibrator.calibrate.lastCall.args[0];
                 assert.equal(browser.sessionId, '100-500');
@@ -370,7 +374,7 @@ describe('ExistingBrowser', () => {
             const calibrator = sinon.createStubInstance(Calibrator);
             calibrator.calibrate.resolves({foo: 'bar'});
 
-            const browser = await mkBrowser_({calibrate: true}).init(null, calibrator);
+            const browser = await mkBrowser_({calibrate: true}).init({}, calibrator);
 
             assert.calledOnceWith(clientBridge.build, browser, {calibration: {foo: 'bar'}});
         });
@@ -484,20 +488,18 @@ describe('ExistingBrowser', () => {
                 });
         });
 
-        it('should extend options by calibration results', () => {
+        it('should extend options by calibration results', async () => {
             const clientBridge = stubClientBridge_();
             const calibrator = sinon.createStubInstance(Calibrator);
             calibrator.calibrate.resolves({usePixelRatio: false});
 
             const browser = mkBrowser_({calibrate: true});
 
-            return browser.init(null, calibrator)
-                .then(() => browser.prepareScreenshot())
-                .then(() => {
-                    const opts = clientBridge.call.lastCall.args[1][1];
+            await browser.init({}, calibrator);
+            await browser.prepareScreenshot();
 
-                    assert.propertyVal(opts, 'usePixelRatio', false);
-                });
+            const opts = clientBridge.call.lastCall.args[1][1];
+            assert.propertyVal(opts, 'usePixelRatio', false);
         });
 
         it('should use pixel ratio by default if calibration was not met', () => {
