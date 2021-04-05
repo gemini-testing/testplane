@@ -10,15 +10,31 @@ describe('worker/browser-agent', () => {
 
     describe('getBrowser', () => {
         it('should get a browser from the pool', () => {
-            browserPool.getBrowser.withArgs('bro-id', null, '100-500').returns({some: 'browser'});
+            browserPool.getBrowser.withArgs({
+                browserId: 'bro-id',
+                browserVersion: null,
+                sessionId: '100-500',
+                sessionCaps: 'some-caps'
+            }).returns({some: 'browser'});
 
-            assert.deepEqual(BrowserAgent.create('bro-id', null, browserPool).getBrowser('100-500'), {some: 'browser'});
+            assert.deepEqual(
+                BrowserAgent.create('bro-id', null, browserPool).getBrowser('100-500', 'some-caps'),
+                {some: 'browser'}
+            );
         });
 
         it('should get a browser with specific version from the pool', () => {
-            browserPool.getBrowser.withArgs('bro-id', '10.1', '100-500').returns({some: 'browser'});
+            browserPool.getBrowser.withArgs({
+                browserId: 'bro-id',
+                browserVersion: '10.1',
+                sessionId: '100-500',
+                sessionCaps: 'some-caps'
+            }).returns({some: 'browser'});
 
-            assert.deepEqual(BrowserAgent.create('bro-id', '10.1', browserPool).getBrowser('100-500'), {some: 'browser'});
+            assert.deepEqual(
+                BrowserAgent.create('bro-id', '10.1', browserPool).getBrowser('100-500', 'some-caps'),
+                {some: 'browser'}
+            );
         });
     });
 

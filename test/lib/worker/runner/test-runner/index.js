@@ -72,16 +72,17 @@ describe('worker/runner/test-runner', () => {
             const test = opts.test || mkTest_();
             const runner = opts.runner || mkRunner_({test});
             const sessionId = opts.sessionId || 'default-sessionId';
+            const sessionCaps = opts.sessionCaps || 'default-session-caps';
 
-            return runner.run({sessionId});
+            return runner.run({sessionId, sessionCaps});
         };
 
         it('should request browser for passed session', async () => {
             const runner = mkRunner_();
 
-            await runner.run({sessionId: '100500'});
+            await runner.run({sessionId: '100500', sessionCaps: 'some-caps'});
 
-            assert.calledOnceWith(BrowserAgent.prototype.getBrowser, '100500');
+            assert.calledOnceWithExactly(BrowserAgent.prototype.getBrowser, '100500', 'some-caps');
         });
 
         it('should create one time screenshooter', async () => {
