@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.2"></a>
+# [4.0.0-alpha.2](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2021-04-05)
+
+
+### Bug Fixes
+
+* add error catch on set page load timeout for edge with w3c support ([f7e438b](https://github.com/gemini-testing/hermione/commit/f7e438b))
+* error in expectation of orientation change ([3c8b21d](https://github.com/gemini-testing/hermione/commit/3c8b21d))
+* reuse session caps in worker from master ([5c70fe0](https://github.com/gemini-testing/hermione/commit/5c70fe0))
+
+
+
 <a name="4.0.0-alpha.1"></a>
 # [4.0.0-alpha.1](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.0...v4.0.0-alpha.1) (2021-03-29)
 
