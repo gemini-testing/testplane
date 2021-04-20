@@ -21,7 +21,7 @@ describe('NewBrowser', () => {
         it('should create session with properties from browser config', async () => {
             await mkBrowser_().init();
 
-            assert.calledWith(webdriverio.remote, {
+            assert.calledOnceWith(webdriverio.remote, {
                 protocol: 'http',
                 hostname: 'test_host',
                 port: 4444,
@@ -36,6 +36,12 @@ describe('NewBrowser', () => {
                 connectionRetryCount: 0,
                 baseUrl: 'http://base_url'
             });
+        });
+
+        it('should create session with default port', async () => {
+            await mkBrowser_({gridUrl: 'http://some_host/wd/hub'}).init();
+
+            assert.calledWithMatch(webdriverio.remote, {port: 4444});
         });
 
         describe('should create session with extended "browserVersion" in desiredCapabilities if', () => {
