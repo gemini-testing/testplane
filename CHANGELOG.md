@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.4"></a>
+# [4.0.0-alpha.4](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.3...v4.0.0-alpha.4) (2021-04-20)
+
+
+### Bug Fixes
+
+* do not fall if port is not specified in "gridUrl" ([4e6f49e](https://github.com/gemini-testing/hermione/commit/4e6f49e))
+
+
+
 <a name="4.0.0-alpha.3"></a>
 # [4.0.0-alpha.3](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.2...v4.0.0-alpha.3) (2021-04-20)
 
