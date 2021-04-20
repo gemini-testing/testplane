@@ -38,10 +38,10 @@ describe('NewBrowser', () => {
             });
         });
 
-        it('should create session with default port', async () => {
-            await mkBrowser_({gridUrl: 'http://some_host/wd/hub'}).init();
+        it('should pass empty port if it is not specified in grid url', async () => {
+            await mkBrowser_({gridUrl: 'http://some-host/some-path'}).init();
 
-            assert.calledWithMatch(webdriverio.remote, {port: 4444});
+            assert.calledWithMatch(webdriverio.remote, {port: ''});
         });
 
         describe('should create session with extended "browserVersion" in desiredCapabilities if', () => {
