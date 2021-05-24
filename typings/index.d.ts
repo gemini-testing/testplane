@@ -3,6 +3,7 @@
 /// <reference path='./mocha/index.d.ts' />
 /// <reference path='./gemini-core/index.d.ts' />
 /// <reference types='@gemini-testing/commander' />
+/// <reference types='@wdio/types' />
 
 class Hermione implements Hermione.Process {
     static create(configPath: string): Hermione;
@@ -211,7 +212,7 @@ declare namespace Hermione {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     };
 
-    type TestDefinitionCallback = (this: { browser: WebdriverIO.Client<void> }, done: TestDone) => any;
+    type TestDefinitionCallback = (this: { browser: WebdriverIO.Browser }, done: TestDone) => any;
 
     interface TestDone {
         (error?: any): any;
@@ -309,7 +310,7 @@ declare namespace Hermione {
 
     export interface CommonConfig {
         configPath: string;
-        desiredCapabilities: WebdriverIO.DesiredCapabilities | null;
+        desiredCapabilities: WebDriver.DesiredCapabilities | null;
         gridUrl: string;
         baseUrl: string;
         sessionsPerBrowser: number;
@@ -327,7 +328,7 @@ declare namespace Hermione {
         saveHistoryOnError: boolean;
         screenshotOnReject: boolean;
         screenshotOnRejectTimeout: number | null;
-        prepareBrowser(browser: WebdriverIO.Client<void>): void | null;
+        prepareBrowser(browser: WebdriverIO.Browser): void | null;
         screenshotPath: string | null;
         screenshotsDir(test: Test): string;
         calibrate: boolean;
@@ -664,8 +665,8 @@ declare namespace Hermione {
         sessionId: string;
     };
 
-    export type AsyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: BrowserInfo) => Promise<void> | void;
-    export type SyncSessionEventCallback = (browser: WebdriverIO.Client<void>, browserInfo: { browserId: string, browserVersion: string}) => void;
+    export type AsyncSessionEventCallback = (browser: WebdriverIO.Browser, browserInfo: BrowserInfo) => Promise<void> | void;
+    export type SyncSessionEventCallback = (browser: WebdriverIO.Browser, browserInfo: { browserId: string, browserVersion: string}) => void;
     export type TestEventCallback = (test: Test) => void;
 };
 
