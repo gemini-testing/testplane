@@ -2,7 +2,7 @@
 
 const {Command} = require('@gemini-testing/commander');
 const _ = require('lodash');
-const proxyquire = require('proxyquire');
+const proxyquire = require('proxyquire').noCallThru();
 const hermioneCli = require('lib/cli');
 const info = require('lib/cli/info');
 const defaults = require('lib/config/defaults');
@@ -165,6 +165,16 @@ describe('cli', () => {
         await actionPromise;
 
         assert.calledWithMatch(Hermione.prototype.run, any, {updateRefs: true});
+    });
+
+    it('should use require modules from cli', async () => {
+        const stubHermioneCli = proxyquire('lib/cli', {foo: {}});
+        onParse((parser) => parser.require = ['foo']);
+
+        stubHermioneCli.run();
+        await actionPromise;
+
+        assert.calledWithMatch(Hermione.prototype.run, any, {requireModules: ['foo']});
     });
 
     it('should allow hermione to extend cli', async () => {
