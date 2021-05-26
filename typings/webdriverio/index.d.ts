@@ -1,13 +1,13 @@
-/// <reference types='webdriverio' />
+/// <reference types='webdriverio/async' />
 
 declare namespace WebdriverIO {
-    export interface Client<T> {
-        getMeta(): Client<Hermione.BrowserMeta>;
+    interface Browser {
+        getMeta(): Browser<Hermione.BrowserMeta>;
         getMeta(key: string): Client<unknown>;
 
-        setMeta(key: string, value: unknown): Client<T>;
+        setMeta(key: string, value: unknown): void;
 
-        extendOptions(opts: { [name: string]: unknown }): Client<T>;
+        extendOptions(opts: { [name: string]: unknown }): void;
 
         /**
          * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
@@ -42,6 +42,6 @@ declare namespace WebdriverIO {
          * @param opts additional options, currently available:
          * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop", "compositeImage", "screenshotDelay"
          */
-        assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): Client<T>;
+        assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): void;
     }
 }
