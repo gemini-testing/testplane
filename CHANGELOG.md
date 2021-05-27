@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.6"></a>
+# [4.0.0-alpha.6](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2021-05-27)
+
+
+### Bug Fixes
+
+* **test-collection:** compare test titles with trim ([e245993](https://github.com/gemini-testing/hermione/commit/e245993))
+* **worker:** load external modules from "--require" option ([1abb66a](https://github.com/gemini-testing/hermione/commit/1abb66a))
+* use new typings from webdriverio ([63d1a5a](https://github.com/gemini-testing/hermione/commit/63d1a5a))
+
+
+
 <a name="4.0.0-alpha.5"></a>
 # [4.0.0-alpha.5](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.4...v4.0.0-alpha.5) (2021-04-21)
 
