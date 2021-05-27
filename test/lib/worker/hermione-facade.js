@@ -1,6 +1,6 @@
 'use strict';
 
-const proxyquire = require('proxyquire');
+const proxyquire = require('proxyquire').noCallThru();
 const {AsyncEmitter} = require('gemini-core').events;
 const Hermione = require('lib/worker/hermione');
 const {makeConfigStub} = require('../../utils');
@@ -10,17 +10,24 @@ describe('worker/hermione-facade', () => {
     let HermioneFacade;
     let hermione;
     let config;
+    let runtimeConfig;
     let ipc;
+
+    const proxyquireHermione_ = (modules) => {
+        return proxyquire('lib/worker/hermione-facade', {
+            // TODO: think about how to make it easier
+            '../utils/ipc': {on: ipc.on.bind(ipc), emit: ipc.emit.bind(ipc)},
+            ...modules
+        });
+    };
 
     beforeEach(() => {
         ipc = new AsyncEmitter();
-        HermioneFacade = proxyquire('lib/worker/hermione-facade', {
-            // TODO: think about how to make it easier
-            '../utils/ipc': {on: ipc.on.bind(ipc), emit: ipc.emit.bind(ipc)}
-        });
+        HermioneFacade = proxyquireHermione_();
         sandbox.spy(HermioneFacade.prototype, 'syncConfig');
 
         config = makeConfigStub();
+        runtimeConfig = {};
 
         hermione = Object.assign(new AsyncEmitter(), {
             init: sandbox.spy().named('hermioneInit'),
@@ -29,7 +36,7 @@ describe('worker/hermione-facade', () => {
         sandbox.stub(Hermione, 'create').returns(hermione);
 
         ipc.on('worker.init', () => {
-            process.nextTick(() => ipc.emit('master.init'));
+            process.nextTick(() => ipc.emit('master.init', {runtimeConfig}));
         });
         ipc.on('worker.syncConfig', () => {
             process.nextTick(() => ipc.emit('master.syncConfig', {config}));
@@ -51,6 +58,21 @@ describe('worker/hermione-facade', () => {
 
             return hermioneFacade.init()
                 .then(() => assert.notCalled(HermioneFacade.prototype.syncConfig));
+        });
+
+        // TODO: implement correct check that module was required
+        it.skip('should require passed modules', async () => {
+            runtimeConfig = {requireModules: ['foo']};
+            const fooRequire = sandbox.stub().returns({});
+
+            HermioneFacade = proxyquireHermione_({
+                foo: fooRequire()
+            });
+            const hermioneFacade = HermioneFacade.create();
+
+            await hermioneFacade.init();
+
+            assert.calledOnce(fooRequire);
         });
     });
 

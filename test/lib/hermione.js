@@ -161,12 +161,12 @@ describe('hermione', () => {
         it('should init runtime config', () => {
             mkRunnerStub_();
 
-            return runHermione([], {updateRefs: true, inspectMode: {inspect: true}})
+            return runHermione([], {updateRefs: true, requireModules: ['foo'], inspectMode: {inspect: true}})
                 .then(() => {
                     assert.calledOnce(RuntimeConfig.getInstance);
                     assert.calledOnceWith(
                         RuntimeConfig.getInstance.lastCall.returnValue.extend,
-                        {updateRefs: true, inspectMode: {inspect: true}}
+                        {updateRefs: true, requireModules: ['foo'], inspectMode: {inspect: true}}
                     );
                     assert.callOrder(
                         RuntimeConfig.getInstance,
