@@ -841,6 +841,8 @@ Image capture mode. There are 3 allowed values for this option:
   * `auto` (default). Mode will be obtained automatically;
   * `fullpage`. Hermione will deal with screenshot of full page;
   * `viewport`. Only viewport area will be used.
+  
+By default, `screenshotMode` on android browsers is set to `viewport` to work around [the chromium bug](https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853).
 
 #### saveHistoryOnTestTimeout
 
