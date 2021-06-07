@@ -3,6 +3,7 @@
 const webdriverio = require('webdriverio');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
+const history = require('lib/browser/history');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('NewBrowser', () => {
@@ -124,6 +125,24 @@ describe('NewBrowser', () => {
             assert.notCalled(session.setTimeouts);
         });
 
+        describe('commands-history', () => {
+            beforeEach(() => {
+                sandbox.spy(history, 'initCommandHistory');
+            });
+
+            it('should NOT init commands-history if it is off', async () => {
+                await mkBrowser_({saveHistory: false}).init();
+
+                assert.notCalled(history.initCommandHistory);
+            });
+
+            it('should save history of executed commands if it is enabled', async () => {
+                await mkBrowser_({saveHistory: true}).init();
+
+                assert.calledOnceWith(history.initCommandHistory, session);
+            });
+        });
+
         describe('set page load timeout if it is specified in a config', () => {
             let browser;
 
@@ -165,6 +184,33 @@ describe('NewBrowser', () => {
 
     describe('reset', () => {
         it('should be fulfilled', () => assert.isFulfilled(mkBrowser_().reset()));
+    });
+
+    describe('flushHistory', () => {
+        let stack;
+
+        beforeEach(() => {
+            stack = {
+                flush: sinon.stub().named('stack').returns([{some: 'data'}])
+            };
+            sandbox.stub(history, 'initCommandHistory').returns(stack);
+        });
+
+        it('should flush a history if it if on', async () => {
+            const browser = await mkBrowser_({saveHistory: true}).init();
+            const res = browser.flushHistory();
+
+            assert.deepEqual(res, [{some: 'data'}]);
+            assert.called(stack.flush);
+        });
+
+        it('should return an empty array if it if off', async () => {
+            const browser = await mkBrowser_({saveHistory: false}).init();
+            const res = browser.flushHistory();
+
+            assert.deepEqual(res, []);
+            assert.notCalled(stack.flush);
+        });
     });
 
     describe('quit', () => {

@@ -47,7 +47,8 @@ describe('worker/runner/test-runner', () => {
             config,
             meta: {},
             state: {},
-            markAsBroken: sandbox.stub()
+            markAsBroken: sandbox.stub(),
+            flushHistory: sandbox.stub().named('flushHistory').returns([])
         };
     };
 

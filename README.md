@@ -68,6 +68,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [screenshotMode](#screenshotmode)
     - [saveHistoryOnTestTimeout](#savehistoryontesttimeout)
     - [saveHistoryOnError](#savehistoryonerror)
+    - [saveHistory](#savehistory)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -841,7 +842,7 @@ Image capture mode. There are 3 allowed values for this option:
   * `auto` (default). Mode will be obtained automatically;
   * `fullpage`. Hermione will deal with screenshot of full page;
   * `viewport`. Only viewport area will be used.
-  
+
 By default, `screenshotMode` on android browsers is set to `viewport` to work around [the chromium bug](https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853).
 
 #### saveHistoryOnTestTimeout
@@ -851,6 +852,23 @@ Allows to save history of all executed commands in the error object on test time
 #### saveHistoryOnError
 
 Allows to save history of all executed commands in the error object on any error. `false` by default.
+
+#### saveHistory
+
+Allows to save history of all executed commands. `false` by default.
+
+Some plugins can rely on this history, for instance:
+ - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
+
+The history is available from such events: `TEST_END`, `TEST_PASS`, `TEST_FAIL` through payload:
+```js
+// example of plugin code
+module.exports = (hermione) => {
+    hermione.on(hermione.events.TEST_PASS, async (test) => {
+        console.log(test.history);
+    });
+};
+```
 
 #### agent
 Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null` (it means that will be used default http-agent from got).

@@ -20,7 +20,8 @@ describe('runner/test-runner/regular-test-runner', () => {
         return _.defaults(opts, {
             browserState: {},
             meta: {},
-            hermioneCtx: {}
+            hermioneCtx: {},
+            history: []
         });
     };
 
@@ -180,7 +181,7 @@ describe('runner/test-runner/regular-test-runner', () => {
                 assert.calledOnceWith(onPass, sinon.match({duration: 2}));
             });
 
-            it('should be emitted with test meta and context', async () => {
+            it('should be emitted with test meta, context and history', async () => {
                 const onPass = sinon.stub().named('onPass');
                 const runner = mkRunner_()
                     .on(Events.TEST_PASS, onPass);
@@ -188,14 +189,16 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const workers = mkWorkers_();
                 workers.runTest.resolves(stubTestResult_({
                     meta: {foo: 'bar'},
-                    hermioneCtx: {baz: 'qux'}
+                    hermioneCtx: {baz: 'qux'},
+                    history: [{item: 'some'}]
                 }));
 
                 await run_({runner, workers});
 
                 assert.calledOnceWith(onPass, sinon.match({
                     meta: {foo: 'bar'},
-                    hermioneCtx: {baz: 'qux'}
+                    hermioneCtx: {baz: 'qux'},
+                    history: [{item: 'some'}]
                 }));
             });
 
@@ -324,7 +327,7 @@ describe('runner/test-runner/regular-test-runner', () => {
                 assert.calledOnceWith(onFail, sinon.match({err}));
             });
 
-            it('should be emitted with test meta and context', async () => {
+            it('should be emitted with test meta, context and history', async () => {
                 const onFail = sinon.stub().named('onFail');
                 const runner = mkRunner_()
                     .on(Events.TEST_FAIL, onFail);
@@ -332,14 +335,16 @@ describe('runner/test-runner/regular-test-runner', () => {
                 const workers = mkWorkers_();
                 workers.runTest.rejects({
                     meta: {foo: 'bar'},
-                    hermioneCtx: {baz: 'qux'}
+                    hermioneCtx: {baz: 'qux'},
+                    history: [{item: 'some'}]
                 });
 
                 await run_({runner, workers});
 
                 assert.calledOnceWith(onFail, sinon.match({
                     meta: {foo: 'bar'},
-                    hermioneCtx: {baz: 'qux'}
+                    hermioneCtx: {baz: 'qux'},
+                    history: [{item: 'some'}]
                 }));
             });
 

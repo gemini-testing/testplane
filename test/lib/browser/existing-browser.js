@@ -6,6 +6,7 @@ const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('webdriverio');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
+const history = require('lib/browser/history');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('ExistingBrowser', () => {
@@ -123,6 +124,24 @@ describe('ExistingBrowser', () => {
                 assert.calledWithMatch(webdriverio.attach, {
                     capabilities: {...desiredCapabilities, ...sessionCaps}
                 });
+            });
+        });
+
+        describe('commands-history', () => {
+            beforeEach(() => {
+                sandbox.spy(history, 'initCommandHistory');
+            });
+
+            it('should NOT init commands-history if it is off', async () => {
+                await mkBrowser_({saveHistory: false}).init();
+
+                assert.notCalled(history.initCommandHistory);
+            });
+
+            it('should save history of executed commands if it is enabled', async () => {
+                await mkBrowser_({saveHistory: true}).init();
+
+                assert.calledOnceWith(history.initCommandHistory, session);
             });
         });
 
