@@ -103,6 +103,29 @@ describe('ExistingBrowser', () => {
             assert.calledWithMatch(webdriverio.attach, {connectionRetryTimeout: 500100});
         });
 
+        describe('in order to correctly work with "devtools" protocol', () => {
+            it('should attach to browser with "options" property', async () => {
+                await mkBrowser_({automationProtocol: 'devtools'}).init();
+
+                assert.calledWithMatch(webdriverio.attach, {
+                    options: {automationProtocol: 'devtools'}
+                });
+            });
+
+            it('should attach to browser with caps merged from browser config and passed as arg', async () => {
+                const desiredCapabilities = {browserName: 'yabro'};
+                const sessionCaps = {
+                    'goog:chromeOptions': {debuggerAddress: 'localhost:12345'}
+                };
+
+                await mkBrowser_({desiredCapabilities}).init({sessionCaps});
+
+                assert.calledWithMatch(webdriverio.attach, {
+                    capabilities: {...desiredCapabilities, ...sessionCaps}
+                });
+            });
+        });
+
         describe('should create session with extended "browserVersion" in "desiredCapabilities" if', () => {
             it('it is already exists in capabilities', async () => {
                 await mkBrowser_(
