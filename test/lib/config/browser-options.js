@@ -1159,6 +1159,45 @@ describe('config browser-options', () => {
             assert.equal(config.browsers.b1.screenshotMode, 'fullpage');
             assert.equal(config.browsers.b2.screenshotMode, 'viewport');
         });
+
+        describe('on android browser', () => {
+            it('should set mode to \'viewport\' by default', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({
+                            desiredCapabilities: {
+                                platformName: 'android'
+                            }
+                        })
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1.screenshotMode, 'viewport');
+            });
+
+            it('should preserve manually set mode', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({
+                            desiredCapabilities: {
+                                platformName: 'android'
+                            },
+                            screenshotMode: 'fullpage'
+                        })
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1.screenshotMode, 'fullpage');
+            });
+        });
     });
 
     describe('orientation', () => {
