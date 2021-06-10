@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.7"></a>
+# [4.0.0-alpha.7](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2021-06-10)
+
+
+### Bug Fixes
+
+* ability to run tests using "devtools" protocol ([85bc868](https://github.com/gemini-testing/hermione/commit/85bc868))
+
+
+
 <a name="4.0.0-alpha.6"></a>
 # [4.0.0-alpha.6](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2021-05-27)
 
