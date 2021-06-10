@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.8"></a>
+# [4.0.0-alpha.8](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2021-06-10)
+
+
+### Bug Fixes
+
+* set screenshotMode to viewport on android browsers ([326f5a7](https://github.com/gemini-testing/hermione/commit/326f5a7))
+
+
+
 <a name="4.0.0-alpha.7"></a>
 # [4.0.0-alpha.7](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2021-06-10)
 
