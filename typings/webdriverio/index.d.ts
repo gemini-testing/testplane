@@ -31,7 +31,8 @@ declare namespace WebdriverIO {
          *                 allowViewportOverflow: true,
          *                 captureElementFromTop: true,
          *                 compositeImage: true,
-         *                 screenshotDelay: 600
+         *                 screenshotDelay: 600,
+         *                 selectorToScroll: '.modal'
          *             }
          *         )
          *});
@@ -40,7 +41,8 @@ declare namespace WebdriverIO {
          * @param state state name, should be unique within one test
          * @param selectors DOM-node selector that you need to capture
          * @param opts additional options, currently available:
-         * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop", "compositeImage", "screenshotDelay"
+         * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
+         * "compositeImage", "screenshotDelay", "selectorToScroll"
          */
         assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): void;
     }

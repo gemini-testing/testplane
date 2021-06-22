@@ -454,6 +454,17 @@ declare namespace Hermione {
          * @defaultValue `0`
          */
         screenshotDelay?: number;
+        /**
+         * Ability to set DOM-node selector which should be scroll when the captured element does not completely fit on the screen.
+         *
+         * @remarks
+         * Useful when you capture the modal (popup). In this case a duplicate of the modal appears on the screenshot.
+         * That happens because we scroll the page using `window` selector, which scroll only the background of the modal, and the modal itself remains in place.
+         * Default value is `undefined` (it means scroll relative to `window`). Works only when `compositeImage` is `true`.
+         *
+         * @defaultValue `undefined`
+         */
+        selectorToScroll?: string;
     };
 
     export interface SystemConfig {
