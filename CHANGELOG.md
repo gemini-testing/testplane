@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.0.0-alpha.9"></a>
+# [4.0.0-alpha.9](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.8...v4.0.0-alpha.9) (2021-06-24)
+
+
+### Features
+
+* Implemented commands-history ([b4c1531](https://github.com/gemini-testing/hermione/commit/b4c1531))
+
+
+
 <a name="4.0.0-alpha.8"></a>
 # [4.0.0-alpha.8](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2021-06-10)
 
