@@ -36,7 +36,8 @@ function createBrowserConfig_(opts = {}) {
         user: null,
         key: null,
         region: null,
-        headless: null
+        headless: null,
+        saveHistory: false
     });
 
     return {
@@ -57,6 +58,10 @@ exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter
 
 exports.mkSessionStub_ = () => {
     const session = {};
+    const element = {
+        click: sinon.stub().named('click').resolves()
+    };
+
     session.isW3C = false;
 
     session.options = {};
@@ -74,15 +79,18 @@ exports.mkSessionStub_ = () => {
     session.waitUntil = sinon.stub().named('waitUntil').resolves();
     session.setTimeout = sinon.stub().named('setTimeout').resolves();
     session.setTimeouts = sinon.stub().named('setTimeouts').resolves();
+    session.$ = sinon.stub().named('$').resolves(element);
 
     session.addCommand = sinon.stub().callsFake((name, command) => {
         session[name] = command;
         sinon.spy(session, name);
     });
 
-    session.overwriteCommand = sinon.stub().callsFake((name, command) => {
-        session[name] = command.bind(session, session[name]);
-        sinon.spy(session, name);
+    session.overwriteCommand = sinon.stub().callsFake((name, command, isElement) => {
+        const target = isElement ? element : session;
+
+        target[name] = command.bind(target, target[name]);
+        sinon.spy(target, name);
     });
 
     return session;

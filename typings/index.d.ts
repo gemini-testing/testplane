@@ -181,7 +181,29 @@ declare namespace Hermione {
         root: boolean;
         suites: Array<Suite>;
         tests: Array<Test>;
+        history: History;
     };
+
+    /**
+     * History of commands were called durung the test execution
+     *
+     * @param n - command name
+     * @param a - list of passed arguments
+     * @param s - scope of execution (browser or element)
+     * @param ts - time start
+     * @param te - time end
+     * @param d - duration
+     * @param c - list of children commands
+     */
+    export interface History {
+        n: string;
+        a: any[];
+        ts: number;
+        te: number;
+        d: number;
+        s: 'b' | 'e';
+        c: History[];
+    }
 
     export interface RootSuite extends Suite {
         root: true;
