@@ -66,8 +66,6 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [strictTestsOrder](#stricttestsorder)
     - [compositeImage](#compositeimage)
     - [screenshotMode](#screenshotmode)
-    - [saveHistoryOnTestTimeout](#savehistoryontesttimeout)
-    - [saveHistoryOnError](#savehistoryonerror)
     - [saveHistory](#savehistory)
   - [system](#system)
     - [debug](#debug)
@@ -644,8 +642,7 @@ Option name               | Description
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 `screenshotMode`          | Image capture mode.
-`saveHistoryOnTestTimeout`| Save history of all executed commands in the error object on test timeout. `false` by default.
-`saveHistoryOnError`      | Save history of all executed commands in the error object on any error. `false` by default.
+`saveHistory`             | Allows to save history of all executed commands. `false` by default.
 `agent`                   | Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null`.
 `headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got#headers) to pass into every http-request. Default value is `null`.
 `transformRequest`        | Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`.
@@ -844,14 +841,6 @@ Image capture mode. There are 3 allowed values for this option:
   * `viewport`. Only viewport area will be used.
 
 By default, `screenshotMode` on android browsers is set to `viewport` to work around [the chromium bug](https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853).
-
-#### saveHistoryOnTestTimeout
-
-Allows to save history of all executed commands in the error object on test timeout. `false` by default.
-
-#### saveHistoryOnError
-
-Allows to save history of all executed commands in the error object on any error. `false` by default.
 
 #### saveHistory
 

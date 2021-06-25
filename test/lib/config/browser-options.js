@@ -1047,8 +1047,6 @@ describe('config browser-options', () => {
         'compositeImage',
         'resetCursor',
         'strictTestsOrder',
-        'saveHistoryOnTestTimeout',
-        'saveHistoryOnError',
         'saveHistory',
         'waitOrientationChange'
     ].forEach((option) => {
