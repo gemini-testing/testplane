@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.1.0"></a>
+# [4.1.0](https://github.com/gemini-testing/hermione/compare/v4.0.0...v4.1.0) (2021-06-28)
+
+
+### Features
+
+* ability to scroll page by passed selector ([7307ae1](https://github.com/gemini-testing/hermione/commit/7307ae1))
+
+
+
 <a name="4.0.0"></a>
 # [4.0.0](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.9...v4.0.0) (2021-06-28)
 
