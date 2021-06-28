@@ -4,6 +4,7 @@ const {EventEmitter} = require('events');
 const Promise = require('bluebird');
 const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('webdriverio');
+const jsdom = require('jsdom-global');
 const Browser = require('lib/browser/existing-browser');
 const logger = require('lib/utils/logger');
 const history = require('lib/browser/history');
@@ -618,6 +619,67 @@ describe('ExistingBrowser', () => {
 
             return mkBrowser_().captureViewportImage({foo: 'bar'})
                 .then((image) => assert.deepEqual(image, {some: 'image'}));
+        });
+    });
+
+    describe('scrollBy', () => {
+        let cleanupJsdom;
+
+        beforeEach(() => {
+            cleanupJsdom = jsdom();
+            global.window.scrollTo = sinon.stub();
+            global.document.querySelector = sinon.stub();
+        });
+
+        afterEach(() => {
+            cleanupJsdom();
+        });
+
+        it('should throw error if passed selector is not found', async () => {
+            const args = {x: 10, y: 20, selector: '.non-existent'};
+            global.document.querySelector.withArgs('.non-existent').returns(null);
+            const browser = mkBrowser_();
+
+            await browser.init();
+            browser.scrollBy(args);
+
+            try {
+                session.execute.lastCall.args[0](args);
+            } catch (e) {
+                assert.match(e.message, /Scroll screenshot failed with:.*\.non-existent/);
+            }
+        });
+
+        describe('should scroll page relative to', () => {
+            it('passed selector with calculated "x" and "y" coords', async () => {
+                const domElem = {
+                    scrollLeft: 10,
+                    scrollTop: 20,
+                    scrollTo: sinon.stub()
+                };
+                const args = {x: 10, y: 20, selector: '.some-selector'};
+                global.document.querySelector.withArgs('.some-selector').returns(domElem);
+                const browser = mkBrowser_();
+
+                await browser.init();
+                browser.scrollBy(args);
+                session.execute.lastCall.args[0](args);
+
+                assert.calledOnceWith(domElem.scrollTo, 20, 40);
+            });
+
+            it('window with calculated "x" and "y" coords', async () => {
+                global.window.pageXOffset = 10;
+                global.window.pageYOffset = 20;
+                const args = {x: 10, y: 20};
+                const browser = mkBrowser_();
+
+                await browser.init();
+                browser.scrollBy(args);
+                session.execute.lastCall.args[0](args);
+
+                assert.calledOnceWith(global.window.scrollTo, 20, 40);
+            });
         });
     });
 

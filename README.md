@@ -461,6 +461,7 @@ Parameters:
    - captureElementFromTop (optional) `Boolean` - ability to set capture element from the top area or from current position. In the first case viewport will be scrolled to the top of the element. Default value is `true`
    - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
    - screenshotDelay (optional) `Number` - overrides config [browsers](#browsers).[screenshotDelay](#screenshotDelay) value
+   - selectorToScroll (optional) `String` - DOM-node selector which should be scroll when the captured element does not completely fit on the screen. Useful when you capture the modal (popup). In this case a duplicate of the modal appears on the screenshot. That happens because we scroll the page using `window` selector, which scroll only the background of the modal, and the modal itself remains in place. Works only when `compositeImage` is `true`.
 
 All options inside `assertView` command override the same options in the [browsers](#browsers).[assertViewOpts](#assertViewOpts).
 
@@ -479,7 +480,8 @@ it('some test', function() {
                 allowViewportOverflow: true,
                 captureElementFromTop: true,
                 compositeImage: true,
-                screenshotDelay: 10
+                screenshotDelay: 10,
+                selectorToScroll: '.modal'
             }
         );
 });

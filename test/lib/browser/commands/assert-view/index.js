@@ -175,6 +175,31 @@ describe('assertView command', () => {
                 });
             });
         });
+
+        describe('should prepare screenshot with "selectorToScroll" option', () => {
+            let browser;
+
+            beforeEach(async () => {
+                const config = mkConfig_({assertViewOpts: {selectorToScroll: '.selector-1'}});
+                browser = await stubBrowser_(config).init();
+            });
+
+            it('from config option "assertViewOpts"', async () => {
+                await browser.publicAPI.assertView();
+
+                assert.calledOnceWith(
+                    browser.prepareScreenshot, sinon.match.any, sinon.match({selectorToScroll: '.selector-1'})
+                );
+            });
+
+            it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
+                await browser.publicAPI.assertView(null, null, {selectorToScroll: '.selector-2'});
+
+                assert.calledOnceWith(
+                    browser.prepareScreenshot, sinon.match.any, sinon.match({selectorToScroll: '.selector-2'})
+                );
+            });
+        });
     });
 
     describe('take screenshot', () => {
@@ -206,24 +231,29 @@ describe('assertView command', () => {
             assert.calledOnceWith(image.save, '/curr/path');
         });
 
-        describe('should capture screenshot with "allowViewportOverflow" option', () => {
-            let browser;
+        [
+            {option: 'allowViewportOverflow', configValue: false, passedValue: true},
+            {option: 'selectorToScroll', configValue: '.selector-1', passedValue: '.selector-2'}
+        ].forEach(({option, configValue, passedValue}) => {
+            describe(`should capture screenshot with "${option}" option`, () => {
+                let browser;
 
-            beforeEach(async () => {
-                const config = mkConfig_({assertViewOpts: {allowViewportOverflow: false}});
-                browser = await stubBrowser_(config).init();
-            });
+                beforeEach(async () => {
+                    const config = mkConfig_({assertViewOpts: {[option]: configValue}});
+                    browser = await stubBrowser_(config).init();
+                });
 
-            it('from config option "assertViewOpts"', async () => {
-                await browser.publicAPI.assertView();
+                it('from config option "assertViewOpts"', async () => {
+                    await browser.publicAPI.assertView();
 
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {allowViewportOverflow: false});
-            });
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {[option]: configValue});
+                });
 
-            it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
-                await browser.publicAPI.assertView(null, null, {allowViewportOverflow: true});
+                it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
+                    await browser.publicAPI.assertView(null, null, {[option]: passedValue});
 
-                assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {allowViewportOverflow: true});
+                    assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {[option]: passedValue});
+                });
             });
         });
 
