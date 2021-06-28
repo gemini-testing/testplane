@@ -346,8 +346,7 @@ declare namespace Hermione {
         sessionQuitTimeout: number | null;
         testTimeout: number | null;
         waitTimeout: number;
-        saveHistoryOnTestTimeout: boolean;
-        saveHistoryOnError: boolean;
+        saveHistory: boolean;
         screenshotOnReject: boolean;
         screenshotOnRejectTimeout: number | null;
         prepareBrowser(browser: WebdriverIO.Browser): void | null;
