@@ -2,118 +2,38 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-<a name="4.0.0-alpha.9"></a>
-# [4.0.0-alpha.9](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.8...v4.0.0-alpha.9) (2021-06-24)
+<a name="4.0.0"></a>
+# [4.0.0](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.9...v4.0.0) (2021-06-28)
 
+### BREAKING CHANGES
+* node versions less than 12.0.0 are no longer supported
+* move to latest version of webdriverio (7.x) from our fork
+* remove browser options: "screenshotPath", "w3cCompatible"
+* custom implementation of commands history
 
 ### Features
 
 * Implemented commands-history ([b4c1531](https://github.com/gemini-testing/hermione/commit/b4c1531))
-
-
-
-<a name="4.0.0-alpha.8"></a>
-# [4.0.0-alpha.8](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.7...v4.0.0-alpha.8) (2021-06-10)
-
-
-### Bug Fixes
-
-* set screenshotMode to viewport on android browsers ([326f5a7](https://github.com/gemini-testing/hermione/commit/326f5a7))
-
-
-
-<a name="4.0.0-alpha.7"></a>
-# [4.0.0-alpha.7](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.6...v4.0.0-alpha.7) (2021-06-10)
-
-
-### Bug Fixes
-
-* ability to run tests using "devtools" protocol ([85bc868](https://github.com/gemini-testing/hermione/commit/85bc868))
-
-
-
-<a name="4.0.0-alpha.6"></a>
-# [4.0.0-alpha.6](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.5...v4.0.0-alpha.6) (2021-05-27)
-
-
-### Bug Fixes
-
-* **test-collection:** compare test titles with trim ([e245993](https://github.com/gemini-testing/hermione/commit/e245993))
-* **worker:** load external modules from "--require" option ([1abb66a](https://github.com/gemini-testing/hermione/commit/1abb66a))
-* use new typings from webdriverio ([63d1a5a](https://github.com/gemini-testing/hermione/commit/63d1a5a))
-
-
-
-<a name="4.0.0-alpha.5"></a>
-# [4.0.0-alpha.5](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.4...v4.0.0-alpha.5) (2021-04-21)
-
-
-### Bug Fixes
-
-* set default port "4444" if it is not specified in "gridUrl" ([5dae3c7](https://github.com/gemini-testing/hermione/commit/5dae3c7))
-
-
-
-<a name="4.0.0-alpha.4"></a>
-# [4.0.0-alpha.4](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.3...v4.0.0-alpha.4) (2021-04-20)
-
-
-### Bug Fixes
-
-* do not fall if port is not specified in "gridUrl" ([4e6f49e](https://github.com/gemini-testing/hermione/commit/4e6f49e))
-
-
-
-<a name="4.0.0-alpha.3"></a>
-# [4.0.0-alpha.3](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.2...v4.0.0-alpha.3) (2021-04-20)
-
-
-### Bug Fixes
-
-* set default port "4444" if it is not specified in "gridUrl" ([5de53aa](https://github.com/gemini-testing/hermione/commit/5de53aa))
-
-
-
-<a name="4.0.0-alpha.2"></a>
-# [4.0.0-alpha.2](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.1...v4.0.0-alpha.2) (2021-04-05)
-
-
-### Bug Fixes
-
-* add error catch on set page load timeout for edge with w3c support ([f7e438b](https://github.com/gemini-testing/hermione/commit/f7e438b))
-* error in expectation of orientation change ([3c8b21d](https://github.com/gemini-testing/hermione/commit/3c8b21d))
-* reuse session caps in worker from master ([5c70fe0](https://github.com/gemini-testing/hermione/commit/5c70fe0))
-
-
-
-<a name="4.0.0-alpha.1"></a>
-# [4.0.0-alpha.1](https://github.com/gemini-testing/hermione/compare/v4.0.0-alpha.0...v4.0.0-alpha.1) (2021-03-29)
-
-
-### Bug Fixes
-
-* call "getUrl" if url is not passed in "url" wrapper ([24dbd18](https://github.com/gemini-testing/hermione/commit/24dbd18))
-* get body width only if it is necessary in "setOrientation" wrapper ([a75655b](https://github.com/gemini-testing/hermione/commit/a75655b))
-* removed temp hack with error catching on set page load timeout ([073cac7](https://github.com/gemini-testing/hermione/commit/073cac7))
-
-
-
-<a name="4.0.0-alpha.0"></a>
-# [4.0.0-alpha.0](https://github.com/gemini-testing/hermione/compare/v3.11.0...v4.0.0-alpha.0) (2021-03-10)
-
-
-### Features
-
 * drop node versions less than 12 ([48fb22b](https://github.com/gemini-testing/hermione/commit/48fb22b))
 * update wdio[@4](https://github.com/4) to wdio[@7](https://github.com/7) ([66057b4](https://github.com/gemini-testing/hermione/commit/66057b4))
 
+### Bug Fixes
 
-### BREAKING CHANGES
-
-* node versions less than 12.0.0 are no longer supported
-* move to latest version of webdriverio (7.x) from our fork
-* remove browser options: "screenshotPath", "w3cCompatible"
-
+* remove features related to wdio native history ([8205bf3](https://github.com/gemini-testing/hermione/commit/8205bf3))
+* set screenshotMode to viewport on android browsers ([326f5a7](https://github.com/gemini-testing/hermione/commit/326f5a7))
+* ability to run tests using "devtools" protocol ([85bc868](https://github.com/gemini-testing/hermione/commit/85bc868))
+* **test-collection:** compare test titles with trim ([e245993](https://github.com/gemini-testing/hermione/commit/e245993))
+* **worker:** load external modules from "--require" option ([1abb66a](https://github.com/gemini-testing/hermione/commit/1abb66a))
+* use new typings from webdriverio ([63d1a5a](https://github.com/gemini-testing/hermione/commit/63d1a5a))
+* set default port "4444" if it is not specified in "gridUrl" ([5dae3c7](https://github.com/gemini-testing/hermione/commit/5dae3c7))
+* do not fall if port is not specified in "gridUrl" ([4e6f49e](https://github.com/gemini-testing/hermione/commit/4e6f49e))
+* set default port "4444" if it is not specified in "gridUrl" ([5de53aa](https://github.com/gemini-testing/hermione/commit/5de53aa))
+* add error catch on set page load timeout for edge with w3c support ([f7e438b](https://github.com/gemini-testing/hermione/commit/f7e438b))
+* error in expectation of orientation change ([3c8b21d](https://github.com/gemini-testing/hermione/commit/3c8b21d))
+* reuse session caps in worker from master ([5c70fe0](https://github.com/gemini-testing/hermione/commit/5c70fe0))
+* call "getUrl" if url is not passed in "url" wrapper ([24dbd18](https://github.com/gemini-testing/hermione/commit/24dbd18))
+* get body width only if it is necessary in "setOrientation" wrapper ([a75655b](https://github.com/gemini-testing/hermione/commit/a75655b))
+* removed temp hack with error catching on set page load timeout ([073cac7](https://github.com/gemini-testing/hermione/commit/073cac7))
 
 
 <a name="3.11.0"></a>
