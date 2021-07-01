@@ -141,6 +141,12 @@ describe('NewBrowser', () => {
 
                 assert.calledOnceWith(history.initCommandHistory, session);
             });
+
+            it('should init commands-history before any commands have added', async () => {
+                await mkBrowser_({saveHistory: true}).init();
+
+                assert.callOrder(history.initCommandHistory, session.addCommand);
+            });
         });
 
         describe('set page load timeout if it is specified in a config', () => {
