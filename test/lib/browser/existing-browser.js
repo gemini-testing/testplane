@@ -128,6 +128,16 @@ describe('ExistingBrowser', () => {
             });
         });
 
+        describe('in order to correctly connect to remote browser using CDP', () => {
+            it('should attach to browser with "requestedCapabilities" property', async () => {
+                const desiredCapabilities = {browserName: 'yabro', 'selenoid:options': {}};
+
+                await mkBrowser_({desiredCapabilities}).init();
+
+                assert.calledWithMatch(webdriverio.attach, {requestedCapabilities: desiredCapabilities});
+            });
+        });
+
         describe('commands-history', () => {
             beforeEach(() => {
                 sandbox.spy(history, 'initCommandHistory');
