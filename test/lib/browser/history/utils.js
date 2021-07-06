@@ -14,7 +14,7 @@ describe('commands-history', () => {
             });
 
             it('should return truncated representation for the "execute" command', () => {
-                assert.deepEqual(normalizeCommandArgs('execute', []), 'code');
+                assert.deepEqual(normalizeCommandArgs('execute', []), ['code']);
             });
 
             it('should truncate string', () => {
@@ -51,45 +51,59 @@ describe('commands-history', () => {
                 clock.restore();
             });
 
-            it('should run hooks and a target in correct sequence', async () => {
-                const before = sinon.stub().callsFake(() => P.delay(1000));
-                const after = sinon.stub().callsFake(() => P.delay(1000));
-                const fn = sinon.stub().callsFake(() => P.delay(1000));
+            describe('should run hooks and a target in correct sequence if "fn" is', () => {
+                it('NOT a promise', async () => {
+                    const before = sinon.stub();
+                    const fn = sinon.stub().callsFake(() => 'some');
+                    const after = sinon.stub();
 
-                runWithHooks({fn, before, after});
+                    runWithHooks({fn, before, after});
 
-                await tick(1);
+                    assert.called(before);
+                    assert.called(fn);
+                    assert.called(after);
+                });
 
-                assert.called(before);
-                assert.notCalled(fn);
-                assert.notCalled(after);
+                it('a promise', async () => {
+                    const before = sinon.stub();
+                    const fn = sinon.stub().callsFake(() => P.delay(1000));
+                    const after = sinon.stub();
 
-                await tick(1000);
+                    runWithHooks({fn, before, after});
 
-                assert.called(fn);
-                assert.notCalled(after);
+                    assert.called(before);
+                    assert.called(fn);
+                    assert.notCalled(after);
 
-                await tick(1000);
+                    await tick(1000);
 
-                assert.called(after);
-
-                await tick(1000);
-
-                assert.called(after);
+                    assert.called(after);
+                });
             });
 
             it('should run hooks even if a target throws an error', async () => {
-                const before = sinon.stub().callsFake(() => P.delay(1000));
+                const before = sinon.stub();
                 const after = sinon.stub();
                 const fn = sinon.stub().callsFake(() => {
                     throw new Error('target');
                 });
 
-                runWithHooks({fn, before, after});
+                assert.throws(() => runWithHooks({fn, before, after}));
+                assert.called(before);
+                assert.called(fn);
+                assert.called(after);
+            });
 
-                await tick(1);
-                await tick(1000);
+            it('should run hooks even if a target has rejected', async () => {
+                const before = sinon.stub();
+                const after = sinon.stub();
+                const fn = sinon.stub().callsFake(async () => {
+                    throw new Error('target');
+                });
 
+                const prom = runWithHooks({fn, before, after});
+
+                await assert.isRejected(prom);
                 assert.called(before);
                 assert.called(fn);
                 assert.called(after);

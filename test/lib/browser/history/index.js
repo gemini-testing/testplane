@@ -1,12 +1,15 @@
 'use strict';
 
 const P = require('bluebird');
+const webdriverio = require('webdriverio');
 const cmds = require('../../../../lib/browser/history/commands');
 const Callstack = require('../../../../lib/browser/history/callstack');
-const {mkSessionStub_} = require('../utils');
 const {initCommandHistory} = require('../../../../lib/browser/history');
+const {mkNewBrowser_, mkExistingBrowser_, mkSessionStub_} = require('../utils');
 
 describe('commands-history', () => {
+    const sandbox = sinon.sandbox.create();
+
     beforeEach(() => {
         sinon.stub(cmds, 'getBrowserCommands').returns([]);
         sinon.stub(cmds, 'getElementCommands').returns([]);
@@ -15,6 +18,8 @@ describe('commands-history', () => {
     afterEach(() => {
         cmds.getBrowserCommands.restore();
         cmds.getElementCommands.restore();
+
+        sandbox.restore();
     });
 
     describe('initCommandHistory', () => {
@@ -105,6 +110,50 @@ describe('commands-history', () => {
             assert.notProperty(clickNode, 'o');
             assert.deepPropertyVal(clickNode, 'c', []);
             assert.deepPropertyVal(clickNode, 'a', ['arg1']);
+        });
+    });
+
+    describe('system commands', () => {
+        const mkTestsSet = (getBrowser, systemCommandNameToTest) => {
+            describe(`should not profile "${systemCommandNameToTest}" for`, () => {
+                ['addCommand', 'overwriteCommand', 'extendOptions', 'setMeta', 'getMeta']
+                    .forEach((commandName) => {
+                        it(commandName, () => {
+                            getBrowser().publicAPI[systemCommandNameToTest](commandName, () => {});
+                            getBrowser().publicAPI[commandName]('some-arg');
+
+                            assert.deepEqual(getBrowser().flushHistory(), []);
+                        });
+                    });
+            });
+        };
+
+        describe('Browser', () => {
+            let browser;
+
+            beforeEach(async () => {
+                sandbox.stub(webdriverio, 'remote').resolves(mkSessionStub_());
+                browser = mkNewBrowser_({saveHistory: true});
+
+                await browser.init();
+            });
+
+            mkTestsSet(() => browser, 'addCommand');
+            mkTestsSet(() => browser, 'overwriteCommand');
+        });
+
+        describe('ExistingBrowser', () => {
+            let browser;
+
+            beforeEach(async () => {
+                sandbox.stub(webdriverio, 'attach').resolves(mkSessionStub_());
+                browser = mkExistingBrowser_({saveHistory: true});
+
+                await browser.init();
+            });
+
+            mkTestsSet(() => browser, 'addCommand');
+            mkTestsSet(() => browser, 'overwriteCommand');
         });
     });
 });

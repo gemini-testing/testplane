@@ -154,6 +154,12 @@ describe('ExistingBrowser', () => {
 
                 assert.calledOnceWith(history.initCommandHistory, session);
             });
+
+            it('should init commands-history before any commands have added', async () => {
+                await mkBrowser_({saveHistory: true}).init();
+
+                assert.callOrder(history.initCommandHistory, session.addCommand);
+            });
         });
 
         describe('should create session with extended "browserVersion" in "desiredCapabilities" if', () => {
