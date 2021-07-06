@@ -43,7 +43,7 @@
     "clear-require": "^1.0.1",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.0.1",
-    "gemini-core": "^6.2.0",
+    "gemini-core": "^6.2.1",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
     "mocha": "~2.4.5",
