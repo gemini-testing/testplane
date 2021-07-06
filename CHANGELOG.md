@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.11.2"></a>
+## [3.11.2](https://github.com/gemini-testing/hermione/compare/v3.11.0...v3.11.2) (2021-07-01)
+
+
+### Bug Fixes
+
+* use exact version of gemini-core in package.json ([f62c43a](https://github.com/gemini-testing/hermione/commit/f62c43a))
+* **test-collection:** compare test titles with trim ([e82bbbc](https://github.com/gemini-testing/hermione/commit/e82bbbc))
+* **worker:** load external modules from "--require" option ([b3b1940](https://github.com/gemini-testing/hermione/commit/b3b1940))
+
+
+
 <a name="3.11.0"></a>
 # [3.11.0](https://github.com/gemini-testing/hermione/compare/v3.10.4...v3.11.0) (2021-02-25)
 
