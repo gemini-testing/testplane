@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.1.4"></a>
+## [4.1.4](https://github.com/gemini-testing/hermione/compare/v4.1.3...v4.1.4) (2021-07-07)
+
+
+### Bug Fixes
+
+* **ie11:** execute script correctly on scroll page ([6481824](https://github.com/gemini-testing/hermione/commit/6481824))
+
+
+
 <a name="4.1.3"></a>
 ## [4.1.3](https://github.com/gemini-testing/hermione/compare/v4.1.2...v4.1.3) (2021-07-06)
 
