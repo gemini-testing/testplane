@@ -390,16 +390,18 @@ These methods allow you to store some information between webdriver calls and it
 
 Example:
 ```js
-it('test1', function() {
-    return this.browser
-        .setMeta('foo', 'bar')
-        .url('/foo/bar?baz=qux')
-        .getMeta('foo')
-        .then((val) => console.log(val)) // prints 'bar'
-        .getMeta('url')
-        .then((url) => console.log(url)) // prints '/foo/bar?baz=qux'
-        .getMeta()
-        .then((meta) => console.log(meta)) // prints `{foo: 'bar', url: '/foo/bar?baz=qux'}`
+it('test1', async function() {
+    await this.browser.setMeta('foo', 'bar');
+    await this.browser.url('/foo/bar?baz=qux');
+
+    const val = await this.browser.getMeta('foo');
+    console.log(val); // prints 'bar'
+
+    const url = await this.browser.getMeta('url');
+    console.log(url); // prints '/foo/bar?baz=qux'
+
+    const meta = await this.browser.getMeta();
+    console.log(meta); // prints `{foo: 'bar', url: '/foo/bar?baz=qux'}`
 });
 ```
 
@@ -408,12 +410,9 @@ The execution context can be accessed by the `browser.executionContext` property
 
 Example:
 ```js
-it('some test', function() {
-    return this.browser
-        .url('/foo/bar')
-        .then(function() {
-            console.log('test', this.executionContext);
-        });
+it('some test', async function() {
+    await this.browser.url('/foo/bar');
+    console.log('test', this.executionContext);
 });
 ```
 will print something like this
@@ -440,12 +439,12 @@ test: {
 Command that adds ability to take screenshot for test state. Each state should have his own unique name. For example:
 
 ```js
-it('some test', function() {
-    return this.browser
-        .url('some/url')
-        .assertView('plain', '.button')
-        .click('.button')
-        .assertView('clicked', '.button');
+it('some test', async function() {
+    await this.browser.url('some/url');
+    await this.browser.assertView('plain', '.button');
+
+    await this.browser.click('.button');
+    await this.browser.assertView('clicked', '.button');
 });
 ```
 
@@ -468,22 +467,21 @@ All options inside `assertView` command override the same options in the [browse
 Full example:
 
 ```js
-it('some test', function() {
-    return this.browser
-        .url('some/url')
-        .assertView(
-            'plain', '.form',
-            {
-                ignoreElements: ['.link'],
-                tolerance: 5,
-                antialiasingTolerance: 4,
-                allowViewportOverflow: true,
-                captureElementFromTop: true,
-                compositeImage: true,
-                screenshotDelay: 10,
-                selectorToScroll: '.modal'
-            }
-        );
+it('some test', async function() {
+    await this.browser.url('some/url');
+    await this.browser.assertView(
+        'plain', '.form',
+        {
+            ignoreElements: ['.link'],
+            tolerance: 5,
+            antialiasingTolerance: 4,
+            allowViewportOverflow: true,
+            captureElementFromTop: true,
+            compositeImage: true,
+            screenshotDelay: 10,
+            selectorToScroll: '.modal'
+        }
+    );
 });
 ```
 
@@ -520,14 +518,12 @@ Write your first test in `tests/desktop/github.js` file.
 ```javascript
 const assert = require('chai').assert;
 
-describe('github', function() {
-    it('should find hermione', function() {
-        return this.browser
-            .url('https://github.com/gemini-testing/hermione')
-            .getText('#readme h1')
-            .then(function(title) {
-                assert.equal(title, 'Hermione')
-            });
+describe('github', async function() {
+    it('should find hermione', async function() {
+        await this.browser.url('https://github.com/gemini-testing/hermione');
+
+        const title = await this.browser.getText('#readme h1')
+        assert.equal(title, 'Hermione')
     });
 });
 ```
