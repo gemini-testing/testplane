@@ -13,15 +13,18 @@ describe('config', () => {
     const initConfig = (opts) => {
         opts = opts || {};
         parseOptions = sandbox.stub().returns(opts.configParserReturns);
+        const config = opts.config || defaults.config;
+        const stubs = {
+            './options': parseOptions
+        };
 
-        const configPath = opts.configPath || defaults.config;
-        const resolvedConfigPath = path.resolve(process.cwd(), configPath);
-        const Config = proxyquire('../../../lib/config', {
-            './options': parseOptions,
-            [resolvedConfigPath]: opts.requireConfigReturns || {}
-        });
+        if (typeof config === 'string') {
+            const resolvedConfigPath = path.resolve(process.cwd(), config);
+            stubs[resolvedConfigPath] = opts.requireConfigReturns || {};
+        }
+        const Config = proxyquire('../../../lib/config', stubs);
 
-        return Config.create(opts.configPath, opts.allowOverrides);
+        return Config.create(opts.config, opts.allowOverrides);
     };
 
     afterEach(() => sandbox.restore());
@@ -39,12 +42,18 @@ describe('config', () => {
             assert.calledWithMatch(parseOptions, {options: 'some-options', env: process.env, argv: process.argv});
         });
 
+        it('should parse config from object', () => {
+            initConfig({config: {someOption: 'some-value'}});
+
+            assert.calledWithMatch(parseOptions, {options: {someOption: 'some-value'}, env: process.env, argv: process.argv});
+        });
+
         it('should create config', () => {
             assert.include(initConfig({configParserReturns: {some: 'option'}}), {some: 'option'});
         });
 
         it('should extend config with a config path', () => {
-            assert.include(initConfig({configPath: 'config-path'}), {configPath: 'config-path'});
+            assert.include(initConfig({config: 'config-path'}), {configPath: 'config-path'});
         });
 
         it('should wrap browser config with "BrowserConfig" instance', () => {

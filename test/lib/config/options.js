@@ -13,7 +13,7 @@ describe('config options', () => {
 
     const parse_ = (opts) => parser(_.defaults(opts, {env: {}, argv: []}));
 
-    beforeEach(() => sandbox.stub(Config, 'read'));
+    beforeEach(() => sandbox.stub(Config, 'read').returns({}));
 
     afterEach(() => sandbox.restore());
 
