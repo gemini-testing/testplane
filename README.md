@@ -642,7 +642,7 @@ Option name               | Description
 `screenshotMode`          | Image capture mode.
 `saveHistory`             | Allows to save history of all executed commands. `false` by default.
 `agent`                   | Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null`.
-`headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got#headers) to pass into every http-request. Default value is `null`.
+`headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `null`.
 `transformRequest`        | Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`.
 `transformResponse`       | Allows to intercept [HTTP response object](https://github.com/sindresorhus/got#response) after a WebDriver response has arrived. Default value is `null`.
 `strictSSL`               | Whether it does require SSL certificate to be valid. Default value is `null` (it means that will be used [default value from wdio](https://webdriver.io/docs/options/#strictssl)).
@@ -861,7 +861,7 @@ module.exports = (hermione) => {
 Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null` (it means that will be used default http-agent from got).
 
 ####  headers
-Allows to set custom [headers](https://github.com/sindresorhus/got#headers) to pass into every http-request. Default value is `null`.
+Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `null`.
 
 ####  transformRequest
 Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`. If function is passed then it takes `RequestOptions` as the first argument and should return modified `RequestOptions`. Example:
@@ -944,7 +944,7 @@ By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. whe
 Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
 
 ### plugins
-`Hermione` plugins are commonly used to extend built-in functionality. For example, [hermione-allure-reporter](https://github.com/gemini-testing/hermione-allure-reporter) and [hermione-tunnel](https://github.com/gemini-testing/hermione-tunnel).
+`Hermione` plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands).
 
 A plugin is a module that exports a single function. The function has two arguments:
 
