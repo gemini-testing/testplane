@@ -75,6 +75,35 @@ class Hermione implements Hermione.Process {
     once(event: Hermione.INFO_EVENT, callback: () => void): this;
     once(event: Hermione.WARNING_EVENT, callback: () => void): this;
     once(event: Hermione.ERROR_EVENT, callback: (err: Error) => void): this;
+
+    prependListener(event: Hermione.INIT_EVENT, callback: () => Promise<void> | void): this;
+    prependListener(event: Hermione.RUNNER_START_EVENT, callback: (runner: Hermione.MainRunner) => Promise<void> | void): this;
+    prependListener(event: Hermione.RUNNER_END_EVENT, callback: (result: Hermione.StatsResult) => Promise<void> | void): this;
+    prependListener(event: Hermione.SESSION_START_EVENT, callback: Hermione.AsyncSessionEventCallback): this;
+    prependListener(event: Hermione.SESSION_END_EVENT, callback: Hermione.AsyncSessionEventCallback): this;
+    prependListener(event: Hermione.EXIT_EVENT, callback: () => Promise<void> | void): this;
+
+    prependListener(event: Hermione.NEW_WORKER_PROCESS_EVENT, callback: (suite: Hermione.NewWorkerProcess) => void): this;
+    prependListener(event: Hermione.SUITE_BEGIN_EVENT, callback: (suite: Hermione.Suite) => void): this;
+    prependListener(event: Hermione.SUITE_END_EVENT, callback: (suite: Hermione.Suite) => void): this;
+    prependListener(event: Hermione.TEST_BEGIN_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.TEST_END_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.TEST_PASS_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.TEST_FAIL_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.TEST_PENDING_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestWithRetriesLeft) => void): this;
+
+    prependListener(event: Hermione.CLI_EVENT, callback: (commander: commander.CommanderStatic) => void): this;
+    prependListener(event: Hermione.BEGIN_EVENT, callback: () => void): this;
+    prependListener(event: Hermione.END_EVENT, callback: () => void): this;
+    prependListener(event: Hermione.BEFORE_FILE_READ_EVENT, callback: (data: Hermione.BeforeFileReadData) => void): this;
+    prependListener(event: Hermione.AFTER_FILE_READ_EVENT, callback: (data: Hermione.AfterFileReadData) => void): this;
+    prependListener(event: Hermione.AFTER_TESTS_READ_EVENT, callback: (collection: Hermione.TestCollection) => void): this;
+    prependListener(event: Hermione.INFO_EVENT, callback: () => void): this;
+    prependListener(event: Hermione.WARNING_EVENT, callback: () => void): this;
+    prependListener(event: Hermione.ERROR_EVENT, callback: (err: Error) => void): this;
+
+    emitAndWait: GeminiCore.AsyncEmitter['emitAndWait'];
 };
 
 declare namespace Hermione {
