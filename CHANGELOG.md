@@ -1,13 +1,11 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [4.2.0](https://github.com/gemini-testing/hermione/compare/v4.1.4...v4.2.0) (2021-08-10)
+<a name="4.2.1"></a>
+## [4.2.1](https://github.com/gemini-testing/hermione/compare/v4.2.0...v4.2.1) (2021-08-17)
 
 
-### Features
-
-* added types for 'prependListener' and 'emitAndWait' methods ([a7dd400](https://github.com/gemini-testing/hermione/commit/a7dd400f9b12a74cef47f09617ee80e006356562))
 
 <a name="4.1.4"></a>
 ## [4.1.4](https://github.com/gemini-testing/hermione/compare/v4.1.3...v4.1.4) (2021-07-07)
