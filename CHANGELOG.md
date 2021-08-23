@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.2.2"></a>
+## [4.2.2](https://github.com/gemini-testing/hermione/compare/v4.2.1...v4.2.2) (2021-08-23)
+
+
+### Bug Fixes
+
+* errors in typings ([49e1117](https://github.com/gemini-testing/hermione/commit/49e1117))
+
+
+
 <a name="4.2.1"></a>
 ## [4.2.1](https://github.com/gemini-testing/hermione/compare/v4.2.0...v4.2.1) (2021-08-17)
 
