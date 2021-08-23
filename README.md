@@ -1,6 +1,6 @@
 # Hermione
 
-Hermione is a utility for integration testing of web pages using [WebdriverIO v7](http://webdriver.io/api.html) and [Mocha](https://mochajs.org).
+Hermione is a utility for integration testing of web pages using [WebdriverIO v7](https://webdriver.io/docs/api) and [Mocha](https://mochajs.org).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
