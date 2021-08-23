@@ -5,7 +5,7 @@
 /// <reference types='@gemini-testing/commander' />
 /// <reference types='@wdio/types' />
 
-class Hermione implements Hermione.Process {
+class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
     static create(configPath: string): Hermione;
     constructor(configPath: string);
 
@@ -13,7 +13,7 @@ class Hermione implements Hermione.Process {
     events: Hermione.EVENTS;
     errors: Hermione.Errors;
 
-    isWorker(): false;
+    isWorker(): boolean;
     intercept(event: Hermione.InterceptedEvent, handler: Hermione.InterceptHandler): this;
     extendCli(parser: commander.CommanderStatic): void;
     run(testPaths: Hermione.TestCollection | Array<string>, opts: Hermione.RunOpts): Promise<boolean>;
@@ -49,6 +49,9 @@ class Hermione implements Hermione.Process {
     on(event: Hermione.WARNING_EVENT, callback: () => void): this;
     on(event: Hermione.ERROR_EVENT, callback: (err: Error) => void): this;
 
+    on(event: Hermione.UPDATE_REFERENCE_EVENT, callback: (data: { state: string, refImg: Hermione.ImageInfo }) => void): this;
+    on(event: Hermione.NEW_BROWSER_EVENT, callback: Hermione.SyncSessionEventCallback): this;
+
     once(event: Hermione.INIT_EVENT, callback: () => Promise<void> | void): this;
     once(event: Hermione.RUNNER_START_EVENT, callback: (runner: Hermione.MainRunner) => Promise<void> | void): this;
     once(event: Hermione.RUNNER_END_EVENT, callback: (result: Hermione.StatsResult) => Promise<void> | void): this;
@@ -75,6 +78,9 @@ class Hermione implements Hermione.Process {
     once(event: Hermione.INFO_EVENT, callback: () => void): this;
     once(event: Hermione.WARNING_EVENT, callback: () => void): this;
     once(event: Hermione.ERROR_EVENT, callback: (err: Error) => void): this;
+
+    once(event: Hermione.UPDATE_REFERENCE_EVENT, callback: (data: { state: string, refImg: Hermione.ImageInfo }) => void): this;
+    once(event: Hermione.NEW_BROWSER_EVENT, callback: Hermione.SyncSessionEventCallback): this;
 
     prependListener(event: Hermione.INIT_EVENT, callback: () => Promise<void> | void): this;
     prependListener(event: Hermione.RUNNER_START_EVENT, callback: (runner: Hermione.MainRunner) => Promise<void> | void): this;
@@ -103,7 +109,8 @@ class Hermione implements Hermione.Process {
     prependListener(event: Hermione.WARNING_EVENT, callback: () => void): this;
     prependListener(event: Hermione.ERROR_EVENT, callback: (err: Error) => void): this;
 
-    emitAndWait: GeminiCore.AsyncEmitter['emitAndWait'];
+    prependListener(event: Hermione.UPDATE_REFERENCE_EVENT, callback: (data: { state: string, refImg: Hermione.ImageInfo }) => void): this;
+    prependListener(event: Hermione.NEW_BROWSER_EVENT, callback: Hermione.SyncSessionEventCallback): this;
 };
 
 declare namespace Hermione {
@@ -263,7 +270,11 @@ declare namespace Hermione {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     };
 
-    type TestDefinitionCallback = (this: { browser: WebdriverIO.Browser }, done: TestDone) => any;
+    type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, done: TestDone) => any;
+
+    export interface TestDefinitionCallbackCtx {
+        browser: WebdriverIO.Browser
+    };
 
     interface TestDone {
         (error?: any): any;

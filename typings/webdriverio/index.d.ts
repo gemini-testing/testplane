@@ -2,12 +2,12 @@
 
 declare namespace WebdriverIO {
     interface Browser {
-        getMeta(): Browser<Hermione.BrowserMeta>;
-        getMeta(key: string): Client<unknown>;
+        getMeta(): Promise<Hermione.BrowserMeta>;
+        getMeta(key: string): Promise<unknown>;
 
-        setMeta(key: string, value: unknown): void;
+        setMeta(key: string, value: unknown): Promise<void>;
 
-        extendOptions(opts: { [name: string]: unknown }): void;
+        extendOptions(opts: { [name: string]: unknown }): Promise<void>;
 
         /**
          * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
@@ -44,6 +44,6 @@ declare namespace WebdriverIO {
          * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
          * "compositeImage", "screenshotDelay", "selectorToScroll"
          */
-        assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): void;
+        assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): Promise<void>;
     }
 }
