@@ -1316,7 +1316,7 @@ const Hermione = require('hermione');
 const hermione = new Hermione(config);
 ```
 
-* **config** (required) `String` – Path to the configuration file that will be read relative to `process.cwd`.
+* **config** (required) `Object|String` – Configuration object or path to the configuration file that will be read relative to `process.cwd`.
 
 ### init
 

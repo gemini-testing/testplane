@@ -6,8 +6,8 @@
 /// <reference types='@wdio/types' />
 
 class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
-    static create(configPath: string): Hermione;
-    constructor(configPath: string);
+    static create(config: string|Hermione.CommonConfig): Hermione;
+    constructor(config: string|Hermione.CommonConfig);
 
     config: Hermione.Config;
     events: Hermione.EVENTS;
@@ -371,7 +371,7 @@ declare namespace Hermione {
     };
 
     export interface CommonConfig {
-        configPath: string;
+        configPath?: string;
         desiredCapabilities: WebDriver.DesiredCapabilities | null;
         gridUrl: string;
         baseUrl: string;
