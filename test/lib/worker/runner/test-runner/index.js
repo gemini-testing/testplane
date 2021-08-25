@@ -256,6 +256,12 @@ describe('worker/runner/test-runner', () => {
                     browser.publicAPI.$.withArgs('body').resolves(body);
                 });
 
+                it('should throw error if "body" does not exist on the page', async () => {
+                    browser.publicAPI.$.withArgs('body').resolves(undefined);
+
+                    assert.isRejected(run_(), /There is no "body" element on the page when resetting cursor position/);
+                });
+
                 it('should get body element', async () => {
                     await run_();
 
