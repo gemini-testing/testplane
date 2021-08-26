@@ -54,7 +54,10 @@ describe('runner/test-runner/regular-test-runner', () => {
             sessionId: 'default-session-id',
             applyState: sinon.stub().callsFake(function(state) {
                 this.state = state;
-            })
+            }),
+            publicAPI: {
+                options: {default: 'options'}
+            }
         });
     };
 
@@ -78,7 +81,10 @@ describe('runner/test-runner/regular-test-runner', () => {
                 id: 'bro',
                 version: '1.0',
                 sessionId: '100500',
-                capabilities: {browserName: 'bro'}
+                capabilities: {browserName: 'bro'},
+                publicAPI: {
+                    options: {foo: 'bar'}
+                }
             }));
             const workers = mkWorkers_();
 
@@ -88,7 +94,8 @@ describe('runner/test-runner/regular-test-runner', () => {
                 browserId: 'bro',
                 browserVersion: '1.0',
                 sessionId: '100500',
-                sessionCaps: {browserName: 'bro'}
+                sessionCaps: {browserName: 'bro'},
+                sessionOpts: {foo: 'bar'}
             }));
         });
 
