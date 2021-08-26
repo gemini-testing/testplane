@@ -129,11 +129,11 @@ describe('worker/runner', () => {
             const test = makeTest({fullTitle: () => 'some test'});
             CachingTestParser.prototype.parse.returns([test]);
 
-            runner.runTest('some test', {sessionId: '100500', sessionCaps: 'some-caps'});
+            runner.runTest('some test', {sessionId: '100500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'});
 
             assert.calledOnceWith(
                 TestRunner.prototype.run,
-                {sessionId: '100500', sessionCaps: 'some-caps'}
+                {sessionId: '100500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'}
             );
         });
     });

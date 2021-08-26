@@ -149,7 +149,7 @@ describe('commands-history', () => {
                 sandbox.stub(webdriverio, 'attach').resolves(mkSessionStub_());
                 browser = mkExistingBrowser_({saveHistory: true});
 
-                await browser.init();
+                await browser.init({sessionOpts: {}});
             });
 
             mkTestsSet(() => browser, 'addCommand');

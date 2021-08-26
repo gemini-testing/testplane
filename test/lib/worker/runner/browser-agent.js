@@ -14,13 +14,16 @@ describe('worker/browser-agent', () => {
                 browserId: 'bro-id',
                 browserVersion: null,
                 sessionId: '100-500',
-                sessionCaps: 'some-caps'
+                sessionCaps: 'some-caps',
+                sessionOpts: 'some-opts'
             }).returns({some: 'browser'});
+            const browserAgent = BrowserAgent.create('bro-id', null, browserPool);
 
-            assert.deepEqual(
-                BrowserAgent.create('bro-id', null, browserPool).getBrowser('100-500', 'some-caps'),
-                {some: 'browser'}
+            const browser = browserAgent.getBrowser(
+                {sessionId: '100-500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'}
             );
+
+            assert.deepEqual(browser, {some: 'browser'});
         });
 
         it('should get a browser with specific version from the pool', () => {
@@ -28,13 +31,16 @@ describe('worker/browser-agent', () => {
                 browserId: 'bro-id',
                 browserVersion: '10.1',
                 sessionId: '100-500',
-                sessionCaps: 'some-caps'
+                sessionCaps: 'some-caps',
+                sessionOpts: 'some-opts'
             }).returns({some: 'browser'});
+            const browserAgent = BrowserAgent.create('bro-id', '10.1', browserPool);
 
-            assert.deepEqual(
-                BrowserAgent.create('bro-id', '10.1', browserPool).getBrowser('100-500', 'some-caps'),
-                {some: 'browser'}
+            const browser = browserAgent.getBrowser(
+                {sessionId: '100-500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'}
             );
+
+            assert.deepEqual(browser, {some: 'browser'});
         });
     });
 

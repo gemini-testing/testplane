@@ -99,12 +99,12 @@ describe('worker/browser-pool', () => {
             Browser.create.returns(browser);
 
             await createPool().getBrowser({
-                browserId: 'bro-id', sessionId: '100-500', sessionCaps: 'some-caps'
+                browserId: 'bro-id', sessionId: '100-500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'
             });
 
             assert.calledOnceWith(
                 browser.init,
-                {sessionId: '100-500', sessionCaps: 'some-caps'},
+                {sessionId: '100-500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'},
                 sinon.match.instanceOf(Calibrator)
             );
         });
