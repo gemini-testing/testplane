@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.4.0"></a>
+# [4.4.0](https://github.com/gemini-testing/hermione/compare/v4.3.0...v4.4.0) (2021-08-26)
+
+
+### Bug Fixes
+
+* throw error when there is no "body" when resetting cursor pos ([b7e8925](https://github.com/gemini-testing/hermione/commit/b7e8925))
+
+
+### Features
+
+* reuse session options in worker from master ([1a50a87](https://github.com/gemini-testing/hermione/commit/1a50a87))
+
+
+
 <a name="4.3.0"></a>
 # [4.3.0](https://github.com/gemini-testing/hermione/compare/v4.2.2...v4.3.0) (2021-08-24)
 
