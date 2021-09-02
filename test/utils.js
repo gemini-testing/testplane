@@ -11,9 +11,9 @@ function browserWithId(id) {
     return new Browser(config, id);
 }
 
-function makeConfigStub(opts = {}) {
+function makeConfigStub(opts = {}, DEFAULT_BROWSER_NAME) {
     opts = _.defaults(opts, {
-        browsers: ['some-default-browser'],
+        browsers: [DEFAULT_BROWSER_NAME],
         version: '1.0',
         desiredCapabilities: {},
         retry: 0,
