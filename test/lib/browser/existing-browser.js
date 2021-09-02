@@ -454,6 +454,14 @@ describe('ExistingBrowser', () => {
             assert.equal(browser.sessionId, '100-500');
         });
 
+        it('should redefine session options', async () => {
+            const browser = await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar'}});
+
+            await browser.reinit('100-500', {bar: 'foo'});
+
+            assert.deepEqual(browser.publicAPI.options, {bar: 'foo'});
+        });
+
         describe('set browser orientation', () => {
             it('should not set orientation if it is not specified in a config', async () => {
                 const browser = await initBrowser_();
