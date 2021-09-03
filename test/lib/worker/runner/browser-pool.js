@@ -159,11 +159,19 @@ describe('worker/browser-pool', () => {
 
             Browser.create.returns(stubBrowser());
 
-            const browser = await browserPool.getBrowser({browserId: 'bro-id', sessionId: '100-500'});
+            const browser = await browserPool.getBrowser({
+                browserId: 'bro-id',
+                sessionId: '100-500',
+                sessionOpts: {foo: 'bar'}
+            });
             browserPool.freeBrowser(browser);
 
-            const anotherBrowser = await browserPool.getBrowser({browserId: 'bro-id', sessionId: '500-100'});
-            assert.calledOnceWith(anotherBrowser.reinit, '500-100');
+            const anotherBrowser = await browserPool.getBrowser({
+                browserId: 'bro-id',
+                sessionId: '500-100',
+                sessionOpts: {bar: 'foo'}
+            });
+            assert.calledOnceWith(anotherBrowser.reinit, '500-100', {bar: 'foo'});
         });
 
         it('should not emit "NEW_BROWSER" event on getting of a free browser from a cache', async () => {
