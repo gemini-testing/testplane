@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.4.1"></a>
+## [4.4.1](https://github.com/gemini-testing/hermione/compare/v4.4.0...v4.4.1) (2021-09-03)
+
+
+### Bug Fixes
+
+* reinit browser in worker with his session options ([585f5fa](https://github.com/gemini-testing/hermione/commit/585f5fa))
+
+
+
 <a name="4.4.0"></a>
 # [4.4.0](https://github.com/gemini-testing/hermione/compare/v4.3.0...v4.4.0) (2021-08-26)
 
