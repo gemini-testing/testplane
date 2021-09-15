@@ -852,5 +852,17 @@ describe('hermione', () => {
                     });
             });
         });
+
+        describe('stop', () => {
+            it('should emit exit signal', async () => {
+                const onExit = sinon.spy();
+                const hermione = mkHermione_().on('exit', onExit);
+
+                await hermione.run();
+                await hermione.stop();
+
+                assert.calledOnce(onExit);
+            });
+        });
     });
 });
