@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="3.12.0"></a>
+# [3.12.0](https://github.com/gemini-testing/hermione/compare/v3.11.4...v3.12.0) (2021-09-16)
+
+
+### Features
+
+* reuse session options from master in worker ([16060be](https://github.com/gemini-testing/hermione/commit/16060be))
+
+
+
 <a name="3.11.4"></a>
 ## [3.11.4](https://github.com/gemini-testing/hermione/compare/v3.11.3...v3.11.4) (2021-09-09)
 
