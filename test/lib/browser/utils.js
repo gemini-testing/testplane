@@ -40,8 +40,8 @@ exports.mkNewBrowser_ = (opts, browser = 'browser', version) => {
     return NewBrowser.create(createBrowserConfig_(opts), browser, version);
 };
 
-exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter = 'emitter') => {
-    return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter);
+exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter = 'emitter', sessionOpts = {}) => {
+    return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter, sessionOpts);
 };
 
 exports.mkSessionStub_ = () => {
