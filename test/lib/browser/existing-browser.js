@@ -331,6 +331,15 @@ describe('ExistingBrowser', () => {
                 .then(() => assert.equal(browser.sessionId, '100-500'));
         });
 
+        it('should redefine session options', () => {
+            const browser = mkBrowser_({}, 'bro', null, 'emitter', {foo: 'bar'});
+
+            return browser.reinit('100-500', {foo: 'qux'})
+                .then(() => {
+                    assert.deepEqual(browser.options, {foo: 'qux'});
+                });
+        });
+
         describe('set browser orientation', () => {
             it('should not set orientation if it is not specified in a config', async () => {
                 await mkBrowser_().reinit();
@@ -525,9 +534,10 @@ describe('ExistingBrowser', () => {
 
         ['addCommand', 'end', 'session'].forEach((commandName) => {
             it(`should not stub "${commandName}" session command`, () => {
+                const browser = mkBrowser_();
                 session[commandName] = () => commandName;
 
-                mkBrowser_().markAsBroken();
+                browser.markAsBroken();
 
                 assert.equal(session[commandName](), commandName);
             });
