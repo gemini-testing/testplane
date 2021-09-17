@@ -104,58 +104,58 @@ describe('test-reader/mocha-test-parser', () => {
     });
 
     describe('loadFiles', () => {
-        it('should be chainable', () => {
+        it('should be chainable', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            assert.deepEqual(mochaTestParser.loadFiles(['path/to/file']), mochaTestParser);
+            assert.deepEqual(await mochaTestParser.loadFiles(['path/to/file']), mochaTestParser);
         });
 
-        it('should load files', () => {
+        it('should load files', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.loadFiles(['path/to/file']);
+            await mochaTestParser.loadFiles(['path/to/file']);
 
             assert.calledOnceWith(MochaStub.lastInstance.addFile, 'path/to/file');
         });
 
-        it('should load a single file', () => {
+        it('should load a single file', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.loadFiles('path/to/file');
+            await mochaTestParser.loadFiles('path/to/file');
 
             assert.calledOnceWith(MochaStub.lastInstance.addFile, 'path/to/file');
         });
 
-        it('should clear require cache for file before adding', () => {
+        it('should clear require cache for file before adding', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.loadFiles(['path/to/file']);
+            await mochaTestParser.loadFiles(['path/to/file']);
 
             assert.calledOnceWith(clearRequire, path.resolve('path/to/file'));
             assert.callOrder(clearRequire, MochaStub.lastInstance.addFile);
         });
 
-        it('should load file after add', () => {
+        it('should load file after add', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.loadFiles(['path/to/file']);
+            await mochaTestParser.loadFiles(['path/to/file']);
 
-            assert.calledOnce(MochaStub.lastInstance.loadFiles);
-            assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFiles);
+            assert.calledOnce(MochaStub.lastInstance.loadFilesAsync);
+            assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFilesAsync);
         });
 
-        it('should flush files after load', () => {
+        it('should flush files after load', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            mochaTestParser.loadFiles(['path/to/file']);
+            await mochaTestParser.loadFiles(['path/to/file']);
 
             assert.deepEqual(MochaStub.lastInstance.files, []);
         });
 
-        it('should throw in case of duplicate test titles in different files', () => {
+        it('should throw in case of duplicate test titles in different files', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            MochaStub.lastInstance.loadFiles.callsFake(() => {
+            MochaStub.lastInstance.loadFilesAsync.callsFake(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
                         .addTest({title: 'some test', file: 'first file'})
@@ -163,14 +163,14 @@ describe('test-reader/mocha-test-parser', () => {
                 });
             });
 
-            assert.throws(() => mochaTestParser.loadFiles([]),
+            await assert.isRejected(mochaTestParser.loadFiles([]),
                 'Tests with the same title \'some test\' in files \'first file\' and \'second file\' can\'t be used');
         });
 
-        it('should throw in case of duplicate test titles in the same file', () => {
+        it('should throw in case of duplicate test titles in the same file', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
-            MochaStub.lastInstance.loadFiles.callsFake(() => {
+            MochaStub.lastInstance.loadFilesAsync.callsFake(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
                         .addTest({title: 'some test', file: 'some file'})
@@ -178,48 +178,48 @@ describe('test-reader/mocha-test-parser', () => {
                 });
             });
 
-            assert.throws(() => mochaTestParser.loadFiles([]),
+            await assert.isRejected(mochaTestParser.loadFiles([]),
                 'Tests with the same title \'some test\' in file \'some file\' can\'t be used');
         });
 
-        it('should emit TEST event on test creation', () => {
+        it('should emit TEST event on test creation', async () => {
             const onTest = sinon.spy().named('onTest');
             const mochaTestParser = mkMochaTestParser_()
                 .on(ParserEvents.TEST, onTest);
 
             const test = MochaStub.Test.create();
 
-            MochaStub.lastInstance.loadFiles.callsFake(() => {
+            MochaStub.lastInstance.loadFilesAsync.callsFake(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addTest(test));
             });
 
-            mochaTestParser.loadFiles([]);
+            await mochaTestParser.loadFiles([]);
 
             assert.calledOnceWith(onTest, test);
         });
 
-        it('should emit SUITE event on suite creation', () => {
+        it('should emit SUITE event on suite creation', async () => {
             const onSuite = sinon.spy().named('onSuite');
             const mochaTestParser = mkMochaTestParser_()
                 .on(ParserEvents.SUITE, onSuite);
 
             const nestedSuite = MochaStub.Suite.create();
 
-            MochaStub.lastInstance.loadFiles.callsFake(() => {
+            MochaStub.lastInstance.loadFilesAsync.callsFake(() => {
                 MochaStub.lastInstance.updateSuiteTree((suite) => suite.addSuite(nestedSuite));
             });
 
-            mochaTestParser.loadFiles([]);
+            await mochaTestParser.loadFiles([]);
 
             assert.calledOnceWith(onSuite, nestedSuite);
         });
 
-        it('hermione.ctx should return passed ctx', () => {
+        it('hermione.ctx should return passed ctx', async () => {
             const system = {ctx: {some: 'ctx'}};
             const config = makeConfigStub({browsers: ['bro'], system});
             const mochaTestParser = mkMochaTestParser_({browserId: 'bro', config});
 
-            mochaTestParser.loadFiles([]);
+            await mochaTestParser.loadFiles([]);
 
             assert.deepEqual(global.hermione.ctx, {some: 'ctx'});
         });
@@ -227,11 +227,11 @@ describe('test-reader/mocha-test-parser', () => {
         describe('inject skip', () => {
             let mochaTestParser;
 
-            beforeEach(() => {
+            beforeEach(async () => {
                 sandbox.stub(Skip.prototype, 'handleEntity');
 
                 mochaTestParser = mkMochaTestParser_();
-                mochaTestParser.loadFiles([]);
+                await mochaTestParser.loadFiles([]);
             });
 
             it('hermione.skip should return SkipBuilder instance', () => {
@@ -272,14 +272,14 @@ describe('test-reader/mocha-test-parser', () => {
             const config = makeConfigStub({browsers: [browserId]});
             const configurator = new BrowserConfigurator(browserId, []);
 
-            beforeEach(() => {
+            beforeEach(async () => {
                 BrowserConfiguratorStubConstructor.returns(configurator);
                 sandbox.stub(configurator, 'exposeAPI').returns(api);
                 sandbox.stub(configurator, 'handleTest');
                 sandbox.stub(configurator, 'handleSuite');
 
                 mochaTestParser = mkMochaTestParser_({config, browserId});
-                mochaTestParser.loadFiles([]);
+                await mochaTestParser.loadFiles([]);
             });
 
             it('should pass the config and the "browserId" param into the constructor', () => {

@@ -66,38 +66,38 @@ describe('worker/runner', () => {
     });
 
     describe('runTest', () => {
-        it('should parse passed file in passed browser', () => {
+        it('should parse passed file in passed browser', async () => {
             const runner = mkRunner_();
 
-            runner.runTest(null, {file: 'some/file.js', browserId: 'bro'});
+            await runner.runTest(null, {file: 'some/file.js', browserId: 'bro'});
 
             assert.calledOnceWith(CachingTestParser.prototype.parse, {file: 'some/file.js', browserId: 'bro'});
         });
 
-        it('should create test runner for parsed test', () => {
+        it('should create test runner for parsed test', async () => {
             const runner = mkRunner_();
 
             const test = makeTest({fullTitle: () => 'some test'});
             CachingTestParser.prototype.parse.returns([test]);
 
-            runner.runTest('some test', {});
+            await runner.runTest('some test', {});
 
             assert.calledOnceWith(TestRunner.create, test);
         });
 
-        it('should pass browser config to test runner', () => {
+        it('should pass browser config to test runner', async () => {
             const config = makeConfigStub({browsers: ['bro']});
             const runner = mkRunner_({config});
 
             const test = makeTest({fullTitle: () => 'some test'});
             CachingTestParser.prototype.parse.returns([test]);
 
-            runner.runTest('some test', {browserId: 'bro'});
+            await runner.runTest('some test', {browserId: 'bro'});
 
             assert.calledOnceWith(TestRunner.create, test, config.forBrowser('bro'));
         });
 
-        it('should create browser agent for test runner', () => {
+        it('should create browser agent for test runner', async () => {
             const runner = mkRunner_();
 
             const test = makeTest({fullTitle: () => 'some test'});
@@ -106,30 +106,30 @@ describe('worker/runner', () => {
             const browserAgent = Object.create(BrowserAgent.prototype);
             BrowserAgent.create.withArgs('bro').returns(browserAgent);
 
-            runner.runTest('some test', {browserId: 'bro'});
+            await runner.runTest('some test', {browserId: 'bro'});
 
             assert.calledOnceWith(TestRunner.create, test, sinon.match.any, browserAgent);
         });
 
-        it('should create test runner only for passed test', () => {
+        it('should create test runner only for passed test', async () => {
             const runner = mkRunner_();
 
             const test1 = makeTest({fullTitle: () => 'some test'});
             const test2 = makeTest({fullTitle: () => 'other test'});
             CachingTestParser.prototype.parse.returns([test1, test2]);
 
-            runner.runTest('other test', {});
+            await runner.runTest('other test', {});
 
             assert.calledOnceWith(TestRunner.create, test2);
         });
 
-        it('should run test in passed session', () => {
+        it('should run test in passed session', async () => {
             const runner = mkRunner_();
 
             const test = makeTest({fullTitle: () => 'some test'});
             CachingTestParser.prototype.parse.returns([test]);
 
-            runner.runTest('some test', {sessionId: '100500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'});
+            await runner.runTest('some test', {sessionId: '100500', sessionCaps: 'some-caps', sessionOpts: 'some-opts'});
 
             assert.calledOnceWith(
                 TestRunner.prototype.run,
