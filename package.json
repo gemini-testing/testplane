@@ -34,7 +34,7 @@
   "license": "MIT",
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
-    "@gemini-testing/webdriverio": "4.16.2",
+    "@gemini-testing/webdriverio": "4.17.0",
     "@types/mocha": "^2.2.48",
     "@types/node": "^8.5.10",
     "@types/webdriverio": "^4.13.3",
