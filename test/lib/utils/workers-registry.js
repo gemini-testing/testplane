@@ -121,17 +121,35 @@ describe('WorkersRegistry', () => {
             });
         });
 
-        it('should emit other events through workers object', () => {
-            const workersRegistry = mkWorkersRegistry_();
-            const workers = workersRegistry.register(null, []);
+        describe('other events', () => {
+            it('should emit one event through workers object', () => {
+                const workersRegistry = mkWorkersRegistry_();
+                const workers = workersRegistry.register(null, []);
+                const child = initChild_();
 
-            const onEvent = sandbox.stub().named('onEvent');
-            workers.on('foo', onEvent);
+                const onEvent = sandbox.stub().named('onEvent');
+                workers.once('foo', onEvent);
+                child.emit('message', {event: 'foo', bar: 'baz'});
 
-            const child = initChild_();
-            child.emit('message', {event: 'foo', bar: 'baz'});
+                assert.calledOnceWith(onEvent, {bar: 'baz'});
+            });
 
-            assert.calledOnceWith(onEvent, {bar: 'baz'});
+            it('should emit few events sequentially through workers object', () => {
+                const workersRegistry = mkWorkersRegistry_();
+                const workers = workersRegistry.register(null, []);
+                const child = initChild_();
+
+                const onFooEvent = sandbox.stub().named('onFooEvent');
+                workers.once('foo', onFooEvent);
+                child.emit('message', {event: 'foo', bar: 'baz'});
+
+                const onBarEvent = sandbox.stub().named('onBarEvent');
+                workers.once('bar', onBarEvent);
+                child.emit('message', {event: 'bar', baz: 'qux'});
+
+                assert.calledOnceWith(onFooEvent, {bar: 'baz'});
+                assert.calledOnceWith(onBarEvent, {baz: 'qux'});
+            });
         });
 
         it('should not emit unknown events (without event field) through workers object', () => {
