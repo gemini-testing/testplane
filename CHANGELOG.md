@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.4.4"></a>
+## [4.4.4](https://github.com/gemini-testing/hermione/compare/v4.4.3...v4.4.4) (2021-10-01)
+
+
+### Bug Fixes
+
+* correct work of "patternsOnReject" ([a936006](https://github.com/gemini-testing/hermione/commit/a936006))
+
+
+
 <a name="4.4.3"></a>
 ## [4.4.3](https://github.com/gemini-testing/hermione/compare/v4.4.2...v4.4.3) (2021-09-17)
 
