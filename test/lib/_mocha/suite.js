@@ -27,8 +27,6 @@ module.exports = class Suite extends EventEmitter {
         this._suites = [];
 
         this.ctx = {};
-
-        this.enableTimeouts = sinon.stub().returns(true);
     }
 
     static create(parent, title) {

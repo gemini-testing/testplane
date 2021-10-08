@@ -23,20 +23,11 @@ module.exports = class Runnable {
         return this.fn.call(this.ctx);
     }
 
-    enableTimeouts(val) {
-        if (val === undefined) {
-            return this._enableTimeouts;
-        }
-
-        this._enableTimeouts = val;
-    }
-
     timeout(val) {
         if (val === undefined) {
             return this._timeout;
         }
 
-        this.enableTimeouts(true);
         this._timeout = val;
     }
 };
