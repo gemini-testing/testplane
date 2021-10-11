@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.5.0"></a>
+# [4.5.0](https://github.com/gemini-testing/hermione/compare/v4.4.4...v4.5.0) (2021-10-11)
+
+
+### Features
+
+* move from mocha[@2](https://github.com/2).4.5 to [@gemini](https://github.com/gemini)-testing/mocha[@9](https://github.com/9).1.5 ([c181f42](https://github.com/gemini-testing/hermione/commit/c181f42))
+
+
+
 <a name="4.4.4"></a>
 ## [4.4.4](https://github.com/gemini-testing/hermione/compare/v4.4.3...v4.4.4) (2021-10-01)
 
