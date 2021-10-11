@@ -7,7 +7,7 @@
   "scripts": {
     "coverage": "nyc --reporter=text npm run test-unit",
     "lint": "eslint .",
-    "test-unit": "_mocha -- test/",
+    "test-unit": "_mocha test/ --config test/.mocharc.js",
     "test": "npm run test-unit && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
@@ -24,9 +24,9 @@
   },
   "keywords": [
     "hermione",
+    "webdriverio",
     "mocha",
-    "test",
-    "webdriverio"
+    "test"
   ],
   "bin": {
     "hermione": "./bin/hermione"
@@ -34,9 +34,7 @@
   "license": "MIT",
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
-    "@types/mocha": "^2.2.48",
-    "@types/node": "^8.5.10",
-    "@wdio/types": "^7.8.0",
+    "@gemini-testing/mocha": "^9.1.5",
     "@wdio/utils": "^7.10.0",
     "bluebird": "^3.5.1",
     "chalk": "^1.1.1",
@@ -46,7 +44,6 @@
     "gemini-core": "^6.2.2",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
-    "mocha": "~2.4.5",
     "plugins-loader": "^1.1.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
@@ -54,6 +51,9 @@
     "worker-farm": "^1.7.0"
   },
   "devDependencies": {
+    "@types/mocha": "^9.0.0",
+    "@types/node": "^12.20.28",
+    "@wdio/types": "^7.10.1",
     "app-module-path": "^2.2.0",
     "bluebird": "^3.5.1",
     "chai": "^4.1.1",

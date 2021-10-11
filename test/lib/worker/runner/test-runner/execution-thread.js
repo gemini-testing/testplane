@@ -183,8 +183,7 @@ describe('worker/runner/test-runner/execution-thread', () => {
                 type: 'test',
                 fn: () => Promise.delay(20)
             });
-            runnable.timeout(10);
-            runnable.enableTimeouts(false);
+            runnable.timeout(0);
 
             const executionThread = mkExecutionThread_();
 

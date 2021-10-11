@@ -47,7 +47,7 @@ describe('test-reader/mocha-test-parser', () => {
 
         MochaTestParser = proxyquire('../../../lib/test-reader/mocha-test-parser', {
             'clear-require': clearRequire,
-            'mocha': MochaStub,
+            '@gemini-testing/mocha': MochaStub,
             './browser': BrowserConfiguratorStubConstructor
         });
 
