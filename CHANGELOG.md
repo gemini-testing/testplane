@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.6.0"></a>
+# [4.6.0](https://github.com/gemini-testing/hermione/compare/v4.5.0...v4.6.0) (2021-10-12)
+
+
+### Features
+
+* add ability to use xpath selectors in "assertView" command ([d399b5f](https://github.com/gemini-testing/hermione/commit/d399b5f))
+
+
+
 <a name="4.5.0"></a>
 # [4.5.0](https://github.com/gemini-testing/hermione/compare/v4.4.4...v4.5.0) (2021-10-11)
 
