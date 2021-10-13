@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.6.2"></a>
+## [4.6.2](https://github.com/gemini-testing/hermione/compare/v4.6.1...v4.6.2) (2021-10-13)
+
+
+### Bug Fixes
+
+* add ability to take screenshot if element is out of the bounds ([6c55e74](https://github.com/gemini-testing/hermione/commit/6c55e74))
+
+
+
 <a name="4.6.1"></a>
 ## [4.6.1](https://github.com/gemini-testing/hermione/compare/v4.6.0...v4.6.1) (2021-10-13)
 
