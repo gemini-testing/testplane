@@ -18,8 +18,9 @@ class Mocha extends EventEmitter {
         this.fullTrace = sinon.stub();
         this.timeout = sinon.stub();
         this.reporter = sinon.stub().callsFake((fn) => this._reporter = fn);
+        this.options = options;
         this.grep = sinon.stub().callsFake((re) => {
-            options.grep = typeof re === 'string' ? new RegExp(re) : re;
+            this.options.grep = typeof re === 'string' ? new RegExp(re) : re;
         });
 
         this.constructorArgs = options;
