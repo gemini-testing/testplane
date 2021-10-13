@@ -41,7 +41,7 @@
     "clear-require": "^1.0.1",
     "fs-extra": "^5.0.0",
     "gemini-configparser": "^1.1.0",
-    "gemini-core": "^6.3.1",
+    "gemini-core": "^6.3.2",
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
     "plugins-loader": "^1.1.0",
