@@ -5,22 +5,38 @@ const TestParser = require('lib/test-reader/mocha-test-parser');
 const TestSkipper = require('lib/test-reader/test-skipper');
 const Events = require('lib/constants/runner-events');
 const SetsBuilder = require('gemini-core').SetsBuilder;
-const {makeConfigStub} = require('../../utils');
+const makeDefaultConfigStub = require('../../utils').makeConfigStub;
 const _ = require('lodash');
+const DEFAULT_BROWSER_NAME = 'some-default-browser';
 
 describe('test-reader', () => {
     const sandbox = sinon.sandbox.create();
+    let groupByBrowser;
 
-    const readTests_ = (opts = {}) => {
+    const makeConfigStub = (opts) => {
+        return makeDefaultConfigStub(opts, DEFAULT_BROWSER_NAME);
+    };
+
+    const callsFakeLoadFiles_ = ({cb = () => {}, tests = ['default-test']} = {}) => {
+        TestParser.prototype.loadFiles.reset();
+        TestParser.prototype.loadFiles.callsFake(function() {
+            cb.call(this);
+            this._tests = tests;
+            return this;
+        });
+    };
+
+    const readTests_ = ({opts, config, reader} = {}) => {
         opts = _.defaults(opts, {
             paths: [],
-            config: makeConfigStub(),
             sets: [],
             ignore: [],
-            grep: 'default-grep'
+            browsers: [],
+            grep: ''
         });
 
-        const reader = opts.reader || TestReader.create(opts.config);
+        config = config || makeConfigStub();
+        reader = reader || TestReader.create(config);
 
         return reader.read(opts);
     };
@@ -31,17 +47,26 @@ describe('test-reader', () => {
         sandbox.stub(SetsBuilder.prototype, 'useSets').returnsThis();
         sandbox.stub(SetsBuilder.prototype, 'useBrowsers').returnsThis();
 
-        sandbox.stub(SetsBuilder.prototype, 'build').resolves({groupByBrowser: () => ({})});
-
         sandbox.stub(TestParser, 'prepare');
         sandbox.spy(TestParser, 'create');
         sandbox.stub(TestParser.prototype, 'applySkip').returnsThis();
         sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
         sandbox.stub(TestParser.prototype, 'applyGrep').returnsThis();
-        sandbox.stub(TestParser.prototype, 'loadFiles').returnsThis();
-        sandbox.stub(TestParser.prototype, 'parse');
 
         sandbox.spy(TestSkipper, 'create');
+
+        groupByBrowser = sinon.stub().returns({[`${DEFAULT_BROWSER_NAME}`]: []});
+
+        sandbox.stub(SetsBuilder.prototype, 'build').resolves({groupByBrowser});
+
+        sandbox.stub(TestParser.prototype, 'loadFiles').callsFake(function() {
+            this._tests = [{title: 'default-test'}];
+            return this;
+        });
+
+        sandbox.stub(TestParser.prototype, 'parse').callsFake(function() {
+            return this._tests;
+        });
     });
 
     afterEach(() => {
@@ -67,13 +92,13 @@ describe('test-reader', () => {
         });
 
         it('should use passed paths', async () => {
-            await readTests_({paths: ['some/path']});
+            await readTests_({opts: {paths: ['some/path']}});
 
             assert.calledOnceWith(SetsBuilder.prototype.useFiles, ['some/path']);
         });
 
         it('should use passed sets', async () => {
-            await readTests_({sets: ['set1']});
+            await readTests_({opts: {sets: ['set1']}});
 
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1']);
         });
@@ -81,7 +106,7 @@ describe('test-reader', () => {
         it('should use sets from environment variable "HERMIONE_SETS"', async () => {
             process.env.HERMIONE_SETS = 'set1,set2';
 
-            await readTests_({sets: null});
+            await readTests_({opts: {sets: null}});
 
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1', 'set2']);
         });
@@ -89,13 +114,13 @@ describe('test-reader', () => {
         it('should concat passed sets with sets from environment variable "HERMIONE_SETS"', async () => {
             process.env.HERMIONE_SETS = 'set2';
 
-            await readTests_({sets: ['set1']});
+            await readTests_({opts: {sets: ['set1']}});
 
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ['set1', 'set2']);
         });
 
         it('should use pased browsers', async () => {
-            await readTests_({browsers: ['bro1']});
+            await readTests_({opts: {browsers: ['bro1']}});
 
             assert.calledOnceWith(SetsBuilder.prototype.useBrowsers, ['bro1']);
         });
@@ -107,7 +132,7 @@ describe('test-reader', () => {
         });
 
         it('should pass ignore files to build', async () => {
-            await readTests_({ignore: 'foo/bar'});
+            await readTests_({opts: {ignore: 'foo/bar'}});
 
             assert.calledOnceWith(SetsBuilder.prototype.build, sinon.match.any, {ignore: 'foo/bar'});
         });
@@ -137,9 +162,6 @@ describe('test-reader', () => {
         });
 
         it('should group files by browser', async () => {
-            const groupByBrowser = sinon.stub().returns({});
-            SetsBuilder.prototype.build.resolves({groupByBrowser});
-
             await readTests_();
 
             assert.calledOnce(groupByBrowser);
@@ -153,7 +175,7 @@ describe('test-reader', () => {
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.calledOnce(TestParser.prepare);
             assert.callOrder(TestParser.prepare, TestParser.create);
@@ -167,7 +189,7 @@ describe('test-reader', () => {
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.calledTwice(TestParser.create);
             assert.calledWith(TestParser.create, 'bro1', config);
@@ -182,7 +204,7 @@ describe('test-reader', () => {
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.calledTwice(TestParser.prototype.loadFiles);
             assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file1']);
@@ -216,7 +238,7 @@ describe('test-reader', () => {
             });
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            const specs = await readTests_({config});
+            const specs = await readTests_({config: config});
 
             assert.deepEqual(specs, {
                 bro1: [test1, test2],
@@ -237,14 +259,10 @@ describe('test-reader', () => {
                 calls.push('applyConfigController');
                 return this;
             });
-            TestParser.prototype.loadFiles.reset();
-            TestParser.prototype.loadFiles.callsFake(function() {
-                calls.push('loadFiles');
-                return this;
-            });
+            callsFakeLoadFiles_({cb: () => calls.push('loadFiles')});
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.deepEqual(calls, ['applyConfigController', 'applyConfigController', 'loadFiles', 'loadFiles']);
         });
@@ -262,14 +280,10 @@ describe('test-reader', () => {
                 calls.push('applyGrep');
                 return this;
             });
-            TestParser.prototype.loadFiles.reset();
-            TestParser.prototype.loadFiles.callsFake(function() {
-                calls.push('loadFiles');
-                return this;
-            });
+            callsFakeLoadFiles_({cb: () => calls.push('loadFiles')});
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.deepEqual(calls, ['applyGrep', 'applyGrep', 'loadFiles', 'loadFiles']);
         });
@@ -290,9 +304,77 @@ describe('test-reader', () => {
             TestParser.prototype.parse.callsFake(() => calls.push('parse'));
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-            await readTests_({config});
+            await readTests_({config: config});
 
             assert.deepEqual(calls, ['loadFiles', 'loadFiles', 'parse', 'parse']);
+        });
+
+        describe('if there are no tests found', () => {
+            it('should throw error', async () => {
+                callsFakeLoadFiles_({tests: []});
+
+                assert.isRejected(readTests_(), 'There are no tests found');
+            });
+
+            [
+                {name: 'paths', value: ['path1, path2'], expectedMsg: '- paths: path1, path2\n'},
+                {name: 'browsers', value: ['bro1', 'bro2'], expectedMsg: '- browsers: bro1, bro2\n'},
+                {name: 'ignore', value: 'ignore1', expectedMsg: '- ignore: ignore1\n'},
+                {name: 'sets', value: ['set1', 'set2'], expectedMsg: '- sets: set1, set2\n'},
+                {name: 'grep', value: 'grep1', expectedMsg: '- grep: grep1\n'}
+            ].forEach(({name, value, expectedMsg}) => {
+                it(`should correctly print passed option ${name}`, async () => {
+                    callsFakeLoadFiles_({tests: []});
+
+                    try {
+                        await readTests_({opts: {[`${name}`]: value}});
+                    } catch (e) {
+                        assert.equal(e.message, 'There are no tests found by the specified options:\n'
+                            + expectedMsg);
+                    }
+                });
+            });
+
+            it(`should correctly print several passed options that have a value`, async () => {
+                callsFakeLoadFiles_({opts: {tests: []}});
+
+                const opts = {
+                    paths: ['path1', 'path2'],
+                    browsers: ['browser1', 'browser2'],
+                    ignore: undefined,
+                    sets: []
+                };
+
+                try {
+                    await readTests_({opts: opts});
+                } catch (e) {
+                    assert.equal(e.message, 'There are no tests found by the specified options:\n' +
+                        '- paths: path1, path2\n- browsers: browser1, browser2\n');
+                }
+            });
+
+            it ('should print supported options if none are specified', () => {
+                callsFakeLoadFiles_({tests: []});
+
+                assert.isRejected(readTests_(), 'Try to specify [paths, sets, ignore, browsers, grep] options');
+            });
+
+            it('should throw error if there no tests after grep applying', async () => {
+                callsFakeLoadFiles_({tests: [{title: 'foo', silentSkip: true}]});
+
+                try {
+                    await readTests_({opts: {grep: 'foo'}});
+                } catch (e) {
+                    assert.equal(e.message, 'There are no tests found by the specified options:\n'
+                        + '- grep: foo\n');
+                }
+            });
+        });
+
+        it('should not throw error if there is test mathed with grep pattern', async () => {
+            callsFakeLoadFiles_({tests: [{title: 'foo', silentSkip: false}, {title: 'bar', silentSkip: true}]});
+
+            assert.isFulfilled(readTests_({opts: {grep: 'bar'}}));
         });
 
         describe('for each browser', () => {
@@ -313,9 +395,10 @@ describe('test-reader', () => {
 
                     TestParser.prototype.parse.callsFake(function() {
                         this.emit(Events[event], {foo: 'bar'});
+                        return this._tests;
                     });
 
-                    await readTests_({reader});
+                    await readTests_({reader: reader});
 
                     assert.calledOnceWith(onEvent, {foo: 'bar'});
                 });
@@ -324,7 +407,7 @@ describe('test-reader', () => {
             it('should create test skipper', async () => {
                 const config = makeConfigStub({browsers: ['bro']});
 
-                await readTests_({config});
+                await readTests_({config: config});
 
                 assert.calledOnceWith(TestSkipper.create, config);
             });
@@ -338,7 +421,7 @@ describe('test-reader', () => {
                 });
 
                 const config = makeConfigStub({browsers: ['bro1', 'bro2']});
-                await readTests_({config});
+                await readTests_({config: config});
 
                 assert.calledTwice(TestParser.prototype.applySkip);
                 assert.equal(
@@ -350,7 +433,7 @@ describe('test-reader', () => {
             it('should apply grep to test parser', async () => {
                 const config = makeConfigStub({browsers: ['bro']});
 
-                await readTests_({config, grep: 'foo bar'});
+                await readTests_({config: config, opts: {grep: 'foo bar'}});
 
                 assert.calledOnceWith(TestParser.prototype.applyGrep, 'foo bar');
             });
@@ -358,7 +441,7 @@ describe('test-reader', () => {
             it('should apply all props before loading files', async () => {
                 const config = makeConfigStub({browsers: ['bro']});
 
-                await readTests_({config});
+                await readTests_({config: config});
 
                 assert.callOrder(TestParser.prototype.applySkip, TestParser.prototype.loadFiles);
                 assert.callOrder(TestParser.prototype.applyGrep, TestParser.prototype.loadFiles);
@@ -367,7 +450,7 @@ describe('test-reader', () => {
             it('should load files before parsing', async () => {
                 const config = makeConfigStub({browsers: ['bro']});
 
-                await readTests_({config});
+                await readTests_({config: config});
 
                 assert.callOrder(TestParser.prototype.loadFiles, TestParser.prototype.parse);
             });
