@@ -33,11 +33,11 @@ class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
     on(event: Hermione.SUITE_BEGIN_EVENT, callback: (suite: Hermione.Suite) => void): this;
     on(event: Hermione.SUITE_END_EVENT, callback: (suite: Hermione.Suite) => void): this;
     on(event: Hermione.TEST_BEGIN_EVENT, callback: Hermione.TestEventCallback): this;
-    on(event: Hermione.TEST_END_EVENT, callback: Hermione.TestEventCallback): this;
-    on(event: Hermione.TEST_PASS_EVENT, callback: Hermione.TestEventCallback): this;
-    on(event: Hermione.TEST_FAIL_EVENT, callback: Hermione.TestEventCallback): this;
+    on(event: Hermione.TEST_END_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    on(event: Hermione.TEST_PASS_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    on(event: Hermione.TEST_FAIL_EVENT, callback: (test: Hermione.TestResult) => void): this;
     on(event: Hermione.TEST_PENDING_EVENT, callback: Hermione.TestEventCallback): this;
-    on(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestWithRetriesLeft) => void): this;
+    on(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestResultWithRetries) => void): this;
 
     on(event: Hermione.CLI_EVENT, callback: (commander: commander.CommanderStatic) => void): this;
     on(event: Hermione.BEGIN_EVENT, callback: () => void): this;
@@ -63,11 +63,11 @@ class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
     once(event: Hermione.SUITE_BEGIN_EVENT, callback: (suite: Hermione.Suite) => void): this;
     once(event: Hermione.SUITE_END_EVENT, callback: (suite: Hermione.Suite) => void): this;
     once(event: Hermione.TEST_BEGIN_EVENT, callback: Hermione.TestEventCallback): this;
-    once(event: Hermione.TEST_END_EVENT, callback: Hermione.TestEventCallback): this;
-    once(event: Hermione.TEST_PASS_EVENT, callback: Hermione.TestEventCallback): this;
-    once(event: Hermione.TEST_FAIL_EVENT, callback: Hermione.TestEventCallback): this;
+    once(event: Hermione.TEST_END_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    once(event: Hermione.TEST_PASS_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    once(event: Hermione.TEST_FAIL_EVENT, callback: (test: Hermione.TestResult) => void): this;
     once(event: Hermione.TEST_PENDING_EVENT, callback: Hermione.TestEventCallback): this;
-    once(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestWithRetriesLeft) => void): this;
+    once(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestResultWithRetries) => void): this;
 
     once(event: Hermione.CLI_EVENT, callback: (commander: commander.CommanderStatic) => void): this;
     once(event: Hermione.BEGIN_EVENT, callback: () => void): this;
@@ -93,11 +93,11 @@ class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
     prependListener(event: Hermione.SUITE_BEGIN_EVENT, callback: (suite: Hermione.Suite) => void): this;
     prependListener(event: Hermione.SUITE_END_EVENT, callback: (suite: Hermione.Suite) => void): this;
     prependListener(event: Hermione.TEST_BEGIN_EVENT, callback: Hermione.TestEventCallback): this;
-    prependListener(event: Hermione.TEST_END_EVENT, callback: Hermione.TestEventCallback): this;
-    prependListener(event: Hermione.TEST_PASS_EVENT, callback: Hermione.TestEventCallback): this;
-    prependListener(event: Hermione.TEST_FAIL_EVENT, callback: Hermione.TestEventCallback): this;
+    prependListener(event: Hermione.TEST_END_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    prependListener(event: Hermione.TEST_PASS_EVENT, callback: (test: Hermione.TestResult) => void): this;
+    prependListener(event: Hermione.TEST_FAIL_EVENT, callback: (test: Hermione.TestResult) => void): this;
     prependListener(event: Hermione.TEST_PENDING_EVENT, callback: Hermione.TestEventCallback): this;
-    prependListener(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestWithRetriesLeft) => void): this;
+    prependListener(event: Hermione.RETRY_EVENT, callback: (test: Hermione.TestResultWithRetries) => void): this;
 
     prependListener(event: Hermione.CLI_EVENT, callback: (commander: commander.CommanderStatic) => void): this;
     prependListener(event: Hermione.BEGIN_EVENT, callback: () => void): this;
@@ -147,10 +147,10 @@ declare namespace Hermione {
 
     export interface WorkerRunTestResult {
         meta: { [name: string]: unknown };
-        hermioneCtx: WorkerRuntTestHermioneCtx;
+        hermioneCtx: WorkerRunTestHermioneCtx;
     };
 
-    export interface WorkerRuntTestHermioneCtx {
+    export interface WorkerRunTestHermioneCtx {
         assertViewResults: Array<AssertViewResultsSuccess>;
     };
 
@@ -262,7 +262,18 @@ declare namespace Hermione {
         body: string;
     };
 
-    export interface TestWithRetriesLeft extends Test {
+    export interface TestResult extends Test {
+        startTime: number;
+        duration: number;
+        assertViewResults: Array<AssertViewResultsSuccess>;
+        meta: { [name: string]: unknown };
+        hermioneCtx: {
+            assertViewResults: Array<AssertViewResultsSuccess>;
+        };
+        history: History;
+    }
+
+    export interface TestResultWithRetries extends TestResult {
         retriesLeft: number;
     };
 
@@ -313,7 +324,7 @@ declare namespace Hermione {
     };
 
     export type RegisterWorkers = <T extends string>(workerFilepath: string, exportedMethods: ReadonlyArray<T>) => {
-        [K in typeof exportedMethods[number]]: (...args: Array<unknown>) => Promise<unknown> | unknown
+        [K in typeof exportedMethods[number]]: (...args: Array<unknown>) => Promise<any> | any
     };
 
     export interface Stats {
