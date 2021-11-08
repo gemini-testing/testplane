@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.7.0"></a>
+# [4.7.0](https://github.com/gemini-testing/hermione/compare/v4.6.4...v4.7.0) (2021-11-08)
+
+
+### Features
+
+* add "startTime" field to test result in order to use in plugins ([9dfb5ed](https://github.com/gemini-testing/hermione/commit/9dfb5ed))
+
+
+
 <a name="4.6.4"></a>
 ## [4.6.4](https://github.com/gemini-testing/hermione/compare/v4.6.3...v4.6.4) (2021-10-15)
 
