@@ -211,12 +211,6 @@ declare namespace Hermione {
     export interface Suite extends Hermione.MochaSuite {
         id(): string;
         browserId: string;
-        file: string;
-        parent: Suite;
-        pending: boolean;
-        root: boolean;
-        suites: Array<Suite>;
-        tests: Array<Test>;
         history: History;
     };
 
@@ -247,19 +241,12 @@ declare namespace Hermione {
 
     export interface Hook extends Hermione.MochaRunnable {
         type: 'hook';
-        parent?: Suite;
-        ctx: Context;
-        file: string;
-        body: string;
     };
 
     export interface Test extends Hermione.MochaTest {
         id(): string;
         browserId: string;
         sessionId: string;
-        err?: Error;
-        file: string;
-        body: string;
     };
 
     export interface TestResult extends Test {
