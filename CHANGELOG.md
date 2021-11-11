@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.7.2"></a>
+## [4.7.2](https://github.com/gemini-testing/hermione/compare/v4.7.1...v4.7.2) (2021-11-11)
+
+
+### Bug Fixes
+
+* up version gemini-core to support Node 16 ([6b5af5d](https://github.com/gemini-testing/hermione/commit/6b5af5d))
+
+
+
 <a name="4.7.1"></a>
 ## [4.7.1](https://github.com/gemini-testing/hermione/compare/v4.7.0...v4.7.1) (2021-11-08)
 
