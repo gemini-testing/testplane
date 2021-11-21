@@ -338,7 +338,7 @@ declare namespace Hermione {
     };
 
     export interface GlobalHelper {
-        ctx: { [name: string]: unknown };
+        ctx: { [name: string]: any };
         skip: SkipBuilder;
         only: OnlyBuilder;
         browser: (browserName: string) => BrowserConfigurator
