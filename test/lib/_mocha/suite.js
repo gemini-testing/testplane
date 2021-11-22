@@ -146,6 +146,14 @@ module.exports = class Suite extends EventEmitter {
         this.suites.forEach((suite) => suite.eachTest(fn));
     }
 
+    filterOnly() {
+        return this;
+    }
+
+    hasOnly() {
+        return true;
+    }
+
     run(runner) {
         return Promise.resolve()
             .then(this._execRunnables(this.beforeAllHooks))
