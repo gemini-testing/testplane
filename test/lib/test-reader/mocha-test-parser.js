@@ -144,6 +144,16 @@ describe('test-reader/mocha-test-parser', () => {
             assert.callOrder(MochaStub.lastInstance.addFile, MochaStub.lastInstance.loadFiles);
         });
 
+        it('should filter suites/tests with `only`', () => {
+            sandbox.stub(MochaStub.Suite.prototype, 'filterOnly');
+            const mochaTestParser = mkMochaTestParser_();
+
+            mochaTestParser.loadFiles(['path/to/file']);
+
+            assert.calledOnce(MochaStub.Suite.prototype.filterOnly);
+            assert.callOrder(MochaStub.lastInstance.loadFiles, MochaStub.Suite.prototype.filterOnly);
+        });
+
         it('should flush files after load', () => {
             const mochaTestParser = mkMochaTestParser_();
 
