@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.7.5"></a>
+## [4.7.5](https://github.com/gemini-testing/hermione/compare/v4.7.4...v4.7.5) (2021-12-15)
+
+
+
 <a name="4.7.4"></a>
 ## [4.7.4](https://github.com/gemini-testing/hermione/compare/v4.7.3...v4.7.4) (2021-11-24)
 
