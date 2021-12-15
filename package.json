@@ -47,13 +47,13 @@
     "plugins-loader": "^1.1.0",
     "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
-    "webdriverio": "^7.10.0",
+    "webdriverio": "^7.16.11",
     "worker-farm": "^1.7.0"
   },
   "devDependencies": {
     "@types/mocha": "^9.0.0",
     "@types/node": "^12.20.28",
-    "@wdio/types": "^7.10.1",
+    "@wdio/types": "^7.16.11",
     "app-module-path": "^2.2.0",
     "bluebird": "^3.5.1",
     "chai": "^4.1.1",
