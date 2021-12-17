@@ -46,6 +46,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [waitTimeout](#waittimeout)
     - [sessionsPerBrowser](#sessionsperbrowser)
     - [screenshotOnReject](#screenshotonreject)
+    - [screenshotOnAssertViewFail](#screenshotonassertviewfail)
+    - [screenshotOnRejectMode](#screenshotonrejectmode)
     - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
     - [testsPerSession](#testspersession)
     - [retry](#retry)
@@ -620,6 +622,8 @@ Option name               | Description
 `testTimeout`             | Timeout for test execution (in milliseconds). Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `screenshotOnReject`      | Allows to attach a screenshot of a current page on test fail. Default value is `true`.
+`screenshotOnAssertViewFail`| Allows to attach a screenshot of a current page on assert view test fail. Default value is `false`.
+`screenshotOnRejectMode`  | Mode for taking a screenshot on reject. Available options are `fullpage` and `viewport`. The default is `viewport`.
 `screenshotOnRejectTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
@@ -726,6 +730,15 @@ Number of sessions which are run simultaneously. Global value for all browsers. 
 
 #### screenshotOnReject
 Allows to attach a screenshot of a current page on test fail. Default value is `true`.
+
+#### screenshotOnAssertViewFail
+Allows to attach a screenshot of a current page on assert view test fail. Default value is `false`.
+
+#### screenshotOnRejectMode
+Mode for taking a screenshot on reject. There are three available options:
+
+* `fullpage` – Hermione will take a screenshot of the entire page from top.
+* `viewport` – Default value. Hermione will take a screenshot of the current viewport.
 
 #### screenshotOnRejectTimeout
 Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
