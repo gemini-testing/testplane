@@ -261,7 +261,7 @@ describe('worker/runner/test-runner', () => {
                 it('should throw error if "body" does not exist on the page', async () => {
                     browser.publicAPI.$.withArgs('body').resolves(undefined);
 
-                    assert.isRejected(run_(), /There is no "body" element on the page when resetting cursor position/);
+                    await assert.isRejected(run_(), /There is no "body" element on the page when resetting cursor position/);
                 });
 
                 it('should get body element', async () => {
@@ -517,6 +517,42 @@ describe('worker/runner/test-runner', () => {
                 });
 
                 await assert.isRejected(run_(), AssertViewError);
+            });
+
+            it('should extend AssertViewError with screenshot on fail if it exists', async () => {
+                sandbox.stub(OneTimeScreenshooter.prototype, 'getScreenshot').returns('base64');
+
+                const assertViewResults = AssertViewResults.create([new Error()]);
+
+                ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        hermioneCtx.assertViewResults = assertViewResults;
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                const error = await run_().catch(e => e);
+
+                assert.propertyVal(error, 'screenshot', 'base64');
+            });
+
+            it('should not extend AssertViewError with screenshot on fail if it not exists', async () => {
+                sandbox.stub(OneTimeScreenshooter.prototype, 'getScreenshot').returns();
+
+                const assertViewResults = AssertViewResults.create([new Error()]);
+
+                ExecutionThread.create.callsFake(({hermioneCtx}) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        hermioneCtx.assertViewResults = assertViewResults;
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                const error = await run_().catch(e => e);
+
+                assert.notProperty(error, 'screenshot');
             });
 
             it('should resolve with browser meta', async () => {

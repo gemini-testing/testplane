@@ -271,7 +271,7 @@ describe('config options', () => {
             it('should parse option from cli', () => {
                 const result = parse_({
                     options: {system: {parallelLimit: 1}},
-                    argv: ['--system-parallel-limit', 15]
+                    argv: ['--system-parallel-limit', '15']
                 });
 
                 assert.equal(result.system.parallelLimit, 15);

@@ -1,9 +1,12 @@
 'use strict';
 
-const _ = require('lodash');
 const Promise = require('bluebird');
+const _ = require('lodash');
+
+const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
 const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
+
 const {Suite, Test, Runnable} = require('../../../_mocha');
 
 describe('worker/runner/test-runner/execution-thread', () => {
@@ -50,7 +53,8 @@ describe('worker/runner/test-runner/execution-thread', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(OneTimeScreenshooter.prototype, 'extendWithPageScreenshot').callsFake((e) => Promise.resolve(e));
+        sandbox.stub(OneTimeScreenshooter.prototype, 'extendWithScreenshot').callsFake((e) => Promise.resolve(e));
+        sandbox.stub(OneTimeScreenshooter.prototype, 'captureScreenshotOnAssertViewFail').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -190,27 +194,48 @@ describe('worker/runner/test-runner/execution-thread', () => {
             await assert.isFulfilled(executionThread.run(runnable));
         });
 
-        describe('screenshotOnReject', () => {
-            it('should extend error with page screenshot', async () => {
+        describe('takeScreenshotOnFails', () => {
+            it('should extend error with screenshot', async () => {
+                const originalError = new Error();
+                const runnable = mkRunnable_({
+                    fn: () => Promise.reject(originalError)
+                });
+                OneTimeScreenshooter.prototype.extendWithScreenshot
+                    .withArgs(originalError).callsFake((e) => {
+                        return Promise.resolve(_.extend(e, {screenshot: 'screenshot'}));
+                    });
+
+                const error = await mkExecutionThread_().run(runnable).catch(e => e);
+
+                assert.propertyVal(error, 'screenshot', 'screenshot');
+            });
+
+            it('should try to capture screenshot on test error', async () => {
                 const error = new Error();
                 const runnable = mkRunnable_({
                     fn: () => Promise.reject(error)
                 });
 
-                OneTimeScreenshooter.prototype.extendWithPageScreenshot
-                    .withArgs(error).callsFake((e) => {
-                        return Promise.resolve(_.extend(e, {screenshot: 'base64img'}));
-                    });
+                await mkExecutionThread_().run(runnable).catch(e => e);
 
-                const err = await mkExecutionThread_().run(runnable)
-                    .catch((e) => e);
+                assert.calledOnceWith(OneTimeScreenshooter.prototype.extendWithScreenshot, error);
+            });
 
-                assert.propertyVal(err, 'screenshot', 'base64img');
+            it('should try to capture screenshot on test fail with assert view errors', async () => {
+                const runnable = mkRunnable_({
+                    fn: () => Promise.resolve()
+                });
+                const assertViewResults = AssertViewResults.create([new Error()]);
+                const hermioneCtx = {assertViewResults};
+
+                await mkExecutionThread_({hermioneCtx}).run(runnable);
+
+                assert.calledOnce(OneTimeScreenshooter.prototype.captureScreenshotOnAssertViewFail);
             });
 
             it('should wait until screenshot will be taken', async () => {
                 const afterScreenshot = sinon.spy().named('afterScreenshot');
-                OneTimeScreenshooter.prototype.extendWithPageScreenshot
+                OneTimeScreenshooter.prototype.extendWithScreenshot
                     .callsFake(() => Promise.delay(10).then(afterScreenshot));
 
                 const runnable = mkRunnable_({
@@ -228,7 +253,7 @@ describe('worker/runner/test-runner/execution-thread', () => {
                 });
                 runnable.timeout(10);
 
-                OneTimeScreenshooter.prototype.extendWithPageScreenshot
+                OneTimeScreenshooter.prototype.extendWithScreenshot
                     .callsFake(() => Promise.delay(20));
 
                 const executionThread = mkExecutionThread_();
