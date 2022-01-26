@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.7.6"></a>
+## [4.7.6](https://github.com/gemini-testing/hermione/compare/v4.7.5...v4.7.6) (2022-01-26)
+
+
+### Bug Fixes
+
+* move mocha and wdio types from dev deps to deps ([c23a0b9](https://github.com/gemini-testing/hermione/commit/c23a0b9))
+
+
+
 <a name="4.7.5"></a>
 ## [4.7.5](https://github.com/gemini-testing/hermione/compare/v4.7.4...v4.7.5) (2021-12-15)
 
