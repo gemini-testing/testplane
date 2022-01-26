@@ -35,6 +35,8 @@
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
     "@gemini-testing/mocha": "^9.1.5",
+    "@types/mocha": "^9.0.0",
+    "@wdio/types": "^7.16.11",
     "@wdio/utils": "^7.10.0",
     "bluebird": "^3.5.1",
     "chalk": "^1.1.1",
@@ -51,9 +53,7 @@
     "worker-farm": "^1.7.0"
   },
   "devDependencies": {
-    "@types/mocha": "^9.0.0",
     "@types/node": "^12.20.28",
-    "@wdio/types": "^7.16.11",
     "app-module-path": "^2.2.0",
     "bluebird": "^3.5.1",
     "chai": "^4.1.1",
