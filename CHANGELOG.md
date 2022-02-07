@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.7.7"></a>
+## [4.7.7](https://github.com/gemini-testing/hermione/compare/v4.7.6...v4.7.7) (2022-02-07)
+
+
+### Bug Fixes
+
+* update gemini-core to 6.3.6 ([452bc69](https://github.com/gemini-testing/hermione/commit/452bc69))
+
+
+
 <a name="4.7.6"></a>
 ## [4.7.6](https://github.com/gemini-testing/hermione/compare/v4.7.5...v4.7.6) (2022-01-26)
 
