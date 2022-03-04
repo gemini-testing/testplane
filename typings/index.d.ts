@@ -264,6 +264,10 @@ declare namespace Hermione {
         retriesLeft: number;
     };
 
+    export interface TestHookDefinition {
+        (callback: Hermione.TestDefinitionCallback): void;
+    };
+
     export interface TestDefinition {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     };
