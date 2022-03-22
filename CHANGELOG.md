@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.8.0"></a>
+## [4.8.0](https://github.com/gemini-testing/hermione/compare/v4.7.8...v4.8.0) (2022-03-22)
+
+### Features
+
+* **worker/test-runner:**  take the error screenshot on every test fail ([2199e0b5](https://github.com/gemini-testing/hermione/commit/2199e0b57ece8e0f46d0f7be141c44827f417d27))
+
+### Tests
+
+* **worker/test-runner:**  add new and remove unnecessary unit tests ([637654ae](https://github.com/gemini-testing/hermione/commit/637654aed892d14b57a10b907cf83cf7066528a1))
+
+
 <a name="4.7.8"></a>
 ## [4.7.8](https://github.com/gemini-testing/hermione/compare/v4.7.7...v4.7.8) (2022-03-04)
 
