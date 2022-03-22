@@ -107,7 +107,10 @@ describe('config', () => {
                 browsers: {
                     bro: {foo: 'bar'}
                 },
-                configPath: 'foo/bar/baz'
+                configPath: 'foo/bar/baz',
+                takeScreenshotOnFails: {
+                    testFail: undefined
+                }
             });
         });
     });

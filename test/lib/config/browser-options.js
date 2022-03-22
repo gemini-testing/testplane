@@ -16,7 +16,10 @@ describe('config browser-options', () => {
 
     const createConfig = () => Config.create(defaults.config);
 
-    beforeEach(() => sandbox.stub(Config, 'read').returns({}));
+    beforeEach(() => {
+        sandbox.stub(Config, 'read').returns({});
+        sandbox.stub(console, 'warn').returns();
+    });
 
     afterEach(() => sandbox.restore());
 
@@ -633,58 +636,103 @@ describe('config browser-options', () => {
         });
     });
 
+    function testNonNegativeIntegerOption(option) {
+        it(`should throw error if ${option} is not a number`, () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({[option]: '100500'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
+        });
+
+        it(`should throw error if ${option} is negative`, () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({[option]: -7})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
+        });
+
+        it(`should set ${option} option to all browsers`, () => {
+            const readConfig = {
+                [option]: 100500,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1[option], 100500);
+            assert.equal(config.browsers.b2[option], 100500);
+        });
+
+        it(`should override ${option} option`, () => {
+            const readConfig = {
+                [option]: 100500,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({[option]: 500100})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1[option], 100500);
+            assert.equal(config.browsers.b2[option], 500100);
+        });
+    }
+
     [
-        'retry', 'httpTimeout', 'sessionRequestTimeout', 'sessionQuitTimeout',
-        'screenshotOnRejectTimeout', 'screenshotDelay', 'pageLoadTimeout', 'testTimeout', 'urlHttpTimeout'
-    ].forEach((option) => {
-        describe(`${option}`, () => {
-            it(`should throw error if ${option} is not a number`, () => {
+        'retry',
+        'httpTimeout',
+        'screenshotDelay'
+    ].forEach((option) => describe(option, () => testNonNegativeIntegerOption(option)));
+
+    function testOptionalNonNegativeIntegerOption(option) {
+        testNonNegativeIntegerOption(option);
+
+        it(`should does not throw an error if ${option} is null`, () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({[option]: null})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.doesNotThrow(createConfig);
+        });
+    }
+
+    [
+        'sessionRequestTimeout', 'sessionQuitTimeout',
+        'pageLoadTimeout', 'testTimeout', 'urlHttpTimeout'
+    ].forEach((option) => describe(option, () => testOptionalNonNegativeIntegerOption(option)));
+
+    describe('takeScreenshotOnFailsTimeout', () => {
+        testOptionalNonNegativeIntegerOption('takeScreenshotOnFailsTimeout');
+
+        describe('if value is not specified', () => {
+            it('should get a value from option "screenshotOnRejectTimeout"', () => {
                 const readConfig = {
                     browsers: {
-                        b1: mkBrowser_(_.set({}, option, '100500'))
-                    }
-                };
-
-                Config.read.returns(readConfig);
-
-                assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
-            });
-
-            it(`should throw error if ${option} is negative`, () => {
-                const readConfig = {
-                    browsers: {
-                        b1: mkBrowser_(_.set({}, option, -7))
-                    }
-                };
-
-                Config.read.returns(readConfig);
-
-                assert.throws(() => createConfig(), Error, `"${option}" must be a non-negative integer`);
-            });
-
-            it(`should set ${option} option to all browsers`, () => {
-                const readConfig = {
-                    [option]: 100500,
-                    browsers: {
-                        b1: mkBrowser_(),
-                        b2: mkBrowser_()
-                    }
-                };
-
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.equal(config.browsers.b1[option], 100500);
-                assert.equal(config.browsers.b2[option], 100500);
-            });
-
-            it(`should override ${option} option`, () => {
-                const readConfig = {
-                    [option]: 100500,
-                    browsers: {
-                        b1: mkBrowser_(),
-                        b2: mkBrowser_(_.set({}, option, 500100))
+                        b1: mkBrowser_({
+                            screenshotOnRejectTimeout: 100500
+                        })
                     }
                 };
 
@@ -692,10 +740,33 @@ describe('config browser-options', () => {
 
                 const config = createConfig();
 
-                assert.equal(config.browsers.b1[option], 100500);
-                assert.equal(config.browsers.b2[option], 500100);
+                assert.equal(config.browsers.b1.takeScreenshotOnFailsTimeout, 100500);
             });
         });
+
+        describe('if value is specified', () => {
+            it('should use its own value', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({
+                            takeScreenshotOnFailsTimeout: 500100,
+                            screenshotOnRejectTimeout: 100500
+                        })
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1.takeScreenshotOnFailsTimeout, 500100);
+            });
+        });
+    });
+
+    describe('screenshotOnRejectTimeout', () => {
+        testOptionalNonNegativeIntegerOption('screenshotOnRejectTimeout');
+        testDeprecatedOption('screenshotOnRejectTimeout');
     });
 
     describe('meta', () => {
@@ -1041,48 +1112,139 @@ describe('config browser-options', () => {
         });
     });
 
+    function testBooleanOption(option) {
+        it('should throw an error if value is not a boolean', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'foo'}));
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, `"${option}" must be a boolean`);
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config[option], defaults[option]);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                [option]: false,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({[option]: true})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.isFalse(config.browsers.b1[option]);
+            assert.isTrue(config.browsers.b2[option]);
+        });
+    }
+
     [
         'calibrate',
-        'screenshotOnReject',
         'compositeImage',
         'resetCursor',
         'strictTestsOrder',
         'saveHistory',
         'waitOrientationChange'
-    ].forEach((option) => {
-        describe(option, () => {
-            it('should throw an error if value is not a boolean', () => {
-                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({[option]: 'foo'}));
+    ].forEach((option) => describe(option, () => testBooleanOption(option)));
 
-                Config.read.returns(readConfig);
+    function testDeprecatedOption(option) {
+        it(`should print a warning if option "${option}" is set by user`, () => {
+            Config.read.returns({[option]: defaults[option]});
 
-                assert.throws(() => createConfig(), Error, `"${option}" must be a boolean`);
+            createConfig();
+
+            assert.calledOnceWith(console.warn, `Using "${option}" option is deprecated`);
+        });
+    }
+
+    describe('screenshotOnReject', () => {
+        testBooleanOption('screenshotOnReject');
+        testDeprecatedOption('screenshotOnReject');
+    });
+
+    describe('takeScreenshotOnFails', () => {
+        it('should throw an error if value is not an object', () => {
+            Config.read.returns({takeScreenshotOnFails: 'foo'});
+
+            assert.throws(() => createConfig(), Error, '"takeScreenshotOnFails" must be an object');
+        });
+
+        it('should throw an error if object value contains unknown fields', () => {
+            Config.read.returns({takeScreenshotOnFails: {
+                foo: 'bar',
+                bar: 'foo'
+            }});
+
+            assert.throws(() => createConfig(), Error, '"takeScreenshotOnFails" contains unknown properties: foo,bar.');
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            Config.read.returns({
+                browsers: {
+                    b1: mkBrowser_()
+                }
             });
 
-            it('should set a default value if it is not set in config', () => {
-                const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
-                Config.read.returns(readConfig);
+            const config = createConfig();
 
-                const config = createConfig();
-
-                assert.equal(config[option], defaults[option]);
+            assert.deepEqual(config.takeScreenshotOnFails, {
+                testFail: defaults.screenshotOnReject,
+                ...defaults.takeScreenshotOnFails
             });
 
-            it('should override option for browser', () => {
-                const readConfig = {
-                    [option]: false,
-                    browsers: {
-                        b1: mkBrowser_(),
-                        b2: mkBrowser_({[option]: true})
-                    }
-                };
+            assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, {
+                testFail: defaults.screenshotOnReject,
+                ...defaults.takeScreenshotOnFails
+            });
+        });
 
-                Config.read.returns(readConfig);
+        it('should extend object value with missing fields', () => {
+            Config.read.returns({takeScreenshotOnFails: {
+                testFail: true
+            }});
 
-                const config = createConfig();
+            const config = createConfig();
 
-                assert.isFalse(config.browsers.b1[option]);
-                assert.isTrue(config.browsers.b2[option]);
+            assert.deepEqual(config.takeScreenshotOnFails, {
+                testFail: true,
+                assertViewFail: false
+            });
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                takeScreenshotOnFails: {
+                    testFail: false
+                },
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({takeScreenshotOnFails: {
+                        assertViewFail: true
+                    }})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, {
+                testFail: false,
+                assertViewFail: false
+            });
+            assert.deepEqual(config.browsers.b2.takeScreenshotOnFails, {
+                testFail: false,
+                assertViewFail: true
             });
         });
     });
@@ -1109,7 +1271,7 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, /"screenshotMode" must be "fullpage", "viewport" or "auto"/);
+            assert.throws(() => createConfig(), Error, /"screenshotMode" must be one of: fullpage, viewport, auto/);
         });
 
         describe('should not throw an error if option value is', () => {
@@ -1196,6 +1358,79 @@ describe('config browser-options', () => {
 
                 assert.equal(config.browsers.b1.screenshotMode, 'fullpage');
             });
+        });
+    });
+
+    describe('takeScreenshotOnFailsMode', () => {
+        it('should throw an error if option is not a string', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({takeScreenshotOnFailsMode: {not: 'string'}})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"takeScreenshotOnFailsMode" must be a string/);
+        });
+
+        it('should throw an error if option value is not "fullpage" or "viewport"', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({takeScreenshotOnFailsMode: 'foo bar'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, /"takeScreenshotOnFailsMode" must be one of: fullpage, viewport/);
+        });
+
+        describe('should not throw an error if option value is', () => {
+            ['fullpage', 'viewport'].forEach((value) => {
+                it(`${value}`, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({takeScreenshotOnFailsMode: value})
+                        }
+                    };
+
+                    Config.read.returns(readConfig);
+
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_()
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.takeScreenshotOnFailsMode, defaults.takeScreenshotOnFailsMode);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                takeScreenshotOnFailsMode: 'fullpage',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({takeScreenshotOnFailsMode: 'viewport'})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.takeScreenshotOnFailsMode, 'fullpage');
+            assert.equal(config.browsers.b2.takeScreenshotOnFailsMode, 'viewport');
         });
     });
 
