@@ -274,6 +274,52 @@ selenium-standalone start
 
 :warning: If you will get error like `No Java runtime present, requesting install.` you should install [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) for your OS.
 
+## Quick start
+First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
+
+Install the package.
+```
+npm install hermione chai
+```
+
+Then put `.hermione.conf.js` in the project root.
+```javascript
+module.exports = {
+    sets: {
+        desktop: {
+            files: 'tests/desktop'
+        }
+    },
+
+    browsers: {
+        chrome: {
+            desiredCapabilities: {
+                browserName: 'chrome' // this browser should be installed on your OS
+            }
+        }
+    }
+};
+```
+
+Write your first test in `tests/desktop/github.js` file.
+```javascript
+const assert = require('chai').assert;
+
+describe('github', async function() {
+    it('should find hermione', async function() {
+        await this.browser.url('https://github.com/gemini-testing/hermione');
+
+        const title = await this.browser.$('#readme h1').getText();
+        assert.equal(title, 'Hermione');
+    });
+});
+```
+
+Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
+```
+node_modules/.bin/hermione
+```
+
 ## Tests API
 
 ### Arguments
@@ -555,52 +601,6 @@ it('some test', async ({ browser }) => {
 ```
 
 For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
-
-## Quick start
-First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
-
-Install the package.
-```
-npm install hermione chai
-```
-
-Then put `.hermione.conf.js` in the project root.
-```javascript
-module.exports = {
-    sets: {
-        desktop: {
-            files: 'tests/desktop'
-        }
-    },
-
-    browsers: {
-        chrome: {
-            desiredCapabilities: {
-                browserName: 'chrome' // this browser should be installed on your OS
-            }
-        }
-    }
-};
-```
-
-Write your first test in `tests/desktop/github.js` file.
-```javascript
-const assert = require('chai').assert;
-
-describe('github', async ({ browser }) => {
-    it('should find hermione', async function() {
-        await browser.url('https://github.com/gemini-testing/hermione');
-
-        const title = await browser.$('#readme h1').getText();
-        assert.equal(title, 'Hermione');
-    });
-});
-```
-
-Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
-```
-node_modules/.bin/hermione
-```
 
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
