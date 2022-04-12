@@ -21,6 +21,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
   - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
 - [Prerequisites](#prerequisites)
 - [Tests API](#tests-api)
+  - [Arguments](#arguments)
   - [Hooks](#hooks)
   - [Skip](#skip)
   - [Only](#only)
@@ -37,6 +38,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [desiredCapabilities](#desiredcapabilities)
     - [gridUrl](#gridurl)
     - [baseUrl](#baseurl)
+    - [automationProtocol](#automationprotocol)
+    - [sessionEnvFlags](#sessionenvflags)
     - [httpTimeout](#httptimeout)
     - [urlHttpTimeout](#urlhttptimeout)
     - [pageLoadTimeout](#pageloadtimeout)
@@ -44,9 +47,10 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [sessionQuitTimeout](#sessionquittimeout)
     - [testTimeout](#testtimeout-1)
     - [waitTimeout](#waittimeout)
+    - [waitInterval](#waitinterval)
     - [sessionsPerBrowser](#sessionsperbrowser)
     - [takeScreenshotOnFails](#takescreenshotonfails)
-    - [takeScreenshotOnFailsMode](#screenshotonrejectmode)
+    - [takeScreenshotOnFailsMode](#takescreenshotonfailsmode)
     - [takeScreenshotOnFailsTimeout](#takescreenshotonfailstimeout)
     - [screenshotOnReject](#screenshotonreject)
     - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
@@ -70,6 +74,15 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [compositeImage](#compositeimage)
     - [screenshotMode](#screenshotmode)
     - [saveHistory](#savehistory)
+    - [agent](#agent)
+    - [headers](#headers)
+    - [transformRequest](#transformrequest)
+    - [transformResponse](#transformresponse)
+    - [strictSSL](#strictssl)
+    - [user](#user)
+    - [key](#key)
+    - [region](#region)
+    - [headless](#headless)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -89,6 +102,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
   - [Overriding settings](#overriding-settings)
   - [Environment variables](#environment-variables)
     - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
+    - [HERMIONE_SETS](#hermione_sets)
   - [Debug mode](#debug-mode)
 - [Programmatic API](#programmatic-api)
   - [init](#init)
@@ -120,7 +134,7 @@ Running of too many tests in parallel can lead to the overloading of the main pr
 ### Extensible
 `WebdriverIO` provides built-in commands for browser and page manipulation. Often projects need to store some common code and reuse it throughout all tests, so the developer needs to create some helpers and include them in the tests.
 
-With `hermione` this is very simple and straightforward. You can add any number of custom commands in the hermione config and use them as `this.browser.myCustomCommand` in tests.
+With `hermione` this is very simple and straightforward. You can add any number of custom commands in the hermione config and use them as `browser.myCustomCommand` in tests.
 
 Moreover, `hermione` provides plugins that work like hooks. They allow the developer to prepare the testing environment and react properly to test execution events.
 
@@ -262,6 +276,58 @@ selenium-standalone start
 
 ## Tests API
 
+### Arguments
+Hermione calls test and hook callback with one argument. This argument is an object with the next properties:
+- **browser** - browser client
+- **currentTest** - current executing test
+
+Example:
+```js
+beforeEach(async ({ browser, currentTest }) => {
+    await browser.url(`/foo/bar?baz=${currentTest.id()}`);
+});
+
+afterEach(async ({ browser, currentTest }) => {
+    // Do some post actions with browser
+});
+
+it('some test', async ({ browser, currentTest }) => {
+    await browser.click('.some-button');
+
+    // Do some actions and asserts
+});
+```
+
+You also can pass any data into your test through parameters:
+```js
+beforeEach(async (opts) => {
+    opts.bar = 'bar';
+});
+
+it('some test', async ({ browser, bar }) => {
+    await browser.url(`/foo/${bar}`);
+
+    // Do some actions and asserts
+});
+```
+
+**browser** and **currentTest** also available through callback context:
+```js
+beforeEach(async function() {
+    await this.browser.url(`/foo/bar?baz=${this.currentTest.id()}`);
+});
+
+afterEach(async function() {
+    // Do some post actions with this.browser
+});
+
+it('some test', async function() {
+    await this.browser.click('.some-button');
+
+    // Do some actions and asserts
+});
+```
+
 ### Hooks
 
 `before` and `after` hooks **are forbidden** in `hermione`, you should use `beforeEach` and `afterEach` hooks instead. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
@@ -393,17 +459,17 @@ These methods allow you to store some information between webdriver calls and it
 
 Example:
 ```js
-it('test1', async function() {
-    await this.browser.setMeta('foo', 'bar');
-    await this.browser.url('/foo/bar?baz=qux');
+it('test1', async ({ browser }) => {
+    await browser.setMeta('foo', 'bar');
+    await browser.url('/foo/bar?baz=qux');
 
-    const val = await this.browser.getMeta('foo');
+    const val = await browser.getMeta('foo');
     console.log(val); // prints 'bar'
 
-    const url = await this.browser.getMeta('url');
+    const url = await browser.getMeta('url');
     console.log(url); // prints '/foo/bar?baz=qux'
 
-    const meta = await this.browser.getMeta();
+    const meta = await browser.getMeta();
     console.log(meta); // prints `{foo: 'bar', url: '/foo/bar?baz=qux'}`
 });
 ```
@@ -413,9 +479,9 @@ The execution context can be accessed by the `browser.executionContext` property
 
 Example:
 ```js
-it('some test', async function() {
-    await this.browser.url('/foo/bar');
-    console.log('test', this.executionContext);
+it('some test', async ({ browser }) => {
+    await browser.url('/foo/bar');
+    console.log('test', browser.executionContext);
 });
 ```
 will print something like this
@@ -442,12 +508,12 @@ test: {
 Command that adds ability to take screenshot for test state. Each state should have his own unique name. For example:
 
 ```js
-it('some test', async function() {
-    await this.browser.url('some/url');
-    await this.browser.assertView('plain', '.button');
+it('some test', async ({ browser }) => {
+    await browser.url('some/url');
+    await browser.assertView('plain', '.button');
 
-    await this.browser.click('.button');
-    await this.browser.assertView('clicked', '.button');
+    await browser.click('.button');
+    await browser.assertView('clicked', '.button');
 });
 ```
 
@@ -470,9 +536,9 @@ All options inside `assertView` command override the same options in the [browse
 Full example:
 
 ```js
-it('some test', async function() {
-    await this.browser.url('some/url');
-    await this.browser.assertView(
+it('some test', async ({ browser }) => {
+    await browser.url('some/url');
+    await browser.assertView(
         'plain', '.form',
         {
             ignoreElements: ['.link'],
@@ -521,11 +587,11 @@ Write your first test in `tests/desktop/github.js` file.
 ```javascript
 const assert = require('chai').assert;
 
-describe('github', async function() {
+describe('github', async ({ browser }) => {
     it('should find hermione', async function() {
-        await this.browser.url('https://github.com/gemini-testing/hermione');
+        await browser.url('https://github.com/gemini-testing/hermione');
 
-        const title = await this.browser.$('#readme h1').getText();
+        const title = await browser.$('#readme h1').getText();
         assert.equal(title, 'Hermione');
     });
 });
@@ -624,7 +690,7 @@ Option name               | Description
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `takeScreenshotOnFails`   | Options for setting up taking a screenshot of a test fail. Default value is `{testFail: true, assertViewFail: false}`.
 `takeScreenshotOnFailsMode` | Mode for taking a screenshot on test fail. Available options are `fullpage` and `viewport`. Default value is `viewport`.
-`takeScreenshotOnFailsTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`. 
+`takeScreenshotOnFailsTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
 `screenshotOnReject`      | Allows to attach a screenshot of a current page on test fail. Default value is `true`. :warning: Option is deprecated! Use `takeScreenshotOnFails` instead.
 `screenshotOnRejectTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`. :warning: Option is deprecated! Use `takeScreenshotOnFailsTimeout` instead.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
