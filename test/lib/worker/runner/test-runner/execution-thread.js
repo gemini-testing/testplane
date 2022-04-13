@@ -60,6 +60,80 @@ describe('worker/runner/test-runner/execution-thread', () => {
     afterEach(() => sandbox.restore());
 
     describe('run', () => {
+        describe('context', () => {
+            it('should run all runnables with the same context', async () => {
+                const firstRunnable = mkRunnable_();
+                const secondRunnable = mkRunnable_();
+
+                const executionThread = mkExecutionThread_();
+
+                await executionThread.run(firstRunnable);
+                await executionThread.run(secondRunnable);
+
+                assert.equal(
+                    firstRunnable.fn.firstCall.thisValue,
+                    secondRunnable.fn.firstCall.thisValue
+                );
+            });
+
+            it('should set browser public API to runnable fn context', async () => {
+                const browser = mkBrowser_();
+                const runnable = mkRunnable_();
+
+                await mkExecutionThread_({browser}).run(runnable);
+
+                assert.calledOn(runnable.fn, sinon.match({browser: browser.publicAPI}));
+            });
+
+            it('should set current test to runnable fn context', async () => {
+                const test = mkTest_({title: 'some test'});
+                const executionThread = mkExecutionThread_({test});
+
+                const runnable = mkRunnable_();
+
+                await executionThread.run(runnable);
+
+                assert.calledOn(runnable.fn, sinon.match({currentTest: {title: 'some test'}}));
+            });
+        });
+
+        describe('params', () => {
+            it('should run all runnables with the same params', async () => {
+                const firstRunnable = mkRunnable_();
+                const secondRunnable = mkRunnable_();
+
+                const executionThread = mkExecutionThread_();
+
+                await executionThread.run(firstRunnable);
+                await executionThread.run(secondRunnable);
+
+                assert.equal(
+                    firstRunnable.fn.firstCall.args[0],
+                    secondRunnable.fn.firstCall.args[0]
+                );
+            });
+
+            it('should pass browser public API to runnable fn', async () => {
+                const browser = mkBrowser_();
+                const runnable = mkRunnable_();
+
+                await mkExecutionThread_({browser}).run(runnable);
+
+                assert.calledWith(runnable.fn, sinon.match({browser: browser.publicAPI}));
+            });
+
+            it('should pass current test to runnable fn', async () => {
+                const test = mkTest_({title: 'some test'});
+                const executionThread = mkExecutionThread_({test});
+
+                const runnable = mkRunnable_();
+
+                await executionThread.run(runnable);
+
+                assert.calledWith(runnable.fn, sinon.match({currentTest: {title: 'some test'}}));
+            });
+        });
+
         it('should reject on runnable reject', async () => {
             const runnable = mkRunnable_({
                 fn: () => Promise.reject(new Error('foo'))
@@ -67,41 +141,6 @@ describe('worker/runner/test-runner/execution-thread', () => {
             const executionThread = mkExecutionThread_();
 
             await assert.isRejected(executionThread.run(runnable), /foo/);
-        });
-
-        it('should set browser public API to runnable fn context', async () => {
-            const browser = mkBrowser_();
-            const runnable = mkRunnable_();
-
-            await mkExecutionThread_({browser}).run(runnable);
-
-            assert.calledOn(runnable.fn, sinon.match({browser: browser.publicAPI}));
-        });
-
-        it('should run all runnables on the same context', async () => {
-            const firstRunnable = mkRunnable_();
-            const secondRunnable = mkRunnable_();
-
-            const executionThread = mkExecutionThread_();
-
-            await executionThread.run(firstRunnable);
-            await executionThread.run(secondRunnable);
-
-            assert.equal(
-                firstRunnable.fn.firstCall.thisValue,
-                secondRunnable.fn.firstCall.thisValue
-            );
-        });
-
-        it('should set current test to runnable fn context', async () => {
-            const test = mkTest_({title: 'some test'});
-            const executionThread = mkExecutionThread_({test});
-
-            const runnable = mkRunnable_();
-
-            await executionThread.run(runnable);
-
-            assert.calledOn(runnable.fn, sinon.match({currentTest: {title: 'some test'}}));
         });
 
         it('should store error in current test on runnable reject', async () => {
