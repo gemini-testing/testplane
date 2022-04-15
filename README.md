@@ -20,6 +20,10 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
   - [Automatically initializes and closes grid sessions](#automatically-initializes-and-closes-grid-sessions)
   - [Fairly waits for screen rotate](#fairly-waits-for-screen-rotate)
 - [Prerequisites](#prerequisites)
+  - [Selenium-standalone](#selenium-standalone)
+- [Quick start](#quick-start)
+  - [Chrome Devtools Protocol](#chrome-devtools-protocol)
+  - [Webdriver protocol](#webdriver-protocol)
 - [Tests API](#tests-api)
   - [Arguments](#arguments)
   - [Hooks](#hooks)
@@ -31,7 +35,6 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [Sharable meta info](#sharable-meta-info)
     - [Execution context](#execution-context)
   - [AssertView](#assertview)
-- [Quick start](#quick-start)
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
@@ -94,6 +97,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [fileExtensions](#fileextensions)
   - [plugins](#plugins)
     - [Parallel execution plugin code](#parallel-execution-plugin-code)
+    - [List of useful plugins](#list-of-useful-plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
@@ -258,9 +262,21 @@ All work with the grid client is encapsulated in hermione. Forget about `client.
 Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but `Hermione` solves this problem.
 
 ## Prerequisites
-Because `hermione` is based on `WebdriverIO`, you need to set up [Selenium](http://www.seleniumhq.org/) before proceeding further.
+All you need are browsers that `Hermione` could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome) plugin).
 
-The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). After installing it (globally), you can install drivers by command
+Next, you have two ways to configure `Hermione` to work with browsers:
+
+* Using the devtools protocol (available only for `Chromium`-based browsers). This method does not need to be pre-configured. Just go to the [quick start](#quick-start).
+* Using the webdriver protocol. In this case you need to set up [Selenium](http://www.seleniumhq.org/) grid. The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). For more information about setting up, see [selenium-standalone](#selenium-standalone).
+
+### Selenium-standalone
+Install `selenium-standalone` by command:
+
+```
+npm i -g selenium-standalone
+```
+
+Next you need to install browser drivers
 
 ```
 selenium-standalone install
@@ -273,6 +289,79 @@ selenium-standalone start
 ```
 
 :warning: If you will get error like `No Java runtime present, requesting install.` you should install [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) for your OS.
+
+## Quick start
+First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
+
+Install the package.
+```
+npm install hermione chai
+```
+
+Then put `.hermione.conf.js` in the project root. There are two configuration options depending on the method selected in the `prerequisites` block.
+
+### Chrome Devtools Protocol
+
+```javascript
+module.exports = {
+    sets: {
+        desktop: {
+            files: 'tests/desktop'
+        }
+    },
+
+    browsers: {
+        chrome: {
+            automationProtocol: 'devtools',
+            desiredCapabilities: {
+                browserName: 'chrome'
+            }
+        }
+    }
+};
+```
+
+### Webdriver protocol
+
+```javascript
+module.exports = {
+    gridUrl: 'http://localhost:4444/wd/hub',
+
+    sets: {
+        desktop: {
+            files: 'tests/desktop'
+        }
+    },
+
+    browsers: {
+        chrome: {
+            automationProtocol: 'webdriver', // default value
+            desiredCapabilities: {
+                browserName: 'chrome'
+            }
+        }
+    }
+};
+```
+
+Write your first test in `tests/desktop/github.js` file.
+```javascript
+const assert = require('chai').assert;
+
+describe('github', async function() {
+    it('should find hermione', async function() {
+        await this.browser.url('https://github.com/gemini-testing/hermione');
+
+        const title = await this.browser.$('#readme h1').getText();
+        assert.equal(title, 'Hermione');
+    });
+});
+```
+
+Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
+```
+node_modules/.bin/hermione
+```
 
 ## Tests API
 
@@ -555,52 +644,6 @@ it('some test', async ({ browser }) => {
 ```
 
 For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
-
-## Quick start
-First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
-
-Install the package.
-```
-npm install hermione chai
-```
-
-Then put `.hermione.conf.js` in the project root.
-```javascript
-module.exports = {
-    sets: {
-        desktop: {
-            files: 'tests/desktop'
-        }
-    },
-
-    browsers: {
-        chrome: {
-            desiredCapabilities: {
-                browserName: 'chrome' // this browser should be installed on your OS
-            }
-        }
-    }
-};
-```
-
-Write your first test in `tests/desktop/github.js` file.
-```javascript
-const assert = require('chai').assert;
-
-describe('github', async ({ browser }) => {
-    it('should find hermione', async function() {
-        await browser.url('https://github.com/gemini-testing/hermione');
-
-        const title = await browser.$('#readme h1').getText();
-        assert.equal(title, 'Hermione');
-    });
-});
-```
-
-Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
-```
-node_modules/.bin/hermione
-```
 
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
@@ -1272,6 +1315,14 @@ module.exports = {
 };
 
 ```
+
+#### List of useful plugins
+There are several plugins that may be useful:
+
+* [html-reporter](https://github.com/gemini-testing/html-reporter)
+* [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands)
+* [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome)
+* ...and many others that you can find in [gemini-testing](https://github.com/search?q=topic%3Ahermione-plugin+org%3Agemini-testing&type=Repositories).
 
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
