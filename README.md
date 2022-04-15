@@ -97,6 +97,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [fileExtensions](#fileextensions)
   - [plugins](#plugins)
     - [Parallel execution plugin code](#parallel-execution-plugin-code)
+    - [List of useful plugins](#list-of-useful-plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
 - [CLI](#cli)
@@ -1314,6 +1315,14 @@ module.exports = {
 };
 
 ```
+
+#### List of useful plugins
+There are several plugins that may be useful:
+
+* [html-reporter](https://github.com/gemini-testing/html-reporter)
+* [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands)
+* [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome)
+* ...and many others that you can find in [gemini-testing](https://github.com/search?q=topic%3Ahermione-plugin+org%3Agemini-testing&type=Repositories).
 
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
