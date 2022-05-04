@@ -34,7 +34,8 @@ describe('NewBrowser', () => {
                     screenshotPath: 'path/to/screenshots',
                     connectionRetryTimeout: 3000,
                     connectionRetryCount: 0,
-                    baseUrl: 'http://base_url'
+                    baseUrl: 'http://base_url',
+                    headers: undefined
                 }));
         });
 
