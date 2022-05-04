@@ -69,6 +69,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
     - [screenshotMode](#screenshotmode)
     - [saveHistoryOnTestTimeout](#savehistoryontesttimeout)
     - [saveHistoryOnError](#savehistoryonerror)
+    - [headers](#headers)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -88,6 +89,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v4
   - [Overriding settings](#overriding-settings)
   - [Environment variables](#environment-variables)
     - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
+    - [HERMIONE_SETS](#hermione_sets)
   - [Debug mode](#debug-mode)
 - [Programmatic API](#programmatic-api)
   - [init](#init)
@@ -645,6 +647,7 @@ Option name               | Description
 `screenshotMode`          | Image capture mode.
 `saveHistoryOnTestTimeout`| Save history of all executed commands in the error object on test timeout. `false` by default.
 `saveHistoryOnError`      | Save history of all executed commands in the error object on any error. `false` by default.
+`headers`                 | Allows to set custom headers to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](http://v4.webdriver.io/guide/getstarted/configuration.html#headers). Default value is `null`.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -816,6 +819,10 @@ Allows to save history of all executed commands in the error object on test time
 #### saveHistoryOnError
 
 Allows to save history of all executed commands in the error object on any error. `false` by default.
+
+#### headers
+
+Allows to set custom headers to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](http://v4.webdriver.io/guide/getstarted/configuration.html#headers). Default value is `null`.
 
 ### system
 
