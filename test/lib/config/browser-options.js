@@ -594,45 +594,47 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('meta', () => {
-        it('should throw error if "meta" is not a object', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_({meta: 'meta-string'})
-                }
-            };
+    ['meta', 'headers'].forEach(option => {
+        describe(option, () => {
+            it(`should throw error if "${option}" is not a object`, () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({[option]: 'some-string'})
+                    }
+                };
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"meta" must be an object');
-        });
+                assert.throws(() => createConfig(), Error, `"${option}" must be an object`);
+            });
 
-        it('should set null by default', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_({})
-                }
-            };
+            it('should set null by default', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({})
+                    }
+                };
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            const config = createConfig();
+                const config = createConfig();
 
-            assert.equal(config.browsers.b1.meta, null);
-        });
+                assert.equal(config.browsers.b1[option], null);
+            });
 
-        it('should set provided value', () => {
-            const readConfig = {
-                browsers: {
-                    b1: mkBrowser_({meta: {k1: 'v1', k2: 'v2'}})
-                }
-            };
+            it('should set provided value', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({[option]: {k1: 'v1', k2: 'v2'}})
+                    }
+                };
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            const config = createConfig();
+                const config = createConfig();
 
-            assert.deepEqual(config.browsers.b1.meta, {k1: 'v1', k2: 'v2'});
+                assert.deepEqual(config.browsers.b1[option], {k1: 'v1', k2: 'v2'});
+            });
         });
     });
 
