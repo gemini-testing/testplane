@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="4.9.0"></a>
+# [4.9.0](https://github.com/gemini-testing/hermione/compare/v4.8.0...v4.9.0) (2022-05-24)
+
+
+### Features
+
+* pass browser into test as an argument ([7b5d655](https://github.com/gemini-testing/hermione/commit/7b5d655))
+
+
+
 <a name="4.8.0"></a>
 ## [4.8.0](https://github.com/gemini-testing/hermione/compare/v4.7.8...v4.8.0) (2022-03-22)
 
