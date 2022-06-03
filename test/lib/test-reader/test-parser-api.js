@@ -5,18 +5,11 @@ const TestParserAPI = require('lib/test-reader/test-parser-api');
 const ParserEvents = require('lib/test-reader/parser-events');
 const RunnerEvents = require('lib/constants/runner-events');
 const {makeSuite, makeTest} = require('../../utils');
-const eventsUtils = require('gemini-core').events.utils;
 
 describe('test-reader/test-parser-api', () => {
-    const sandbox = sinon.sandbox.create();
-
     const mkTestParser_ = () => {
         return new EventEmitter();
     };
-
-    afterEach(() => {
-        sandbox.restore();
-    });
 
     describe('setController', () => {
         it('should set appropriate controller to context', () => {
@@ -144,25 +137,6 @@ describe('test-reader/test-parser-api', () => {
 
             assert.calledOnce(doStuff);
             assert.calledOn(doStuff, test);
-        });
-
-        it('should pass through all parser events', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const doStuff = sandbox.stub(eventsUtils, 'passthroughEvent');
-
-            const testParserAPI = TestParserAPI.create(testParser, hermione);
-
-            assert.calledOnceWith(
-                doStuff,
-                testParser,
-                testParserAPI,
-                [
-                    ParserEvents.TEST,
-                    ParserEvents.SUITE,
-                    ParserEvents.HOOK
-                ]
-            );
         });
     });
 });
