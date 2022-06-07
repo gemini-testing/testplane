@@ -1370,10 +1370,20 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 **Note.** All CLI options override config values.
 
 ### Reporters
+
 You can choose `flat` or `plain` reporter by option `-r, --reporter`. Default is `flat`.
+Information about test results is displayed to the command line by default. But there is an ability to redirect the output to a file, for example:
+```
+hermione --reporter '{"type": "flat", "path": "./some-path/result.txt"}'
+```
 
-* `flat` – all information about failed and retried tests would be grouped by browsers at the end of the report.
+In that example specified file path and all directories will be created automatically. Moreover you can use few reporters:
+```
+hermione --reporter '{"type": "flat", "path": "./some-path/result.txt"}' --reporter flat
+```
 
+Information about each report type:
+* `flat` – all information about failed and retried tests would be grouped by browsers at the end of the report;
 * `plain` – information about fails and retries would be placed after each test.
 
 ### Require modules
