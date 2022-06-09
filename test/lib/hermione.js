@@ -11,7 +11,6 @@ const proxyquire = require('proxyquire').noCallThru();
 const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
 const Errors = require('lib/errors');
-const Hermione = require('lib/hermione');
 const RunnerStats = require('lib/stats');
 const TestReader = require('lib/test-reader');
 const TestCollection = require('lib/test-collection');
@@ -23,6 +22,7 @@ const {makeConfigStub} = require('../utils');
 
 describe('hermione', () => {
     const sandbox = sinon.sandbox.create();
+    let Hermione, initReporters;
 
     const mkHermione_ = (config) => {
         Config.create.returns(config || makeConfigStub());
@@ -43,14 +43,16 @@ describe('hermione', () => {
     beforeEach(() => {
         sandbox.stub(logger, 'warn');
         sandbox.stub(Config, 'create').returns(makeConfigStub());
-
         sandbox.stub(pluginsLoader, 'load').returns([]);
-
         sandbox.stub(RuntimeConfig, 'getInstance').returns({extend: sandbox.stub()});
-
         sandbox.stub(TestReader.prototype, 'read').resolves();
-
         sandbox.stub(RunnerStats, 'create');
+
+        initReporters = sandbox.stub().resolves();
+
+        Hermione = proxyquire('lib/hermione', {
+            './reporters': {initReporters}
+        });
     });
 
     afterEach(() => sandbox.restore());
@@ -224,64 +226,30 @@ describe('hermione', () => {
         });
 
         describe('reporters', () => {
-            let Hermione;
-            let attachRunner;
-
-            const createReporter = () => {
-                return function Reporter() {
-                    this.attachRunner = attachRunner;
-                };
-            };
+            let runner;
 
             beforeEach(() => {
-                Hermione = proxyquire('lib/hermione', {
-                    './reporters/reporter': createReporter()
-                });
-
-                attachRunner = sandbox.stub();
-
-                mkRunnerStub_();
+                runner = mkRunnerStub_();
             });
 
-            it('should accept reporter specified as string', async () => {
+            it('should initialize passed reporters', async () => {
                 const options = {reporters: ['reporter']};
                 Config.create.returns(makeConfigStub());
                 const hermione = Hermione.create();
 
                 await hermione.run(null, options);
 
-                assert.calledOnceWith(attachRunner, hermione);
+                assert.calledOnceWith(initReporters, ['reporter'], hermione);
             });
 
-            it('should accept reporter specified as function', async () => {
-                const options = {reporters: [createReporter()]};
-                const hermione = mkHermione_();
+            it('should initialize reporters before run tests', async () => {
+                const options = {reporters: ['reporter']};
+                Config.create.returns(makeConfigStub());
+                const hermione = Hermione.create();
 
                 await hermione.run(null, options);
 
-                assert.calledOnceWith(attachRunner, hermione);
-            });
-
-            it('should fail if reporter was not found for given identifier', async () => {
-                const options = {reporters: ['unknown-reporter']};
-                const hermione = mkHermione_();
-
-                try {
-                    await hermione.run(null, options);
-                } catch (e) {
-                    assert.equal(e.message, 'No such reporter: unknown-reporter');
-                }
-            });
-
-            it('should fail if reporter is not string or function', async () => {
-                const options = {reporters: [1234]};
-                const hermione = mkHermione_();
-
-                try {
-                    await hermione.run(null, options);
-                } catch (e) {
-                    assert.equal(e.message, 'Reporter must be a string or a function');
-                }
+                assert.callOrder(initReporters, runner.run);
             });
         });
 

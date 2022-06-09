@@ -47,7 +47,6 @@
     "inherit": "^2.2.2",
     "lodash": "^4.17.4",
     "plugins-loader": "^1.1.0",
-    "teamcity-service-messages": "^0.1.6",
     "urijs": "^1.17.0",
     "webdriverio": "^7.16.11",
     "worker-farm": "^1.7.0"
