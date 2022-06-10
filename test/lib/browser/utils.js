@@ -18,8 +18,6 @@ function createBrowserConfig_(opts = {}) {
         pageLoadTimeout: null,
         sessionRequestTimeout: null,
         sessionQuitTimeout: null,
-        screenshotOnReject: true,
-        screenshotOnRejectTimeout: 3000,
         screenshotDelay: 0,
         windowSize: null,
         getScreenshotPath: () => '/some/path',

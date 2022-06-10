@@ -393,9 +393,7 @@ declare namespace Hermione {
             testFail: boolean;
             assertViewFail: boolean;
         };
-        screenshotOnReject: boolean;
         takeScreenshotOnFailsTimeout: number | null;
-        screenshotOnRejectTimeout: number | null;
         takeScreenshotOnFailsMode: 'fullpage' | 'viewport';
         prepareBrowser(browser: WebdriverIO.Browser): void | null;
         screenshotPath: string | null;

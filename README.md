@@ -55,8 +55,6 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [takeScreenshotOnFails](#takescreenshotonfails)
     - [takeScreenshotOnFailsMode](#takescreenshotonfailsmode)
     - [takeScreenshotOnFailsTimeout](#takescreenshotonfailstimeout)
-    - [screenshotOnReject](#screenshotonreject)
-    - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
     - [testsPerSession](#testspersession)
     - [retry](#retry)
     - [shouldRetry](#shouldretry)
@@ -733,8 +731,6 @@ Option name               | Description
 `takeScreenshotOnFails`   | Options for setting up taking a screenshot of a test fail. Default value is `{testFail: true, assertViewFail: false}`.
 `takeScreenshotOnFailsMode` | Mode for taking a screenshot on test fail. Available options are `fullpage` and `viewport`. Default value is `viewport`.
 `takeScreenshotOnFailsTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-`screenshotOnReject`      | Allows to attach a screenshot of a current page on test fail. Default value is `true`. :warning: Option is deprecated! Use `takeScreenshotOnFails` instead.
-`screenshotOnRejectTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`. :warning: Option is deprecated! Use `takeScreenshotOnFailsTimeout` instead.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `shouldRetry`             | Function that determines whether to make a retry. By default returns `true `if retry attempts are available otherwise returns `false`.
@@ -852,16 +848,6 @@ Mode for taking a screenshot on test fail. There are two available options:
 
 #### takeScreenshotOnFailsTimeout
 Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-
-#### screenshotOnReject
-Allows to attach a screenshot of a current page on test fail. Default value is `true`.
-
-:warning: This option is **deprecated**, use `takeScreenshotOnFails` instead.
-
-#### screenshotOnRejectTimeout
-Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-
-:warning: This option is **deprecated**, use `takeScreenshotOnFailsTimeout` instead.
 
 #### testsPerSession
 Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
