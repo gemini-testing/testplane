@@ -35,7 +35,7 @@ function createBrowserConfig_(opts = {}) {
         key: null,
         region: null,
         headless: null,
-        saveHistory: false
+        saveHistory: true
     });
 
     return {

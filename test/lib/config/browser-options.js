@@ -1149,7 +1149,7 @@ describe('config browser-options', () => {
 
             assert.deepEqual(config.takeScreenshotOnFails, {
                 testFail: true,
-                assertViewFail: false
+                assertViewFail: true
             });
         });
 
@@ -1161,7 +1161,7 @@ describe('config browser-options', () => {
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({takeScreenshotOnFails: {
-                        assertViewFail: true
+                        assertViewFail: false
                     }})
                 }
             };
@@ -1172,11 +1172,11 @@ describe('config browser-options', () => {
 
             assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, {
                 testFail: false,
-                assertViewFail: false
+                assertViewFail: true
             });
             assert.deepEqual(config.browsers.b2.takeScreenshotOnFails, {
                 testFail: false,
-                assertViewFail: true
+                assertViewFail: false
             });
         });
     });
