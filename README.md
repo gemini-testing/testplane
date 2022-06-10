@@ -1337,10 +1337,10 @@ shows the following
 
     -V, --version                output the version number
     -c, --config <path>          path to configuration file
-    -r, --reporter <reporter>    test reporters
     -b, --browser <browser>      run tests only in specified browser
     -s, --set <set>              run tests only in the specified set
-    --require <module>           require a module before running hermione
+    -r, --require <module>       require a module before running hermione
+    --reporter <reporter>        test reporters
     --grep <grep>                run only tests matching the pattern
     --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
     --inspect [inspect]          nodejs inspector on [=[host:]port]
@@ -1357,7 +1357,7 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 
 ### Reporters
 
-You can choose `flat`, `plain` or `jsonl` reporter by option `-r, --reporter`. Default is `flat`.
+You can choose `flat`, `plain` or `jsonl` reporter by option `--reporter`. Default is `flat`.
 Information about test results is displayed to the command line by default. But there is an ability to redirect the output to a file, for example:
 ```
 hermione --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}'
@@ -1375,7 +1375,7 @@ Information about each report type:
 
 ### Require modules
 
-Using `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
+Using `-r` or `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
 
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
