@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="5.0.0"></a>
+# [5.0.0](https://github.com/gemini-testing/hermione/compare/v4.9.1...v5.0.0) (2022-06-11)
+
+
+### Bug Fixes
+
+* change some default values to more commonly used ([40b8343](https://github.com/gemini-testing/hermione/commit/40b8343))
+* do not passthrough parser events via TestParserApi ([5f26c80](https://github.com/gemini-testing/hermione/commit/5f26c80))
+* remove deprecated options ([cf1d69f](https://github.com/gemini-testing/hermione/commit/cf1d69f))
+* remove unused "teamcity" reporter ([56a9293](https://github.com/gemini-testing/hermione/commit/56a9293))
+* use "-r" option for require module and not for "--reporter" ([ca35198](https://github.com/gemini-testing/hermione/commit/ca35198))
+
+
+### Features
+
+* add "jsonl" reporter ([08140fd](https://github.com/gemini-testing/hermione/commit/08140fd))
+* add ability to redirect output of reporter to the file ([066c590](https://github.com/gemini-testing/hermione/commit/066c590))
+
+
+### BREAKING CHANGES
+
+* - change default value for "saveHistory" option from "false" to "true"
+- change default value for "antialiasingTolerance" option from "0" to "4"
+- change default value for "compositeImage" option from "false" to "true"
+- change default value for "takeScreenshotOnFails.assertViewFail" option from "false" to "true"
+- change default value for "takeScreenshotOnFailsMode" option from "viewport" to "fullpage"
+- change default value for "httpTimeout" option from "90000" to "30000"
+- change default value for "pageLoadTimeout" option from "300000" to " 20000"
+- change default value for "sessionQuitTimeout" option from "90000" to "5000"
+- change default value for "takeScreenshotOnFailsTimeout" option from "90000" to "5000"
+* option "-r" is no longer sets the specified reporter, now it uses for require module
+* remove deprecated options: "screenshotOnReject" and "screenshotOnRejectTimeout"
+* reporters specified as function and used through programmatic API must have a static create method for initialization
+* "teamcity" reporter is no longer supported, use "hermione-teamcity-reporter" plugin instead
+* testParserApi object passed on BEFORE_FILE_READ event is no longer an EventEmitter
+
+
+
 <a name="4.9.1"></a>
 ## [4.9.1](https://github.com/gemini-testing/hermione/compare/v4.9.0...v4.9.1) (2022-05-24)
 
