@@ -55,8 +55,6 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [takeScreenshotOnFails](#takescreenshotonfails)
     - [takeScreenshotOnFailsMode](#takescreenshotonfailsmode)
     - [takeScreenshotOnFailsTimeout](#takescreenshotonfailstimeout)
-    - [screenshotOnReject](#screenshotonreject)
-    - [screenshotOnRejectTimeout](#screenshotonrejecttimeout)
     - [testsPerSession](#testspersession)
     - [retry](#retry)
     - [shouldRetry](#shouldretry)
@@ -613,7 +611,7 @@ Parameters:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
    - antialiasingTolerance (optional) `Number` – overrides config [browsers](#browsers).[antialiasingTolerance](#antialiasingTolerance) value
-   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. In this case only visible part of the element will be captured. But if set browser option [compositeImage](#compositeimage) with `true` value, then in the resulting screenshot will appear the whole element with not visible parts outside of the viewport.
+   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. And in this case if browser option [compositeImage](#compositeimage) set to `false`, then only visible part of the element will be captured. But if [compositeImage](#compositeimage) set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.
    - captureElementFromTop (optional) `Boolean` - ability to set capture element from the top area or from current position. In the first case viewport will be scrolled to the top of the element. Default value is `true`
    - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
    - screenshotDelay (optional) `Number` - overrides config [browsers](#browsers).[screenshotDelay](#screenshotDelay) value
@@ -723,18 +721,16 @@ Option name               | Description
 `sessionEnvFlags`         | Environment flags that determine which protocol will be used in created browser session. Default value is `{}`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
 `waitInterval`            | Interval for web page event. Default value is `250` ms.
-`httpTimeout`             | Timeout for any requests to Selenium server. Default value is `90000` ms.
+`httpTimeout`             | Timeout for any requests to Selenium server. Default value is `30000` ms.
 `urlHttpTimeout`          | Timeout for `/url` request to Selenium server. Default value is `httpTimeout`.
-`pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `300000` ms.
+`pageLoadTimeout`         | Timeout for the page loading to complete. Default value is `20000` ms.
 `sessionRequestTimeout`   | Timeout for getting a browser session. Default value is `httpTimeout`.
-`sessionQuitTimeout`      | Timeout for quitting a session. Default value is `httpTimeout`.
+`sessionQuitTimeout`      | Timeout for quitting a session. Default value is `5000`.
 `testTimeout`             | Timeout for test execution (in milliseconds). Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 `sessionsPerBrowser`      | Number of sessions which are run simultaneously. Default value is `1`.
 `takeScreenshotOnFails`   | Options for setting up taking a screenshot of a test fail. Default value is `{testFail: true, assertViewFail: false}`.
-`takeScreenshotOnFailsMode` | Mode for taking a screenshot on test fail. Available options are `fullpage` and `viewport`. Default value is `viewport`.
-`takeScreenshotOnFailsTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-`screenshotOnReject`      | Allows to attach a screenshot of a current page on test fail. Default value is `true`. :warning: Option is deprecated! Use `takeScreenshotOnFails` instead.
-`screenshotOnRejectTimeout`| Timeout for taking screenshot on test fail. Default value is `httpTimeout`. :warning: Option is deprecated! Use `takeScreenshotOnFailsTimeout` instead.
+`takeScreenshotOnFailsMode` | Mode for taking a screenshot on test fail. Available options are `fullpage` and `viewport`. Default value is `fullpage`.
+`takeScreenshotOnFailsTimeout`| Timeout for taking screenshot on test fail. Default value is `5000`.
 `testsPerSession`         | Maximum amount of tests (`it`s) to run in each web driver session.
 `retry`                   | How many times a test should be rerun. Default value is `0`.
 `shouldRetry`             | Function that determines whether to make a retry. By default returns `true `if retry attempts are available otherwise returns `false`.
@@ -746,15 +742,15 @@ Option name               | Description
 `waitOrientationChange`   | Allows to wait until screen orientation is changed. Default value is `true`.
 `resetCursor`             | Allows to configure whether to move mouse cursor to `body` coordinates `(0, 0)` before each test run.
 `tolerance`               | Maximum allowed [CIEDE2000](http://en.wikipedia.org/wiki/Color_difference#CIEDE2000) difference between colors. Default value is `2.3`.
-`antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `0`.
+`antialiasingTolerance`   | Minimum difference in brightness between the darkest/lightest pixel (which is adjacent to the antiasing pixel) and theirs adjacent pixels. Default value is `4`.
 `compareOpts`             | Options for comparing images.
 `buildDiffOpts`           | Options for building diff image.
 `assertViewOpts`          | Options for `assertView` command, used by default.
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
-`compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
+`compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height. In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height. `true` by default.
 `screenshotMode`          | Image capture mode.
-`saveHistory`             | Allows to save history of all executed commands. `false` by default.
+`saveHistory`             | Allows to save history of all executed commands. `true` by default.
 `agent`                   | Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null`.
 `headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `null`.
 `transformRequest`        | Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`.
@@ -809,20 +805,20 @@ For example:
 ```
 
 #### httpTimeout
-Timeout for any requests to Selenium server. Default value is `90000` ms.
+Timeout for any requests to Selenium server. Default value is `30000` ms.
 
 #### urlHttpTimeout
 Timeout for `/url` request to Selenium server. Default value is `httpTimeout`.
 It may be useful when opening url takes a long time (for example a lot of logic is executed in middlewares), and you don't want to increase timeout for other commands.
 
 #### pageLoadTimeout
-Timeout for the page loading to complete. Default value is `300000` ms.
+Timeout for the page loading to complete. Default value is `20000` ms.
 
 #### sessionRequestTimeout
 Timeout for getting a browser session. Default value is `httpTimeout`.
 
 #### sessionQuitTimeout
-Timeout for quitting a session. Default value is `httpTimeout`.
+Timeout for quitting a session. Default value is `5000`.
 
 #### testTimeout
 Timeout for test execution (in milliseconds).
@@ -842,26 +838,16 @@ Number of sessions which are run simultaneously. Global value for all browsers. 
 Options for setting up taking a screenshot of a test fail. Can be an object with `testFail` and `assertViewFail` keys.
 
 * `testFail` (default: `true`) – takes a screenshot when an error occurs in the test, except `assertView` fail.
-* `assertViewFail` (default: `false`) – takes a screenshot if the test fails on the `assetView` command.
+* `assertViewFail` (default: `true`) – takes a screenshot if the test fails on the `assetView` command.
 
 #### takeScreenshotOnFailsMode
 Mode for taking a screenshot on test fail. There are two available options:
 
-* `fullpage` – Hermione will take a screenshot of the entire page from top.
-* `viewport` – Default value. Hermione will take a screenshot of the current viewport.
+* `fullpage` – Hermione will take a screenshot of the entire page from top. Default value.
+* `viewport` – Hermione will take a screenshot of the current viewport.
 
 #### takeScreenshotOnFailsTimeout
-Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-
-#### screenshotOnReject
-Allows to attach a screenshot of a current page on test fail. Default value is `true`.
-
-:warning: This option is **deprecated**, use `takeScreenshotOnFails` instead.
-
-#### screenshotOnRejectTimeout
-Timeout for taking screenshot on test fail. Default value is `httpTimeout`.
-
-:warning: This option is **deprecated**, use `takeScreenshotOnFailsTimeout` instead.
+Timeout for taking screenshot on test fail. Default value is `5000`.
 
 #### testsPerSession
 Maximum amount of tests (`it`s) to run in each web driver session. After limit is reached, session will be closed and new one will be started.
@@ -961,7 +947,7 @@ Directory to save reference images for command `assertView`. Default dir is `her
 
 #### compositeImage
 
-Allows testing of regions which bottom bounds are outside of a viewport height (default: false). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
+Allows testing of regions which bottom bounds are outside of a viewport height (default: true). In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
 
 #### screenshotMode
 
@@ -975,7 +961,7 @@ By default, `screenshotMode` on android browsers is set to `viewport` to work ar
 
 #### saveHistory
 
-Allows to save history of all executed commands. `false` by default.
+Allows to save history of all executed commands. `true` by default.
 
 Some plugins can rely on this history, for instance:
  - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
@@ -1351,10 +1337,10 @@ shows the following
 
     -V, --version                output the version number
     -c, --config <path>          path to configuration file
-    -r, --reporter <reporter>    test reporters
     -b, --browser <browser>      run tests only in specified browser
     -s, --set <set>              run tests only in the specified set
-    --require <module>           require a module before running hermione
+    -r, --require <module>       require a module before running hermione
+    --reporter <reporter>        test reporters
     --grep <grep>                run only tests matching the pattern
     --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
     --inspect [inspect]          nodejs inspector on [=[host:]port]
@@ -1371,7 +1357,7 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 
 ### Reporters
 
-You can choose `flat`, `plain` or `jsonl` reporter by option `-r, --reporter`. Default is `flat`.
+You can choose `flat`, `plain` or `jsonl` reporter by option `--reporter`. Default is `flat`.
 Information about test results is displayed to the command line by default. But there is an ability to redirect the output to a file, for example:
 ```
 hermione --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}'
@@ -1389,7 +1375,7 @@ Information about each report type:
 
 ### Require modules
 
-Using `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
+Using `-r` or `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
 
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).

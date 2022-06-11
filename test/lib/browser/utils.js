@@ -18,8 +18,6 @@ function createBrowserConfig_(opts = {}) {
         pageLoadTimeout: null,
         sessionRequestTimeout: null,
         sessionQuitTimeout: null,
-        screenshotOnReject: true,
-        screenshotOnRejectTimeout: 3000,
         screenshotDelay: 0,
         windowSize: null,
         getScreenshotPath: () => '/some/path',
@@ -37,7 +35,7 @@ function createBrowserConfig_(opts = {}) {
         key: null,
         region: null,
         headless: null,
-        saveHistory: false
+        saveHistory: true
     });
 
     return {

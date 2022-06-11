@@ -31,7 +31,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
                 testFail: true,
                 assertViewFail: true
             },
-            screenshotOnRejectTimeout: 100500
+            takeScreenshotOnFailsTimeout: 100500
         });
         const browser = opts.browser || mkBrowser_();
 
@@ -157,7 +157,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
         });
 
         it('should set custom http timeout for screenshot', async () => {
-            const config = {screenshotOnRejectTimeout: 15};
+            const config = {takeScreenshotOnFailsTimeout: 15};
             const browser = mkBrowser_();
             const screenshooter = mkScreenshooter_({config, browser});
 
@@ -187,7 +187,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
         });
 
         it('should fail with timeout error on long execution of "screenshot" command', async () => {
-            const config = {screenshotOnRejectTimeout: 10};
+            const config = {takeScreenshotOnFailsTimeout: 10};
             const browser = mkBrowser_();
             browser.publicAPI.takeScreenshot.callsFake(() => Promise.delay(20));
 

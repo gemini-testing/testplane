@@ -719,55 +719,9 @@ describe('config browser-options', () => {
     }
 
     [
-        'sessionRequestTimeout', 'sessionQuitTimeout',
-        'pageLoadTimeout', 'testTimeout', 'urlHttpTimeout'
+        'sessionRequestTimeout', 'sessionQuitTimeout', 'pageLoadTimeout',
+        'testTimeout', 'urlHttpTimeout', 'takeScreenshotOnFailsTimeout'
     ].forEach((option) => describe(option, () => testOptionalNonNegativeIntegerOption(option)));
-
-    describe('takeScreenshotOnFailsTimeout', () => {
-        testOptionalNonNegativeIntegerOption('takeScreenshotOnFailsTimeout');
-
-        describe('if value is not specified', () => {
-            it('should get a value from option "screenshotOnRejectTimeout"', () => {
-                const readConfig = {
-                    browsers: {
-                        b1: mkBrowser_({
-                            screenshotOnRejectTimeout: 100500
-                        })
-                    }
-                };
-
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.equal(config.browsers.b1.takeScreenshotOnFailsTimeout, 100500);
-            });
-        });
-
-        describe('if value is specified', () => {
-            it('should use its own value', () => {
-                const readConfig = {
-                    browsers: {
-                        b1: mkBrowser_({
-                            takeScreenshotOnFailsTimeout: 500100,
-                            screenshotOnRejectTimeout: 100500
-                        })
-                    }
-                };
-
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.equal(config.browsers.b1.takeScreenshotOnFailsTimeout, 500100);
-            });
-        });
-    });
-
-    describe('screenshotOnRejectTimeout', () => {
-        testOptionalNonNegativeIntegerOption('screenshotOnRejectTimeout');
-        testDeprecatedOption('screenshotOnRejectTimeout');
-    });
 
     describe('meta', () => {
         it('should throw error if "meta" is not a object', () => {
@@ -1157,21 +1111,6 @@ describe('config browser-options', () => {
         'waitOrientationChange'
     ].forEach((option) => describe(option, () => testBooleanOption(option)));
 
-    function testDeprecatedOption(option) {
-        it(`should print a warning if option "${option}" is set by user`, () => {
-            Config.read.returns({[option]: defaults[option]});
-
-            createConfig();
-
-            assert.calledOnceWith(console.warn, `Using "${option}" option is deprecated`);
-        });
-    }
-
-    describe('screenshotOnReject', () => {
-        testBooleanOption('screenshotOnReject');
-        testDeprecatedOption('screenshotOnReject');
-    });
-
     describe('takeScreenshotOnFails', () => {
         it('should throw an error if value is not an object', () => {
             Config.read.returns({takeScreenshotOnFails: 'foo'});
@@ -1197,15 +1136,8 @@ describe('config browser-options', () => {
 
             const config = createConfig();
 
-            assert.deepEqual(config.takeScreenshotOnFails, {
-                testFail: defaults.screenshotOnReject,
-                ...defaults.takeScreenshotOnFails
-            });
-
-            assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, {
-                testFail: defaults.screenshotOnReject,
-                ...defaults.takeScreenshotOnFails
-            });
+            assert.deepEqual(config.takeScreenshotOnFails, defaults.takeScreenshotOnFails);
+            assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, defaults.takeScreenshotOnFails);
         });
 
         it('should extend object value with missing fields', () => {
@@ -1217,7 +1149,7 @@ describe('config browser-options', () => {
 
             assert.deepEqual(config.takeScreenshotOnFails, {
                 testFail: true,
-                assertViewFail: false
+                assertViewFail: true
             });
         });
 
@@ -1229,7 +1161,7 @@ describe('config browser-options', () => {
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({takeScreenshotOnFails: {
-                        assertViewFail: true
+                        assertViewFail: false
                     }})
                 }
             };
@@ -1240,11 +1172,11 @@ describe('config browser-options', () => {
 
             assert.deepEqual(config.browsers.b1.takeScreenshotOnFails, {
                 testFail: false,
-                assertViewFail: false
+                assertViewFail: true
             });
             assert.deepEqual(config.browsers.b2.takeScreenshotOnFails, {
                 testFail: false,
-                assertViewFail: true
+                assertViewFail: false
             });
         });
     });

@@ -393,9 +393,7 @@ declare namespace Hermione {
             testFail: boolean;
             assertViewFail: boolean;
         };
-        screenshotOnReject: boolean;
         takeScreenshotOnFailsTimeout: number | null;
-        screenshotOnRejectTimeout: number | null;
         takeScreenshotOnFailsMode: 'fullpage' | 'viewport';
         prepareBrowser(browser: WebdriverIO.Browser): void | null;
         screenshotPath: string | null;
@@ -449,10 +447,10 @@ declare namespace Hermione {
          * Disables check that element is outside of the viewport left, top, right or bottom bounds.
          *
          * @remarks
-         * By default Hermione throws an error if element is outside the viewport bounds. This option disables this behaviour.
-         * If option set to `true` then only visible part of the element will be captured.
-         * But if set browser option {@link https://github.com/gemini-testing/hermione#compositeimage compositeImage} with `true` value,
-         * then in the resulting screenshot will appear the whole element with not visible parts outside of the viewport bottom bound.
+         * By default Hermione throws an error if element is outside the viewport bounds.
+         * This option disables check that element is outside of the viewport left, top, right or bottom bounds.
+         * And in this case if browser option {@link https://github.com/gemini-testing/hermione#compositeimage compositeImage} set to `false`, then only visible part of the element will be captured.
+         * But if {@link https://github.com/gemini-testing/hermione#compositeimage compositeImage} set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.
          *
          * @defaultValue `false`
          */
@@ -479,7 +477,7 @@ declare namespace Hermione {
          * @remarks
          * Read more about this option in {@link https://github.com/gemini-testing/looks-same#comparing-images-with-ignoring-antialiasing looks-same}
          *
-         * @defaultValue `0`
+         * @defaultValue `4`
          */
         antialiasingTolerance?: number;
         /**
@@ -489,7 +487,7 @@ declare namespace Hermione {
          * @remarks
          * In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
          *
-         * @defaultValue `false`
+         * @defaultValue `true`
          */
         compositeImage?: boolean;
         /**
@@ -508,7 +506,7 @@ declare namespace Hermione {
          * @remarks
          * Useful when you capture the modal (popup). In this case a duplicate of the modal appears on the screenshot.
          * That happens because we scroll the page using `window` selector, which scroll only the background of the modal, and the modal itself remains in place.
-         * Default value is `undefined` (it means scroll relative to `window`). Works only when `compositeImage` is `true`.
+         * Default value is `undefined` (it means scroll relative to `window`). Works only when `compositeImage` is `true` (default).
          *
          * @defaultValue `undefined`
          */
