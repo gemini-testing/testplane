@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="5.0.1"></a>
+## [5.0.1](https://github.com/gemini-testing/hermione/compare/v5.0.0...v5.0.1) (2022-06-29)
+
+
+### Bug Fixes
+
+* **types:** add 'headers' property to config ([a0061d2](https://github.com/gemini-testing/hermione/commit/a0061d2))
+
+
+
 <a name="5.0.0"></a>
 # [5.0.0](https://github.com/gemini-testing/hermione/compare/v4.9.1...v5.0.0) (2022-06-11)
 
