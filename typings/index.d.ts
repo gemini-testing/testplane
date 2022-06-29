@@ -412,6 +412,7 @@ declare namespace Hermione {
         windowSize: string | { width: number, height: number } | null;
         orientation: 'landscape' | 'portrait' | null;
         resetCursor: boolean;
+        headers: Record<string, string> | null;
 
         system: SystemConfig;
     };
