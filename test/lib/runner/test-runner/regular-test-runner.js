@@ -99,6 +99,16 @@ describe('runner/test-runner/regular-test-runner', () => {
             }));
         });
 
+        it('should calculate test duration with time taken on get browser', async () => {
+            BrowserAgent.prototype.getBrowser.resolves(Promise.delay(100).then(() => stubBrowser_()));
+            const onTestEnd = sinon.stub().named('onTestEnd');
+            const runner = mkRunner_().on(Events.TEST_END, onTestEnd);
+
+            await run_({runner});
+
+            assert.isAtLeast(onTestEnd.lastCall.args[0].duration, 100);
+        });
+
         it('should run test in workers', async () => {
             const test = makeTest({
                 file: 'foo/bar',
@@ -151,7 +161,7 @@ describe('runner/test-runner/regular-test-runner', () => {
         });
 
         describe('TEST_PASS event', () => {
-            it('should be emitted on test pass wit test data', async () => {
+            it('should be emitted on test pass with test data', async () => {
                 const test = makeTest();
                 const onPass = sinon.stub().named('onPass');
                 const runner = mkRunner_({test})
