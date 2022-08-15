@@ -1,8 +1,6 @@
 'use strict';
 
-const {assert} = require('chai');
 const webdriverio = require('webdriverio');
-const {clientBridge} = require('gemini-core');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
 
 describe('"getConfig" command', () => {
@@ -12,7 +10,6 @@ describe('"getConfig" command', () => {
     beforeEach(() => {
         session = mkSessionStub_();
         sandbox.stub(webdriverio, 'attach').resolves(session);
-        sandbox.stub(clientBridge, 'build').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -26,29 +23,42 @@ describe('"getConfig" command', () => {
     it('should return object', async () => {
         await mkBrowser_().init();
 
-        const config = session.getConfig();
-        assert.isObject(config);
+        const browserConfig = session.getConfig();
+        assert.isObject(browserConfig);
     });
 
-    it('should have desiredCapabilities', async () => {
-        await mkBrowser_().init();
+    it('should have defined desiredCapabilities', async () => {
+        await mkBrowser_({
+            desiredCapabilities: {
+                killProcessByName: true,
+                honorSystemProxy: false,
+                ensureCleanSession: true
+            }
+        }).init();
 
-        const config = session.getConfig();
-        assert.isDefined(config.desiredCapabilities);
-        assert.isObject(config.desiredCapabilities);
+        const browserConfig = session.getConfig();
+        assert.isDefined(browserConfig.desiredCapabilities);
+        assert.isObject(browserConfig.desiredCapabilities);
+        assert.nestedPropertyVal(browserConfig, 'desiredCapabilities.killProcessByName', true);
+        assert.nestedPropertyVal(browserConfig, 'desiredCapabilities.honorSystemProxy', false);
+        assert.nestedPropertyVal(browserConfig, 'desiredCapabilities.ensureCleanSession', true);
     });
 
-    it('should have gridUrl', async () => {
-        await mkBrowser_().init();
+    it('should have defined gridUrl', async () => {
+        await mkBrowser_({
+            gridUrl: 'http://test_new_host:1234/wd/hub?query=value'
+        }).init();
 
-        const config = session.getConfig();
-        assert.isString(config.gridUrl);
+        const browserConfig = session.getConfig();
+        assert.equal(browserConfig.gridUrl, 'http://test_new_host:1234/wd/hub?query=value');
     });
 
-    it('should have baseUrl', async () => {
-        await mkBrowser_().init();
+    it('should have defined baseUrl', async () => {
+        await mkBrowser_({
+            baseUrl: 'http://custom_base_url'
+        }).init();
 
-        const config = session.getConfig();
-        assert.isString(config.baseUrl);
+        const browserConfig = session.getConfig();
+        assert.equal(browserConfig.baseUrl, 'http://custom_base_url');
     });
 });
