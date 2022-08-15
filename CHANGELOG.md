@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="5.1.0"></a>
+# [5.1.0](https://github.com/gemini-testing/hermione/compare/v5.0.1...v5.1.0) (2022-08-15)
+
+
+### Features
+
+* add getConfig to the browser instance ([30f579e](https://github.com/gemini-testing/hermione/commit/30f579e))
+* update gemini-core to the version with png-img[@4](https://github.com/4) ([58f3da8](https://github.com/gemini-testing/hermione/commit/58f3da8))
+
+
+
 <a name="5.0.1"></a>
 ## [5.0.1](https://github.com/gemini-testing/hermione/compare/v5.0.0...v5.0.1) (2022-06-29)
 
