@@ -70,9 +70,38 @@ describe('commands-history', () => {
                 return this;
             });
 
-            const resultContest = await session.foo();
+            const resultContext = await session.foo();
 
-            assert.equal(resultContest, session);
+            assert.equal(resultContext, session);
+        });
+
+        it('should save element context while wrapping for "addCommand" with elemScope: true', async () => {
+            const session = mkSessionStub_();
+
+            initCommandHistory(session);
+            session.addCommand('foo', function() {
+                return this;
+            }, true);
+
+            const elem = await session.$('.selector');
+            const resultContext = elem.foo();
+
+            assert.equal(resultContext, elem);
+        });
+
+        it('should save element context while wrapping for "overwriteCommand" with elemScope: true', async () => {
+            const session = mkSessionStub_();
+
+            initCommandHistory(session);
+            session.addCommand('foo', ()=>{}, true);
+            session.overwriteCommand('foo', function() {
+                return this;
+            }, true);
+
+            const elem = await session.$('.selector');
+            const resultContext = elem.foo();
+
+            assert.equal(resultContext, elem);
         });
 
         it('should wrap browser commands', async () => {

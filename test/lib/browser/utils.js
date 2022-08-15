@@ -79,9 +79,11 @@ exports.mkSessionStub_ = () => {
     session.setTimeouts = sinon.stub().named('setTimeouts').resolves();
     session.$ = sinon.stub().named('$').resolves(element);
 
-    session.addCommand = sinon.stub().callsFake((name, command) => {
-        session[name] = command;
-        sinon.spy(session, name);
+    session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
+        const target = isElement ? element : session;
+
+        target[name] = command.bind(target);
+        sinon.spy(target, name);
     });
 
     session.overwriteCommand = sinon.stub().callsFake((name, command, isElement) => {
