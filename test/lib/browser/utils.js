@@ -57,6 +57,7 @@ exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter
 exports.mkSessionStub_ = () => {
     const session = {};
     const element = {
+        selector: '.selector',
         click: sinon.stub().named('click').resolves()
     };
 
