@@ -541,7 +541,7 @@ declare namespace Hermione {
     export interface Config extends CommonConfig {
         browsers: { [name: string]: BrowserConfig };
         plugins: { [name: string]: unknown };
-        sets: SetsConfig;
+        sets: Record<string, SetsConfig>;
 
         prepareEnvironment(): void | null;
         forBrowser(id: string): BrowserConfig;
@@ -552,8 +552,8 @@ declare namespace Hermione {
 
     export interface SetsConfig {
         files: string | Array<string>;
-        ignoreFiles: Array<string>;
-        browsers: Array<string>;
+        ignoreFiles?: Array<string>;
+        browsers?: Array<string>;
     };
 
     export interface BrowserConfig extends CommonConfig {
