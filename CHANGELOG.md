@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="5.2.0"></a>
+# [5.2.0](https://github.com/gemini-testing/hermione/compare/v5.1.2...v5.2.0) (2022-08-30)
+
+
+### Features
+
+* add element's assertView method ([54724f7](https://github.com/gemini-testing/hermione/commit/54724f7))
+
+
+
 <a name="5.1.2"></a>
 ## [5.1.2](https://github.com/gemini-testing/hermione/compare/v5.1.1...v5.1.2) (2022-08-29)
 
