@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [5.2.2](https://github.com/gemini-testing/hermione/compare/v5.2.1...v5.2.2) (2022-09-09)
+
+
+### Bug Fixes
+
+* vulnerabilities ([7c3e942](https://github.com/gemini-testing/hermione/commit/7c3e942292d3eab9f84a420246343134f2eabf94))
 
 <a name="5.2.0"></a>
 # [5.2.0](https://github.com/gemini-testing/hermione/compare/v5.1.2...v5.2.0) (2022-08-30)
