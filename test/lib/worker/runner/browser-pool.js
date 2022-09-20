@@ -1,10 +1,10 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const {Calibrator} = require('gemini-core');
 const _ = require('lodash');
 const Browser = require('lib/browser/existing-browser');
 const BrowserPool = require('lib/worker/runner/browser-pool');
+const Calibrator = require('lib/core/calibrator');
 const RunnerEvents = require('lib/worker/constants/runner-events');
 const logger = require('lib/utils/logger');
 const ipc = require('lib/utils/ipc');

@@ -3,10 +3,12 @@
 const {EventEmitter} = require('events');
 const _ = require('lodash');
 const Promise = require('bluebird');
-const {Calibrator, clientBridge, browser: {Camera}} = require('gemini-core');
 const webdriverio = require('webdriverio');
 const jsdom = require('jsdom-global');
 const Browser = require('lib/browser/existing-browser');
+const Calibrator = require('lib/core/calibrator');
+const Camera = require('lib/core/browser/camera');
+const clientBridge = require('lib/core/client-bridge');
 const logger = require('lib/utils/logger');
 const history = require('lib/browser/history');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');

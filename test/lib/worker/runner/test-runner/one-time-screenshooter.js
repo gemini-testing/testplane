@@ -3,7 +3,9 @@
 const _ = require('lodash');
 const Promise = require('bluebird');
 const fs = require('fs');
-const {ScreenShooter, Image, temp} = require('gemini-core');
+const Image = require('lib/core/image');
+const ScreenShooter = require('lib/core/screen-shooter');
+const temp = require('lib/core/temp');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
 const RuntimeConfig = require('lib/config/runtime-config');
 const logger = require('lib/utils/logger');

@@ -1,7 +1,7 @@
 'use strict';
 
 const proxyquire = require('proxyquire').noCallThru();
-const {AsyncEmitter} = require('gemini-core').events;
+const AsyncEmitter = require('lib/core/events/async-emitter');
 const Hermione = require('lib/worker/hermione');
 const {makeConfigStub} = require('../../utils');
 

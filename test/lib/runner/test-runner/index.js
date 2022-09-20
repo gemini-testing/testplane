@@ -3,7 +3,7 @@
 const TestRunner = require('lib/runner/test-runner');
 const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
 const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
-const {BrowserAgent} = require('gemini-core');
+const BrowserAgent = require('lib/core/browser-agent');
 
 const {makeConfigStub, makeTest} = require('../../../utils');
 

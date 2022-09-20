@@ -4,7 +4,7 @@ const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
 const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
 const HighPriorityBrowserAgent = require('lib/runner/test-runner/high-priority-browser-agent');
 const Events = require('lib/constants/runner-events');
-const {BrowserAgent} = require('gemini-core');
+const BrowserAgent = require('lib/core/browser-agent');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
 

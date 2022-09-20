@@ -1,11 +1,10 @@
 /// <reference path='./global.d.ts' />
 /// <reference path='./webdriverio/index.d.ts' />
 /// <reference path='./mocha/index.d.ts' />
-/// <reference path='./gemini-core/index.d.ts' />
 /// <reference types='@gemini-testing/commander' />
 /// <reference types='@wdio/types' />
 
-class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
+class Hermione extends Hermione.AsyncEmitter implements Hermione.Process  {
     static create(config: string|Hermione.CommonConfig): Hermione;
     constructor(config: string|Hermione.CommonConfig);
 
@@ -114,7 +113,11 @@ class Hermione extends GeminiCore.AsyncEmitter implements Hermione.Process  {
 };
 
 declare namespace Hermione {
-    export interface Process extends GeminiCore.AsyncEmitter {
+    export class AsyncEmitter extends NodeJS.EventEmitter {
+        emitAndWait(event: string, ...args: Array<unknown>): Promise<Array<unknown>>;
+    }
+
+    export interface Process extends AsyncEmitter {
         config: Config;
         events: EVENTS;
         errors: Errors;
