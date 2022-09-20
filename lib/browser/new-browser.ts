@@ -1,7 +1,7 @@
 import { URLSearchParams } from 'url';
 import URI from 'urijs';
 import _ from 'lodash';
-import webdriverio from 'webdriverio';
+import webdriverio, { RemoteOptions } from 'webdriverio';
 
 import Browser from './browser';
 import signalHandler from '../signal-handler';
@@ -10,6 +10,8 @@ import * as logger from '../utils/logger';
 import { Capabilities } from '@wdio/types';
 import type Config from '../config';
 
+import type {INewBrowser} from 'gemini-core';
+
 const DEFAULT_PORT = 4444;
 const OPTIONAL_SESSION_OPTS = [
     'outputDir', 'agent', 'headers', 'transformRequest', 'transformResponse', 'strictSSL',
@@ -17,7 +19,7 @@ const OPTIONAL_SESSION_OPTS = [
     'user', 'key', 'region', 'headless'
 ] as const;
 
-export default class NewBrowser extends Browser {    
+export default class NewBrowser extends Browser implements INewBrowser {    
     public static create(config: Config, id: string, version: string): NewBrowser {
         return new NewBrowser(config, id, version);
     }
@@ -82,14 +84,14 @@ export default class NewBrowser extends Browser {
         }
     }
 
-    private _getSessionOpts(): webdriverio.RemoteOptions {
+    private _getSessionOpts(): RemoteOptions {
         const config = this._config;
         const gridUri = new URI(config.gridUrl);
         const capabilities = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
 
-        const options: webdriverio.RemoteOptions = {
+        const options: RemoteOptions = {
             protocol: gridUri.protocol(),
             hostname: this._getGridHost(gridUri),
             port: gridUri.port() ? parseInt(gridUri.port(), 10) : DEFAULT_PORT,

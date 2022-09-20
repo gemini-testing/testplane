@@ -75,7 +75,7 @@
     "jsdom-global": "^3.0.2",
     "looks-same": "^7.3.0",
     "nyc": "13.3.0",
-    "png-img": "^3.3.6",
+    "png-img": "^4.0.4",
     "proxyquire": "^1.7.3",
     "sinon": "^4.4.2",
     "sinon-chai": "^2.12.0",

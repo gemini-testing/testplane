@@ -2,21 +2,27 @@ import _ from 'lodash';
 import * as history from './history';
 
 import type { Capabilities } from '@wdio/types';
-import type { Browser as Session } from 'webdriverio';
+import type { Browser as Session, RemoteOptions } from 'webdriverio';
 import type Callstack from './history/callstack';
 import type Config from '../config';
 import type BrowserConfig from '../config/browser-config';
+
+import type {IBrowser} from 'gemini-core';
+
+type ExtendedAsyncSession = Session<'async'> & {
+    extendOptions: (opts: Partial<RemoteOptions>) => void;
+};
 
 type BrowserState = {
     isBroken: boolean;
 };
 
-export default abstract class Browser {
+export default abstract class Browser implements IBrowser {
     public id: string;
     public version: string;
     protected _config: BrowserConfig;
     protected _debug: boolean;
-    protected _session: Session<'async'> | null;
+    protected _session: ExtendedAsyncSession | null;
     private _callstackHistory: Callstack | null;
     protected _state: BrowserState;
 
@@ -38,7 +44,7 @@ export default abstract class Browser {
             timeout = this._config.httpTimeout;
         }
 
-        this.publicAPI.extendOptions({connectionRetryTimeout: timeout});
+        this._session && this._session.extendOptions({connectionRetryTimeout: timeout});
     }
 
     public restoreHttpTimeout(): void {
@@ -60,13 +66,13 @@ export default abstract class Browser {
     }
 
     protected _addHistory(): void {
-        if (this._config.saveHistory) {
-            this._callstackHistory = history.initCommandHistory(this._session as Session<'async'>);
+        if (this._config.saveHistory && this._session) {
+            this._callstackHistory = history.initCommandHistory(this._session);
         }
     }
 
     private _addExtendOptionsMethod(session: Session<'async'>): void {
-        session.addCommand('extendOptions', (opts) => {
+        session.addCommand('extendOptions', (opts: Partial<RemoteOptions>) => {
             _.extend(session.options, opts);
         });
     }
@@ -77,7 +83,7 @@ export default abstract class Browser {
             : this.id;
     }
 
-    public get publicAPI(): Session<'async'> {
+    public get publicAPI(): ExtendedAsyncSession {
         if (this._session === null) {
             throw new Error('TODO');
         }
@@ -89,7 +95,7 @@ export default abstract class Browser {
         return this.publicAPI.sessionId;
     }
 
-    public set sessionId(id: string) {
+    public set sessionId(id: string | null) {
         this.publicAPI.sessionId = id;
     }
 

@@ -1,5 +1,6 @@
 import type * as LooksSame from 'looks-same';
-import type { SetsConfig } from 'gemini-core/lib/config/options';
+import type { SetsConfig } from 'gemini-core/build/lib/config/options';
+import type {ScreenshotMode} from 'gemini-core/build/lib/browser/camera/constants';
 import type Mocha from '@gemini-testing/mocha';
 import type { Capabilities } from '@wdio/types';
 
@@ -60,7 +61,7 @@ export type CommonOptions = {
 
     strictTestsOrder: boolean;
 
-    screenshotMode: 'fullpage' | 'viewport' | 'auto';
+    screenshotMode: ScreenshotMode;
 
     screenshotDelay: NonNegativeInteger;
 

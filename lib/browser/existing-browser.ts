@@ -3,25 +3,27 @@ import url from 'url';
 import Bluebird from 'bluebird';
 import { clientBridge, browser } from 'gemini-core';
 import _ from 'lodash';
-import webdriverio from 'webdriverio';
+import webdriverio, { RemoteOptions } from 'webdriverio';
 import { sessionEnvironmentDetector } from '@wdio/utils';
 
 import Browser from './browser';
 import commandsList from './commands';
 import * as logger from '../utils/logger';
 
-import type { Capabilities, Options } from '@wdio/types';
+import type { Capabilities } from '@wdio/types';
 import type { events, Image, Calibrator } from 'gemini-core';
 import type { Page } from 'gemini-core/lib/types/page';
 import type { CalibrationResult } from 'gemini-core/lib/types/calibrator';
 import type { ClientBridge } from 'gemini-core/lib/client-bridge';
-import type { Size } from 'png-img';
+import type { Size } from 'png-img/dist/types';
 import type Config from '../config';
 
-export default class ExistingBrowser extends Browser {
+import type {IExistingBrowser} from 'gemini-core';
+
+export default class ExistingBrowser extends Browser implements IExistingBrowser {
     private _emitter: events.AsyncEmitter;
     private _camera: browser.Camera;
-    private _meta;
+    private _meta: Record<string, any>;
     private _clientBridge: ClientBridge | undefined;
     private _calibration: CalibrationResult | undefined;
 
@@ -46,7 +48,7 @@ export default class ExistingBrowser extends Browser {
 
         try {
             this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
-        } catch (e) {
+        } catch (e: any) {
             logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, e.stack);
         }
 
@@ -57,8 +59,8 @@ export default class ExistingBrowser extends Browser {
         return this;
     }
 
-    async reinit(sessionId: string, sessionOpts) {
-        this._session.extendOptions(sessionOpts);
+    async reinit(sessionId: string, sessionOpts: Partial<RemoteOptions>): Promise<this> {
+        this._session && this._session.extendOptions(sessionOpts);
         await this._prepareSession(sessionId);
 
         return this;
@@ -82,21 +84,35 @@ export default class ExistingBrowser extends Browser {
         });
 
         const result = await this._clientBridge.call('prepareScreenshot', [selectors, opts]);
+
         if (result.error) {
             throw new Error(`Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`);
         }
+
         return result;
     }
 
     public async open(url: string): Promise<string> {
+        if (!this._session) {
+            throw new Error('Session is not initialized');
+        }
+
         return this._session.url(url);
     }
 
     public async evalScript<T>(script: string): Promise<T> {
+        if (!this._session) {
+            throw new Error('Session is not initialized');
+        }
+
         return this._session.execute(`return ${script}`);
     }
 
     public async injectScript<T>(script: string): Promise<T> {
+        if (!this._session) {
+            throw new Error('Session is not initialized');
+        }
+
         return this._session.execute(script);
     }
 
@@ -138,9 +154,9 @@ export default class ExistingBrowser extends Browser {
     public async attach(
         sessionId: string,
         sessionCaps: Capabilities.DesiredCapabilities,
-        sessionOpts: Options.WebdriverIO
+        sessionOpts: RemoteOptions
     ): Promise<void> {
-        this._session = await this._attachSession(sessionId, sessionCaps, sessionOpts);
+        this._session = await this._attachSession({sessionId, sessionCaps, sessionOpts});
 
         this._addHistory();
         this._addCommands();
@@ -149,11 +165,11 @@ export default class ExistingBrowser extends Browser {
     private _attachSession({
         sessionId,
         sessionCaps,
-        sessionOpts = {}
+        sessionOpts
     }: {
         sessionId: string;
         sessionCaps: Capabilities.DesiredCapabilities;
-        sessionOpts: any;
+        sessionOpts: RemoteOptions;
     }) {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps,
