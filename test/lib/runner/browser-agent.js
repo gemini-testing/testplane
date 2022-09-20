@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const BaseBrowserAgent = require('gemini-core').BrowserAgent;
+const BaseBrowserAgent = require('lib/core/browser-agent');
 const BrowserAgent = require('lib/runner/browser-agent');
 
 describe('runner/browser-agent', () => {

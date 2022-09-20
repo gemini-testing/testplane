@@ -1,2 +1,3 @@
 node_modules
+/lib/core/browser/client-scripts/calibrate.min.js
 /coverage

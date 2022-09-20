@@ -1,8 +1,6 @@
 'use strict';
 
 const _ = require('lodash');
-const eventsUtils = require('gemini-core').events.utils;
-const {AsyncEmitter} = require('gemini-core').events;
 const {EventEmitter} = require('events');
 const pluginsLoader = require('plugins-loader');
 const Promise = require('bluebird');
@@ -10,6 +8,8 @@ const proxyquire = require('proxyquire').noCallThru();
 
 const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
+const AsyncEmitter = require('lib/core/events/async-emitter');
+const eventsUtils = require('lib/core/events/utils');
 const Errors = require('lib/errors');
 const RunnerStats = require('lib/stats');
 const TestReader = require('lib/test-reader');

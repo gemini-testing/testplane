@@ -1,9 +1,9 @@
 'use strict';
 
-const {BrowserPool: CoreBrowserPool} = require('gemini-core');
+const CoreBrowserPool = require('lib/core/browser-pool');
 const _ = require('lodash');
 const Promise = require('bluebird');
-const AsyncEmitter = require('gemini-core').events.AsyncEmitter;
+const AsyncEmitter = require('lib/core/events/async-emitter');
 const BrowserPool = require('../../../lib/browser-pool');
 const Browser = require('../../../lib/browser/new-browser');
 const Events = require('../../../lib/constants/runner-events');

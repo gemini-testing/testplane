@@ -1,9 +1,9 @@
 'use strict';
 
 const _ = require('lodash');
-const {temp} = require('gemini-core');
 const Promise = require('bluebird');
 
+const temp = require('lib/core/temp');
 const BrowserPool = require('lib/browser-pool');
 const RuntimeConfig = require('lib/config/runtime-config');
 const RunnerStats = require('lib/stats');

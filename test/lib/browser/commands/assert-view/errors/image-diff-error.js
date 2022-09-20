@@ -1,9 +1,9 @@
 'use strict';
 
 const _ = require('lodash');
-const {Image} = require('gemini-core');
 const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
+const Image = require('lib/core/image');
 
 const mkImageDiffError = (opts = {}) => {
     const {stateName, currImg, refImg, diffOpts} = _.defaults(opts, {
