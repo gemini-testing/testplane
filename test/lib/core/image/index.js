@@ -1,7 +1,7 @@
 'use strict';
 
-const PngImg = require('png-img');
-const utils = require('png-img/dist/utils'); // TODO: provide public interface for utils from png-img
+const {PngImg} = require('png-img');
+const utils = require('png-img/utils');
 const proxyquire = require('proxyquire');
 
 const looksSameStub = sinon.stub();
@@ -116,7 +116,7 @@ describe('Image', () => {
     });
 
     it('should save file', () => {
-        const stubSave = sandbox.stub(PngImg.prototype, 'save').yields();
+        const stubSave = sandbox.stub(PngImg.prototype, 'save').resolves();
 
         return image.save('some/path')
             .then(() => {
