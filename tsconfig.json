@@ -1,0 +1,16 @@
+{
+  "extends": "@tsconfig/node12/tsconfig.json",
+  "include": ["src/lib"],
+
+  "compilerOptions": {
+    "outDir": "build",
+
+    "alwaysStrict": false,
+    "allowJs": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmitOnError": true
+  }
+}
