@@ -1,7 +1,5 @@
-'use strict';
-
-module.exports = class ClientBridgeError extends Error {
-    constructor(message) {
+export default class ClientBridgeError extends Error {
+    constructor(message: string) {
         super(message);
 
         this.name = this.constructor.name;
