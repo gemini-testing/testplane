@@ -1,6 +1,2 @@
-'use strict';
-
-module.exports = {
-    AsyncEmitter: require('./async-emitter'),
-    utils: require('./utils')
-};
+export {default as AsyncEmitter} from './async-emitter';
+export * as utils from './utils';

@@ -1,16 +1,22 @@
-'use strict';
+import type {EventEmitter} from 'events';
 
-const mkPassthroughFn = (methodName) => {
-    const passEvents = (from, to, event) => {
+import type AsyncEmitter from './async-emitter';
+
+type PassEventsFunc<To extends EventEmitter> = <From extends EventEmitter>(from: From, to: To, event: string | Array<string>) => void;
+
+const mkPassthroughFn = <To extends EventEmitter>(methodName: To extends AsyncEmitter ? 'emitAndWait' : 'emit'): PassEventsFunc<To> => {
+    const passEvents = <From extends EventEmitter>(from: From, to: To, event: string | Array<string>): void => {
         if (typeof event === 'string') {
-            from.on(event, (...args) => to[methodName](event, ...args));
+            from.on(event, (...args: Array<unknown>) => to[methodName](event, ...args));
+
             return;
         }
+
         event.forEach((event) => passEvents(from, to, event));
     };
 
     return passEvents;
 };
 
-exports.passthroughEvent = mkPassthroughFn('emit');
-exports.passthroughEventAsync = mkPassthroughFn('emitAndWait');
+export const passthroughEvent = mkPassthroughFn<EventEmitter>('emit');
+export const passthroughEventAsync = mkPassthroughFn<AsyncEmitter>('emitAndWait');
