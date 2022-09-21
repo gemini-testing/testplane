@@ -1,38 +1,42 @@
-'use strict';
+import {Size} from "png-img/dist/types";
 
-module.exports = class SafeRect {
-    static create(rect, imageSize) {
+export interface Coordinate {
+    top: number;
+    left: number;
+}
+
+export interface SerializedRect extends Coordinate, Size {}
+
+export default class SafeRect {
+    static create(rect: SerializedRect, imageSize: Size): SafeRect {
         return new SafeRect(rect, imageSize);
     }
 
-    constructor(rect, imageSize) {
-        this._rect = rect;
-        this._imageSize = imageSize;
-    }
+    constructor(private _rect: SerializedRect, private _imageSize: Size) {}
 
-    get left() {
+    get left(): number {
         return this._calcCoord('left');
     }
 
-    get top() {
+    get top(): number {
         return this._calcCoord('top');
     }
 
-    _calcCoord(coord) {
+    private _calcCoord(coord: keyof Coordinate): number {
         return Math.max(this._rect[coord], 0);
     }
 
-    get width() {
+    get width(): number {
         return this._calcSize('width', 'left');
     }
 
-    get height() {
+    get height(): number {
         return this._calcSize('height', 'top');
     }
 
-    _calcSize(size, coord) {
+    private _calcSize(size: keyof Size, coord: keyof Coordinate): number {
         const rectCoord = this._calcCoord(coord);
 
         return Math.min(this._rect[size], this._imageSize[size] - rectCoord);
     }
-};
+}
