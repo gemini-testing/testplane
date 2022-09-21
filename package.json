@@ -14,7 +14,7 @@
     "test": "npm run test-unit && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
-    "preversion": "npm run lint && npm test",
+    "preversion": "npm test",
     "prepublishOnly": "npm run build",
     "prepare-calibrate-script": "uglifyjs ./build/core/browser/client-scripts/calibrate.js -m > ./build/core/browser/client-scripts/calibrate.min.js --support-ie8",
     "commitmsg": "commitlint -e",
