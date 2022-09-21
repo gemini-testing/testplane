@@ -1,9 +1,9 @@
 'use strict';
 
 const webdriverio = require('webdriverio');
-const logger = require('lib/utils/logger');
-const signalHandler = require('lib/signal-handler');
-const history = require('lib/browser/history');
+const logger = require('build/utils/logger');
+const signalHandler = require('build/signal-handler');
+const history = require('build/browser/history');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('NewBrowser', () => {

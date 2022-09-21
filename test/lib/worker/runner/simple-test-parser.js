@@ -1,8 +1,8 @@
 'use strict';
 
-const SimpleTestParser = require('lib/worker/runner/sequence-test-parser');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const TestParser = require('lib/test-reader/mocha-test-parser');
+const SimpleTestParser = require('build/worker/runner/sequence-test-parser');
+const RunnerEvents = require('build/worker/constants/runner-events');
+const TestParser = require('build/test-reader/mocha-test-parser');
 const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner/simple-test-parser', () => {

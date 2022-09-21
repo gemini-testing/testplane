@@ -1,6 +1,6 @@
 'use strict';
 
-const configController = require('lib/test-reader/config-controller');
+const configController = require('build/test-reader/config-controller');
 
 describe('test-reader/config-controller', () => {
     describe('testTimeout', () => {

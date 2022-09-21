@@ -1,8 +1,8 @@
 'use strict';
 
 const Promise = require('bluebird');
-const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
+const HookRunner = require('build/worker/runner/test-runner/hook-runner');
+const ExecutionThread = require('build/worker/runner/test-runner/execution-thread');
 const {Suite, Test} = require('../../../_mocha');
 
 describe('worker/runner/test-runner/hook-runner', () => {

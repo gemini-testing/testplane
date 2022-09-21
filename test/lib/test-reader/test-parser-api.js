@@ -1,9 +1,9 @@
 'use strict';
 
 const {EventEmitter} = require('events');
-const TestParserAPI = require('lib/test-reader/test-parser-api');
-const ParserEvents = require('lib/test-reader/parser-events');
-const RunnerEvents = require('lib/constants/runner-events');
+const TestParserAPI = require('build/test-reader/test-parser-api');
+const ParserEvents = require('build/test-reader/parser-events');
+const RunnerEvents = require('build/constants/runner-events');
 const {makeSuite, makeTest} = require('../../utils');
 
 describe('test-reader/test-parser-api', () => {

@@ -1,6 +1,6 @@
 'use strict';
 
-const commands = require('lib/test-reader/browser/commands');
+const commands = require('build/test-reader/browser/commands');
 
 describe('VersionCommand', () => {
     describe('test', () => {

@@ -2,8 +2,8 @@
 
 const _ = require('lodash');
 
-const Config = require('lib/config');
-const defaults = require('lib/config/defaults');
+const Config = require('build/config');
+const defaults = require('build/config/defaults');
 
 describe('config browser-options', () => {
     const sandbox = sinon.sandbox.create();

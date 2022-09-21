@@ -1,6 +1,6 @@
 'use strict';
 
-const cmds = require('../../../../lib/browser/history/commands');
+const cmds = require('../../../../build/browser/history/commands');
 
 describe('commands-history', () => {
     describe('commands', () => {

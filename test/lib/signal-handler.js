@@ -1,10 +1,10 @@
 'use strict';
 
-const logger = require('lib/utils/logger');
+const logger = require('build/utils/logger');
 const clearRequire = require('clear-require');
 const Promise = require('bluebird');
 
-describe('lib/signal-handler', () => {
+describe('build/signal-handler', () => {
     const sandbox = sinon.sandbox.create();
 
     let signalHandler;
@@ -22,8 +22,8 @@ describe('lib/signal-handler', () => {
         sandbox.stub(process, 'exit');
         sandbox.stub(logger, 'log');
 
-        clearRequire('lib/signal-handler');
-        signalHandler = require('lib/signal-handler');
+        clearRequire('build/signal-handler');
+        signalHandler = require('build/signal-handler');
     });
 
     afterEach(() => sandbox.restore());

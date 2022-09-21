@@ -1,8 +1,8 @@
 'use strict';
 
 const _ = require('lodash');
-const BaseBrowserAgent = require('lib/core/browser-agent');
-const BrowserAgent = require('lib/runner/browser-agent');
+const BaseBrowserAgent = require('build/core/browser-agent');
+const BrowserAgent = require('build/runner/browser-agent');
 
 describe('runner/browser-agent', () => {
     const sandbox = sinon.sandbox.create();

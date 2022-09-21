@@ -2,13 +2,13 @@
 
 const _ = require('lodash');
 const pluginsLoader = require('plugins-loader');
-const Config = require('lib/config');
-const RunnerEvents = require('lib/constants/runner-events');
-const Errors = require('lib/errors');
-const TestCollection = require('lib/test-collection');
-const WorkerRunnerEvents = require('lib/worker/constants/runner-events');
-const Hermione = require('lib/worker/hermione');
-const Runner = require('lib/worker/runner');
+const Config = require('build/config');
+const RunnerEvents = require('build/constants/runner-events');
+const Errors = require('build/errors');
+const TestCollection = require('build/test-collection');
+const WorkerRunnerEvents = require('build/worker/constants/runner-events');
+const Hermione = require('build/worker/hermione');
+const Runner = require('build/worker/runner');
 const {makeConfigStub, makeSuite} = require('../../utils');
 
 describe('worker/hermione', () => {

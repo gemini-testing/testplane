@@ -1,7 +1,7 @@
 'use strict';
 
-const Callstack = require('lib/browser/history/callstack');
-const logger = require('../../../../lib/utils/logger');
+const Callstack = require('build/browser/history/callstack');
+const logger = require('build/utils/logger');
 
 describe('commands-history', () => {
     describe('callstack', () => {

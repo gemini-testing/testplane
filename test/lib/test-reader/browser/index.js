@@ -1,7 +1,7 @@
 'use strict';
 
-const BrowserConfigurator = require('lib/test-reader/browser');
-const commands = require('lib/test-reader/browser/commands');
+const BrowserConfigurator = require('build/test-reader/browser');
+const commands = require('build/test-reader/browser/commands');
 
 describe('BrowserConfigurator', () => {
     const sandbox = sinon.sandbox.create();

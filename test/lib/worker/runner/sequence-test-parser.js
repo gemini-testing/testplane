@@ -1,8 +1,8 @@
 'use strict';
 
-const SequenceTestParser = require('lib/worker/runner/sequence-test-parser');
-const SimpleTestParser = require('lib/worker/runner/simple-test-parser');
-const RunnerEvents = require('lib/worker/constants/runner-events');
+const SequenceTestParser = require('build/worker/runner/sequence-test-parser');
+const SimpleTestParser = require('build/worker/runner/simple-test-parser');
+const RunnerEvents = require('build/worker/constants/runner-events');
 const {makeConfigStub, makeTest} = require('../../../utils');
 const Promise = require('bluebird');
 

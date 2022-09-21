@@ -2,8 +2,8 @@
 
 const Promise = require('bluebird');
 
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const utils = require('lib/core/events/utils');
+const AsyncEmitter = require('build/core/events/async-emitter');
+const utils = require('build/core/events/utils');
 
 describe('events/utils', () => {
     describe('passthroughEvent', () => {

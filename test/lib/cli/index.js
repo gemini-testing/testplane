@@ -3,11 +3,11 @@
 const {Command} = require('@gemini-testing/commander');
 const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
-const hermioneCli = require('lib/cli');
-const info = require('lib/cli/info');
-const defaults = require('lib/config/defaults');
-const Hermione = require('lib/hermione');
-const logger = require('lib/utils/logger');
+const hermioneCli = require('build/cli');
+const info = require('build/cli/info');
+const defaults = require('build/config/defaults');
+const Hermione = require('build/hermione');
+const logger = require('build/utils/logger');
 
 const any = sinon.match.any;
 
@@ -66,7 +66,7 @@ describe('cli', () => {
     it('should require modules specified in "require" option', async () => {
         const fooRequire = sandbox.stub().returns({});
 
-        const stubHermioneCli = proxyquire('lib/cli', {
+        const stubHermioneCli = proxyquire('build/cli', {
             foo: (() => fooRequire())()
         });
 
@@ -168,7 +168,7 @@ describe('cli', () => {
     });
 
     it('should use require modules from cli', async () => {
-        const stubHermioneCli = proxyquire('lib/cli', {foo: {}});
+        const stubHermioneCli = proxyquire('build/cli', {foo: {}});
         onParse((parser) => parser.require = ['foo']);
 
         stubHermioneCli.run();

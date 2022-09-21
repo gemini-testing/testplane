@@ -1,6 +1,6 @@
 'use strict';
 
-const TestCollection = require('lib/test-collection');
+const TestCollection = require('build/test-collection');
 
 describe('test-collection', () => {
     describe('getBrowsers', () => {

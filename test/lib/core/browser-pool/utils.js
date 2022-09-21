@@ -1,6 +1,6 @@
 'use strict';
 
-const utils = require('lib/core/browser-pool/utils');
+const utils = require('build/core/browser-pool/utils');
 
 describe('browser-pool/utils', () => {
     describe('buildCompositeBrowserId', () => {

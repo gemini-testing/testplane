@@ -2,12 +2,12 @@
 
 const _ = require('lodash');
 
-const BrowserAgent = require('lib/core/browser-agent');
-const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
-const WorkersRegistry = require('lib/utils/workers-registry');
-const logger = require('lib/utils/logger');
-const Events = require('lib/constants/runner-events');
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
+const BrowserAgent = require('build/core/browser-agent');
+const RegularTestRunner = require('build/runner/test-runner/regular-test-runner');
+const WorkersRegistry = require('build/utils/workers-registry');
+const logger = require('build/utils/logger');
+const Events = require('build/constants/runner-events');
+const AssertViewResults = require('build/browser/commands/assert-view/assert-view-results');
 const Promise = require('bluebird');
 const {EventEmitter} = require('events');
 

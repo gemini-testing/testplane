@@ -1,7 +1,7 @@
 'use strict';
 
-const Skip = require('lib/test-reader/skip/');
-const SkipBuilder = require('lib/test-reader/skip/skip-builder');
+const Skip = require('build/test-reader/skip/');
+const SkipBuilder = require('build/test-reader/skip/skip-builder');
 
 describe('SkipBuilder', () => {
     let skip;

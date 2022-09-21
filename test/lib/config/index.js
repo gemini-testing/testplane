@@ -2,8 +2,8 @@
 
 const path = require('path');
 const proxyquire = require('proxyquire').noCallThru();
-const defaults = require('lib/config/defaults');
-const BrowserConfig = require('lib/config/browser-config');
+const defaults = require('build/config/defaults');
+const BrowserConfig = require('build/config/browser-config');
 
 describe('config', () => {
     const sandbox = sinon.sandbox.create();
@@ -22,7 +22,7 @@ describe('config', () => {
             const resolvedConfigPath = path.resolve(process.cwd(), config);
             stubs[resolvedConfigPath] = opts.requireConfigReturns || {};
         }
-        const Config = proxyquire('../../../lib/config', stubs);
+        const Config = proxyquire('../../../build/config', stubs);
 
         return Config.create(opts.config, opts.allowOverrides);
     };

@@ -1,12 +1,12 @@
 'use strict';
 
-const CoreBrowserPool = require('lib/core/browser-pool');
+const CoreBrowserPool = require('build/core/browser-pool');
 const _ = require('lodash');
 const Promise = require('bluebird');
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const BrowserPool = require('../../../lib/browser-pool');
-const Browser = require('../../../lib/browser/new-browser');
-const Events = require('../../../lib/constants/runner-events');
+const AsyncEmitter = require('build/core/events/async-emitter');
+const BrowserPool = require('../../../build/browser-pool');
+const Browser = require('../../../build/browser/new-browser');
+const Events = require('../../../build/constants/runner-events');
 const makeConfigStub = require('../../utils').makeConfigStub;
 
 describe('browser-pool', () => {

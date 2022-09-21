@@ -1,8 +1,8 @@
 'use strict';
 
 const _ = require('lodash');
-const Image = require('lib/core/image');
-const utils = require('lib/core/browser/camera/utils');
+const Image = require('build/core/image');
+const utils = require('build/core/browser/camera/utils');
 
 describe('camera utils.isFullPage', () => {
     const sandbox = sinon.sandbox.create();

@@ -1,10 +1,10 @@
 'use strict';
 
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const Hermione = require('lib/worker/hermione');
+const AsyncEmitter = require('build/core/events/async-emitter');
+const Hermione = require('build/worker/hermione');
 const {makeConfigStub} = require('../../utils');
-const ipc = require('lib/utils/ipc');
-const HermioneFacade = require('lib/worker/hermione-facade');
+const ipc = require('build/utils/ipc');
+const HermioneFacade = require('build/worker/hermione-facade');
 
 describe('worker/hermione-facade', () => {
     const sandbox = sinon.createSandbox();

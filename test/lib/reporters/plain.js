@@ -1,7 +1,7 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter;
-const RunnerEvents = require('lib/constants/runner-events');
+const RunnerEvents = require('build/constants/runner-events');
 const proxyquire = require('proxyquire');
 const mkTestStub_ = require('./utils').mkTestStub_;
 const getDeserializedResult = require('./utils').getDeserializedResult;
@@ -37,8 +37,8 @@ describe('Plain reporter', () => {
 
         initInformer = sandbox.stub().resolves(informer);
 
-        PlainReporter = proxyquire('lib/reporters/plain', {
-            './base': proxyquire('lib/reporters/base', {
+        PlainReporter = proxyquire('build/reporters/plain', {
+            './base': proxyquire('build/reporters/base', {
                 './informers': {initInformer}
             })
         });

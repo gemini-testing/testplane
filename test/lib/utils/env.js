@@ -1,4 +1,4 @@
-const env = require('lib/utils/env');
+const env = require('build/utils/env');
 
 describe('env-utils', () => {
     describe('parseCommaSeparatedValue', () => {

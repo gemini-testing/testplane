@@ -1,7 +1,7 @@
 'use strict';
 
-const BrowserAgent = require('lib/core/browser-agent');
-const HighPriorityBrowserAgent = require('lib/runner/test-runner/high-priority-browser-agent');
+const BrowserAgent = require('build/core/browser-agent');
+const HighPriorityBrowserAgent = require('build/runner/test-runner/high-priority-browser-agent');
 
 describe('runner/test-runner/high-priority-browser-agent', () => {
     describe('getBrowser', () => {
