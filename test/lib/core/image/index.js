@@ -137,7 +137,7 @@ describe('Image', () => {
     });
 
     it('should compare two images', () => {
-        looksSameStub.yields();
+        looksSameStub.resolves();
 
         return Image.compare('some/path', 'other/path', {
             canHaveCaret: true,
@@ -161,7 +161,7 @@ describe('Image', () => {
     it('should build diff image', () => {
         const createDiffStub = sinon.stub();
         looksSameStub.createDiff = createDiffStub;
-        createDiffStub.yields();
+        createDiffStub.resolves();
 
         return Image.buildDiff({
             reference: 100,
