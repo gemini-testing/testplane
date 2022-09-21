@@ -1,51 +1,53 @@
-'use strict';
+import _ from 'lodash';
 
-const _ = require('lodash');
+import type TestSet from './test-set';
 
-module.exports = class SetCollection {
-    static create(sets) {
+export default class SetCollection {
+    private _sets: Record<string, TestSet>;
+
+    static create(sets: Record<string, TestSet>): SetCollection {
         return new SetCollection(sets);
     }
 
-    constructor(sets) {
+    constructor(sets: Record<string, TestSet>) {
         this._sets = sets;
     }
 
-    groupByFile() {
+    groupByFile(): Record<string, Array<string>> {
         const files = this._getFiles();
         const browsers = files.map((file) => this._getBrowsersForFile(file));
 
         return _.zipObject(files, browsers);
     }
 
-    _getFiles() {
+    private _getFiles(): Array<string> {
         return this._getFromSets((set) => set.getFiles());
     }
 
-    _getBrowsersForFile(path) {
+    private _getBrowsersForFile(path: string): Array<string> {
         return this._getFromSets((set) => set.getBrowsersForFile(path));
     }
 
-    groupByBrowser() {
+    groupByBrowser(): Record<string, Array<string>> {
         const browsers = this._getBrowsers();
         const files = browsers.map((browser) => this._getFilesForBrowser(browser));
 
         return _.zipObject(browsers, files);
     }
 
-    _getBrowsers() {
+    private _getBrowsers(): Array<string> {
         return this._getFromSets((set) => set.getBrowsers());
     }
 
-    _getFilesForBrowser(browser) {
+    private _getFilesForBrowser(browser: string): Array<string> {
         return this._getFromSets((set) => set.getFilesForBrowser(browser));
     }
 
-    _getFromSets(cb) {
+    private _getFromSets(cb: (set: TestSet) => Array<string>): Array<string> {
         return _(this._sets)
             .map(cb)
             .flatten()
             .uniq()
             .value();
     }
-};
+}

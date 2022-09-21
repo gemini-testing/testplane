@@ -1,67 +1,75 @@
-'use strict';
+import * as globExtra from 'glob-extra';
+import _ from 'lodash';
+import mm from 'micromatch';
+import path from 'path';
+import Bluebird from 'bluebird';
+import fs from 'fs';
 
-const globExtra = require('glob-extra');
-const _ = require('lodash');
-const mm = require('micromatch');
-const path = require('path');
-const Promise = require('bluebird');
+import type {SetConfig} from '../config/options';
 
-const fs = Promise.promisifyAll(require('fs'));
+export default class TestSet {
+    private _set: SetConfig;
 
-module.exports = class TestSet {
-    static create(set) {
+    static create(set: SetConfig): TestSet {
         return new TestSet(set);
     }
 
-    constructor(set) {
+    constructor(set: SetConfig) {
         this._set = _.clone(set);
     }
 
-    expandFiles(expandOpts, globOpts = {}) {
+    async expandFiles(expandOpts: globExtra.ExpandOpts, globOpts: globExtra.GlobOpts = {}): Promise<SetConfig> {
         const {files, ignoreFiles = []} = this._set;
+
         globOpts = _.clone(globOpts);
-        globOpts.ignore = []
+        globOpts.ignore = ([] as Array<string>)
             .concat(globOpts.ignore || [], ignoreFiles)
             .map((p) => path.resolve(expandOpts.root, p));
 
-        return globExtra.expandPaths(files, expandOpts, globOpts)
-            .then((expandedFiles) => this._set = _.extend(this._set, {files: expandedFiles}));
+        const expandedFiles = await globExtra.expandPaths(files, expandOpts, globOpts);
+
+        return this._set = _.extend(this._set, {files: expandedFiles});
     }
 
-    transformDirsToMasks() {
-        return Promise.map(this._set.files, (file) => {
+    async transformDirsToMasks(): Promise<Array<string>> {
+        const files = await Bluebird.map(this._set.files, async (file) => {
             if (globExtra.isMask(file)) {
                 return file;
             }
 
-            return fs.statAsync(file)
-                .then((stat) => stat.isDirectory() ? path.join(file, '**') : file)
-                .catch(() => Promise.reject(new Error(`Cannot read such file or directory: '${file}'`)));
-        })
-            .then((files) => this._set.files = files);
+            try {
+                const stat = await fs.promises.stat(file);
+
+                return stat.isDirectory() ? path.join(file, '**') : file;
+            } catch {
+                return Bluebird.reject(new Error(`Cannot read such file or directory: '${file}'`));
+            }
+        });
+
+        return this._set.files = files;
     }
 
-    resolveFiles(projectRoot) {
+    resolveFiles(projectRoot: string): void {
         this._set.files = this._set.files.map((file) => path.resolve(projectRoot, file));
     }
 
-    getFiles() {
+    getFiles(): Array<string> {
         return this._set.files;
     }
 
-    getBrowsers() {
+    getBrowsers(): Array<string> {
         return this._set.browsers;
     }
 
-    getFilesForBrowser(browser) {
+    getFilesForBrowser(browser: string): Array<string> {
         return _.includes(this._set.browsers, browser) ? this._set.files : [];
     }
 
-    getBrowsersForFile(file) {
+    getBrowsersForFile(file: string): Array<string> {
         return _.includes(this._set.files, file) ? this._set.browsers : [];
     }
 
-    useFiles(files) {
+    useFiles(files: Array<string>): void {
         if (_.isEmpty(files)) {
             return;
         }
@@ -69,9 +77,9 @@ module.exports = class TestSet {
         this._set.files = _.isEmpty(this._set.files) ? files : mm(files, this._set.files);
     }
 
-    useBrowsers(browsers) {
+    useBrowsers(browsers: Array<string>): void {
         this._set.browsers = _.isEmpty(browsers)
             ? this._set.browsers
             : _.intersection(this._set.browsers, browsers);
     }
-};
+}
