@@ -1,13 +1,27 @@
-'use strict';
+import _ from 'lodash';
 
-const _ = require('lodash');
+export type Values<T> = T[keyof T] extends string ? T[keyof T] : never;
 
-module.exports = class BaseStats {
-    static create(...args) {
-        return new this(...args);
-    }
+type StatNames = {
+    PASSED: "passed";
+    FAILED: "failed";
+    SKIPPED: "skipped";
+};
 
-    constructor(statNames) {
+type TestsStats<T> = Record<Values<T>, number>;
+
+type StatsResult<T> = TestsStats<T> & {
+    total: number;
+    retries: number;
+};
+
+export default abstract class BaseStats<T extends StatNames = StatNames> {
+    private _tests: Set<string>;
+    private _retries: number;
+    private _statNames: T;
+    private _stats: TestsStats<T>;
+
+    constructor(statNames: T) {
         this._tests = new Set();
         this._retries = 0;
         this._statNames = statNames;
@@ -15,47 +29,48 @@ module.exports = class BaseStats {
         this._stats = this._fillEmptyStats();
     }
 
-    addPassed(test) {
-        this._addStat(this._statNames.PASSED, test);
+    addPassed(test: unknown): void {
+        this._addStat(this._statNames.PASSED as Values<T>, test);
     }
 
-    addFailed(test) {
-        this._addStat(this._statNames.FAILED, test);
+    addFailed(test: unknown): void {
+        this._addStat(this._statNames.FAILED as Values<T>, test);
     }
 
-    addSkipped(test) {
-        this._addStat(this._statNames.SKIPPED, test);
+    addSkipped(test: unknown): void {
+        this._addStat(this._statNames.SKIPPED as Values<T>, test);
     }
 
-    addRetries() {
+    addRetries(): void {
         this._retries++;
     }
 
-    _addStat(stat, test, statsStorage = this._stats, testsStorage = this._tests) {
+    protected _addStat(
+        stat: Values<T>,
+        test: unknown,
+        statsStorage: TestsStats<T> = this._stats,
+        testsStorage: Set<string> = this._tests
+    ) {
         const key = `${this._buildSuiteKey(test)} ${this._buildStateKey(test)}`;
 
         statsStorage[stat]++;
         testsStorage.add(key);
     }
 
-    _fillEmptyStats() {
+    protected _fillEmptyStats(): TestsStats<T> {
         const statValues = _.values(this._statNames);
 
-        return _.zipObject(statValues, Array(statValues.length).fill(0));
+        return _.zipObject(statValues, Array(statValues.length).fill(0)) as TestsStats<T>;
     }
 
-    _buildStateKey() {
-        throw new Error('Method must be implemented in child classes');
-    }
+    protected abstract _buildStateKey(_test: unknown): string;
 
-    _buildSuiteKey() {
-        throw new Error('Method must be implemented in child classes');
-    }
+    protected abstract _buildSuiteKey(_test: unknown): string;
 
-    getResult() {
+    getResult(): StatsResult<T> {
         return _.extend(this._stats, {
             total: this._tests.size,
             retries: this._retries
         });
     }
-};
+}
