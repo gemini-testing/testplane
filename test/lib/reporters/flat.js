@@ -4,7 +4,7 @@ const chalk = require('chalk');
 const path = require('path');
 const {EventEmitter} = require('events');
 const proxyquire = require('proxyquire');
-const RunnerEvents = require('lib/constants/runner-events');
+const RunnerEvents = require('build/constants/runner-events');
 const {mkTestStub_, getDeserializedResult} = require('./utils');
 
 describe('Flat reporter', () => {
@@ -38,8 +38,8 @@ describe('Flat reporter', () => {
 
         initInformer = sandbox.stub().resolves(informer);
 
-        FlatReporter = proxyquire('lib/reporters/flat', {
-            './base': proxyquire('lib/reporters/base', {
+        FlatReporter = proxyquire('build/reporters/flat', {
+            './base': proxyquire('build/reporters/base', {
                 './informers': {initInformer}
             })
         });

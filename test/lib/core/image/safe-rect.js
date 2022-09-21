@@ -1,6 +1,6 @@
 'use strict';
 
-const SafeRect = require('lib/core/image/safe-rect');
+const SafeRect = require('build/core/image/safe-rect');
 
 describe('SafeRect', () => {
     describe('left', () => {

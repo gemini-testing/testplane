@@ -1,5 +1,5 @@
-const logger = require('lib/utils/logger');
-const ConsoleInformer = require('lib/reporters/informers/console');
+const logger = require('build/utils/logger');
+const ConsoleInformer = require('build/reporters/informers/console');
 
 describe('reporter/informers/console', () => {
     const sandbox = sinon.sandbox.create();

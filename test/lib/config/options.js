@@ -1,10 +1,10 @@
 'use strict';
 
 const _ = require('lodash');
-const Config = require('lib/config');
-const defaults = require('lib/config/defaults');
+const Config = require('build/config');
+const defaults = require('build/config/defaults');
 
-const parser = require('lib/config/options');
+const parser = require('build/config/options');
 
 describe('config options', () => {
     const sandbox = sinon.sandbox.create();

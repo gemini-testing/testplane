@@ -1,7 +1,7 @@
 'use strict';
 
-const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
-const Events = require('lib/constants/runner-events');
+const SkippedTestRunner = require('build/runner/test-runner/skipped-test-runner');
+const Events = require('build/constants/runner-events');
 const {makeTest, makeSuite} = require('../../../utils');
 
 describe('runner/test-runner/skipped-test-runner', () => {

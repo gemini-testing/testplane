@@ -1,8 +1,8 @@
 'use strict';
 
 const _ = require('lodash');
-const NewBrowser = require('lib/browser/new-browser');
-const ExistingBrowser = require('lib/browser/existing-browser');
+const NewBrowser = require('build/browser/new-browser');
+const ExistingBrowser = require('build/browser/existing-browser');
 
 function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {

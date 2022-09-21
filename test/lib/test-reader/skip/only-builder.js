@@ -1,8 +1,8 @@
 'use strict';
 
-const Skip = require('lib/test-reader/skip/');
-const SkipBuilder = require('lib/test-reader/skip/skip-builder');
-const OnlyBuilder = require('lib/test-reader/skip/only-builder');
+const Skip = require('build/test-reader/skip/');
+const SkipBuilder = require('build/test-reader/skip/skip-builder');
+const OnlyBuilder = require('build/test-reader/skip/only-builder');
 
 describe('OnlyBuilder', () => {
     const sandbox = sinon.sandbox.create();

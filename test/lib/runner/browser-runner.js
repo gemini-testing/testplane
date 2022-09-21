@@ -1,15 +1,15 @@
 'use strict';
 
 const Promise = require('bluebird');
-const BrowserRunner = require('lib/runner/browser-runner');
-const BrowserAgent = require('lib/runner/browser-agent');
-const BrowserPool = require('lib/browser-pool');
-const TestRunnerFabric = require('lib/runner/test-runner');
-const TestRunner = require('lib/runner/test-runner/insistant-test-runner');
-const TestCollection = require('lib/test-collection');
-const Test = require('lib/test');
-const SuiteMonitor = require('lib/runner/suite-monitor');
-const Events = require('lib/constants/runner-events');
+const BrowserRunner = require('build/runner/browser-runner');
+const BrowserAgent = require('build/runner/browser-agent');
+const BrowserPool = require('build/browser-pool');
+const TestRunnerFabric = require('build/runner/test-runner');
+const TestRunner = require('build/runner/test-runner/insistant-test-runner');
+const TestCollection = require('build/test-collection');
+const Test = require('build/test');
+const SuiteMonitor = require('build/runner/suite-monitor');
+const Events = require('build/constants/runner-events');
 
 const {makeConfigStub} = require('../../utils');
 

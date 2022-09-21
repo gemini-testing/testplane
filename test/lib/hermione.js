@@ -6,18 +6,18 @@ const pluginsLoader = require('plugins-loader');
 const Promise = require('bluebird');
 const proxyquire = require('proxyquire').noCallThru();
 
-const Config = require('lib/config');
-const RuntimeConfig = require('lib/config/runtime-config');
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const eventsUtils = require('lib/core/events/utils');
-const Errors = require('lib/errors');
-const RunnerStats = require('lib/stats');
-const TestReader = require('lib/test-reader');
-const TestCollection = require('lib/test-collection');
-const RunnerEvents = require('lib/constants/runner-events');
-const signalHandler = require('lib/signal-handler');
-const Runner = require('lib/runner');
-const logger = require('lib/utils/logger');
+const Config = require('build/config');
+const RuntimeConfig = require('build/config/runtime-config');
+const AsyncEmitter = require('build/core/events/async-emitter');
+const eventsUtils = require('build/core/events/utils');
+const Errors = require('build/errors');
+const RunnerStats = require('build/stats');
+const TestReader = require('build/test-reader');
+const TestCollection = require('build/test-collection');
+const RunnerEvents = require('build/constants/runner-events');
+const signalHandler = require('build/signal-handler');
+const Runner = require('build/runner');
+const logger = require('build/utils/logger');
 const {makeConfigStub} = require('../utils');
 
 describe('hermione', () => {
@@ -50,7 +50,7 @@ describe('hermione', () => {
 
         initReporters = sandbox.stub().resolves();
 
-        Hermione = proxyquire('lib/hermione', {
+        Hermione = proxyquire('build/hermione', {
             './reporters': {initReporters}
         });
     });

@@ -1,11 +1,11 @@
 'use strict';
 
-const Runner = require('lib/worker/runner');
-const BrowserPool = require('lib/worker/runner/browser-pool');
-const CachingTestParser = require('lib/worker/runner/caching-test-parser');
-const BrowserAgent = require('lib/worker/runner/browser-agent');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const TestRunner = require('lib/worker/runner/test-runner');
+const Runner = require('build/worker/runner');
+const BrowserPool = require('build/worker/runner/browser-pool');
+const CachingTestParser = require('build/worker/runner/caching-test-parser');
+const BrowserAgent = require('build/worker/runner/browser-agent');
+const RunnerEvents = require('build/worker/constants/runner-events');
+const TestRunner = require('build/worker/runner/test-runner');
 const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner', () => {

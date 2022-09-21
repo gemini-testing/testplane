@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const Skip = require('lib/test-reader/skip/');
+const Skip = require('build/test-reader/skip/');
 
 describe('Skip', () => {
     let skip;

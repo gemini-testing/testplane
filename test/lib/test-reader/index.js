@@ -1,10 +1,10 @@
 'use strict';
 
-const TestReader = require('lib/test-reader');
-const TestParser = require('lib/test-reader/mocha-test-parser');
-const TestSkipper = require('lib/test-reader/test-skipper');
-const Events = require('lib/constants/runner-events');
-const SetsBuilder = require('lib/core/sets-builder');
+const TestReader = require('build/test-reader');
+const TestParser = require('build/test-reader/mocha-test-parser');
+const TestSkipper = require('build/test-reader/test-skipper');
+const Events = require('build/constants/runner-events');
+const SetsBuilder = require('build/core/sets-builder');
 const makeDefaultConfigStub = require('../../utils').makeConfigStub;
 const _ = require('lodash');
 const DEFAULT_BROWSER_NAME = 'some-default-browser';

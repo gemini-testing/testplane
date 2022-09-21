@@ -2,13 +2,13 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
-const TestRunner = require('lib/worker/runner/test-runner');
-const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const BrowserAgent = require('lib/worker/runner/browser-agent');
-const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
+const TestRunner = require('build/worker/runner/test-runner');
+const HookRunner = require('build/worker/runner/test-runner/hook-runner');
+const ExecutionThread = require('build/worker/runner/test-runner/execution-thread');
+const OneTimeScreenshooter = require('build/worker/runner/test-runner/one-time-screenshooter');
+const BrowserAgent = require('build/worker/runner/browser-agent');
+const AssertViewError = require('build/browser/commands/assert-view/errors/assert-view-error');
+const AssertViewResults = require('build/browser/commands/assert-view/assert-view-results');
 const {makeConfigStub} = require('../../../../utils');
 const {Suite, Test} = require('../../../_mocha');
 

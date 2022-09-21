@@ -1,8 +1,8 @@
 'use strict';
 
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
-const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
+const AssertViewResults = require('build/browser/commands/assert-view/assert-view-results');
+const ImageDiffError = require('build/browser/commands/assert-view/errors/image-diff-error');
+const NoRefImageError = require('build/browser/commands/assert-view/errors/no-ref-image-error');
 
 describe('AssertViewResults', () => {
     describe('fromRawObject', () => {

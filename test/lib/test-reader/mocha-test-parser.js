@@ -4,17 +4,17 @@ const path = require('path');
 const escapeRe = require('escape-string-regexp');
 const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
-const crypto = require('lib/utils/crypto');
-const SkipBuilder = require('lib/test-reader/skip/skip-builder');
-const OnlyBuilder = require('lib/test-reader/skip/only-builder');
-const Skip = require('lib/test-reader/skip/');
-const BrowserConfigurator = require('lib/test-reader/browser');
-const TestSkipper = require('lib/test-reader/test-skipper');
-const RunnerEvents = require('lib/constants/runner-events');
-const ParserEvents = require('lib/test-reader/parser-events');
-const TestParserAPI = require('lib/test-reader/test-parser-api');
-const configController = require('lib/test-reader/config-controller');
-const logger = require('lib/utils/logger');
+const crypto = require('build/utils/crypto');
+const SkipBuilder = require('build/test-reader/skip/skip-builder');
+const OnlyBuilder = require('build/test-reader/skip/only-builder');
+const Skip = require('build/test-reader/skip/');
+const BrowserConfigurator = require('build/test-reader/browser');
+const TestSkipper = require('build/test-reader/test-skipper');
+const RunnerEvents = require('build/constants/runner-events');
+const ParserEvents = require('build/test-reader/parser-events');
+const TestParserAPI = require('build/test-reader/test-parser-api');
+const configController = require('build/test-reader/config-controller');
+const logger = require('build/utils/logger');
 const MochaStub = require('../_mocha');
 const {makeConfigStub} = require('../../utils');
 
@@ -45,7 +45,7 @@ describe('test-reader/mocha-test-parser', () => {
 
         sandbox.stub(crypto, 'getShortMD5');
 
-        MochaTestParser = proxyquire('../../../lib/test-reader/mocha-test-parser', {
+        MochaTestParser = proxyquire('../../../build/test-reader/mocha-test-parser', {
             'clear-require': clearRequire,
             '@gemini-testing/mocha': MochaStub,
             './browser': BrowserConfiguratorStubConstructor

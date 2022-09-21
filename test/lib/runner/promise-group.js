@@ -2,7 +2,7 @@
 
 const Promise = require('bluebird');
 
-const PromiseGroup = require('lib/runner/promise-group');
+const PromiseGroup = require('build/runner/promise-group');
 
 describe('runner/promise-group', () => {
     const sandbox = sinon.sandbox.create();

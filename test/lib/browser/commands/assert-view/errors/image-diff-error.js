@@ -1,9 +1,9 @@
 'use strict';
 
 const _ = require('lodash');
-const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
-const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
-const Image = require('lib/core/image');
+const BaseStateError = require('build/browser/commands/assert-view/errors/base-state-error');
+const ImageDiffError = require('build/browser/commands/assert-view/errors/image-diff-error');
+const Image = require('build/core/image');
 
 const mkImageDiffError = (opts = {}) => {
     const {stateName, currImg, refImg, diffOpts} = _.defaults(opts, {

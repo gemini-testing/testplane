@@ -3,9 +3,9 @@
 const Promise = require('bluebird');
 const _ = require('lodash');
 
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
+const AssertViewResults = require('build/browser/commands/assert-view/assert-view-results');
+const ExecutionThread = require('build/worker/runner/test-runner/execution-thread');
+const OneTimeScreenshooter = require('build/worker/runner/test-runner/one-time-screenshooter');
 
 const {Suite, Test, Runnable} = require('../../../_mocha');
 

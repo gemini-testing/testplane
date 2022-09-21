@@ -2,12 +2,12 @@
 
 const EventEmitter = require('events').EventEmitter;
 const _ = require('lodash');
-const Browser = require('lib/browser/existing-browser');
-const BrowserPool = require('lib/worker/runner/browser-pool');
-const Calibrator = require('lib/core/calibrator');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const logger = require('lib/utils/logger');
-const ipc = require('lib/utils/ipc');
+const Browser = require('build/browser/existing-browser');
+const BrowserPool = require('build/worker/runner/browser-pool');
+const Calibrator = require('build/core/calibrator');
+const RunnerEvents = require('build/worker/constants/runner-events');
+const logger = require('build/utils/logger');
+const ipc = require('build/utils/ipc');
 
 describe('worker/browser-pool', () => {
     const sandbox = sinon.sandbox.create();

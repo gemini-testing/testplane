@@ -1,6 +1,6 @@
 'use strict';
 
-const BrowserConfig = require('lib/config/browser-config');
+const BrowserConfig = require('build/config/browser-config');
 
 describe('BrowserConfig', () => {
     const sandbox = sinon.sandbox.create();

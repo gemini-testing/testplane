@@ -2,8 +2,8 @@ const path = require('path');
 const {EventEmitter} = require('events');
 const proxyquire = require('proxyquire');
 const _ = require('lodash');
-const RunnerEvents = require('lib/constants/runner-events');
-const {SUCCESS, FAIL, RETRY, SKIPPED} = require('lib/constants/test-statuses');
+const RunnerEvents = require('build/constants/runner-events');
+const {SUCCESS, FAIL, RETRY, SKIPPED} = require('build/constants/test-statuses');
 
 const testStates = {
     RETRY: 'retried',
@@ -51,8 +51,8 @@ describe('Jsonl reporter', () => {
 
         initInformer = sandbox.stub().resolves(informer);
 
-        JsonlReporter = proxyquire('lib/reporters/jsonl', {
-            './base': proxyquire('lib/reporters/base', {
+        JsonlReporter = proxyquire('build/reporters/jsonl', {
+            './base': proxyquire('build/reporters/base', {
                 './informers': {initInformer}
             })
         });

@@ -1,8 +1,8 @@
 'use strict';
 
 const proxyquire = require('proxyquire').noCallThru();
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const Hermione = require('lib/worker/hermione');
+const AsyncEmitter = require('build/core/events/async-emitter');
+const Hermione = require('build/worker/hermione');
 const {makeConfigStub} = require('../../utils');
 
 describe('worker/hermione-facade', () => {
@@ -14,7 +14,7 @@ describe('worker/hermione-facade', () => {
     let ipc;
 
     const proxyquireHermione_ = (modules) => {
-        return proxyquire('lib/worker/hermione-facade', {
+        return proxyquire('build/worker/hermione-facade', {
             // TODO: think about how to make it easier
             '../utils/ipc': {on: ipc.on.bind(ipc), emit: ipc.emit.bind(ipc)},
             ...modules

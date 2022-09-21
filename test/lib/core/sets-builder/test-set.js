@@ -11,7 +11,7 @@ describe('TestSet', () => {
         globExtraStub = {
             expandPaths: sinon.stub()
         };
-        TestSet = proxyquire('lib/core/sets-builder/test-set', {
+        TestSet = proxyquire('build/core/sets-builder/test-set', {
             'glob-extra': globExtraStub
         });
     });

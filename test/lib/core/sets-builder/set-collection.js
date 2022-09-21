@@ -1,7 +1,7 @@
 'use strict';
 
-const SetCollection = require('lib/core/sets-builder/set-collection');
-const TestSet = require('lib/core/sets-builder/test-set');
+const SetCollection = require('build/core/sets-builder/set-collection');
+const TestSet = require('build/core/sets-builder/test-set');
 
 describe('set-collection', () => {
     const sandbox = sinon.sandbox.create();
