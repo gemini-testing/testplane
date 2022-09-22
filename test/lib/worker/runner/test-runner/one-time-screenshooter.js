@@ -43,7 +43,8 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
     const stubImage_ = (size = {width: 100500, height: 500100}) => {
         return {
             getSize: sandbox.stub().named('getSize').returns(size),
-            save: sandbox.stub().named('save').resolves()
+            save: sandbox.stub().named('save').resolves(),
+            toPngBuffer: sandbox.stub().named('toPngBuffer').resolves({data: Buffer.from('buffer'), size})
         };
     };
 
@@ -54,7 +55,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
         sandbox.stub(temp, 'path').named('path').returns();
         sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
         sandbox.stub(logger, 'warn');
-        sandbox.stub(fs.promises, 'readFile').resolves(Buffer.from('buffer'));
+        sandbox.stub(fs.promises, 'writeFile').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -95,7 +96,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             const browser = mkBrowser_();
             browser.evalScript.resolves({width: 100, height: 500});
             browser.prepareScreenshot
-                .withArgs([{top: 0, left: 0, width: 100, height: 500}], {
+                .withArgs([{left: 0, top: 0, width: 100, height: 500}], {
                     ignoreSelectors: [],
                     captureElementFromTop: true,
                     allowViewportOverflow: true
@@ -112,17 +113,14 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
             temp.path
                 .withArgs({some: 'opts', suffix: '.png'})
                 .returns('some-path');
-            fs.promises.readFile
-                .withArgs('some-path')
-                .resolves(Buffer.from('base64'));
             const config = {takeScreenshotOnFailsMode: 'fullpage'};
             const screenshooter = mkScreenshooter_({browser, config});
 
             await screenshooter[method](...getArgs());
 
-            assert.calledOnceWith(imgStub.save, 'some-path');
+            assert.calledOnceWith(fs.promises.writeFile, 'some-path', Buffer.from('buffer'));
             assert.deepEqual(screenshooter.getScreenshot(), {
-                base64: 'YmFzZTY0',
+                base64: Buffer.from('buffer').toString('base64'),
                 size: {width: 100, height: 500}
             });
         });
