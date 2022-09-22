@@ -1,6 +1,7 @@
 {
   "extends": "@tsconfig/node12/tsconfig.json",
   "include": ["lib"],
+  "exclude": ["lib/core/browser/client-scripts"],
 
   "compilerOptions": {
     "outDir": "build",

@@ -1,20 +1,33 @@
-'use strict';
+enum SCROLL_DIR_NAME {
+    top = 'scrollTop',
+    left = 'scrollLeft'
+}
 
-var SCROLL_DIR_NAME = {
-    top: 'scrollTop',
-    left: 'scrollLeft'
-};
+enum PAGE_OFFSET_NAME {
+    x = 'pageXOffset',
+    y = 'pageYOffset'
+}
 
-var PAGE_OFFSET_NAME = {
-    x: 'pageXOffset',
-    y: 'pageYOffset'
-};
+export const each = arrayUtil(Array.prototype.forEach, myForEach);
+export const some = arrayUtil(Array.prototype.some, mySome);
+export const every = arrayUtil(Array.prototype.every, myEvery);
 
-exports.each = arrayUtil(Array.prototype.forEach, myForEach);
-exports.some = arrayUtil(Array.prototype.some, mySome);
-exports.every = arrayUtil(Array.prototype.every, myEvery);
+type NativeFuncEach = typeof Array.prototype.forEach;
+type NativeFuncSome = typeof Array.prototype.some;
+type NativeFuncEvery = typeof Array.prototype.every;
+type NativeFunc = NativeFuncEach | NativeFuncSome | NativeFuncEvery;
 
-function arrayUtil(nativeFunc, shimFunc) {
+type Callback<T, C, R> = (this: C, value: T, index: number, array: Array<T>) => R;
+
+type ContextFuncEach = <T, C>(ctx: Array<T>, cb: Callback<T, C, void>, thisArg?: C) => void;
+type ContextFuncSome = <T, C>(ctx: Array<T>, cb: Callback<T, C, boolean>, thisArg?: C) => boolean;
+type ContextFuncEvery = <T, C>(ctx: Array<T>, cb: Callback<T, C, boolean>, thisArg?: C) => boolean;
+type ContextFunc = ContextFuncEach | ContextFuncSome | ContextFuncEvery;
+
+function arrayUtil(nativeFunc: NativeFuncEach | undefined, shimFunc: typeof myForEach): ContextFuncEach;
+function arrayUtil(nativeFunc: NativeFuncSome | undefined, shimFunc: typeof mySome): ContextFuncSome;
+function arrayUtil(nativeFunc: NativeFuncEvery | undefined, shimFunc: typeof myEvery): ContextFuncEvery;
+function arrayUtil(nativeFunc: NativeFunc | undefined, shimFunc: ContextFunc): ContextFunc {
     return nativeFunc ? contextify(nativeFunc) : shimFunc;
 }
 
@@ -22,42 +35,43 @@ function arrayUtil(nativeFunc, shimFunc) {
  * Makes function f to accept context as a
  * first argument
  */
-function contextify(f) {
-    return function(ctx) {
-        var rest = Array.prototype.slice.call(arguments, 1);
+function contextify(f: NativeFunc): ContextFunc {
+    return function<T>(ctx: Array<T>, ...rest: Parameters<typeof f>): ReturnType<typeof f> {
         return f.apply(ctx, rest);
     };
 }
 
-function myForEach(array, cb, context) {
-    for (var i = 0; i < array.length; i++) {
-        cb.call(context, array[i], i, array);
+function myForEach<T, C>(array: Array<T>, cb: Callback<T, C, void>, context?: C): void {
+    for (let i = 0; i < array.length; i++) {
+        cb.call(context as C, array[i], i, array);
     }
 }
 
-function mySome(array, cb, context) {
-    for (var i = 0; i < array.length; i++) {
-        if (cb.call(context, array[i], i, array)) {
+function mySome<T, C>(array: Array<T>, cb: Callback<T, C, boolean>, context?: C): boolean {
+    for (let i = 0; i < array.length; i++) {
+        if (cb.call(context as C, array[i], i, array)) {
             return true;
         }
     }
+
     return false;
 }
 
-function myEvery(array, cb, context) {
-    for (var i = 0; i < array.length; i++) {
-        if (!cb.call(context, array[i], i, array)) {
+function myEvery<T, C>(array: Array<T>, cb: Callback<T, C, boolean>, context?: C): boolean {
+    for (let i = 0; i < array.length; i++) {
+        if (!cb.call(context as C, array[i], i, array)) {
             return false;
         }
     }
+
     return true;
 }
 
-function getScroll(scrollElem, direction, coord) {
-    var scrollDir = SCROLL_DIR_NAME[direction];
-    var pageOffset = PAGE_OFFSET_NAME[coord];
+function getScroll(scrollElem: Element | Window | undefined, direction: keyof typeof SCROLL_DIR_NAME, coord: keyof typeof PAGE_OFFSET_NAME): number {
+    const scrollDir = SCROLL_DIR_NAME[direction];
+    const pageOffset = PAGE_OFFSET_NAME[coord];
 
-    if (scrollElem && scrollElem !== window) {
+    if (scrollElem && !isWindow(scrollElem)) {
         return scrollElem[scrollDir];
     }
 
@@ -68,17 +82,21 @@ function getScroll(scrollElem, direction, coord) {
     return document.documentElement[scrollDir];
 }
 
-exports.getScrollTop = function(scrollElem) {
+function isWindow(elem: Element | Window): elem is Window {
+    return elem !== window;
+}
+
+export function getScrollTop(scrollElem?: Element | Window): number {
     return getScroll(scrollElem, 'top', 'y');
-};
+}
 
-exports.getScrollLeft = function(scrollElem) {
+export function getScrollLeft(scrollElem?: Element | Window): number {
     return getScroll(scrollElem, 'left', 'x');
-};
+}
 
-exports.isSafariMobile = function() {
+export function isSafariMobile(): boolean {
     return navigator
         && typeof navigator.vendor === 'string'
-        && navigator.vendor.match(/apple/i)
+        && Boolean(navigator.vendor.match(/apple/i))
         && /(iPhone|iPad).*AppleWebKit.*Safari/i.test(navigator.userAgent);
-};
+}

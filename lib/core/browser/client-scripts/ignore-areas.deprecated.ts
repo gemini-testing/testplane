@@ -1,9 +1,13 @@
-'use strict';
+import type * as libTypings from './lib.native';
 
-var lib = require('./lib');
+const lib: typeof libTypings = require('./lib');
 
-module.exports = function queryIgnoreAreas(selector) {
-    return typeof selector === 'string'
-        ? [lib.queryFirst(selector)]
-        : lib.queryAll(selector.every);
-};
+export default function queryIgnoreAreas(selector: string | { every: string }): Array<Node> | NodeListOf<Node> {
+    if (typeof selector === 'string') {
+        const node = lib.queryFirst(selector);
+
+        return node ? [node] : [];
+    }
+
+    return lib.queryAll(selector.every);
+}

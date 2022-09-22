@@ -1,0 +1,16 @@
+{
+    "extends": "@tsconfig/recommended/tsconfig.json",
+    "include": ["**/*"],
+  
+    "compilerOptions": {
+      "target": "ES3",
+      "outDir": "../../../../build/lib",
+      "lib": ["dom"],
+  
+      "allowJs": true,
+      "noImplicitReturns": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true
+    }
+  }
+  

@@ -1,28 +1,29 @@
-'use strict';
-var xpath = require('./xpath');
+import * as xpath from './xpath';
 
-exports.queryFirst = function(selector) {
+export function queryFirst(selector: string): Node | null {
     if (xpath.isXpathSelector(selector)) {
         return xpath.queryFirst(selector);
     }
-    return document.querySelector(selector);
-};
 
-exports.queryAll = function(selector) {
+    return document.querySelector(selector);
+}
+
+export function queryAll(selector: string): Array<Node> | NodeListOf<Node> {
     if (xpath.isXpathSelector(selector)) {
         return xpath.queryAll(selector);
     }
+
     return document.querySelectorAll(selector);
-};
+}
 
-exports.getComputedStyle = function(element, pseudoElement) {
-    return getComputedStyle(element, pseudoElement);
-};
+export function getComputedStyle(element: Element, pseudoElement?: string): CSSStyleDeclaration {
+    return window.getComputedStyle(element, pseudoElement);
+}
 
-exports.matchMedia = function(mediaQuery) {
-    return matchMedia(mediaQuery);
-};
+export function matchMedia(mediaQuery: string): MediaQueryList {
+    return window.matchMedia(mediaQuery);
+}
 
-exports.trim = function(str) {
+export function trim(str: string): string {
     return str.trim();
-};
+}

@@ -1,32 +1,26 @@
-'use strict';
-
-var XPATH_SELECTORS_START = [
+const XPATH_SELECTORS_START = [
     '/', '(', '../', './', '*/'
-];
+] as const;
 
-function isXpathSelector(selector) {
+export function isXpathSelector(selector: string): boolean {
     return XPATH_SELECTORS_START.some(function(startString) {
         return selector.indexOf(startString) === 0;
     });
 }
 
-function queryFirst(selector) {
+export function queryFirst(selector: string): Node | null {
     return document.evaluate(selector, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
 }
 
-function queryAll(selector) {
-    var elements = document.evaluate(selector, document, null, XPathResult.ANY_TYPE, null);
-    var node, nodes = [];
-    node = elements.iterateNext();
+export function queryAll(selector: string): Node[] {
+    const elements = document.evaluate(selector, document, null, XPathResult.ANY_TYPE, null);
+    const nodes = ([] as Array<Node>);
+    let node = elements.iterateNext();
+
     while (node) {
         nodes.push(node);
         node = elements.iterateNext();
     }
+
     return nodes;
 }
-
-module.exports = {
-    isXpathSelector: isXpathSelector,
-    queryFirst: queryFirst,
-    queryAll: queryAll
-};
