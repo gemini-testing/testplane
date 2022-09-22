@@ -1,20 +1,21 @@
-'use strict';
+import {ScreenshotMode} from './constants';
 
-exports.isFullPage = (image, page, screenshotMode) => {
+import type Image from '../../image';
+import type {Page} from '../../types/page';
+
+export function isFullPage(image: Image, page: Page, screenshotMode: ScreenshotMode): boolean {
     switch (screenshotMode) {
-        case 'fullpage': return true;
-        case 'viewport': return false;
-        case 'auto': return compareDimensions(image, page);
+        case ScreenshotMode.fullpage: return true;
+        case ScreenshotMode.viewport: return false;
+        case ScreenshotMode.auto: return compareDimensions(image, page);
     }
-};
+}
 
 /**
- * @param {Image} image - PngImg wrapper
- * @param {Object} page - capture meta information object
- * @returns {boolean}
- * @private
+ * @param image - PngImg wrapper
+ * @param page - capture meta information object
  */
-function compareDimensions(image, page) {
+function compareDimensions(image: Image, page: Page): boolean {
     const pixelRatio = page.pixelRatio;
     const documentWidth = page.documentWidth * pixelRatio;
     const documentHeight = page.documentHeight * pixelRatio;

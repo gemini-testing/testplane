@@ -1,31 +1,36 @@
-'use strict';
+import _ from 'lodash';
 
-const Image = require('../../image');
-const _ = require('lodash');
-const utils = require('./utils');
+import * as utils from './utils';
+import Image from '../../image';
 
-module.exports = class Camera {
-    static create(screenshotMode, takeScreenshot) {
-        return new this(screenshotMode, takeScreenshot);
+import type {ScreenshotMode} from './constants';
+import type {CalibrationResult} from '../../types/calibrator';
+import type {Page} from '../../types/page';
+
+export default class Camera {
+    private _calibration: CalibrationResult | null = null;
+
+    static create(screenshotMode: ScreenshotMode, takeScreenshot: () => Promise<string>): Camera {
+        return new Camera(screenshotMode, takeScreenshot);
     }
 
-    constructor(screenshotMode, takeScreenshot) {
-        this._screenshotMode = screenshotMode;
-        this._takeScreenshot = takeScreenshot;
-        this._calibration = null;
-    }
+    constructor(
+        private _screenshotMode: ScreenshotMode,
+        private _takeScreenshot: () => Promise<string>
+    ) {}
 
-    calibrate(calibration) {
+    calibrate(calibration: CalibrationResult): void {
         this._calibration = calibration;
     }
 
-    captureViewportImage(page) {
-        return this._takeScreenshot()
-            .then((base64) => this._applyCalibration(Image.fromBase64(base64)))
-            .then((image) => this._cropToViewport(image, page));
+    async captureViewportImage(page?: Page): Promise<Image> {
+        const base64 = await this._takeScreenshot();
+        const image = await this._applyCalibration(Image.fromBase64(base64));
+
+        return this._cropToViewport(image, page);
     }
 
-    _applyCalibration(image) {
+    private async _applyCalibration(image: Image): Promise<Image> {
         if (!this._calibration) {
             return image;
         }
@@ -36,7 +41,7 @@ module.exports = class Camera {
         return image.crop({left, top, width: width - left, height: height - top});
     }
 
-    _cropToViewport(image, page) {
+    private async _cropToViewport(image: Image, page?: Page): Promise<Image> {
         if (!page) {
             return image;
         }
@@ -53,4 +58,4 @@ module.exports = class Camera {
 
         return image.crop(cropArea, {scaleFactor: page.pixelRatio});
     }
-};
+}
