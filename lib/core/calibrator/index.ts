@@ -1,60 +1,74 @@
-'use strict';
+import fs from 'fs';
+import _ from 'lodash';
+import looksSame from 'looks-same';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
-const Promise = require('bluebird');
-const _ = require('lodash');
-const looksSame = require('looks-same');
-const {CoreError} = require('../errors');
+import type {Color} from 'png-img/dist/types';
+
+import {CoreError} from '../errors';
+
+import type Image from '../image';
+import type ExistingBrowser from '../../browser/existing-browser';
+import type {CalibrationResult, Features} from '../types/calibrator';
 
 const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, '..', 'browser', 'client-scripts', 'calibrate.min.js'), 'utf8');
-const DIRECTION = {FORWARD: 'forward', REVERSE: 'reverse'};
 
-module.exports = class Calibrator {
-    constructor() {
-        this._cache = {};
-    }
+enum DIRECTION {
+    FORWARD = 'forward',
+    REVERSE = 'reverse'
+}
 
-    /**
-     * @param {Browser} browser
-     * @returns {Promise.<CalibrationResult>}
-     */
-    calibrate(browser) {
+type AnalyzeImageParams = {
+    calculateColorLength?: boolean;
+};
+
+type AnalyzeRowResult = {
+    viewportStart: {
+        x: number;
+        y: number;
+    };
+    colorLength?: number;
+};
+
+export default class Calibrator {
+    private _cache: Record<string, CalibrationResult> = {};
+
+    async calibrate(browser: ExistingBrowser): Promise<CalibrationResult> {
         if (this._cache[browser.id]) {
-            return Promise.resolve(this._cache[browser.id]);
+            return this._cache[browser.id];
         }
 
-        return Promise.resolve(browser.open('about:blank'))
-            .then(() => browser.evalScript(clientScriptCalibrate))
-            .then((features) => [features, browser.captureViewportImage()])
-            .spread((features, image) => {
-                const {innerWidth, pixelRatio} = features;
-                const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-                const imageFeatures = this._analyzeImage(image, {calculateColorLength: hasPixelRatio});
+        await browser.open('about:blank');
 
-                if (!imageFeatures) {
-                    return Promise.reject(new CoreError(
-                        'Could not calibrate. This could be due to calibration page has failed to open properly'
-                    ));
-                }
+        const features: Features = await browser.evalScript(clientScriptCalibrate);
+        const image = await browser.captureViewportImage();
 
-                features = _.extend(features, {
-                    top: imageFeatures.viewportStart.y,
-                    left: imageFeatures.viewportStart.x,
-                    usePixelRatio: hasPixelRatio && imageFeatures.colorLength > innerWidth
-                });
+        const {innerWidth, pixelRatio} = features;
+        const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
+        const imageFeatures = this._analyzeImage(image, {calculateColorLength: hasPixelRatio});
 
-                this._cache[browser.id] = features;
+        if (!imageFeatures) {
+            throw new CoreError(
+                'Could not calibrate. This could be due to calibration page has failed to open properly'
+            );
+        }
 
-                return features;
-            });
+        const calibrationResult = _.extend(features, {
+            top: imageFeatures.viewportStart.y,
+            left: imageFeatures.viewportStart.x,
+            usePixelRatio: hasPixelRatio && (imageFeatures.colorLength || 0) > innerWidth
+        });
+
+        this._cache[browser.id] = calibrationResult;
+
+        return calibrationResult;
     }
 
-    _analyzeImage(image, params) {
+    private _analyzeImage(image: Image, params: AnalyzeImageParams): AnalyzeRowResult | null {
         const imageHeight = image.getSize().height;
 
-        for (var y = 0; y < imageHeight; y++) {
-            var result = analyzeRow(y, image, params);
+        for (let y = 0; y < imageHeight; y++) {
+            const result = analyzeRow(y, image, params);
 
             if (result) {
                 return result;
@@ -63,9 +77,9 @@ module.exports = class Calibrator {
 
         return null;
     }
-};
+}
 
-function analyzeRow(row, image, params = {}) {
+function analyzeRow(row: number, image: Image, params: AnalyzeImageParams = {}): AnalyzeRowResult | null {
     const markerStart = findMarkerInRow(row, image, DIRECTION.FORWARD);
 
     if (markerStart === -1) {
@@ -84,7 +98,7 @@ function analyzeRow(row, image, params = {}) {
     return _.extend(result, {colorLength});
 }
 
-function findMarkerInRow(row, image, searchDirection) {
+function findMarkerInRow(row: number, image: Image, searchDirection: DIRECTION): number {
     const imageWidth = image.getSize().width;
     const searchColor = {R: 148, G: 250, B: 0};
 
@@ -94,31 +108,34 @@ function findMarkerInRow(row, image, searchDirection) {
         return searchForward_();
     }
 
-    function searchForward_() {
-        for (var x = 0; x < imageWidth; x++) {
+    function searchForward_(): number {
+        for (let x = 0; x < imageWidth; x++) {
             if (compare_(x)) {
                 return x;
             }
         }
+
         return -1;
     }
 
-    function searchReverse_() {
-        for (var x = imageWidth - 1; x >= 0; x--) {
+    function searchReverse_(): number {
+        for (let x = imageWidth - 1; x >= 0; x--) {
             if (compare_(x)) {
                 return x;
             }
         }
+
         return -1;
     }
 
-    function compare_(x) {
-        var color = pickRGB(image.getRGBA(x, row));
+    function compare_(x: number): boolean {
+        const color = pickRGB(image.getRGBA(x, row));
+
         return looksSame.colors(color, searchColor);
     }
 }
 
-function pickRGB(rgba) {
+function pickRGB(rgba: Color): looksSame.Color {
     return {
         R: rgba.r,
         G: rgba.g,
