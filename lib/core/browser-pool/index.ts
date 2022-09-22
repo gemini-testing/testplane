@@ -1,27 +1,26 @@
-'use strict';
+import _ from 'lodash';
+import Bluebird from 'bluebird';
 
-const _ = require('lodash');
-const Promise = require('bluebird');
-const BasicPool = require('./basic-pool');
-const LimitedPool = require('./limited-pool');
-const PerBrowserLimitedPool = require('./per-browser-limited-pool');
-const CachingPool = require('./caching-pool');
+import BasicPool from './basic-pool';
+import CachingPool from './caching-pool';
+import LimitedPool from './limited-pool';
+import PerBrowserLimitedPool from './per-browser-limited-pool';
 
-/**
- * @param {Object} BrowserManager
- * @param {Function} BrowserManager.start
- * @param {Function} BrowserManager.onStart
- * @param {Function} BrowserManager.onQuit
- * @param {Function} BrowserManager.quit
- * @returns {BasicPool}
- */
-exports.create = function(BrowserManager, opts) {
-    BrowserManager = _.defaults(BrowserManager, {
-        onStart: () => Promise.resolve(),
-        onQuit: () => Promise.resolve()
+import type {BrowserManager, Pool} from '../types/pool';
+import type Config from '../../config';
+
+type CreatePoolOpts = {
+    config: Config;
+    logNamespace: string;
+};
+
+export function create(browserManager: BrowserManager, opts: CreatePoolOpts): Pool {
+    browserManager = _.defaults(browserManager, {
+        onStart: () => Bluebird.resolve(),
+        onQuit: () => Bluebird.resolve()
     });
 
-    var pool = BasicPool.create(BrowserManager, opts);
+    let pool: Pool = BasicPool.create(browserManager, opts);
 
     pool = new CachingPool(pool, opts.config, opts);
     pool = new PerBrowserLimitedPool(pool, opts.config, opts);
@@ -35,4 +34,4 @@ exports.create = function(BrowserManager, opts) {
     }
 
     return pool;
-};
+}
