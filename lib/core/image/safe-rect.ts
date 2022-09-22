@@ -1,11 +1,6 @@
 import {Size} from "png-img/dist/types";
 
-export interface Coordinate {
-    top: number;
-    left: number;
-}
-
-export interface SerializedRect extends Coordinate, Size {}
+import { Coordinate, SerializedRect } from '../types/rect';
 
 export default class SafeRect {
     static create(rect: SerializedRect, imageSize: Size): SafeRect {

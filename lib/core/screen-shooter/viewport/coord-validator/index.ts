@@ -1,34 +1,34 @@
-'use strict';
+import debug from 'debug';
 
-const debug = require('debug');
-const HeightViewportError = require('./errors/height-viewport-error');
-const OffsetViewportError = require('./errors/offset-viewport-error');
+import HeightViewportError from './errors/height-viewport-error';
+import OffsetViewportError from './errors/offset-viewport-error';
 
-const isOutsideOfViewport = (viewport, cropArea) =>
+import type ExistingBrowser from '../../../../browser/existing-browser';
+import type {SerializedRect} from '../../../types/rect';
+
+const isOutsideOfViewport = (viewport: SerializedRect, cropArea: SerializedRect): boolean =>
     cropArea.top < 0 || cropArea.left < 0 || cropArea.left + cropArea.width > viewport.width;
 
-module.exports = class CoordValidator {
-    static create(...args) {
-        return new CoordValidator(...args);
+type CoordValidatorOpts = {
+    allowViewportOverflow?: boolean;
+    compositeImage?: boolean;
+};
+
+export default class CoordValidator {
+    private _log: debug.Debugger;
+
+    static create(browser: ExistingBrowser, opts: CoordValidatorOpts): CoordValidator {
+        return new CoordValidator(browser, opts);
     }
 
-    /**
-     * @param {Browser} browser session instance
-     * @param {Object} opts
-     * @param {Boolean} [opts.allowViewportOverflow] ignore OffsetViewportError
-     * @param {Boolean} [opts.compositeImage] allow area bottom bound to be outside of viewport
-     */
-    constructor(browser, opts = {}) {
-        this._log = debug('coord-validator:' + browser.id);
-        this._opts = opts;
+    constructor(browser: ExistingBrowser, private _opts: CoordValidatorOpts = {}) {
+        this._log = debug('gemini-core:coord-validator:' + browser.id);
     }
 
     /**
      * Validates compatibility of viewport and crop area coordinates
-     * @param {Object} viewport
-     * @param {Object} cropArea
      */
-    validate(viewport, cropArea) {
+    validate(viewport: SerializedRect, cropArea: SerializedRect): void {
         this._log('viewport size', viewport);
         this._log('crop area', cropArea);
 
@@ -47,10 +47,8 @@ module.exports = class CoordValidator {
 
     /**
      * Reports error if crop area is outside of viewport
-     * @returns {OffsetViewportError}
-     * @private
      */
-    _reportOffsetViewportError() {
+    private _reportOffsetViewportError(): never {
         this._log('crop area is outside of the viewport left, top or right bounds');
 
         const message = `Can not capture the specified region of the viewport.
@@ -70,12 +68,8 @@ module.exports = class CoordValidator {
      * This case is handled specially because of Opera 12 browser.
      * Problem, described in error message occurs there much more often then
      * for other browsers and has different workaround
-     * @param {Object} viewport
-     * @param {Object} cropArea - crop area
-     * @returns {HeightViewportError}
-     * @private
      */
-    _reportHeightViewportError(viewport, cropArea) {
+    private _reportHeightViewportError(viewport: SerializedRect, cropArea: SerializedRect): never {
         this._log('crop area bottom bound is outside of the viewport height');
 
         const message = `Can not capture the specified region of the viewport.
@@ -87,4 +81,4 @@ module.exports = class CoordValidator {
 
         throw new HeightViewportError(message);
     }
-};
+}

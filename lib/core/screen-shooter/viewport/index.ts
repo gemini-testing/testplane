@@ -1,37 +1,43 @@
-'use strict';
+import _ from 'lodash';
 
-const _ = require('lodash');
+import CoordValidator from './coord-validator';
 
-const CoordValidator = require('./coord-validator');
+import type Image from '../../image';
+import type ExistingBrowser from '../../../browser/existing-browser';
+import type {SerializedRect} from '../../types/rect';
 
-module.exports = class Viewport {
-    static create(...args) {
-        return new Viewport(...args);
+type ViewportOpts = {
+    allowViewportOverflow?: boolean;
+    compositeImage?: boolean;
+};
+
+export default class Viewport {
+    private _viewport: SerializedRect;
+
+    static create(viewport: SerializedRect, image: Image, pixelRatio: number, opts: ViewportOpts): Viewport {
+        return new Viewport(viewport, image, pixelRatio, opts);
     }
 
-    constructor(viewport, image, pixelRatio, opts) {
+    constructor(viewport: SerializedRect, private _image: Image, private _pixelRatio: number, private _opts: ViewportOpts) {
         this._viewport = _.clone(viewport);
-        this._image = image;
-        this._pixelRatio = pixelRatio;
-        this._opts = opts;
     }
 
-    validate(captureArea, browser) {
+    validate(captureArea: SerializedRect, browser: ExistingBrowser): void {
         CoordValidator.create(browser, this._opts).validate(this._viewport, captureArea);
     }
 
-    ignoreAreas(areas) {
+    ignoreAreas(areas: Array<SerializedRect>): void {
         _(areas)
             .map((area) => this._getIntersectionWithViewport(area))
             .compact()
             .forEach((area) => this._image.clear(this._transformToViewportOrigin(area), {scaleFactor: this._pixelRatio}));
     }
 
-    crop(captureArea) {
+    crop(captureArea: SerializedRect): Promise<Image> {
         return this._image.crop(this._transformToViewportOrigin(captureArea), {scaleFactor: this._pixelRatio});
     }
 
-    _getIntersectionWithViewport(area) {
+    private _getIntersectionWithViewport(area: SerializedRect): SerializedRect | null {
         const top = Math.max(this._viewport.top, area.top);
         const bottom = Math.min(getAreaBottom(this._viewport), getAreaBottom(area));
         const left = Math.max(this._viewport.left, area.left);
@@ -40,44 +46,46 @@ module.exports = class Viewport {
         if (left >= right || top >= bottom) {
             return null;
         }
+
         return {top, left, width: right - left, height: bottom - top};
     }
 
-    _transformToViewportOrigin(area) {
+    private _transformToViewportOrigin(area: SerializedRect): SerializedRect {
         return _.extend({}, area, {
             top: area.top - this._viewport.top,
             left: area.left - this._viewport.left
         });
     }
 
-    save(path) {
+    save(path: string): Promise<void> {
         return this._image.save(path);
     }
 
-    extendBy(scrollHeight, newImage) {
+    async extendBy(scrollHeight: number, newImage: Image): Promise<Image> {
         const newImageSize = newImage.getSize();
         const physicalScrollHeight = scrollHeight * this._pixelRatio;
 
         this._viewport.height += scrollHeight;
 
-        return newImage.crop({
+        const croppedImage = await newImage.crop({
             left: 0,
             top: newImageSize.height - physicalScrollHeight,
             width: newImageSize.width,
             height: physicalScrollHeight
-        })
-            .then((croppedImage) => this._image.join(croppedImage));
+        });
+
+        return this._image.join(croppedImage);
     }
 
-    getVerticalOverflow(captureArea) {
+    getVerticalOverflow(captureArea: SerializedRect): number {
         return (captureArea.top + captureArea.height) - (this._viewport.top + this._viewport.height);
     }
-};
+}
 
-function getAreaBottom(area) {
+function getAreaBottom(area: SerializedRect): number {
     return area.top + area.height;
 }
 
-function getAreaRight(area) {
+function getAreaRight(area: SerializedRect): number {
     return area.left + area.width;
 }

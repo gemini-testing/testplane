@@ -5,7 +5,9 @@ import utils from 'png-img/utils';
 
 import type {Color, Size} from 'png-img/dist/types';
 
-import SafeRect, {SerializedRect} from './safe-rect';
+import SafeRect from './safe-rect';
+
+import type { SerializedRect } from '../types/rect';
 
 type ImageCompareOpts = {
     canHaveCaret?: boolean;
