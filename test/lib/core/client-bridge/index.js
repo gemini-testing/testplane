@@ -30,16 +30,6 @@ describe('clientBridge', () => {
                 .then(() => assert.calledOnceWith(browserify, sinon.match({entries: './index', basedir: sinon.match(/browser\/client-scripts/)})));
         });
 
-        it('should exclude coverage client script if coverage is disabled', () => {
-            return clientBridge.build(null, {coverage: false})
-                .then(() => assert.calledOnceWith(script.exclude, './index.coverage'));
-        });
-
-        it('should not exclude coverage client script if coverage is enabled', () => {
-            return clientBridge.build(null, {coverage: true})
-                .then(() => assert.notCalled(script.exclude));
-        });
-
         it('should transform client scripts', () => {
             return clientBridge.build()
                 .then(() => {
@@ -51,11 +41,6 @@ describe('clientBridge', () => {
                         output: {screw_ie8: false} // eslint-disable-line camelcase
                     }, 'uglifyify');
                 });
-        });
-
-        it('should transform client scripts after excluding of a coverage client script', () => {
-            return clientBridge.build(null, {coverage: false})
-                .then(() => assert.callOrder(script.exclude, script.transform));
         });
 
         it('should transform client scripts using native library', () => {
