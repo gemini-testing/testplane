@@ -25,8 +25,10 @@ export function create(browserManager: BrowserManager, opts: CreatePoolOpts): Po
     pool = new CachingPool(pool, opts.config, opts);
     pool = new PerBrowserLimitedPool(pool, opts.config, opts);
 
+            // @ts-expect-error
     if (_.isFinite(opts.config.system.parallelLimit)) {
         pool = new LimitedPool(pool, {
+            // @ts-expect-error
             limit: opts.config.system.parallelLimit,
             logNamespace: opts.logNamespace,
             isSpecificBrowserLimiter: false

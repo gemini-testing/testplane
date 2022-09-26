@@ -73,6 +73,7 @@ export default class CachingPool implements Pool {
             // browser does not get put in a set on first usages, so if
             // we want to limit it usage to N times, we must set N-1 limit
             // for the set.
+            // @ts-expect-error
             useLimit: browserConfig.sessionUseLimit - 1,
             finalize: freeBrowser,
             logNamespace: this._logNamespace

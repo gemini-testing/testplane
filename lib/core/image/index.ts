@@ -1,6 +1,7 @@
 import Bluebird from 'bluebird';
 import looksSame from 'looks-same';
 import {PngImg} from 'png-img';
+// @ts-expect-error
 import utils from 'png-img/utils';
 
 import type {Color, Size} from 'png-img/dist/types';

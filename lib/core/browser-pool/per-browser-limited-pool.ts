@@ -23,6 +23,7 @@ export default class PerBrowserLimitedPool implements Pool {
         this._browserPools = _.zipObject(
             ids,
             ids.map((id: string) => LimitedPool.create(underlyingPool, {
+                // @ts-expect-error
                 limit: config.forBrowser(id).parallelLimit,
                 logNamespace: opts.logNamespace
             }))

@@ -12,7 +12,7 @@ export type SetsConfig = {
 };
 
 export default {
-    sets: map<SetsConfig, any>(section({
+    sets: map<SetConfig>(section({
         files: option({
             defaultValue: [] as Array<string>,
             validate: (value): asserts value is Array<string> => {
