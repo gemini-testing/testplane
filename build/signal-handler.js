@@ -1,5 +1,5 @@
 'use strict';
-const AsyncEmitter = require('./core/events/async-emitter');
+const AsyncEmitter = require('./core/events/async-emitter').default;
 const { log } = require('./utils/logger');
 const signalHandler = new AsyncEmitter();
 signalHandler.setMaxListeners(0);

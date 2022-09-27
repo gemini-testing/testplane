@@ -1,6 +1,6 @@
 'use strict';
 const _ = require('lodash');
-const BaseStats = require('./core/base-stats');
+const BaseStats = require('./core/base-stats').default;
 const RunnerEvents = require('./constants/runner-events');
 const statNames = {
     TOTAL: 'total',
@@ -10,6 +10,9 @@ const statNames = {
     RETRIES: 'retries'
 };
 module.exports = class Stats extends BaseStats {
+    static create(runner) {
+        return new Stats(runner);
+    }
     constructor(runner) {
         super(statNames);
         this._statsByBrowsers = {};

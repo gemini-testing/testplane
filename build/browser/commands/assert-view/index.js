@@ -1,9 +1,9 @@
 'use strict';
 const fs = require('fs-extra');
 const _ = require('lodash');
-const Image = require('../../../core/image');
-const ScreenShooter = require('../../../core/screen-shooter');
-const temp = require('../../../core/temp');
+const Image = require('../../../core/image').default;
+const ScreenShooter = require('../../../core/screen-shooter').default;
+const temp = require('../../../core/temp').default;
 const { getCaptureProcessors } = require('./capture-processors');
 const { getTestContext } = require('../../../utils/mocha');
 const RuntimeConfig = require('../../../config/runtime-config');

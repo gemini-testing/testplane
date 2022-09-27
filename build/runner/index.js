@@ -1,7 +1,7 @@
 'use strict';
 const _ = require('lodash');
 const eventsUtils = require('../core/events/utils');
-const temp = require('../core/temp');
+const temp = require('../core/temp').default;
 const pool = require('../browser-pool');
 const BrowserRunner = require('./browser-runner');
 const Events = require('../constants/runner-events');

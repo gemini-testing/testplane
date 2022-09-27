@@ -1,5 +1,5 @@
 'use strict';
-const AsyncEmitter = require('../../core/events/async-emitter');
+const AsyncEmitter = require('../../core/events/async-emitter').default;
 const { passthroughEvent } = require('../../core/events/utils');
 const RunnerEvents = require('../constants/runner-events');
 const BrowserPool = require('./browser-pool');

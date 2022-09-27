@@ -1,7 +1,7 @@
 'use strict';
 const _ = require('lodash');
 const Browser = require('../../browser/existing-browser');
-const Calibrator = require('../../core/calibrator');
+const Calibrator = require('../../core/calibrator').default;
 const RunnerEvents = require('../constants/runner-events');
 const ipc = require('../../utils/ipc');
 module.exports = class BrowserPool {

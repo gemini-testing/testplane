@@ -5,7 +5,7 @@ const browserOptions = require('./browser-options');
 const defaults = require('./defaults');
 const optionsBuilder = require('./options-builder');
 const options = optionsBuilder(_.propertyOf(defaults));
-const coreOptions = require('../core/config/options');
+const coreOptions = require('../core/config/options').default;
 const ENV_PREFIX = `${require('../../package').name}_`;
 const rootSection = section(_.extend(browserOptions.getTopLevel(), {
     browsers: map(section(browserOptions.getPerBrowser())),

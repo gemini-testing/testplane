@@ -2,7 +2,7 @@
 const _ = require('lodash');
 const { EventEmitter } = require('events');
 const { passthroughEvent } = require('../core/events/utils');
-const SetsBuilder = require('../core/sets-builder');
+const SetsBuilder = require('../core/sets-builder').default;
 const TestParser = require('./mocha-test-parser');
 const TestSkipper = require('./test-skipper');
 const Events = require('../constants/runner-events');

@@ -1,5 +1,5 @@
 'use strict';
-const BaseBrowserAgent = require('../core/browser-agent');
+const BaseBrowserAgent = require('../core/browser-agent').default;
 module.exports = class BrowserAgent {
     static create(id, version, pool) {
         return new this(id, version, pool);

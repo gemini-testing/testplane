@@ -1,5 +1,5 @@
 import Bluebird from 'bluebird';
-import globExtra from 'glob-extra';
+import * as globExtra from 'glob-extra';
 import _ from 'lodash';
 import path from 'path';
 

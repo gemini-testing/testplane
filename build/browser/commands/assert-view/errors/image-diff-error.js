@@ -1,5 +1,5 @@
 'use strict';
-const Image = require('../../../../core/image');
+const Image = require('../../../../core/image').default;
 const BaseStateError = require('./base-state-error');
 module.exports = class ImageDiffError extends BaseStateError {
     static create(...args) {
