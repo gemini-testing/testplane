@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.3.0](https://github.com/gemini-testing/hermione/compare/v5.2.2...v5.3.0) (2022-10-10)
+
+
+### Features
+
+* merge gemini-core ([0760792](https://github.com/gemini-testing/hermione/commit/07607922d4ec81a7c73382163f013678db76c1f2))
+* update looks-same ([e9ac36d](https://github.com/gemini-testing/hermione/commit/e9ac36d83250e6370b32d91b212f3b9d02404d65))
+* update png-img ([01712eb](https://github.com/gemini-testing/hermione/commit/01712eb8d0da1230f541cc88fb7610c1e8804b88))
+
 ### [5.2.2](https://github.com/gemini-testing/hermione/compare/v5.2.1...v5.2.2) (2022-09-09)
 
 
