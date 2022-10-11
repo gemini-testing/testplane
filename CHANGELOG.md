@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.3.1](https://github.com/gemini-testing/hermione/compare/v5.3.0...v5.3.1) (2022-10-11)
+
+
+### Bug Fixes
+
+* update png-img to 5.0.1 with windows build fix ([f3a00d1](https://github.com/gemini-testing/hermione/commit/f3a00d189c60cab571473c95cfd02bd3157c2c5a))
+
 ## [5.3.0](https://github.com/gemini-testing/hermione/compare/v5.2.2...v5.3.0) (2022-10-10)
 
 
