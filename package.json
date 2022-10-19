@@ -73,7 +73,7 @@
     "chai-as-promised": "^7.1.1",
     "doctoc": "^2.2.0",
     "escape-string-regexp": "1.0.5",
-    "eslint": "^5.16.0",
+    "eslint": "^8.25.0",
     "eslint-config-gemini-testing": "^2.8.0",
     "husky": "^0.11.4",
     "jsdom": "^16.6.0",
