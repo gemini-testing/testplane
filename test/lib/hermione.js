@@ -172,7 +172,7 @@ describe('hermione', () => {
                     );
                     assert.callOrder(
                         RuntimeConfig.getInstance,
-                        Runner.create,
+                        Runner.create
                     );
                 });
         });
