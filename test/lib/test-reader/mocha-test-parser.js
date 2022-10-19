@@ -2,7 +2,6 @@
 
 const path = require('path');
 const escapeRe = require('escape-string-regexp');
-const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
 const crypto = require('lib/utils/crypto');
 const SkipBuilder = require('lib/test-reader/skip/skip-builder');
@@ -17,6 +16,8 @@ const configController = require('lib/test-reader/config-controller');
 const logger = require('lib/utils/logger');
 const MochaStub = require('../_mocha');
 const {makeConfigStub} = require('../../utils');
+
+const {EVENT_FILE_PRE_REQUIRE, EVENT_FILE_POST_REQUIRE} = MochaStub.Suite.constants;
 
 describe('test-reader/mocha-test-parser', () => {
     const sandbox = sinon.sandbox.create();
@@ -381,7 +382,7 @@ describe('test-reader/mocha-test-parser', () => {
 
                 mkMochaTestParser_();
 
-                MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+                MochaStub.lastInstance.suite.emit(EVENT_FILE_PRE_REQUIRE, {}, '/some/file.js');
 
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
@@ -405,7 +406,7 @@ describe('test-reader/mocha-test-parser', () => {
 
                 mkMochaTestParser_();
 
-                MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+                MochaStub.lastInstance.suite.emit(EVENT_FILE_PRE_REQUIRE, {}, '/some/file.js');
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
                         .addSuite(MochaStub.Suite.create());
@@ -415,7 +416,7 @@ describe('test-reader/mocha-test-parser', () => {
 
                 assert.equal(suite1.id(), '123450');
 
-                MochaStub.lastInstance.suite.emit('pre-require', {}, '/other/file.js');
+                MochaStub.lastInstance.suite.emit(EVENT_FILE_PRE_REQUIRE, {}, '/other/file.js');
                 MochaStub.lastInstance.updateSuiteTree((suite) => {
                     return suite
                         .addSuite(MochaStub.Suite.create());
@@ -456,7 +457,7 @@ describe('test-reader/mocha-test-parser', () => {
             const mochaTestParser = mkMochaTestParser_();
 
             mochaTestParser.applyConfigController();
-            MochaStub.lastInstance.suite.emit('pre-require');
+            MochaStub.lastInstance.suite.emit(EVENT_FILE_PRE_REQUIRE);
 
             assert.calledOnceWith(TestParserAPI.prototype.setController, 'config', configController);
         });
@@ -610,10 +611,10 @@ describe('test-reader/mocha-test-parser', () => {
             MochaTestParser.init();
         });
 
-        _.forEach({
-            'pre-require': 'BEFORE_FILE_READ',
-            'post-require': 'AFTER_FILE_READ'
-        }, (hermioneEvent, mochaEvent) => {
+        [
+            [EVENT_FILE_PRE_REQUIRE, 'BEFORE_FILE_READ'],
+            [EVENT_FILE_POST_REQUIRE, 'AFTER_FILE_READ']
+        ].forEach(([mochaEvent, hermioneEvent]) => {
             it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, () => {
                 const onEvent = sinon.stub().named(`on${hermioneEvent}`);
                 mkMochaTestParser_({browserId: 'bro'})
@@ -634,7 +635,7 @@ describe('test-reader/mocha-test-parser', () => {
             mkMochaTestParser_()
                 .on(RunnerEvents.BEFORE_FILE_READ, onBeforeFileRead);
 
-            MochaStub.lastInstance.suite.emit('pre-require', {}, '/some/file.js');
+            MochaStub.lastInstance.suite.emit(EVENT_FILE_PRE_REQUIRE, {}, '/some/file.js');
 
             assert.calledOnceWith(onBeforeFileRead, sinon.match({
                 testParser: sinon.match.instanceOf(TestParserAPI)
