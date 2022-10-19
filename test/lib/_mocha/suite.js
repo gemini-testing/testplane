@@ -13,6 +13,11 @@ const EVENTS = {
 };
 
 module.exports = class Suite extends EventEmitter {
+    static constants = {
+        EVENT_FILE_POST_REQUIRE: 'post-require',
+        EVENT_FILE_PRE_REQUIRE: 'pre-require'
+    };
+
     constructor(parent, title) {
         super();
 
