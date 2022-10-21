@@ -1,33 +1,24 @@
 'use strict';
 
-const proxyquire = require('proxyquire').noCallThru();
 const AsyncEmitter = require('lib/core/events/async-emitter');
 const Hermione = require('lib/worker/hermione');
 const {makeConfigStub} = require('../../utils');
+const ipc = require('lib/utils/ipc');
+const HermioneFacade = require('lib/worker/hermione-facade');
 
 describe('worker/hermione-facade', () => {
     const sandbox = sinon.createSandbox();
-    let HermioneFacade;
     let hermione;
-    let config;
-    let runtimeConfig;
-    let ipc;
-
-    const proxyquireHermione_ = (modules) => {
-        return proxyquire('lib/worker/hermione-facade', {
-            // TODO: think about how to make it easier
-            '../utils/ipc': {on: ipc.on.bind(ipc), emit: ipc.emit.bind(ipc)},
-            ...modules
-        });
-    };
+    let hermioneFacade;
 
     beforeEach(() => {
-        ipc = new AsyncEmitter();
-        HermioneFacade = proxyquireHermione_();
-        sandbox.spy(HermioneFacade.prototype, 'syncConfig');
+        const config = makeConfigStub();
 
-        config = makeConfigStub();
-        runtimeConfig = {};
+        sandbox.stub(ipc);
+        ipc.on.withArgs('master.init').yieldsAsync({runtimeConfig: {}});
+        ipc.on.withArgs('master.syncConfig').yieldsAsync({config});
+
+        sandbox.spy(HermioneFacade.prototype, 'syncConfig');
 
         hermione = Object.assign(new AsyncEmitter(), {
             init: sandbox.spy().named('hermioneInit'),
@@ -35,44 +26,35 @@ describe('worker/hermione-facade', () => {
         });
         sandbox.stub(Hermione, 'create').returns(hermione);
 
-        ipc.on('worker.init', () => {
-            process.nextTick(() => ipc.emit('master.init', {runtimeConfig}));
-        });
-        ipc.on('worker.syncConfig', () => {
-            process.nextTick(() => ipc.emit('master.syncConfig', {config}));
-        });
+        hermioneFacade = HermioneFacade.create();
     });
 
     afterEach(() => sandbox.restore());
 
     describe('init', () => {
-        it('should init hermione', () => {
-            const hermioneFacade = HermioneFacade.create();
+        it('should init hermione', async () => {
+            await hermioneFacade.init();
 
-            return hermioneFacade.init()
-                .then(() => assert.calledOnce(hermione.init));
+            assert.calledOnce(hermione.init);
         });
 
-        it('should not sync config', () => {
-            const hermioneFacade = HermioneFacade.create();
+        it('should not sync config', async () => {
+            await hermioneFacade.init();
 
-            return hermioneFacade.init()
-                .then(() => assert.notCalled(HermioneFacade.prototype.syncConfig));
+            assert.notCalled(HermioneFacade.prototype.syncConfig);
         });
 
-        // TODO: implement correct check that module was required
-        it.skip('should require passed modules', async () => {
-            runtimeConfig = {requireModules: ['foo']};
-            const fooRequire = sandbox.stub().returns({});
+        it('should require passed modules', async () => {
+            const hermioneFacadeModule = module.children.find(({filename}) => /\/hermione-facade\.js$/.test(filename));
+            sandbox.stub(hermioneFacadeModule, 'require');
 
-            HermioneFacade = proxyquireHermione_({
-                foo: fooRequire()
+            ipc.on.withArgs('master.init').yieldsAsync({
+                runtimeConfig: {requireModules: ['foo']}
             });
-            const hermioneFacade = HermioneFacade.create();
 
             await hermioneFacade.init();
 
-            assert.calledOnce(fooRequire);
+            assert.calledOnceWith(hermioneFacadeModule.require, 'foo');
         });
     });
 
@@ -81,18 +63,16 @@ describe('worker/hermione-facade', () => {
             hermione.runTest = sandbox.spy().named('hermioneRunTest');
         });
 
-        it('should init hermione before running test', () => {
-            const hermioneFacade = HermioneFacade.create();
+        it('should init hermione before running test', async () => {
+            await hermioneFacade.runTest();
 
-            return hermioneFacade.runTest()
-                .then(() => assert.callOrder(hermione.init, hermione.runTest));
+            assert.callOrder(hermione.init, hermione.runTest);
         });
 
-        it('should sync config before running test', () => {
-            const hermioneFacade = HermioneFacade.create();
+        it('should sync config before running test', async () => {
+            await hermioneFacade.runTest();
 
-            return hermioneFacade.runTest()
-                .then(() => assert.callOrder(HermioneFacade.prototype.syncConfig, hermione.runTest));
+            assert.callOrder(HermioneFacade.prototype.syncConfig, hermione.runTest);
         });
     });
 });
