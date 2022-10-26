@@ -603,6 +603,22 @@ it('some test', async ({ browser }) => {
 });
 ```
 
+Could also be used as element's method:
+
+```js
+it('some test', async ({ browser }) => {
+    await browser.url('some/url');
+
+    const elem = await browser.$('.button');
+
+    await elem.assertView('plain');
+    await elem.click();
+    await elem.assertView('clicked');
+});
+```
+
+*Note: assertView will trigger [waitForExist](https://webdriver.io/docs/api/element/waitForExist/) with [waitTimeout](#waittimeout) and [waitInterval](#waitinterval)*
+
 Parameters:
 
  - state (required) `String` – state name; should be unique within one test
@@ -826,10 +842,14 @@ If applied to suite then timeout will be set for all tests and hooks inside this
 Default value is `null`, in this case will be used common timeout for all browsers from `system.mochaOpts.timeout`.
 
 #### waitTimeout
-Timeout for web page events. Default value is `1000` ms.
+Timeout for [waitUntil](https://webdriver.io/docs/api/element/waitUntil) which is used to all `waitFor*` commands. It is used in the search for elements and web page events. Default value is `3000` ms.
+
+*For example: `browser.$('.element').click()` will wait up to 3000ms for element to exist before clicking it by default*
 
 #### waitInterval
-Interval for web page events. Default value is `250` ms.
+Interval for [waitUntil](https://webdriver.io/docs/api/element/waitUntil) which is used to all `waitFor*` commands. It is used in element finding and web page events. Default value is `500` ms.
+
+*For example: `browser.$('.element').click()` will check element existence every 500ms by default*
 
 #### sessionsPerBrowser
 Number of sessions which are run simultaneously. Global value for all browsers. Default value is `1`.

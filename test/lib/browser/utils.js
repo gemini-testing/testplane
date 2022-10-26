@@ -59,7 +59,8 @@ exports.mkSessionStub_ = () => {
     const session = {};
     const element = {
         selector: '.selector',
-        click: sinon.stub().named('click').resolves()
+        click: sinon.stub().named('click').resolves(),
+        waitForExist: sinon.stub().named('waitForExist').resolves()
     };
 
     session.isW3C = false;
