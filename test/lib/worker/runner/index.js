@@ -1,11 +1,11 @@
 'use strict';
 
 const Runner = require('lib/worker/runner');
-const BrowserPool = require('lib/worker/runner/browser-pool');
 const CachingTestParser = require('lib/worker/runner/caching-test-parser');
 const BrowserAgent = require('lib/worker/runner/browser-agent');
 const RunnerEvents = require('lib/worker/constants/runner-events');
 const TestRunner = require('lib/worker/runner/test-runner');
+const BrowserPoolManager = require('lib/worker/runner/browser-pool/manager');
 const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner', () => {
@@ -17,7 +17,8 @@ describe('worker/runner', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(BrowserPool, 'create').returns({browser: 'pool'});
+        sandbox.stub(BrowserPoolManager, 'create').returns(Object.create(BrowserPoolManager.prototype));
+        sandbox.stub(BrowserPoolManager.prototype, 'getPool').returns({});
 
         sandbox.stub(CachingTestParser, 'create').returns(Object.create(CachingTestParser.prototype));
         sandbox.stub(CachingTestParser.prototype, 'parse').resolves([]);
@@ -31,10 +32,10 @@ describe('worker/runner', () => {
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
-        it('should create browser pool', () => {
+        it('should create browser pool manager', () => {
             Runner.create({foo: 'bar'});
 
-            assert.calledOnceWith(BrowserPool.create, {foo: 'bar'});
+            assert.calledOnceWith(BrowserPoolManager.create, {foo: 'bar'});
         });
 
         it('should create caching test parser', () => {
@@ -97,16 +98,28 @@ describe('worker/runner', () => {
             assert.calledOnceWith(TestRunner.create, test, config.forBrowser('bro'));
         });
 
+        it('should get browser pool by passed browser config', async () => {
+            const config = makeConfigStub({browsers: ['bro']});
+            const runner = mkRunner_({config});
+
+            await runner.runTest('some test', {browserId: 'bro'});
+
+            assert.calledOnceWith(BrowserPoolManager.prototype.getPool, config.forBrowser('bro'));
+        });
+
         it('should create browser agent for test runner', async () => {
             const runner = mkRunner_();
 
             const test = makeTest({fullTitle: () => 'some test'});
             CachingTestParser.prototype.parse.resolves([test]);
 
-            const browserAgent = Object.create(BrowserAgent.prototype);
-            BrowserAgent.create.withArgs('bro').returns(browserAgent);
+            const browserPool = {};
+            BrowserPoolManager.prototype.getPool.returns(browserPool);
 
-            await runner.runTest('some test', {browserId: 'bro'});
+            const browserAgent = Object.create(BrowserAgent.prototype);
+            BrowserAgent.create.withArgs('bro', '123', browserPool).returns(browserAgent);
+
+            await runner.runTest('some test', {browserId: 'bro', browserVersion: '123'});
 
             assert.calledOnceWith(TestRunner.create, test, sinon.match.any, browserAgent);
         });

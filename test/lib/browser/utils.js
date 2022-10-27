@@ -3,13 +3,14 @@
 const _ = require('lodash');
 const NewBrowser = require('lib/browser/new-browser');
 const ExistingBrowser = require('lib/browser/existing-browser');
+const {WEBDRIVER_PROTOCOL} = require('lib/constants/config');
 
 function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
         desiredCapabilities: {browserName: 'browser', version: '1.0'},
         baseUrl: 'http://base_url',
         gridUrl: 'http://test_host:4444/wd/hub?query=value',
-        automationProtocol: 'webdriver',
+        automationProtocol: WEBDRIVER_PROTOCOL,
         sessionEnvFlags: {},
         outputDir: null,
         waitTimeout: 100,
