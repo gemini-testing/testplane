@@ -18,7 +18,7 @@ describe('worker/runner/caching-test-parser', () => {
         sandbox.stub(TestParser, 'prepare');
         sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
         sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
-        sandbox.stub(TestParser.prototype, 'loadFiles').returnsThis();
+        sandbox.stub(TestParser.prototype, 'loadFiles').resolvesThis();
         sandbox.stub(TestParser.prototype, 'parse').returns([]);
     });
 
@@ -33,11 +33,11 @@ describe('worker/runner/caching-test-parser', () => {
     });
 
     describe('parse', () => {
-        it('should create test parser', () => {
+        it('should create test parser', async () => {
             const config = makeConfigStub();
             const cachingParser = mkCachingParser_({config});
 
-            cachingParser.parse({browserId: 'bro'});
+            await cachingParser.parse({browserId: 'bro'});
 
             assert.calledOnceWith(TestParser.create, 'bro', config);
         });
@@ -46,7 +46,7 @@ describe('worker/runner/caching-test-parser', () => {
             'BEFORE_FILE_READ',
             'AFTER_FILE_READ'
         ].forEach((event) => {
-            it(`should passthrough ${event} event from caching test parser`, () => {
+            it(`should passthrough ${event} event from caching test parser`, async () => {
                 const onEvent = sinon.spy().named(`on${event}`);
                 const cachingParser = mkCachingParser_()
                     .on(RunnerEvents[event], onEvent);
@@ -56,16 +56,16 @@ describe('worker/runner/caching-test-parser', () => {
                     return [];
                 });
 
-                cachingParser.parse({});
+                await cachingParser.parse({});
 
                 assert.calledOnceWith(onEvent, {foo: 'bar'});
             });
         });
 
-        it('should apply config controller before loading file', () => {
+        it('should apply config controller before loading file', async () => {
             const cachingParser = mkCachingParser_();
 
-            cachingParser.parse({});
+            await cachingParser.parse({});
 
             assert.callOrder(
                 TestParser.prototype.applyConfigController,
@@ -73,18 +73,18 @@ describe('worker/runner/caching-test-parser', () => {
             );
         });
 
-        it('should load file', () => {
+        it('should load file', async () => {
             const cachingParser = mkCachingParser_();
 
-            cachingParser.parse({file: 'some/file.js'});
+            await cachingParser.parse({file: 'some/file.js'});
 
             assert.calledOnceWith(TestParser.prototype.loadFiles, 'some/file.js');
         });
 
-        it('should load file before parse', () => {
+        it('should load file before parse', async () => {
             const cachingParser = mkCachingParser_();
 
-            cachingParser.parse({});
+            await cachingParser.parse({});
 
             assert.callOrder(
                 TestParser.prototype.loadFiles,
@@ -92,97 +92,97 @@ describe('worker/runner/caching-test-parser', () => {
             );
         });
 
-        it('should return parsed tests', () => {
+        it('should return parsed tests', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
             TestParser.prototype.parse.returns(tests);
 
-            const result = cachingParser.parse({});
+            const result = await cachingParser.parse({});
 
             assert.deepEqual(result, tests);
         });
 
-        it('should parse each file in each browser only once', () => {
+        it('should parse each file in each browser only once', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
             TestParser.prototype.parse.returns(tests);
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
-            const result = cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            const result = await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
 
             assert.deepEqual(result, tests);
             assert.calledOnce(TestParser.prototype.parse);
         });
 
-        it('should parse same file in different browsers', () => {
+        it('should parse same file in different browsers', async () => {
             const cachingParser = mkCachingParser_();
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro1'});
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro2'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro1'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro2'});
 
             assert.calledTwice(TestParser.prototype.parse);
         });
 
-        it('should parse different files in same browser', () => {
+        it('should parse different files in same browser', async () => {
             const cachingParser = mkCachingParser_();
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
-            cachingParser.parse({file: 'other/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'other/file.js', browserId: 'bro'});
 
             assert.calledTwice(TestParser.prototype.parse);
         });
 
-        it('should emit AFTER_TESTS_READ event on parse', () => {
+        it('should emit AFTER_TESTS_READ event on parse', async () => {
             const onAfterTestsRead = sinon.spy().named('onAfterTestsRead');
             const cachingParser = mkCachingParser_()
                 .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
-            cachingParser.parse({});
+            await cachingParser.parse({});
 
             assert.calledOnceWith(onAfterTestsRead, sinon.match.instanceOf(TestCollection));
         });
 
-        it('should create test collection with parsed tests', () => {
+        it('should create test collection with parsed tests', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
             TestParser.prototype.parse.returns(tests);
 
             sinon.spy(TestCollection, 'create');
 
-            cachingParser.parse({browserId: 'bro'});
+            await cachingParser.parse({browserId: 'bro'});
 
             assert.calledOnceWith(TestCollection.create, {bro: tests});
         });
 
-        it('should emit AFTER_TESTS_READ event only once for each file in each browser', () => {
+        it('should emit AFTER_TESTS_READ event only once for each file in each browser', async () => {
             const onAfterTestsRead = sinon.spy().named('onAfterTestsRead');
             const cachingParser = mkCachingParser_()
                 .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
 
             assert.calledOnce(onAfterTestsRead);
         });
 
-        it('should emit AFTER_TESTS_READ event for the same file in different browsers', () => {
+        it('should emit AFTER_TESTS_READ event for the same file in different browsers', async () => {
             const onAfterTestsRead = sinon.spy().named('onAfterTestsRead');
             const cachingParser = mkCachingParser_()
                 .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro1'});
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro2'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro1'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro2'});
 
             assert.calledTwice(onAfterTestsRead);
         });
 
-        it('should emit AFTER_TESTS_READ event for different files in the same browser', () => {
+        it('should emit AFTER_TESTS_READ event for different files in the same browser', async () => {
             const onAfterTestsRead = sinon.spy().named('onAfterTestsRead');
             const cachingParser = mkCachingParser_()
                 .on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
-            cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
-            cachingParser.parse({file: 'other/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            await cachingParser.parse({file: 'other/file.js', browserId: 'bro'});
 
             assert.calledTwice(onAfterTestsRead);
         });

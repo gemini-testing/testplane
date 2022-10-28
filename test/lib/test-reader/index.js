@@ -7,6 +7,7 @@ const Events = require('lib/constants/runner-events');
 const SetsBuilder = require('lib/core/sets-builder');
 const makeDefaultConfigStub = require('../../utils').makeConfigStub;
 const _ = require('lodash');
+const Promise = require('bluebird');
 const DEFAULT_BROWSER_NAME = 'some-default-browser';
 
 describe('test-reader', () => {
@@ -19,10 +20,10 @@ describe('test-reader', () => {
 
     const callsFakeLoadFiles_ = ({cb = () => {}, tests = ['default-test']} = {}) => {
         TestParser.prototype.loadFiles.reset();
-        TestParser.prototype.loadFiles.callsFake(function() {
-            cb.call(this);
+        TestParser.prototype.loadFiles.callsFake(async function() {
+            await cb.call(this);
             this._tests = tests;
-            return this;
+            return Promise.resolve(this);
         });
     };
 
@@ -61,7 +62,7 @@ describe('test-reader', () => {
 
         sandbox.stub(TestParser.prototype, 'loadFiles').callsFake(function() {
             this._tests = [{title: 'default-test'}];
-            return this;
+            return Promise.resolve(this);
         });
 
         sandbox.stub(TestParser.prototype, 'parse').callsFake(function() {
@@ -296,17 +297,34 @@ describe('test-reader', () => {
             SetsBuilder.prototype.build.resolves({groupByBrowser});
 
             const calls = [];
-            TestParser.prototype.loadFiles.reset();
-            TestParser.prototype.loadFiles.callsFake(function() {
-                calls.push('loadFiles');
-                return this;
-            });
+            callsFakeLoadFiles_({cb: () => calls.push('loadFiles')});
             TestParser.prototype.parse.callsFake(() => calls.push('parse'));
 
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
             await readTests_({config: config});
 
             assert.deepEqual(calls, ['loadFiles', 'loadFiles', 'parse', 'parse']);
+        });
+
+        it('should load files sequentially by browsers', async () => {
+            const groupByBrowser = sinon.stub().returns({
+                bro1: [],
+                bro2: []
+            });
+            SetsBuilder.prototype.build.resolves({groupByBrowser});
+
+            const calls = [];
+
+            callsFakeLoadFiles_({cb: async () => {
+                calls.push('loadFiles');
+                await Promise.delay(1);
+                calls.push('afterLoadFiles');
+            }});
+
+            const config = makeConfigStub({browsers: ['bro1', 'bro2']});
+            await readTests_({config: config});
+
+            assert.deepEqual(calls, ['loadFiles', 'afterLoadFiles', 'loadFiles', 'afterLoadFiles']);
         });
 
         describe('if there are no tests found', () => {
@@ -372,9 +390,14 @@ describe('test-reader', () => {
         });
 
         it('should not throw error if there is test mathed with grep pattern', async () => {
-            callsFakeLoadFiles_({tests: [{title: 'foo', silentSkip: false}, {title: 'bar', silentSkip: true}]});
+            callsFakeLoadFiles_({
+                tests: [
+                    {title: 'foo', silentSkip: false},
+                    {title: 'bar', silentSkip: true}
+                ]
+            });
 
-            assert.isFulfilled(readTests_({opts: {grep: 'bar'}}));
+            await assert.isFulfilled(readTests_({opts: {grep: 'bar'}}));
         });
 
         describe('for each browser', () => {
