@@ -1,8 +1,8 @@
 'use strict';
 
 const CachingTestParser = require('lib/worker/runner/caching-test-parser');
+const SequenceTestParser = require('lib/worker/runner/sequence-test-parser');
 const RunnerEvents = require('lib/worker/constants/runner-events');
-const TestParser = require('lib/test-reader/mocha-test-parser');
 const TestCollection = require('lib/test-collection');
 const {makeConfigStub, makeTest} = require('../../../utils');
 
@@ -15,45 +15,35 @@ describe('worker/runner/caching-test-parser', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(TestParser, 'prepare');
-        sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
-        sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
-        sandbox.stub(TestParser.prototype, 'loadFiles').resolvesThis();
-        sandbox.stub(TestParser.prototype, 'parse').returns([]);
+        sandbox.stub(SequenceTestParser, 'create').returns(Object.create(SequenceTestParser.prototype));
+        sandbox.stub(SequenceTestParser.prototype, 'parse').resolves([]);
     });
 
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
-        it('should prepare test parser', () => {
-            mkCachingParser_();
+        it('should create sequnce test parser', () => {
+            const config = makeConfigStub();
 
-            assert.calledOnce(TestParser.prepare);
+            mkCachingParser_({config});
+
+            assert.calledOnceWith(SequenceTestParser.create, config);
         });
     });
 
     describe('parse', () => {
-        it('should create test parser', async () => {
-            const config = makeConfigStub();
-            const cachingParser = mkCachingParser_({config});
-
-            await cachingParser.parse({browserId: 'bro'});
-
-            assert.calledOnceWith(TestParser.create, 'bro', config);
-        });
-
         [
             'BEFORE_FILE_READ',
             'AFTER_FILE_READ'
         ].forEach((event) => {
-            it(`should passthrough ${event} event from caching test parser`, async () => {
+            it(`should passthrough ${event} event from seqeunce test parser`, async () => {
                 const onEvent = sinon.spy().named(`on${event}`);
                 const cachingParser = mkCachingParser_()
                     .on(RunnerEvents[event], onEvent);
 
-                TestParser.prototype.parse.callsFake(function() {
+                SequenceTestParser.prototype.parse.callsFake(function() {
                     this.emit(RunnerEvents[event], {foo: 'bar'});
-                    return [];
+                    return Promise.resolve([]);
                 });
 
                 await cachingParser.parse({});
@@ -62,40 +52,10 @@ describe('worker/runner/caching-test-parser', () => {
             });
         });
 
-        it('should apply config controller before loading file', async () => {
-            const cachingParser = mkCachingParser_();
-
-            await cachingParser.parse({});
-
-            assert.callOrder(
-                TestParser.prototype.applyConfigController,
-                TestParser.prototype.loadFiles
-            );
-        });
-
-        it('should load file', async () => {
-            const cachingParser = mkCachingParser_();
-
-            await cachingParser.parse({file: 'some/file.js'});
-
-            assert.calledOnceWith(TestParser.prototype.loadFiles, 'some/file.js');
-        });
-
-        it('should load file before parse', async () => {
-            const cachingParser = mkCachingParser_();
-
-            await cachingParser.parse({});
-
-            assert.callOrder(
-                TestParser.prototype.loadFiles,
-                TestParser.prototype.parse
-            );
-        });
-
         it('should return parsed tests', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
-            TestParser.prototype.parse.returns(tests);
+            SequenceTestParser.prototype.parse.resolves(tests);
 
             const result = await cachingParser.parse({});
 
@@ -105,13 +65,13 @@ describe('worker/runner/caching-test-parser', () => {
         it('should parse each file in each browser only once', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
-            TestParser.prototype.parse.returns(tests);
+            SequenceTestParser.prototype.parse.resolves(tests);
 
             await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
             const result = await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
 
             assert.deepEqual(result, tests);
-            assert.calledOnce(TestParser.prototype.parse);
+            assert.calledOnce(SequenceTestParser.prototype.parse);
         });
 
         it('should parse same file in different browsers', async () => {
@@ -120,7 +80,7 @@ describe('worker/runner/caching-test-parser', () => {
             await cachingParser.parse({file: 'some/file.js', browserId: 'bro1'});
             await cachingParser.parse({file: 'some/file.js', browserId: 'bro2'});
 
-            assert.calledTwice(TestParser.prototype.parse);
+            assert.calledTwice(SequenceTestParser.prototype.parse);
         });
 
         it('should parse different files in same browser', async () => {
@@ -129,7 +89,7 @@ describe('worker/runner/caching-test-parser', () => {
             await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
             await cachingParser.parse({file: 'other/file.js', browserId: 'bro'});
 
-            assert.calledTwice(TestParser.prototype.parse);
+            assert.calledTwice(SequenceTestParser.prototype.parse);
         });
 
         it('should emit AFTER_TESTS_READ event on parse', async () => {
@@ -145,7 +105,7 @@ describe('worker/runner/caching-test-parser', () => {
         it('should create test collection with parsed tests', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
-            TestParser.prototype.parse.returns(tests);
+            SequenceTestParser.prototype.parse.resolves(tests);
 
             sinon.spy(TestCollection, 'create');
 
