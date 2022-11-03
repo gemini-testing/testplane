@@ -127,13 +127,46 @@ describe('test-reader/mocha-test-parser', () => {
             assert.calledOnceWith(MochaStub.lastInstance.addFile, 'path/to/file');
         });
 
-        it('should clear require cache for file before adding', async () => {
+        it('should clear require cache for commonjs file before adding', async () => {
             const mochaTestParser = mkMochaTestParser_();
 
             await mochaTestParser.loadFiles(['path/to/file']);
 
             assert.calledOnceWith(clearRequire, path.resolve('path/to/file'));
             assert.callOrder(clearRequire, MochaStub.lastInstance.addFile);
+        });
+
+        it('should pass commonjs file to mocha as is', async () => {
+            const mochaTestParser = mkMochaTestParser_();
+
+            await mochaTestParser.loadFiles(['path/to/file']);
+
+            assert.calledWith(MochaStub.lastInstance.addFile, 'path/to/file');
+        });
+
+        it('should pass ESM file to mocha as is', async () => {
+            const mochaTestParser = mkMochaTestParser_({browserId: 'bro'});
+
+            await mochaTestParser.loadFiles(['path/to/file.mjs']);
+
+            assert.calledWith(MochaStub.lastInstance.addFile, 'path/to/file.mjs');
+        });
+
+        it('should not clear require cache for ESM files', async () => {
+            const mochaTestParser = mkMochaTestParser_();
+
+            await mochaTestParser.loadFiles(['path/to/file.mjs']);
+
+            assert.notCalled(clearRequire);
+        });
+
+        it('should pass esm decorator to mocha, which will add query with browser id to module name', async () => {
+            const mochaTestParser = mkMochaTestParser_({browserId: 'bro'});
+
+            await mochaTestParser.loadFiles([]);
+
+            const esmDecorator = MochaStub.lastInstance.loadFilesAsync.firstCall.args[0];
+            assert.equal(esmDecorator('/some/file.esm'), '/some/file.esm?browserId=bro');
         });
 
         it('should load file after add', async () => {
