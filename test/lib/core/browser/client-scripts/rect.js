@@ -4,8 +4,8 @@ const Rect = require('lib/core/browser/client-scripts/rect').Rect;
 
 describe('Rect', () => {
     const rect = new Rect({
-        top: 10,
         left: 20,
+        top: 10,
         width: 100,
         height: 100
     });
@@ -14,8 +14,8 @@ describe('Rect', () => {
         it('should create instance using width/height properties', () => {
             assert.doesNotThrow(() => {
                 return new Rect({
-                    top: 10,
                     left: 20,
+                    top: 10,
                     width: 100,
                     height: 100
                 });
@@ -124,8 +124,8 @@ describe('Rect', () => {
         it('should return true when rect is inside', () => {
             assert.isTrue(rect.rectInside(
                 new Rect({
-                    top: rect.top + 10,
                     left: rect.left + 10,
+                    top: rect.top + 10,
                     width: rect.width - 50,
                     height: rect.height - 50
                 })
@@ -135,8 +135,8 @@ describe('Rect', () => {
         it('should return false when rect is not inside', () => {
             assert.isFalse(rect.rectInside(
                 new Rect({
-                    top: rect.top - 5,
                     left: rect.left - 5,
+                    top: rect.top - 5,
                     width: rect.width,
                     height: rect.width
                 })
@@ -146,8 +146,8 @@ describe('Rect', () => {
         it('should return false when rect intersects on top-left', () => {
             assert.isFalse(rect.rectInside(
                 new Rect({
-                    top: rect.top + 5,
                     left: rect.left - 5,
+                    top: rect.top + 5,
                     width: rect.width + 5,
                     height: rect.height - 5
                 })
@@ -156,8 +156,8 @@ describe('Rect', () => {
 
         it('should return false when rect intersects on bottom-right', () => {
             assert.isFalse(new Rect({
-                top: rect.top + 5,
                 left: rect.left - 5,
+                top: rect.top + 5,
                 width: rect.width + 5,
                 height: rect.height - 5
             }).rectInside(rect));
@@ -169,8 +169,8 @@ describe('Rect', () => {
             it('intersects on left side', () => {
                 assert.isTrue(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 5,
                         left: rect.left - 5,
+                        top: rect.top + 5,
                         width: rect.width - 5,
                         height: rect.height - 5
                     })
@@ -180,8 +180,8 @@ describe('Rect', () => {
             it('intersects on top side', () => {
                 assert.isTrue(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 5,
                         left: rect.left + 5,
+                        top: rect.top + 5,
                         width: rect.width - 5,
                         height: rect.height + 5
                     })
@@ -191,8 +191,8 @@ describe('Rect', () => {
             it('intersects on right side', () => {
                 assert.isTrue(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 5,
                         left: rect.left + 5,
+                        top: rect.top + 5,
                         width: rect.width + 5,
                         height: rect.height - 5
                     })
@@ -202,8 +202,8 @@ describe('Rect', () => {
             it('intersects on bottom side', () => {
                 assert.isTrue(rect.rectIntersects(
                     new Rect({
-                        top: rect.top - 5,
                         left: rect.left + 5,
+                        top: rect.top - 5,
                         width: rect.width - 5,
                         height: rect.height - 5
                     })
@@ -213,8 +213,8 @@ describe('Rect', () => {
             it('intersects on left and right sides', () => {
                 assert.isTrue(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 5,
                         left: rect.left - 5,
+                        top: rect.top + 5,
                         width: rect.width + 5,
                         height: rect.height - 5
                     })
@@ -226,8 +226,8 @@ describe('Rect', () => {
             it('top', () => {
                 assert.isFalse(rect.rectIntersects(
                     new Rect({
-                        top: rect.top - 1,
                         left: rect.left + 1,
+                        top: rect.top - 1,
                         width: 1,
                         height: 1
                     })
@@ -237,8 +237,8 @@ describe('Rect', () => {
             it('left', () => {
                 assert.isFalse(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 1,
                         left: rect.left - 1,
+                        top: rect.top + 1,
                         width: 1,
                         height: 1
                     })
@@ -248,8 +248,8 @@ describe('Rect', () => {
             it('bottom', () => {
                 assert.isFalse(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + rect.height,
                         left: rect.left + 1,
+                        top: rect.top + rect.height,
                         width: 1,
                         height: 1
                     })
@@ -259,8 +259,8 @@ describe('Rect', () => {
             it('right', () => {
                 assert.isFalse(rect.rectIntersects(
                     new Rect({
-                        top: rect.top + 1,
                         left: rect.left + rect.width,
+                        top: rect.top + 1,
                         width: 1,
                         height: 1
                     })

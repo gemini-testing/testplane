@@ -39,50 +39,46 @@ describe('calibrator', () => {
         {data: {innerWidth: 984}, name: 'wd'},
         {data: {value: {innerWidth: 984}}, name: 'webdriverio'}
     ].forEach(({data, name}) => {
-        it(`should calculate correct crop area for ${name}`, () => {
+        it(`should calculate correct crop area for ${name}`, async () => {
             setScreenshot('calibrate.png');
             browser.evalScript.returns(Promise.resolve(data));
 
-            const result = calibrator.calibrate(browser);
+            const result = await calibrator.calibrate(browser);
 
-            return Promise.all([
-                assert.eventually.propertyVal(result, 'top', 2),
-                assert.eventually.propertyVal(result, 'left', 2)
-            ]);
+            assert.match(result.top, 2);
+            assert.match(result.left, 2);
         });
     });
 
-    it('should return also features detected by script', () => {
+    it('should return also features detected by script', async () => {
         setScreenshot('calibrate.png');
         browser.evalScript.returns(Promise.resolve({feature: 'value', innerWidth: 984}));
 
-        const result = calibrator.calibrate(browser);
+        const result = await calibrator.calibrate(browser);
 
-        return assert.eventually.propertyVal(result, 'feature', 'value');
+        assert.match(result.feature, 'value');
     });
 
-    it('should not perform the calibration process two times', () => {
+    it('should not perform the calibration process two times', async () => {
         setScreenshot('calibrate.png');
 
-        return calibrator.calibrate(browser)
-            .then(() => calibrator.calibrate(browser))
-            .then(() => {
-                assert.calledOnce(browser.open);
-                assert.calledOnce(browser.evalScript);
-                assert.calledOnce(browser.captureViewportImage);
-            });
+        await calibrator.calibrate(browser);
+        await calibrator.calibrate(browser);
+
+        assert.calledOnce(browser.open);
+        assert.calledOnce(browser.evalScript);
+        assert.calledOnce(browser.captureViewportImage);
     });
 
-    it('should return cached result second time', () => {
+    it('should return cached result second time', async () => {
         setScreenshot('calibrate.png');
 
-        const result = calibrator.calibrate(browser)
-            .then(() => calibrator.calibrate(browser));
+        const result = await calibrator.calibrate(browser);
 
-        return Promise.all([
-            assert.eventually.propertyVal(result, 'top', 2),
-            assert.eventually.propertyVal(result, 'left', 2)
-        ]);
+        await calibrator.calibrate(browser);
+
+        assert.match(result.top, 2);
+        assert.match(result.left, 2);
     });
 
     it('should fail on broken calibration page', () => {

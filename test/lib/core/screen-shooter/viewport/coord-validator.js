@@ -68,6 +68,12 @@ describe('CoordValidator', () => {
         assert.doesNotThrow(() => validate_({left: -1}));
     });
 
+    it('should return "true" if crop area height bigger than viewport height and "compositeImage" is set', () => {
+        coordValidator = new CoordValidator({id: 'some-browser-id'}, {compositeImage: true});
+
+        assert.equal(validate_({height: +1}), true);
+    });
+
     it('should not throw on passed validation', () => {
         const fn = () => validate_({left: 0});
 
