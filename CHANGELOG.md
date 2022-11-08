@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.4.0](https://github.com/gemini-testing/hermione/compare/v5.3.1...v5.4.0) (2022-11-08)
+
+
+### Features
+
+* esm modules support ([5fc3272](https://github.com/gemini-testing/hermione/commit/5fc3272fc24da88315d0298c9212d6ed13615f61))
+* load test files asynchronously ([026e3d8](https://github.com/gemini-testing/hermione/commit/026e3d8f16df2d89128f6fa66c1ad9ea71cfecad))
+* read tests sequentially in worker ([78e8485](https://github.com/gemini-testing/hermione/commit/78e84854ee334242e6867dddc41bcb07a641f233))
+
+
+### Bug Fixes
+
+* migrate png-img -> sharp ([35e9429](https://github.com/gemini-testing/hermione/commit/35e942918308279b4d6f552092d99e151eac271d))
+
 ### [5.3.1](https://github.com/gemini-testing/hermione/compare/v5.3.0...v5.3.1) (2022-10-11)
 
 
