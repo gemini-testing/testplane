@@ -4,6 +4,7 @@ const _ = require('lodash');
 
 const Config = require('lib/config');
 const defaults = require('lib/config/defaults');
+const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL} = require('lib/constants/config');
 
 describe('config browser-options', () => {
     const sandbox = sinon.sandbox.create();
@@ -220,7 +221,7 @@ describe('config browser-options', () => {
             assert.throws(() => createConfig(), Error, /"automationProtocol" must be a string/);
         });
 
-        it('should throw an error if option value is not "webdriver" or "devtools"', () => {
+        it(`should throw an error if option value is not "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`, () => {
             const readConfig = {
                 browsers: {
                     b1: mkBrowser_({automationProtocol: 'foo bar'})
@@ -229,11 +230,15 @@ describe('config browser-options', () => {
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, /"automationProtocol" must be "webdriver" or "devtools"/);
+            assert.throws(
+                () => createConfig(),
+                Error,
+                new RegExp(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`)
+            );
         });
 
         describe('should not throw an error if option value is', () => {
-            ['webdriver', 'devtools'].forEach((value) => {
+            [WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL].forEach((value) => {
                 it(`${value}`, () => {
                     const readConfig = {
                         browsers: {
@@ -264,10 +269,10 @@ describe('config browser-options', () => {
 
         it('should override option for browser', () => {
             const readConfig = {
-                automationProtocol: 'webdriver',
+                automationProtocol: WEBDRIVER_PROTOCOL,
                 browsers: {
                     b1: mkBrowser_(),
-                    b2: mkBrowser_({automationProtocol: 'devtools'})
+                    b2: mkBrowser_({automationProtocol: DEVTOOLS_PROTOCOL})
                 }
             };
 
@@ -275,8 +280,8 @@ describe('config browser-options', () => {
 
             const config = createConfig();
 
-            assert.equal(config.browsers.b1.automationProtocol, 'webdriver');
-            assert.equal(config.browsers.b2.automationProtocol, 'devtools');
+            assert.equal(config.browsers.b1.automationProtocol, WEBDRIVER_PROTOCOL);
+            assert.equal(config.browsers.b2.automationProtocol, DEVTOOLS_PROTOCOL);
         });
     });
 
