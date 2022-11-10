@@ -2,7 +2,7 @@
 
 const _ = require('lodash');
 
-const BrowserAgent = require('lib/core/browser-agent');
+const BrowserAgent = require('lib/runner/browser-agent');
 const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
 const WorkersRegistry = require('lib/utils/workers-registry');
 const logger = require('lib/utils/logger');
