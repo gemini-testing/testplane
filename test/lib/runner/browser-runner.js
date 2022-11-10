@@ -61,7 +61,7 @@ describe('runner/browser-runner', () => {
         sandbox.stub(SuiteMonitor.prototype, 'testRetry');
 
         const browserAgent = Object.create(BrowserAgent.prototype);
-        sandbox.stub(browserAgent, 'browserId').get(() => 'default-bro-id');
+        browserAgent.browserId = 'default-bro-id';
         sandbox.stub(BrowserAgent, 'create').returns(browserAgent);
 
         stubTestCollection_([Test.create({title: 'defaultTitle'})]);
