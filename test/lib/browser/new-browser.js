@@ -5,6 +5,7 @@ const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
 const history = require('lib/browser/history');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
+const {WEBDRIVER_PROTOCOL} = require('lib/constants/config');
 
 describe('NewBrowser', () => {
     const sandbox = sinon.sandbox.create();
@@ -29,7 +30,7 @@ describe('NewBrowser', () => {
                 path: '/wd/hub',
                 queryParams: {query: 'value'},
                 capabilities: {browserName: 'browser', version: '1.0'},
-                automationProtocol: 'webdriver',
+                automationProtocol: WEBDRIVER_PROTOCOL,
                 waitforTimeout: 100,
                 waitforInterval: 50,
                 logLevel: 'trace',
