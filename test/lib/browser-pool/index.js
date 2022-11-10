@@ -1,141 +1,66 @@
 'use strict';
 
-const CoreBrowserPool = require('lib/core/browser-pool');
+const BasicPool = require('lib/browser-pool/basic-pool');
+const LimitedPool = require('lib/browser-pool/limited-pool');
+const PerBrowserLimitedPool = require('lib/browser-pool/per-browser-limited-pool');
+const pool = require('lib/browser-pool');
 const _ = require('lodash');
-const Promise = require('bluebird');
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const BrowserPool = require('../../../lib/browser-pool');
-const Browser = require('../../../lib/browser/new-browser');
-const Events = require('../../../lib/constants/runner-events');
-const makeConfigStub = require('../../utils').makeConfigStub;
+const {EventEmitter} = require('events');
+const {makeConfigStub} = require('../../utils');
 
 describe('browser-pool', () => {
     const sandbox = sinon.sandbox.create();
 
-    beforeEach(() => {
-        sandbox.stub(CoreBrowserPool, 'create');
-        sandbox.stub(Browser, 'create');
-    });
-
     afterEach(() => sandbox.restore());
 
-    describe('create', () => {
-        it('should create browser pool', () => {
-            BrowserPool.create();
-
-            assert.calledOnce(CoreBrowserPool.create);
-            assert.calledWithMatch(CoreBrowserPool.create, sinon.match.any, {logNamespace: 'hermione'});
+    const mkPool_ = (opts) => {
+        opts = _.defaults(opts, {
+            emitter: new EventEmitter(),
+            config: makeConfigStub()
         });
 
-        it('should wrap browser pool into "q" promises', () => {
-            CoreBrowserPool.create.returns({foo: 'bar'});
+        return pool.create(opts.config, opts.emitter);
+    };
 
-            assert.deepEqual(BrowserPool.create(), {foo: 'bar'});
-        });
+    it('should create basic pool', () => {
+        const emitter = new EventEmitter();
+        const config = makeConfigStub();
 
-        describe('browser manager', () => {
-            const getBrowserManager = () => CoreBrowserPool.create.lastCall.args[0];
-            const stubBrowser = ({id, sessionId, publicAPI} = {}) => {
-                return {
-                    id,
-                    sessionId,
-                    publicAPI,
-                    init: sandbox.stub(),
-                    quit: sandbox.stub()
-                };
-            };
+        sandbox.spy(BasicPool, 'create');
 
-            it('should create a browser', () => {
-                Browser.create.withArgs({some: 'config'}, 'bro').returns({some: 'browser'});
+        pool.create(config, emitter);
 
-                BrowserPool.create({some: 'config'});
+        assert.calledOnce(BasicPool.create);
+        assert.calledWith(BasicPool.create, config, emitter);
+    });
 
-                assert.deepEqual(getBrowserManager().create('bro'), {some: 'browser'});
-            });
+    it('should create pool according to perBrowserLimit by default', () => {
+        const browserPool = mkPool_();
 
-            it('should start a browser', () => {
-                BrowserPool.create();
+        assert.instanceOf(browserPool, PerBrowserLimitedPool);
+    });
 
-                const browser = stubBrowser();
-                browser.init.resolves({session: 'id'});
+    it('should create pool according to parallelLimit if that option exist', () => {
+        const config = makeConfigStub({system: {parallelLimit: 10}});
 
-                assert.becomes(getBrowserManager().start(browser), {session: 'id'});
-            });
+        const browserPool = mkPool_({config});
 
-            _.forEach({onStart: Events.SESSION_START, onQuit: Events.SESSION_END}, (event, method) => {
-                describe(`${method}`, () => {
-                    it(`should emit browser event "${event}"`, () => {
-                        const emitter = new AsyncEmitter();
-                        const onEvent = sandbox.spy();
+        assert.instanceOf(browserPool, LimitedPool);
+    });
 
-                        BrowserPool.create(null, emitter);
+    it('should ignore parallelLimit if its value is Infinity', () => {
+        const config = makeConfigStub({system: {parallelLimit: Infinity}});
 
-                        const BrowserManager = getBrowserManager();
+        const browserPool = mkPool_({config});
 
-                        emitter.on(event, onEvent);
+        assert.instanceOf(browserPool, PerBrowserLimitedPool);
+    });
 
-                        const browser = stubBrowser({
-                            id: 'bro',
-                            sessionId: '100500',
-                            publicAPI: {public: 'api'}
-                        });
+    it('should ignore parallelLimit if its value is not set', () => {
+        const config = makeConfigStub({system: {}});
 
-                        return BrowserManager[method](browser)
-                            .then(() => assert.calledOnceWith(onEvent, {public: 'api'}, {browserId: 'bro', sessionId: '100500'}));
-                    });
+        const browserPool = mkPool_({config});
 
-                    it('should wait all async listeners', () => {
-                        const emitter = new AsyncEmitter();
-                        const onEvent = sandbox.stub().callsFake(() => Promise.delay(1).then(() => ({foo: 'bar'})));
-
-                        BrowserPool.create(null, emitter);
-
-                        const BrowserManager = getBrowserManager();
-
-                        emitter.on(event, onEvent);
-
-                        return assert.becomes(BrowserManager[method](stubBrowser()), [{foo: 'bar'}]);
-                    });
-                });
-            });
-
-            it('should quit a browser', () => {
-                const browser = stubBrowser();
-
-                browser.quit.resolves({foo: 'bar'});
-
-                BrowserPool.create();
-
-                assert.becomes(getBrowserManager().quit(browser), {foo: 'bar'});
-            });
-        });
-
-        describe('adapter config', () => {
-            const getAdapterConfig = () => CoreBrowserPool.create.lastCall.args[1].config;
-
-            it('should return config for a browser', () => {
-                const configStub = makeConfigStub({
-                    browsers: ['bro'],
-                    sessionsPerBrowser: 777,
-                    testsPerSession: 999
-                });
-
-                BrowserPool.create(configStub);
-
-                assert.deepEqual(getAdapterConfig().forBrowser('bro'), {parallelLimit: 777, sessionUseLimit: 999});
-            });
-
-            it('should return all browser ids', () => {
-                BrowserPool.create(makeConfigStub({browsers: ['bro1', 'bro2']}));
-
-                assert.deepEqual(getAdapterConfig().getBrowserIds(), ['bro1', 'bro2']);
-            });
-
-            it('should return a system section of a config', () => {
-                BrowserPool.create(makeConfigStub({system: {foo: 'bar'}}));
-
-                assert.deepEqual(getAdapterConfig().system, {foo: 'bar'});
-            });
-        });
+        assert.instanceOf(browserPool, PerBrowserLimitedPool);
     });
 });

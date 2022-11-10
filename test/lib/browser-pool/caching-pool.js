@@ -1,8 +1,8 @@
 'use strict';
 
 const Promise = require('bluebird');
-const Pool = require('lib/core/browser-pool/caching-pool');
-const {buildCompositeBrowserId} = require('lib/core/browser-pool/utils');
+const Pool = require('lib/browser-pool/caching-pool');
+const {buildCompositeBrowserId} = require('lib/browser-pool/utils');
 const stubBrowser = require('./util').stubBrowser;
 
 describe('browser-pool/caching-pool', () => {
@@ -15,7 +15,7 @@ describe('browser-pool/caching-pool', () => {
             getBrowserIds: sinon.stub().returns(Object.keys(limits)),
             forBrowser: (id) => {
                 return {
-                    sessionUseLimit: limits[id]
+                    testsPerSession: limits[id]
                 };
             }
         };
