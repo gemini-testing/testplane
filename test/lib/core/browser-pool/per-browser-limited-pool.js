@@ -29,8 +29,8 @@ describe('browser-pool/per-browser-limited-pool', () => {
     describe('constructor', () => {
         it('should create LimitedPool for each browser', () => {
             const config = mkConfigStub_({
-                bro1: {parallelLimit: 1},
-                bro2: {parallelLimit: 2}
+                bro1: {sessionsPerBrowser: 1},
+                bro2: {sessionsPerBrowser: 2}
             });
             const underlyingPool = sinon.createStubInstance(BasicPool);
 
@@ -45,8 +45,8 @@ describe('browser-pool/per-browser-limited-pool', () => {
     describe('getBrowser', () => {
         it('should redirect request to corresponding pool', () => {
             const config = mkConfigStub_({
-                bro1: {parallelLimit: 1},
-                bro2: {parallelLimit: 2}
+                bro1: {sessionsPerBrowser: 1},
+                bro2: {sessionsPerBrowser: 2}
             });
 
             const bro1Pool = sinon.createStubInstance(BasicPool);
@@ -69,7 +69,7 @@ describe('browser-pool/per-browser-limited-pool', () => {
             LimitedPool.create.returns(pool);
 
             const config = mkConfigStub_({
-                bro: {parallelLimit: 1}
+                bro: {sessionsPerBrowser: 1}
             });
             const perBrowserLimitedPool = makePool_({config});
 
@@ -82,8 +82,8 @@ describe('browser-pool/per-browser-limited-pool', () => {
     describe('freeBrowser', () => {
         it('should redirect request to corresponding pool', () => {
             const config = mkConfigStub_({
-                bro1: {parallelLimit: 1},
-                bro2: {parallelLimit: 2}
+                bro1: {sessionsPerBrowser: 1},
+                bro2: {sessionsPerBrowser: 2}
             });
 
             const bro1Pool = sinon.createStubInstance(BasicPool);
@@ -107,8 +107,8 @@ describe('browser-pool/per-browser-limited-pool', () => {
     describe('cancel', () => {
         it('should cancel all underlying pools', () => {
             const config = mkConfigStub_({
-                bro1: {parallelLimit: 1},
-                bro2: {parallelLimit: 2}
+                bro1: {sessionsPerBrowser: 1},
+                bro2: {sessionsPerBrowser: 2}
             });
 
             const bro1Pool = sinon.createStubInstance(BasicPool);

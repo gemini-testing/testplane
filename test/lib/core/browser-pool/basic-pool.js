@@ -1,272 +1,245 @@
 'use strict';
 
+const AsyncEmitter = require('lib/core/events/async-emitter');
 const BasicPool = require('lib/core/browser-pool/basic-pool');
+const Browser = require('lib/browser/new-browser');
 const CancelledError = require('lib/core/errors/cancelled-error');
-const stubBrowser = require('./util').stubBrowser;
+const Events = require('lib/constants/runner-events');
+const {stubBrowser} = require('./util');
 const _ = require('lodash');
 const Promise = require('bluebird');
+const {makeConfigStub} = require('../../../utils');
 
 describe('browser-pool/basic-pool', () => {
     const sandbox = sinon.sandbox.create();
 
-    const stubBrowserManager_ = () => {
-        return {
-            create: sinon.stub().callsFake((id) => stubBrowser(id)),
-            start: sinon.stub().returns(Promise.resolve()),
-            onStart: sinon.stub().returns(Promise.resolve()),
-            onQuit: sinon.stub().returns(Promise.resolve()),
-            quit: sinon.stub().returns(Promise.resolve())
-        };
-    };
-
     const mkPool_ = (opts) => {
         opts = _.defaults(opts, {
-            browserManager: stubBrowserManager_()
+            config: makeConfigStub(),
+            emitter: new AsyncEmitter()
         });
 
-        return BasicPool.create(opts.browserManager, {});
+        return BasicPool.create(opts.config, opts.emitter);
     };
+
+    beforeEach(() => {
+        sandbox.stub(Browser, 'create').returns(stubBrowser());
+    });
 
     afterEach(() => sandbox.restore());
 
-    it('should create new browser when requested', () => {
-        const browserManager = stubBrowserManager_();
-        const pool = mkPool_({browserManager});
+    it('should create new browser when requested', async () => {
+        const config = makeConfigStub();
 
-        return pool.getBrowser('broId')
-            .then(() => assert.calledWith(browserManager.create, 'broId'));
+        await mkPool_({config}).getBrowser('broId');
+
+        assert.calledWith(Browser.create, config, 'broId');
     });
 
-    it('should create new browser with specified version when requested', () => {
-        const browserManager = stubBrowserManager_();
-        const pool = mkPool_({browserManager});
+    it('should create new browser with specified version when requested', async () => {
+        await mkPool_().getBrowser('broId', {version: '1.0'});
 
-        return pool.getBrowser('broId', {version: '1.0'})
-            .then(() => assert.calledWith(browserManager.create, 'broId', '1.0'));
+        assert.calledWith(Browser.create, sinon.match.any, 'broId', '1.0');
     });
 
-    it('should launch a browser', () => {
+    it('should init browser', async () => {
         const browser = stubBrowser();
-        const browserManager = stubBrowserManager_();
-        browserManager.create.returns(browser);
-        const pool = mkPool_({browserManager});
+        Browser.create.returns(browser);
 
-        return pool.getBrowser()
-            .then(() => {
-                assert.calledOnceWith(browserManager.start);
-                assert.calledWith(browserManager.start, browser);
-            });
+        await mkPool_().getBrowser();
+
+        assert.calledOnce(browser.init);
     });
 
     it('should not finalize browser if failed to start it', async () => {
         const publicAPI = null;
         const browser = stubBrowser('some-id', 'some-version', publicAPI);
+        browser.init.rejects(new Error('foo'));
+        Browser.create.returns(browser);
 
-        const browserManager = stubBrowserManager_();
-        browserManager.create.returns(browser);
-        browserManager.start.rejects();
+        const pool = mkPool_();
 
-        const pool = mkPool_({browserManager});
+        await assert.isRejected(pool.getBrowser(), 'foo');
 
-        await assert.isRejected(pool.getBrowser());
-
-        assert.notCalled(browserManager.quit);
+        assert.notCalled(browser.quit);
     });
 
     it('should finalize browser if failed after start it', async () => {
         const publicAPI = {};
         const browser = stubBrowser('some-id', 'some-version', publicAPI);
+        browser.init.resolves();
+        Browser.create.returns(browser);
 
-        const browserManager = stubBrowserManager_();
-        browserManager.create.returns(browser);
-        browserManager.onStart.rejects();
+        const emitter = new AsyncEmitter()
+            .on(Events.SESSION_START, () => Promise.reject(new Error('foo')));
 
-        const pool = mkPool_({browserManager});
+        const pool = mkPool_({emitter});
 
-        await assert.isRejected(pool.getBrowser());
+        await assert.isRejected(pool.getBrowser(), 'foo');
 
-        assert.calledOnceWith(browserManager.quit, browser);
+        assert.calledOnce(browser.quit);
     });
 
-    describe('onStart', () => {
-        it('should be called after browser start', () => {
+    describe('SESSION_START event', () => {
+        it('should be emitted after browser init', async () => {
             const browser = stubBrowser();
+            Browser.create.returns(browser);
 
-            const browserManager = stubBrowserManager_();
-            browserManager.create.returns(browser);
+            const onSessionStart = sinon.stub().named('onSessionStart');
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_START, onSessionStart);
 
-            const pool = mkPool_({browserManager});
+            await mkPool_({emitter}).getBrowser();
 
-            return pool.getBrowser()
-                .then(() => {
-                    assert.calledOnce(browserManager.onStart);
-                    assert.calledWith(browserManager.onStart, browser);
-                    assert.callOrder(browserManager.start, browserManager.onStart);
-                });
+            assert.callOrder(browser.init, onSessionStart);
         });
 
-        it('handler should be waited by pool', () => {
+        it('handler should be waited by pool', async () => {
             const browser = stubBrowser();
-            const afterSessionStart = sinon.spy();
+            Browser.create.returns(browser);
 
-            const browserManager = stubBrowserManager_();
-            browserManager.create.returns(browser);
-            browserManager.onStart.callsFake(() => Promise.delay(10).then(afterSessionStart));
+            const afterSessionStart = sinon.stub().named('afterSessionStart');
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_START, () => Promise.delay(1).then(afterSessionStart));
 
-            const pool = mkPool_({browserManager});
+            await mkPool_({emitter}).getBrowser();
 
-            return pool.getBrowser()
-                .then(() => assert.callOrder(afterSessionStart, browser.reset));
+            assert.callOrder(afterSessionStart, browser.reset);
         });
 
-        it('handler fail should fail browser request', () => {
-            const browserManager = stubBrowserManager_();
-            browserManager.onStart.rejects(new Error('some-error'));
+        it('handler fail should fail browser request', async () => {
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_START, () => Promise.reject(new Error('foo')));
 
-            const pool = mkPool_({browserManager});
+            const pool = mkPool_({emitter});
 
-            return assert.isRejected(pool.getBrowser(), 'some-error');
+            await assert.isRejected(pool.getBrowser(), 'foo');
         });
 
-        it('on handler fail browser should be finalized', () => {
+        it('on handler fail browser should be finalized', async () => {
             const browser = stubBrowser();
+            Browser.create.returns(browser);
 
-            const browserManager = stubBrowserManager_();
-            browserManager.create.returns(browser);
-            browserManager.onStart.rejects(new Error());
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_START, () => Promise.reject(new Error()));
 
-            const pool = mkPool_({browserManager});
+            const pool = mkPool_({emitter});
 
-            return assert.isRejected(pool.getBrowser())
-                .then(() => {
-                    assert.calledOnce(browserManager.quit);
-                    assert.calledWith(browserManager.quit, browser);
-                });
+            await assert.isRejected(pool.getBrowser());
+
+            assert.calledOnce(browser.quit);
         });
     });
 
-    it('should quit a browser when freed', () => {
-        const browser = stubBrowser();
+    it('should quit a browser when freed', async () => {
+        const pool = mkPool_();
+        const browser = await pool.getBrowser();
 
-        const browserManager = stubBrowserManager_();
-        browserManager.create.returns(browser);
+        await pool.freeBrowser(browser);
 
-        const pool = mkPool_({browserManager});
-
-        return pool.getBrowser()
-            .then((browser) => pool.freeBrowser(browser))
-            .then(() => {
-                assert.calledOnce(browserManager.quit);
-                assert.calledWith(browserManager.quit, browser);
-            });
+        assert.calledOnce(browser.quit);
     });
 
-    describe('onQuit', () => {
-        it('should be emitted before browser quit', () => {
-            const browser = stubBrowser();
+    describe('SESSION_END event', () => {
+        it('should be emitted before browser quit', async () => {
+            const onSessionEnd = sinon.stub().named('onSessionEnd');
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_END, onSessionEnd);
 
-            const browserManager = stubBrowserManager_();
-            browserManager.create.returns(browser);
+            const pool = mkPool_({emitter});
+            const browser = await pool.getBrowser();
 
-            const pool = mkPool_({browserManager});
+            await pool.freeBrowser(browser);
 
-            return pool.getBrowser()
-                .then((browser) => pool.freeBrowser(browser))
-                .then(() => {
-                    assert.calledOnce(browserManager.onQuit);
-                    assert.calledWith(browserManager.onQuit, browser);
-                    assert.callOrder(browserManager.onQuit, browserManager.quit);
-                });
+            assert.callOrder(onSessionEnd, browser.quit);
         });
 
-        it('handler should be waited before actual quit', () => {
-            const beforeSessionQuit = sinon.spy();
+        it('handler should be waited before actual quit', async () => {
+            const afterSessionEnd = sinon.stub().named('afterSessionEnd');
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_END, () => Promise.delay(1).then(afterSessionEnd));
 
-            const browserManager = stubBrowserManager_();
-            browserManager.onQuit.callsFake(() => Promise.delay(10).then(beforeSessionQuit));
+            const pool = mkPool_({emitter});
+            const browser = await pool.getBrowser();
 
-            const pool = mkPool_({browserManager});
+            await pool.freeBrowser(browser);
 
-            return pool.getBrowser()
-                .then((browser) => pool.freeBrowser(browser))
-                .then(() => assert.callOrder(beforeSessionQuit, browserManager.quit));
+            assert.callOrder(afterSessionEnd, browser.quit);
         });
 
-        it('handler fail should not prevent browser from quit', () => {
-            const browserManager = stubBrowserManager_();
-            browserManager.onQuit.rejects(new Error());
+        it('handler fail should not prevent browser from quit', async () => {
+            const emitter = new AsyncEmitter()
+                .on(Events.SESSION_END, () => Promise.reject(new Error()));
 
-            const pool = mkPool_({browserManager});
+            const pool = mkPool_({emitter});
+            const browser = await pool.getBrowser();
 
-            return pool.getBrowser()
-                .then((browser) => pool.freeBrowser(browser))
-                .then(() => assert.calledOnce(browserManager.quit));
+            await pool.freeBrowser(browser);
+
+            assert.calledOnce(browser.quit);
         });
     });
 
     describe('cancel', () => {
-        it('should quit all browsers on cancel', () => {
-            const browserManager = stubBrowserManager_();
-            const pool = mkPool_({browserManager});
+        it('should quit all browsers on cancel', async () => {
+            const pool = mkPool_();
 
-            return Promise
-                .all([
-                    pool.getBrowser('bro1'),
-                    pool.getBrowser('bro2')
-                ])
-                .spread((bro1, bro2) => {
-                    pool.cancel();
+            const [bro1, bro2] = await Promise.all([
+                pool.getBrowser('bro1'),
+                pool.getBrowser('bro2')
+            ]);
 
-                    assert.calledTwice(browserManager.quit);
-                    assert.calledWith(browserManager.quit, bro1);
-                    assert.calledWith(browserManager.quit, bro2);
-                });
+            pool.cancel();
+
+            assert.calledOnce(bro1.quit);
+            assert.calledOnce(bro2.quit);
         });
 
-        it('should quit all browser with the same id on cancel', () => {
-            const browserManager = stubBrowserManager_();
-            const pool = mkPool_({browserManager});
+        it('should quit all browser with the same id on cancel', async () => {
+            const pool = mkPool_();
 
-            return Promise
-                .all([
-                    pool.getBrowser('bro'),
-                    pool.getBrowser('bro')
-                ])
-                .spread((bro1, bro2) => {
-                    pool.cancel();
+            const [bro1, bro2] = await Promise.all([
+                pool.getBrowser('bro'),
+                pool.getBrowser('bro')
+            ]);
 
-                    assert.calledTwice(browserManager.quit);
-                    assert.calledWith(browserManager.quit, bro1);
-                    assert.calledWith(browserManager.quit, bro2);
-                });
+            pool.cancel();
+
+            assert.calledOnce(bro1.quit);
+            assert.calledOnce(bro2.quit);
         });
 
-        it('should reject all subsequent reqests for browser', () => {
+        it('should reject all subsequent reqests for browser', async () => {
             const pool = mkPool_();
 
             pool.cancel();
 
-            return assert.isRejected(pool.getBrowser(), CancelledError);
+            await assert.isRejected(pool.getBrowser(), CancelledError);
         });
 
-        it('should quit browser once if it was launched after cancel', () => {
-            const browserManager = stubBrowserManager_();
-            const pool = mkPool_({browserManager});
+        it('should quit browser once if it was launched after cancel', async () => {
+            const browser = stubBrowser();
+            Browser.create.returns(browser);
+
+            const emitter = new AsyncEmitter();
+            const pool = mkPool_({emitter});
+
+            emitter.on(Events.SESSION_START, () => pool.cancel());
+
+            await assert.isRejected(pool.getBrowser());
+
+            assert.calledOnce(browser.quit);
+        });
+
+        it('should quit browsers only once', async () => {
+            const pool = mkPool_();
+
+            const browser = await pool.getBrowser();
 
             pool.cancel();
+            pool.cancel();
 
-            return pool.getBrowser()
-                .catch(() => assert.calledOnce(browserManager.quit));
-        });
-
-        it('should quit browsers only once', () => {
-            const browserManager = stubBrowserManager_();
-            const pool = mkPool_({browserManager});
-
-            return pool.getBrowser()
-                .then(() => pool.cancel())
-                .then(() => pool.cancel())
-                .then(() => assert.calledOnce(browserManager.quit));
+            assert.calledOnce(browser.quit);
         });
     });
 });

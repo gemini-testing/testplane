@@ -15,7 +15,7 @@ describe('browser-pool/caching-pool', () => {
             getBrowserIds: sinon.stub().returns(Object.keys(limits)),
             forBrowser: (id) => {
                 return {
-                    sessionUseLimit: limits[id]
+                    testsPerSession: limits[id]
                 };
             }
         };

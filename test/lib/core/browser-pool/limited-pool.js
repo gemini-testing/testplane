@@ -11,7 +11,7 @@ describe('browser-pool/limited-pool', () => {
 
     const makePool_ = ({limit = 1, isSpecificBrowserLimiter = true} = {}) => new LimitedPool(
         underlyingPool,
-        {limit, isSpecificBrowserLimiter, logNamespace: 'hermione'}
+        {limit, isSpecificBrowserLimiter}
     );
 
     beforeEach(() => {

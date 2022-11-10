@@ -1,13 +1,13 @@
 'use strict';
 
-const Promise = require('bluebird');
-
 exports.stubBrowser = function(id, version, publicAPI = {}) {
     return {
         id: id || 'default-id',
         sessionId: process.hrtime().join('_'), // must be unique
-        reset: sinon.stub().returns(Promise.resolve()),
+        init: sinon.stub().resolves(),
+        reset: sinon.stub().resolves(),
         toPrint: sinon.stub().returns(id),
+        quit: sinon.stub(),
         publicAPI,
         version
     };

@@ -5,38 +5,33 @@ const LimitedPool = require('lib/core/browser-pool/limited-pool');
 const PerBrowserLimitedPool = require('lib/core/browser-pool/per-browser-limited-pool');
 const pool = require('lib/core/browser-pool');
 const _ = require('lodash');
+const {EventEmitter} = require('events');
+const {makeConfigStub} = require('../../../utils');
 
 describe('browser-pool', () => {
     const sandbox = sinon.sandbox.create();
 
     afterEach(() => sandbox.restore());
 
-    const mkConfig_ = (opts) => {
-        return {
-            system: opts && opts.system || {},
-            forBrowser: sinon.stub().returns({id: 'id'}),
-            getBrowserIds: sinon.stub().returns(['id'])
-        };
-    };
-
     const mkPool_ = (opts) => {
         opts = _.defaults(opts, {
-            browserManager: {},
-            config: mkConfig_()
+            emitter: new EventEmitter(),
+            config: makeConfigStub()
         });
 
-        return pool.create(opts.browserManager, opts);
+        return pool.create(opts.config, opts.emitter);
     };
 
     it('should create basic pool', () => {
-        const browserManager = {foo: 'bar'};
-        const opts = {config: mkConfig_()};
+        const emitter = new EventEmitter();
+        const config = makeConfigStub();
+
         sandbox.spy(BasicPool, 'create');
 
-        pool.create(browserManager, opts);
+        pool.create(config, emitter);
 
         assert.calledOnce(BasicPool.create);
-        assert.calledWith(BasicPool.create, browserManager, opts);
+        assert.calledWith(BasicPool.create, config, emitter);
     });
 
     it('should create pool according to perBrowserLimit by default', () => {
@@ -46,7 +41,7 @@ describe('browser-pool', () => {
     });
 
     it('should create pool according to parallelLimit if that option exist', () => {
-        const config = mkConfig_({system: {parallelLimit: 10}});
+        const config = makeConfigStub({system: {parallelLimit: 10}});
 
         const browserPool = mkPool_({config});
 
@@ -54,7 +49,7 @@ describe('browser-pool', () => {
     });
 
     it('should ignore parallelLimit if its value is Infinity', () => {
-        const config = mkConfig_({system: {parallelLimit: Infinity}});
+        const config = makeConfigStub({system: {parallelLimit: Infinity}});
 
         const browserPool = mkPool_({config});
 
@@ -62,7 +57,7 @@ describe('browser-pool', () => {
     });
 
     it('should ignore parallelLimit if its value is not set', () => {
-        const config = mkConfig_({system: {}});
+        const config = makeConfigStub({system: {}});
 
         const browserPool = mkPool_({config});
 
