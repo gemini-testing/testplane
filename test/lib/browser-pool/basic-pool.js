@@ -1,14 +1,14 @@
 'use strict';
 
 const AsyncEmitter = require('lib/core/events/async-emitter');
-const BasicPool = require('lib/core/browser-pool/basic-pool');
+const BasicPool = require('lib/browser-pool/basic-pool');
 const Browser = require('lib/browser/new-browser');
 const CancelledError = require('lib/core/errors/cancelled-error');
 const Events = require('lib/constants/runner-events');
 const {stubBrowser} = require('./util');
 const _ = require('lodash');
 const Promise = require('bluebird');
-const {makeConfigStub} = require('../../../utils');
+const {makeConfigStub} = require('../../utils');
 
 describe('browser-pool/basic-pool', () => {
     const sandbox = sinon.sandbox.create();

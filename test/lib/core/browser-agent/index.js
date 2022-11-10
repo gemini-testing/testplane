@@ -2,7 +2,7 @@
 
 const Promise = require('bluebird');
 const BrowserAgent = require('lib/core/browser-agent');
-const BasicPool = require('lib/core/browser-pool/basic-pool');
+const BasicPool = require('lib/browser-pool/basic-pool');
 
 describe('browser-agent', () => {
     const sandbox = sinon.sandbox.create();
