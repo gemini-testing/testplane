@@ -23,6 +23,7 @@ function makeConfigStub(opts = {}, DEFAULT_BROWSER_NAME) {
         resetCursor: true,
         system: {
             mochaOpts: {},
+            expectOpts: {},
             patternsOnReject: []
         },
         sets: {}

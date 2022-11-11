@@ -411,6 +411,7 @@ declare namespace Hermione {
         compareOpts: CompareOptsConfig;
         buildDiffOpts: BuildDiffOptsConfig;
         assertViewOpts: AssertViewOptsConfig;
+        expectOpts: ExpectOptsConfig;
         meta: { [name: string]: unknown };
         windowSize: string | { width: number, height: number } | null;
         orientation: 'landscape' | 'portrait' | null;
@@ -459,6 +460,11 @@ declare namespace Hermione {
          * @defaultValue `false`
          */
         allowViewportOverflow: boolean;
+    };
+
+    export interface ExpectOptsConfig {
+        wait: number;
+        interval: number;
     };
 
     export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {

@@ -25,9 +25,10 @@ describe('worker/runner/simple-test-parser', () => {
 
     describe('constructor', () => {
         it('should prepare test parser', () => {
-            mkSimpleParser_();
+            const config = makeConfigStub();
+            mkSimpleParser_({config});
 
-            assert.calledOnce(TestParser.prepare);
+            assert.calledOnceWith(TestParser.prepare, config);
         });
 
         it('should not create test parser', () => {

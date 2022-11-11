@@ -178,7 +178,7 @@ describe('test-reader', () => {
             const config = makeConfigStub({browsers: ['bro1', 'bro2']});
             await readTests_({config: config});
 
-            assert.calledOnce(TestParser.prepare);
+            assert.calledOnceWith(TestParser.prepare, config);
             assert.callOrder(TestParser.prepare, TestParser.create);
         });
 

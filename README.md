@@ -5,12 +5,12 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-
 - [Why you should choose hermione](#why-you-should-choose-hermione)
   - [Easy to use](#easy-to-use)
   - [Runs tests in parallel](#runs-tests-in-parallel)
   - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
   - [Extensible](#extensible)
+  - [Built-in assert library](#built-in-assert-library)
   - [Retries failed tests](#retries-failed-tests)
   - [Executes separate tests](#executes-separate-tests)
   - [Skips tests in specific browsers](#skips-tests-in-specific-browsers)
@@ -87,6 +87,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
+    - [expectOpts](#expectopts)
     - [ctx](#ctx)
     - [patternsOnReject](#patternsonreject)
     - [workers](#workers)
@@ -138,6 +139,9 @@ Running of too many tests in parallel can lead to the overloading of the main pr
 With `hermione` this is very simple and straightforward. You can add any number of custom commands in the hermione config and use them as `browser.myCustomCommand` in tests.
 
 Moreover, `hermione` provides plugins that work like hooks. They allow the developer to prepare the testing environment and react properly to test execution events.
+
+### Built-in assert library
+when writing integration tests, we need to check for various conditions, such as that a button element has certain attributes. So hermione provides global `expect` variable that gives you access to a number of `matchers` that let you validate different things on the browser, an element or mock object. More about using `expect` and its API you can find [here](https://webdriver.io/docs/api/expect-webdriverio/).
 
 ### Retries failed tests
 Integration tests use a dynamic environment with a lot of dependencies, where any of them could be unstable from time to time. As a result, integration tests turn red randomly, which makes them imprecise. This spoils the entire testing process.
@@ -1014,7 +1018,7 @@ Allows to intercept [HTTP response object](https://github.com/sindresorhus/got#r
 
 ```javascript
 (Response, RequestOptions) => Response
-````
+```
 
 ####  strictSSL
 Whether it does require SSL certificate to be valid. Default value is `null` (it means that will be used [default value from wdio](https://webdriver.io/docs/options/#strictssl)).
@@ -1037,11 +1041,23 @@ Ability to run headless browser in cloud service. Default value is `null`.
 Turn webdriver debug mode on. Default value is `false`.
 
 #### mochaOpts
+
 Extra options for `mocha` which are passed to `mocha.setup`. See [Mocha](https://mochajs.org/) documentation for the list of options. Default values are:
 ```javascript
 mochaOpts: {
     slow: 10000, // If test execution time is greater than this value, then the test is slow.
     timeout: 60000 // timeout for test execution.
+}
+```
+
+#### expectOpts
+
+Options for [expect-webdriverio](https://webdriver.io/docs/api/expect-webdriverio/) that allow you to change default wait timeout and interval between attempts. Default values are:
+
+```javascript
+expectOpts: {
+    wait: 3000, // wait timeout for expectation to succeed
+    interval: 100 // interval between attempts
 }
 ```
 

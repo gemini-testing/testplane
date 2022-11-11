@@ -43,46 +43,51 @@ describe('config options', () => {
             });
         });
 
-        describe('mochaOpts', () => {
-            it('should throw error if mochaOpts is not a null or object', () => {
-                const readConfig = _.set({}, 'system.mochaOpts', ['Array']);
+        [
+            {optionName: 'mochaOpts', subOptionName: 'slow'},
+            {optionName: 'expectOpts', subOptionName: 'wait'}
+        ].forEach(({optionName, subOptionName}) => {
+            describe(`${optionName}`, () => {
+                it('should throw error if option is not a null or object', () => {
+                    const readConfig = _.set({}, `system.${optionName}`, ['Array']);
 
-                Config.read.returns(readConfig);
+                    Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, '"mochaOpts" must be an object');
-            });
-
-            it('should set default mochaOpts option if it does not set in config file', () => {
-                const config = createConfig();
-
-                assert.deepEqual(config.system.mochaOpts, defaults.mochaOpts);
-            });
-
-            it('should override mochaOpts option', () => {
-                const readConfig = _.set({}, 'system.mochaOpts.grep', /test/);
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.deepEqual(config.system.mochaOpts.grep, /test/);
-            });
-
-            it('should parse mochaOpts option from environment', () => {
-                const result = parse_({
-                    options: {system: {mochaOpts: {}}},
-                    env: {'hermione_system_mocha_opts': '{"some": "opts"}'}
+                    assert.throws(() => createConfig(), Error, `"${optionName}" must be an object`);
                 });
 
-                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
-            });
+                it('should set default option if it does not set in config file', () => {
+                    const config = createConfig();
 
-            it('should parse mochaOpts options from cli', () => {
-                const result = parse_({
-                    options: {system: {mochaOpts: {}}},
-                    argv: ['--system-mocha-opts', '{"some": "opts"}']
+                    assert.deepEqual(config.system[optionName], defaults[optionName]);
                 });
 
-                assert.deepEqual(result.system.mochaOpts, {some: 'opts'});
+                it('should override option', () => {
+                    const readConfig = _.set({}, `system.${optionName}.${subOptionName}`, 100500);
+                    Config.read.returns(readConfig);
+
+                    const config = createConfig();
+
+                    assert.deepEqual(config.system[optionName][subOptionName], 100500);
+                });
+
+                it('should parse option from environment', () => {
+                    const result = parse_({
+                        options: {system: {[optionName]: {}}},
+                        env: {[`hermione_system_${_.snakeCase(optionName)}`]: '{"some": "opts"}'}
+                    });
+
+                    assert.deepEqual(result.system[optionName], {some: 'opts'});
+                });
+
+                it('should parse option from cli', () => {
+                    const result = parse_({
+                        options: {system: {[optionName]: {}}},
+                        argv: [`--system-${_.kebabCase(optionName)}`, '{"some": "opts"}']
+                    });
+
+                    assert.deepEqual(result.system[optionName], {some: 'opts'});
+                });
             });
         });
 
