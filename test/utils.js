@@ -71,6 +71,7 @@ function makeSuite(opts = {}) {
 
 function makeTest(opts = {}) {
     return _.defaults(opts, {
+        id: 'some-default-id',
         parent: makeSuite(),
         title: 'default-test',
         browserId: 'yabro',
