@@ -3,7 +3,7 @@
 const fs = require('fs');
 const proxyquire = require('proxyquire');
 
-describe('TestSet', () => {
+describe('test-reader/sets-builder/test-set', () => {
     const sandbox = sinon.sandbox.create();
     let TestSet, globExtraStub;
 
@@ -11,7 +11,7 @@ describe('TestSet', () => {
         globExtraStub = {
             expandPaths: sinon.stub()
         };
-        TestSet = proxyquire('lib/core/sets-builder/test-set', {
+        TestSet = proxyquire('lib/test-reader/sets-builder/test-set', {
             'glob-extra': globExtraStub
         });
     });
