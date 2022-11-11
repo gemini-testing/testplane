@@ -1,9 +1,9 @@
 'use strict';
 
-const SetCollection = require('lib/core/sets-builder/set-collection');
-const TestSet = require('lib/core/sets-builder/test-set');
+const SetCollection = require('lib/test-reader/sets-builder/set-collection');
+const TestSet = require('lib/test-reader/sets-builder/test-set');
 
-describe('set-collection', () => {
+describe('test-reader/sets-builder/set-collection', () => {
     const sandbox = sinon.sandbox.create();
 
     afterEach(() => sandbox.restore());

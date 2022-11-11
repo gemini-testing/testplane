@@ -1,21 +1,20 @@
 'use strict';
 
-const Promise = require('bluebird');
 const globExtra = require('glob-extra');
 const fs = require('fs');
-const SetBuilder = require('lib/core/sets-builder');
-const SetCollection = require('lib/core/sets-builder/set-collection');
-const TestSet = require('lib/core/sets-builder/test-set');
+const SetBuilder = require('lib/test-reader/sets-builder');
+const SetCollection = require('lib/test-reader/sets-builder/set-collection');
+const TestSet = require('lib/test-reader/sets-builder/test-set');
 
-describe('sets-builder', () => {
+describe('test-reader/sets-builder', () => {
     const sandbox = sinon.sandbox.create();
     const setCollection = sinon.createStubInstance(SetCollection);
 
     const createSetBuilder = (sets, opts) => SetBuilder.create(sets || {all: {files: ['some/path']}}, opts || {});
 
     beforeEach(() => {
-        sandbox.stub(SetCollection, 'create').returns(Promise.resolve());
-        sandbox.stub(globExtra, 'expandPaths').returns(Promise.resolve([]));
+        sandbox.stub(SetCollection, 'create').resolves();
+        sandbox.stub(globExtra, 'expandPaths').resolves([]);
         sandbox.stub(TestSet.prototype, 'resolveFiles');
         sandbox.stub(fs, 'stat').yields(null, {isDirectory: () => false});
     });
@@ -25,8 +24,8 @@ describe('sets-builder', () => {
     describe('build', () => {
         it('should create set collection for all sets if sets to use are not specified', () => {
             globExtra.expandPaths
-                .withArgs(['some/files']).returns(Promise.resolve(['some/files/file1.js']))
-                .withArgs(['other/files']).returns(Promise.resolve(['other/files/file2.js']));
+                .withArgs(['some/files']).resolves(['some/files/file1.js'])
+                .withArgs(['other/files']).resolves(['other/files/file2.js']);
 
             const sets = {
                 set1: {files: ['some/files']},
@@ -78,7 +77,7 @@ describe('sets-builder', () => {
 
         it('should use default directory', () => {
             sandbox.stub(TestSet.prototype, 'expandFiles');
-            globExtra.expandPaths.withArgs(['project/path']).returns(Promise.resolve(['project/path']));
+            globExtra.expandPaths.withArgs(['project/path']).resolves(['project/path']);
 
             const setStub = TestSet.create({files: ['project/path']});
 
@@ -142,7 +141,7 @@ describe('sets-builder', () => {
         });
 
         it('should create set collection for specified sets', () => {
-            globExtra.expandPaths.withArgs(['some/files']).returns(Promise.resolve(['some/files/file.js']));
+            globExtra.expandPaths.withArgs(['some/files']).resolves(['some/files/file.js']);
 
             const sets = {
                 set1: {files: ['some/files']},
@@ -176,7 +175,7 @@ describe('sets-builder', () => {
         });
 
         it('should throw an error if sets do not contain paths from opts', () => {
-            globExtra.expandPaths.withArgs(['other/files']).returns(Promise.resolve(['other/files/file.js']));
+            globExtra.expandPaths.withArgs(['other/files']).resolves(['other/files/file.js']);
 
             const sets = {
                 all: {files: ['some/files']}
@@ -243,7 +242,7 @@ describe('sets-builder', () => {
         });
 
         it('should use default directory if sets are not specified and paths are not passed', () => {
-            globExtra.expandPaths.withArgs(['project/path']).returns(Promise.resolve(['project/path']));
+            globExtra.expandPaths.withArgs(['project/path']).resolves(['project/path']);
 
             const setStub = TestSet.create({files: ['project/path']});
 
