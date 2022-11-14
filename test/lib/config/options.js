@@ -3,15 +3,15 @@
 const _ = require('lodash');
 const Config = require('lib/config');
 const defaults = require('lib/config/defaults');
-
 const parser = require('lib/config/options');
+const {MissingOptionError} = require('gemini-configparser');
 
 describe('config options', () => {
     const sandbox = sinon.sandbox.create();
 
     const createConfig = () => Config.create(defaults.config);
 
-    const parse_ = (opts) => parser(_.defaults(opts, {env: {}, argv: []}));
+    const parse_ = (opts = {}) => parser({env: {}, argv: [], ...opts});
 
     beforeEach(() => sandbox.stub(Config, 'read').returns({}));
 
@@ -434,6 +434,199 @@ describe('config options', () => {
             const config = createConfig();
 
             assert.equal(config.shouldRetry, shouldRetry);
+        });
+    });
+
+    describe('sets', () => {
+        const parseOpts_ = (options = {}) => {
+            options.browsers = _.mapValues(options.browsers, (broConfig) => ({desiredCapabilities: {}, ...broConfig}));
+            return parse_({options});
+        };
+
+        describe('files', () => {
+            it('should throw an error if files are not specified', () => {
+                assert.throws(() => {
+                    parseOpts_({
+                        sets: {
+                            someSet: {}
+                        }
+                    });
+                }, MissingOptionError);
+            });
+
+            it('should convert string to array of strings', () => {
+                const config = parseOpts_({
+                    sets: {
+                        someSet: {
+                            files: 'some/path'
+                        }
+                    }
+                });
+
+                assert.deepEqual(config.sets.someSet.files, ['some/path']);
+            });
+
+            it('should throw an error if files are specified as non-string array', () => {
+                assert.throws(() => {
+                    parseOpts_({
+                        sets: {
+                            someSet: {
+                                files: [100500]
+                            }
+                        }
+                    });
+                }, Error, /"sets.files" must be an array of strings/);
+            });
+
+            it('should accept array with strings', () => {
+                const config = parseOpts_({
+                    sets: {
+                        someSet: {
+                            files: [
+                                'some/path',
+                                'other/path'
+                            ]
+                        }
+                    }
+                });
+
+                assert.deepEqual(config.sets.someSet.files, [
+                    'some/path',
+                    'other/path'
+                ]);
+            });
+        });
+
+        describe('ignoreFiles', () => {
+            it('should accept array with strings', () => {
+                const config = parseOpts_({
+                    sets: {
+                        someSet: {
+                            files: ['foo'],
+                            ignoreFiles: [
+                                'foo/bar',
+                                'baz'
+                            ]
+                        }
+                    }
+                });
+
+                assert.deepEqual(config.sets.someSet.ignoreFiles, [
+                    'foo/bar',
+                    'baz'
+                ]);
+            });
+
+            describe('should throw an error', () => {
+                const errorMask = /"sets.ignoreFiles" must be an array of strings/;
+
+                it('if "ignoreFiles" is not array', () => {
+                    assert.throws(() => {
+                        parseOpts_({
+                            sets: {
+                                someSet: {
+                                    files: ['foo'],
+                                    ignoreFiles: 100500
+                                }
+                            }
+                        });
+                    }, Error, errorMask);
+                });
+
+                it('if "ignoreFiles" are specified as non-string array', () => {
+                    assert.throws(() => {
+                        parseOpts_({
+                            sets: {
+                                someSet: {
+                                    files: ['foo'],
+                                    ignoreFiles: [100, 500]
+                                }
+                            }
+                        });
+                    }, Error, errorMask);
+                });
+            });
+        });
+
+        describe('browsers', () => {
+            it('should contain all browsers from config by default', () => {
+                const config = parseOpts_({
+                    browsers: {
+                        b1: {},
+                        b2: {}
+                    },
+                    sets: {
+                        someSet: {
+                            files: ['some/path']
+                        }
+                    }
+                });
+
+                assert.deepEqual(config.sets.someSet.browsers, ['b1', 'b2']);
+            });
+
+            it('should throw an error if browsers are not specified as array', () => {
+                const config = {
+                    sets: {
+                        someSet: {
+                            files: ['some/path'],
+                            browsers: 'something'
+                        }
+                    }
+                };
+
+                assert.throws(() => parseOpts_(config), Error, /"sets.browsers" must be an array/);
+            });
+
+            it('should throw an error if sets contain unknown browsers', () => {
+                assert.throws(() => {
+                    parseOpts_({
+                        browsers: {
+                            b1: {},
+                            b2: {}
+                        },
+                        sets: {
+                            someSet: {
+                                files: ['some/path'],
+                                browsers: ['b3']
+                            }
+                        }
+                    });
+                }, Error, /Unknown browsers for "sets.browsers": b3/);
+            });
+
+            it('should use browsers which are specified in config', () => {
+                const config = parseOpts_({
+                    browsers: {
+                        b1: {},
+                        b2: {}
+                    },
+                    sets: {
+                        set1: {
+                            files: ['some/path'],
+                            browsers: ['b1']
+                        },
+                        set2: {
+                            files: ['other/path'],
+                            browsers: ['b2']
+                        }
+                    }
+                });
+
+                assert.deepEqual(config.sets.set1.browsers, ['b1']);
+                assert.deepEqual(config.sets.set2.browsers, ['b2']);
+            });
+        });
+
+        it('should have default set with empty files and all browsers if sets are not specified', () => {
+            const config = parseOpts_({
+                browsers: {
+                    b1: {},
+                    b2: {}
+                }
+            });
+
+            assert.deepEqual(config.sets, {'': {files: [], browsers: ['b1', 'b2'], ignoreFiles: []}});
         });
     });
 });
