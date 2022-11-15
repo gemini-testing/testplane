@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.4.1](https://github.com/gemini-testing/hermione/compare/v5.4.0...v5.4.1) (2022-11-15)
+
+
+### Bug Fixes
+
+* **devtools:** do not use cache for browsers ([bf5afb0](https://github.com/gemini-testing/hermione/commit/bf5afb0204eb232fd9c8758b7353290c508c45ae))
+* **screenshot:** handle viewport overflow properly ([2142cd8](https://github.com/gemini-testing/hermione/commit/2142cd8ff4ef5cb65dc87af5e0a144225bd8137a))
+
 ## [5.4.0](https://github.com/gemini-testing/hermione/compare/v5.3.1...v5.4.0) (2022-11-08)
 
 
