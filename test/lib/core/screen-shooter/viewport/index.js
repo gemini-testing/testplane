@@ -210,16 +210,30 @@ describe('Viewport', () => {
                 assert.calledOnceWith(image.crop, {left: 1, top: 2, width: 3, height: 4});
             });
 
-            it('considering pixel ratio', async () => {
-                const vieport = createViewport({
-                    captureArea: {left: 1, top: 2, width: 3, height: 4},
-                    viewport: {left: 0, top: 0, width: 10, height: 10},
-                    pixelRatio: 2
+            describe('considering pixel ratio', () => {
+                it('without intersection', async () => {
+                    const vieport = createViewport({
+                        captureArea: {left: 1, top: 1, width: 1, height: 1},
+                        viewport: {left: 0, top: 0, width: 10, height: 10},
+                        pixelRatio: 3
+                    });
+
+                    await vieport.handleImage(image);
+
+                    assert.calledOnceWith(image.crop, {left: 3, top: 3, width: 3, height: 3});
                 });
 
-                await vieport.handleImage(image);
+                it('with intersection', async () => {
+                    const vieport = createViewport({
+                        captureArea: {left: 2, top: 3, width: 4, height: 5},
+                        viewport: {left: 0, top: 0, width: 10, height: 10},
+                        pixelRatio: 3
+                    });
 
-                assert.calledOnceWith(image.crop, {left: 2, top: 4, width: 5, height: 8});
+                    await vieport.handleImage(image);
+
+                    assert.calledOnceWith(image.crop, {left: 6, top: 9, width: 1, height: 1});
+                });
             });
 
             it('with given area', async () => {
@@ -241,7 +255,7 @@ describe('Viewport', () => {
 
                 await vieport.handleImage(image, {left: 0, top: 7, width: 7, height: 3});
 
-                assert.calledOnceWith(image.crop, {left: 1, top: 9, width: 3, height: 3});
+                assert.calledOnceWith(image.crop, {left: 1, top: 9, width: 3, height: 1});
             });
 
             it('with negative offsets in captureAreas', async () => {
@@ -252,7 +266,18 @@ describe('Viewport', () => {
 
                 await vieport.handleImage(image);
 
-                assert.calledOnceWith(image.crop, {left: 0, top: 0, width: 3, height: 8});
+                assert.calledOnceWith(image.crop, {left: 0, top: 0, width: 7, height: 8});
+            });
+
+            it('with viewport is lower than captureArea without intersection', async () => {
+                const vieport = createViewport({
+                    captureArea: {left: 0, top: 0, width: 10, height: 10},
+                    viewport: {left: 0, top: 100, width: 10, height: 10}
+                });
+
+                await vieport.handleImage(image);
+
+                assert.calledOnceWith(image.crop, {left: 0, top: 0, width: 7, height: 10});
             });
         });
     });
