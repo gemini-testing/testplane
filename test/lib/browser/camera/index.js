@@ -1,7 +1,7 @@
 'use strict';
 
 const Camera = require('lib/browser/camera');
-const Image = require('lib/core/image');
+const Image = require('lib/image');
 const utils = require('lib/browser/camera/utils');
 
 describe('browser/camera', () => {
