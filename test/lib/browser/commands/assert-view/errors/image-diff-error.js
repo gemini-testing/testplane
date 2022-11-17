@@ -3,7 +3,7 @@
 const _ = require('lodash');
 const BaseStateError = require('lib/browser/commands/assert-view/errors/base-state-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
-const Image = require('lib/core/image');
+const Image = require('lib/image');
 
 const mkImageDiffError = (opts = {}) => {
     const {stateName, currImg, refImg, diffOpts} = _.defaults(opts, {

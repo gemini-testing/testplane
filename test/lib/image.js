@@ -42,7 +42,7 @@ describe('Image', () => {
         looksSameStub = sandbox.stub();
         sharpStub = mkSharpStub_();
         mkSharpInstance = sandbox.stub().callsFake(() => sharpStub);
-        Image = proxyquire('lib/core/image', {
+        Image = proxyquire('lib/image', {
             'looks-same': looksSameStub,
             'sharp': mkSharpInstance
         });
