@@ -43,6 +43,7 @@ describe('assertView command', () => {
         });
 
         return {
+            toPngBuffer: sandbox.stub().resolves('defaultPngBuffer'),
             save: sandbox.stub().named('save'),
             getSize: sandbox.stub().named('getSize').returns(opts.size)
         };
@@ -69,6 +70,7 @@ describe('assertView command', () => {
 
         sandbox.stub(fs, 'readFileSync');
         sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'outputFile').resolves();
 
         sandbox.stub(temp, 'path');
         sandbox.stub(temp, 'attach');
@@ -277,10 +279,11 @@ describe('assertView command', () => {
                     const image = stubImage_();
 
                     ScreenShooter.prototype.capture.resolves(image);
+                    image.toPngBuffer.resolves('currPngBuffer');
 
                     await fn(browser);
 
-                    assert.calledOnceWith(image.save, '/curr/path');
+                    assert.calledOnceWith(fs.outputFile, '/curr/path', 'currPngBuffer');
                 });
 
                 [
@@ -355,6 +358,28 @@ describe('assertView command', () => {
                         });
                     });
                 });
+            });
+
+            it('should not save current image if reference is already exists', async () => {
+                const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
+                const image = stubImage_();
+                fs.existsSync.withArgs('/ref/path').returns(true);
+                ScreenShooter.prototype.capture.resolves(image);
+
+                await fn(browser);
+
+                assert.notCalled(image.save);
+            });
+
+            it('should save current image if reference does not exist', async () => {
+                const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
+                const image = stubImage_();
+                fs.existsSync.withArgs('/ref/path').returns(false);
+                ScreenShooter.prototype.capture.resolves(image);
+
+                await fn(browser);
+
+                assert.calledOnce(image.save);
             });
 
             it('should not fail if there is no reference image', async () => {
@@ -442,13 +467,41 @@ describe('assertView command', () => {
 
                 it('should compare a current image with a reference', async () => {
                     const config = mkConfig_({getScreenshotPath: () => '/ref/path'});
+                    const image = stubImage_();
                     Image.compare.resolves({equal: true});
                     temp.path.returns('/curr/path');
+                    ScreenShooter.prototype.capture.resolves(image);
+                    image.toPngBuffer.resolves('currPngBuffer');
                     const browser = await stubBrowser_(config).init();
 
                     await fn(browser);
 
-                    assert.calledOnceWith(Image.compare, '/ref/path', '/curr/path');
+                    assert.calledOnceWith(Image.compare, '/ref/path', 'currPngBuffer');
+                });
+
+                it('should not save current image if images are equal', async () => {
+                    const image = stubImage_();
+                    const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
+                    image.toPngBuffer.resolves('currPngBuffer');
+                    Image.compare.withArgs('/ref/path', 'currPngBuffer').resolves({equal: true});
+                    ScreenShooter.prototype.capture.resolves(image);
+
+                    await fn(browser);
+
+                    assert.notCalled(fs.outputFile);
+                });
+
+                it('should save current image if images are not equal', async () => {
+                    const image = stubImage_();
+                    const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
+                    image.toPngBuffer.resolves('currPngBuffer');
+                    Image.compare.withArgs('/ref/path', 'currPngBuffer').resolves({equal: false});
+                    temp.path.returns('/curr/path');
+                    ScreenShooter.prototype.capture.resolves(image);
+
+                    await fn(browser);
+
+                    assert.calledOnceWith(fs.outputFile, '/curr/path', 'currPngBuffer');
                 });
 
                 it('should compare images with given set of parameters', async () => {
