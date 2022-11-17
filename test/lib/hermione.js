@@ -8,8 +8,8 @@ const proxyquire = require('proxyquire').noCallThru();
 
 const Config = require('lib/config');
 const RuntimeConfig = require('lib/config/runtime-config');
-const AsyncEmitter = require('lib/core/events/async-emitter');
-const eventsUtils = require('lib/core/events/utils');
+const AsyncEmitter = require('lib/events/async-emitter');
+const eventsUtils = require('lib/events/utils');
 const Errors = require('lib/errors');
 const RunnerStats = require('lib/stats');
 const TestReader = require('lib/test-reader');

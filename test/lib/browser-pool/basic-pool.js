@@ -1,6 +1,6 @@
 'use strict';
 
-const AsyncEmitter = require('lib/core/events/async-emitter');
+const AsyncEmitter = require('lib/events/async-emitter');
 const BasicPool = require('lib/browser-pool/basic-pool');
 const Browser = require('lib/browser/new-browser');
 const CancelledError = require('lib/core/errors/cancelled-error');
