@@ -1,6 +1,6 @@
 'use strict';
 
-const AsyncEmitter = require('lib/core/events/async-emitter');
+const AsyncEmitter = require('lib/events/async-emitter');
 const Hermione = require('lib/worker/hermione');
 const {makeConfigStub} = require('../../utils');
 const ipc = require('lib/utils/ipc');

@@ -1,9 +1,9 @@
 'use strict';
 
-const AsyncEmitter = require('lib/core/events/async-emitter');
+const AsyncEmitter = require('lib/events/async-emitter');
 const Promise = require('bluebird');
 
-describe('async-emitter', () => {
+describe('events/async-emitter', () => {
     const sandbox = sinon.sandbox.create();
     let emitter;
 
