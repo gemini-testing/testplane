@@ -9,7 +9,7 @@ describe('temp', () => {
 
     beforeEach(() => {
         sandbox.stub(nodeTemp);
-        temp = requireWithNoCache(require.resolve('lib/core/temp'));
+        temp = requireWithNoCache(require.resolve('lib/temp'));
     });
 
     afterEach(() => sandbox.restore());
