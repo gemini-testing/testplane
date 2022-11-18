@@ -1,7 +1,7 @@
 'use strict';
 
 const nodeTemp = require('temp');
-const {requireWithNoCache} = require('lib/core/utils');
+const clearRequire = require('clear-require');
 
 describe('temp', () => {
     const sandbox = sinon.sandbox.create();
@@ -9,7 +9,8 @@ describe('temp', () => {
 
     beforeEach(() => {
         sandbox.stub(nodeTemp);
-        temp = requireWithNoCache(require.resolve('lib/temp'));
+        clearRequire(require.resolve('lib/temp'));
+        temp = require('lib/temp');
     });
 
     afterEach(() => sandbox.restore());
