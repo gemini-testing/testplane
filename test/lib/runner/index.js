@@ -3,7 +3,7 @@
 const _ = require('lodash');
 const Promise = require('bluebird');
 
-const temp = require('lib/core/temp');
+const temp = require('lib/temp');
 const BrowserPool = require('lib/browser-pool');
 const RuntimeConfig = require('lib/config/runtime-config');
 const RunnerStats = require('lib/stats');
