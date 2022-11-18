@@ -16,4 +16,4 @@ npm-debug.log
 coverage/
 .nyc_output/
 
-/lib/core/browser/client-scripts/calibrate.min.js
+/lib/browser/client-scripts/calibrate.min.js
