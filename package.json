@@ -13,7 +13,7 @@
     "precommit": "npm run lint",
     "preversion": "npm run lint && npm test",
     "prepublish": "npm run prepare-calibrate-script",
-    "prepare-calibrate-script": "uglifyjs ./lib/core/browser/client-scripts/calibrate.js -m > ./lib/core/browser/client-scripts/calibrate.min.js --support-ie8",
+    "prepare-calibrate-script": "uglifyjs ./lib/browser/client-scripts/calibrate.js -m > ./lib/browser/client-scripts/calibrate.min.js --support-ie8",
     "commitmsg": "commitlint -e",
     "release": "standard-version"
   },
