@@ -5,7 +5,7 @@ const fs = require('fs');
 const Promise = require('bluebird');
 const Image = require('lib/image');
 const Calibrator = require('lib/browser/calibrator');
-const {CoreError} = require('lib/core/errors');
+const CoreError = require('lib/browser/core-error');
 
 describe('calibrator', () => {
     let browser, calibrator;
