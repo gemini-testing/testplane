@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const Promise = require('bluebird');
 const Image = require('lib/image');
-const Calibrator = require('lib/core/calibrator');
+const Calibrator = require('lib/browser/calibrator');
 const {CoreError} = require('lib/core/errors');
 
 describe('calibrator', () => {
@@ -19,7 +19,7 @@ describe('calibrator', () => {
     };
 
     const setScreenshot = (imageName) => {
-        const imgPath = path.join(__dirname, '..', '..', '..', 'fixtures', imageName);
+        const imgPath = path.join(__dirname, '..', '..', 'fixtures', imageName);
         const imgData = fs.readFileSync(imgPath);
 
         browser.captureViewportImage.returns(Promise.resolve(new Image(imgData)));
