@@ -2,12 +2,9 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
-const fs = require('fs');
 const Image = require('lib/image');
 const ScreenShooter = require('lib/core/screen-shooter');
-const temp = require('lib/temp');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const RuntimeConfig = require('lib/config/runtime-config');
 const logger = require('lib/utils/logger');
 const {mkSessionStub_} = require('../../../browser/utils');
 
@@ -51,11 +48,7 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
     beforeEach(() => {
         sandbox.stub(ScreenShooter.prototype, 'capture').resolves(stubImage_());
         sandbox.stub(Image, 'fromBase64').returns(stubImage_());
-        sandbox.stub(temp, 'attach').named('attach').returns();
-        sandbox.stub(temp, 'path').named('path').returns();
-        sandbox.stub(RuntimeConfig, 'getInstance').returns({tempOpts: {}});
         sandbox.stub(logger, 'warn');
-        sandbox.stub(fs.promises, 'writeFile').resolves();
     });
 
     afterEach(() => sandbox.restore());
@@ -109,16 +102,12 @@ describe('worker/runner/test-runner/one-time-screenshooter', () => {
                     allowViewportOverflow: true
                 })
                 .resolves(imgStub);
-            RuntimeConfig.getInstance.returns({tempOpts: {some: 'opts'}});
-            temp.path
-                .withArgs({some: 'opts', suffix: '.png'})
-                .returns('some-path');
+
             const config = {takeScreenshotOnFailsMode: 'fullpage'};
             const screenshooter = mkScreenshooter_({browser, config});
 
             await screenshooter[method](...getArgs());
 
-            assert.calledOnceWith(fs.promises.writeFile, 'some-path', Buffer.from('buffer'));
             assert.deepEqual(screenshooter.getScreenshot(), {
                 base64: Buffer.from('buffer').toString('base64'),
                 size: {width: 100, height: 500}
