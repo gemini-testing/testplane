@@ -84,6 +84,26 @@ describe('assertView command', () => {
 
     afterEach(() => sandbox.restore());
 
+    it('should wait for all selectors to exist', async () => {
+        const browser = await stubBrowser_().init();
+        const element = await browser.publicAPI.$('.selector');
+
+        await browser.publicAPI.assertView('plain', ['.selector1', '.selector2']);
+
+        assert.calledWith(browser.publicAPI.$, '.selector1');
+        assert.calledWith(browser.publicAPI.$, '.selector2');
+        assert.calledTwice(element.waitForExist);
+    });
+
+    it('should wait for element to exist', async () => {
+        const browser = await stubBrowser_().init();
+        const element = await browser.publicAPI.$('.selector');
+
+        await element.assertView('plain');
+
+        assert.calledOnce(element.waitForExist);
+    });
+
     it('should fail on duplicate name of the state on mixed scopes', async () => {
         const browser = await stubBrowser_().init();
 
