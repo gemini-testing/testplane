@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.5.0](https://github.com/gemini-testing/hermione/compare/v5.4.1...v5.5.0) (2022-11-21)
+
+
+### Features
+
+* **assert-view:** add waitForExist ([4d20b5c](https://github.com/gemini-testing/hermione/commit/4d20b5c7da1ee1c7245c7a98104f54eff5f85597))
+
 ### [5.4.1](https://github.com/gemini-testing/hermione/compare/v5.4.0...v5.4.1) (2022-11-15)
 
 
