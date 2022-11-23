@@ -52,7 +52,7 @@
     "glob-extra": "^5.0.2",
     "inherit": "^2.2.2",
     "lodash": "^4.17.21",
-    "looks-same": "^8.0.1",
+    "looks-same": "^8.1.0",
     "micromatch": "^4.0.5",
     "plugins-loader": "^1.1.0",
     "sharp": "~0.30.7",
