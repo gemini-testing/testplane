@@ -9,15 +9,18 @@ const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-scr
 const BrowserAgent = require('lib/worker/runner/browser-agent');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
+const {Suite, Test} = require('lib/test-reader/test-object');
 const {makeConfigStub} = require('../../../../utils');
-const {Suite, Test} = require('../../../_mocha');
 
 describe('worker/runner/test-runner', () => {
     const sandbox = sinon.sandbox.create();
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();
-        return Test.create(Suite.create(), opts);
+        const test = Test.create(opts);
+        test.parent = Suite.create();
+
+        return test;
     };
 
     const mkRunner_ = (opts = {}) => {
