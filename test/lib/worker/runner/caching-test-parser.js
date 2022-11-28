@@ -62,7 +62,7 @@ describe('worker/runner/caching-test-parser', () => {
             assert.deepEqual(result, tests);
         });
 
-        it('should parse each file in each browser only once', async () => {
+        it('should parse each file in each browser only once (sequential requests)', async () => {
             const cachingParser = mkCachingParser_();
             const tests = [makeTest(), makeTest()];
             SequenceTestParser.prototype.parse.resolves(tests);
@@ -71,6 +71,21 @@ describe('worker/runner/caching-test-parser', () => {
             const result = await cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
 
             assert.deepEqual(result, tests);
+            assert.calledOnce(SequenceTestParser.prototype.parse);
+        });
+
+        it('should parse each file in each browser only once (parallel requests)', async () => {
+            const cachingParser = mkCachingParser_();
+            const tests = [makeTest(), makeTest()];
+            SequenceTestParser.prototype.parse.resolves(tests);
+
+            const promise1 = cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+            const promise2 = cachingParser.parse({file: 'some/file.js', browserId: 'bro'});
+
+            const [tests1, tests2] = await Promise.all([promise1, promise2]);
+
+            assert.deepEqual(tests1, tests2);
+            assert.deepEqual(tests2, tests);
             assert.calledOnce(SequenceTestParser.prototype.parse);
         });
 
