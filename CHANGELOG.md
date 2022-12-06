@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.6.0](https://github.com/gemini-testing/hermione/compare/v5.5.2...v5.6.0) (2022-12-06)
+
+
+### Features
+
+* add built-in assert library ([01ac6de](https://github.com/gemini-testing/hermione/commit/01ac6de407f6f1926e4a03ff3917a099526db978))
+
+
+### Bug Fixes
+
+* fill tests cache synchronously in workers ([b3b96d3](https://github.com/gemini-testing/hermione/commit/b3b96d3eef34f3da66357fabf1a051f7bcd9d64a))
+
 ### [5.5.2](https://github.com/gemini-testing/hermione/compare/v5.5.1...v5.5.2) (2022-11-23)
 
 ### [5.5.1](https://github.com/gemini-testing/hermione/compare/v5.5.0...v5.5.1) (2022-11-21)
