@@ -1,4 +1,5 @@
 /// <reference types='webdriverio/async' />
+/// <reference types="expect-webdriverio/types/standalone"/>
 
 declare namespace WebdriverIO {
     interface Browser {
@@ -47,3 +48,5 @@ declare namespace WebdriverIO {
         assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): Promise<void>;
     }
 }
+
+declare const expect: ExpectWebdriverIO.Expect

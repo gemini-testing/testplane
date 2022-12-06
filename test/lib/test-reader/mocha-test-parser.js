@@ -26,12 +26,23 @@ describe('test-reader/mocha-test-parser', () => {
     let clearRequire;
     let testSkipper;
     let BrowserConfiguratorStubConstructor;
+    let expectWdio;
+    let expectWdioSetOptions;
 
     const mkMochaTestParser_ = (opts = {}) => {
         const browserId = opts.browserId || 'default-bro';
         const config = opts.config || makeConfigStub({browsers: [browserId]});
 
         return MochaTestParser.create(browserId, config);
+    };
+
+    const proxyquireMochaTestParser_ = () => {
+        return proxyquire('../../../lib/test-reader/mocha-test-parser', {
+            'clear-require': clearRequire,
+            '@gemini-testing/mocha': MochaStub,
+            './browser': BrowserConfiguratorStubConstructor,
+            'expect-webdriverio': (() => expectWdio())()
+        });
     };
 
     beforeEach(() => {
@@ -43,16 +54,16 @@ describe('test-reader/mocha-test-parser', () => {
             .returns(new BrowserConfigurator('bro-id', []));
 
         clearRequire = sandbox.stub().named('clear-require');
+        expectWdioSetOptions = sandbox.stub().named('set-options');
+        expectWdio = sandbox.stub().named('expect-webdriverio')
+            .returns({setOptions: expectWdioSetOptions});
 
         sandbox.stub(crypto, 'getShortMD5');
 
-        MochaTestParser = proxyquire('../../../lib/test-reader/mocha-test-parser', {
-            'clear-require': clearRequire,
-            '@gemini-testing/mocha': MochaStub,
-            './browser': BrowserConfiguratorStubConstructor
-        });
+        global.expect = {some: 'data'};
 
-        MochaTestParser.prepare();
+        MochaTestParser = proxyquireMochaTestParser_();
+        MochaTestParser.prepare(makeConfigStub());
     });
 
     afterEach(() => {
@@ -61,20 +72,55 @@ describe('test-reader/mocha-test-parser', () => {
     });
 
     describe('prepare', () => {
-        beforeEach(() => delete global.hermione);
-
-        it('should add an empty hermione object to global', () => {
-            MochaTestParser.prepare();
-
-            assert.deepEqual(global.hermione, {});
+        beforeEach(() => {
+            delete global.hermione;
         });
 
-        it('should do nothing if hermione is already in a global', () => {
-            global.hermione = {some: 'data'};
+        describe('hermione', () => {
+            it('should add an empty hermione object to global', () => {
+                MochaTestParser.prepare(makeConfigStub());
 
-            MochaTestParser.prepare();
+                assert.deepEqual(global.hermione, {});
+            });
 
-            assert.deepEqual(global.hermione, {some: 'data'});
+            it('should do nothing if hermione is already in a global', () => {
+                global.hermione = {some: 'data'};
+
+                MochaTestParser.prepare(makeConfigStub());
+
+                assert.deepEqual(global.hermione, {some: 'data'});
+            });
+        });
+
+        describe('expect', () => {
+            beforeEach(() => {
+                delete global.expect;
+                expectWdio.resetHistory();
+
+                MochaTestParser = proxyquireMochaTestParser_();
+            });
+
+            it('should require expect library', () => {
+                MochaTestParser.prepare(makeConfigStub());
+
+                assert.calledOnce(expectWdio);
+            });
+
+            it('should set user options for expect', () => {
+                const system = {expectOpts: {wait: 200, interval: 100}};
+
+                MochaTestParser.prepare(makeConfigStub({system}));
+
+                assert.calledOnceWith(expectWdioSetOptions, system.expectOpts);
+            });
+
+            it('should do nothing if expect is already in a global', () => {
+                global.expect = {some: 'data'};
+
+                MochaTestParser.prepare(makeConfigStub());
+
+                assert.notCalled(expectWdioSetOptions);
+            });
         });
     });
 
