@@ -136,11 +136,9 @@ describe('ExistingBrowser', () => {
 
         describe('in order to correctly work with "devtools" protocol', () => {
             it('should attach to browser with "options" property from master session', async () => {
-                await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar'}});
+                await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar', automationProtocol: 'devtools'}});
 
-                assert.calledWithMatch(webdriverio.attach, {
-                    options: {foo: 'bar'}
-                });
+                assert.calledOnceWith(webdriverio.attach, sinon.match.has('options', {automationProtocol: 'devtools'}));
             });
 
             it('should attach to browser with caps merged from master session opts and caps', async () => {
