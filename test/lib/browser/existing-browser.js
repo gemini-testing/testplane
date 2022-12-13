@@ -118,13 +118,27 @@ describe('ExistingBrowser', () => {
             assert.calledWithMatch(webdriverio.attach, {foo: 'bar'});
         });
 
+        it('should attach to browser with "transform*" options from browser config', async () => {
+            const transformRequestStub = sinon.stub();
+            const transformResponseStub = sinon.stub();
+
+            await initBrowser_(mkBrowser_({
+                transformRequest: transformRequestStub,
+                transformResponse: transformResponseStub
+            }));
+
+            assert.calledOnce(webdriverio.attach);
+            assert.calledWithMatch(webdriverio.attach, {
+                transformRequest: transformRequestStub,
+                transformResponse: transformResponseStub
+            });
+        });
+
         describe('in order to correctly work with "devtools" protocol', () => {
             it('should attach to browser with "options" property from master session', async () => {
-                await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar'}});
+                await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar', automationProtocol: 'devtools'}});
 
-                assert.calledWithMatch(webdriverio.attach, {
-                    options: {foo: 'bar'}
-                });
+                assert.calledOnceWith(webdriverio.attach, sinon.match.has('options', {automationProtocol: 'devtools'}));
             });
 
             it('should attach to browser with caps merged from master session opts and caps', async () => {
