@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.6.1](https://github.com/gemini-testing/hermione/compare/v5.6.0...v5.6.1) (2022-12-13)
+
+
+### Bug Fixes
+
+* **existing-browser:** do not pass unnecessary options ([451d23a](https://github.com/gemini-testing/hermione/commit/451d23ad59f90f1cc7e112015d5f4f1d57915123))
+* **existing-browser:** fix request and response custom transforming ([714ddb9](https://github.com/gemini-testing/hermione/commit/714ddb93c97c325ec7e8caca134c15da22e18fb4))
+
 ## [5.6.0](https://github.com/gemini-testing/hermione/compare/v5.5.2...v5.6.0) (2022-12-06)
 
 
