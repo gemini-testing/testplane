@@ -158,53 +158,88 @@ describe('config browser-options', () => {
         });
     });
 
-    describe('gridUrl', () => {
-        it('should throw error if gridUrl is not a string', () => {
+    [
+        {optionName: 'gridUrl', uriScheme: 'http'},
+        {optionName: 'browserWSEndpoint', uriScheme: 'ws'}
+    ].forEach(({optionName, uriScheme}) => {
+        describe(optionName, () => {
+            it('should throw error if option is not a string', () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({[optionName]: /regExp/})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, `"${optionName}" must be a string`);
+            });
+
+            it('should set option to all browsers', () => {
+                const optionValue = `${uriScheme}://default.com`;
+                const readConfig = {
+                    [optionName]: optionValue,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_()
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1[optionName], optionValue);
+                assert.equal(config.browsers.b2[optionName], optionValue);
+            });
+
+            it('should override option', () => {
+                const optionValue = `${uriScheme}://default.com`;
+                const readConfig = {
+                    [optionName]: optionValue,
+                    browsers: {
+                        b1: mkBrowser_(),
+                        b2: mkBrowser_({[optionName]: `${uriScheme}://bar.com`})
+                    }
+                };
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1[optionName], optionValue);
+                assert.equal(config.browsers.b2[optionName], `${uriScheme}://bar.com`);
+            });
+        });
+    });
+
+    describe('browserWSEndpoint', () => {
+        it('should throw an error if option value does not start with WebSocket protocol', () => {
             const readConfig = {
                 browsers: {
-                    b1: mkBrowser_({gridUrl: /regExp/})
+                    b1: mkBrowser_({browserWSEndpoint: 'http://endpoint.com'})
                 }
             };
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"gridUrl" must be a string');
+            assert.throws(() => createConfig(), Error, /"browserWSEndpoint" must start with "ws:\/\/" or "wss:\/\/" prefix/);
         });
 
-        it('should set gridUrl to all browsers', () => {
-            const gridUrl = 'http://default.com';
-            const readConfig = {
-                gridUrl,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_()
-                }
-            };
+        describe('should not throw an error if option value start with', () => {
+            ['ws', 'wss'].forEach((protocol) => {
+                it(protocol, () => {
+                    const readConfig = {
+                        browsers: {
+                            b1: mkBrowser_({browserWSEndpoint: `${protocol}://endpoint.com`})
+                        }
+                    };
 
-            Config.read.returns(readConfig);
+                    Config.read.returns(readConfig);
 
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.gridUrl, gridUrl);
-            assert.equal(config.browsers.b2.gridUrl, gridUrl);
-        });
-
-        it('should override gridUrl option', () => {
-            const gridUrl = 'http://default.com';
-            const readConfig = {
-                gridUrl,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({gridUrl: 'http://bar.com'})
-                }
-            };
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.gridUrl, gridUrl);
-            assert.equal(config.browsers.b2.gridUrl, 'http://bar.com');
+                    assert.doesNotThrow(() => createConfig());
+                });
+            });
         });
     });
 

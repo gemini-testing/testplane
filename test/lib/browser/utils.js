@@ -63,6 +63,7 @@ exports.mkSessionStub_ = () => {
         waitForExist: sinon.stub().named('waitForExist').resolves()
     };
 
+    session.sessionId = '1234567890';
     session.isW3C = false;
 
     session.options = {};
@@ -80,6 +81,7 @@ exports.mkSessionStub_ = () => {
     session.waitUntil = sinon.stub().named('waitUntil').resolves();
     session.setTimeout = sinon.stub().named('setTimeout').resolves();
     session.setTimeouts = sinon.stub().named('setTimeouts').resolves();
+    session.getPuppeteer = sinon.stub().named('getPuppeteer').resolves({});
     session.$ = sinon.stub().named('$').resolves(element);
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {

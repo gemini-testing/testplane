@@ -19,7 +19,8 @@ describe('ExistingBrowser', () => {
 
     const initBrowser_ = (browser = mkBrowser_(), sessionData = {}, calibrator) => {
         sessionData = _.defaults(sessionData, {
-            sessionOpts: {}
+            sessionOpts: {},
+            sessionCaps: {}
         });
 
         return browser.init(sessionData, calibrator);
