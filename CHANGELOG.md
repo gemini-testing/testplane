@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [6.0.0](https://github.com/gemini-testing/hermione/compare/v5.6.1...v6.0.0) (2022-12-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* node versions less than 14.0.0 are no longer supported
+
+### Features
+
+* add "browserWSEndpoint" to be able to change ws enpoint ([57c0a06](https://github.com/gemini-testing/hermione/commit/57c0a06422c137c4eeaf279646896a1aa1fb2629))
+* drop node versions less than 14 ([fad5815](https://github.com/gemini-testing/hermione/commit/fad58157fd12908195cef05d37c6c714f4f0148b))
+
+
+### Bug Fixes
+
+* callback type for "it" and hooks ([57071e6](https://github.com/gemini-testing/hermione/commit/57071e66528d5cdf9f48baaff7e92ec504cd7d17))
+
 ### [5.6.1](https://github.com/gemini-testing/hermione/compare/v5.6.0...v5.6.1) (2022-12-13)
 
 
