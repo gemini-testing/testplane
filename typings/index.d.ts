@@ -275,14 +275,11 @@ declare namespace Hermione {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     };
 
-    type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, done: TestDone) => any;
+    type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, ctx: TestDefinitionCallbackCtx) => any;
 
     export interface TestDefinitionCallbackCtx {
-        browser: WebdriverIO.Browser
-    };
-
-    interface TestDone {
-        (error?: any): any;
+        browser: WebdriverIO.Browser;
+        currentTest: Test;
     };
 
     export interface AfterFileReadData {
