@@ -2,7 +2,7 @@
 
 const webdriverio = require('webdriverio');
 const clientBridge = require('lib/browser/client-bridge');
-const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
+const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../utils');
 
 describe('"getConfig" command', () => {
     const sandbox = sinon.sandbox.create();
