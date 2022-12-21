@@ -2,51 +2,62 @@
 
 const webdriverio = require('webdriverio');
 const clientBridge = require('lib/browser/client-bridge');
-const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
+const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../utils');
 
 describe('"setOrientation" command', () => {
     const sandbox = sinon.sandbox.create();
-    let session;
 
     beforeEach(() => {
-        session = mkSessionStub_();
-        sandbox.stub(webdriverio, 'attach').resolves(session);
+        sandbox.stub(webdriverio, 'attach');
         sandbox.stub(clientBridge, 'build').resolves();
     });
 
     afterEach(() => sandbox.restore());
 
+    const initBrowser_ = ({browser = mkBrowser_(), session = mkSessionStub_()} = {}) => {
+        webdriverio.attach.resolves(session);
+
+        return browser.init({sessionId: session.sessionId, sessionCaps: session.capabilities});
+    };
+
     it('should not overwrite command `setOrientation` if it does not exist`', async () => {
+        const session = mkSessionStub_();
         session.setOrientation = undefined;
 
-        await mkBrowser_().init();
+        await initBrowser_({session});
 
         assert.neverCalledWith(session.overwriteCommand, 'setOrientation');
     });
 
     it('should overwrite `setOrientation` command', async () => {
-        await mkBrowser_().init();
+        const session = mkSessionStub_();
+
+        await initBrowser_({session});
 
         assert.calledWith(session.overwriteCommand, 'setOrientation', sinon.match.func);
     });
 
     it('should not throw if orientation does not return current state', async () => {
+        const session = mkSessionStub_();
         const origSetOrientationFn = session.setOrientation;
         origSetOrientationFn.resolves(null);
 
-        await mkBrowser_().init();
+        await initBrowser_({session});
 
         await assert.isFulfilled(session.setOrientation('portrait'));
     });
 
     describe('if new orientation does not differ from the current one', () => {
+        let session;
+
         beforeEach(() => {
+            session = mkSessionStub_();
             const origSetOrientationFn = session.setOrientation;
             origSetOrientationFn.withArgs('portrait').resolves('Already in portrait');
         });
 
         it('should return orientation', async () => {
-            await mkBrowser_().init();
+            await initBrowser_({session});
 
             const orientation = await session.setOrientation('portrait');
 
@@ -54,7 +65,7 @@ describe('"setOrientation" command', () => {
         });
 
         it('should not wait for orientation change', async () => {
-            await mkBrowser_().init();
+            await initBrowser_({session});
 
             await session.setOrientation('portrait');
 
@@ -63,9 +74,10 @@ describe('"setOrientation" command', () => {
     });
 
     it('should return changed orientation if it differs from the current one', async () => {
+        const session = mkSessionStub_();
         const origSetOrientationFn = session.setOrientation;
         origSetOrientationFn.resolves('portrait');
-        await mkBrowser_().init();
+        await initBrowser_({session});
 
         const orientation = await session.setOrientation('portrait');
 
@@ -73,13 +85,17 @@ describe('"setOrientation" command', () => {
     });
 
     describe('if option "waitOrientationChange" set to false', () => {
+        let session;
+
         beforeEach(() => {
+            session = mkSessionStub_();
             const origSetOrientationFn = session.setOrientation;
             origSetOrientationFn.resolves('portrait');
         });
 
         it('should not get initial body width', async () => {
-            await mkBrowser_({waitOrientationChange: false}).init();
+            const browser = mkBrowser_({waitOrientationChange: false});
+            await initBrowser_({browser, session});
 
             await session.setOrientation('portrait');
 
@@ -87,7 +103,8 @@ describe('"setOrientation" command', () => {
         });
 
         it('should not wait for orientation change', async () => {
-            await mkBrowser_({waitOrientationChange: false}).init();
+            const browser = mkBrowser_({waitOrientationChange: false});
+            await initBrowser_({browser, session});
 
             await session.setOrientation('portrait');
 
@@ -96,9 +113,10 @@ describe('"setOrientation" command', () => {
     });
 
     it('should wait for orientation change', async () => {
+        const session = mkSessionStub_();
         const origSetOrientationFn = session.setOrientation;
         origSetOrientationFn.resolves('portrait');
-        await mkBrowser_().init();
+        await initBrowser_({session});
 
         await session.setOrientation('portrait');
 
@@ -106,7 +124,9 @@ describe('"setOrientation" command', () => {
     });
 
     it('should wait for orientation change using a timeout from a browser config', async () => {
-        await mkBrowser_({waitTimeout: 100500}).init();
+        const session = mkSessionStub_();
+        const browser = mkBrowser_({waitTimeout: 100500});
+        await initBrowser_({browser, session});
 
         await session.setOrientation('portrait');
 

@@ -41,6 +41,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [desiredCapabilities](#desiredcapabilities)
     - [gridUrl](#gridurl)
     - [baseUrl](#baseurl)
+    - [browserWSEndpoint](#browserwsendpoint)
     - [automationProtocol](#automationprotocol)
     - [sessionEnvFlags](#sessionenvflags)
     - [httpTimeout](#httptimeout)
@@ -737,6 +738,7 @@ Option name               | Description
 `desiredCapabilities`     | **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities)
 `gridUrl`                 | Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 `baseUrl`                 | Base service-under-test URL. Default value is `http://localhost`.
+`browserWSEndpoint`       | Websocket endpoint to connect to the browser in order to be able to use CDP protocol. Default value is `null`.
 `automationProtocol`      | Browser automation protocol. Default value is `webdriver`.
 `sessionEnvFlags`         | Environment flags that determine which protocol will be used in created browser session. Default value is `{}`.
 `waitTimeout`             | Timeout for web page event. Default value is `1000` ms.
@@ -799,6 +801,9 @@ Selenium grid URL. Default value is `http://localhost:4444/wd/hub`.
 
 #### baseUrl
 Base service-under-test URL. Default value is `http://localhost`.
+
+#### browserWSEndpoint
+Websocket endpoint to connect to the browser in order to be able to use [CDP protocol](https://chromedevtools.github.io/devtools-protocol/). For example you specify `browserWSEndpoint: "ws://YOUR_HOST/devtools"` to which `sessionId` of the browser will be added to the end: `ws://YOUR_HOST/devtools/12345`, where `12345` is a `sessionId`. Default value is `null`, it means that `webdriverio` is trying to figure out the websocket endpoint on its own.
 
 #### automationProtocol
 Browser automation protocol (`webdriver`, `devtools`) that will be used. Default value is `webdriver`.
