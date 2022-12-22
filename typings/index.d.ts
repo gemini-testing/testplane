@@ -374,6 +374,7 @@ declare namespace Hermione {
 
     export interface CommonConfig {
         configPath?: string;
+        automationProtocol: "webdriver" | "devtools";
         desiredCapabilities: WebDriver.DesiredCapabilities | null;
         gridUrl: string;
         baseUrl: string;
