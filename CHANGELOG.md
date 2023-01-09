@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.1](https://github.com/gemini-testing/hermione/compare/v6.0.0...v6.0.1) (2023-01-09)
+
+
+### Bug Fixes
+
+* use strict version of webdriverio ([a111f9b](https://github.com/gemini-testing/hermione/commit/a111f9b8f853660eda4aa631b7f8e0c0e4c21e6d))
+
 ## [6.0.0](https://github.com/gemini-testing/hermione/compare/v5.6.1...v6.0.0) (2022-12-21)
 
 
