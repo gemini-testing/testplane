@@ -252,6 +252,12 @@ declare namespace Hermione {
         sessionId: string;
     };
 
+    export interface TestError extends Error {
+        screenshot?: {
+            base64: string;
+        };
+    };
+
     export interface TestResult extends Test {
         startTime: number;
         duration: number;
@@ -261,7 +267,8 @@ declare namespace Hermione {
             assertViewResults: Array<AssertViewResultsSuccess>;
         };
         history: History;
-    }
+        err?: TestError;
+    };
 
     export interface TestResultWithRetries extends TestResult {
         retriesLeft: number;
