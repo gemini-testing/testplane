@@ -12,8 +12,6 @@
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
     "preversion": "npm run lint && npm test",
-    "prepublish": "npm run prepare-calibrate-script",
-    "prepare-calibrate-script": "uglifyjs ./lib/browser/client-scripts/calibrate.js -m > ./lib/browser/client-scripts/calibrate.min.js --support-ie8",
     "commitmsg": "commitlint -e",
     "release": "standard-version"
   },
@@ -60,7 +58,6 @@
     "sharp": "~0.30.7",
     "sizzle": "^2.3.6",
     "temp": "^0.8.3",
-    "uglify-js": "^2.8.29",
     "uglifyify": "^3.0.4",
     "urijs": "^1.19.11",
     "url-join": "^4.0.1",
