@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.2](https://github.com/gemini-testing/hermione/compare/v6.0.1...v6.0.2) (2023-01-11)
+
+
+### Bug Fixes
+
+* add err field to test result ([5f6dbe4](https://github.com/gemini-testing/hermione/commit/5f6dbe4811389d1da92decbbeedb5a59553b4c06))
+* change error throwing on not existing element ([16dea03](https://github.com/gemini-testing/hermione/commit/16dea0320ba85c42f207c7c4cd6c0fd773897f2b))
+* throw error on invalid reference ([7b74f1b](https://github.com/gemini-testing/hermione/commit/7b74f1b04cf7977d3eabdb930717de08533d5fe9))
+
 ### [6.0.1](https://github.com/gemini-testing/hermione/compare/v6.0.0...v6.0.1) (2023-01-09)
 
 
