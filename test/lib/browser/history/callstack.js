@@ -1,7 +1,7 @@
 'use strict';
 
 const Callstack = require('lib/browser/history/callstack');
-const logger = require('../../../../lib/utils/logger');
+const {historyDataMap} = require('lib/browser/history/utils');
 
 describe('commands-history', () => {
     describe('callstack', () => {
@@ -69,14 +69,21 @@ describe('commands-history', () => {
             assert.propertyVal(node, 'some', 'data');
         });
 
-        it('should log warn if "leave" a command has been executed for an empty stack', () => {
-            sinon.spy(logger, 'warn');
+        it('should remove child nodes when parent leaves a stack', () => {
+            stack.enter({[historyDataMap.KEY]: 2});
+            stack.enter({[historyDataMap.KEY]: 3});
 
+            stack.leave(2);
+
+            const nodes = stack.flush();
+            assert.equal(nodes.length, 1);
+        });
+
+        it('should ignore "leave" command on empty stack', () => {
             stack.leave();
 
-            assert.calledWith(logger.warn, sinon.match(/empty/));
-
-            logger.warn.restore();
+            const nodes = stack.flush();
+            assert.equal(nodes.length, 0);
         });
 
         it('should calculate a duration properly', () => {
