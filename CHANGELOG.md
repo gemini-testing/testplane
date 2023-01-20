@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.0.3](https://github.com/gemini-testing/hermione/compare/v6.0.2...v6.0.3) (2023-01-20)
+
+
+### Bug Fixes
+
+* remove child nodes when parent leaves callstack ([8fade7b](https://github.com/gemini-testing/hermione/commit/8fade7b2f43aef23e6cec5b6568e80d48da3d05c))
+
 ### [6.0.2](https://github.com/gemini-testing/hermione/compare/v6.0.1...v6.0.2) (2023-01-11)
 
 
