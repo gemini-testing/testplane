@@ -58,7 +58,6 @@ describe('browser/camera', () => {
                     sandbox.stub(utils, 'isFullPage');
 
                     page = {
-                        pixelRatio: 1,
                         viewport: {
                             left: 1,
                             top: 1,
@@ -92,19 +91,6 @@ describe('browser/camera', () => {
                         height: page.viewport.height,
                         width: page.viewport.width
                     });
-                });
-
-                it('should crop considering pixel ratio', async () => {
-                    utils.isFullPage.returns(true);
-
-                    const scaledPage = {
-                        pixelRatio: 2,
-                        viewport: {left: 2, top: 3, width: 10, height: 12}
-                    };
-
-                    await mkCamera_({screenshotMode: 'fullPage'}).captureViewportImage(scaledPage);
-
-                    assert.calledOnceWith(image.crop, {left: 4, top: 6, width: 20, height: 24});
                 });
             });
         });

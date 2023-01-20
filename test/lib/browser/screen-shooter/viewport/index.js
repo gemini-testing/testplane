@@ -12,7 +12,6 @@ describe('Viewport', () => {
 
     const createViewport = (opts = {}) => new Viewport(
         {
-            pixelRatio: opts.pixelRatio || 1,
             captureArea: opts.captureArea || {},
             viewport: opts.viewport || {},
             ignoreAreas: opts.ignoreAreas || []
@@ -98,21 +97,6 @@ describe('Viewport', () => {
             assert.calledOnceWith(image.applyClear);
         });
 
-        it('should consider pixel ratio', async () => {
-            const firstArea = {left: 20, top: 12, width: 30, height: 5};
-            const secondArea = {left: 12, top: 35, width: 25, height: 15};
-            const pixelRatio = 2;
-            const viewport = createViewport({
-                ignoreAreas: [firstArea, secondArea],
-                pixelRatio
-            });
-
-            await viewport.ignoreAreas(image, {left: 0, top: 0, width: 100, height: 100});
-
-            assert.calledWith(image.addClear.firstCall, {left: 40, top: 24, width: 60, height: 10});
-            assert.calledWith(image.addClear.secondCall, {left: 24, top: 70, width: 50, height: 30});
-        });
-
         describe('should crop ignore area to image area', () => {
             it('inside', async () => {
                 const viewport = createViewport({ignoreAreas: [{left: 0, top: 0, width: 1000, height: 1000}]});
@@ -147,10 +131,7 @@ describe('Viewport', () => {
             });
 
             it('bottom right', async () => {
-                const viewport = createViewport({
-                    ignoreAreas: [{left: 10, top: 10, width: 100, height: 100}],
-                    pixelRatio: 1
-                });
+                const viewport = createViewport({ignoreAreas: [{left: 10, top: 10, width: 100, height: 100}]});
 
                 await viewport.ignoreAreas(image, {left: 50, top: 50, width: 100, height: 100});
 
@@ -208,32 +189,6 @@ describe('Viewport', () => {
                 await vieport.handleImage(image);
 
                 assert.calledOnceWith(image.crop, {left: 1, top: 2, width: 3, height: 4});
-            });
-
-            describe('considering pixel ratio', () => {
-                it('without intersection', async () => {
-                    const vieport = createViewport({
-                        captureArea: {left: 1, top: 1, width: 1, height: 1},
-                        viewport: {left: 0, top: 0, width: 10, height: 10},
-                        pixelRatio: 3
-                    });
-
-                    await vieport.handleImage(image);
-
-                    assert.calledOnceWith(image.crop, {left: 3, top: 3, width: 3, height: 3});
-                });
-
-                it('with intersection', async () => {
-                    const vieport = createViewport({
-                        captureArea: {left: 2, top: 3, width: 4, height: 5},
-                        viewport: {left: 0, top: 0, width: 10, height: 10},
-                        pixelRatio: 3
-                    });
-
-                    await vieport.handleImage(image);
-
-                    assert.calledOnceWith(image.crop, {left: 6, top: 9, width: 1, height: 1});
-                });
             });
 
             it('with given area', async () => {
@@ -335,13 +290,12 @@ describe('Viewport', () => {
             newImage.getSize.resolves({height: 4, width: 2});
             const viewport = createViewport({
                 captureArea: {left: 0, top: 0, width: 4, height: 20},
-                viewport: {left: 0, top: 0, width: 4, height: 8},
-                pixelRatio: 0.5
+                viewport: {left: 0, top: 0, width: 4, height: 8}
             });
 
             await viewport.extendBy(2, newImage);
 
-            assert.calledWith(newImage.crop, {left: 0, top: 3, width: 2, height: 1});
+            assert.calledWith(newImage.crop, {left: 0, top: 2, width: 2, height: 2});
         });
 
         it('should join original image with cropped image', async () => {
