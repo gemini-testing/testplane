@@ -14,6 +14,12 @@ module.exports = class HookRunner {
         this._failedSuite = null;
     }
 
+    hasBeforeEachHooks() {
+        const suite = this._test.parent;
+
+        return hasHooks(suite, 'beforeEach');
+    }
+
     async runBeforeEachHooks() {
         await this._runBeforeEachHooks(this._test.parent);
     }
@@ -33,6 +39,12 @@ module.exports = class HookRunner {
 
     _runHook(hook) {
         return this._executionThread.run(hook.clone());
+    }
+
+    hasAfterEachHooks() {
+        const suite = this._failedSuite || this._test.parent;
+
+        return hasHooks(suite, 'afterEach');
     }
 
     async runAfterEachHooks() {
@@ -61,3 +73,7 @@ module.exports = class HookRunner {
         }
     }
 };
+
+function hasHooks(suite, hookType) {
+    return suite && (suite[`${hookType}Hooks`].length || hasHooks(suite.parent, hookType));
+}

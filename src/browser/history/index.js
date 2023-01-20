@@ -2,17 +2,18 @@
 
 const Callstack = require('./callstack');
 const cmds = require('./commands');
-const {runWithHooks, normalizeCommandArgs, historyDataMap} = require('./utils');
+const {runWithHooks, normalizeCommandArgs, historyDataMap, isGroup} = require('./utils');
 
 const shouldNotWrapCommand = (commandName) => [
     'addCommand',
     'overwriteCommand',
     'extendOptions',
     'setMeta',
-    'getMeta'
+    'getMeta',
+    'runStep'
 ].includes(commandName);
 
-const mkNodeData = ({name, args, elementScope, key, overwrite}) => {
+const mkHistoryNode = ({name, args, elementScope, key, overwrite, isGroup}) => {
     const map = {
         [historyDataMap.NAME]: name,
         [historyDataMap.ARGS]: normalizeCommandArgs(name, args),
@@ -24,7 +25,22 @@ const mkNodeData = ({name, args, elementScope, key, overwrite}) => {
         map[historyDataMap.IS_OVERWRITTEN] = Number(overwrite);
     }
 
+    if (isGroup) {
+        map[historyDataMap.IS_GROUP] = true;
+    }
+
     return map;
+};
+
+const runWithHistoryHooks = ({callstack, nodeData, fn}) => {
+    nodeData.key = nodeData.key || Symbol();
+
+    return runWithHooks({
+        before: () => callstack.enter(mkHistoryNode(nodeData)),
+        fn,
+        after: () => callstack.leave(nodeData.key),
+        error: () => callstack.markError(exports.shouldPropagateFn)
+    });
 };
 
 const overwriteAddCommand = (session, callstack) => session
@@ -34,12 +50,10 @@ const overwriteAddCommand = (session, callstack) => session
         }
 
         function decoratedWrapper(...args) {
-            const key = Symbol();
-
-            return runWithHooks({
-                before: () => callstack.enter(mkNodeData({name, args, elementScope, key, overwrite: false})),
-                fn: () => wrapper.apply(this, args),
-                after: () => callstack.leave(key)
+            return runWithHistoryHooks({
+                callstack,
+                nodeData: {name, args, elementScope, overwrite: false},
+                fn: () => wrapper.apply(this, args)
             });
         }
 
@@ -53,12 +67,10 @@ const overwriteOverwriteCommand = (session, callstack) => session
         }
 
         function decoratedWrapper(origFn, ...args) {
-            const key = Symbol();
-
-            return runWithHooks({
-                before: () => callstack.enter(mkNodeData({name, args, elementScope, key, overwrite: true})),
-                fn: () => wrapper.apply(this, [origFn, ...args]),
-                after: () => callstack.leave(key)
+            return runWithHistoryHooks({
+                callstack,
+                nodeData: {name, args, elementScope, overwrite: true},
+                fn: () => wrapper.apply(this, [origFn, ...args])
             });
         }
 
@@ -67,12 +79,10 @@ const overwriteOverwriteCommand = (session, callstack) => session
 
 const overwriteCommands = ({session, callstack, commands, elementScope}) => commands.forEach((name) => {
     function decoratedWrapper(origFn, ...args) {
-        const key = Symbol();
-
-        return runWithHooks({
-            before: () => callstack.enter(mkNodeData({name, args, elementScope, key, overwrite: false})),
-            fn: () => origFn(...args),
-            after: () => callstack.leave(key)
+        return runWithHistoryHooks({
+            callstack,
+            nodeData: {name, args, elementScope, overwrite: false},
+            fn: () => origFn(...args)
         });
     }
 
@@ -93,6 +103,11 @@ const overwriteElementCommands = (session, callstack) => overwriteCommands({
     elementScope: true
 });
 
+const overwriteRunStepCommand = (session, callstack) => session
+    .overwriteCommand('runStep', (origCommand, stepName, stepCb) => {
+        return exports.runGroup(callstack, stepName, () => origCommand(stepName, stepCb));
+    });
+
 exports.initCommandHistory = (session) => {
     const callstack = new Callstack();
 
@@ -100,6 +115,21 @@ exports.initCommandHistory = (session) => {
     overwriteBrowserCommands(session, callstack);
     overwriteElementCommands(session, callstack);
     overwriteOverwriteCommand(session, callstack);
+    overwriteRunStepCommand(session, callstack);
 
     return callstack;
 };
+
+exports.runGroup = (callstack, name, fn) => {
+    if (!callstack) {
+        return fn();
+    }
+
+    return runWithHistoryHooks({
+        callstack,
+        nodeData: {name, isGroup: true},
+        fn
+    });
+};
+
+exports.shouldPropagateFn = (parentNode, currentNode) => isGroup(parentNode) || isGroup(currentNode);

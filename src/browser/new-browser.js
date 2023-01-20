@@ -6,6 +6,7 @@ const _ = require('lodash');
 const webdriverio = require('webdriverio');
 const Browser = require('./browser');
 const signalHandler = require('../signal-handler');
+const history = require('./history');
 const logger = require('../utils/logger');
 
 const DEFAULT_PORT = 4444;
@@ -20,11 +21,14 @@ module.exports = class NewBrowser extends Browser {
     async init() {
         this._session = await this._createSession();
 
+        this._addSteps();
         this._addHistory();
-        this._addCommands();
 
-        this.restoreHttpTimeout();
-        await this._setPageLoadTimeout();
+        await history.runGroup(this._callstackHistory, 'hermione: init browser', async () => {
+            this._addCommands();
+            this.restoreHttpTimeout();
+            await this._setPageLoadTimeout();
+        });
 
         return this;
     }

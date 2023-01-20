@@ -10,6 +10,7 @@ const Browser = require('./browser');
 const commandsList = require('./commands');
 const Camera = require('./camera');
 const clientBridge = require('./client-bridge');
+const history = require('./history');
 const logger = require('../utils/logger');
 
 const OPTIONAL_SESSION_OPTS = ['transformRequest', 'transformResponse'];
@@ -31,25 +32,31 @@ module.exports = class ExistingBrowser extends Browser {
     async init({sessionId, sessionCaps, sessionOpts} = {}, calibrator) {
         this._session = await this._attachSession({sessionId, sessionCaps, sessionOpts});
 
+        this._addSteps();
         this._addHistory();
-        this._addCommands();
 
-        try {
-            this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
-        } catch (e) {
-            logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, e.stack);
-        }
+        await history.runGroup(this._callstackHistory, 'hermione: init browser', async () => {
+            this._addCommands();
 
-        await this._prepareSession(sessionId);
-        await this._performCalibration(calibrator);
-        await this._buildClientScripts();
+            try {
+                this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
+            } catch (e) {
+                logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, e.stack);
+            }
+
+            await this._prepareSession(sessionId);
+            await this._performCalibration(calibrator);
+            await this._buildClientScripts();
+        });
 
         return this;
     }
 
     async reinit(sessionId, sessionOpts) {
-        this._session.extendOptions(sessionOpts);
-        await this._prepareSession(sessionId);
+        await history.runGroup(this._callstackHistory, 'hermione: reinit browser', async () => {
+            this._session.extendOptions(sessionOpts);
+            await this._prepareSession(sessionId);
+        });
 
         return this;
     }

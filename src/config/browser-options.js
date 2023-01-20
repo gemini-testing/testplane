@@ -5,7 +5,7 @@ const option = require('gemini-configparser').option;
 const defaults = require('./defaults');
 const optionsBuilder = require('./options-builder');
 const utils = require('./utils');
-const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL} = require('../constants/config');
+const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE} = require('../constants/config');
 
 const is = utils.is;
 
@@ -132,7 +132,17 @@ function buildBrowserOptions(defaultFactory, extra) {
         testTimeout: options.optionalNonNegativeInteger('testTimeout'),
         waitTimeout: options.positiveInteger('waitTimeout'),
         waitInterval: options.positiveInteger('waitInterval'),
-        saveHistory: options.boolean('saveHistory'),
+
+        saveHistoryMode: option({
+            defaultValue: defaultFactory('saveHistoryMode'),
+            validate: (value) => {
+                const availableValues = Object.values(SAVE_HISTORY_MODE);
+
+                if (!availableValues.includes(value)) {
+                    throw new Error(`"saveHistoryMode" must be one of: ${availableValues.join(', ')}`);
+                }
+            }
+        }),
 
         takeScreenshotOnFails: option({
             defaultValue: defaultFactory('takeScreenshotOnFails'),

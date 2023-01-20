@@ -4,7 +4,7 @@ const _ = require('lodash');
 
 const Config = require('src/config');
 const defaults = require('src/config/defaults');
-const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL} = require('src/constants/config');
+const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE} = require('src/constants/config');
 
 describe('config browser-options', () => {
     const sandbox = sinon.sandbox.create();
@@ -1147,9 +1147,56 @@ describe('config browser-options', () => {
         'compositeImage',
         'resetCursor',
         'strictTestsOrder',
-        'saveHistory',
         'waitOrientationChange'
     ].forEach((option) => describe(option, () => testBooleanOption(option)));
+
+    describe('saveHistoryMode', () => {
+        it('should throw an error if value is not available', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_({saveHistoryMode: 'foo'}));
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, `"saveHistoryMode" must be one of`);
+        });
+
+        it('should set a default value if it is not set in config', () => {
+            const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.saveHistory, defaults.saveHistory);
+        });
+
+        it('should override option for browser', () => {
+            const readConfig = {
+                saveHistoryMode: 'none',
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL})
+                }
+            };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.browsers.b1.saveHistoryMode, SAVE_HISTORY_MODE.NONE);
+            assert.equal(config.browsers.b2.saveHistoryMode, SAVE_HISTORY_MODE.ALL);
+        });
+
+        [SAVE_HISTORY_MODE.NONE, SAVE_HISTORY_MODE.ONLY_FAILED, SAVE_HISTORY_MODE.ALL].forEach(value => {
+            it(`should set option for browser to "${value}"`, () => {
+                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({saveHistoryMode: value}));
+
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.equal(config.browsers.b1.saveHistoryMode, value);
+            });
+        });
+    });
 
     describe('takeScreenshotOnFails', () => {
         it('should throw an error if value is not an object', () => {

@@ -4,8 +4,8 @@ const webdriverio = require('webdriverio');
 const logger = require('src/utils/logger');
 const signalHandler = require('src/signal-handler');
 const history = require('src/browser/history');
+const {WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE} = require('src/constants/config');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
-const {WEBDRIVER_PROTOCOL} = require('src/constants/config');
 
 describe('NewBrowser', () => {
     const sandbox = sinon.sandbox.create();
@@ -132,21 +132,35 @@ describe('NewBrowser', () => {
             });
 
             it('should NOT init commands-history if it is off', async () => {
-                await mkBrowser_({saveHistory: false}).init();
+                await mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.NONE}).init();
 
                 assert.notCalled(history.initCommandHistory);
             });
 
             it('should save history of executed commands if it is enabled', async () => {
-                await mkBrowser_({saveHistory: true}).init();
+                await mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL}).init();
+
+                assert.calledOnceWith(history.initCommandHistory, session);
+            });
+
+            it('should save history of executed commands if it is enabled on fails', async () => {
+                await mkBrowser_({saveHistoryMode: 'onlyFailed'}).init();
 
                 assert.calledOnceWith(history.initCommandHistory, session);
             });
 
             it('should init commands-history before any commands have added', async () => {
-                await mkBrowser_({saveHistory: true}).init();
+                await mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL}).init();
 
                 assert.callOrder(history.initCommandHistory, session.addCommand);
+            });
+
+            it('should log "init" to history if "saveHistoryMode" and "pageLoadTimeout" are set', async () => {
+                const browser = mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL, pageLoadTimeout: 500100});
+                sandbox.stub(history, 'runGroup');
+                await browser.init();
+
+                assert.calledOnceWith(history.runGroup, sinon.match.any, 'hermione: init browser', sinon.match.func);
             });
         });
 
@@ -191,33 +205,6 @@ describe('NewBrowser', () => {
 
     describe('reset', () => {
         it('should be fulfilled', () => assert.isFulfilled(mkBrowser_().reset()));
-    });
-
-    describe('flushHistory', () => {
-        let stack;
-
-        beforeEach(() => {
-            stack = {
-                flush: sinon.stub().named('stack').returns([{some: 'data'}])
-            };
-            sandbox.stub(history, 'initCommandHistory').returns(stack);
-        });
-
-        it('should flush a history if it if on', async () => {
-            const browser = await mkBrowser_({saveHistory: true}).init();
-            const res = browser.flushHistory();
-
-            assert.deepEqual(res, [{some: 'data'}]);
-            assert.called(stack.flush);
-        });
-
-        it('should return an empty array if it if off', async () => {
-            const browser = await mkBrowser_({saveHistory: false}).init();
-            const res = browser.flushHistory();
-
-            assert.deepEqual(res, []);
-            assert.notCalled(stack.flush);
-        });
     });
 
     describe('quit', () => {

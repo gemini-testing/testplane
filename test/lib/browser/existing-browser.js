@@ -11,6 +11,7 @@ const Camera = require('src/browser/camera');
 const clientBridge = require('src/browser/client-bridge');
 const logger = require('src/utils/logger');
 const history = require('src/browser/history');
+const {SAVE_HISTORY_MODE} = require('src/constants/config');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
 
 describe('ExistingBrowser', () => {
@@ -170,15 +171,33 @@ describe('ExistingBrowser', () => {
             });
 
             it('should NOT init commands-history if it is off', async () => {
-                const browser = mkBrowser_({saveHistory: false});
+                const browser = mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.NONE});
 
                 await initBrowser_(browser);
 
                 assert.notCalled(history.initCommandHistory);
             });
 
-            it('should save history of executed commands if it is enabled', async () => {
-                const browser = mkBrowser_({saveHistory: true});
+            describe('should save history of executed commands', () => {
+                it('if it is enabled for all tests', async () => {
+                    const browser = mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL});
+
+                    await initBrowser_(browser);
+
+                    assert.calledOnceWith(history.initCommandHistory, session);
+                });
+
+                it('if it is enabled for failed tests only', async () => {
+                    const browser = mkBrowser_({saveHistoryMode: 'onlyFailed'});
+
+                    await initBrowser_(browser);
+
+                    assert.calledOnceWith(history.initCommandHistory, session);
+                });
+            });
+
+            it('should save history of executed commands if it is enabled on fails', async () => {
+                const browser = mkBrowser_({saveHistoryMode: 'onlyFailed'});
 
                 await initBrowser_(browser);
 
@@ -186,11 +205,20 @@ describe('ExistingBrowser', () => {
             });
 
             it('should init commands-history before any commands have added', async () => {
-                const browser = mkBrowser_({saveHistory: true});
+                const browser = mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL});
 
                 await initBrowser_(browser);
 
                 assert.callOrder(history.initCommandHistory, session.addCommand);
+            });
+
+            it('should log "init" to history if "saveHistory" is set', async () => {
+                const browser = mkBrowser_({saveHistoryMode: SAVE_HISTORY_MODE.ALL});
+                sandbox.stub(history, 'runGroup');
+
+                await initBrowser_(browser, {});
+
+                assert.calledOnceWith(history.runGroup, sinon.match.any, 'hermione: init browser', sinon.match.func);
             });
         });
 
