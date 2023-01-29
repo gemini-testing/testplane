@@ -1,13 +1,13 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
+const _ = require("lodash");
 
-const Runner = require('./runner');
-const TestRunner = require('./test-runner');
-const Events = require('../constants/runner-events');
-const SuiteMonitor = require('./suite-monitor');
-const BrowserAgent = require('./browser-agent');
-const PromiseGroup = require('./promise-group');
+const Runner = require("./runner");
+const TestRunner = require("./test-runner");
+const Events = require("../constants/runner-events");
+const SuiteMonitor = require("./suite-monitor");
+const BrowserAgent = require("./browser-agent");
+const PromiseGroup = require("./promise-group");
 
 module.exports = class BrowserRunner extends Runner {
     constructor(browserId, config, browserPool, workers) {
@@ -20,7 +20,7 @@ module.exports = class BrowserRunner extends Runner {
         this._suiteMonitor = SuiteMonitor.create();
         this._passthroughEvents(this._suiteMonitor, [
             Events.SUITE_BEGIN,
-            Events.SUITE_END
+            Events.SUITE_END,
         ]);
 
         this._activeTestRunners = new Set();
@@ -62,7 +62,7 @@ module.exports = class BrowserRunner extends Runner {
             Events.TEST_PASS,
             Events.TEST_FAIL,
             Events.TEST_PENDING,
-            Events.RETRY
+            Events.RETRY,
         ]);
 
         runner.on(Events.TEST_END, (test) => this._suiteMonitor.testEnd(test));
@@ -81,7 +81,7 @@ module.exports = class BrowserRunner extends Runner {
 
     _passthroughEvents(runner, events) {
         events.forEach((event) => {
-            runner.on(event, (data) => this.emit(event, _.extend(data, {browserId: this._browserId})));
+            runner.on(event, (data) => this.emit(event, _.extend(data, { browserId: this._browserId })));
         });
     }
 };

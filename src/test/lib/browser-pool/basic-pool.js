@@ -1,48 +1,48 @@
-'use strict';
+"use strict";
 
-const AsyncEmitter = require('lib/events/async-emitter');
-const BasicPool = require('lib/browser-pool/basic-pool');
-const Browser = require('lib/browser/new-browser');
-const CancelledError = require('lib/browser-pool/cancelled-error');
-const Events = require('lib/constants/runner-events');
-const {stubBrowser} = require('./util');
-const _ = require('lodash');
-const Promise = require('bluebird');
-const {makeConfigStub} = require('../../utils');
+const AsyncEmitter = require("lib/events/async-emitter");
+const BasicPool = require("lib/browser-pool/basic-pool");
+const Browser = require("lib/browser/new-browser");
+const CancelledError = require("lib/browser-pool/cancelled-error");
+const Events = require("lib/constants/runner-events");
+const { stubBrowser } = require("./util");
+const _ = require("lodash");
+const Promise = require("bluebird");
+const { makeConfigStub } = require("../../utils");
 
-describe('browser-pool/basic-pool', () => {
+describe("browser-pool/basic-pool", () => {
     const sandbox = sinon.sandbox.create();
 
     const mkPool_ = (opts) => {
         opts = _.defaults(opts, {
             config: makeConfigStub(),
-            emitter: new AsyncEmitter()
+            emitter: new AsyncEmitter(),
         });
 
         return BasicPool.create(opts.config, opts.emitter);
     };
 
     beforeEach(() => {
-        sandbox.stub(Browser, 'create').returns(stubBrowser());
+        sandbox.stub(Browser, "create").returns(stubBrowser());
     });
 
     afterEach(() => sandbox.restore());
 
-    it('should create new browser when requested', async () => {
+    it("should create new browser when requested", async () => {
         const config = makeConfigStub();
 
-        await mkPool_({config}).getBrowser('broId');
+        await mkPool_({ config }).getBrowser("broId");
 
-        assert.calledWith(Browser.create, config, 'broId');
+        assert.calledWith(Browser.create, config, "broId");
     });
 
-    it('should create new browser with specified version when requested', async () => {
-        await mkPool_().getBrowser('broId', {version: '1.0'});
+    it("should create new browser with specified version when requested", async () => {
+        await mkPool_().getBrowser("broId", { version: "1.0" });
 
-        assert.calledWith(Browser.create, sinon.match.any, 'broId', '1.0');
+        assert.calledWith(Browser.create, sinon.match.any, "broId", "1.0");
     });
 
-    it('should init browser', async () => {
+    it("should init browser", async () => {
         const browser = stubBrowser();
         Browser.create.returns(browser);
 
@@ -51,79 +51,79 @@ describe('browser-pool/basic-pool', () => {
         assert.calledOnce(browser.init);
     });
 
-    it('should not finalize browser if failed to start it', async () => {
+    it("should not finalize browser if failed to start it", async () => {
         const publicAPI = null;
-        const browser = stubBrowser('some-id', 'some-version', publicAPI);
-        browser.init.rejects(new Error('foo'));
+        const browser = stubBrowser("some-id", "some-version", publicAPI);
+        browser.init.rejects(new Error("foo"));
         Browser.create.returns(browser);
 
         const pool = mkPool_();
 
-        await assert.isRejected(pool.getBrowser(), 'foo');
+        await assert.isRejected(pool.getBrowser(), "foo");
 
         assert.notCalled(browser.quit);
     });
 
-    it('should finalize browser if failed after start it', async () => {
+    it("should finalize browser if failed after start it", async () => {
         const publicAPI = {};
-        const browser = stubBrowser('some-id', 'some-version', publicAPI);
+        const browser = stubBrowser("some-id", "some-version", publicAPI);
         browser.init.resolves();
         Browser.create.returns(browser);
 
         const emitter = new AsyncEmitter()
-            .on(Events.SESSION_START, () => Promise.reject(new Error('foo')));
+            .on(Events.SESSION_START, () => Promise.reject(new Error("foo")));
 
-        const pool = mkPool_({emitter});
+        const pool = mkPool_({ emitter });
 
-        await assert.isRejected(pool.getBrowser(), 'foo');
+        await assert.isRejected(pool.getBrowser(), "foo");
 
         assert.calledOnce(browser.quit);
     });
 
-    describe('SESSION_START event', () => {
-        it('should be emitted after browser init', async () => {
+    describe("SESSION_START event", () => {
+        it("should be emitted after browser init", async () => {
             const browser = stubBrowser();
             Browser.create.returns(browser);
 
-            const onSessionStart = sinon.stub().named('onSessionStart');
+            const onSessionStart = sinon.stub().named("onSessionStart");
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_START, onSessionStart);
 
-            await mkPool_({emitter}).getBrowser();
+            await mkPool_({ emitter }).getBrowser();
 
             assert.callOrder(browser.init, onSessionStart);
         });
 
-        it('handler should be waited by pool', async () => {
+        it("handler should be waited by pool", async () => {
             const browser = stubBrowser();
             Browser.create.returns(browser);
 
-            const afterSessionStart = sinon.stub().named('afterSessionStart');
+            const afterSessionStart = sinon.stub().named("afterSessionStart");
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_START, () => Promise.delay(1).then(afterSessionStart));
 
-            await mkPool_({emitter}).getBrowser();
+            await mkPool_({ emitter }).getBrowser();
 
             assert.callOrder(afterSessionStart, browser.reset);
         });
 
-        it('handler fail should fail browser request', async () => {
+        it("handler fail should fail browser request", async () => {
             const emitter = new AsyncEmitter()
-                .on(Events.SESSION_START, () => Promise.reject(new Error('foo')));
+                .on(Events.SESSION_START, () => Promise.reject(new Error("foo")));
 
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
 
-            await assert.isRejected(pool.getBrowser(), 'foo');
+            await assert.isRejected(pool.getBrowser(), "foo");
         });
 
-        it('on handler fail browser should be finalized', async () => {
+        it("on handler fail browser should be finalized", async () => {
             const browser = stubBrowser();
             Browser.create.returns(browser);
 
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_START, () => Promise.reject(new Error()));
 
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
 
             await assert.isRejected(pool.getBrowser());
 
@@ -131,7 +131,7 @@ describe('browser-pool/basic-pool', () => {
         });
     });
 
-    it('should quit a browser when freed', async () => {
+    it("should quit a browser when freed", async () => {
         const pool = mkPool_();
         const browser = await pool.getBrowser();
 
@@ -140,13 +140,13 @@ describe('browser-pool/basic-pool', () => {
         assert.calledOnce(browser.quit);
     });
 
-    describe('SESSION_END event', () => {
-        it('should be emitted before browser quit', async () => {
-            const onSessionEnd = sinon.stub().named('onSessionEnd');
+    describe("SESSION_END event", () => {
+        it("should be emitted before browser quit", async () => {
+            const onSessionEnd = sinon.stub().named("onSessionEnd");
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_END, onSessionEnd);
 
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
             const browser = await pool.getBrowser();
 
             await pool.freeBrowser(browser);
@@ -154,12 +154,12 @@ describe('browser-pool/basic-pool', () => {
             assert.callOrder(onSessionEnd, browser.quit);
         });
 
-        it('handler should be waited before actual quit', async () => {
-            const afterSessionEnd = sinon.stub().named('afterSessionEnd');
+        it("handler should be waited before actual quit", async () => {
+            const afterSessionEnd = sinon.stub().named("afterSessionEnd");
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_END, () => Promise.delay(1).then(afterSessionEnd));
 
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
             const browser = await pool.getBrowser();
 
             await pool.freeBrowser(browser);
@@ -167,11 +167,11 @@ describe('browser-pool/basic-pool', () => {
             assert.callOrder(afterSessionEnd, browser.quit);
         });
 
-        it('handler fail should not prevent browser from quit', async () => {
+        it("handler fail should not prevent browser from quit", async () => {
             const emitter = new AsyncEmitter()
                 .on(Events.SESSION_END, () => Promise.reject(new Error()));
 
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
             const browser = await pool.getBrowser();
 
             await pool.freeBrowser(browser);
@@ -180,13 +180,13 @@ describe('browser-pool/basic-pool', () => {
         });
     });
 
-    describe('cancel', () => {
-        it('should quit all browsers on cancel', async () => {
+    describe("cancel", () => {
+        it("should quit all browsers on cancel", async () => {
             const pool = mkPool_();
 
             const [bro1, bro2] = await Promise.all([
-                pool.getBrowser('bro1'),
-                pool.getBrowser('bro2')
+                pool.getBrowser("bro1"),
+                pool.getBrowser("bro2"),
             ]);
 
             pool.cancel();
@@ -195,12 +195,12 @@ describe('browser-pool/basic-pool', () => {
             assert.calledOnce(bro2.quit);
         });
 
-        it('should quit all browser with the same id on cancel', async () => {
+        it("should quit all browser with the same id on cancel", async () => {
             const pool = mkPool_();
 
             const [bro1, bro2] = await Promise.all([
-                pool.getBrowser('bro'),
-                pool.getBrowser('bro')
+                pool.getBrowser("bro"),
+                pool.getBrowser("bro"),
             ]);
 
             pool.cancel();
@@ -209,7 +209,7 @@ describe('browser-pool/basic-pool', () => {
             assert.calledOnce(bro2.quit);
         });
 
-        it('should reject all subsequent reqests for browser', async () => {
+        it("should reject all subsequent reqests for browser", async () => {
             const pool = mkPool_();
 
             pool.cancel();
@@ -217,12 +217,12 @@ describe('browser-pool/basic-pool', () => {
             await assert.isRejected(pool.getBrowser(), CancelledError);
         });
 
-        it('should quit browser once if it was launched after cancel', async () => {
+        it("should quit browser once if it was launched after cancel", async () => {
             const browser = stubBrowser();
             Browser.create.returns(browser);
 
             const emitter = new AsyncEmitter();
-            const pool = mkPool_({emitter});
+            const pool = mkPool_({ emitter });
 
             emitter.on(Events.SESSION_START, () => pool.cancel());
 
@@ -231,7 +231,7 @@ describe('browser-pool/basic-pool', () => {
             assert.calledOnce(browser.quit);
         });
 
-        it('should quit browsers only once', async () => {
+        it("should quit browsers only once", async () => {
             const pool = mkPool_();
 
             const browser = await pool.getBrowser();

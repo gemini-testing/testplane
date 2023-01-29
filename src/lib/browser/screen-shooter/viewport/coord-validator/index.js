@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const debug = require('debug');
-const HeightViewportError = require('./errors/height-viewport-error');
-const OffsetViewportError = require('./errors/offset-viewport-error');
+const debug = require("debug");
+const HeightViewportError = require("./errors/height-viewport-error");
+const OffsetViewportError = require("./errors/offset-viewport-error");
 
 const isOutsideOfViewport = (viewport, cropArea) =>
     cropArea.top < 0 || cropArea.left < 0 || cropArea.left + cropArea.width > viewport.width;
@@ -19,7 +19,7 @@ module.exports = class CoordValidator {
      * @param {Boolean} [opts.compositeImage] allow area bottom bound to be outside of viewport
      */
     constructor(browser, opts = {}) {
-        this._log = debug('coord-validator:' + browser.id);
+        this._log = debug("coord-validator:" + browser.id);
         this._opts = opts;
     }
 
@@ -29,8 +29,8 @@ module.exports = class CoordValidator {
      * @param {Object} cropArea
      */
     validate(viewport, cropArea) {
-        this._log('viewport size', viewport);
-        this._log('crop area', cropArea);
+        this._log("viewport size", viewport);
+        this._log("crop area", cropArea);
 
         if (this._opts.allowViewportOverflow && !this._opts.compositeImage) {
             return;
@@ -51,7 +51,7 @@ module.exports = class CoordValidator {
      * @private
      */
     _reportOffsetViewportError() {
-        this._log('crop area is outside of the viewport left, top or right bounds');
+        this._log("crop area is outside of the viewport left, top or right bounds");
 
         const message = `Can not capture the specified region of the viewport.
             Position of the region is outside of the viewport left, top or right bounds.
@@ -76,7 +76,7 @@ module.exports = class CoordValidator {
      * @private
      */
     _reportHeightViewportError(viewport, cropArea) {
-        this._log('crop area bottom bound is outside of the viewport height');
+        this._log("crop area bottom bound is outside of the viewport height");
 
         const message = `Can not capture the specified region of the viewport.
             The region bottom bound is outside of the viewport height.

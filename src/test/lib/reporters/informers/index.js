@@ -1,7 +1,7 @@
-const fs = require('fs-extra');
-const proxyquire = require('proxyquire');
+const fs = require("fs-extra");
+const proxyquire = require("proxyquire");
 
-describe('reporters/informers', () => {
+describe("reporters/informers", () => {
     const sandbox = sinon.sandbox.create();
 
     afterEach(() => sandbox.restore());
@@ -13,23 +13,23 @@ describe('reporters/informers', () => {
             createFileInformer = sandbox.stub();
             createConsoleInformer = sandbox.stub();
 
-            sandbox.stub(fs, 'ensureDir');
+            sandbox.stub(fs, "ensureDir");
 
-            ({initInformer} = proxyquire('lib/reporters/informers', {
-                './file': {create: createFileInformer},
-                './console': {create: createConsoleInformer}
+            ({ initInformer } = proxyquire("lib/reporters/informers", {
+                "./file": { create: createFileInformer },
+                "./console": { create: createConsoleInformer },
             }));
         });
 
         describe('if option "path" is passed', () => {
-            it('should create directory', async () => {
-                await initInformer({path: './foo/bar/baz.txt'});
+            it("should create directory", async () => {
+                await initInformer({ path: "./foo/bar/baz.txt" });
 
-                assert.calledOnceWith(fs.ensureDir, './foo/bar');
+                assert.calledOnceWith(fs.ensureDir, "./foo/bar");
             });
 
-            it('should create file informer', async () => {
-                const opts = {path: './foo/bar/baz.txt', type: 'jsonl'};
+            it("should create file informer", async () => {
+                const opts = { path: "./foo/bar/baz.txt", type: "jsonl" };
 
                 await initInformer(opts);
 
@@ -38,14 +38,14 @@ describe('reporters/informers', () => {
         });
 
         describe('if option "path" is not passed', () => {
-            it('should not create directory', async () => {
+            it("should not create directory", async () => {
                 await initInformer({});
 
                 assert.notCalled(fs.ensureDir);
             });
 
-            it('should create console informer', async () => {
-                const opts = {type: 'jsonl'};
+            it("should create console informer", async () => {
+                const opts = { type: "jsonl" };
 
                 await initInformer(opts);
 

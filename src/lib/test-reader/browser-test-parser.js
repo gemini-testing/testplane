@@ -1,16 +1,16 @@
-const {EventEmitter} = require('events');
-const {InstructionsList} = require('./build-instructions');
-const {SkipController} = require('./controllers/skip-controller');
-const {OnlyController} = require('./controllers/only-controller');
-const {ConfigController} = require('./controllers/config-controller');
-const browserVersionController = require('./controllers/browser-version-controller');
-const {readFiles} = require('./mocha-reader');
-const ReadEvents = require('./read-events');
-const TestParserAPI = require('./test-parser-api');
-const RunnerEvents = require('../constants/runner-events');
-const _ = require('lodash');
-const clearRequire = require('clear-require');
-const path = require('path');
+const { EventEmitter } = require("events");
+const { InstructionsList } = require("./build-instructions");
+const { SkipController } = require("./controllers/skip-controller");
+const { OnlyController } = require("./controllers/only-controller");
+const { ConfigController } = require("./controllers/config-controller");
+const browserVersionController = require("./controllers/browser-version-controller");
+const { readFiles } = require("./mocha-reader");
+const ReadEvents = require("./read-events");
+const TestParserAPI = require("./test-parser-api");
+const RunnerEvents = require("../constants/runner-events");
+const _ = require("lodash");
+const clearRequire = require("clear-require");
+const path = require("path");
 
 class BrowserTestParser extends EventEmitter {
     #browserId;
@@ -31,13 +31,13 @@ class BrowserTestParser extends EventEmitter {
     }
 
     addRootSuiteDecorator(fn) {
-        this.#buildInstructions.push(({treeBuilder}) => {
+        this.#buildInstructions.push(({ treeBuilder }) => {
             treeBuilder.addTrap(fn);
         });
     }
 
     applyGrep(re) {
-        this.#buildInstructions.push(({treeBuilder}) => {
+        this.#buildInstructions.push(({ treeBuilder }) => {
             treeBuilder.addTestFilter((test) => re.test(test.fullTitle()));
         });
     }
@@ -51,7 +51,7 @@ class BrowserTestParser extends EventEmitter {
             config: ConfigController.create(eventBus),
             ctx: _.clone(browserConfig.system.ctx),
             only: OnlyController.create(eventBus),
-            skip: SkipController.create(eventBus)
+            skip: SkipController.create(eventBus),
         };
 
         this.#decorateRootSuiteWithBrowserData(browserConfig);
@@ -63,13 +63,13 @@ class BrowserTestParser extends EventEmitter {
         this.#clearRequireCach(files);
 
         const esmDecorator = (f) => f + `?browserId=${this.#browserId}`;
-        await readFiles(files, {esmDecorator, config: browserConfig.system.mochaOpts, eventBus});
+        await readFiles(files, { esmDecorator, config: browserConfig.system.mochaOpts, eventBus });
 
         return this;
     }
 
     #decorateRootSuiteWithBrowserData(browserConfig) {
-        const {desiredCapabilities: {browserVersion, version}} = browserConfig;
+        const { desiredCapabilities: { browserVersion, version } } = browserConfig;
 
         this.addRootSuiteDecorator((suite) => {
             suite.browserId = this.#browserId;
@@ -78,7 +78,7 @@ class BrowserTestParser extends EventEmitter {
     }
 
     #decorateRootSuiteWithTimeout(browserConfig) {
-        const {testTimeout} = browserConfig;
+        const { testTimeout } = browserConfig;
         if (!_.isNumber(testTimeout)) {
             return;
         }
@@ -100,17 +100,17 @@ class BrowserTestParser extends EventEmitter {
                 ...data,
                 browser: this.#browserId,
                 hermione,
-                ...customOpts
+                ...customOpts,
             }));
         };
 
-        passthroughEvent_(RunnerEvents.BEFORE_FILE_READ, {testParser: TestParserAPI.create(hermione, eventBus)});
+        passthroughEvent_(RunnerEvents.BEFORE_FILE_READ, { testParser: TestParserAPI.create(hermione, eventBus) });
         passthroughEvent_(RunnerEvents.AFTER_FILE_READ);
     }
 
     #clearRequireCach(files) {
         files.forEach((filename) => {
-            if (path.extname(filename) !== '.mjs') {
+            if (path.extname(filename) !== ".mjs") {
                 clearRequire(path.resolve(filename));
             }
         });
@@ -151,5 +151,5 @@ class BrowserTestParser extends EventEmitter {
 }
 
 module.exports = {
-    BrowserTestParser
+    BrowserTestParser,
 };

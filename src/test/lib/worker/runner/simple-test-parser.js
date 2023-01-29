@@ -1,11 +1,11 @@
-'use strict';
+"use strict";
 
-const SimpleTestParser = require('lib/worker/runner/sequence-test-parser');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const {BrowserTestParser: TestParser} = require('lib/test-reader/browser-test-parser');
-const {makeConfigStub, makeTest} = require('../../../utils');
+const SimpleTestParser = require("lib/worker/runner/sequence-test-parser");
+const RunnerEvents = require("lib/worker/constants/runner-events");
+const { BrowserTestParser: TestParser } = require("lib/test-reader/browser-test-parser");
+const { makeConfigStub, makeTest } = require("../../../utils");
 
-describe('worker/runner/simple-test-parser', () => {
+describe("worker/runner/simple-test-parser", () => {
     const sandbox = sinon.sandbox.create();
 
     const mkSimpleParser_ = (opts = {}) => {
@@ -14,71 +14,71 @@ describe('worker/runner/simple-test-parser', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
-        sandbox.stub(TestParser.prototype, 'loadFiles').resolvesThis();
-        sandbox.stub(TestParser.prototype, 'parse').returns([]);
+        sandbox.stub(TestParser, "create").returns(Object.create(TestParser.prototype));
+        sandbox.stub(TestParser.prototype, "loadFiles").resolvesThis();
+        sandbox.stub(TestParser.prototype, "parse").returns([]);
     });
 
     afterEach(() => sandbox.restore());
 
-    describe('constructor', () => {
-        it('should not create test parser', () => {
+    describe("constructor", () => {
+        it("should not create test parser", () => {
             mkSimpleParser_();
 
             assert.notCalled(TestParser.create);
         });
     });
 
-    describe('parse', () => {
-        it('should create test parser', async () => {
+    describe("parse", () => {
+        it("should create test parser", async () => {
             const config = makeConfigStub();
-            const simpleParser = mkSimpleParser_({config});
+            const simpleParser = mkSimpleParser_({ config });
 
-            await simpleParser.parse({browserId: 'bro'});
+            await simpleParser.parse({ browserId: "bro" });
 
-            assert.calledOnceWith(TestParser.create, 'bro', config);
+            assert.calledOnceWith(TestParser.create, "bro", config);
         });
 
         [
-            'BEFORE_FILE_READ',
-            'AFTER_FILE_READ'
+            "BEFORE_FILE_READ",
+            "AFTER_FILE_READ",
         ].forEach((event) => {
             it(`should passthrough ${event} event from inner test parser`, async () => {
                 const onEvent = sinon.spy().named(`on${event}`);
                 const simpleParser = mkSimpleParser_()
                     .on(RunnerEvents[event], onEvent);
 
-                TestParser.prototype.parse.callsFake(function() {
-                    this.emit(RunnerEvents[event], {foo: 'bar'});
+                TestParser.prototype.parse.callsFake(function () {
+                    this.emit(RunnerEvents[event], { foo: "bar" });
                     return [];
                 });
 
                 await simpleParser.parse({});
 
-                assert.calledOnceWith(onEvent, {foo: 'bar'});
+                assert.calledOnceWith(onEvent, { foo: "bar" });
             });
         });
 
-        it('should load file', async () => {
+        it("should load file", async () => {
             const simpleParser = mkSimpleParser_();
 
-            await simpleParser.parse({file: 'some/file.js'});
+            await simpleParser.parse({ file: "some/file.js" });
 
-            assert.calledOnceWith(TestParser.prototype.loadFiles, ['some/file.js']);
+            assert.calledOnceWith(TestParser.prototype.loadFiles, ["some/file.js"]);
         });
 
-        it('should load file before parse', async () => {
+        it("should load file before parse", async () => {
             const simpleParser = mkSimpleParser_();
 
             await simpleParser.parse({});
 
             assert.callOrder(
                 TestParser.prototype.loadFiles,
-                TestParser.prototype.parse
+                TestParser.prototype.parse,
             );
         });
 
-        it('should return parsed tests', async () => {
+        it("should return parsed tests", async () => {
             const simpleParser = mkSimpleParser_();
             const tests = [makeTest(), makeTest()];
             TestParser.prototype.parse.returns(tests);

@@ -1,4 +1,4 @@
-const {TreeBuilder} = require('./tree-builder');
+const { TreeBuilder } = require("./tree-builder");
 
 class InstructionsList {
     #instructions;
@@ -25,5 +25,5 @@ class InstructionsList {
 }
 
 module.exports = {
-    InstructionsList
+    InstructionsList,
 };

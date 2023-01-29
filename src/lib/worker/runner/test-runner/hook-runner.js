@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
+const Promise = require("bluebird");
 
 module.exports = class HookRunner {
     static create(...args) {

@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const chalk = require('chalk');
-const _ = require('lodash');
+const path = require("path");
+const chalk = require("chalk");
+const _ = require("lodash");
 
 const getSkipReason = (test) => test && (getSkipReason(test.parent) || test.skipReason);
 const getFilePath = (test) => test && test.file || test.parent && getFilePath(test.parent);
@@ -19,12 +19,12 @@ const getTestError = (test) => {
 };
 
 exports.formatTestInfo = (test) => {
-    const suiteName = test.fullTitle().replace(test.title, '');
-    const sessionId = test.sessionId ? `:${test.sessionId}` : '';
-    const reason = test.pending && ` reason: ${chalk.red(getSkipReason(test) || 'no comment')}`;
+    const suiteName = test.fullTitle().replace(test.title, "");
+    const sessionId = test.sessionId ? `:${test.sessionId}` : "";
+    const reason = test.pending && ` reason: ${chalk.red(getSkipReason(test) || "no comment")}`;
 
     return ` ${suiteName}${chalk.underline(test.title)} [${chalk.yellow(test.browserId)}` +
-        `${sessionId}] - ${chalk.cyan(test.duration || 0)}ms${reason || ''}`;
+        `${sessionId}] - ${chalk.cyan(test.duration || 0)}ms${reason || ""}`;
 };
 
 exports.getTestInfo = (test) => {
@@ -36,7 +36,7 @@ exports.getTestInfo = (test) => {
         sessionId: test.sessionId,
         duration: test.duration,
         startTime: test.startTime,
-        meta: test.meta
+        meta: test.meta,
     };
 
     if (test.err) {
@@ -58,14 +58,14 @@ exports.formatFailedTests = (tests) => {
     const formattedTests = [];
 
     tests.forEach((test) => {
-        const testItem = _.pick(test, ['fullTitle', 'file']);
+        const testItem = _.pick(test, ["fullTitle", "file"]);
 
         if (_.find(formattedTests, testItem)) {
             return;
         }
 
         const browsers = _.filter(tests, testItem);
-        formattedTests.push(_.extend(testItem, {browsers}));
+        formattedTests.push(_.extend(testItem, { browsers }));
     });
 
     return formattedTests;

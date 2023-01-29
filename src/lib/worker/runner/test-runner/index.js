@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const HookRunner = require('./hook-runner');
-const ExecutionThread = require('./execution-thread');
-const OneTimeScreenshooter = require('./one-time-screenshooter');
-const AssertViewError = require('../../../browser/commands/assert-view/errors/assert-view-error');
+const _ = require("lodash");
+const HookRunner = require("./hook-runner");
+const ExecutionThread = require("./execution-thread");
+const OneTimeScreenshooter = require("./one-time-screenshooter");
+const AssertViewError = require("../../../browser/commands/assert-view/errors/assert-view-error");
 
 module.exports = class TestRunner {
     static create(...args) {
@@ -14,7 +14,7 @@ module.exports = class TestRunner {
     constructor(test, config, browserAgent) {
         this._test = _.cloneDeepWith(test, (val, key) => {
             // Don't clone whole tree
-            if (key === 'parent') {
+            if (key === "parent") {
                 return val;
             }
         });
@@ -23,20 +23,20 @@ module.exports = class TestRunner {
         this._browserAgent = browserAgent;
     }
 
-    async run({sessionId, sessionCaps, sessionOpts}) {
+    async run({ sessionId, sessionCaps, sessionOpts }) {
         const test = this._test;
         const hermioneCtx = test.hermioneCtx || {};
 
         let browser;
 
         try {
-            browser = await this._browserAgent.getBrowser({sessionId, sessionCaps, sessionOpts});
+            browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts });
         } catch (e) {
-            throw Object.assign(e, {hermioneCtx});
+            throw Object.assign(e, { hermioneCtx });
         }
 
         const screenshooter = OneTimeScreenshooter.create(this._config, browser);
-        const executionThread = ExecutionThread.create({test, browser, hermioneCtx, screenshooter});
+        const executionThread = ExecutionThread.create({ test, browser, hermioneCtx, screenshooter });
         const hookRunner = HookRunner.create(test, executionThread);
 
         let error;
@@ -73,11 +73,11 @@ module.exports = class TestRunner {
         }
 
         hermioneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
-        const {meta} = browser;
+        const { meta } = browser;
         const results = {
             hermioneCtx,
             meta,
-            history: browser.flushHistory()
+            history: browser.flushHistory(),
         };
 
         this._browserAgent.freeBrowser(browser);
@@ -89,17 +89,17 @@ module.exports = class TestRunner {
         return results;
     }
 
-    async _resetCursorPosition({publicAPI: session}) {
-        const body = await session.$('body');
+    async _resetCursorPosition({ publicAPI: session }) {
+        const body = await session.$("body");
         if (!body) {
             throw new Error('There is no "body" element on the page when resetting cursor position');
         }
 
         await body.scrollIntoView();
-        await body.moveTo({xOffset: 0, yOffset: 0});
+        await body.moveTo({ xOffset: 0, yOffset: 0 });
     }
 };
 
-function isSessionBroken(error, {system: {patternsOnReject}}) {
+function isSessionBroken(error, { system: { patternsOnReject } }) {
     return error && patternsOnReject.some((p) => new RegExp(p).test(error.message));
 }

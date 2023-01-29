@@ -1,9 +1,9 @@
 module.exports = {
-    extends: 'gemini-testing/tests',
+    extends: "gemini-testing/tests",
     parserOptions: {
-        ecmaVersion: 2022
+        ecmaVersion: 2022,
     },
     rules: {
-        'no-new': 0
-    }
+        "no-new": 0,
+    },
 };

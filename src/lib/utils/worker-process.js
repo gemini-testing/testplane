@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class WorkerProcess {
     static create(...args) {

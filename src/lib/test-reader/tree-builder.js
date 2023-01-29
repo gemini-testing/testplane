@@ -76,5 +76,5 @@ class TreeBuilder {
 }
 
 module.exports = {
-    TreeBuilder
+    TreeBuilder,
 };

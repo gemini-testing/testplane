@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const chalk = require('chalk');
-const RunnerEvents = require('../constants/runner-events');
-const icons = require('./utils/icons');
-const helpers = require('./utils/helpers');
-const {initInformer} = require('./informers');
+const chalk = require("chalk");
+const RunnerEvents = require("../constants/runner-events");
+const icons = require("./utils/icons");
+const helpers = require("./utils/helpers");
+const { initInformer } = require("./informers");
 
 module.exports = class BaseReporter {
     static async create(opts = {}) {
@@ -52,10 +52,10 @@ module.exports = class BaseReporter {
             `Passed: ${chalk.green(stats.passed)}`,
             `Failed: ${chalk.red(stats.failed)}`,
             `Skipped: ${chalk.cyan(stats.skipped)}`,
-            `Retries: ${chalk.yellow(stats.retries)}`
+            `Retries: ${chalk.yellow(stats.retries)}`,
         ];
 
-        this.informer.log(message.join(' '));
+        this.informer.log(message.join(" "));
     }
 
     _onRunnerEnd(stats) {

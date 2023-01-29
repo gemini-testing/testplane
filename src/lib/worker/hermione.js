@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const eventsUtils = require('../events/utils');
+const eventsUtils = require("../events/utils");
 
-const RunnerEvents = require('./constants/runner-events');
-const Runner = require('./runner');
-const BaseHermione = require('../base-hermione');
+const RunnerEvents = require("./constants/runner-events");
+const Runner = require("./runner");
+const BaseHermione = require("../base-hermione");
 
 module.exports = class Hermione extends BaseHermione {
     constructor(configPath) {
@@ -19,7 +19,7 @@ module.exports = class Hermione extends BaseHermione {
             RunnerEvents.AFTER_TESTS_READ,
 
             RunnerEvents.NEW_BROWSER,
-            RunnerEvents.UPDATE_REFERENCE
+            RunnerEvents.UPDATE_REFERENCE,
         ]);
     }
 
@@ -27,7 +27,7 @@ module.exports = class Hermione extends BaseHermione {
         await this._init();
 
         if (!global.expect) {
-            const {setOptions} = require('expect-webdriverio');
+            const { setOptions } = require("expect-webdriverio");
             setOptions(this._config.system.expectOpts);
         }
     }

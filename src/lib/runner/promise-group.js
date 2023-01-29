@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class PromiseGroup {
     constructor() {
@@ -13,7 +13,7 @@ module.exports = class PromiseGroup {
 
     add(promise) {
         if (this.isFulfilled()) {
-            throw new Error('Can not add promise to a fulfilled group');
+            throw new Error("Can not add promise to a fulfilled group");
         }
 
         this._count += 1;

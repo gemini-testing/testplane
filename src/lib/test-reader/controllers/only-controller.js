@@ -1,4 +1,4 @@
-const ReadEvents = require('../read-events');
+const ReadEvents = require("../read-events");
 
 class OnlyController {
     #eventBus;
@@ -24,7 +24,7 @@ class OnlyController {
     }
 
     #addTrap(match) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({treeBuilder}) => {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
             treeBuilder.addTrap((obj) => {
                 if (!match(obj.browserId)) {
                     obj.disable();
@@ -41,5 +41,5 @@ class OnlyController {
 }
 
 module.exports = {
-    OnlyController
+    OnlyController,
 };

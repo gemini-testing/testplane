@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const temp = require('temp');
-const path = require('path');
-const _ = require('lodash');
+const temp = require("temp");
+const path = require("path");
+const _ = require("lodash");
 
 temp.track();
 
@@ -12,18 +12,18 @@ class Temp {
             ? dir
             : temp.mkdirSync({
                 dir: dir && path.resolve(dir),
-                prefix: '.screenshots.tmp.'
+                prefix: ".screenshots.tmp.",
             });
     }
 
     path(opts = {}) {
         return temp.path(_.extend(opts, {
-            dir: this._tempDir
+            dir: this._tempDir,
         }));
     }
 
     serialize() {
-        return {dir: this._tempDir};
+        return { dir: this._tempDir };
     }
 }
 
@@ -37,10 +37,10 @@ module.exports = {
 
     attach: (serializedTemp) => {
         if (!tempInstance) {
-            tempInstance = new Temp(serializedTemp.dir, {attach: true});
+            tempInstance = new Temp(serializedTemp.dir, { attach: true });
         }
     },
 
     path: (opts) => tempInstance.path(opts),
-    serialize: () => tempInstance.serialize()
+    serialize: () => tempInstance.serialize(),
 };

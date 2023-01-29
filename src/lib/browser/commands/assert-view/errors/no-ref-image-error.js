@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const BaseStateError = require('./base-state-error');
+const BaseStateError = require("./base-state-error");
 
 module.exports = class NoRefImageError extends BaseStateError {
     static create(...args) {

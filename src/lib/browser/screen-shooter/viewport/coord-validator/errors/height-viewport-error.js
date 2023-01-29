@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Height of the element is larger than viewport

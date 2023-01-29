@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const {URLSearchParams} = require('url');
-const URI = require('urijs');
-const _ = require('lodash');
-const webdriverio = require('webdriverio');
-const Browser = require('./browser');
-const signalHandler = require('../signal-handler');
-const logger = require('../utils/logger');
+const { URLSearchParams } = require("url");
+const URI = require("urijs");
+const _ = require("lodash");
+const webdriverio = require("webdriverio");
+const Browser = require("./browser");
+const signalHandler = require("../signal-handler");
+const logger = require("../utils/logger");
 
 const DEFAULT_PORT = 4444;
 
@@ -14,7 +14,7 @@ module.exports = class NewBrowser extends Browser {
     constructor(config, id, version) {
         super(config, id, version);
 
-        signalHandler.on('exit', () => this.quit());
+        signalHandler.on("exit", () => this.quit());
     }
 
     async init() {
@@ -54,10 +54,10 @@ module.exports = class NewBrowser extends Browser {
         }
 
         try {
-            await this._session.setTimeout({pageLoad: this._config.pageLoadTimeout});
+            await this._session.setTimeout({ pageLoad: this._config.pageLoadTimeout });
         } catch (e) {
             // edge with w3c does not support setting page load timeout
-            if (this._session.isW3C && this._session.capabilities.browserName === 'MicrosoftEdge') {
+            if (this._session.isW3C && this._session.capabilities.browserName === "MicrosoftEdge") {
                 logger.warn(`WARNING: Can not set page load timeout: ${e.message}`);
             } else {
                 throw e;
@@ -80,32 +80,32 @@ module.exports = class NewBrowser extends Browser {
             queryParams: this._getQueryParams(gridUri.query()),
             capabilities,
             automationProtocol: config.automationProtocol,
-            logLevel: this._debug ? 'trace' : 'error',
+            logLevel: this._debug ? "trace" : "error",
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
             connectionRetryCount: 0, // hermione has its own advanced retries
             baseUrl: config.baseUrl,
             waitforTimeout: config.waitTimeout,
             waitforInterval: config.waitInterval,
-            ...this._getSessionOptsFromConfig()
+            ...this._getSessionOptsFromConfig(),
         };
 
         return options;
     }
 
     _extendCapabilitiesByVersion() {
-        const {desiredCapabilities, sessionEnvFlags} = this._config;
+        const { desiredCapabilities, sessionEnvFlags } = this._config;
         const versionKeyName = desiredCapabilities.browserVersion || sessionEnvFlags.isW3C
-            ? 'browserVersion'
-            : 'version';
+            ? "browserVersion"
+            : "version";
 
-        return _.assign({}, desiredCapabilities, {[versionKeyName]: this.version});
+        return _.assign({}, desiredCapabilities, { [versionKeyName]: this.version });
     }
 
     _getGridHost(url) {
         return new URI({
             username: url.username(),
             password: url.password(),
-            hostname: url.hostname()
+            hostname: url.hostname(),
         }).toString().slice(2); // URIjs leaves `//` prefix, removing it
     }
 

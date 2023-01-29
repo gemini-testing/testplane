@@ -1,11 +1,11 @@
-'use strict';
+"use strict";
 
 var XPATH_SELECTORS_START = [
-    '/', '(', '../', './', '*/'
+    "/", "(", "../", "./", "*/",
 ];
 
 function isXpathSelector(selector) {
-    return XPATH_SELECTORS_START.some(function(startString) {
+    return XPATH_SELECTORS_START.some(function (startString) {
         return selector.indexOf(startString) === 0;
     });
 }
@@ -28,5 +28,5 @@ function queryAll(selector) {
 module.exports = {
     isXpathSelector: isXpathSelector,
     queryFirst: queryFirst,
-    queryAll: queryAll
+    queryAll: queryAll,
 };

@@ -1,30 +1,30 @@
-'use strict';
+"use strict";
 
-const {Suite, Test, Hook} = require('lib/test-reader/test-object');
-const {ConfigurableTestObject} = require('lib/test-reader/test-object/configurable-test-object');
+const { Suite, Test, Hook } = require("lib/test-reader/test-object");
+const { ConfigurableTestObject } = require("lib/test-reader/test-object/configurable-test-object");
 
-describe('test-reader/test-object/suite', () => {
+describe("test-reader/test-object/suite", () => {
     const sandbox = sinon.sandbox.create();
 
     afterEach(() => {
         sandbox.restore();
     });
 
-    it('should be an instance of configurable test object', () => {
+    it("should be an instance of configurable test object", () => {
         const suite = new Suite();
 
         assert.instanceOf(suite, ConfigurableTestObject);
     });
 
-    describe('create', () => {
-        it('should create Suite object', () => {
+    describe("create", () => {
+        it("should create Suite object", () => {
             const suite = Suite.create();
 
             assert.instanceOf(suite, Suite);
         });
     });
 
-    describe('constructor', () => {
+    describe("constructor", () => {
         before(() => {
             const stub = sandbox.stub();
             Object.setPrototypeOf(stub, Object.getPrototypeOf(Suite));
@@ -39,25 +39,25 @@ describe('test-reader/test-object/suite', () => {
             sandbox.reset();
         });
 
-        it('should pass base properties to base class constructor', () => {
-            const title = 'foo bar';
-            const file = 'baz/qux.js';
-            const id = 'bazqux100500';
+        it("should pass base properties to base class constructor", () => {
+            const title = "foo bar";
+            const file = "baz/qux.js";
+            const id = "bazqux100500";
 
-            new Suite({title, file, id});
+            new Suite({ title, file, id });
 
-            assert.calledWithMatch(Object.getPrototypeOf(Suite), {title, file, id});
+            assert.calledWithMatch(Object.getPrototypeOf(Suite), { title, file, id });
         });
     });
 
     [
-        ['addSuite', Suite],
-        ['addTest', Test],
-        ['addBeforeEachHook', Hook],
-        ['addAfterEachHook', Hook]
+        ["addSuite", Suite],
+        ["addTest", Test],
+        ["addBeforeEachHook", Hook],
+        ["addAfterEachHook", Hook],
     ].forEach(([method, ChildClass]) => {
         describe(method, () => {
-            it('should be chainable', () => {
+            it("should be chainable", () => {
                 const suite = new Suite();
 
                 const res = suite[method](new ChildClass({}));
@@ -65,7 +65,7 @@ describe('test-reader/test-object/suite', () => {
                 assert.equal(res, suite);
             });
 
-            it('should set parent to added object', () => {
+            it("should set parent to added object", () => {
                 const suite = new Suite();
                 const child = new ChildClass({});
 
@@ -77,24 +77,24 @@ describe('test-reader/test-object/suite', () => {
     });
 
     [
-        ['beforeEach', 'addBeforeEachHook', '"before each" hook'],
-        ['afterEach', 'addAfterEachHook', '"after each" hook']
+        ["beforeEach", "addBeforeEachHook", '"before each" hook'],
+        ["afterEach", "addAfterEachHook", '"after each" hook'],
     ].forEach(([createMethod, addMethod, title]) => {
         describe(createMethod, () => {
-            it('should create hook', () => {
+            it("should create hook", () => {
                 const fn = sinon.spy();
                 const suite = new Suite();
 
-                sandbox.spy(Hook, 'create');
+                sandbox.spy(Hook, "create");
 
                 suite[createMethod](fn);
 
-                assert.calledOnceWith(Hook.create, {title, fn});
+                assert.calledOnceWith(Hook.create, { title, fn });
             });
 
-            it('should add created hook', () => {
+            it("should add created hook", () => {
                 const hook = new Hook({});
-                sandbox.stub(Hook, 'create').returns(hook);
+                sandbox.stub(Hook, "create").returns(hook);
 
                 const suite = new Suite();
                 sandbox.spy(suite, addMethod);
@@ -106,33 +106,33 @@ describe('test-reader/test-object/suite', () => {
         });
     });
 
-    describe('eachTest', () => {
-        it('should iterate over added tests recursively', () => {
+    describe("eachTest", () => {
+        it("should iterate over added tests recursively", () => {
             const titles = [];
 
             new Suite({})
-                .addTest(new Test({title: 'foo'}))
+                .addTest(new Test({ title: "foo" }))
                 .addSuite(
                     new Suite({})
-                        .addTest(new Test({title: 'bar'}))
+                        .addTest(new Test({ title: "bar" }))
                         .addSuite(
                             new Suite({})
-                                .addTest(new Test({title: 'baz'}))
-                        )
+                                .addTest(new Test({ title: "baz" })),
+                        ),
                 )
-                .addTest(new Test({title: 'qux'}))
+                .addTest(new Test({ title: "qux" }))
                 .eachTest((t) => titles.push(t.title));
 
-            assert.deepEqual(titles, ['foo', 'qux', 'bar', 'baz']);
+            assert.deepEqual(titles, ["foo", "qux", "bar", "baz"]);
         });
     });
 
-    describe('getTests', () => {
-        it('should return tests for whole tree', () => {
-            const testFoo = new Test({title: 'foo'});
-            const testBar = new Test({title: 'bar'});
-            const testBaz = new Test({title: 'baz'});
-            const testQux = new Test({title: 'qux'});
+    describe("getTests", () => {
+        it("should return tests for whole tree", () => {
+            const testFoo = new Test({ title: "foo" });
+            const testBar = new Test({ title: "bar" });
+            const testBaz = new Test({ title: "baz" });
+            const testQux = new Test({ title: "qux" });
 
             const tests = new Suite({})
                 .addTest(testFoo)
@@ -141,8 +141,8 @@ describe('test-reader/test-object/suite', () => {
                         .addTest(testBar)
                         .addSuite(
                             new Suite({})
-                                .addTest(testBaz)
-                        )
+                                .addTest(testBaz),
+                        ),
                 )
                 .addTest(testQux)
                 .getTests();
@@ -151,8 +151,8 @@ describe('test-reader/test-object/suite', () => {
         });
     });
 
-    describe('filterTests', () => {
-        it('should be chainable', () => {
+    describe("filterTests", () => {
+        it("should be chainable", () => {
             const suite = new Suite();
 
             const res = suite.filterTests(() => true);
@@ -160,11 +160,11 @@ describe('test-reader/test-object/suite', () => {
             assert.equal(res, suite);
         });
 
-        it('should leave only accepted tests', () => {
-            const testFoo = new Test({title: 'foo'});
-            const testBar = new Test({title: 'bar'});
-            const testBaz = new Test({title: 'baz'});
-            const testQux = new Test({title: 'qux'});
+        it("should leave only accepted tests", () => {
+            const testFoo = new Test({ title: "foo" });
+            const testBar = new Test({ title: "bar" });
+            const testBaz = new Test({ title: "baz" });
+            const testQux = new Test({ title: "qux" });
 
             const tests = new Suite({})
                 .addTest(testFoo)
@@ -173,25 +173,25 @@ describe('test-reader/test-object/suite', () => {
                         .addTest(testBar)
                         .addSuite(
                             new Suite({})
-                                .addTest(testBaz)
-                        )
+                                .addTest(testBaz),
+                        ),
                 )
                 .addTest(testQux)
-                .filterTests((t) => ['bar', 'qux'].includes(t.title))
+                .filterTests((t) => ["bar", "qux"].includes(t.title))
                 .getTests();
 
             assert.deepEqual(tests, [testQux, testBar]);
         });
     });
 
-    describe('root', () => {
-        it('should be true if no parent set', () => {
+    describe("root", () => {
+        it("should be true if no parent set", () => {
             const suite = new Suite();
 
             assert.isTrue(suite.root);
         });
 
-        it('should be false if parent set', () => {
+        it("should be false if parent set", () => {
             const suite = new Suite();
             suite.parent = new Suite();
 
@@ -199,11 +199,11 @@ describe('test-reader/test-object/suite', () => {
         });
     });
 
-    describe('suites', () => {
-        it('should return only own children', () => {
-            const suiteFoo = new Suite({title: 'foo'});
-            const suiteBar = new Suite({title: 'bar'});
-            const suiteBaz = new Suite({title: 'baz'});
+    describe("suites", () => {
+        it("should return only own children", () => {
+            const suiteFoo = new Suite({ title: "foo" });
+            const suiteBar = new Suite({ title: "bar" });
+            const suiteBaz = new Suite({ title: "baz" });
 
             suiteBar.addSuite(suiteBaz);
 
@@ -216,15 +216,15 @@ describe('test-reader/test-object/suite', () => {
     });
 
     [
-        ['tests', 'addTest', Test],
-        ['beforeEachHooks', 'addBeforeEachHook', Hook],
-        ['afterEachHooks', 'addAfterEachHook', Hook]
+        ["tests", "addTest", Test],
+        ["beforeEachHooks", "addBeforeEachHook", Hook],
+        ["afterEachHooks", "addAfterEachHook", Hook],
     ].forEach(([getter, addMethod, ChildClass]) => {
         describe(getter, () => {
-            it('should return only own children', () => {
-                const childFoo = new ChildClass({title: 'foo'});
-                const childBar = new ChildClass({title: 'bar'});
-                const childBaz = new ChildClass({title: 'baz'});
+            it("should return only own children", () => {
+                const childFoo = new ChildClass({ title: "foo" });
+                const childBar = new ChildClass({ title: "bar" });
+                const childBaz = new ChildClass({ title: "baz" });
 
                 const childSuite = new Suite({});
                 childSuite[addMethod](childBaz);

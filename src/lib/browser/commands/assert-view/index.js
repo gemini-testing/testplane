@@ -1,36 +1,36 @@
-'use strict';
+"use strict";
 
-const fs = require('fs-extra');
-const _ = require('lodash');
-const Promise = require('bluebird');
-const {pngValidator: validatePng} = require('png-validator');
-const Image = require('../../../image');
-const ScreenShooter = require('../../screen-shooter');
-const temp = require('../../../temp');
-const {getCaptureProcessors} = require('./capture-processors');
-const {getTestContext} = require('../../../utils/mocha');
-const RuntimeConfig = require('../../../config/runtime-config');
-const AssertViewResults = require('./assert-view-results');
-const BaseStateError = require('./errors/base-state-error');
-const AssertViewError = require('./errors/assert-view-error');
-const InvalidPngError = require('./errors/invalid-png-error');
+const fs = require("fs-extra");
+const _ = require("lodash");
+const Promise = require("bluebird");
+const { pngValidator: validatePng } = require("png-validator");
+const Image = require("../../../image");
+const ScreenShooter = require("../../screen-shooter");
+const temp = require("../../../temp");
+const { getCaptureProcessors } = require("./capture-processors");
+const { getTestContext } = require("../../../utils/mocha");
+const RuntimeConfig = require("../../../config/runtime-config");
+const AssertViewResults = require("./assert-view-results");
+const BaseStateError = require("./errors/base-state-error");
+const AssertViewError = require("./errors/assert-view-error");
+const InvalidPngError = require("./errors/invalid-png-error");
 
 module.exports = (browser) => {
     const screenShooter = ScreenShooter.create(browser);
-    const {publicAPI: session, config} = browser;
-    const {assertViewOpts, compareOpts, compositeImage, screenshotDelay, tolerance, antialiasingTolerance} = config;
+    const { publicAPI: session, config } = browser;
+    const { assertViewOpts, compareOpts, compositeImage, screenshotDelay, tolerance, antialiasingTolerance } = config;
 
-    const {handleNoRefImage, handleImageDiff} = getCaptureProcessors();
+    const { handleNoRefImage, handleImageDiff } = getCaptureProcessors();
 
     const assertView = async (state, selectors, opts) => {
         opts = _.defaults(opts, assertViewOpts, {
             compositeImage,
             screenshotDelay,
             tolerance,
-            antialiasingTolerance
+            antialiasingTolerance,
         });
 
-        const {hermioneCtx} = session.executionContext;
+        const { hermioneCtx } = session.executionContext;
         hermioneCtx.assertViewResults = hermioneCtx.assertViewResults || AssertViewResults.create();
 
         if (hermioneCtx.assertViewResults.hasState(state)) {
@@ -47,40 +47,40 @@ module.exports = (browser) => {
                 ignoreSelectors: [].concat(opts.ignoreElements),
                 allowViewportOverflow: opts.allowViewportOverflow,
                 captureElementFromTop: opts.captureElementFromTop,
-                selectorToScroll: opts.selectorToScroll
-            }
+                selectorToScroll: opts.selectorToScroll,
+            },
         );
 
-        const {tempOpts} = RuntimeConfig.getInstance();
+        const { tempOpts } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
         const screenshoterOpts = _.pick(
             opts,
-            ['allowViewportOverflow', 'compositeImage', 'screenshotDelay', 'selectorToScroll']
+            ["allowViewportOverflow", "compositeImage", "screenshotDelay", "selectorToScroll"],
         );
         const currImgInst = await screenShooter.capture(page, screenshoterOpts);
         const currSize = await currImgInst.getSize();
-        const currImg = {path: temp.path(Object.assign(tempOpts, {suffix: '.png'})), size: currSize};
+        const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
         const test = getTestContext(session.executionContext);
-        const refImg = {path: config.getScreenshotPath(test, state), size: null};
-        const {emitter} = browser;
+        const refImg = { path: config.getScreenshotPath(test, state), size: null };
+        const { emitter } = browser;
 
         if (!fs.existsSync(refImg.path)) {
             await currImgInst.save(currImg.path);
 
-            return handleNoRefImage(currImg, refImg, state, {emitter}).catch((e) => handleCaptureProcessorError(e));
+            return handleNoRefImage(currImg, refImg, state, { emitter }).catch((e) => handleCaptureProcessorError(e));
         }
 
-        const {canHaveCaret, pixelRatio} = page;
+        const { canHaveCaret, pixelRatio } = page;
         const imageCompareOpts = {
             tolerance: opts.tolerance,
             antialiasingTolerance: opts.antialiasingTolerance,
             canHaveCaret,
             pixelRatio,
-            compareOpts
+            compareOpts,
         };
-        const currBuffer = await currImgInst.toPngBuffer({resolveWithObject: false});
+        const currBuffer = await currImgInst.toPngBuffer({ resolveWithObject: false });
         const refBuffer = await fs.readFile(refImg.path);
 
         try {
@@ -89,37 +89,37 @@ module.exports = (browser) => {
             throw new InvalidPngError(`Reference image in ${refImg.path} is not a valid png`);
         }
 
-        const {equal, diffBounds, diffClusters, metaInfo = {}} = await Image.compare(refBuffer, currBuffer, imageCompareOpts);
+        const { equal, diffBounds, diffClusters, metaInfo = {} } = await Image.compare(refBuffer, currBuffer, imageCompareOpts);
         Object.assign(refImg, metaInfo.refImg);
 
         if (!equal) {
-            const diffAreas = {diffBounds, diffClusters};
-            const {tolerance, antialiasingTolerance} = opts;
-            const imageDiffOpts = {tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config, emitter};
+            const diffAreas = { diffBounds, diffClusters };
+            const { tolerance, antialiasingTolerance } = opts;
+            const imageDiffOpts = { tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config, emitter };
 
             await fs.outputFile(currImg.path, currBuffer);
 
             return handleImageDiff(currImg, refImg, state, imageDiffOpts).catch((e) => handleCaptureProcessorError(e));
         }
 
-        hermioneCtx.assertViewResults.add({stateName: state, refImg: refImg});
+        hermioneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
-    session.addCommand('assertView', async function(state, selectors, opts = {}) {
+    session.addCommand("assertView", async function (state, selectors, opts = {}) {
         await Promise.map([].concat(selectors), async (selector) => {
             await this.$(selector)
                 .then(el => el.waitForExist())
                 .catch(() => {
                     throw new Error(`element ("${selector}") still not existing after ${this.options.waitforTimeout} ms`);
                 });
-        }
+        },
         );
 
         return assertView(state, selectors, opts);
     });
 
-    session.addCommand('assertView', async function(state, opts = {}) {
-        await this.waitForExist({timeoutMsg: 'custom timeout msg'})
+    session.addCommand("assertView", async function (state, opts = {}) {
+        await this.waitForExist({ timeoutMsg: "custom timeout msg" })
             .catch(() => {
                 throw new Error(`element ("${this.selector}") still not existing after ${this.options.waitforTimeout} ms`);
             });

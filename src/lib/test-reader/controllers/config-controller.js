@@ -1,4 +1,4 @@
-const ReadEvents = require('../read-events');
+const ReadEvents = require("../read-events");
 
 class ConfigController {
     #eventBus;
@@ -12,7 +12,7 @@ class ConfigController {
     }
 
     testTimeout(timeout) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({treeBuilder}) => {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
             treeBuilder.addTrap((obj) => obj.timeout = timeout);
         });
 
@@ -21,5 +21,5 @@ class ConfigController {
 }
 
 module.exports = {
-    ConfigController
+    ConfigController,
 };

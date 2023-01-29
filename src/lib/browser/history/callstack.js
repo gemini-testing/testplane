@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const {historyDataMap} = require('./utils');
+const _ = require("lodash");
+const { historyDataMap } = require("./utils");
 
 module.exports = class Callstack {
     constructor() {
@@ -13,7 +13,7 @@ module.exports = class Callstack {
         this._stack.push({
             ...data,
             [historyDataMap.TIME_START]: Date.now(),
-            [historyDataMap.CHILDREN]: []
+            [historyDataMap.CHILDREN]: [],
         });
     }
 

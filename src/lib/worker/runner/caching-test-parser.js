@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const {EventEmitter} = require('events');
-const {passthroughEvent} = require('../../events/utils');
-const SequenceTestParser = require('./sequence-test-parser');
-const TestCollection = require('../../test-collection');
-const RunnerEvents = require('../constants/runner-events');
+const { EventEmitter } = require("events");
+const { passthroughEvent } = require("../../events/utils");
+const SequenceTestParser = require("./sequence-test-parser");
+const TestCollection = require("../../test-collection");
+const RunnerEvents = require("../constants/runner-events");
 
 module.exports = class CachingTestParser extends EventEmitter {
     static create(...args) {
@@ -20,31 +20,31 @@ module.exports = class CachingTestParser extends EventEmitter {
         this._sequenceTestParser = SequenceTestParser.create(config);
         passthroughEvent(this._sequenceTestParser, this, [
             RunnerEvents.BEFORE_FILE_READ,
-            RunnerEvents.AFTER_FILE_READ
+            RunnerEvents.AFTER_FILE_READ,
         ]);
     }
 
-    async parse({file, browserId}) {
-        const cached = this._getFromCache({file, browserId});
+    async parse({ file, browserId }) {
+        const cached = this._getFromCache({ file, browserId });
         if (cached) {
             return cached;
         }
 
-        const testsPromise = this._sequenceTestParser.parse({file, browserId});
-        this._putToCache(testsPromise, {file, browserId});
+        const testsPromise = this._sequenceTestParser.parse({ file, browserId });
+        this._putToCache(testsPromise, { file, browserId });
 
         const tests = await testsPromise;
 
-        this.emit(RunnerEvents.AFTER_TESTS_READ, TestCollection.create({[browserId]: tests}, this._config));
+        this.emit(RunnerEvents.AFTER_TESTS_READ, TestCollection.create({ [browserId]: tests }, this._config));
 
         return tests;
     }
 
-    _getFromCache({file, browserId}) {
+    _getFromCache({ file, browserId }) {
         return this._cache[browserId] && this._cache[browserId][file];
     }
 
-    _putToCache(testsPromise, {file, browserId}) {
+    _putToCache(testsPromise, { file, browserId }) {
         this._cache[browserId] = this._cache[browserId] || {};
         this._cache[browserId][file] = testsPromise;
     }

@@ -1,14 +1,14 @@
-'use strict';
+"use strict";
 
-const fs = require('fs');
-const path = require('path');
-const Promise = require('bluebird');
-const _ = require('lodash');
-const looksSame = require('looks-same');
-const CoreError = require('./core-error');
+const fs = require("fs");
+const path = require("path");
+const Promise = require("bluebird");
+const _ = require("lodash");
+const looksSame = require("looks-same");
+const CoreError = require("./core-error");
 
-const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, 'client-scripts', 'calibrate.js'), 'utf8');
-const DIRECTION = {FORWARD: 'forward', REVERSE: 'reverse'};
+const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, "client-scripts", "calibrate.js"), "utf8");
+const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" };
 
 module.exports = class Calibrator {
     constructor() {
@@ -24,24 +24,24 @@ module.exports = class Calibrator {
             return Promise.resolve(this._cache[browser.id]);
         }
 
-        return Promise.resolve(browser.open('about:blank'))
+        return Promise.resolve(browser.open("about:blank"))
             .then(() => browser.evalScript(clientScriptCalibrate))
             .then((features) => [features, browser.captureViewportImage()])
             .spread(async (features, image) => {
-                const {innerWidth, pixelRatio} = features;
+                const { innerWidth, pixelRatio } = features;
                 const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-                const imageFeatures = await this._analyzeImage(image, {calculateColorLength: hasPixelRatio});
+                const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio });
 
                 if (!imageFeatures) {
                     return Promise.reject(new CoreError(
-                        'Could not calibrate. This could be due to calibration page has failed to open properly'
+                        "Could not calibrate. This could be due to calibration page has failed to open properly",
                     ));
                 }
 
                 features = _.extend(features, {
                     top: imageFeatures.viewportStart.y,
                     left: imageFeatures.viewportStart.x,
-                    usePixelRatio: hasPixelRatio && imageFeatures.colorLength > innerWidth
+                    usePixelRatio: hasPixelRatio && imageFeatures.colorLength > innerWidth,
                 });
 
                 this._cache[browser.id] = features;
@@ -72,7 +72,7 @@ async function analyzeRow(row, image, params = {}) {
         return null;
     }
 
-    const result = {viewportStart: {x: markerStart, y: row}};
+    const result = { viewportStart: { x: markerStart, y: row } };
 
     if (!params.calculateColorLength) {
         return result;
@@ -81,12 +81,12 @@ async function analyzeRow(row, image, params = {}) {
     const markerEnd = await findMarkerInRow(row, image, DIRECTION.REVERSE);
     const colorLength = markerEnd - markerStart + 1;
 
-    return _.extend(result, {colorLength});
+    return _.extend(result, { colorLength });
 }
 
 async function findMarkerInRow(row, image, searchDirection) {
     const imageWidth = (await image.getSize()).width;
-    const searchColor = {R: 148, G: 250, B: 0};
+    const searchColor = { R: 148, G: 250, B: 0 };
 
     if (searchDirection === DIRECTION.REVERSE) {
         return searchReverse_();
@@ -127,6 +127,6 @@ function pickRGB(rgba) {
     return {
         R: rgba.r,
         G: rgba.g,
-        B: rgba.b
+        B: rgba.b,
     };
 }

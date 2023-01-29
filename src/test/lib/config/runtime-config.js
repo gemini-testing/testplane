@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-const RuntimeConfig = require('lib/config/runtime-config');
+const RuntimeConfig = require("lib/config/runtime-config");
 
-describe('RuntimeConfig', () => {
-    it('should be a singleton instance', () => {
+describe("RuntimeConfig", () => {
+    it("should be a singleton instance", () => {
         const runtimeConfig1 = RuntimeConfig.getInstance();
         const runtimeConfig2 = RuntimeConfig.getInstance();
 

@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
+const _ = require("lodash");
 
 module.exports = class TestCollection {
     static create(...args) {
@@ -81,7 +81,7 @@ module.exports = class TestCollection {
     }
 
     eachTestByVersions(browserId, cb) {
-        const groups = _.groupBy(this._specs[browserId], 'browserVersion');
+        const groups = _.groupBy(this._specs[browserId], "browserVersion");
         const versions = Object.keys(groups);
         const maxLength = _(groups)
             .map((tests) => tests.length)
@@ -110,7 +110,7 @@ module.exports = class TestCollection {
     }
 
     _mkDisabledTest(test) {
-        return _.extend(Object.create(test), {disabled: true});
+        return _.extend(Object.create(test), { disabled: true });
     }
 
     disableTest(fullTitle, browserId) {

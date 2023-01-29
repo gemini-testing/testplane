@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const BasicPool = require('./basic-pool');
-const LimitedPool = require('./limited-pool');
-const PerBrowserLimitedPool = require('./per-browser-limited-pool');
-const CachingPool = require('./caching-pool');
+const _ = require("lodash");
+const BasicPool = require("./basic-pool");
+const LimitedPool = require("./limited-pool");
+const PerBrowserLimitedPool = require("./per-browser-limited-pool");
+const CachingPool = require("./caching-pool");
 
-exports.create = function(config, emitter) {
+exports.create = function (config, emitter) {
     var pool = BasicPool.create(config, emitter);
 
     pool = new CachingPool(pool, config);
@@ -15,7 +15,7 @@ exports.create = function(config, emitter) {
     if (_.isFinite(config.system.parallelLimit)) {
         pool = new LimitedPool(pool, {
             limit: config.system.parallelLimit,
-            isSpecificBrowserLimiter: false
+            isSpecificBrowserLimiter: false,
         });
     }
 

@@ -4,30 +4,30 @@ exports.initReporters = async (rawReporters, runner) => {
 
 const reporterHandlers = [
     {
-        isMatched: (rawReporter) => typeof rawReporter === 'string' && isJSON(rawReporter),
-        initReporter: (rawReporter) => initReporter(getReporterDefinition(rawReporter, JSON.parse))
+        isMatched: (rawReporter) => typeof rawReporter === "string" && isJSON(rawReporter),
+        initReporter: (rawReporter) => initReporter(getReporterDefinition(rawReporter, JSON.parse)),
     },
     {
-        isMatched: (rawReporter) => typeof rawReporter === 'string',
-        initReporter: (rawReporter) => initReporter({...getReporterDefinition(rawReporter), type: rawReporter})
+        isMatched: (rawReporter) => typeof rawReporter === "string",
+        initReporter: (rawReporter) => initReporter({ ...getReporterDefinition(rawReporter), type: rawReporter }),
     },
     {
-        isMatched: (rawReporter) => typeof rawReporter === 'object',
-        initReporter: (rawReporter) => initReporter(getReporterDefinition(rawReporter, (v) => v))
+        isMatched: (rawReporter) => typeof rawReporter === "object",
+        initReporter: (rawReporter) => initReporter(getReporterDefinition(rawReporter, (v) => v)),
     },
     {
-        isMatched: (rawReporter) => typeof rawReporter === 'function',
+        isMatched: (rawReporter) => typeof rawReporter === "function",
         initReporter: (rawReporter) => {
             validateReporter(rawReporter);
             return rawReporter.create(getReporterDefinition(rawReporter));
-        }
+        },
     },
     {
         isMatched: () => true,
         initReporter: (rawReporter) => {
             throw new TypeError(`Specified reporter must be a string, object or function, but got: "${typeof rawReporter}"`);
-        }
-    }
+        },
+    },
 ];
 
 async function applyReporter(rawReporter, runner) {
@@ -38,9 +38,9 @@ async function applyReporter(rawReporter, runner) {
 
         const reporter = await handler.initReporter(rawReporter);
 
-        if (typeof reporter.attachRunner !== 'function') {
+        if (typeof reporter.attachRunner !== "function") {
             throw new TypeError(
-                'Initialized reporter must have an "attachRunner" function for subscribe on test result events'
+                'Initialized reporter must have an "attachRunner" function for subscribe on test result events',
             );
         }
 
@@ -54,7 +54,7 @@ function initReporter(reporter) {
     try {
         Reporter = require(`./${reporter.type}`);
     } catch (e) {
-        if (e.code === 'MODULE_NOT_FOUND') {
+        if (e.code === "MODULE_NOT_FOUND") {
             throw new Error(`No such reporter: "${reporter.type}"`);
         }
         throw e;
@@ -67,25 +67,25 @@ function initReporter(reporter) {
 
 function getReporterDefinition(rawReporter, parser) {
     if (!parser) {
-        return {type: null, path: null};
+        return { type: null, path: null };
     }
 
-    const {type, path} = parser(rawReporter);
+    const { type, path } = parser(rawReporter);
 
     if (!type) {
-        const strRawReporter = typeof rawReporter !== 'string' ? JSON.stringify(rawReporter) : rawReporter;
+        const strRawReporter = typeof rawReporter !== "string" ? JSON.stringify(rawReporter) : rawReporter;
         throw new Error(`Failed to find required "type" field in reporter definition: "${strRawReporter}"`);
     }
 
-    return {type, path};
+    return { type, path };
 }
 
 function validateReporter(Reporter) {
-    if (typeof Reporter !== 'function') {
+    if (typeof Reporter !== "function") {
         throw new TypeError(`Imported reporter must be a function, but got: "${typeof Reporter}"`);
     }
 
-    if (typeof Reporter.create !== 'function') {
+    if (typeof Reporter.create !== "function") {
         throw new TypeError('Imported reporter must have a "create" function for initialization');
     }
 }

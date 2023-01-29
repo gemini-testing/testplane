@@ -1,25 +1,25 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
+const Promise = require("bluebird");
 
 module.exports = class ExecutionThread {
     static create(...args) {
         return new this(...args);
     }
 
-    constructor({test, browser, hermioneCtx, screenshooter}) {
+    constructor({ test, browser, hermioneCtx, screenshooter }) {
         this._hermioneCtx = hermioneCtx;
         this._screenshooter = screenshooter;
         this._ctx = {
             browser: browser.publicAPI,
-            currentTest: test
+            currentTest: test,
         };
     }
 
     async run(runnable) {
         this._setExecutionContext(Object.assign(runnable, {
             hermioneCtx: this._hermioneCtx,
-            ctx: this._ctx
+            ctx: this._ctx,
         }));
 
         try {

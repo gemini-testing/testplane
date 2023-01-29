@@ -1,21 +1,21 @@
-'use strict';
+"use strict";
 
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {InstructionsList} = require('lib/test-reader/build-instructions');
-const {SkipController} = require('lib/test-reader/controllers/skip-controller');
-const {OnlyController} = require('lib/test-reader/controllers/only-controller');
-const {ConfigController} = require('lib/test-reader/controllers/config-controller');
-const browserVersionController = require('lib/test-reader/controllers/browser-version-controller');
-const TestParserAPI = require('lib/test-reader/test-parser-api');
-const {NEW_BUILD_INSTRUCTION} = require('lib/test-reader/read-events');
-const {Test, Suite} = require('lib/test-reader/test-object');
-const RunnerEvents = require('lib/constants/runner-events');
-const {makeConfigStub} = require('../../utils');
-const proxyquire = require('proxyquire').noCallThru();
-const path = require('path');
-const {EventEmitter} = require('events');
+const { TreeBuilder } = require("lib/test-reader/tree-builder");
+const { InstructionsList } = require("lib/test-reader/build-instructions");
+const { SkipController } = require("lib/test-reader/controllers/skip-controller");
+const { OnlyController } = require("lib/test-reader/controllers/only-controller");
+const { ConfigController } = require("lib/test-reader/controllers/config-controller");
+const browserVersionController = require("lib/test-reader/controllers/browser-version-controller");
+const TestParserAPI = require("lib/test-reader/test-parser-api");
+const { NEW_BUILD_INSTRUCTION } = require("lib/test-reader/read-events");
+const { Test, Suite } = require("lib/test-reader/test-object");
+const RunnerEvents = require("lib/constants/runner-events");
+const { makeConfigStub } = require("../../utils");
+const proxyquire = require("proxyquire").noCallThru();
+const path = require("path");
+const { EventEmitter } = require("events");
 
-describe('test-reader/browser-test-parser', () => {
+describe("test-reader/browser-test-parser", () => {
     const sandbox = sinon.sandbox.create();
 
     let BrowserTestParser;
@@ -23,23 +23,23 @@ describe('test-reader/browser-test-parser', () => {
     let readFiles;
 
     const mkBrowserTestParser_ = (opts = {}) => {
-        const browserId = opts.browserId || 'default-bro';
-        const config = opts.config || makeConfigStub({browsers: [browserId]});
+        const browserId = opts.browserId || "default-bro";
+        const config = opts.config || makeConfigStub({ browsers: [browserId] });
 
         return BrowserTestParser.create(browserId, config);
     };
 
     beforeEach(() => {
-        clearRequire = sandbox.stub().named('clear-require');
-        readFiles = sandbox.stub().named('readFiles').resolves();
+        clearRequire = sandbox.stub().named("clear-require");
+        readFiles = sandbox.stub().named("readFiles").resolves();
 
-        BrowserTestParser = proxyquire('lib/test-reader/browser-test-parser', {
-            'clear-require': clearRequire,
-            './mocha-reader': {readFiles}
+        BrowserTestParser = proxyquire("lib/test-reader/browser-test-parser", {
+            "clear-require": clearRequire,
+            "./mocha-reader": { readFiles },
         }).BrowserTestParser;
 
-        sandbox.stub(InstructionsList.prototype, 'push');
-        sandbox.stub(InstructionsList.prototype, 'exec').returns(new Suite());
+        sandbox.stub(InstructionsList.prototype, "push");
+        sandbox.stub(InstructionsList.prototype, "exec").returns(new Suite());
     });
 
     afterEach(() => {
@@ -48,8 +48,8 @@ describe('test-reader/browser-test-parser', () => {
         delete global.hermione;
     });
 
-    describe('addRootSuiteDecorator', () => {
-        it('should set build instruction', () => {
+    describe("addRootSuiteDecorator", () => {
+        it("should set build instruction", () => {
             const parser = mkBrowserTestParser_();
             InstructionsList.prototype.push.reset();
 
@@ -58,7 +58,7 @@ describe('test-reader/browser-test-parser', () => {
             assert.calledOnceWith(InstructionsList.prototype.push, sinon.match.func);
         });
 
-        it('should set passed decorator as trap to tree builder', () => {
+        it("should set passed decorator as trap to tree builder", () => {
             const parser = mkBrowserTestParser_();
             const decorator = sinon.spy();
             parser.addRootSuiteDecorator(decorator);
@@ -66,22 +66,22 @@ describe('test-reader/browser-test-parser', () => {
             const buildInstruction = InstructionsList.prototype.push.lastCall.args[0];
             const treeBuilder = sinon.createStubInstance(TreeBuilder);
 
-            buildInstruction({treeBuilder});
+            buildInstruction({ treeBuilder });
 
             assert.calledWith(treeBuilder.addTrap, decorator);
         });
     });
 
-    describe('applyGrep', () => {
+    describe("applyGrep", () => {
         beforeEach(() => {
-            sandbox.stub(TreeBuilder.prototype, 'addTestFilter').returnsThis();
+            sandbox.stub(TreeBuilder.prototype, "addTestFilter").returnsThis();
 
             InstructionsList.prototype.push.callsFake((fn) => {
-                fn({treeBuilder: new TreeBuilder()});
+                fn({ treeBuilder: new TreeBuilder() });
             });
         });
 
-        it('should add filter to tree builder', () => {
+        it("should add filter to tree builder", () => {
             const parser = mkBrowserTestParser_();
 
             parser.applyGrep(/fooBar/);
@@ -89,101 +89,101 @@ describe('test-reader/browser-test-parser', () => {
             assert.calledOnceWith(TreeBuilder.prototype.addTestFilter, sinon.match.func);
         });
 
-        it('filter should accept matched runnable', () => {
+        it("filter should accept matched runnable", () => {
             const parser = mkBrowserTestParser_();
             parser.applyGrep(/fooBar/);
 
             const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
-            const suite = {fullTitle: () => 'baz fooBar qux'};
+            const suite = { fullTitle: () => "baz fooBar qux" };
 
             assert.isTrue(filter(suite));
         });
 
-        it('filter should ignore not matched runnable', () => {
+        it("filter should ignore not matched runnable", () => {
             const parser = mkBrowserTestParser_();
             parser.applyGrep(/fooBar/);
 
             const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
-            const suite = {fullTitle: () => 'baz qux'};
+            const suite = { fullTitle: () => "baz qux" };
 
             assert.isFalse(filter(suite));
         });
     });
 
-    describe('loadFiles', () => {
+    describe("loadFiles", () => {
         const mkConfigWithBrowserSection_ = (opts = {}) => {
             const config = makeConfigStub();
-            sandbox.stub(config, 'forBrowser').returns({
+            sandbox.stub(config, "forBrowser").returns({
                 system: {},
                 desiredCapabilities: {},
-                ...opts
+                ...opts,
             });
 
             return config;
         };
 
-        const loadFiles_ = async ({parser, files, config} = {}) => {
-            parser = parser || mkBrowserTestParser_({config});
+        const loadFiles_ = async ({ parser, files, config } = {}) => {
+            parser = parser || mkBrowserTestParser_({ config });
             return parser.loadFiles(files || []);
         };
 
-        it('should be chainable', async () => {
+        it("should be chainable", async () => {
             const testParser = mkBrowserTestParser_();
 
             assert.deepEqual(await testParser.loadFiles([]), testParser);
         });
 
-        it('should get browser config for passed browser id', async () => {
+        it("should get browser config for passed browser id", async () => {
             const config = mkConfigWithBrowserSection_();
-            const parser = mkBrowserTestParser_({config, browserId: 'foo'});
+            const parser = mkBrowserTestParser_({ config, browserId: "foo" });
 
-            await loadFiles_({parser});
+            await loadFiles_({ parser });
 
-            assert.calledOnceWith(config.forBrowser, 'foo');
+            assert.calledOnceWith(config.forBrowser, "foo");
         });
 
-        describe('globals', () => {
-            it('should create global hermione object', async () => {
+        describe("globals", () => {
+            it("should create global hermione object", async () => {
                 await loadFiles_();
 
-                assert.property(global, 'hermione');
+                assert.property(global, "hermione");
             });
 
-            describe('hermione.ctx', () => {
-                it('should set hermione.ctx', async () => {
+            describe("hermione.ctx", () => {
+                it("should set hermione.ctx", async () => {
                     const config = mkConfigWithBrowserSection_({
                         system: {
-                            ctx: {foo: 'bar'}
-                        }
+                            ctx: { foo: "bar" },
+                        },
                     });
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.deepEqual(global.hermione.ctx, {foo: 'bar'});
+                    assert.deepEqual(global.hermione.ctx, { foo: "bar" });
                 });
 
-                it('should set hermione.ctx before loading files', async () => {
+                it("should set hermione.ctx before loading files", async () => {
                     const config = mkConfigWithBrowserSection_({
                         system: {
-                            ctx: {foo: 'bar'}
-                        }
+                            ctx: { foo: "bar" },
+                        },
                     });
 
                     let ctx;
                     readFiles.callsFake(() => ctx = global.hermione.ctx);
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.deepEqual(ctx, {foo: 'bar'});
+                    assert.deepEqual(ctx, { foo: "bar" });
                 });
             });
 
-            describe('hermione.browser', () => {
+            describe("hermione.browser", () => {
                 beforeEach(() => {
-                    sandbox.stub(browserVersionController, 'mkProvider').returns(() => {});
+                    sandbox.stub(browserVersionController, "mkProvider").returns(() => {});
                 });
 
-                it('should set controller provider', async () => {
+                it("should set controller provider", async () => {
                     const provider = () => {};
                     browserVersionController.mkProvider.returns(provider);
 
@@ -192,22 +192,22 @@ describe('test-reader/browser-test-parser', () => {
                     assert.equal(global.hermione.browser, provider);
                 });
 
-                it('should set controller provider before loading files', async () => {
+                it("should set controller provider before loading files", async () => {
                     await loadFiles_();
 
                     assert.callOrder(browserVersionController.mkProvider, readFiles);
                 });
 
-                it('should create controller provider with list of known browsers', async () => {
-                    const config = makeConfigStub({browsers: ['foo', 'bar']});
-                    const parser = mkBrowserTestParser_({browserId: 'foo', config});
+                it("should create controller provider with list of known browsers", async () => {
+                    const config = makeConfigStub({ browsers: ["foo", "bar"] });
+                    const parser = mkBrowserTestParser_({ browserId: "foo", config });
 
-                    await loadFiles_({parser});
+                    await loadFiles_({ parser });
 
-                    assert.calledWith(browserVersionController.mkProvider, ['foo', 'bar']);
+                    assert.calledWith(browserVersionController.mkProvider, ["foo", "bar"]);
                 });
 
-                it('should create controller with event bus', async () => {
+                it("should create controller with event bus", async () => {
                     await loadFiles_();
 
                     assert.calledWith(browserVersionController.mkProvider, sinon.match.any, sinon.match.instanceOf(EventEmitter));
@@ -216,11 +216,11 @@ describe('test-reader/browser-test-parser', () => {
 
             Object.entries({
                 skip: SkipController,
-                only: OnlyController
+                only: OnlyController,
             }).forEach(([controllerName, controllerClass]) => {
                 describe(`hermions.${controllerName}`, () => {
                     beforeEach(() => {
-                        sandbox.spy(controllerClass, 'create');
+                        sandbox.spy(controllerClass, "create");
                     });
 
                     it(`should set hermione.${controllerName}`, async () => {
@@ -235,7 +235,7 @@ describe('test-reader/browser-test-parser', () => {
                         assert.callOrder(controllerClass.create, readFiles);
                     });
 
-                    it('should create controller with event bus', async () => {
+                    it("should create controller with event bus", async () => {
                         await loadFiles_();
 
                         assert.calledWith(controllerClass.create, sinon.match.instanceOf(EventEmitter));
@@ -243,24 +243,24 @@ describe('test-reader/browser-test-parser', () => {
                 });
             });
 
-            describe('hermione.config', () => {
+            describe("hermione.config", () => {
                 beforeEach(() => {
-                    sandbox.stub(ConfigController, 'create').returns(Object.create(ConfigController.prototype));
+                    sandbox.stub(ConfigController, "create").returns(Object.create(ConfigController.prototype));
                 });
 
-                it('should set hermione.config', async () => {
+                it("should set hermione.config", async () => {
                     await loadFiles_();
 
                     assert.instanceOf(global.hermione.config, ConfigController);
                 });
 
-                it('should set hermione.config before loading files', async () => {
+                it("should set hermione.config before loading files", async () => {
                     await loadFiles_();
 
                     assert.callOrder(ConfigController.create, readFiles);
                 });
 
-                it('should create controller with event bus', async () => {
+                it("should create controller with event bus", async () => {
                     await loadFiles_();
 
                     assert.calledWith(ConfigController.create, sinon.match.instanceOf(EventEmitter));
@@ -268,92 +268,92 @@ describe('test-reader/browser-test-parser', () => {
             });
         });
 
-        describe('root suite decorators', () => {
+        describe("root suite decorators", () => {
             let rootSuite;
 
             beforeEach(() => {
                 rootSuite = {};
-                sandbox.stub(BrowserTestParser.prototype, 'addRootSuiteDecorator')
+                sandbox.stub(BrowserTestParser.prototype, "addRootSuiteDecorator")
                     .callsFake((fn) => fn(rootSuite));
             });
 
-            it('should set traps for root suite', async () => {
+            it("should set traps for root suite", async () => {
                 await loadFiles_();
 
                 assert.calledWith(BrowserTestParser.prototype.addRootSuiteDecorator, sinon.match.func);
             });
 
-            it('root suite should be decorated with browser id', async () => {
-                const parser = mkBrowserTestParser_({browserId: 'bro'});
+            it("root suite should be decorated with browser id", async () => {
+                const parser = mkBrowserTestParser_({ browserId: "bro" });
 
-                await loadFiles_({parser});
+                await loadFiles_({ parser });
 
-                assert.propertyVal(rootSuite, 'browserId', 'bro');
+                assert.propertyVal(rootSuite, "browserId", "bro");
             });
 
-            describe('browser version', () => {
-                it('root suite should be decorated with browser version if exists', async () => {
+            describe("browser version", () => {
+                it("root suite should be decorated with browser version if exists", async () => {
                     const config = mkConfigWithBrowserSection_({
                         desiredCapabilities: {
-                            version: '100500',
-                            browserVersion: '500100'
-                        }
+                            version: "100500",
+                            browserVersion: "500100",
+                        },
                     });
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.propertyVal(rootSuite, 'browserVersion', '500100');
+                    assert.propertyVal(rootSuite, "browserVersion", "500100");
                 });
 
-                it('root suite should be decorated with version if no browser version specified', async () => {
+                it("root suite should be decorated with version if no browser version specified", async () => {
                     const config = mkConfigWithBrowserSection_({
                         desiredCapabilities: {
-                            version: '100500'
-                        }
+                            version: "100500",
+                        },
                     });
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.propertyVal(rootSuite, 'browserVersion', '100500');
+                    assert.propertyVal(rootSuite, "browserVersion", "100500");
                 });
             });
 
-            describe('test timeout', () => {
+            describe("test timeout", () => {
                 it('root suite should not be decorated with timeout if "testTimeout" is not specified in config', async () => {
                     const config = mkConfigWithBrowserSection_();
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.notProperty(rootSuite, 'timeout');
+                    assert.notProperty(rootSuite, "timeout");
                 });
 
                 it('root suite should be decorated with timeout if "testTimeout" is specified in config', async () => {
                     const config = mkConfigWithBrowserSection_({
-                        testTimeout: 100500
+                        testTimeout: 100500,
                     });
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.propertyVal(rootSuite, 'timeout', 100500);
+                    assert.propertyVal(rootSuite, "timeout", 100500);
                 });
 
                 it('root suite should be decorated with timeout even if "testTimeout" is set to 0', async () => {
                     const config = mkConfigWithBrowserSection_({
-                        testTimeout: 0
+                        testTimeout: 0,
                     });
 
-                    await loadFiles_({config});
+                    await loadFiles_({ config });
 
-                    assert.propertyVal(rootSuite, 'timeout', 0);
+                    assert.propertyVal(rootSuite, "timeout", 0);
                 });
             });
         });
 
-        describe('events', () => {
-            describe('on NEW_BUILD_INSTRUCTION', () => {
-                it('from reader should push build instruction', async () => {
+        describe("events", () => {
+            describe("on NEW_BUILD_INSTRUCTION", () => {
+                it("from reader should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    readFiles.callsFake((files, {eventBus}) => {
+                    readFiles.callsFake((files, { eventBus }) => {
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
                     });
 
@@ -362,9 +362,9 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWith(InstructionsList.prototype.push, instruction);
                 });
 
-                it('from browser version controller should push build instruction', async () => {
+                it("from browser version controller should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    sandbox.spy(browserVersionController, 'mkProvider');
+                    sandbox.spy(browserVersionController, "mkProvider");
                     readFiles.callsFake(() => {
                         const eventBus = browserVersionController.mkProvider.lastCall.args[1];
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
@@ -375,9 +375,9 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWith(InstructionsList.prototype.push, instruction);
                 });
 
-                it('from config controller should push build instruction', async () => {
+                it("from config controller should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    sandbox.spy(ConfigController, 'create');
+                    sandbox.spy(ConfigController, "create");
                     readFiles.callsFake(() => {
                         const eventBus = ConfigController.create.lastCall.args[0];
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
@@ -388,9 +388,9 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWith(InstructionsList.prototype.push, instruction);
                 });
 
-                it('from skip controller should push build instruction', async () => {
+                it("from skip controller should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    sandbox.spy(SkipController, 'create');
+                    sandbox.spy(SkipController, "create");
                     readFiles.callsFake(() => {
                         const eventBus = SkipController.create.lastCall.args[0];
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
@@ -401,9 +401,9 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWith(InstructionsList.prototype.push, instruction);
                 });
 
-                it('from only controller should push build instruction', async () => {
+                it("from only controller should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    sandbox.spy(OnlyController, 'create');
+                    sandbox.spy(OnlyController, "create");
                     readFiles.callsFake(() => {
                         const eventBus = OnlyController.create.lastCall.args[0];
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
@@ -414,9 +414,9 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWith(InstructionsList.prototype.push, instruction);
                 });
 
-                it('from test parser api should push build instruction', async () => {
+                it("from test parser api should push build instruction", async () => {
                     const instruction = sinon.spy();
-                    sandbox.spy(TestParserAPI, 'create');
+                    sandbox.spy(TestParserAPI, "create");
                     readFiles.callsFake(() => {
                         const eventBus = TestParserAPI.create.lastCall.args[1];
                         eventBus.emit(NEW_BUILD_INSTRUCTION, instruction);
@@ -429,34 +429,34 @@ describe('test-reader/browser-test-parser', () => {
             });
 
             [
-                'BEFORE_FILE_READ',
-                'AFTER_FILE_READ'
+                "BEFORE_FILE_READ",
+                "AFTER_FILE_READ",
             ].forEach((eventName) => {
                 describe(`on ${eventName}`, () => {
                     beforeEach(() => {
-                        sandbox.spy(TestParserAPI, 'create');
+                        sandbox.spy(TestParserAPI, "create");
                     });
 
-                    const init_ = ({browserId, eventData} = {}) => {
+                    const init_ = ({ browserId, eventData } = {}) => {
                         const onEvent = sinon.stub().named(`on${eventName}`);
 
-                        const parser = mkBrowserTestParser_({browserId})
+                        const parser = mkBrowserTestParser_({ browserId })
                             .on(RunnerEvents[eventName], onEvent);
 
-                        readFiles.callsFake((files, {eventBus}) => {
-                            eventBus.emit(RunnerEvents[eventName], eventData || {some: 'default-data'});
+                        readFiles.callsFake((files, { eventBus }) => {
+                            eventBus.emit(RunnerEvents[eventName], eventData || { some: "default-data" });
                         });
 
                         return {
                             onEvent,
                             parser,
-                            loadFiles: () => loadFiles_({parser})
+                            loadFiles: () => loadFiles_({ parser }),
                         };
                     };
 
                     it(`should passthrough ${eventName} event`, async () => {
-                        const eventData = {file: 'foo/bar.js'};
-                        const {onEvent, loadFiles} = init_({eventData});
+                        const eventData = { file: "foo/bar.js" };
+                        const { onEvent, loadFiles } = init_({ eventData });
 
                         await loadFiles();
 
@@ -464,39 +464,39 @@ describe('test-reader/browser-test-parser', () => {
                     });
 
                     it(`should extend ${eventName} event data with browser id`, async () => {
-                        const {onEvent, loadFiles} = init_({browserId: 'bro'});
+                        const { onEvent, loadFiles } = init_({ browserId: "bro" });
 
                         await loadFiles();
 
                         assert.calledOnceWith(onEvent, sinon.match({
-                            browser: 'bro'
+                            browser: "bro",
                         }));
                     });
 
                     it(`should extend ${eventName} event data with hermione object`, async () => {
-                        const {onEvent, loadFiles} = init_();
+                        const { onEvent, loadFiles } = init_();
 
                         await loadFiles();
 
                         assert.calledOnceWith(onEvent, sinon.match({
-                            hermione: global.hermione
+                            hermione: global.hermione,
                         }));
                     });
 
-                    if (eventName === 'BEFORE_FILE_READ') {
-                        it('should create test parser API object', async () => {
+                    if (eventName === "BEFORE_FILE_READ") {
+                        it("should create test parser API object", async () => {
                             await loadFiles_();
 
                             assert.calledOnceWith(TestParserAPI.create, global.hermione, sinon.match.instanceOf(EventEmitter));
                         });
 
                         it(`should extend ${eventName} event with test parser API`, async () => {
-                            const {onEvent, loadFiles} = init_();
+                            const { onEvent, loadFiles } = init_();
 
                             await loadFiles();
 
                             assert.calledOnceWith(onEvent, sinon.match({
-                                testParser: sinon.match.instanceOf(TestParserAPI)
+                                testParser: sinon.match.instanceOf(TestParserAPI),
                             }));
                         });
                     }
@@ -504,93 +504,93 @@ describe('test-reader/browser-test-parser', () => {
             });
         });
 
-        describe('file cache', () => {
-            it('should pass files to mocha reader as is', async () => {
-                await loadFiles_({files: ['foo/bar.js', 'baz/qux.mjs']});
+        describe("file cache", () => {
+            it("should pass files to mocha reader as is", async () => {
+                await loadFiles_({ files: ["foo/bar.js", "baz/qux.mjs"] });
 
-                assert.calledWith(readFiles, ['foo/bar.js', 'baz/qux.mjs']);
+                assert.calledWith(readFiles, ["foo/bar.js", "baz/qux.mjs"]);
             });
 
-            it('should clear require cache for commonjs file before reading', async () => {
-                await loadFiles_({files: ['foo/bar.js']});
+            it("should clear require cache for commonjs file before reading", async () => {
+                await loadFiles_({ files: ["foo/bar.js"] });
 
-                assert.calledOnceWith(clearRequire, path.resolve('foo/bar.js'));
+                assert.calledOnceWith(clearRequire, path.resolve("foo/bar.js"));
                 assert.callOrder(clearRequire, readFiles);
             });
 
-            it('should not clear require cache for ESM files', async () => {
-                await loadFiles_({files: ['foo/bar.mjs']});
+            it("should not clear require cache for ESM files", async () => {
+                await loadFiles_({ files: ["foo/bar.mjs"] });
 
                 assert.notCalled(clearRequire);
             });
         });
 
-        describe('read files', () => {
-            it('should read passed files', async () => {
-                const files = ['foo/bar', 'baz/qux'];
+        describe("read files", () => {
+            it("should read passed files", async () => {
+                const files = ["foo/bar", "baz/qux"];
 
-                await loadFiles_({files});
+                await loadFiles_({ files });
 
                 assert.calledOnceWith(readFiles, files);
             });
 
-            it('should pass mocha opts to reader', async () => {
+            it("should pass mocha opts to reader", async () => {
                 const config = mkConfigWithBrowserSection_({
                     system: {
                         mochaOpts: {
-                            foo: 'bar'
-                        }
-                    }
+                            foo: "bar",
+                        },
+                    },
                 });
 
-                await loadFiles_({config});
+                await loadFiles_({ config });
 
-                assert.calledWithMatch(readFiles, sinon.match.any, {config: {foo: 'bar'}});
+                assert.calledWithMatch(readFiles, sinon.match.any, { config: { foo: "bar" } });
             });
 
-            it('should pass event bus to reader', async () => {
+            it("should pass event bus to reader", async () => {
                 await loadFiles_();
 
-                assert.calledWithMatch(readFiles, sinon.match.any, {eventBus: sinon.match.instanceOf(EventEmitter)});
+                assert.calledWithMatch(readFiles, sinon.match.any, { eventBus: sinon.match.instanceOf(EventEmitter) });
             });
 
-            describe('esm decorator', () => {
-                it('should be passed to mocha reader', async () => {
+            describe("esm decorator", () => {
+                it("should be passed to mocha reader", async () => {
                     await loadFiles_();
 
-                    assert.calledWithMatch(readFiles, sinon.match.any, {esmDecorator: sinon.match.func});
+                    assert.calledWithMatch(readFiles, sinon.match.any, { esmDecorator: sinon.match.func });
                 });
 
-                it('should esm module name with browser id', async () => {
+                it("should esm module name with browser id", async () => {
                     const config = makeConfigStub({
-                        browsers: ['bro']
+                        browsers: ["bro"],
                     });
 
-                    const parser = mkBrowserTestParser_({browserId: 'bro', config});
+                    const parser = mkBrowserTestParser_({ browserId: "bro", config });
 
-                    await loadFiles_({parser});
+                    await loadFiles_({ parser });
 
-                    const {esmDecorator} = readFiles.lastCall.args[1];
-                    assert.equal(esmDecorator('/some/file.mjs'), '/some/file.mjs?browserId=bro');
+                    const { esmDecorator } = readFiles.lastCall.args[1];
+                    assert.equal(esmDecorator("/some/file.mjs"), "/some/file.mjs?browserId=bro");
                 });
             });
         });
     });
 
-    describe('parse', () => {
+    describe("parse", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'getTests').returns([]);
+            sandbox.stub(Suite.prototype, "getTests").returns([]);
         });
 
-        it('should execute build instructions with tree builder', () => {
+        it("should execute build instructions with tree builder", () => {
             mkBrowserTestParser_()
                 .parse();
 
             assert.calledOnceWith(InstructionsList.prototype.exec, {});
         });
 
-        it('should return tree tests', () => {
-            const tests = [new Test({file: 'foo/bar.js'})];
+        it("should return tree tests", () => {
+            const tests = [new Test({ file: "foo/bar.js" })];
             Suite.prototype.getTests.returns(tests);
 
             const parser = mkBrowserTestParser_();
@@ -600,32 +600,32 @@ describe('test-reader/browser-test-parser', () => {
             assert.deepEqual(res, tests);
         });
 
-        describe('in case of duplicate test titles', () => {
-            it('should reject for tests in the same file', async () => {
+        describe("in case of duplicate test titles", () => {
+            it("should reject for tests in the same file", async () => {
                 const parser = mkBrowserTestParser_();
 
                 Suite.prototype.getTests.returns([
-                    new Test({title: 'some test', file: 'foo/bar.js'}),
-                    new Test({title: 'some test', file: 'foo/bar.js'})
+                    new Test({ title: "some test", file: "foo/bar.js" }),
+                    new Test({ title: "some test", file: "foo/bar.js" }),
                 ]);
 
                 assert.throws(
                     () => parser.parse(),
-                    'same title'
+                    "same title",
                 );
             });
 
-            it('should reject for tests in different files', async () => {
+            it("should reject for tests in different files", async () => {
                 const parser = mkBrowserTestParser_();
 
                 Suite.prototype.getTests.returns([
-                    new Test({title: 'some test', file: 'foo/bar.js'}),
-                    new Test({title: 'some test', file: 'baz/qux.js'})
+                    new Test({ title: "some test", file: "foo/bar.js" }),
+                    new Test({ title: "some test", file: "baz/qux.js" }),
                 ]);
 
                 assert.throws(
                     () => parser.parse(),
-                    'same title'
+                    "same title",
                 );
             });
         });

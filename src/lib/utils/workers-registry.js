@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const {EventEmitter} = require('events');
-const workerFarm = require('worker-farm');
-const Promise = require('bluebird');
-const _ = require('lodash');
-const Events = require('../constants/runner-events');
-const RuntimeConfig = require('../config/runtime-config');
-const WorkerProcess = require('./worker-process');
+const { EventEmitter } = require("events");
+const workerFarm = require("worker-farm");
+const Promise = require("bluebird");
+const _ = require("lodash");
+const Events = require("../constants/runner-events");
+const RuntimeConfig = require("../config/runtime-config");
+const WorkerProcess = require("./worker-process");
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -55,7 +55,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
     }
 
     _createWorkerFarm() {
-        const workerFilepath = require.resolve('./processor');
+        const workerFilepath = require.resolve("./processor");
 
         const params = {
             maxConcurrentWorkers: this._config.system.workers,
@@ -64,7 +64,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
             autoStart: true,
             maxRetries: 0,
             onChild: (child) => this._initChild(child),
-            ...this._inspectParams()
+            ...this._inspectParams(),
         };
 
         return workerFarm(params, workerFilepath);
@@ -77,39 +77,39 @@ module.exports = class WorkersRegistry extends EventEmitter {
             return;
         }
 
-        const {inspect, inspectBrk} = runtimeConfig.inspectMode;
+        const { inspect, inspectBrk } = runtimeConfig.inspectMode;
 
-        const inspectName = inspectBrk ? 'inspect-brk' : 'inspect';
+        const inspectName = inspectBrk ? "inspect-brk" : "inspect";
         let inspectValue = inspectBrk ? inspectBrk : inspect;
 
-        inspectValue = typeof inspectValue === 'string' ? `=${inspectValue}` : '';
+        inspectValue = typeof inspectValue === "string" ? `=${inspectValue}` : "";
 
         return {
-            workerOptions: {execArgv: [`--${inspectName}${inspectValue}`]},
+            workerOptions: { execArgv: [`--${inspectName}${inspectValue}`] },
             maxConcurrentWorkers: 1,
-            maxCallsPerWorker: Infinity
+            maxCallsPerWorker: Infinity,
         };
     }
 
     _initChild(child) {
-        child.on('message', (data = {}) => {
+        child.on("message", (data = {}) => {
             switch (data.event) {
-                case 'worker.init':
+                case "worker.init":
                     child.send({
-                        event: 'master.init',
+                        event: "master.init",
                         configPath: this._config.configPath,
-                        runtimeConfig: RuntimeConfig.getInstance()
+                        runtimeConfig: RuntimeConfig.getInstance(),
                     });
                     break;
-                case 'worker.syncConfig':
+                case "worker.syncConfig":
                     child.send({
-                        event: 'master.syncConfig',
-                        config: this._config.serialize()
+                        event: "master.syncConfig",
+                        config: this._config.serialize(),
                     });
                     break;
                 default:
                     if (data.event) {
-                        this._registeredWorkers.forEach((workers) => workers.emit(data.event, _.omit(data, 'event')));
+                        this._registeredWorkers.forEach((workers) => workers.emit(data.event, _.omit(data, "event")));
                     }
                     break;
             }

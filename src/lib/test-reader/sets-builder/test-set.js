@@ -1,10 +1,10 @@
-const globExtra = require('glob-extra');
-const _ = require('lodash');
-const mm = require('micromatch');
-const path = require('path');
-const Promise = require('bluebird');
+const globExtra = require("glob-extra");
+const _ = require("lodash");
+const mm = require("micromatch");
+const path = require("path");
+const Promise = require("bluebird");
 
-const fs = Promise.promisifyAll(require('fs'));
+const fs = Promise.promisifyAll(require("fs"));
 
 module.exports = class TestSet {
     #set;
@@ -18,14 +18,14 @@ module.exports = class TestSet {
     }
 
     expandFiles(expandOpts, globOpts = {}) {
-        const {files, ignoreFiles = []} = this.#set;
+        const { files, ignoreFiles = [] } = this.#set;
         globOpts = _.clone(globOpts);
         globOpts.ignore = []
             .concat(globOpts.ignore || [], ignoreFiles)
             .map((p) => path.resolve(expandOpts.root, p));
 
         return globExtra.expandPaths(files, expandOpts, globOpts)
-            .then((expandedFiles) => this.#set = _.extend(this.#set, {files: expandedFiles}));
+            .then((expandedFiles) => this.#set = _.extend(this.#set, { files: expandedFiles }));
     }
 
     transformDirsToMasks() {
@@ -35,7 +35,7 @@ module.exports = class TestSet {
             }
 
             return fs.statAsync(file)
-                .then((stat) => stat.isDirectory() ? path.join(file, '**') : file)
+                .then((stat) => stat.isDirectory() ? path.join(file, "**") : file)
                 .catch(() => Promise.reject(new Error(`Cannot read such file or directory: '${file}'`)));
         })
             .then((files) => this.#set.files = files);

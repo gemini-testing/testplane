@@ -1,40 +1,40 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const Config = require('lib/config');
-const defaults = require('lib/config/defaults');
-const parser = require('lib/config/options');
-const {MissingOptionError} = require('gemini-configparser');
+const _ = require("lodash");
+const Config = require("lib/config");
+const defaults = require("lib/config/defaults");
+const parser = require("lib/config/options");
+const { MissingOptionError } = require("gemini-configparser");
 
-describe('config options', () => {
+describe("config options", () => {
     const sandbox = sinon.sandbox.create();
 
     const createConfig = () => Config.create(defaults.config);
 
-    const parse_ = (opts = {}) => parser({env: {}, argv: [], ...opts});
+    const parse_ = (opts = {}) => parser({ env: {}, argv: [], ...opts });
 
-    beforeEach(() => sandbox.stub(Config, 'read').returns({}));
+    beforeEach(() => sandbox.stub(Config, "read").returns({}));
 
     afterEach(() => sandbox.restore());
 
-    describe('system', () => {
-        describe('debug', () => {
-            it('should throw error if debug is not a boolean', () => {
-                const readConfig = _.set({}, 'system.debug', 'String');
+    describe("system", () => {
+        describe("debug", () => {
+            it("should throw error if debug is not a boolean", () => {
+                const readConfig = _.set({}, "system.debug", "String");
 
                 Config.read.returns(readConfig);
 
                 assert.throws(() => createConfig(), Error, '"debug" must be a boolean');
             });
 
-            it('should set default debug option if it does not set in config file', () => {
+            it("should set default debug option if it does not set in config file", () => {
                 const config = createConfig();
 
                 assert.equal(config.system.debug, defaults.debug);
             });
 
-            it('should override debug option', () => {
-                const readConfig = _.set({}, 'system.debug', true);
+            it("should override debug option", () => {
+                const readConfig = _.set({}, "system.debug", true);
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
@@ -44,25 +44,25 @@ describe('config options', () => {
         });
 
         [
-            {optionName: 'mochaOpts', subOptionName: 'slow'},
-            {optionName: 'expectOpts', subOptionName: 'wait'}
-        ].forEach(({optionName, subOptionName}) => {
+            { optionName: "mochaOpts", subOptionName: "slow" },
+            { optionName: "expectOpts", subOptionName: "wait" },
+        ].forEach(({ optionName, subOptionName }) => {
             describe(`${optionName}`, () => {
-                it('should throw error if option is not a null or object', () => {
-                    const readConfig = _.set({}, `system.${optionName}`, ['Array']);
+                it("should throw error if option is not a null or object", () => {
+                    const readConfig = _.set({}, `system.${optionName}`, ["Array"]);
 
                     Config.read.returns(readConfig);
 
                     assert.throws(() => createConfig(), Error, `"${optionName}" must be an object`);
                 });
 
-                it('should set default option if it does not set in config file', () => {
+                it("should set default option if it does not set in config file", () => {
                     const config = createConfig();
 
                     assert.deepEqual(config.system[optionName], defaults[optionName]);
                 });
 
-                it('should override option', () => {
+                it("should override option", () => {
                     const readConfig = _.set({}, `system.${optionName}.${subOptionName}`, 100500);
                     Config.read.returns(readConfig);
 
@@ -71,52 +71,52 @@ describe('config options', () => {
                     assert.deepEqual(config.system[optionName][subOptionName], 100500);
                 });
 
-                it('should parse option from environment', () => {
+                it("should parse option from environment", () => {
                     const result = parse_({
-                        options: {system: {[optionName]: {}}},
-                        env: {[`hermione_system_${_.snakeCase(optionName)}`]: '{"some": "opts"}'}
+                        options: { system: { [optionName]: {} } },
+                        env: { [`hermione_system_${_.snakeCase(optionName)}`]: '{"some": "opts"}' },
                     });
 
-                    assert.deepEqual(result.system[optionName], {some: 'opts'});
+                    assert.deepEqual(result.system[optionName], { some: "opts" });
                 });
 
-                it('should parse option from cli', () => {
+                it("should parse option from cli", () => {
                     const result = parse_({
-                        options: {system: {[optionName]: {}}},
-                        argv: [`--system-${_.kebabCase(optionName)}`, '{"some": "opts"}']
+                        options: { system: { [optionName]: {} } },
+                        argv: [`--system-${_.kebabCase(optionName)}`, '{"some": "opts"}'],
                     });
 
-                    assert.deepEqual(result.system[optionName], {some: 'opts'});
+                    assert.deepEqual(result.system[optionName], { some: "opts" });
                 });
             });
         });
 
-        describe('ctx', () => {
-            it('should be empty by default', () => {
+        describe("ctx", () => {
+            it("should be empty by default", () => {
                 const config = createConfig();
 
                 assert.deepEqual(config.system.ctx, {});
             });
 
-            it('should override ctx option', () => {
-                const readConfig = _.set({}, 'system.ctx', {some: 'ctx'});
+            it("should override ctx option", () => {
+                const readConfig = _.set({}, "system.ctx", { some: "ctx" });
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.deepEqual(config.system.ctx, {some: 'ctx'});
+                assert.deepEqual(config.system.ctx, { some: "ctx" });
             });
         });
 
-        describe('patternsOnReject', () => {
-            it('should be empty by default', () => {
+        describe("patternsOnReject", () => {
+            it("should be empty by default", () => {
                 const config = createConfig();
 
                 assert.deepEqual(config.system.patternsOnReject, []);
             });
 
             it('should throw error if "patternsOnReject" is not an array', () => {
-                const readConfig = _.set({}, 'system.patternsOnReject', {});
+                const readConfig = _.set({}, "system.patternsOnReject", {});
 
                 Config.read.returns(readConfig);
 
@@ -124,50 +124,50 @@ describe('config options', () => {
             });
 
             it('should override "patternsOnReject" option', () => {
-                const readConfig = _.set({}, 'system.patternsOnReject', ['some-pattern']);
+                const readConfig = _.set({}, "system.patternsOnReject", ["some-pattern"]);
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.deepEqual(config.system.patternsOnReject, ['some-pattern']);
+                assert.deepEqual(config.system.patternsOnReject, ["some-pattern"]);
             });
 
             it('should parse "patternsOnReject" option from environment', () => {
                 const result = parse_({
-                    options: {system: {patternsOnReject: []}},
-                    env: {'hermione_system_patterns_on_reject': '["some-pattern"]'}
+                    options: { system: { patternsOnReject: [] } },
+                    env: { "hermione_system_patterns_on_reject": '["some-pattern"]' },
                 });
 
-                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
+                assert.deepEqual(result.system.patternsOnReject, ["some-pattern"]);
             });
 
             it('should parse "patternsOnReject" options from cli', () => {
                 const result = parse_({
-                    options: {system: {patternsOnReject: []}},
-                    argv: ['--system-patterns-on-reject', '["some-pattern"]']
+                    options: { system: { patternsOnReject: [] } },
+                    argv: ["--system-patterns-on-reject", '["some-pattern"]'],
                 });
 
-                assert.deepEqual(result.system.patternsOnReject, ['some-pattern']);
+                assert.deepEqual(result.system.patternsOnReject, ["some-pattern"]);
             });
         });
 
-        describe('workers', () => {
-            it('should throw in case of not positive integer', () => {
-                [0, -1, 'string', {foo: 'bar'}].forEach((workers) => {
-                    Config.read.returns({system: {workers}});
+        describe("workers", () => {
+            it("should throw in case of not positive integer", () => {
+                [0, -1, "string", { foo: "bar" }].forEach((workers) => {
+                    Config.read.returns({ system: { workers } });
 
                     assert.throws(() => createConfig(), '"workers" must be a positive integer');
                 });
             });
 
-            it('should equal one by default', () => {
+            it("should equal one by default", () => {
                 const config = createConfig();
 
                 assert.equal(config.system.workers, 1);
             });
 
-            it('should be overridden from a config', () => {
-                Config.read.returns({system: {workers: 100500}});
+            it("should be overridden from a config", () => {
+                Config.read.returns({ system: { workers: 100500 } });
 
                 const config = createConfig();
 
@@ -175,32 +175,32 @@ describe('config options', () => {
             });
         });
 
-        describe('diffColor', () => {
-            it('should be #ff00ff by default', () => {
+        describe("diffColor", () => {
+            it("should be #ff00ff by default", () => {
                 const config = createConfig();
 
-                assert.deepEqual(config.system.diffColor, '#ff00ff');
+                assert.deepEqual(config.system.diffColor, "#ff00ff");
             });
 
-            it('should override diffColor option', () => {
-                const readConfig = _.set({}, 'system.diffColor', '#f5f5f5');
+            it("should override diffColor option", () => {
+                const readConfig = _.set({}, "system.diffColor", "#f5f5f5");
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.equal(config.system.diffColor, '#f5f5f5');
+                assert.equal(config.system.diffColor, "#f5f5f5");
             });
 
-            it('should throw an error if option is not a string', () => {
-                const readConfig = _.set({}, 'system.diffColor', 1);
+            it("should throw an error if option is not a string", () => {
+                const readConfig = _.set({}, "system.diffColor", 1);
 
                 Config.read.returns(readConfig);
 
                 assert.throws(() => createConfig(), Error, '"diffColor" must be a string');
             });
 
-            it('should throw an error if option is not a hexadecimal value', () => {
-                const readConfig = _.set({}, 'system.diffColor', '#gggggg');
+            it("should throw an error if option is not a hexadecimal value", () => {
+                const readConfig = _.set({}, "system.diffColor", "#gggggg");
 
                 Config.read.returns(readConfig);
 
@@ -208,24 +208,24 @@ describe('config options', () => {
             });
         });
 
-        describe('tempDir', () => {
-            it('should set default option if it does not set in config file', () => {
+        describe("tempDir", () => {
+            it("should set default option if it does not set in config file", () => {
                 const config = createConfig();
 
                 assert.deepEqual(config.system.tempDir, defaults.tempDir);
             });
 
-            it('should override tempDir option', () => {
-                const readConfig = _.set({}, 'system.tempDir', '/def/path');
+            it("should override tempDir option", () => {
+                const readConfig = _.set({}, "system.tempDir", "/def/path");
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.equal(config.system.tempDir, '/def/path');
+                assert.equal(config.system.tempDir, "/def/path");
             });
 
-            it('should throw an error if option is not a string', () => {
-                const readConfig = _.set({}, 'system.tempDir', 1);
+            it("should throw an error if option is not a string", () => {
+                const readConfig = _.set({}, "system.tempDir", 1);
 
                 Config.read.returns(readConfig);
 
@@ -233,85 +233,85 @@ describe('config options', () => {
             });
         });
 
-        describe('parallelLimit', () => {
-            it('should throw error in case of not positive integer', () => {
-                [0, -1, '10', 10.15, {foo: 'bar'}].forEach((parallelLimit) => {
-                    Config.read.returns({system: {parallelLimit}});
+        describe("parallelLimit", () => {
+            it("should throw error in case of not positive integer", () => {
+                [0, -1, "10", 10.15, { foo: "bar" }].forEach((parallelLimit) => {
+                    Config.read.returns({ system: { parallelLimit } });
 
                     assert.throws(() => createConfig(), '"parallelLimit" must be a positive integer');
                 });
             });
 
-            it('should be able to pass value is Infinity', () => {
-                Config.read.returns({system: {parallelLimit: Infinity}});
+            it("should be able to pass value is Infinity", () => {
+                Config.read.returns({ system: { parallelLimit: Infinity } });
 
                 const config = createConfig();
 
                 assert.equal(config.system.parallelLimit, Infinity);
             });
 
-            it('should set default parallelLimit option if it does not set in config file', () => {
+            it("should set default parallelLimit option if it does not set in config file", () => {
                 const config = createConfig();
 
                 assert.equal(config.system.parallelLimit, defaults.parallelLimit);
             });
 
-            it('should be overridden from a config', () => {
-                Config.read.returns({system: {parallelLimit: 5}});
+            it("should be overridden from a config", () => {
+                Config.read.returns({ system: { parallelLimit: 5 } });
 
                 const config = createConfig();
 
                 assert.equal(config.system.parallelLimit, 5);
             });
 
-            it('should parse option from environment', () => {
+            it("should parse option from environment", () => {
                 const result = parse_({
-                    options: {system: {mochaOpts: {}}},
-                    env: {'hermione_system_parallel_limit': 10}
+                    options: { system: { mochaOpts: {} } },
+                    env: { "hermione_system_parallel_limit": 10 },
                 });
 
                 assert.equal(result.system.parallelLimit, 10);
             });
 
-            it('should parse option from cli', () => {
+            it("should parse option from cli", () => {
                 const result = parse_({
-                    options: {system: {parallelLimit: 1}},
-                    argv: ['--system-parallel-limit', '15']
+                    options: { system: { parallelLimit: 1 } },
+                    argv: ["--system-parallel-limit", "15"],
                 });
 
                 assert.equal(result.system.parallelLimit, 15);
             });
         });
 
-        describe('fileExtensions', () => {
-            it('should set default extension', () => {
+        describe("fileExtensions", () => {
+            it("should set default extension", () => {
                 const config = createConfig();
 
                 assert.deepEqual(config.system.fileExtensions, defaults.fileExtensions);
             });
 
             describe('should throw error if "fileExtensions" option', () => {
-                it('is not an array', () => {
+                it("is not an array", () => {
                     const value = {};
-                    const readConfig = _.set({}, 'system.fileExtensions', value);
+                    const readConfig = _.set({}, "system.fileExtensions", value);
 
                     Config.read.returns(readConfig);
 
                     assert.throws(() => createConfig(), Error, `"fileExtensions" must be an array of strings but got ${JSON.stringify(value)}`);
                 });
 
-                it('is not an array of strings', () => {
-                    const value = ['string', 100500];
-                    const readConfig = _.set({}, 'system.fileExtensions', value);
+                it("is not an array of strings", () => {
+                    const value = ["string", 100500];
+                    const readConfig = _.set({}, "system.fileExtensions", value);
 
                     Config.read.returns(readConfig);
 
                     assert.throws(() => createConfig(), Error, `fileExtensions" must be an array of strings but got ${JSON.stringify(value)}`);
                 });
 
-                it('has strings that do not start with dot symbol', () => {
-                    const value = ['.foo', 'bar'];
-                    const readConfig = _.set({}, 'system.fileExtensions', value);
+                it("has strings that do not start with dot symbol", () => {
+                    const value = [".foo", "bar"];
+                    const readConfig = _.set({}, "system.fileExtensions", value);
 
                     Config.read.returns(readConfig);
 
@@ -320,8 +320,8 @@ describe('config options', () => {
             });
 
             it('should set "fileExtensions" option', () => {
-                const fileExtensions = ['.foo', '.bar'];
-                const readConfig = _.set({}, 'system.fileExtensions', fileExtensions);
+                const fileExtensions = [".foo", ".bar"];
+                const readConfig = _.set({}, "system.fileExtensions", fileExtensions);
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
@@ -331,24 +331,24 @@ describe('config options', () => {
         });
     });
 
-    describe('prepareEnvironment', () => {
-        it('should throw error if prepareEnvironment is not a null or function', () => {
-            const readConfig = {prepareEnvironment: 'String'};
+    describe("prepareEnvironment", () => {
+        it("should throw error if prepareEnvironment is not a null or function", () => {
+            const readConfig = { prepareEnvironment: "String" };
 
             Config.read.returns(readConfig);
 
             assert.throws(() => createConfig(), Error, '"prepareEnvironment" must be a function');
         });
 
-        it('should set default prepareEnvironment option if it does not set in config file', () => {
+        it("should set default prepareEnvironment option if it does not set in config file", () => {
             const config = createConfig();
 
             assert.equal(config.prepareEnvironment, defaults.prepareEnvironment);
         });
 
-        it('should override prepareEnvironment option', () => {
+        it("should override prepareEnvironment option", () => {
             const newFunc = () => {};
-            const readConfig = {prepareEnvironment: newFunc};
+            const readConfig = { prepareEnvironment: newFunc };
 
             Config.read.returns(readConfig);
 
@@ -358,82 +358,82 @@ describe('config options', () => {
         });
     });
 
-    describe('plugins', () => {
-        it('should parse boolean value from environment', () => {
+    describe("plugins", () => {
+        it("should parse boolean value from environment", () => {
             const result = parse_({
-                options: {plugins: {foo: {}}},
-                env: {'hermione_plugins_foo': 'true'}
+                options: { plugins: { foo: {} } },
+                env: { "hermione_plugins_foo": "true" },
             });
 
             assert.strictEqual(result.plugins.foo, true);
         });
 
-        it('should parse object value from environment', () => {
+        it("should parse object value from environment", () => {
             const result = parse_({
-                options: {plugins: {foo: {}}},
-                env: {'hermione_plugins_foo': '{"opt": 1}'}
+                options: { plugins: { foo: {} } },
+                env: { "hermione_plugins_foo": '{"opt": 1}' },
             });
 
-            assert.deepEqual(result.plugins.foo, {opt: 1});
+            assert.deepEqual(result.plugins.foo, { opt: 1 });
         });
 
-        it('should throw error on invalid values from environment', () => {
+        it("should throw error on invalid values from environment", () => {
             assert.throws(
                 () => parse_({
-                    options: {plugins: {foo: {}}},
-                    env: {'hermione_plugins_foo': '{key: 1}'}
+                    options: { plugins: { foo: {} } },
+                    env: { "hermione_plugins_foo": "{key: 1}" },
                 }),
-                'a value must be a primitive type'
+                "a value must be a primitive type",
             );
         });
 
-        it('should parse boolean value from cli', () => {
+        it("should parse boolean value from cli", () => {
             const result = parse_({
-                options: {plugins: {foo: {}}},
-                argv: ['--plugins-foo', 'true']
+                options: { plugins: { foo: {} } },
+                argv: ["--plugins-foo", "true"],
             });
 
             assert.strictEqual(result.plugins.foo, true);
         });
 
-        it('should parse object value from cli', () => {
+        it("should parse object value from cli", () => {
             const result = parse_({
-                options: {plugins: {foo: {}}},
-                argv: ['--plugins-foo', '{"opt": 1}']
+                options: { plugins: { foo: {} } },
+                argv: ["--plugins-foo", '{"opt": 1}'],
             });
 
-            assert.deepEqual(result.plugins.foo, {opt: 1});
+            assert.deepEqual(result.plugins.foo, { opt: 1 });
         });
 
-        it('should throw error on invalid values from cli', () => {
+        it("should throw error on invalid values from cli", () => {
             assert.throws(
                 () => parse_({
-                    options: {plugins: {foo: {}}},
-                    argv: ['--plugins-foo', '{key: 1}']
+                    options: { plugins: { foo: {} } },
+                    argv: ["--plugins-foo", "{key: 1}"],
                 }),
-                'a value must be a primitive type'
+                "a value must be a primitive type",
             );
         });
     });
 
-    describe('shouldRetry', () => {
-        it('should throw error if shouldRetry is not a function', () => {
-            const readConfig = _.set({}, 'shouldRetry', 'shouldRetry');
+    describe("shouldRetry", () => {
+        it("should throw error if shouldRetry is not a function", () => {
+            const readConfig = _.set({}, "shouldRetry", "shouldRetry");
 
             Config.read.returns(readConfig);
 
             assert.throws(() => createConfig(), Error, '"shouldRetry" must be a function');
         });
 
-        it('should set default shouldRetry option if it does not set in config file', () => {
+        it("should set default shouldRetry option if it does not set in config file", () => {
             const config = createConfig();
 
             assert.equal(config.shouldRetry, null);
         });
 
-        it('should override shouldRetry option', () => {
+        it("should override shouldRetry option", () => {
             const shouldRetry = () => {};
-            const readConfig = _.set({}, 'shouldRetry', shouldRetry);
+            const readConfig = _.set({}, "shouldRetry", shouldRetry);
             Config.read.returns(readConfig);
 
             const config = createConfig();
@@ -442,87 +442,87 @@ describe('config options', () => {
         });
     });
 
-    describe('sets', () => {
+    describe("sets", () => {
         const parseOpts_ = (options = {}) => {
-            options.browsers = _.mapValues(options.browsers, (broConfig) => ({desiredCapabilities: {}, ...broConfig}));
-            return parse_({options});
+            options.browsers = _.mapValues(options.browsers, (broConfig) => ({ desiredCapabilities: {}, ...broConfig }));
+            return parse_({ options });
         };
 
-        describe('files', () => {
-            it('should throw an error if files are not specified', () => {
+        describe("files", () => {
+            it("should throw an error if files are not specified", () => {
                 assert.throws(() => {
                     parseOpts_({
                         sets: {
-                            someSet: {}
-                        }
+                            someSet: {},
+                        },
                     });
                 }, MissingOptionError);
             });
 
-            it('should convert string to array of strings', () => {
+            it("should convert string to array of strings", () => {
                 const config = parseOpts_({
                     sets: {
                         someSet: {
-                            files: 'some/path'
-                        }
-                    }
+                            files: "some/path",
+                        },
+                    },
                 });
 
-                assert.deepEqual(config.sets.someSet.files, ['some/path']);
+                assert.deepEqual(config.sets.someSet.files, ["some/path"]);
             });
 
-            it('should throw an error if files are specified as non-string array', () => {
+            it("should throw an error if files are specified as non-string array", () => {
                 assert.throws(() => {
                     parseOpts_({
                         sets: {
                             someSet: {
-                                files: [100500]
-                            }
-                        }
+                                files: [100500],
+                            },
+                        },
                     });
                 }, Error, /"sets.files" must be an array of strings/);
             });
 
-            it('should accept array with strings', () => {
+            it("should accept array with strings", () => {
                 const config = parseOpts_({
                     sets: {
                         someSet: {
                             files: [
-                                'some/path',
-                                'other/path'
-                            ]
-                        }
-                    }
+                                "some/path",
+                                "other/path",
+                            ],
+                        },
+                    },
                 });
 
                 assert.deepEqual(config.sets.someSet.files, [
-                    'some/path',
-                    'other/path'
+                    "some/path",
+                    "other/path",
                 ]);
             });
         });
 
-        describe('ignoreFiles', () => {
-            it('should accept array with strings', () => {
+        describe("ignoreFiles", () => {
+            it("should accept array with strings", () => {
                 const config = parseOpts_({
                     sets: {
                         someSet: {
-                            files: ['foo'],
+                            files: ["foo"],
                             ignoreFiles: [
-                                'foo/bar',
-                                'baz'
-                            ]
-                        }
-                    }
+                                "foo/bar",
+                                "baz",
+                            ],
+                        },
+                    },
                 });
 
                 assert.deepEqual(config.sets.someSet.ignoreFiles, [
-                    'foo/bar',
-                    'baz'
+                    "foo/bar",
+                    "baz",
                 ]);
             });
 
-            describe('should throw an error', () => {
+            describe("should throw an error", () => {
                 const errorMask = /"sets.ignoreFiles" must be an array of strings/;
 
                 it('if "ignoreFiles" is not array', () => {
@@ -530,10 +530,10 @@ describe('config options', () => {
                         parseOpts_({
                             sets: {
                                 someSet: {
-                                    files: ['foo'],
-                                    ignoreFiles: 100500
-                                }
-                            }
+                                    files: ["foo"],
+                                    ignoreFiles: 100500,
+                                },
+                            },
                         });
                     }, Error, errorMask);
                 });
@@ -543,95 +543,95 @@ describe('config options', () => {
                         parseOpts_({
                             sets: {
                                 someSet: {
-                                    files: ['foo'],
-                                    ignoreFiles: [100, 500]
-                                }
-                            }
+                                    files: ["foo"],
+                                    ignoreFiles: [100, 500],
+                                },
+                            },
                         });
                     }, Error, errorMask);
                 });
             });
         });
 
-        describe('browsers', () => {
-            it('should contain all browsers from config by default', () => {
+        describe("browsers", () => {
+            it("should contain all browsers from config by default", () => {
                 const config = parseOpts_({
                     browsers: {
                         b1: {},
-                        b2: {}
+                        b2: {},
                     },
                     sets: {
                         someSet: {
-                            files: ['some/path']
-                        }
-                    }
+                            files: ["some/path"],
+                        },
+                    },
                 });
 
-                assert.deepEqual(config.sets.someSet.browsers, ['b1', 'b2']);
+                assert.deepEqual(config.sets.someSet.browsers, ["b1", "b2"]);
             });
 
-            it('should throw an error if browsers are not specified as array', () => {
+            it("should throw an error if browsers are not specified as array", () => {
                 const config = {
                     sets: {
                         someSet: {
-                            files: ['some/path'],
-                            browsers: 'something'
-                        }
-                    }
+                            files: ["some/path"],
+                            browsers: "something",
+                        },
+                    },
                 };
 
                 assert.throws(() => parseOpts_(config), Error, /"sets.browsers" must be an array/);
             });
 
-            it('should throw an error if sets contain unknown browsers', () => {
+            it("should throw an error if sets contain unknown browsers", () => {
                 assert.throws(() => {
                     parseOpts_({
                         browsers: {
                             b1: {},
-                            b2: {}
+                            b2: {},
                         },
                         sets: {
                             someSet: {
-                                files: ['some/path'],
-                                browsers: ['b3']
-                            }
-                        }
+                                files: ["some/path"],
+                                browsers: ["b3"],
+                            },
+                        },
                     });
                 }, Error, /Unknown browsers for "sets.browsers": b3/);
             });
 
-            it('should use browsers which are specified in config', () => {
+            it("should use browsers which are specified in config", () => {
                 const config = parseOpts_({
                     browsers: {
                         b1: {},
-                        b2: {}
+                        b2: {},
                     },
                     sets: {
                         set1: {
-                            files: ['some/path'],
-                            browsers: ['b1']
+                            files: ["some/path"],
+                            browsers: ["b1"],
                         },
                         set2: {
-                            files: ['other/path'],
-                            browsers: ['b2']
-                        }
-                    }
+                            files: ["other/path"],
+                            browsers: ["b2"],
+                        },
+                    },
                 });
 
-                assert.deepEqual(config.sets.set1.browsers, ['b1']);
-                assert.deepEqual(config.sets.set2.browsers, ['b2']);
+                assert.deepEqual(config.sets.set1.browsers, ["b1"]);
+                assert.deepEqual(config.sets.set2.browsers, ["b2"]);
             });
         });
 
-        it('should have default set with empty files and all browsers if sets are not specified', () => {
+        it("should have default set with empty files and all browsers if sets are not specified", () => {
             const config = parseOpts_({
                 browsers: {
                     b1: {},
-                    b2: {}
-                }
+                    b2: {},
+                },
             });
 
-            assert.deepEqual(config.sets, {'': {files: [], browsers: ['b1', 'b2'], ignoreFiles: []}});
+            assert.deepEqual(config.sets, { "": { files: [], browsers: ["b1", "b2"], ignoreFiles: [] } });
         });
     });
 });

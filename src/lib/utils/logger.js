@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
 module.exports = {
     log: console.log,
     warn: console.warn,
-    error: console.error
+    error: console.error,
 };

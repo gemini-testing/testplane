@@ -1,4 +1,4 @@
-const _ = require('lodash');
+const _ = require("lodash");
 
 module.exports = class SetCollection {
     #sets;

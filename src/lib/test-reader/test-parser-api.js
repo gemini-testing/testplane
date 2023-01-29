@@ -1,4 +1,4 @@
-const ReadEvents = require('./read-events');
+const ReadEvents = require("./read-events");
 
 module.exports = class TestParserAPI {
     #ctx;
@@ -18,7 +18,7 @@ module.exports = class TestParserAPI {
 
         Object.entries(methods).forEach(([cbName, cb]) => {
             this.#ctx[namespace][cbName] = (...args) => {
-                this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({treeBuilder}) => {
+                this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
                     treeBuilder.addTrap((obj) => cb.call(obj, ...args));
                 });
 

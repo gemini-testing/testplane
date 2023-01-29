@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {Suite, Test, Hook} = require('lib/test-reader/test-object');
+const { TreeBuilder } = require("lib/test-reader/tree-builder");
+const { Suite, Test, Hook } = require("lib/test-reader/test-object");
 
-describe('test-reader/tree-builder', () => {
+describe("test-reader/tree-builder", () => {
     const sandbox = sinon.sandbox.create();
 
     beforeEach(() => {
@@ -13,12 +13,12 @@ describe('test-reader/tree-builder', () => {
         sandbox.restore();
     });
 
-    describe('addSuite', () => {
+    describe("addSuite", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'addSuite');
+            sandbox.stub(Suite.prototype, "addSuite");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addSuite();
@@ -26,9 +26,9 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should set first passed suite as root suite', () => {
-            const suiteFoo = new Suite({title: 'foo'});
-            const suiteBar = new Suite({title: 'bar'});
+        it("should set first passed suite as root suite", () => {
+            const suiteFoo = new Suite({ title: "foo" });
+            const suiteBar = new Suite({ title: "bar" });
             const builder = new TreeBuilder()
                 .addSuite(suiteFoo)
                 .addSuite(suiteBar);
@@ -36,9 +36,9 @@ describe('test-reader/tree-builder', () => {
             assert.equal(builder.getRootSuite(), suiteFoo);
         });
 
-        it('should link suite with its parent', () => {
-            const parentSuite = new Suite({title: 'foo'});
-            const childSuite = new Suite({title: 'bar'});
+        it("should link suite with its parent", () => {
+            const parentSuite = new Suite({ title: "foo" });
+            const childSuite = new Suite({ title: "bar" });
 
             new TreeBuilder()
                 .addSuite(childSuite, parentSuite);
@@ -47,9 +47,9 @@ describe('test-reader/tree-builder', () => {
             assert.calledOn(Suite.prototype.addSuite, parentSuite);
         });
 
-        it('should apply traps for suite', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
-            const trapBar = sinon.spy().named('trapBar');
+        it("should apply traps for suite", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
+            const trapBar = sinon.spy().named("trapBar");
             const suite = new Suite({});
 
             new TreeBuilder()
@@ -62,9 +62,9 @@ describe('test-reader/tree-builder', () => {
             assert.callOrder(trapFoo, trapBar);
         });
 
-        it('should apply traps only once', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
-            const trapBar = sinon.spy().named('trapBar');
+        it("should apply traps only once", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
+            const trapBar = sinon.spy().named("trapBar");
 
             new TreeBuilder()
                 .addTrap(trapFoo)
@@ -76,8 +76,8 @@ describe('test-reader/tree-builder', () => {
             assert.calledOnce(trapBar);
         });
 
-        it('should apply traps after linking with parent', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
+        it("should apply traps after linking with parent", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
 
             new TreeBuilder()
                 .addTrap(trapFoo)
@@ -87,12 +87,12 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('addTest', () => {
+    describe("addTest", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'addTest');
+            sandbox.stub(Suite.prototype, "addTest");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addTest(new Test({}), new Suite({}));
@@ -100,15 +100,15 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should fail if no parent passed', () => {
+        it("should fail if no parent passed", () => {
             const builder = new TreeBuilder();
 
-            assert.throws(() => builder.addTest(new Test({})), 'of undefined');
+            assert.throws(() => builder.addTest(new Test({})), "of undefined");
         });
 
-        it('should link test with its parent', () => {
-            const suite = new Suite({title: 'foo'});
-            const test = new Test({title: 'bar'});
+        it("should link test with its parent", () => {
+            const suite = new Suite({ title: "foo" });
+            const test = new Test({ title: "bar" });
 
             new TreeBuilder()
                 .addTest(test, suite);
@@ -117,9 +117,9 @@ describe('test-reader/tree-builder', () => {
             assert.calledOn(Suite.prototype.addTest, suite);
         });
 
-        it('should apply traps for test', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
-            const trapBar = sinon.spy().named('trapBar');
+        it("should apply traps for test", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
+            const trapBar = sinon.spy().named("trapBar");
             const test = new Test({});
 
             new TreeBuilder()
@@ -132,9 +132,9 @@ describe('test-reader/tree-builder', () => {
             assert.callOrder(trapFoo, trapBar);
         });
 
-        it('should apply traps only once', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
-            const trapBar = sinon.spy().named('trapBar');
+        it("should apply traps only once", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
+            const trapBar = sinon.spy().named("trapBar");
 
             new TreeBuilder()
                 .addTrap(trapFoo)
@@ -146,8 +146,8 @@ describe('test-reader/tree-builder', () => {
             assert.calledOnce(trapBar);
         });
 
-        it('should apply traps after linking with parent', () => {
-            const trapFoo = sinon.spy().named('trapFoo');
+        it("should apply traps after linking with parent", () => {
+            const trapFoo = sinon.spy().named("trapFoo");
 
             new TreeBuilder()
                 .addTrap(trapFoo)
@@ -157,12 +157,12 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('addBeforeEachHook', () => {
+    describe("addBeforeEachHook", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'addBeforeEachHook');
+            sandbox.stub(Suite.prototype, "addBeforeEachHook");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addBeforeEachHook(new Hook({}), new Suite({}));
@@ -170,15 +170,15 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should fail if no parent passed', () => {
+        it("should fail if no parent passed", () => {
             const builder = new TreeBuilder();
 
-            assert.throws(() => builder.addBeforeEachHook(new Hook({})), 'of undefined');
+            assert.throws(() => builder.addBeforeEachHook(new Hook({})), "of undefined");
         });
 
-        it('should link hook with its parent', () => {
-            const suite = new Suite({title: 'foo'});
-            const hook = new Hook({title: 'bar'});
+        it("should link hook with its parent", () => {
+            const suite = new Suite({ title: "foo" });
+            const hook = new Hook({ title: "bar" });
 
             new TreeBuilder()
                 .addBeforeEachHook(hook, suite);
@@ -187,8 +187,8 @@ describe('test-reader/tree-builder', () => {
             assert.calledOn(Suite.prototype.addBeforeEachHook, suite);
         });
 
-        it('should not apply traps for hook', () => {
-            const trap = sinon.spy().named('trap');
+        it("should not apply traps for hook", () => {
+            const trap = sinon.spy().named("trap");
 
             new TreeBuilder()
                 .addTrap(trap)
@@ -198,12 +198,12 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('addAfterEachHook', () => {
+    describe("addAfterEachHook", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'addAfterEachHook');
+            sandbox.stub(Suite.prototype, "addAfterEachHook");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addAfterEachHook(new Hook({}), new Suite({}));
@@ -211,15 +211,15 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should fail if no parent passed', () => {
+        it("should fail if no parent passed", () => {
             const builder = new TreeBuilder();
 
-            assert.throws(() => builder.addAfterEachHook(new Hook({})), 'of undefined');
+            assert.throws(() => builder.addAfterEachHook(new Hook({})), "of undefined");
         });
 
-        it('should link hook with its parent', () => {
-            const suite = new Suite({title: 'foo'});
-            const hook = new Hook({title: 'bar'});
+        it("should link hook with its parent", () => {
+            const suite = new Suite({ title: "foo" });
+            const hook = new Hook({ title: "bar" });
 
             new TreeBuilder()
                 .addAfterEachHook(hook, suite);
@@ -228,8 +228,8 @@ describe('test-reader/tree-builder', () => {
             assert.calledOn(Suite.prototype.addAfterEachHook, suite);
         });
 
-        it('should not apply traps for hook', () => {
-            const trap = sinon.spy().named('trap');
+        it("should not apply traps for hook", () => {
+            const trap = sinon.spy().named("trap");
 
             new TreeBuilder()
                 .addTrap(trap)
@@ -239,8 +239,8 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('addTrap', () => {
-        it('should be chainable', () => {
+    describe("addTrap", () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addTrap(() => {});
@@ -249,12 +249,12 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('addTestFilter', () => {
+    describe("addTestFilter", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'filterTests');
+            sandbox.stub(Suite.prototype, "filterTests");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.addTestFilter(() => true);
@@ -262,7 +262,7 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should not apply filter on site', () => {
+        it("should not apply filter on site", () => {
             new TreeBuilder()
                 .addSuite(new Suite())
                 .addTestFilter(() => true);
@@ -271,12 +271,12 @@ describe('test-reader/tree-builder', () => {
         });
     });
 
-    describe('applyFilters', () => {
+    describe("applyFilters", () => {
         beforeEach(() => {
-            sandbox.stub(Suite.prototype, 'filterTests');
+            sandbox.stub(Suite.prototype, "filterTests");
         });
 
-        it('should be chainable', () => {
+        it("should be chainable", () => {
             const builder = new TreeBuilder();
 
             const res = builder.applyFilters();
@@ -284,7 +284,7 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should be chainable on actual filter', () => {
+        it("should be chainable on actual filter", () => {
             const builder = new TreeBuilder();
 
             const res = builder
@@ -295,7 +295,7 @@ describe('test-reader/tree-builder', () => {
             assert.equal(res, builder);
         });
 
-        it('should not process tests if no any suite added', () => {
+        it("should not process tests if no any suite added", () => {
             new TreeBuilder()
                 .addTestFilter(() => true)
                 .applyFilters();
@@ -303,7 +303,7 @@ describe('test-reader/tree-builder', () => {
             assert.notCalled(Suite.prototype.filterTests);
         });
 
-        it('should not process tests if no filter added', () => {
+        it("should not process tests if no filter added", () => {
             new TreeBuilder()
                 .addSuite(new Suite())
                 .applyFilters();
@@ -311,7 +311,7 @@ describe('test-reader/tree-builder', () => {
             assert.notCalled(Suite.prototype.filterTests);
         });
 
-        it('should process tests on apply', () => {
+        it("should process tests on apply", () => {
             new TreeBuilder()
                 .addSuite(new Suite())
                 .addTestFilter(() => true)
@@ -320,9 +320,9 @@ describe('test-reader/tree-builder', () => {
             assert.calledOnce(Suite.prototype.filterTests);
         });
 
-        it('should process tests only through root suite', () => {
+        it("should process tests only through root suite", () => {
             const rootSuite = new Suite();
-            const childSuite = new Suite({title: 'foo'});
+            const childSuite = new Suite({ title: "foo" });
 
             new TreeBuilder()
                 .addSuite(rootSuite)
@@ -334,18 +334,18 @@ describe('test-reader/tree-builder', () => {
             assert.calledOn(Suite.prototype.filterTests, rootSuite);
         });
 
-        it('should filter tests on apply', () => {
+        it("should filter tests on apply", () => {
             new TreeBuilder()
                 .addSuite(new Suite())
-                .addTestFilter((test) => test.title !== 'foo')
-                .addTestFilter((test) => test.title !== 'baz')
+                .addTestFilter((test) => test.title !== "foo")
+                .addTestFilter((test) => test.title !== "baz")
                 .applyFilters();
 
             const filter = Suite.prototype.filterTests.lastCall.args[0];
 
-            assert.isFalse(filter(new Test({title: 'foo'})));
-            assert.isTrue(filter(new Test({title: 'bar'})));
-            assert.isFalse(filter(new Test({title: 'baz'})));
+            assert.isFalse(filter(new Test({ title: "foo" })));
+            assert.isTrue(filter(new Test({ title: "bar" })));
+            assert.isFalse(filter(new Test({ title: "baz" })));
         });
     });
 });

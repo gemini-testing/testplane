@@ -1,12 +1,12 @@
-const path = require('path');
-const globExtra = require('glob-extra');
-const _ = require('lodash');
-const Promise = require('bluebird');
+const path = require("path");
+const globExtra = require("glob-extra");
+const _ = require("lodash");
+const Promise = require("bluebird");
 
-const SetCollection = require('./set-collection');
-const TestSet = require('./test-set');
+const SetCollection = require("./set-collection");
+const TestSet = require("./test-set");
 
-const FILE_EXTENSIONS = ['.js', '.mjs'];
+const FILE_EXTENSIONS = [".js", ".mjs"];
 
 module.exports = class SetsBuilder {
     #sets;
@@ -39,10 +39,10 @@ module.exports = class SetsBuilder {
             return;
         }
 
-        let error = `No such sets: ${unknownSets.join(', ')}.`;
+        let error = `No such sets: ${unknownSets.join(", ")}.`;
 
         if (!_.isEmpty(setsNames)) {
-            error += ` Use one of the specified sets: ${setsNames.join(', ')}`;
+            error += ` Use one of the specified sets: ${setsNames.join(", ")}`;
         }
 
         throw new Error(error);
@@ -63,7 +63,7 @@ module.exports = class SetsBuilder {
     }
 
     build(projectRoot, globOpts = {}, fileExtensions = FILE_EXTENSIONS) {
-        const expandOpts = {formats: fileExtensions, root: projectRoot};
+        const expandOpts = { formats: fileExtensions, root: projectRoot };
 
         if (globOpts.ignore) {
             globOpts.ignore = [].concat(globOpts.ignore)
@@ -95,7 +95,7 @@ module.exports = class SetsBuilder {
 
     #validateFoundFiles(foundFiles) {
         if (!_.isEmpty(this.#filesToUse) && _.isEmpty(foundFiles)) {
-            const paths = [].concat(this.#filesToUse).join(', ');
+            const paths = [].concat(this.#filesToUse).join(", ");
             throw new Error(`Cannot find files by specified paths: ${paths}`);
         }
     }
@@ -104,7 +104,7 @@ module.exports = class SetsBuilder {
         _.forEach(this.#sets, (set) => set.useFiles(filesToUse));
 
         if (!this.#hasFiles()) {
-            throw new Error('Cannot find files by masks in sets');
+            throw new Error("Cannot find files by masks in sets");
         }
     }
 

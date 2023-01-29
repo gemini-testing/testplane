@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class BrowserAgent {
     static create(id, version, pool) {
@@ -14,13 +14,13 @@ module.exports = class BrowserAgent {
     }
 
     async getBrowser(opts = {}) {
-        const browser = await this._pool.getBrowser(this.browserId, {...opts, version: this._version});
+        const browser = await this._pool.getBrowser(this.browserId, { ...opts, version: this._version });
         if (!this._sessions.includes(browser.sessionId)) {
             this._sessions.push(browser.sessionId);
             return browser;
         }
 
-        await this.freeBrowser(browser, {force: true});
+        await this.freeBrowser(browser, { force: true });
 
         return this.getBrowser(opts);
     }
@@ -28,6 +28,6 @@ module.exports = class BrowserAgent {
     freeBrowser(browser, opts = {}) {
         const force = opts.force || browser.state.isBroken;
 
-        return this._pool.freeBrowser(browser, {force});
+        return this._pool.freeBrowser(browser, { force });
     }
 };

@@ -1,35 +1,35 @@
-'use strict';
+"use strict";
 
-const {WEBDRIVER_PROTOCOL} = require('../constants/config');
+const { WEBDRIVER_PROTOCOL } = require("../constants/config");
 
 module.exports = {
-    baseUrl: 'http://localhost',
-    gridUrl: 'http://localhost:4444/wd/hub',
+    baseUrl: "http://localhost",
+    gridUrl: "http://localhost:4444/wd/hub",
     browserWSEndpoint: null,
-    config: '.hermione.conf.js',
+    config: ".hermione.conf.js",
     desiredCapabilities: null,
     automationProtocol: WEBDRIVER_PROTOCOL,
     sessionEnvFlags: {},
-    screenshotsDir: 'hermione/screens',
-    diffColor: '#ff00ff',
+    screenshotsDir: "hermione/screens",
+    diffColor: "#ff00ff",
     tolerance: 2.3,
     antialiasingTolerance: 4,
     compareOpts: {
         shouldCluster: false,
         clustersSize: 10,
-        stopOnFirstFail: false
+        stopOnFirstFail: false,
     },
     buildDiffOpts: {
         ignoreAntialiasing: true,
-        ignoreCaret: true
+        ignoreCaret: true,
     },
     assertViewOpts: {
         ignoreElements: [],
         captureElementFromTop: true,
-        allowViewportOverflow: false
+        allowViewportOverflow: false,
     },
     calibrate: false,
-    screenshotMode: 'auto',
+    screenshotMode: "auto",
     screenshotDelay: 0,
     compositeImage: true,
     prepareBrowser: null,
@@ -44,11 +44,11 @@ module.exports = {
     testTimeout: null,
     takeScreenshotOnFails: {
         testFail: true,
-        assertViewFail: true
+        assertViewFail: true,
     },
     takeScreenshotOnFailsTimeout: 5000,
-    takeScreenshotOnFailsMode: 'fullpage',
-    reporters: ['flat'],
+    takeScreenshotOnFailsMode: "fullpage",
+    reporters: ["flat"],
     debug: false,
     parallelLimit: Infinity,
     sessionsPerBrowser: 1,
@@ -59,22 +59,22 @@ module.exports = {
     shouldRetry: null,
     mochaOpts: {
         slow: 10000,
-        timeout: 60000
+        timeout: 60000,
     },
     expectOpts: {
         wait: 3000,
-        interval: 100
+        interval: 100,
     },
     patternsOnReject: [],
     meta: null,
     windowSize: null,
-    tempDir: '',
+    tempDir: "",
     orientation: null,
     waitOrientationChange: true,
     resetCursor: true,
     strictTestsOrder: false,
     saveHistory: true,
-    fileExtensions: ['.js', '.mjs'],
+    fileExtensions: [".js", ".mjs"],
     outputDir: null,
     agent: null,
     headers: null,
@@ -84,5 +84,5 @@ module.exports = {
     user: null,
     key: null,
     region: null,
-    headless: null
+    headless: null,
 };

@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const Viewport = require('./viewport');
+const Viewport = require("./viewport");
 
 module.exports = class ScreenShooter {
     static create(browser) {
@@ -12,9 +12,9 @@ module.exports = class ScreenShooter {
     }
 
     async capture(page, opts = {}) {
-        const {allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll} = opts;
-        const viewportOpts = {allowViewportOverflow, compositeImage};
-        const cropImageOpts = {screenshotDelay, compositeImage, selectorToScroll};
+        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll } = opts;
+        const viewportOpts = { allowViewportOverflow, compositeImage };
+        const cropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
         const capturedImage = await this._browser.captureViewportImage(page, screenshotDelay);
         const viewport = Viewport.create(page, capturedImage, viewportOpts);
@@ -38,10 +38,10 @@ module.exports = class ScreenShooter {
     async _extendImage(viewport, page, opts) {
         const scrollHeight = Math.min(
             viewport.getVerticalOverflow(),
-            page.viewport.height
+            page.viewport.height,
         );
 
-        await this._browser.scrollBy({x: 0, y: scrollHeight, selector: opts.selectorToScroll});
+        await this._browser.scrollBy({ x: 0, y: scrollHeight, selector: opts.selectorToScroll });
 
         page.viewport.top += scrollHeight;
 

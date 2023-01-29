@@ -1,13 +1,13 @@
-'use strict';
+"use strict";
 
-const chalk = require('chalk');
-const path = require('path');
-const {EventEmitter} = require('events');
-const proxyquire = require('proxyquire');
-const RunnerEvents = require('lib/constants/runner-events');
-const {mkTestStub_, getDeserializedResult} = require('./utils');
+const chalk = require("chalk");
+const path = require("path");
+const { EventEmitter } = require("events");
+const proxyquire = require("proxyquire");
+const RunnerEvents = require("lib/constants/runner-events");
+const { mkTestStub_, getDeserializedResult } = require("./utils");
 
-describe('Flat reporter', () => {
+describe("Flat reporter", () => {
     const sandbox = sinon.sandbox.create();
     let FlatReporter, initInformer, informer, emitter, test, stdout;
 
@@ -27,59 +27,59 @@ describe('Flat reporter', () => {
     beforeEach(() => {
         test = mkTestStub_();
         emitter = new EventEmitter();
-        stdout = '';
+        stdout = "";
 
         informer = {
             log: sandbox.stub().callsFake((str) => stdout += `${str}\n`),
             warn: sandbox.stub(),
             error: sandbox.stub(),
-            end: sandbox.stub()
+            end: sandbox.stub(),
         };
 
         initInformer = sandbox.stub().resolves(informer);
 
-        FlatReporter = proxyquire('lib/reporters/flat', {
-            './base': proxyquire('lib/reporters/base', {
-                './informers': {initInformer}
-            })
+        FlatReporter = proxyquire("lib/reporters/flat", {
+            "./base": proxyquire("lib/reporters/base", {
+                "./informers": { initInformer },
+            }),
         });
     });
 
     afterEach(() => sandbox.restore());
 
-    it('should initialize informer with passed args', async () => {
-        const opts = {type: 'flat', path: './flat.txt'};
+    it("should initialize informer with passed args", async () => {
+        const opts = { type: "flat", path: "./flat.txt" };
 
         await createFlatReporter(opts);
 
         assert.calledOnceWith(initInformer, opts);
     });
 
-    it('should inform about info', async () => {
+    it("should inform about info", async () => {
         await createFlatReporter();
 
-        emit(RunnerEvents.INFO, 'foo');
+        emit(RunnerEvents.INFO, "foo");
 
-        assert.calledWith(informer.log, 'foo');
+        assert.calledWith(informer.log, "foo");
     });
 
-    it('should inform about warning', async () => {
+    it("should inform about warning", async () => {
         await createFlatReporter();
 
-        emit(RunnerEvents.WARNING, 'foo');
+        emit(RunnerEvents.WARNING, "foo");
 
-        assert.calledWith(informer.warn, 'foo');
+        assert.calledWith(informer.warn, "foo");
     });
 
-    it('should inform about error', async () => {
+    it("should inform about error", async () => {
         await createFlatReporter();
 
-        emit(RunnerEvents.ERROR, 'foo');
+        emit(RunnerEvents.ERROR, "foo");
 
-        assert.calledWith(informer.error, chalk.red('foo'));
+        assert.calledWith(informer.error, chalk.red("foo"));
     });
 
-    it('should inform about statistics of the tests execution', async () => {
+    it("should inform about statistics of the tests execution", async () => {
         await createFlatReporter();
 
         emit(RunnerEvents.RUNNER_END, {
@@ -87,36 +87,36 @@ describe('Flat reporter', () => {
             passed: 2,
             failed: 2,
             skipped: 1,
-            retries: 2
+            retries: 2,
         });
 
         const deserealizedResult = chalk.stripColor(informer.log.firstCall.args[0]);
 
-        assert.equal(deserealizedResult, 'Total: 5 Passed: 2 Failed: 2 Skipped: 1 Retries: 2');
+        assert.equal(deserealizedResult, "Total: 5 Passed: 2 Failed: 2 Skipped: 1 Retries: 2");
     });
 
-    describe('rendering', () => {
+    describe("rendering", () => {
         const testStates = {
-            RETRY: 'retried',
-            TEST_FAIL: 'failed'
+            RETRY: "retried",
+            TEST_FAIL: "failed",
         };
 
-        it('should correctly do the rendering', async () => {
-            test = mkTestStub_({sessionId: 'test_session'});
+        it("should correctly do the rendering", async () => {
+            test = mkTestStub_({ sessionId: "test_session" });
 
             await createFlatReporter();
             emit(RunnerEvents.TEST_PASS, test);
 
             const result = getDeserializedResult(informer.log.firstCall.args[0]);
 
-            assert.equal(result, 'suite test [chrome:test_session] - 100500ms');
+            assert.equal(result, "suite test [chrome:test_session] - 100500ms");
         });
 
-        describe('skipped tests report', () => {
-            it('should add skip comment if test was skipped', async () => {
+        describe("skipped tests report", () => {
+            it("should add skip comment if test was skipped", async () => {
                 test = mkTestStub_({
                     pending: true,
-                    skipReason: 'some comment'
+                    skipReason: "some comment",
                 });
 
                 await createFlatReporter();
@@ -127,13 +127,13 @@ describe('Flat reporter', () => {
                 assert.match(result, /reason: some comment/);
             });
 
-            it('should use parent skip comment if all describe was skipped', async () => {
+            it("should use parent skip comment if all describe was skipped", async () => {
                 test = mkTestStub_({
                     pending: true,
-                    skipReason: 'test comment',
+                    skipReason: "test comment",
                     parent: {
-                        skipReason: 'suite comment'
-                    }
+                        skipReason: "suite comment",
+                    },
                 });
 
                 await createFlatReporter();
@@ -144,11 +144,11 @@ describe('Flat reporter', () => {
                 assert.match(result, /reason: suite comment/);
             });
 
-            it('should use test skip comment if describe was skipped without comment', async () => {
+            it("should use test skip comment if describe was skipped without comment", async () => {
                 test = mkTestStub_({
                     pending: true,
-                    skipReason: 'test comment',
-                    parent: {some: 'data'}
+                    skipReason: "test comment",
+                    parent: { some: "data" },
                 });
 
                 await createFlatReporter();
@@ -159,9 +159,9 @@ describe('Flat reporter', () => {
                 assert.match(result, /reason: test comment/);
             });
 
-            it('should use default message if test was skipped without comment', async () => {
+            it("should use default message if test was skipped without comment", async () => {
                 test = mkTestStub_({
-                    pending: true
+                    pending: true,
                 });
 
                 await createFlatReporter();
@@ -173,7 +173,7 @@ describe('Flat reporter', () => {
             });
         });
 
-        ['RETRY', 'TEST_FAIL'].forEach((event) => {
+        ["RETRY", "TEST_FAIL"].forEach((event) => {
             describe(`${testStates[event]} tests report`, () => {
                 it(`should log correct number of ${testStates[event]} suite`, async () => {
                     test = mkTestStub_();
@@ -195,7 +195,7 @@ describe('Flat reporter', () => {
 
                 it(`should log path to file of ${testStates[event]} suite`, async () => {
                     test = mkTestStub_();
-                    sandbox.stub(path, 'relative').returns(`relative/${test.file}`);
+                    sandbox.stub(path, "relative").returns(`relative/${test.file}`);
 
                     await createFlatReporter();
                     emit(RunnerEvents[event], test);
@@ -205,7 +205,7 @@ describe('Flat reporter', () => {
 
                 it(`should log browser of ${testStates[event]} suite`, async () => {
                     test = mkTestStub_({
-                        browserId: 'bro1'
+                        browserId: "bro1",
                     });
 
                     await createFlatReporter();
@@ -216,7 +216,7 @@ describe('Flat reporter', () => {
 
                 it(`should log an error stack of ${testStates[event]} test`, async () => {
                     test = mkTestStub_({
-                        err: {stack: 'some stack'}
+                        err: { stack: "some stack" },
                     });
 
                     await createFlatReporter();
@@ -227,7 +227,7 @@ describe('Flat reporter', () => {
 
                 it(`should log an error message of ${testStates[event]} test if an error stack does not exist`, async () => {
                     test = mkTestStub_({
-                        err: {message: 'some message'}
+                        err: { message: "some message" },
                     });
 
                     await createFlatReporter();
@@ -238,7 +238,7 @@ describe('Flat reporter', () => {
 
                 it(`should log an error of ${testStates[event]} test if an error stack and message do not exist`, async () => {
                     test = mkTestStub_({
-                        err: 'some error'
+                        err: "some error",
                     });
 
                     await createFlatReporter();
@@ -247,14 +247,14 @@ describe('Flat reporter', () => {
                     assert.match(stdout, /some error/);
                 });
 
-                it('should extend error with original selenium error if it exists', async () => {
+                it("should extend error with original selenium error if it exists", async () => {
                     test = mkTestStub_({
                         err: {
-                            stack: 'some stack',
+                            stack: "some stack",
                             seleniumStack: {
-                                orgStatusMessage: 'some original message'
-                            }
-                        }
+                                orgStatusMessage: "some original message",
+                            },
+                        },
                     });
 
                     await createFlatReporter();
@@ -274,27 +274,27 @@ describe('Flat reporter', () => {
             });
         });
 
-        describe('failed tests report', () => {
-            it('should log path to file of failed hook', async () => {
+        describe("failed tests report", () => {
+            it("should log path to file of failed hook", async () => {
                 test = mkTestStub_({
                     file: null,
                     parent: {
-                        file: 'path-to-test'
-                    }
+                        file: "path-to-test",
+                    },
                 });
 
-                sandbox.stub(path, 'relative').returns(`relative/${test.parent.file}`);
+                sandbox.stub(path, "relative").returns(`relative/${test.parent.file}`);
 
                 await createFlatReporter();
                 emit(RunnerEvents.TEST_FAIL, test);
 
-                assert.include(stdout, 'relative/path-to-test');
+                assert.include(stdout, "relative/path-to-test");
             });
 
-            it('should not throw if path to file is not specified on failed hook', async () => {
+            it("should not throw if path to file is not specified on failed hook", async () => {
                 test = mkTestStub_({
                     file: null,
-                    parent: {}
+                    parent: {},
                 });
 
                 await createFlatReporter();

@@ -1,6 +1,6 @@
-const {ConfigurableTestObject} = require('./configurable-test-object');
-const {Hook} = require('./hook');
-const _ = require('lodash');
+const { ConfigurableTestObject } = require("./configurable-test-object");
+const { Hook } = require("./hook");
+const _ = require("lodash");
 
 class Suite extends ConfigurableTestObject {
     #suites;
@@ -8,8 +8,8 @@ class Suite extends ConfigurableTestObject {
     #beforeEachHooks;
     #afterEachHooks;
 
-    constructor({title, file, id} = {}) {
-        super({title, file, id});
+    constructor({ title, file, id } = {}) {
+        super({ title, file, id });
 
         this.#suites = [];
         this.#tests = [];
@@ -34,11 +34,11 @@ class Suite extends ConfigurableTestObject {
     }
 
     beforeEach(fn) {
-        return this.addBeforeEachHook(Hook.create({title: '"before each" hook', fn}));
+        return this.addBeforeEachHook(Hook.create({ title: '"before each" hook', fn }));
     }
 
     afterEach(fn) {
-        return this.addAfterEachHook(Hook.create({title: '"after each" hook', fn}));
+        return this.addAfterEachHook(Hook.create({ title: '"after each" hook', fn }));
     }
 
     #addChild(child, storage) {
@@ -55,7 +55,7 @@ class Suite extends ConfigurableTestObject {
 
     getTests() {
         return this.#tests.concat(
-            _.flatten(this.#suites.map((s) => s.getTests()))
+            _.flatten(this.#suites.map((s) => s.getTests())),
         );
     }
 
@@ -91,5 +91,5 @@ class Suite extends ConfigurableTestObject {
 }
 
 module.exports = {
-    Suite
+    Suite,
 };

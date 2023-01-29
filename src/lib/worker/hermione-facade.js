@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const Hermione = require('./hermione');
-const RuntimeConfig = require('../config/runtime-config');
-const Promise = require('bluebird');
-const debug = require('debug')(`hermione:worker:${process.pid}`);
-const ipc = require('../utils/ipc');
+const Hermione = require("./hermione");
+const RuntimeConfig = require("../config/runtime-config");
+const Promise = require("bluebird");
+const debug = require("debug")(`hermione:worker:${process.pid}`);
+const ipc = require("../utils/ipc");
 
 module.exports = class HermioneFacade {
     static create() {
@@ -42,9 +42,9 @@ module.exports = class HermioneFacade {
 
     _init() {
         return new Promise((resolve, reject) => {
-            debug('init worker');
+            debug("init worker");
 
-            ipc.on('master.init', ({configPath, runtimeConfig} = {}) => {
+            ipc.on("master.init", ({ configPath, runtimeConfig } = {}) => {
                 try {
                     if (runtimeConfig.requireModules) {
                         runtimeConfig.requireModules.forEach((module) => require(module));
@@ -53,31 +53,31 @@ module.exports = class HermioneFacade {
                     RuntimeConfig.getInstance().extend(runtimeConfig);
                     const hermione = Hermione.create(configPath);
 
-                    debug('worker initialized');
+                    debug("worker initialized");
                     resolve(hermione);
                 } catch (e) {
-                    debug('worker initialization failed');
+                    debug("worker initialization failed");
                     reject(e);
                 }
             });
 
-            ipc.emit('worker.init');
+            ipc.emit("worker.init");
         });
     }
 
     _syncConfig() {
         return new Promise((resolve) => {
-            debug('sync config');
+            debug("sync config");
 
-            ipc.on('master.syncConfig', ({config} = {}) => {
+            ipc.on("master.syncConfig", ({ config } = {}) => {
                 delete config.system.mochaOpts.grep; // grep affects only master
                 this._hermione.config.mergeWith(config);
 
-                debug('config synced');
+                debug("config synced");
                 resolve();
             });
 
-            ipc.emit('worker.syncConfig');
+            ipc.emit("worker.syncConfig");
         });
     }
 };

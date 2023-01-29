@@ -1,16 +1,16 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
-const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const {Suite, Test, Hook} = require('lib/test-reader/test-object');
+const Promise = require("bluebird");
+const HookRunner = require("lib/worker/runner/test-runner/hook-runner");
+const ExecutionThread = require("lib/worker/runner/test-runner/execution-thread");
+const { Suite, Test, Hook } = require("lib/test-reader/test-object");
 
-describe('worker/runner/test-runner/hook-runner', () => {
+describe("worker/runner/test-runner/hook-runner", () => {
     const sandbox = sinon.sandbox.create();
 
     const mkHook_ = (fn) => {
         return new Hook({
-            fn: fn || (() => {})
+            fn: fn || (() => {}),
         });
     };
 
@@ -19,8 +19,8 @@ describe('worker/runner/test-runner/hook-runner', () => {
         suite.parent = opts.parent;
 
         const convertHooks_ = (hooks = []) => hooks.map((fn) => mkHook_(() => fn()));
-        sandbox.stub(suite, 'beforeEachHooks').get(() => convertHooks_(opts.beforeEachHooks));
-        sandbox.stub(suite, 'afterEachHooks').get(() => convertHooks_(opts.afterEachHooks));
+        sandbox.stub(suite, "beforeEachHooks").get(() => convertHooks_(opts.beforeEachHooks));
+        sandbox.stub(suite, "afterEachHooks").get(() => convertHooks_(opts.afterEachHooks));
 
         return suite;
     };
@@ -39,117 +39,117 @@ describe('worker/runner/test-runner/hook-runner', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(ExecutionThread.prototype, 'run').callsFake(async (runnable) => {
+        sandbox.stub(ExecutionThread.prototype, "run").callsFake(async (runnable) => {
             await runnable.fn();
         });
     });
 
     afterEach(() => sandbox.restore());
 
-    describe('runBeforeEachHooks', () => {
-        it('should run hook in execution thread', async () => {
+    describe("runBeforeEachHooks", () => {
+        it("should run hook in execution thread", async () => {
             const hook = mkHook_();
-            sandbox.stub(Suite.prototype, 'beforeEachHooks').get(() => [hook]);
+            sandbox.stub(Suite.prototype, "beforeEachHooks").get(() => [hook]);
 
             await mkRunner_().runBeforeEachHooks();
 
             assert.calledWithMatch(ExecutionThread.prototype.run, hook);
         });
 
-        it('should protect hook from modification during run in execution thread', async () => {
+        it("should protect hook from modification during run in execution thread", async () => {
             const hook = mkHook_();
-            sandbox.stub(Suite.prototype, 'beforeEachHooks').get(() => [hook]);
+            sandbox.stub(Suite.prototype, "beforeEachHooks").get(() => [hook]);
 
-            ExecutionThread.prototype.run.callsFake((hook) => hook.foo = 'bar');
+            ExecutionThread.prototype.run.callsFake((hook) => hook.foo = "bar");
 
             await mkRunner_().runBeforeEachHooks();
 
-            assert.notProperty(hook, 'foo');
+            assert.notProperty(hook, "foo");
         });
 
-        it('should call beforeEach hooks for all parents', async () => {
-            const topLevelHook1 = sinon.spy().named('topLevelHook1');
-            const topLevelHook2 = sinon.spy().named('topLevelHook2');
-            const hook1 = sinon.spy().named('hook1');
-            const hook2 = sinon.spy().named('hook2');
+        it("should call beforeEach hooks for all parents", async () => {
+            const topLevelHook1 = sinon.spy().named("topLevelHook1");
+            const topLevelHook2 = sinon.spy().named("topLevelHook2");
+            const hook1 = sinon.spy().named("hook1");
+            const hook2 = sinon.spy().named("hook2");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
-                        beforeEachHooks: [topLevelHook1, topLevelHook2]
+                        beforeEachHooks: [topLevelHook1, topLevelHook2],
                     }),
-                    beforeEachHooks: [hook1, hook2]
-                })
+                    beforeEachHooks: [hook1, hook2],
+                }),
             });
 
-            await mkRunner_({test}).runBeforeEachHooks();
+            await mkRunner_({ test }).runBeforeEachHooks();
 
             assert.callOrder(
                 topLevelHook1,
                 topLevelHook2,
                 hook1,
-                hook2
+                hook2,
             );
         });
 
-        it('should wait until first hook finished before next hook started', async () => {
-            const afterFirstHook = sinon.spy().named('afterFirstHook');
+        it("should wait until first hook finished before next hook started", async () => {
+            const afterFirstHook = sinon.spy().named("afterFirstHook");
             const firstHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterFirstHook));
-            const secondHook = sinon.spy().named('secondHook');
+            const secondHook = sinon.spy().named("secondHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
-                    beforeEachHooks: [firstHook, secondHook]
-                })
+                    beforeEachHooks: [firstHook, secondHook],
+                }),
             });
 
-            await mkRunner_({test}).runBeforeEachHooks();
+            await mkRunner_({ test }).runBeforeEachHooks();
 
             assert.callOrder(
                 afterFirstHook,
-                secondHook
+                secondHook,
             );
         });
 
-        it('should wait until parent hook finished before child hook start', async () => {
-            const afterParentHook = sinon.spy().named('afterParentHook');
+        it("should wait until parent hook finished before child hook start", async () => {
+            const afterParentHook = sinon.spy().named("afterParentHook");
             const parentHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterParentHook));
-            const childHook = sinon.spy().named('childHook');
+            const childHook = sinon.spy().named("childHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
-                        beforeEachHooks: [parentHook]
+                        beforeEachHooks: [parentHook],
                     }),
-                    beforeEachHooks: [childHook]
-                })
+                    beforeEachHooks: [childHook],
+                }),
             });
 
-            await mkRunner_({test}).runBeforeEachHooks();
+            await mkRunner_({ test }).runBeforeEachHooks();
 
             assert.callOrder(
                 afterParentHook,
-                childHook
+                childHook,
             );
         });
 
-        it('should fail on first hook fail', async () => {
-            const secondParentHook = sinon.spy().named('secondParentHook');
-            const childHook = sinon.spy().named('childHook');
+        it("should fail on first hook fail", async () => {
+            const secondParentHook = sinon.spy().named("secondParentHook");
+            const childHook = sinon.spy().named("childHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
                         beforeEachHooks: [
-                            () => Promise.reject(new Error('foo')),
-                            secondParentHook
-                        ]
+                            () => Promise.reject(new Error("foo")),
+                            secondParentHook,
+                        ],
                     }),
-                    beforeEachHooks: [childHook]
-                })
+                    beforeEachHooks: [childHook],
+                }),
             });
 
-            const runner = mkRunner_({test});
+            const runner = mkRunner_({ test });
 
             await assert.isRejected(runner.runBeforeEachHooks(), /foo/);
             assert.notCalled(secondParentHook);
@@ -157,167 +157,167 @@ describe('worker/runner/test-runner/hook-runner', () => {
         });
     });
 
-    describe('runAfterEachHooks', () => {
-        it('should run hook in execution thread', async () => {
+    describe("runAfterEachHooks", () => {
+        it("should run hook in execution thread", async () => {
             const hook = mkHook_();
-            sandbox.stub(Suite.prototype, 'afterEachHooks').get(() => [hook]);
+            sandbox.stub(Suite.prototype, "afterEachHooks").get(() => [hook]);
 
             await mkRunner_().runAfterEachHooks();
 
             assert.calledWithMatch(ExecutionThread.prototype.run, hook);
         });
 
-        it('should protect hook from modification during run in execution thread', async () => {
+        it("should protect hook from modification during run in execution thread", async () => {
             const hook = mkHook_();
-            sandbox.stub(Suite.prototype, 'afterEachHooks').get(() => [hook]);
+            sandbox.stub(Suite.prototype, "afterEachHooks").get(() => [hook]);
 
-            ExecutionThread.prototype.run.callsFake((hook) => hook.foo = 'bar');
+            ExecutionThread.prototype.run.callsFake((hook) => hook.foo = "bar");
 
             await mkRunner_().runAfterEachHooks();
 
-            assert.notProperty(hook, 'foo');
+            assert.notProperty(hook, "foo");
         });
 
-        it('should call afterEach hooks for all parents', async () => {
-            const topLevelHook1 = sinon.spy().named('topLevelHook1');
-            const topLevelHook2 = sinon.spy().named('topLevelHook2');
-            const hook1 = sinon.spy().named('hook1');
-            const hook2 = sinon.spy().named('hook2');
+        it("should call afterEach hooks for all parents", async () => {
+            const topLevelHook1 = sinon.spy().named("topLevelHook1");
+            const topLevelHook2 = sinon.spy().named("topLevelHook2");
+            const hook1 = sinon.spy().named("hook1");
+            const hook2 = sinon.spy().named("hook2");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
-                        afterEachHooks: [topLevelHook1, topLevelHook2]
+                        afterEachHooks: [topLevelHook1, topLevelHook2],
                     }),
-                    afterEachHooks: [hook1, hook2]
-                })
+                    afterEachHooks: [hook1, hook2],
+                }),
             });
 
-            await mkRunner_({test}).runAfterEachHooks();
+            await mkRunner_({ test }).runAfterEachHooks();
 
             assert.callOrder(
                 hook1,
                 hook2,
                 topLevelHook1,
-                topLevelHook2
+                topLevelHook2,
             );
         });
 
-        it('should wait until first hook finished before next hook started', async () => {
-            const afterFirstHook = sinon.spy().named('afterFirstHook');
+        it("should wait until first hook finished before next hook started", async () => {
+            const afterFirstHook = sinon.spy().named("afterFirstHook");
             const firstHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterFirstHook));
-            const secondHook = sinon.spy().named('secondHook');
+            const secondHook = sinon.spy().named("secondHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
-                    afterEachHooks: [firstHook, secondHook]
-                })
+                    afterEachHooks: [firstHook, secondHook],
+                }),
             });
 
-            await mkRunner_({test}).runAfterEachHooks();
+            await mkRunner_({ test }).runAfterEachHooks();
 
             assert.callOrder(
                 afterFirstHook,
-                secondHook
+                secondHook,
             );
         });
 
-        it('should wait until child hook finished before parent hook start', async () => {
-            const afterChildHook = sinon.spy().named('afterChildHook');
+        it("should wait until child hook finished before parent hook start", async () => {
+            const afterChildHook = sinon.spy().named("afterChildHook");
             const childHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterChildHook));
-            const parentHook = sinon.spy().named('parentHook');
+            const parentHook = sinon.spy().named("parentHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
-                        afterEachHooks: [parentHook]
+                        afterEachHooks: [parentHook],
                     }),
-                    afterEachHooks: [childHook]
-                })
+                    afterEachHooks: [childHook],
+                }),
             });
 
-            await mkRunner_({test}).runAfterEachHooks();
+            await mkRunner_({ test }).runAfterEachHooks();
 
             assert.callOrder(
                 afterChildHook,
-                parentHook
+                parentHook,
             );
         });
 
-        it('should fail on first hook fail in suite', async () => {
-            const secondHook = sinon.spy().named('secondHook');
+        it("should fail on first hook fail in suite", async () => {
+            const secondHook = sinon.spy().named("secondHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     afterEachHooks: [
-                        () => Promise.reject(new Error('foo')),
-                        secondHook
-                    ]
-                })
+                        () => Promise.reject(new Error("foo")),
+                        secondHook,
+                    ],
+                }),
             });
 
-            const runner = mkRunner_({test});
+            const runner = mkRunner_({ test });
 
             await assert.isRejected(runner.runAfterEachHooks(), /foo/);
             assert.notCalled(secondHook);
         });
 
-        it('should run parent hook even if child hook failed', async () => {
-            const parentHook = sinon.spy().named('parentHook');
+        it("should run parent hook even if child hook failed", async () => {
+            const parentHook = sinon.spy().named("parentHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
-                        afterEachHooks: [parentHook]
+                        afterEachHooks: [parentHook],
                     }),
                     afterEachHooks: [
-                        () => Promise.reject(new Error('foo'))
-                    ]
-                })
+                        () => Promise.reject(new Error("foo")),
+                    ],
+                }),
             });
 
-            const runner = mkRunner_({test});
+            const runner = mkRunner_({ test });
 
             await assert.isRejected(runner.runAfterEachHooks(), /foo/);
             assert.calledOnce(parentHook);
         });
 
-        it('should reject with child hook error if both child and parent hooks failed', async () => {
+        it("should reject with child hook error if both child and parent hooks failed", async () => {
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
                         afterEachHooks: [
-                            () => Promise.reject(new Error('bar'))
-                        ]
+                            () => Promise.reject(new Error("bar")),
+                        ],
                     }),
                     afterEachHooks: [
-                        () => Promise.reject(new Error('foo'))
-                    ]
-                })
+                        () => Promise.reject(new Error("foo")),
+                    ],
+                }),
             });
 
-            const runner = mkRunner_({test});
+            const runner = mkRunner_({ test });
 
             await assert.isRejected(runner.runAfterEachHooks(), /foo/);
         });
 
-        it('should run only parent afterEach hook if parent beforeEach hook failed', async () => {
-            const parentHook = sinon.spy().named('parentHook');
-            const childHook = sinon.spy().named('childHook');
+        it("should run only parent afterEach hook if parent beforeEach hook failed", async () => {
+            const parentHook = sinon.spy().named("parentHook");
+            const childHook = sinon.spy().named("childHook");
 
             const test = mkTest_({
                 parent: mkSuite_({
                     parent: mkSuite_({
                         beforeEachHooks: [
-                            () => Promise.reject(new Error())
+                            () => Promise.reject(new Error()),
                         ],
-                        afterEachHooks: [parentHook]
+                        afterEachHooks: [parentHook],
                     }),
-                    afterEachHooks: [childHook]
-                })
+                    afterEachHooks: [childHook],
+                }),
             });
 
-            const runner = mkRunner_({test});
+            const runner = mkRunner_({ test });
             await runner.runBeforeEachHooks().catch(() => {});
 
             await runner.runAfterEachHooks();

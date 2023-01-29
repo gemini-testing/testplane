@@ -1,14 +1,14 @@
 /* global document */
-'use strict';
+"use strict";
 
 module.exports = (browser) => {
-    const {publicAPI: session, config} = browser;
+    const { publicAPI: session, config } = browser;
 
     if (!session.setOrientation) {
         return;
     }
 
-    session.overwriteCommand('setOrientation', async (origSetOrientation, orientation) => {
+    session.overwriteCommand("setOrientation", async (origSetOrientation, orientation) => {
         if (!config.waitOrientationChange) {
             return origSetOrientation(orientation);
         }
@@ -16,7 +16,7 @@ module.exports = (browser) => {
         const initialBodyWidth = await getBodyWidth();
         const result = await origSetOrientation(orientation);
 
-        if (typeof result === 'string' && result.match(/Already in/)) {
+        if (typeof result === "string" && result.match(/Already in/)) {
             return result;
         }
 

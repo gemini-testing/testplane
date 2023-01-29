@@ -1,15 +1,15 @@
-'use strict';
+"use strict";
 
-const chalk = require('chalk');
-const _ = require('lodash');
+const chalk = require("chalk");
+const _ = require("lodash");
 
 exports.mkTestStub_ = (opts) => {
     return _.defaults(opts || {}, {
-        fullTitle: sinon.stub().returns('suite test'),
-        title: 'test',
-        file: 'path/to/test',
-        browserId: 'chrome',
-        duration: '100500'
+        fullTitle: sinon.stub().returns("suite test"),
+        title: "test",
+        file: "path/to/test",
+        browserId: "chrome",
+        duration: "100500",
     });
 };
 

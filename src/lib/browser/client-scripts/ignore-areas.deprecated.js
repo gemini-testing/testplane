@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-var lib = require('./lib');
+var lib = require("./lib");
 
 module.exports = function queryIgnoreAreas(selector) {
-    return typeof selector === 'string'
+    return typeof selector === "string"
         ? [lib.queryFirst(selector)]
         : lib.queryAll(selector.every);
 };

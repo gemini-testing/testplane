@@ -1,5 +1,5 @@
-const {EventEmitter} = require('events');
-const Mocha = require('@gemini-testing/mocha');
+const { EventEmitter } = require("events");
+const Mocha = require("@gemini-testing/mocha");
 
 const {
     EVENT_FILE_PRE_REQUIRE,
@@ -9,7 +9,7 @@ const {
     EVENT_SUITE_ADD_HOOK_BEFORE_ALL,
     EVENT_SUITE_ADD_HOOK_AFTER_ALL,
     EVENT_SUITE_ADD_HOOK_BEFORE_EACH,
-    EVENT_SUITE_ADD_HOOK_AFTER_EACH
+    EVENT_SUITE_ADD_HOOK_AFTER_EACH,
 } = Mocha.Suite.constants;
 
 class MochaEventBus extends EventEmitter {
@@ -27,7 +27,7 @@ class MochaEventBus extends EventEmitter {
 
         [
             EVENT_FILE_PRE_REQUIRE,
-            EVENT_FILE_POST_REQUIRE
+            EVENT_FILE_POST_REQUIRE,
         ].forEach((event) => {
             rootSuite.on(event, (...args) => this.emit(event, ...args));
         });
@@ -38,7 +38,7 @@ class MochaEventBus extends EventEmitter {
             EVENT_SUITE_ADD_HOOK_BEFORE_ALL,
             EVENT_SUITE_ADD_HOOK_AFTER_ALL,
             EVENT_SUITE_ADD_HOOK_BEFORE_EACH,
-            EVENT_SUITE_ADD_HOOK_AFTER_EACH
+            EVENT_SUITE_ADD_HOOK_AFTER_EACH,
         ].forEach((event) => {
             this.#addRecursiveHandler(rootSuite, event, (...args) => this.emit(event, ...args));
         });
@@ -51,5 +51,5 @@ class MochaEventBus extends EventEmitter {
 }
 
 module.exports = {
-    MochaEventBus
+    MochaEventBus,
 };

@@ -1,13 +1,13 @@
 /*jshint browserify:true*/
-'use strict';
+"use strict";
 
-var util = require('./util'),
-    rect = require('./rect'),
-    lib = require('./lib'),
-    queryIgnoreAreas = require('./ignore-areas'),
+var util = require("./util"),
+    rect = require("./rect"),
+    lib = require("./lib"),
+    queryIgnoreAreas = require("./ignore-areas"),
     Rect = rect.Rect;
 
-if (typeof window === 'undefined') {
+if (typeof window === "undefined") {
     global.__geminiCore = exports;
 } else {
     window.__geminiCore = exports;
@@ -27,8 +27,8 @@ exports.prepareScreenshot = function prepareScreenshot(areas, opts) {
         return prepareScreenshotUnsafe(areas, opts);
     } catch (e) {
         return {
-            error: 'JS',
-            message: e.stack || e.message
+            error: "JS",
+            message: e.stack || e.message,
         };
     }
 };
@@ -43,16 +43,16 @@ function prepareScreenshotUnsafe(areas, opts) {
 
         if (!scrollElem) {
             return {
-                error: 'NOTFOUND',
+                error: "NOTFOUND",
                 message: 'Could not find element with css selector specified in "selectorToScroll" option: ' + opts.selectorToScroll,
-                selector: opts.selectorToScroll
+                selector: opts.selectorToScroll,
             };
         }
     }
 
     var rect, selectors = [];
 
-    areas.forEach(function(area) {
+    areas.forEach(function (area) {
         if (Rect.isRect(area)) {
             rect = rect ? rect.merge(new Rect(area)) : new Rect(area);
         } else {
@@ -60,7 +60,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     });
 
-    rect = getCaptureRect(selectors, {allowViewportOverflow: allowViewportOverflow, scrollElem: scrollElem}, rect);
+    rect = getCaptureRect(selectors, { allowViewportOverflow: allowViewportOverflow, scrollElem: scrollElem }, rect);
 
     if (rect.error) {
         return rect;
@@ -74,7 +74,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             left: util.getScrollLeft(scrollElem),
             top: util.getScrollTop(scrollElem),
             width: viewportWidth,
-            height: viewportHeight
+            height: viewportHeight,
         }),
         pixelRatio = configurePixelRatio(opts.usePixelRatio);
 
@@ -87,9 +87,9 @@ function prepareScreenshotUnsafe(areas, opts) {
         rect.overflowsLeftBound(viewPort) && rect.recalculateWidth(viewPort);
     } else if (!captureElementFromTop && !viewPort.rectIntersects(rect)) {
         return {
-            error: 'OUTSIDE_OF_VIEWPORT',
-            message: 'Can not capture element, because it is outside of viewport. ' +
-                'Try to set "captureElementFromTop=true" to scroll to it before capture.'
+            error: "OUTSIDE_OF_VIEWPORT",
+            message: "Can not capture element, because it is outside of viewport. " +
+                'Try to set "captureElementFromTop=true" to scroll to it before capture.',
         };
     }
 
@@ -100,24 +100,24 @@ function prepareScreenshotUnsafe(areas, opts) {
             left: util.getScrollLeft(scrollElem),
             top: util.getScrollTop(scrollElem),
             width: Math.round(viewportWidth),
-            height: Math.round(viewportHeight)
+            height: Math.round(viewportHeight),
         },
         documentHeight: Math.round(documentHeight),
         documentWidth: Math.round(documentWidth),
         canHaveCaret: isEditable(document.activeElement),
-        pixelRatio: pixelRatio
+        pixelRatio: pixelRatio,
     };
 }
 
-exports.resetZoom = function() {
+exports.resetZoom = function () {
     var meta = lib.queryFirst('meta[name="viewport"]');
     if (!meta) {
-        meta = document.createElement('meta');
-        meta.name = 'viewport';
-        var head = lib.queryFirst('head');
+        meta = document.createElement("meta");
+        meta.name = "viewport";
+        var head = lib.queryFirst("head");
         head && head.appendChild(meta);
     }
-    meta.content = 'width=device-width,initial-scale=1.0,user-scalable=no';
+    meta.content = "width=device-width,initial-scale=1.0,user-scalable=no";
 };
 
 function getCaptureRect(selectors, opts, initialRect) {
@@ -126,9 +126,9 @@ function getCaptureRect(selectors, opts, initialRect) {
         element = lib.queryFirst(selectors[i]);
         if (!element) {
             return {
-                error: 'NOTFOUND',
-                message: 'Could not find element with css selector specified in setCaptureElements: ' + selectors[i],
-                selector: selectors[i]
+                error: "NOTFOUND",
+                message: "Could not find element with css selector specified in setCaptureElements: " + selectors[i],
+                selector: selectors[i],
             };
         }
 
@@ -139,9 +139,9 @@ function getCaptureRect(selectors, opts, initialRect) {
     }
 
     return rect ? rect.round() : {
-        error: 'HIDDEN',
-        message: 'Area with css selector : ' + selectors + ' is hidden',
-        selector: selectors
+        error: "HIDDEN",
+        message: "Area with css selector : " + selectors + " is hidden",
+        selector: selectors,
     };
 }
 
@@ -160,10 +160,10 @@ function configurePixelRatio(usePixelRatio) {
 
 function findIgnoreAreas(selectors, scrollElem) {
     var result = [];
-    util.each(selectors, function(selector) {
+    util.each(selectors, function (selector) {
         var elements = queryIgnoreAreas(selector);
 
-        util.each(elements, function(elem) {
+        util.each(elements, function (elem) {
             return addIgnoreArea.call(result, elem, scrollElem);
         });
     });
@@ -172,20 +172,20 @@ function findIgnoreAreas(selectors, scrollElem) {
 }
 
 function addIgnoreArea(element, scrollElem) {
-    var rect = element && getElementCaptureRect(element, {scrollElem: scrollElem});
+    var rect = element && getElementCaptureRect(element, { scrollElem: scrollElem });
     rect && this.push(rect.round().serialize());
 }
 
 function isHidden(css, clientRect) {
-    return css.display === 'none' ||
-        css.visibility === 'hidden' ||
+    return css.display === "none" ||
+        css.visibility === "hidden" ||
         css.opacity < 0.0001 ||
         clientRect.width < 0.0001 ||
         clientRect.height < 0.0001;
 }
 
 function getElementCaptureRect(element, opts) {
-    var pseudo = [':before', ':after'],
+    var pseudo = [":before", ":after"],
         css = lib.getComputedStyle(element),
         clientRect = rect.getAbsoluteClientRect(element, opts.scrollElem);
 
@@ -195,7 +195,7 @@ function getElementCaptureRect(element, opts) {
 
     var elementRect = getExtRect(css, clientRect, opts.allowViewportOverflow);
 
-    util.each(pseudo, function(pseudoEl) {
+    util.each(pseudo, function (pseudoEl) {
         css = lib.getComputedStyle(element, pseudoEl);
         elementRect = elementRect.merge(getExtRect(css, clientRect, opts.allowViewportOverflow));
     });
@@ -215,20 +215,20 @@ function getExtRect(css, clientRect, allowViewportOverflow) {
 }
 
 function parseBoxShadow(value) {
-    value = value || '';
+    value = value || "";
     var regex = /[-+]?\d*\.?\d+px/g,
-        values = value.split(','),
+        values = value.split(","),
         results = [],
         match;
 
-    util.each(values, function(value) {
+    util.each(values, function (value) {
         if ((match = value.match(regex))) {
             results.push({
                 offsetX: parseFloat(match[0]),
                 offsetY: parseFloat(match[1]) || 0,
                 blurRadius: parseFloat(match[2]) || 0,
                 spreadRadius: parseFloat(match[3]) || 0,
-                inset: value.indexOf('inset') !== -1
+                inset: value.indexOf("inset") !== -1,
             });
         }
     });
@@ -249,7 +249,7 @@ function calculateOutlineRect(rect, outline, allowViewportOverflow) {
         top: allowViewportOverflow ? top : Math.max(0, top),
         left: allowViewportOverflow ? left : Math.max(0, left),
         bottom: rect.bottom + outline,
-        right: rect.right + outline
+        right: rect.right + outline,
     });
 }
 
@@ -262,14 +262,14 @@ function calculateShadowRect(rect, shadows, allowViewportOverflow) {
         left: allowViewportOverflow ? left : Math.max(0, left),
         top: allowViewportOverflow ? top : Math.max(0, top),
         width: rect.width - extent.left + extent.right,
-        height: rect.height - extent.top + extent.bottom
+        height: rect.height - extent.top + extent.bottom,
     });
 }
 
 function calculateShadowExtent(shadows) {
-    var result = {top: 0, left: 0, right: 0, bottom: 0};
+    var result = { top: 0, left: 0, right: 0, bottom: 0 };
 
-    util.each(shadows, function(shadow) {
+    util.each(shadows, function (shadow) {
         if (shadow.inset) {
             //skip inset shadows
             return;

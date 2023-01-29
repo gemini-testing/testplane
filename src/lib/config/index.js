@@ -1,11 +1,11 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const _ = require('lodash');
-const logger = require('../utils/logger');
-const parseOptions = require('./options');
-const defaults = require('./defaults');
-const BrowserConfig = require('./browser-config');
+const path = require("path");
+const _ = require("lodash");
+const logger = require("../utils/logger");
+const parseOptions = require("./options");
+const defaults = require("./defaults");
+const BrowserConfig = require("./browser-config");
 
 module.exports = class Config {
     static create(config) {
@@ -37,7 +37,7 @@ module.exports = class Config {
         _.extend(this, parseOptions({
             options,
             env: process.env,
-            argv: process.argv
+            argv: process.argv,
         }));
 
         this.browsers = _.mapValues(this.browsers, (browser, id) => {
@@ -45,8 +45,8 @@ module.exports = class Config {
                 browser,
                 {
                     id: id,
-                    system: this.system
-                }
+                    system: this.system,
+                },
             );
 
             return new BrowserConfig(browserOptions);
@@ -63,7 +63,7 @@ module.exports = class Config {
 
     serialize() {
         return _.extend({}, this, {
-            browsers: _.mapValues(this.browsers, (broConf) => broConf.serialize())
+            browsers: _.mapValues(this.browsers, (broConf) => broConf.serialize()),
         });
     }
 

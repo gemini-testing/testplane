@@ -1,19 +1,19 @@
-'use strict';
+"use strict";
 
-const TestRunner = require('lib/runner/test-runner');
-const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
-const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
-const BrowserAgent = require('lib/runner/browser-agent');
+const TestRunner = require("lib/runner/test-runner");
+const SkippedTestRunner = require("lib/runner/test-runner/skipped-test-runner");
+const InsistantTestRunner = require("lib/runner/test-runner/insistant-test-runner");
+const BrowserAgent = require("lib/runner/browser-agent");
 
-const {makeConfigStub, makeTest} = require('../../../utils');
+const { makeConfigStub, makeTest } = require("../../../utils");
 
-describe('runner/test-runner', () => {
+describe("runner/test-runner", () => {
     const sandbox = sinon.sandbox.create();
 
     afterEach(() => sandbox.restore());
 
-    it('should create skipped test runner for skipped test', () => {
-        sandbox.spy(SkippedTestRunner, 'create');
+    it("should create skipped test runner for skipped test", () => {
+        sandbox.spy(SkippedTestRunner, "create");
         const test = makeTest();
         test.pending = true;
 
@@ -23,8 +23,8 @@ describe('runner/test-runner', () => {
         assert.instanceOf(runner, SkippedTestRunner);
     });
 
-    it('should create skipped test runner for disabled test', () => {
-        sandbox.spy(SkippedTestRunner, 'create');
+    it("should create skipped test runner for disabled test", () => {
+        sandbox.spy(SkippedTestRunner, "create");
         const test = makeTest();
         test.disabled = true;
 
@@ -34,8 +34,8 @@ describe('runner/test-runner', () => {
         assert.instanceOf(runner, SkippedTestRunner);
     });
 
-    it('should create insistant test runner for regular test', () => {
-        sandbox.spy(InsistantTestRunner, 'create');
+    it("should create insistant test runner for regular test", () => {
+        sandbox.spy(InsistantTestRunner, "create");
 
         const test = makeTest();
         const config = makeConfigStub();

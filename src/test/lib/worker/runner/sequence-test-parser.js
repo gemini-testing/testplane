@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const SequenceTestParser = require('lib/worker/runner/sequence-test-parser');
-const SimpleTestParser = require('lib/worker/runner/simple-test-parser');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const {makeConfigStub, makeTest} = require('../../../utils');
-const Promise = require('bluebird');
+const SequenceTestParser = require("lib/worker/runner/sequence-test-parser");
+const SimpleTestParser = require("lib/worker/runner/simple-test-parser");
+const RunnerEvents = require("lib/worker/constants/runner-events");
+const { makeConfigStub, makeTest } = require("../../../utils");
+const Promise = require("bluebird");
 
-describe('worker/runner/sequence-test-parser', () => {
+describe("worker/runner/sequence-test-parser", () => {
     const sandbox = sinon.sandbox.create();
 
     const mkSequenceParser_ = (opts = {}) => {
@@ -15,44 +15,44 @@ describe('worker/runner/sequence-test-parser', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(SimpleTestParser, 'create').returns(Object.create(SimpleTestParser.prototype));
-        sandbox.stub(SimpleTestParser.prototype, 'parse').resolves([]);
+        sandbox.stub(SimpleTestParser, "create").returns(Object.create(SimpleTestParser.prototype));
+        sandbox.stub(SimpleTestParser.prototype, "parse").resolves([]);
     });
 
     afterEach(() => sandbox.restore());
 
-    describe('constructor', () => {
-        it('should create simple test parser', () => {
+    describe("constructor", () => {
+        it("should create simple test parser", () => {
             const config = makeConfigStub();
 
-            mkSequenceParser_({config});
+            mkSequenceParser_({ config });
 
             assert.calledOnceWith(SimpleTestParser.create, config);
         });
     });
 
-    describe('parse', () => {
+    describe("parse", () => {
         [
-            'BEFORE_FILE_READ',
-            'AFTER_FILE_READ'
+            "BEFORE_FILE_READ",
+            "AFTER_FILE_READ",
         ].forEach((event) => {
             it(`should passthrough ${event} event from inner test parser`, async () => {
                 const onEvent = sinon.spy().named(`on${event}`);
                 const sequenceParser = mkSequenceParser_()
                     .on(RunnerEvents[event], onEvent);
 
-                SimpleTestParser.prototype.parse.callsFake(function() {
-                    this.emit(RunnerEvents[event], {foo: 'bar'});
+                SimpleTestParser.prototype.parse.callsFake(function () {
+                    this.emit(RunnerEvents[event], { foo: "bar" });
                     return Promise.resolve([]);
                 });
 
                 await sequenceParser.parse({});
 
-                assert.calledOnceWith(onEvent, {foo: 'bar'});
+                assert.calledOnceWith(onEvent, { foo: "bar" });
             });
         });
 
-        it('should return parsed tests', async () => {
+        it("should return parsed tests", async () => {
             const sequenceParser = mkSequenceParser_();
             const tests = [makeTest(), makeTest()];
             SimpleTestParser.prototype.parse.resolves(tests);
@@ -62,13 +62,13 @@ describe('worker/runner/sequence-test-parser', () => {
             assert.deepEqual(result, tests);
         });
 
-        it('should parse tests sequentially', async () => {
+        it("should parse tests sequentially", async () => {
             const calls = [];
 
             SimpleTestParser.prototype.parse.callsFake(async () => {
-                calls.push('parse');
+                calls.push("parse");
                 await Promise.delay(1);
-                calls.push('afterParse');
+                calls.push("afterParse");
 
                 return [];
             });
@@ -77,7 +77,7 @@ describe('worker/runner/sequence-test-parser', () => {
 
             await Promise.all([sequenceParser.parse({}), sequenceParser.parse({})]);
 
-            assert.deepEqual(calls, ['parse', 'afterParse', 'parse', 'afterParse']);
+            assert.deepEqual(calls, ["parse", "afterParse", "parse", "afterParse"]);
         });
     });
 });

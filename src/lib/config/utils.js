@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const _ = require('lodash');
+const path = require("path");
+const _ = require("lodash");
 
 const is = (type, name) => {
     return (value) => {
@@ -14,7 +14,7 @@ const is = (type, name) => {
 exports.is = is;
 
 exports.assertNonNegativeNumber = (value, name) => {
-    is('number', name)(value);
+    is("number", name)(value);
     if (value < 0) {
         throw new Error(`"${name}" must be non-negative`);
     }
@@ -39,10 +39,10 @@ exports.assertNonNegativeInteger = (value, name) => {
 };
 
 exports.assertEnum = (enumValues, value, name) => {
-    is('string', name)(value);
+    is("string", name)(value);
 
     if (!_.includes(enumValues, value)) {
-        throw new Error(`"${name}" must be one of: ${enumValues.join(', ')}`);
+        throw new Error(`"${name}" must be one of: ${enumValues.join(", ")}`);
     }
 };
 
@@ -62,13 +62,13 @@ exports.assertPositiveIntegerOrInfinity = (value, name) => {
 
 exports.parseBoolean = exports.parseBoolean = (value, name) => {
     switch (value.toLowerCase()) {
-        case '1':
-        case 'yes':
-        case 'true':
+        case "1":
+        case "yes":
+        case "true":
             return true;
-        case '0':
-        case 'no':
-        case 'false':
+        case "0":
+        case "no":
+        case "false":
             return false;
         default:
             throw new Error(`Unexpected value for boolean option "${name}"`);
@@ -79,7 +79,7 @@ exports.parsePrimitive = exports.parsePrimitive = (str) => {
     try {
         return JSON.parse(str);
     } catch (error) {
-        throw new Error('a value must be a primitive type');
+        throw new Error("a value must be a primitive type");
     }
 };
 

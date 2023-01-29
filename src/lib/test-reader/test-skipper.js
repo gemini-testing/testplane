@@ -1,6 +1,6 @@
-const _ = require('lodash');
-const validators = require('../validators');
-const env = require('../utils/env');
+const _ = require("lodash");
+const validators = require("../validators");
+const env = require("../utils/env");
 
 module.exports = class TestSkipper {
     static create(config) {
@@ -12,7 +12,7 @@ module.exports = class TestSkipper {
     }
 
     constructor(config) {
-        this._skipBrowsers = env.parseCommaSeparatedValue('HERMIONE_SKIP_BROWSERS');
+        this._skipBrowsers = env.parseCommaSeparatedValue("HERMIONE_SKIP_BROWSERS");
 
         TestSkipper.#validateUnknownBrowsers(this._skipBrowsers, _.keys(config.browsers));
     }
@@ -23,7 +23,7 @@ module.exports = class TestSkipper {
 
     getSuiteDecorator() {
         return (suite) => {
-            suite.skip({reason: 'The test was skipped by environment variable HERMIONE_SKIP_BROWSERS'});
+            suite.skip({ reason: "The test was skipped by environment variable HERMIONE_SKIP_BROWSERS" });
         };
     }
 };

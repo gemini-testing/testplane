@@ -1,9 +1,9 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const BaseReporter = require('./base');
-const helpers = require('./utils/helpers');
-const icons = require('./utils/icons');
+const _ = require("lodash");
+const BaseReporter = require("./base");
+const helpers = require("./utils/helpers");
+const icons = require("./utils/icons");
 
 module.exports = class FlatReporter extends BaseReporter {
     constructor(...args) {
@@ -15,13 +15,13 @@ module.exports = class FlatReporter extends BaseReporter {
     _onTestFail(test) {
         super._onTestFail(test);
 
-        this._tests.push(helpers.extendTestInfo(test, {isFailed: true}));
+        this._tests.push(helpers.extendTestInfo(test, { isFailed: true }));
     }
 
     _onRetry(test) {
         super._onRetry(test);
 
-        this._tests.push(helpers.extendTestInfo(test, {isFailed: false}));
+        this._tests.push(helpers.extendTestInfo(test, { isFailed: false }));
     }
 
     _onBeforeRunnerEnd(stats) {

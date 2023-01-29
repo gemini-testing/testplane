@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const debug = require('debug');
+const _ = require("lodash");
+const debug = require("debug");
 
 /**
  * Set implementation which allows to get and put an object
@@ -22,7 +22,7 @@ module.exports = class LimitedUseSet {
         this._formatItem = opts.formatItem || _.identity;
         this._objects = [];
 
-        this.log = debug('hermione:pool:limited-use-set');
+        this.log = debug("hermione:pool:limited-use-set");
     }
 
     push(value) {

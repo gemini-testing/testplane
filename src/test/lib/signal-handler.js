@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const logger = require('lib/utils/logger');
-const clearRequire = require('clear-require');
-const Promise = require('bluebird');
+const logger = require("lib/utils/logger");
+const clearRequire = require("clear-require");
+const Promise = require("bluebird");
 
-describe('lib/signal-handler', () => {
+describe("lib/signal-handler", () => {
     const sandbox = sinon.sandbox.create();
 
     let signalHandler;
@@ -18,31 +18,31 @@ describe('lib/signal-handler', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(process, 'on');
-        sandbox.stub(process, 'exit');
-        sandbox.stub(logger, 'log');
+        sandbox.stub(process, "on");
+        sandbox.stub(process, "exit");
+        sandbox.stub(logger, "log");
 
-        clearRequire('lib/signal-handler');
-        signalHandler = require('lib/signal-handler');
+        clearRequire("lib/signal-handler");
+        signalHandler = require("lib/signal-handler");
     });
 
     afterEach(() => sandbox.restore());
 
     [
-        {signal: 'SIGHUP', exitCode: 129},
-        {signal: 'SIGINT', exitCode: 130},
-        {signal: 'SIGTERM', exitCode: 143}
-    ].forEach(({signal, exitCode}) => {
+        { signal: "SIGHUP", exitCode: 129 },
+        { signal: "SIGINT", exitCode: 130 },
+        { signal: "SIGTERM", exitCode: 143 },
+    ].forEach(({ signal, exitCode }) => {
         describe(signal, () => {
             it(`should subscribe to ${signal} event`, () => {
                 assert.calledWith(process.on, signal);
             });
 
-            it('should emit and wait for exit', () => {
-                const afterHandler = sandbox.stub().named('afterHandler');
-                const handler = sandbox.stub().named('handler')
+            it("should emit and wait for exit", () => {
+                const afterHandler = sandbox.stub().named("afterHandler");
+                const handler = sandbox.stub().named("handler")
                     .returns(Promise.delay(10).then(afterHandler));
-                signalHandler.on('exit', handler);
+                signalHandler.on("exit", handler);
 
                 sendSignal(signal);
 
@@ -51,7 +51,7 @@ describe('lib/signal-handler', () => {
                 });
             });
 
-            it('should force quit on second call', () => {
+            it("should force quit on second call", () => {
                 sendSignal(signal);
                 sendSignal(signal);
 

@@ -1,33 +1,33 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const webdriverio = require('webdriverio');
-const clientBridge = require('lib/browser/client-bridge');
-const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../utils');
+const _ = require("lodash");
+const webdriverio = require("webdriverio");
+const clientBridge = require("lib/browser/client-bridge");
+const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../utils");
 
 describe('"getPuppeteer" command', () => {
     const sandbox = sinon.sandbox.create();
 
     beforeEach(() => {
-        sandbox.stub(webdriverio, 'attach');
-        sandbox.stub(clientBridge, 'build').resolves();
+        sandbox.stub(webdriverio, "attach");
+        sandbox.stub(clientBridge, "build").resolves();
     });
 
     afterEach(() => sandbox.restore());
 
-    const initBrowser_ = ({browser = mkBrowser_(), session = mkSessionStub_()} = {}) => {
+    const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}) => {
         webdriverio.attach.resolves(session);
 
-        return browser.init({sessionId: session.sessionId, sessionCaps: session.capabilities});
+        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });
     };
 
-    describe('should not overwrite command if', () => {
+    describe("should not overwrite command if", () => {
         it('"browserWSEndpoint" is not specified', async () => {
             const session = mkSessionStub_();
 
-            await initBrowser_({session});
+            await initBrowser_({ session });
 
-            assert.neverCalledWith(session.overwriteCommand, 'getPuppeteer');
+            assert.neverCalledWith(session.overwriteCommand, "getPuppeteer");
         });
 
         it('command "getPuppeteer" does not exist in browser', async () => {
@@ -36,38 +36,38 @@ describe('"getPuppeteer" command', () => {
 
             await initBrowser_();
 
-            assert.neverCalledWith(session.overwriteCommand, 'getPuppeteer');
+            assert.neverCalledWith(session.overwriteCommand, "getPuppeteer");
         });
     });
 
-    it('should overwrite command', async () => {
+    it("should overwrite command", async () => {
         const session = mkSessionStub_();
-        const browser = mkBrowser_({browserWSEndpoint: 'ws://foo.bar/devtools'});
+        const browser = mkBrowser_({ browserWSEndpoint: "ws://foo.bar/devtools" });
 
-        await initBrowser_({browser, session});
+        await initBrowser_({ browser, session });
 
-        assert.calledWith(session.overwriteCommand, 'getPuppeteer', sinon.match.func);
+        assert.calledWith(session.overwriteCommand, "getPuppeteer", sinon.match.func);
     });
 
-    describe('before call original command', () => {
+    describe("before call original command", () => {
         [
             {
                 name: '"alwaysMatch" capability',
-                fieldName: 'alwaysMatch.se:cdp',
+                fieldName: "alwaysMatch.se:cdp",
                 capabilities: {
-                    alwaysMatch: {'se:cdp': 'ws://old.endpoint/devtools'}
-                }
+                    alwaysMatch: { "se:cdp": "ws://old.endpoint/devtools" },
+                },
             },
             {
-                name: 'main capabilities',
-                fieldName: 'se:cdp',
-                capabilities: {'se:cdp': 'ws://old.endpoint/devtools'}
-            }
-        ].forEach(({name, fieldName, capabilities}) => {
+                name: "main capabilities",
+                fieldName: "se:cdp",
+                capabilities: { "se:cdp": "ws://old.endpoint/devtools" },
+            },
+        ].forEach(({ name, fieldName, capabilities }) => {
             it(`should overwrite "se:cdp" in ${name}`, async () => {
                 const session = mkSessionStub_();
                 session.capabilities = capabilities;
-                session.sessionId = '100500';
+                session.sessionId = "100500";
 
                 const origGetPuppeteerFn = session.getPuppeteer;
                 let capsBeforeReset;
@@ -76,41 +76,41 @@ describe('"getPuppeteer" command', () => {
                     capsBeforeReset = _.cloneDeep(session.capabilities);
                 });
 
-                const browser = mkBrowser_({browserWSEndpoint: 'ws://new.endpoint/devtools'});
+                const browser = mkBrowser_({ browserWSEndpoint: "ws://new.endpoint/devtools" });
 
-                await initBrowser_({browser, session});
+                await initBrowser_({ browser, session });
                 await session.getPuppeteer();
 
-                assert.equal(_.get(capsBeforeReset, fieldName), 'ws://new.endpoint/devtools/100500');
+                assert.equal(_.get(capsBeforeReset, fieldName), "ws://new.endpoint/devtools/100500");
             });
         });
     });
 
-    describe('after call original command', () => {
+    describe("after call original command", () => {
         [
             {
                 name: '"alwaysMatch" capability',
-                fieldName: 'alwaysMatch.se:cdp',
+                fieldName: "alwaysMatch.se:cdp",
                 capabilities: {
-                    alwaysMatch: {'se:cdp': 'ws://old.endpoint/devtools'}
-                }
+                    alwaysMatch: { "se:cdp": "ws://old.endpoint/devtools" },
+                },
             },
             {
-                name: 'main capabilities',
-                fieldName: 'se:cdp',
-                capabilities: {'se:cdp': 'ws://old.endpoint/devtools'}
-            }
-        ].forEach(({name, fieldName, capabilities}) => {
+                name: "main capabilities",
+                fieldName: "se:cdp",
+                capabilities: { "se:cdp": "ws://old.endpoint/devtools" },
+            },
+        ].forEach(({ name, fieldName, capabilities }) => {
             it(`should restore "se:cdp" in ${name}`, async () => {
                 const session = mkSessionStub_();
                 session.capabilities = capabilities;
-                session.sessionId = '100500';
-                const browser = mkBrowser_({browserWSEndpoint: 'ws://new.endpoint/devtools'});
+                session.sessionId = "100500";
+                const browser = mkBrowser_({ browserWSEndpoint: "ws://new.endpoint/devtools" });
 
-                await initBrowser_({browser, session});
+                await initBrowser_({ browser, session });
                 await session.getPuppeteer();
 
-                assert.equal(_.get(session.capabilities, fieldName), 'ws://old.endpoint/devtools');
+                assert.equal(_.get(session.capabilities, fieldName), "ws://old.endpoint/devtools");
             });
         });
     });

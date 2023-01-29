@@ -13,6 +13,7 @@
     "clean": "rimraf build/ *.tsbuildinfo",
     "prepack": "npm run clean && npm run build",
     "lint": "eslint .",
+    "reformat": "npm run lint -- --fix",
     "test-unit": "_mocha src/test/ --config src/test/.mocharc.json",
     "test": "npm run test-unit && npm run lint",
     "toc": "doctoc README.md",

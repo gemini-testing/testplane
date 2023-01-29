@@ -1,16 +1,16 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const Promise = require('bluebird');
-const pluginsLoader = require('plugins-loader');
+const _ = require("lodash");
+const Promise = require("bluebird");
+const pluginsLoader = require("plugins-loader");
 
-const Config = require('./config');
-const RunnerEvents = require('./constants/runner-events');
-const AsyncEmitter = require('./events/async-emitter');
-const Errors = require('./errors');
-const WorkerRunnerEvents = require('./worker/constants/runner-events');
+const Config = require("./config");
+const RunnerEvents = require("./constants/runner-events");
+const AsyncEmitter = require("./events/async-emitter");
+const Errors = require("./errors");
+const WorkerRunnerEvents = require("./worker/constants/runner-events");
 
-const PREFIX = require('../../package').name + '-';
+const PREFIX = require("../../package").name + "-";
 
 module.exports = class BaseHermione extends AsyncEmitter {
     static create(config) {
@@ -44,13 +44,13 @@ module.exports = class BaseHermione extends AsyncEmitter {
     }
 
     intercept(event, handler) {
-        this._interceptors.push({event, handler});
+        this._interceptors.push({ event, handler });
 
         return this;
     }
 
     isWorker() {
-        throw new Error('Method must be implemented in child classes');
+        throw new Error("Method must be implemented in child classes");
     }
 
     _loadPlugins() {
