@@ -3,6 +3,27 @@
 const {TestObject} = require('lib/test-reader/test-object/test-object');
 
 describe('test-reader/test-object/test-object', () => {
+    describe('assign', () => {
+        it('should return itself', () => {
+            const obj = new TestObject({});
+
+            assert.equal(obj.assign(new TestObject({})), obj);
+        });
+
+        it('should assign source properties', () => {
+            const src = new TestObject({});
+            src.foo = 'bar';
+
+            const baz = {qux: 100500};
+            src.baz = baz;
+
+            const obj = new TestObject({}).assign(src);
+
+            assert.equal(obj.foo, 'bar');
+            assert.equal(obj.baz, baz);
+        });
+    });
+
     describe('title', () => {
         it('should return object title', () => {
             const obj = new TestObject({title: 'foo bar'});

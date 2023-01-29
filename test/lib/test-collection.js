@@ -1,6 +1,7 @@
 'use strict';
 
 const TestCollection = require('lib/test-collection');
+const {Test} = require('lib/test-reader/test-object');
 
 describe('test-collection', () => {
     describe('getBrowsers', () => {
@@ -215,9 +216,9 @@ describe('test-collection', () => {
 
     describe('disableAll', () => {
         it('should disable all tests', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = new Test({title: 'test1'});
+            const test2 = new Test({title: 'test2'});
+            const test3 = new Test({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -226,20 +227,13 @@ describe('test-collection', () => {
 
             collection.disableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1', disabled: true},
-                    {title: 'test2', disabled: true},
-                    {title: 'test3', disabled: true}
-                ]
-            );
+            collection.eachTest((t) => assert.propertyVal(t, 'disabled', true));
         });
 
         it('should disable all tests for specified browser', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = new Test({title: 'test1'});
+            const test2 = new Test({title: 'test2'});
+            const test3 = new Test({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -248,19 +242,8 @@ describe('test-collection', () => {
 
             collection.disableAll('bro1');
 
-            assert.deepEqual(
-                collection.mapTests('bro1', (t) => t),
-                [
-                    {title: 'test1', disabled: true}
-                ]
-            );
-            assert.deepEqual(
-                collection.mapTests('bro2', (t) => t),
-                [
-                    {title: 'test2'},
-                    {title: 'test3'}
-                ]
-            );
+            collection.eachTest('bro1', (t) => assert.propertyVal(t, 'disabled', true));
+            collection.eachTest('bro2', (t) => assert.propertyVal(t, 'disabled', false));
         });
 
         it('should be chainable', () => {
@@ -272,7 +255,7 @@ describe('test-collection', () => {
 
     describe('enableAll', () => {
         it('should do nothing for tests which were not disabled', () => {
-            const test = {title: 'test'};
+            const test = new Test({title: 'test'});
 
             const collection = TestCollection.create({
                 'bro': [test]
@@ -280,17 +263,12 @@ describe('test-collection', () => {
 
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test'}
-                ]
-            );
+            collection.eachTest((t) => assert.propertyVal(t, 'disabled', false));
         });
 
         it('should enable all previously disabled tests', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
+            const test1 = new Test({title: 'test1'});
+            const test2 = new Test({title: 'test2'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -300,17 +278,12 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1'},
-                    {title: 'test2'}
-                ]
-            );
+            collection.eachTest((t) => assert.propertyVal(t, 'disabled', false));
         });
 
         it('should not enable tests which were originally disabled', () => {
-            const test = {title: 'test', disabled: true};
+            const test = new Test({title: 'test'});
+            test.disable();
 
             const collection = TestCollection.create({
                 'bro': [test]
@@ -319,17 +292,12 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll();
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test', disabled: true}
-                ]
-            );
+            collection.eachTest((t) => assert.propertyVal(t, 'disabled', true));
         });
 
         it('should enable all previously disabled tests for passed browser', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
+            const test1 = new Test({title: 'test1'});
+            const test2 = new Test({title: 'test2'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -339,13 +307,8 @@ describe('test-collection', () => {
             collection.disableAll();
             collection.enableAll('bro2');
 
-            assert.deepEqual(
-                collection.mapTests((t) => t),
-                [
-                    {title: 'test1', disabled: true},
-                    {title: 'test2'}
-                ]
-            );
+            collection.eachTest('bro1', (t) => assert.propertyVal(t, 'disabled', true));
+            collection.eachTest('bro2', (t) => assert.propertyVal(t, 'disabled', false));
         });
 
         it('should be chainable', () => {
@@ -358,8 +321,8 @@ describe('test-collection', () => {
     describe('disableTest', () => {
         it('should disable test in all browsers', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'foo bar'}]
+                'bro1': [new Test({title: 'foo bar'})],
+                'bro2': [new Test({title: 'foo bar'})]
             });
 
             collection.disableTest('foo bar');
@@ -372,8 +335,8 @@ describe('test-collection', () => {
 
         it('should disable test in specified browser', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'foo bar'}]
+                'bro1': [new Test({title: 'foo bar'})],
+                'bro2': [new Test({title: 'foo bar'})]
             });
 
             collection.disableTest('foo bar', 'bro1');
@@ -384,8 +347,8 @@ describe('test-collection', () => {
 
         it('should disable test in all browsers where it exists', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'baz qux'}]
+                'bro1': [new Test({title: 'foo bar'})],
+                'bro2': [new Test({title: 'baz qux'})]
             });
 
             collection.disableTest('foo bar');
@@ -404,7 +367,7 @@ describe('test-collection', () => {
     describe('enableTest', () => {
         it('should do nothing for tests which were not disabled', () => {
             const collection = TestCollection.create({
-                'bro': [{fullTitle: () => 'foo bar'}]
+                'bro': [new Test({title: 'foo bar'})]
             });
 
             collection
@@ -419,8 +382,8 @@ describe('test-collection', () => {
 
         it('should enable test in all browsers', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'foo bar'}]
+                'bro1': [new Test({title: 'foo bar'})],
+                'bro2': [new Test({title: 'foo bar'})]
             });
 
             collection
@@ -435,7 +398,7 @@ describe('test-collection', () => {
 
         it('should enable previously disabled single test', () => {
             const collection = TestCollection.create({
-                'bro': [{fullTitle: () => 'foo bar'}]
+                'bro': [new Test({title: 'foo bar'})]
             });
 
             collection
@@ -447,7 +410,7 @@ describe('test-collection', () => {
 
         it('should enable test even if it was disabled twice', () => {
             const collection = TestCollection.create({
-                'bro': [{fullTitle: () => 'foo bar'}]
+                'bro': [new Test({title: 'foo bar'})]
             });
 
             collection
@@ -460,8 +423,8 @@ describe('test-collection', () => {
 
         it('should enable test in specified browser', () => {
             const collection = TestCollection.create({
-                'bro1': [{fullTitle: () => 'foo bar'}],
-                'bro2': [{fullTitle: () => 'foo bar'}]
+                'bro1': [new Test({title: 'foo bar'})],
+                'bro2': [new Test({title: 'foo bar'})]
             });
 
             collection

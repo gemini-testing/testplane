@@ -2,9 +2,26 @@
 
 const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
 const Events = require('lib/constants/runner-events');
-const {makeTest, makeSuite} = require('../../../utils');
+const {Test, Suite} = require('lib/test-reader/test-object');
 
 describe('runner/test-runner/skipped-test-runner', () => {
+    const sandbox = sinon.sandbox.create();
+
+    afterEach(() => {
+        sandbox.restore();
+    });
+
+    describe('constructor', () => {
+        it('should clone passed test', () => {
+            const test = new Test({title: 'foo bar'});
+            sandbox.spy(test, 'clone');
+
+            SkippedTestRunner.create(test);
+
+            assert.calledOnce(test.clone);
+        });
+    });
+
     describe('run', () => {
         [
             'TEST_BEGIN',
@@ -13,7 +30,7 @@ describe('runner/test-runner/skipped-test-runner', () => {
         ].forEach((event) => {
             it(`should emit ${event}`, async () => {
                 const onEvent = sinon.stub().named(`on${event}`);
-                const test = makeTest();
+                const test = new Test({});
 
                 const runner = SkippedTestRunner.create(test)
                     .on(Events[event], onEvent);
@@ -25,7 +42,7 @@ describe('runner/test-runner/skipped-test-runner', () => {
 
             it(`should not emit ${event} if test is disabled`, async () => {
                 const onEvent = sinon.stub().named(`on${event}`);
-                const test = makeTest({disabled: true});
+                const test = Object.assign(new Test({}), {disabled: true});
 
                 const runner = SkippedTestRunner.create(test)
                     .on(Events[event], onEvent);
@@ -37,7 +54,7 @@ describe('runner/test-runner/skipped-test-runner', () => {
 
             it(`should not emit ${event} if test silently skipped`, async () => {
                 const onEvent = sinon.stub().named(`on${event}`);
-                const test = makeTest({silentSkip: true});
+                const test = Object.assign(new Test({}), {silentSkip: true});
 
                 const runner = SkippedTestRunner.create(test)
                     .on(Events[event], onEvent);
@@ -49,9 +66,9 @@ describe('runner/test-runner/skipped-test-runner', () => {
 
             it(`should not emit ${event} if test from describe which is silently skipped`, async () => {
                 const onEvent = sinon.stub().named(`on${event}`);
-                const suite1 = makeSuite({silentSkip: true});
-                const suite2 = makeSuite({parent: suite1});
-                const test = makeTest({parent: suite2});
+                const suite1 = Object.assign(new Suite(), {silentSkip: true});
+                const suite2 = Object.assign(new Suite(), {parent: suite1});
+                const test = Object.assign(new Test({}), {parent: suite2});
 
                 const runner = SkippedTestRunner.create(test)
                     .on(Events[event], onEvent);
@@ -67,7 +84,7 @@ describe('runner/test-runner/skipped-test-runner', () => {
             const onTestPending = sinon.stub().named(`onTestPending`);
             const onTestEnd = sinon.stub().named(`onTestEnd`);
 
-            const runner = SkippedTestRunner.create(makeTest)
+            const runner = SkippedTestRunner.create(new Test({}))
                 .on(Events.TEST_BEGIN, onTestBegin)
                 .on(Events.TEST_PENDING, onTestPending)
                 .on(Events.TEST_END, onTestEnd);
