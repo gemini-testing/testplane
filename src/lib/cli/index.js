@@ -6,7 +6,7 @@ const escapeRe = require('escape-string-regexp');
 const defaults = require('../config/defaults');
 const info = require('./info');
 const Hermione = require('../hermione');
-const pkg = require('../../package.json');
+const pkg = require('../../../package.json');
 const logger = require('../utils/logger');
 
 process.on('uncaughtException', (err) => {

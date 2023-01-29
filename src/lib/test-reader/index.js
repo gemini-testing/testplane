@@ -28,7 +28,7 @@ module.exports = class TestReader extends EventEmitter {
 
         const {fileExtensions} = this.#config.system;
         const setCollection = await SetsBuilder
-            .create(this.#config.sets, {defaultDir: require('../../package').name})
+            .create(this.#config.sets, {defaultDir: require('../../../package').name})
             .useFiles(paths)
             .useSets((sets || []).concat(env.parseCommaSeparatedValue('HERMIONE_SETS')))
             .useBrowsers(browsers)

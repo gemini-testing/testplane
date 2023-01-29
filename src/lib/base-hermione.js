@@ -10,7 +10,7 @@ const AsyncEmitter = require('./events/async-emitter');
 const Errors = require('./errors');
 const WorkerRunnerEvents = require('./worker/constants/runner-events');
 
-const PREFIX = require('../package').name + '-';
+const PREFIX = require('../../package').name + '-';
 
 module.exports = class BaseHermione extends AsyncEmitter {
     static create(config) {

@@ -78,7 +78,7 @@ describe('test-reader', () => {
 
     describe('read', async () => {
         it('should create set-builder with sets from config and default directory', async () => {
-            const defaultDir = require('../../../package').name;
+            const defaultDir = require('../../../../package').name;
 
             await readTests_({
                 config: makeConfigStub({

@@ -8,7 +8,7 @@ const optionsBuilder = require('./options-builder');
 
 const options = optionsBuilder(_.propertyOf(defaults));
 
-const ENV_PREFIX = `${require('../../package').name}_`;
+const ENV_PREFIX = `${require('../../../package').name}_`;
 
 const rootSection = section(_.extend(browserOptions.getTopLevel(), {
 
