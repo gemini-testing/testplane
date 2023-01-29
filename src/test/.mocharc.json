@@ -1,0 +1,5 @@
+{
+    "recursive": true,
+    "require": ["./src/test/setup", "./src/test/assert-ext", "ts-node/register"],
+    "extension": ["js", "ts"]
+}

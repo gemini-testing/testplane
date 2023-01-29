@@ -1,0 +1,22 @@
+{
+    "include": ["src"],
+    "compilerOptions": {
+        "target": "ES2020",
+        "lib": ["ES2020"],
+        "moduleResolution": "node",
+        "module": "commonjs",
+        "allowSyntheticDefaultImports": true,
+        "allowJs": true,
+        // "declaration": true,
+        // "declarationMap": false,
+        // "sourceMap": true,
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "esModuleInterop": true,
+        "noEmitOnError": true,
+        "skipLibCheck": true
+    }
+}

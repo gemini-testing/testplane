@@ -4,14 +4,20 @@
   "description": "Tests framework based on mocha and wdio",
   "main": "src/lib/hermione.js",
   "types": "./typings/index.d.ts",
+  "files": [
+    "build"
+  ],
   "scripts": {
+    "build": "tsc",
     "coverage": "nyc --reporter=text npm run test-unit",
+    "clean": "rimraf build/ *.tsbuildinfo",
+    "prepack": "npm run clean && npm run build",
     "lint": "eslint .",
-    "test-unit": "_mocha test/ --config test/.mocharc.js",
+    "test-unit": "_mocha src/test/ --config src/test/.mocharc.json",
     "test": "npm run test-unit && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
-    "preversion": "npm run lint && npm test",
+    "preversion": "npm test",
     "commitmsg": "commitlint -e",
     "release": "standard-version"
   },
@@ -68,7 +74,9 @@
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
-    "@types/node": "^12.20.28",
+    "@types/node": "^14.18.36",
+    "@typescript-eslint/eslint-plugin": "^5.49.0",
+    "@typescript-eslint/parser": "^5.49.0",
     "app-module-path": "^2.2.0",
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
@@ -81,8 +89,11 @@
     "jsdom-global": "^3.0.2",
     "nyc": "^15.1.0",
     "proxyquire": "^1.7.3",
+    "rimraf": "^4.1.2",
     "sinon": "^4.4.2",
     "sinon-chai": "^2.12.0",
-    "standard-version": "^9.5.0"
+    "standard-version": "^9.5.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.4"
   }
 }
