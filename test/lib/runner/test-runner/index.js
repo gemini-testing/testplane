@@ -4,8 +4,9 @@ const TestRunner = require('lib/runner/test-runner');
 const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
 const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
 const BrowserAgent = require('lib/runner/browser-agent');
+const {Test} = require('lib/test-reader/test-object');
 
-const {makeConfigStub, makeTest} = require('../../../utils');
+const {makeConfigStub} = require('../../../utils');
 
 describe('runner/test-runner', () => {
     const sandbox = sinon.sandbox.create();
@@ -14,7 +15,7 @@ describe('runner/test-runner', () => {
 
     it('should create skipped test runner for skipped test', () => {
         sandbox.spy(SkippedTestRunner, 'create');
-        const test = makeTest();
+        const test = new Test({});
         test.pending = true;
 
         const runner = TestRunner.create(test);
@@ -25,7 +26,7 @@ describe('runner/test-runner', () => {
 
     it('should create skipped test runner for disabled test', () => {
         sandbox.spy(SkippedTestRunner, 'create');
-        const test = makeTest();
+        const test = new Test({});
         test.disabled = true;
 
         const runner = TestRunner.create(test);
@@ -37,7 +38,7 @@ describe('runner/test-runner', () => {
     it('should create insistant test runner for regular test', () => {
         sandbox.spy(InsistantTestRunner, 'create');
 
-        const test = makeTest();
+        const test = new Test({});
         const config = makeConfigStub();
         const browserAgent = BrowserAgent.create();
 
