@@ -1,31 +1,20 @@
 'use strict';
 
 const _ = require('lodash');
-const proxyquire = require('proxyquire').noCallThru();
 const pluginsLoader = require('plugins-loader');
 const Config = require('lib/config');
 const RunnerEvents = require('lib/constants/runner-events');
 const Errors = require('lib/errors');
 const TestCollection = require('lib/test-collection');
 const WorkerRunnerEvents = require('lib/worker/constants/runner-events');
+const Hermione = require('lib/worker/hermione');
 const Runner = require('lib/worker/runner');
 const {makeConfigStub, makeSuite} = require('../../utils');
 
 describe('worker/hermione', () => {
     const sandbox = sinon.sandbox.create();
 
-    let ExpectWebdriverio;
-    let Hermione;
-
     beforeEach(() => {
-        ExpectWebdriverio = {
-            setOptions: sandbox.stub()
-        };
-
-        Hermione = proxyquire('lib/worker/hermione', {
-            'expect-webdriverio': ExpectWebdriverio
-        });
-
         sandbox.stub(Config, 'create').returns(makeConfigStub());
 
         sandbox.stub(pluginsLoader, 'load');
@@ -34,9 +23,7 @@ describe('worker/hermione', () => {
         sandbox.stub(Runner.prototype, 'runTest');
     });
 
-    afterEach(() => {
-        sandbox.restore();
-    });
+    afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
         it('should create a config from the passed path', () => {
@@ -122,10 +109,6 @@ describe('worker/hermione', () => {
     });
 
     describe('init', () => {
-        afterEach(() => {
-            delete global.expect;
-        });
-
         it('should emit "INIT"', () => {
             const hermione = Hermione.create();
 
@@ -141,28 +124,6 @@ describe('worker/hermione', () => {
                 .on(WorkerRunnerEvents.INIT, () => Promise.reject('o.O'));
 
             return assert.isRejected(hermione.init(), /o.O/);
-        });
-
-        it('should not init expect-webdriverio if global.expect already set', async () => {
-            global.expect = {};
-
-            await Hermione.create()
-                .init();
-
-            assert.notCalled(ExpectWebdriverio.setOptions);
-        });
-
-        it('should not init expect-webdriverio if global.expect not set', async () => {
-            Config.create.returns({
-                system: {
-                    expectOpts: {foo: 'bar'}
-                }
-            });
-
-            await Hermione.create()
-                .init();
-
-            assert.calledOnceWith(ExpectWebdriverio.setOptions, {foo: 'bar'});
         });
     });
 

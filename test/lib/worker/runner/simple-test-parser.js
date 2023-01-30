@@ -2,7 +2,7 @@
 
 const SimpleTestParser = require('lib/worker/runner/sequence-test-parser');
 const RunnerEvents = require('lib/worker/constants/runner-events');
-const {BrowserTestParser: TestParser} = require('lib/test-reader/browser-test-parser');
+const TestParser = require('lib/test-reader/mocha-test-parser');
 const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner/simple-test-parser', () => {
@@ -14,7 +14,9 @@ describe('worker/runner/simple-test-parser', () => {
     };
 
     beforeEach(() => {
+        sandbox.stub(TestParser, 'prepare');
         sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
+        sandbox.stub(TestParser.prototype, 'applyConfigController').returnsThis();
         sandbox.stub(TestParser.prototype, 'loadFiles').resolvesThis();
         sandbox.stub(TestParser.prototype, 'parse').returns([]);
     });
@@ -22,6 +24,13 @@ describe('worker/runner/simple-test-parser', () => {
     afterEach(() => sandbox.restore());
 
     describe('constructor', () => {
+        it('should prepare test parser', () => {
+            const config = makeConfigStub();
+            mkSimpleParser_({config});
+
+            assert.calledOnceWith(TestParser.prepare, config);
+        });
+
         it('should not create test parser', () => {
             mkSimpleParser_();
 
@@ -59,12 +68,23 @@ describe('worker/runner/simple-test-parser', () => {
             });
         });
 
+        it('should apply config controller before loading file', async () => {
+            const simpleParser = mkSimpleParser_();
+
+            await simpleParser.parse({});
+
+            assert.callOrder(
+                TestParser.prototype.applyConfigController,
+                TestParser.prototype.loadFiles
+            );
+        });
+
         it('should load file', async () => {
             const simpleParser = mkSimpleParser_();
 
             await simpleParser.parse({file: 'some/file.js'});
 
-            assert.calledOnceWith(TestParser.prototype.loadFiles, ['some/file.js']);
+            assert.calledOnceWith(TestParser.prototype.loadFiles, 'some/file.js');
         });
 
         it('should load file before parse', async () => {
