@@ -38,7 +38,7 @@ describe('commands-history', () => {
 
             await session.foo('arg1', 'arg2');
 
-            const [node] = stack.flush();
+            const [node] = stack.release();
 
             assert.propertyVal(node, 'n', 'foo');
             assert.propertyVal(node, 's', 'b');
@@ -54,7 +54,7 @@ describe('commands-history', () => {
 
             await session.url('site.com');
 
-            const [node] = stack.flush();
+            const [node] = stack.release();
 
             assert.propertyVal(node, 'n', 'url');
             assert.propertyVal(node, 's', 'b');
@@ -113,7 +113,7 @@ describe('commands-history', () => {
             await session.url('site.com');
             await session.execute();
 
-            const [urlNode] = stack.flush();
+            const [urlNode] = stack.release();
 
             assert.propertyVal(urlNode, 'n', 'url');
             assert.propertyVal(urlNode, 's', 'b');
@@ -132,7 +132,7 @@ describe('commands-history', () => {
 
             await element.click('arg1');
 
-            const [clickNode] = stack.flush();
+            const [clickNode] = stack.release();
 
             assert.propertyVal(clickNode, 'n', 'click');
             assert.propertyVal(clickNode, 's', 'e');
@@ -151,7 +151,7 @@ describe('commands-history', () => {
                             getBrowser().publicAPI[systemCommandNameToTest](commandName, () => {});
                             getBrowser().publicAPI[commandName]('some-arg');
 
-                            assert.deepEqual(getBrowser().flushHistory(), []);
+                            assert.isTrue(getBrowser().releaseHistory().every(node => node.n !== commandName));
                         });
                     });
             });
