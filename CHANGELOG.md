@@ -2,19 +2,6 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [6.1.0](https://github.com/gemini-testing/hermione/compare/v6.0.3...v6.1.0) (2023-01-30)
-
-
-### Features
-
-* add ability to write test steps ([efead66](https://github.com/gemini-testing/hermione/commit/efead668c2bf928c6423b3cac1fe76e73612777b))
-* use own test/suite/hook objects ([228a5c9](https://github.com/gemini-testing/hermione/commit/228a5c96205937b34086b9c835a88f0286842198))
-
-
-### Bug Fixes
-
-* use test.clone instead of Object.create(test) to avoid test modification ([23dbee7](https://github.com/gemini-testing/hermione/commit/23dbee7800c5081271fb19611399b053cd974300))
-
 ### [6.0.3](https://github.com/gemini-testing/hermione/compare/v6.0.2...v6.0.3) (2023-01-20)
 
 
