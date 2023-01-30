@@ -1147,56 +1147,9 @@ describe('config browser-options', () => {
         'compositeImage',
         'resetCursor',
         'strictTestsOrder',
+        'saveHistory',
         'waitOrientationChange'
     ].forEach((option) => describe(option, () => testBooleanOption(option)));
-
-    describe('saveHistory', () => {
-        it('should throw an error if value is not available', () => {
-            const readConfig = _.set({}, 'browsers.b1', mkBrowser_({saveHistory: 'foo'}));
-
-            Config.read.returns(readConfig);
-
-            assert.throws(() => createConfig(), Error, `"saveHistory" must be one of`);
-        });
-
-        it('should set a default value if it is not set in config', () => {
-            const readConfig = _.set({}, 'browsers.b1', mkBrowser_());
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.saveHistory, defaults.saveHistory);
-        });
-
-        it('should override option for browser', () => {
-            const readConfig = {
-                saveHistory: false,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({saveHistory: true})
-                }
-            };
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.isFalse(config.browsers.b1.saveHistory);
-            assert.isTrue(config.browsers.b2.saveHistory);
-        });
-
-        [false, 'onlyFailed', true].forEach(value => {
-            it(`should set option for browser to "${value}"`, () => {
-                const readConfig = _.set({}, 'browsers.b1', mkBrowser_({saveHistory: value}));
-
-                Config.read.returns(readConfig);
-
-                const config = createConfig();
-
-                assert.equal(config.browsers.b1.saveHistory, value);
-            });
-        });
-    });
 
     describe('takeScreenshotOnFails', () => {
         it('should throw an error if value is not an object', () => {

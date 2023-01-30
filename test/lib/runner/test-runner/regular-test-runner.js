@@ -8,9 +8,10 @@ const WorkersRegistry = require('lib/utils/workers-registry');
 const logger = require('lib/utils/logger');
 const Events = require('lib/constants/runner-events');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const {Test} = require('lib/test-reader/test-object');
 const Promise = require('bluebird');
 const {EventEmitter} = require('events');
+
+const {makeTest} = require('../../../utils');
 
 describe('runner/test-runner/regular-test-runner', () => {
     const sandbox = sinon.sandbox.create();
@@ -31,7 +32,7 @@ describe('runner/test-runner/regular-test-runner', () => {
     };
 
     const mkRunner_ = (opts = {}) => {
-        const test = opts.test || new Test({title: 'defaultTest'});
+        const test = opts.test || makeTest({title: 'defaultTest'});
         const browserAgent = opts.browserAgent || BrowserAgent.create();
 
         return RegularTestRunner.create(test, browserAgent);
@@ -74,17 +75,6 @@ describe('runner/test-runner/regular-test-runner', () => {
 
     afterEach(() => sandbox.restore());
 
-    describe('constructor', () => {
-        it('should clone passed test', () => {
-            const test = new Test({title: 'foo bar'});
-            sandbox.spy(test, 'clone');
-
-            mkRunner_({test});
-
-            assert.calledOnce(test.clone);
-        });
-    });
-
     describe('run', () => {
         it('should get browser before running test', async () => {
             BrowserAgent.prototype.getBrowser.resolves(stubBrowser_({
@@ -110,9 +100,9 @@ describe('runner/test-runner/regular-test-runner', () => {
         });
 
         it('should run test in workers', async () => {
-            const test = new Test({
+            const test = makeTest({
                 file: 'foo/bar',
-                title: 'baz qux'
+                fullTitle: () => 'baz qux'
             });
 
             const workers = mkWorkers_();
@@ -125,7 +115,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
         describe('TEST_BEGIN event', () => {
             it('should be emitted on test begin with test data', async () => {
-                const test = new Test({});
+                const test = makeTest();
                 const onTestBegin = sinon.stub().named('onTestBegin');
                 const runner = mkRunner_({test})
                     .on(Events.TEST_BEGIN, onTestBegin);
@@ -162,7 +152,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
         describe('TEST_PASS event', () => {
             it('should be emitted on test pass wit test data', async () => {
-                const test = new Test({});
+                const test = makeTest();
                 const onPass = sinon.stub().named('onPass');
                 const runner = mkRunner_({test})
                     .on(Events.TEST_PASS, onPass);
@@ -221,7 +211,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
             it('should extend test meta from master process by test meta from worker', async () => {
                 const onPass = sinon.stub().named('onPass');
-                const runner = mkRunner_({test: Object.assign(new Test({}), {meta: {foo: 'bar'}})})
+                const runner = mkRunner_({test: makeTest({meta: {foo: 'bar'}})})
                     .on(Events.TEST_PASS, onPass);
 
                 const workers = mkWorkers_();
@@ -272,7 +262,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
         describe('TEST_FAIL event', () => {
             it('should be emitted on test fail with test data', async () => {
-                const test = new Test({});
+                const test = makeTest();
                 const onFail = sinon.stub().named('onFail');
                 const runner = mkRunner_({test})
                     .on(Events.TEST_FAIL, onFail);
@@ -405,7 +395,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
         describe('TEST_END event', () => {
             it('should be emitted on test finish with test data', async () => {
-                const test = new Test({});
+                const test = makeTest();
                 const onTestEnd = sinon.stub().named('onTestEnd');
                 const runner = mkRunner_({test})
                     .on(Events.TEST_END, onTestEnd);
@@ -457,7 +447,7 @@ describe('runner/test-runner/regular-test-runner', () => {
 
         describe('freeBrowser', () => {
             const runTest_ = async ({onRun, onTestFail}) => {
-                const test = Object.assign(new Test({id: 'foo'}), {browserId: 'bar'});
+                const test = makeTest({id: 'foo', browserId: 'bar'});
                 const runner = mkRunner_({test});
 
                 if (onTestFail) {

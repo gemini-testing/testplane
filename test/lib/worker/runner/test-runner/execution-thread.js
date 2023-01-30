@@ -6,24 +6,32 @@ const _ = require('lodash');
 const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
 const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
 const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const {Test} = require('lib/test-reader/test-object');
+
+const {Suite, Test, Runnable} = require('../../../_mocha');
 
 describe('worker/runner/test-runner/execution-thread', () => {
     const sandbox = sinon.sandbox.create();
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();
-        return Test.create(opts);
+        return Test.create(Suite.create(), opts);
     };
 
     const mkRunnable_ = (opts = {}) => {
-        return {
-            type: 'default-runnable-type',
-            fn: sinon.spy(),
-            timeout: 0,
-            fullTitle: sinon.stub().returns(''),
-            ...opts
-        };
+        opts.type = opts.type || 'default-runnable-type';
+        opts.fn = opts.fn || sinon.spy();
+        return Runnable.create(Suite.create(), opts);
+    };
+
+    const mkTimedoutRunnable_ = () => {
+        const runnable = mkRunnable_({
+            type: 'test',
+            title: 'bla bla',
+            fn: () => Promise.delay(20)
+        });
+        runnable.timeout(10);
+
+        return runnable;
     };
 
     const mkBrowser_ = (config = {}) => {
@@ -148,9 +156,7 @@ describe('worker/runner/test-runner/execution-thread', () => {
 
         it('should not override error in current test on runnable reject', async () => {
             const origError = new Error('bar');
-            const test = mkTest_();
-            test.err = origError;
-
+            const test = mkTest_({err: origError});
             const runnable = mkRunnable_({
                 fn: () => Promise.reject(new Error('foo'))
             });
@@ -208,24 +214,19 @@ describe('worker/runner/test-runner/execution-thread', () => {
         });
 
         it('should fail with timeout error on timeout', async () => {
-            const runnable = mkRunnable_({
-                type: 'test',
-                fullTitle: () => 'bla bla',
-                fn: () => Promise.delay(20),
-                timeout: 10
-            });
+            const runnable = mkTimedoutRunnable_();
 
             const executionThread = mkExecutionThread_();
 
-            await assert.isRejected(executionThread.run(runnable), /test 'bla bla' timed out/);
+            await assert.isRejected(executionThread.run(runnable), /test '.* bla bla' timed out/);
         });
 
         it('should not set timeout if timeouts are disabled', async () => {
             const runnable = mkRunnable_({
                 type: 'test',
-                fn: () => Promise.delay(20),
-                timeout: 0
+                fn: () => Promise.delay(20)
             });
+            runnable.timeout(0);
 
             const executionThread = mkExecutionThread_();
 
@@ -287,9 +288,9 @@ describe('worker/runner/test-runner/execution-thread', () => {
 
             it('runnable should not fail with timeout while taking screenshot', async () => {
                 const runnable = mkRunnable_({
-                    fn: () => Promise.reject(new Error('foo')),
-                    timeout: 10
+                    fn: () => Promise.reject(new Error('foo'))
                 });
+                runnable.timeout(10);
 
                 OneTimeScreenshooter.prototype.extendWithScreenshot
                     .callsFake(() => Promise.delay(20));

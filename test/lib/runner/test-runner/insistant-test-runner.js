@@ -7,9 +7,8 @@ const Events = require('lib/constants/runner-events');
 const BrowserAgent = require('lib/runner/browser-agent');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
-const {Test} = require('lib/test-reader/test-object');
 
-const {makeConfigStub} = require('../../../utils');
+const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('runner/test-runner/insistant-test-runner', () => {
     const sandbox = sinon.sandbox.create();
@@ -21,7 +20,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
     };
 
     const mkRunner_ = (opts = {}) => {
-        const test = opts.test || new Test({title: 'default test'});
+        const test = opts.test || makeTest({title: 'defaultTest'});
         const config = opts.config || makeConfigStub();
 
         const browserId = Object.keys(config.browsers)[0];
@@ -53,7 +52,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
     };
 
     const makeFailedTest_ = () => {
-        return Object.assign(new Test({}), {err: new Error()});
+        return makeTest({err: new Error()});
     };
 
     beforeEach(() => {
@@ -67,7 +66,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
     describe('run', () => {
         it('should run test in regular test runner', async () => {
-            const test = new Test({});
+            const test = makeTest();
             const config = makeConfigStub();
             const browserAgent = BrowserAgent.create();
 
@@ -91,7 +90,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
                 const runner = mkRunner_()
                     .on(Events[event], onEvent);
 
-                const test = new Test({});
+                const test = makeTest();
                 onEachTestRun_((innerRunner) => innerRunner.emit(Events[event], test));
 
                 await run_({runner});
@@ -239,7 +238,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
                 it('should not retry assert view fail with NoRefImageError', async () => {
                     onEachTestRun_((innerRunner) => {
-                        const test = new Test({});
+                        const test = makeTest();
                         test.err = new AssertViewError();
                         test.assertViewResults = [new NoRefImageError()];
 
@@ -253,7 +252,7 @@ describe('runner/test-runner/insistant-test-runner', () => {
 
                 it('should retry regular fail with NoRefImageError in assert view results', async () => {
                     onFirstTestRun_((innerRunner) => {
-                        const test = new Test({});
+                        const test = makeTest();
                         test.err = new Error();
                         test.assertViewResults = [new NoRefImageError()];
 

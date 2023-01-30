@@ -7,7 +7,7 @@ const BrowserPool = require('lib/browser-pool');
 const TestRunnerFabric = require('lib/runner/test-runner');
 const TestRunner = require('lib/runner/test-runner/insistant-test-runner');
 const TestCollection = require('lib/test-collection');
-const {Test} = require('lib/test-reader/test-object');
+const Test = require('lib/test');
 const SuiteMonitor = require('lib/runner/suite-monitor');
 const Events = require('lib/constants/runner-events');
 
@@ -276,7 +276,7 @@ describe('runner/browser-runner', () => {
 
     describe('cancel', () => {
         it('should cancel all executing test runners', async () => {
-            stubTestCollection_([Test.create({}), Test.create({})]);
+            stubTestCollection_([Test.create(), Test.create()]);
 
             const runner = mkRunner_();
             TestRunner.prototype.run.onSecondCall().callsFake(() => {
