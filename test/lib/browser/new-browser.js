@@ -143,31 +143,10 @@ describe('NewBrowser', () => {
                 assert.calledOnceWith(history.initCommandHistory, session);
             });
 
-            it('should save history of executed commands if it is enabled on fails', async () => {
-                await mkBrowser_({saveHistory: 'failed'}).init();
-
-                assert.calledOnceWith(history.initCommandHistory, session);
-            });
-
             it('should init commands-history before any commands have added', async () => {
                 await mkBrowser_({saveHistory: true}).init();
 
                 assert.callOrder(history.initCommandHistory, session.addCommand);
-            });
-
-            it('should not log "init" to history if "pageLoadTimeout" is not set', async () => {
-                const browser = await mkBrowser_({saveHistory: true}).init();
-                sandbox.stub(browser, 'runWithHistory');
-
-                assert.notCalled(browser.runWithHistory);
-            });
-
-            it('should log "init" to history if "saveHistory" and "pageLoadTimeout" are set', async () => {
-                const browser = mkBrowser_({saveHistory: true, pageLoadTimeout: 500100});
-                sandbox.stub(browser, 'runWithHistory');
-                await browser.init();
-
-                assert.calledOnceWith(browser.runWithHistory, 'init', sinon.match.func);
             });
         });
 
@@ -214,85 +193,30 @@ describe('NewBrowser', () => {
         it('should be fulfilled', () => assert.isFulfilled(mkBrowser_().reset()));
     });
 
-    describe('releaseHistory', () => {
+    describe('flushHistory', () => {
         let stack;
 
         beforeEach(() => {
             stack = {
-                release: sinon.stub().named('stack').returns([{some: 'data'}])
+                flush: sinon.stub().named('stack').returns([{some: 'data'}])
             };
             sandbox.stub(history, 'initCommandHistory').returns(stack);
         });
 
-        it('should release a history if it is on', async () => {
+        it('should flush a history if it if on', async () => {
             const browser = await mkBrowser_({saveHistory: true}).init();
-            const res = browser.releaseHistory();
+            const res = browser.flushHistory();
 
             assert.deepEqual(res, [{some: 'data'}]);
-            assert.called(stack.release);
+            assert.called(stack.flush);
         });
 
-        it('should return an empty array if it is off', async () => {
+        it('should return an empty array if it if off', async () => {
             const browser = await mkBrowser_({saveHistory: false}).init();
-            const res = browser.releaseHistory();
+            const res = browser.flushHistory();
 
             assert.deepEqual(res, []);
-            assert.notCalled(stack.release);
-        });
-    });
-
-    describe('runWithHistory', () => {
-        beforeEach(() => {
-            sandbox.spy(history, 'runWithHistory');
-        });
-
-        it('should run command with history if "saveHistory" is set', async () => {
-            const browser = await mkBrowser_({saveHistory: true}).init();
-            const fnStub = sandbox.stub();
-
-            await browser.runWithHistory('commandName', fnStub);
-
-            assert.calledOnceWith(history.runWithHistory, sinon.match.any, 'commandName', fnStub);
-            assert.calledOnce(fnStub);
-        });
-
-        it('should run command without history if "saveHistory" is not set', async () => {
-            const browser = await mkBrowser_({saveHistory: false}).init();
-            const fnStub = sandbox.stub();
-
-            await browser.runWithHistory('commandName', fnStub);
-
-            assert.notCalled(history.runWithHistory);
-            assert.calledOnce(fnStub);
-        });
-    });
-
-    describe('markHistoryError', () => {
-        let callstack;
-
-        beforeEach(() => {
-            callstack = {
-                enter: sandbox.stub(),
-                markError: sandbox.stub(),
-                leave: sandbox.stub()
-            };
-            sandbox.stub(history, 'initCommandHistory').returns(callstack);
-        });
-
-        it('should call callstack "markError" method if "saveHistory" is set', async () => {
-            const browser = await mkBrowser_({saveHistory: true}).init();
-
-            await browser.markHistoryError();
-
-            assert.calledOnce(callstack.markError);
-        });
-
-        it('should not call callstack "markError" method if "saveHistory" is not set', async () => {
-            const browser = await mkBrowser_({saveHistory: false}).init();
-
-            await browser.markHistoryError();
-
-            assert.notCalled(callstack.markError);
+            assert.notCalled(stack.flush);
         });
     });
 

@@ -15,7 +15,7 @@ describe('commands-history', () => {
             stack.enter();
             stack.leave();
 
-            const [node] = stack.release();
+            const [node] = stack.flush();
 
             assert.property(node, 'c');
             assert.property(node, 'ts');
@@ -29,7 +29,7 @@ describe('commands-history', () => {
             stack.enter();
             stack.leave();
 
-            const nodes = stack.release();
+            const nodes = stack.flush();
 
             assert.equal(nodes.length, 2);
             assert.deepEqual(nodes[0].c, []);
@@ -44,7 +44,7 @@ describe('commands-history', () => {
             stack.leave();
             stack.leave();
 
-            const nodes = stack.release();
+            const nodes = stack.flush();
 
             assert.propertyVal(nodes, 'length', 2);
             assert.deepNestedPropertyVal(nodes, '0.c', []);
@@ -52,19 +52,19 @@ describe('commands-history', () => {
             assert.deepNestedPropertyVal(nodes, '1.c.0.c', []);
         });
 
-        it('should clean a history after release', () => {
+        it('should clean a history after flush', () => {
             stack.enter();
             stack.leave();
 
-            assert.propertyVal(stack.release(), 'length', 1);
-            assert.propertyVal(stack.release(), 'length', 0);
+            assert.propertyVal(stack.flush(), 'length', 1);
+            assert.propertyVal(stack.flush(), 'length', 0);
         });
 
         it('should extend a node with a passed data', () => {
             stack.enter({some: 'data'});
             stack.leave();
 
-            const [node] = stack.release();
+            const [node] = stack.flush();
 
             assert.propertyVal(node, 'some', 'data');
         });
@@ -75,14 +75,14 @@ describe('commands-history', () => {
 
             stack.leave(2);
 
-            const nodes = stack.release();
+            const nodes = stack.flush();
             assert.equal(nodes.length, 1);
         });
 
         it('should ignore "leave" command on empty stack', () => {
             stack.leave();
 
-            const nodes = stack.release();
+            const nodes = stack.flush();
             assert.equal(nodes.length, 0);
         });
 
@@ -94,45 +94,13 @@ describe('commands-history', () => {
             clock.tick(5);
             stack.leave();
 
-            const [node] = stack.release();
+            const [node] = stack.flush();
 
             assert.propertyVal(node, 'ts', 1);
             assert.propertyVal(node, 'te', 6);
             assert.propertyVal(node, 'd', 5);
 
             clock.restore();
-        });
-
-        it('should mark error all parent nodes', () => {
-            stack.enter();
-            stack.enter();
-            stack.enter();
-            stack.leave();
-            stack.enter();
-            stack.leave();
-            stack.leave();
-            stack.leave();
-
-            stack.markError(() => true);
-
-            const nodes = stack.release();
-            assert.nestedPropertyVal(nodes, '0.f', true);
-            assert.nestedPropertyVal(nodes, '0.c.0.f', true);
-            assert.notNestedPropertyVal(nodes, '0.c.0.c.0.f');
-            assert.nestedPropertyVal(nodes, '0.c.0.c.1.f', true);
-        });
-
-        it('should mark error only parent node', () => {
-            stack.enter();
-            stack.enter();
-            stack.leave();
-            stack.leave();
-
-            stack.markError(() => false);
-
-            const nodes = stack.release();
-            assert.nestedPropertyVal(nodes, '0.f', true);
-            assert.notNestedPropertyVal(nodes, '0.c.0.f');
         });
     });
 });

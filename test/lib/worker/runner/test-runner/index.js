@@ -51,9 +51,7 @@ describe('worker/runner/test-runner', () => {
             meta: {},
             state: {},
             markAsBroken: sandbox.stub(),
-            markHistoryError: sandbox.stub(),
-            runWithHistory: sandbox.stub().callsFake((commandName, fn) => fn()),
-            releaseHistory: sandbox.stub().named('releaseHistory').returns([])
+            flushHistory: sandbox.stub().named('flushHistory').returns([])
         };
     };
 
@@ -65,9 +63,7 @@ describe('worker/runner/test-runner', () => {
         sandbox.stub(ExecutionThread.prototype, 'run').callsFake((runnable) => runnable.fn());
 
         sandbox.stub(HookRunner, 'create').returns(Object.create(HookRunner.prototype));
-        sandbox.stub(HookRunner.prototype, 'hasBeforeEachHooks').returns(false);
         sandbox.stub(HookRunner.prototype, 'runBeforeEachHooks').resolves();
-        sandbox.stub(HookRunner.prototype, 'hasAfterEachHooks').returns(false);
         sandbox.stub(HookRunner.prototype, 'runAfterEachHooks').resolves();
 
         sandbox.stub(OneTimeScreenshooter, 'create').returns(Object.create(OneTimeScreenshooter.prototype));
@@ -347,42 +343,10 @@ describe('worker/runner/test-runner', () => {
 
                 await assert.isRejected(run_(), /foo/);
             });
-
-            it('should log "resetCursor" in history if set', async () => {
-                const browser = mkBrowser_({config: {resetCursor: true, saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasBeforeEachHooks.returns(true);
-
-                await run_();
-
-                assert.calledWith(browser.runWithHistory, 'resetCursor', sinon.match.func);
-            });
-
-            it('should log "beforeEach" in history if beforeEach hooks exist', async () => {
-                const browser = mkBrowser_({config: {saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasBeforeEachHooks.returns(true);
-
-                await run_();
-
-                assert.calledWith(browser.runWithHistory, 'beforeEach', sinon.match.func);
-            });
-
-            it('should not log "beforeEach" in history if beforeEach hooks do not exist', async () => {
-                const browser = mkBrowser_({config: {resetCursor: false, saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasBeforeEachHooks.returns(false);
-
-                await run_();
-
-                assert.neverCalledWith(browser.runWithHistory, 'beforeEach', sinon.match.func);
-            });
         });
 
         describe('afterEach hooks', () => {
             it('should be called if beforeEach hook failed', async () => {
-                HookRunner.prototype.hasBeforeEachHooks.returns(true);
-                HookRunner.prototype.hasAfterEachHooks.returns(true);
                 HookRunner.prototype.runBeforeEachHooks.rejects(new Error());
 
                 await run_().catch(() => {});
@@ -391,7 +355,6 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should be called even if test failed', async () => {
-                HookRunner.prototype.hasAfterEachHooks.returns(true);
                 const test = mkTest_({
                     fn: sinon.stub().rejects(new Error())
                 });
@@ -402,7 +365,6 @@ describe('worker/runner/test-runner', () => {
             });
 
             it('should fail on afterEach fail', async () => {
-                HookRunner.prototype.hasAfterEachHooks.returns(true);
                 HookRunner.prototype.runAfterEachHooks.rejects(new Error('foo'));
 
                 await assert.isRejected(run_(), /foo/);
@@ -415,26 +377,6 @@ describe('worker/runner/test-runner', () => {
                 HookRunner.prototype.runAfterEachHooks.rejects(new Error('bar'));
 
                 await assert.isRejected(run_({test}), /foo/);
-            });
-
-            it('should log "afterEach" in history if afterEach hooks exist', async () => {
-                const browser = mkBrowser_({config: {saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasAfterEachHooks.returns(true);
-
-                await run_();
-
-                assert.calledWith(browser.runWithHistory, 'afterEach', sinon.match.func);
-            });
-
-            it('should not log "afterEach" in history if afterEach hooks do not exist', async () => {
-                const browser = mkBrowser_({config: {saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasAfterEachHooks.returns(false);
-
-                await run_();
-
-                assert.neverCalledWith(browser.runWithHistory, 'afterEach', sinon.match.func);
             });
         });
 
@@ -655,28 +597,6 @@ describe('worker/runner/test-runner', () => {
 
                 assert.match(result.meta, {foo: 'bar'});
             });
-
-            it(`should pass history if "saveHistory" is true`, async () => {
-                const history = Symbol();
-                const browser = mkBrowser_({config: {saveHistory: true}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                browser.releaseHistory.returns(history);
-
-                const result = await run_();
-
-                assert.equal(result.history, history);
-            });
-
-            [false, 'failed'].forEach((saveHistoryVal) => {
-                it(`should not pass history if "saveHistory" is ${saveHistoryVal}`, async () => {
-                    const browser = mkBrowser_({config: {saveHistory: saveHistoryVal}});
-                    BrowserAgent.prototype.getBrowser.resolves(browser);
-
-                    const result = await run_();
-
-                    assert.isUndefined(result.history);
-                });
-            });
         });
 
         describe('on fail', () => {
@@ -759,32 +679,6 @@ describe('worker/runner/test-runner', () => {
                 await run_().catch((e) => e);
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
-            });
-
-            ['onlyFailed', true].forEach((saveHistoryVal) => {
-                it(`should pass history if "saveHistory" is ${saveHistoryVal}`, async () => {
-                    const history = Symbol();
-                    const browser = mkBrowser_({config: {saveHistory: saveHistoryVal}});
-                    BrowserAgent.prototype.getBrowser.resolves(browser);
-                    HookRunner.prototype.hasAfterEachHooks.returns(true);
-                    HookRunner.prototype.runAfterEachHooks.rejects(new Error());
-                    browser.releaseHistory.returns(history);
-
-                    await run_().catch(err => {
-                        assert.equal(err.history, history);
-                    });
-                });
-            });
-
-            it(`should not pass history if "saveHistory" is not set`, async () => {
-                const browser = mkBrowser_({config: {saveHistory: false}});
-                BrowserAgent.prototype.getBrowser.resolves(browser);
-                HookRunner.prototype.hasAfterEachHooks.returns(true);
-                HookRunner.prototype.runAfterEachHooks.rejects(new Error());
-
-                await run_().catch(err => {
-                    assert.isUndefined(err.history);
-                });
             });
         });
     });

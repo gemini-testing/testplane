@@ -663,45 +663,6 @@ it('some test', async ({ browser }) => {
 
 For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
 
-### RunStep
-
-Command that wraps other commands for better representation in `history` with [saveHistory](#savehistory) enabled. For example:
-
-```js
-it('some test', async ({browser}) => {
-    await browser.runStep('some step name', async () => {
-        await browser.url('some/url');
-        await browser.$('some-selector').click();
-    });
-
-    await browser.runStep('other step name', async () => {
-        await browser.runStep('some nested step', async () => {
-            await browser.$('not-exist').click();
-        });
-    });
-
-    await browser.runStep('another step', async () => {
-        ...
-    });
-});
-```
-
-Will produce the following history, if test fails on 'Can't call click on element with selector "not-exist" because element wasn't found':
-
-- some step name
-- other step name
-  - some nested step
-    - $("not-exist")
-    - click()
-      - waitForExist
-
-Parameters:
-
- - stepName (required) `String` – step name
- - stepCb (required) `Function` – step callback
-
-*Note: [html-reporter](https://github.com/gemini-testing/html-reporter) v9.7.6+ highly recommended.*
-
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
@@ -1030,11 +991,6 @@ By default, `screenshotMode` on android browsers is set to `viewport` to work ar
 #### saveHistory
 
 Allows to save history of all executed commands. `true` by default.
-
-Available options:
- - `true` - history is enabled 
- - `'onlyFailed'` - history is saved for failed tests only
- - `false` - history is disabled
 
 Some plugins can rely on this history, for instance:
  - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
