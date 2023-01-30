@@ -55,33 +55,6 @@ describe('test-reader/test-object/hook', () => {
         });
     });
 
-    describe('clone', () => {
-        it('should return an instance of Hook', () => {
-            const clonedHook = new Hook({}).clone();
-
-            assert.instanceOf(clonedHook, Hook);
-        });
-
-        it('should create object with same own properties', () => {
-            const fn = sinon.spy();
-
-            const clonedHook = new Hook({title: 'foo bar', fn});
-
-            assert.equal(clonedHook.fn, fn);
-            assert.equal(clonedHook.title, 'foo bar');
-        });
-
-        it('should assign itself to cloned object', () => {
-            sandbox.spy(Hook.prototype, 'assign');
-            const hook = new Hook({});
-
-            const clonedHook = hook.clone();
-
-            assert.calledOnceWith(Hook.prototype.assign, hook);
-            assert.calledOn(Hook.prototype.assign, clonedHook);
-        });
-    });
-
     describe('type', () => {
         it('should be "hook"', () => {
             const hook = new Hook({});

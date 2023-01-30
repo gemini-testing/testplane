@@ -50,35 +50,6 @@ describe('test-reader/test-object/test', () => {
         });
     });
 
-    describe('clone', () => {
-        it('should return an instance of Test', () => {
-            const clonedTest = new Test({}).clone();
-
-            assert.instanceOf(clonedTest, Test);
-        });
-
-        it('should create object with same own properties', () => {
-            const fn = sinon.spy();
-
-            const clonedTest = new Test({title: 'foo bar', file: 'foo/bar', id: 'foobar', fn});
-
-            assert.equal(clonedTest.fn, fn);
-            assert.equal(clonedTest.title, 'foo bar');
-            assert.equal(clonedTest.file, 'foo/bar');
-            assert.equal(clonedTest.id, 'foobar');
-        });
-
-        it('should assign itself to cloned object', () => {
-            sandbox.spy(Test.prototype, 'assign');
-            const test = new Test({});
-
-            const clonedTest = test.clone();
-
-            assert.calledOnceWith(Test.prototype.assign, test);
-            assert.calledOn(Test.prototype.assign, clonedTest);
-        });
-    });
-
     describe('type', () => {
         it('should be "test"', () => {
             const test = new Test({});

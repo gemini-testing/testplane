@@ -44,42 +44,6 @@ describe('test-reader/test-object/configurable-test-object', () => {
         });
     });
 
-    describe('assign', () => {
-        it('should return itself', () => {
-            const obj = mkObj_();
-
-            assert.equal(obj.assign(mkObj_()), obj);
-        });
-
-        it('should call base class assign method', () => {
-            sandbox.spy(TestObject.prototype, 'assign');
-            const src = mkObj_();
-
-            mkObj_().assign(src);
-
-            assert.calledOnceWith(TestObject.prototype.assign, src);
-        });
-
-        [
-            ['pending', true],
-            ['skipReason', 'foo bar'],
-            ['disabled', true],
-            ['silentSkip', true],
-            ['timeout', 100500],
-            ['browserId', 'foo'],
-            ['browserVersion', '100500']
-        ].forEach(([property, value]) => {
-            it(`should assign ${property} property value`, () => {
-                const src = mkObj_();
-                src[property] = value;
-
-                const obj = mkObj_().assign(src);
-
-                assert.propertyVal(obj, property, value);
-            });
-        });
-    });
-
     describe('id', () => {
         it('should return object id', () => {
             const obj = mkObj_({id: 'foo'});

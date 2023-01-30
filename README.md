@@ -1230,10 +1230,12 @@ Besides, you have the ability to intercept events in plugins and translate them 
 
 ```js
 module.exports = (hermione) => {
-    hermione.intercept(hermione.events.TEST_FAIL, ({event, test}) => {
-        test.skip({reason: 'intercepted failure'});
+    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+        const test = Object.create(data);
+        test.pending = true;
+        test.skipReason = 'intercepted failure';
 
-        return {event: hermione.events.TEST_PENDING, test};
+        return {event: hermione.events.TEST_PENDING, data: test};
     });
 
     hermione.on(hermione.events.TEST_FAIL, (test) => {
