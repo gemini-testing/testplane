@@ -6,6 +6,7 @@ const _ = require('lodash');
 const RuntimeConfig = require('lib/config/runtime-config');
 const Events = require('lib/constants/runner-events');
 const WorkerProcess = require('lib/utils/worker-process');
+const logger = require('lib/utils/logger');
 
 describe('WorkersRegistry', () => {
     const sandbox = sinon.sandbox.create();
@@ -41,6 +42,7 @@ describe('WorkersRegistry', () => {
         workerFarm.end = sandbox.stub().yieldsRight();
 
         sandbox.stub(RuntimeConfig, 'getInstance');
+        sandbox.stub(logger, 'error');
     });
 
     afterEach(() => sandbox.restore());
@@ -215,6 +217,39 @@ describe('WorkersRegistry', () => {
 
             assert.calledOnceWith(onNewWorkerProcess, workerProcessStub);
             assert.calledOnceWith(WorkerProcess.create, child);
+        });
+    });
+
+    describe('child process termination', () => {
+        it('should not inform about error in child process if it ends correctly', () => {
+            mkWorkersRegistry_();
+            const child = initChild_();
+
+            child.emit('exit', 0, null);
+
+            assert.notCalled(logger.error);
+        });
+
+        describe('should inform about incorrect ends of child process with', () => {
+            it('exit code', () => {
+                mkWorkersRegistry_();
+                const child = initChild_();
+                child.pid = '12345';
+
+                child.emit('exit', 1, null);
+
+                assert.calledOnceWith(logger.error, `hermione:worker:${child.pid} terminated unexpectedly with exit code: 1`);
+            });
+
+            it('signal', () => {
+                mkWorkersRegistry_();
+                const child = initChild_();
+                child.pid = '12345';
+
+                child.emit('exit', null, 'SIGINT');
+
+                assert.calledOnceWith(logger.error, `hermione:worker:${child.pid} terminated unexpectedly with signal: SIGINT`);
+            });
         });
     });
 });
