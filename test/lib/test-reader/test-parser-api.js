@@ -1,142 +1,122 @@
 'use strict';
 
-const {EventEmitter} = require('events');
 const TestParserAPI = require('lib/test-reader/test-parser-api');
-const ParserEvents = require('lib/test-reader/parser-events');
-const RunnerEvents = require('lib/constants/runner-events');
-const {makeSuite, makeTest} = require('../../utils');
+const {TreeBuilder} = require('lib/test-reader/tree-builder');
+const ReadEvents = require('lib/test-reader/read-events');
+const {EventEmitter} = require('events');
 
 describe('test-reader/test-parser-api', () => {
-    const mkTestParser_ = () => {
-        return new EventEmitter();
+    const sandbox = sinon.sandbox.create();
+
+    const init_ = () => {
+        const ctx = {};
+
+        const eventBus = new EventEmitter()
+            .on(ReadEvents.NEW_BUILD_INSTRUCTION, (instruction) => instruction({treeBuilder: new TreeBuilder()}));
+
+        return {
+            ctx,
+            api: TestParserAPI.create(ctx, eventBus)
+        };
     };
+
+    beforeEach(() => {
+        sandbox.stub(TreeBuilder.prototype, 'addTrap');
+    });
+
+    afterEach(() => {
+        sandbox.restore();
+    });
 
     describe('setController', () => {
         it('should set appropriate controller to context', () => {
-            const hermione = {};
-            const parserAPI = TestParserAPI.create(mkTestParser_(), hermione);
+            const {ctx, api} = init_();
 
-            parserAPI.setController('someController', {});
+            api.setController('foo', {});
 
-            assert.property(hermione, 'someController');
-        });
-
-        it('should remove controller on AFTER_FILE_READ', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const parserAPI = TestParserAPI.create(testParser, hermione);
-
-            parserAPI.setController('someController', {});
-
-            testParser.emit(RunnerEvents.AFTER_FILE_READ);
-
-            assert.notProperty(hermione, 'someController');
+            assert.property(ctx, 'foo');
         });
 
         it('should set controller methods', () => {
-            const hermione = {};
-            const parserAPI = TestParserAPI.create(mkTestParser_(), hermione);
+            const {ctx, api} = init_();
 
-            parserAPI.setController('someController', {
+            api.setController('foo', {
                 doStuff: () => {},
                 doOtherStuff: () => {}
             });
 
-            assert.property(hermione.someController, 'doStuff');
-            assert.property(hermione.someController, 'doOtherStuff');
+            assert.property(ctx.foo, 'doStuff');
+            assert.property(ctx.foo, 'doOtherStuff');
         });
 
         it('controller methods should be chainable', () => {
-            const hermione = {};
-            const parserAPI = TestParserAPI.create(mkTestParser_(), hermione);
+            const {ctx, api} = init_();
 
-            parserAPI.setController('someController', {doStuff: sinon.spy()});
+            api.setController('foo', {doStuff: sinon.spy()});
 
-            const res = hermione.someController.doStuff();
+            const res = ctx.foo.doStuff();
 
-            assert.equal(res, hermione.someController);
+            assert.equal(res, ctx.foo);
         });
 
-        it('should not call controller methods if nothing parsed', () => {
-            const hermione = {};
-            const parserAPI = TestParserAPI.create(mkTestParser_(), hermione);
+        it('should add trap for each controller method call', () => {
+            const {ctx, api} = init_();
 
-            const doStuff = sinon.spy();
-            parserAPI.setController('someController', {doStuff});
+            api.setController('foo', {
+                doStuff: () => {},
+                doOtherStuff: () => {}
+            });
 
-            hermione.someController.doStuff();
+            ctx.foo
+                .doStuff()
+                .doOtherStuff();
 
-            assert.notCalled(doStuff);
+            assert.calledTwice(TreeBuilder.prototype.addTrap);
+            assert.alwaysCalledWith(TreeBuilder.prototype.addTrap, sinon.match.func);
         });
 
-        it('should call controller method on parsed suite', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const parserAPI = TestParserAPI.create(testParser, hermione);
+        describe('trap', () => {
+            const installMethod_ = (spy) => {
+                const {ctx, api} = init_();
 
-            const doStuff = sinon.spy();
-            parserAPI.setController('someController', {doStuff});
+                api.setController('foo', {spy});
 
-            hermione.someController.doStuff('foo', {bar: 'baz'});
+                return {
+                    controller: (...args) => ctx.foo.spy(...args),
+                    trap: (...args) => TreeBuilder.prototype.addTrap.lastCall.args[0](...args)
+                };
+            };
 
-            const suite = makeSuite();
-            testParser.emit(ParserEvents.SUITE, suite);
+            it('should call controller method', () => {
+                const spy = sinon.spy();
+                const {controller, trap} = installMethod_(spy);
 
-            assert.calledOn(doStuff, suite);
-            assert.calledWith(doStuff, 'foo', {bar: 'baz'});
-        });
+                controller();
+                trap({});
 
-        it('should call controller method only once for parsed suite', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const parserAPI = TestParserAPI.create(testParser, hermione);
+                assert.calledOnce(spy);
+            });
 
-            const doStuff = sinon.spy();
-            parserAPI.setController('someController', {doStuff});
+            it('should call controller method on trapped object', () => {
+                const spy = sinon.spy();
+                const testObject = {};
+                const {controller, trap} = installMethod_(spy);
 
-            hermione.someController.doStuff();
+                controller();
+                trap(testObject);
 
-            const suite = makeSuite();
-            testParser.emit(ParserEvents.SUITE, suite);
-            testParser.emit(ParserEvents.SUITE, makeSuite());
+                assert.calledOn(spy, testObject);
+            });
 
-            assert.calledOnce(doStuff);
-            assert.calledOn(doStuff, suite);
-        });
+            it('should call controller method with passed arguments', () => {
+                const spy = sinon.spy();
+                const {controller, trap} = installMethod_(spy);
 
-        it('should call controller method on parsed test', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const parserAPI = TestParserAPI.create(testParser, hermione);
+                controller('bar', {baz: 'qux'});
+                trap({});
 
-            const doStuff = sinon.spy();
-            parserAPI.setController('someController', {doStuff});
-
-            hermione.someController.doStuff('foo', {bar: 'baz'});
-
-            const test = makeTest();
-            testParser.emit(ParserEvents.TEST, test);
-
-            assert.calledOn(doStuff, test);
-            assert.calledWith(doStuff, 'foo', {bar: 'baz'});
-        });
-
-        it('should call controller method only once for parsed test', () => {
-            const hermione = {};
-            const testParser = mkTestParser_();
-            const parserAPI = TestParserAPI.create(testParser, hermione);
-
-            const doStuff = sinon.spy();
-            parserAPI.setController('someController', {doStuff});
-
-            hermione.someController.doStuff();
-
-            const test = makeTest();
-            testParser.emit(ParserEvents.TEST, test);
-            testParser.emit(ParserEvents.TEST, makeTest());
-
-            assert.calledOnce(doStuff);
-            assert.calledOn(doStuff, test);
+                assert.calledWith(spy, 'bar', {baz: 'qux'});
+            });
         });
     });
 });
