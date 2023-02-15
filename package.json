@@ -57,7 +57,7 @@
     "micromatch": "^4.0.5",
     "plugins-loader": "^1.1.0",
     "png-validator": "1.1.0",
-    "sharp": "^0.30.7",
+    "sharp": "~0.30.7",
     "sizzle": "^2.3.6",
     "temp": "^0.8.3",
     "uglify-js": "^2.8.29",
