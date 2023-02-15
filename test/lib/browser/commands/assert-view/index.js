@@ -8,9 +8,11 @@ const clientBridge = require('lib/browser/client-bridge');
 const Image = require('lib/image');
 const ScreenShooter = require('lib/browser/screen-shooter');
 const temp = require('lib/temp');
+const validator = require('png-validator');
 const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
 const ImageDiffError = require('lib/browser/commands/assert-view/errors/image-diff-error');
 const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
+const InvalidPngError = require('lib/browser/commands/assert-view/errors/invalid-png-error');
 const RuntimeConfig = require('lib/config/runtime-config');
 const updateRefs = require('lib/browser/commands/assert-view/capture-processors/update-refs');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../../utils');
@@ -69,6 +71,8 @@ describe('assertView command', () => {
         sandbox.stub(Image.prototype, 'getSize');
 
         sandbox.stub(fs, 'readFileSync');
+        sandbox.stub(validator, 'pngValidator').returns(true);
+        sandbox.stub(fs, 'readFile');
         sandbox.stub(fs, 'existsSync').returns(true);
         sandbox.stub(fs, 'outputFile').resolves();
 
@@ -85,6 +89,14 @@ describe('assertView command', () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    it('should throw an error on invalid reference', async () => {
+        fs.readFile.withArgs('/ref/invalid').resolves('invalidPngBuffer');
+        validator.pngValidator.withArgs('invalidPngBuffer').throws();
+        const browser = await stubBrowser_({getScreenshotPath: () => '/ref/invalid'}).init();
+
+        await assert.isRejected(browser.publicAPI.assertView('plain', '.selector'), InvalidPngError);
+    });
 
     it('should wait for all selectors to exist', async () => {
         const browser = await stubBrowser_().init();
@@ -470,20 +482,22 @@ describe('assertView command', () => {
                     const image = stubImage_();
                     Image.compare.resolves({equal: true});
                     temp.path.returns('/curr/path');
+                    fs.readFile.withArgs('/ref/path').resolves('refPngBuffer');
                     ScreenShooter.prototype.capture.resolves(image);
                     image.toPngBuffer.resolves('currPngBuffer');
                     const browser = await stubBrowser_(config).init();
 
                     await fn(browser);
 
-                    assert.calledOnceWith(Image.compare, '/ref/path', 'currPngBuffer');
+                    assert.calledOnceWith(Image.compare, 'refPngBuffer', 'currPngBuffer');
                 });
 
                 it('should not save current image if images are equal', async () => {
                     const image = stubImage_();
                     const browser = await stubBrowser_({getScreenshotPath: () => '/ref/path'}).init();
+                    fs.readFile.withArgs('/ref/path').resolves('refPngBuffer');
                     image.toPngBuffer.resolves('currPngBuffer');
-                    Image.compare.withArgs('/ref/path', 'currPngBuffer').resolves({equal: true});
+                    Image.compare.withArgs('refPngBuffer', 'currPngBuffer').resolves({equal: true});
                     ScreenShooter.prototype.capture.resolves(image);
 
                     await fn(browser);
