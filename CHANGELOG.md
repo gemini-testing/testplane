@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.6.2](https://github.com/gemini-testing/hermione/compare/v5.6.1...v5.6.2) (2023-02-15)
+
+
+### Bug Fixes
+
+* change assert-view error on not existing element ([7e11968](https://github.com/gemini-testing/hermione/commit/7e119688f45c698f48b317ae4782c2bf4a3544ec))
+* reference validation ([8e84356](https://github.com/gemini-testing/hermione/commit/8e8435636d010314bb846a687b019379556215d7))
+
 ### [5.6.1](https://github.com/gemini-testing/hermione/compare/v5.6.0...v5.6.1) (2022-12-13)
 
 
