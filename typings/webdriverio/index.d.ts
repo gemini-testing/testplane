@@ -19,23 +19,18 @@ declare namespace WebdriverIO {
          * @example
          * ```ts
          *
-         * it('some test', function() {
-         *     return this.browser
-         *         .url('some/url')
-         *         .assertView(
-         *             'plain',
-         *             '.button',
-         *             {
-         *                 ignoreElements: ['.link'],
-         *                 tolerance: 2.3,
-         *                 antialiasingTolerance: 4,
-         *                 allowViewportOverflow: true,
-         *                 captureElementFromTop: true,
-         *                 compositeImage: true,
-         *                 screenshotDelay: 600,
-         *                 selectorToScroll: '.modal'
-         *             }
-         *         )
+         * it('some test', async function() {
+         *     await this.browser.url('some/url');
+         *     await this.browser.assertView('plain', '.button', {
+         *         ignoreElements: ['.link'],
+         *         tolerance: 2.3,
+         *         antialiasingTolerance: 4,
+         *         allowViewportOverflow: true,
+         *         captureElementFromTop: true,
+         *         compositeImage: true,
+         *         screenshotDelay: 600,
+         *         selectorToScroll: '.modal'
+         *     });
          *});
          * ```
          *
@@ -46,6 +41,40 @@ declare namespace WebdriverIO {
          * "compositeImage", "screenshotDelay", "selectorToScroll"
          */
         assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): Promise<void>;
+    }
+
+    interface Element {
+        /**
+         * Takes a screenshot of the element and compares the received screenshot with the reference.
+         *
+         * @remarks
+         * For more details, see {@link https://github.com/gemini-testing/hermione#assertview documentation}.
+         *
+         * @example
+         * ```ts
+         *
+         * it('some test', async function() {
+         *     await this.browser.url('some/url');
+         *     const button = await this.browser.$('.button');
+         *     await button.assertView('plain', {
+         *         ignoreElements: ['.link'],
+         *         tolerance: 2.3,
+         *         antialiasingTolerance: 4,
+         *         allowViewportOverflow: true,
+         *         captureElementFromTop: true,
+         *         compositeImage: true,
+         *         screenshotDelay: 600,
+         *         selectorToScroll: '.modal'
+         *     });
+         *});
+         * ```
+         *
+         * @param state state name, should be unique within one test
+         * @param opts additional options, currently available:
+         * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
+         * "compositeImage", "screenshotDelay", "selectorToScroll"
+         */
+         assertView(state: string, opts?: Hermione.AssertViewOpts): Promise<void>;
     }
 }
 
