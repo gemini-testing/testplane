@@ -6,7 +6,7 @@ const {TreeBuilder} = require('lib/test-reader/tree-builder');
 const {Test} = require('lib/test-reader/test-object');
 const ReadEvents = require('lib/test-reader/read-events');
 const RunnerEvents = require('lib/constants/runner-events');
-const Mocha = require('@gemini-testing/mocha');
+const Mocha = require('mocha');
 const proxyquire = require('proxyquire').noCallThru();
 const {EventEmitter} = require('events');
 
@@ -37,7 +37,7 @@ describe('test-reader/mocha-reader', () => {
         MochaConstructorStub.Suite = Mocha.Suite;
 
         readFiles = proxyquire('lib/test-reader/mocha-reader', {
-            '@gemini-testing/mocha': MochaConstructorStub
+            'mocha': MochaConstructorStub
         }).readFiles;
 
         sandbox.stub(MochaEventBus, 'create').returns(Object.create(MochaEventBus.prototype));
@@ -147,7 +147,7 @@ describe('test-reader/mocha-reader', () => {
 
                 await readFiles_({esmDecorator});
 
-                assert.calledWith(Mocha.prototype.loadFilesAsync, esmDecorator);
+                assert.calledWith(Mocha.prototype.loadFilesAsync, {esmDecorator});
             });
         });
 

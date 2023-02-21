@@ -14,7 +14,7 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
 
     const mkMochaSuite_ = (opts = {}) => {
         return {
-            'mocha_id': 'some-default-id',
+            id: 'some-default-id',
             title: 'some default title',
             file: 'some/default/file',
             pending: false,
@@ -95,9 +95,9 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
                 .withArgs('baz/qux.js').returns('bazqux');
 
             mkDecorator_()
-                .addSuite(mkMochaSuite_({'mocha_id': '00', file: 'foo/bar.js'}))
-                .addSuite(mkMochaSuite_({'mocha_id': '01', file: 'baz/qux.js'}))
-                .addSuite(mkMochaSuite_({'mocha_id': '02', file: 'foo/bar.js'}));
+                .addSuite(mkMochaSuite_({id: '00', file: 'foo/bar.js'}))
+                .addSuite(mkMochaSuite_({id: '01', file: 'baz/qux.js'}))
+                .addSuite(mkMochaSuite_({id: '02', file: 'foo/bar.js'}));
 
             assert.calledWithMatch(Suite.create, {file: 'foo/bar.js', id: 'foobar0'});
             assert.calledWithMatch(Suite.create, {file: 'baz/qux.js', id: 'bazqux1'});
@@ -106,7 +106,7 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
 
         it('should passthrough mocha id to suite constructor for root suite', () => {
             mkDecorator_()
-                .addSuite(mkMochaSuite_({'mocha_id': 'foobar', root: true}));
+                .addSuite(mkMochaSuite_({id: 'foobar', root: true}));
 
             assert.calledWithMatch(Suite.create, {id: 'foobar'});
             assert.notCalled(crypto.getShortMD5);
@@ -203,11 +203,11 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
                 .onSecondCall().returns(childSuite);
 
             const treeBuilder = sinon.createStubInstance(TreeBuilder);
-            const parentMochaSuite = mkMochaSuite_({'mocha_id': 'foo'});
+            const parentMochaSuite = mkMochaSuite_({id: 'foo'});
 
             mkDecorator_(treeBuilder)
                 .addSuite(parentMochaSuite)
-                .addSuite(mkMochaSuite_({'mocha_id': 'bar', parent: parentMochaSuite}));
+                .addSuite(mkMochaSuite_({id: 'bar', parent: parentMochaSuite}));
 
             assert.calledWith(treeBuilder.addSuite, childSuite, parentSuite);
         });
@@ -331,7 +331,7 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
             Suite.create.returns(parentSuite);
 
             const treeBuilder = sinon.createStubInstance(TreeBuilder);
-            const parentMochaSuite = mkMochaSuite_({'mocha_id': 'foo'});
+            const parentMochaSuite = mkMochaSuite_({id: 'foo'});
 
             mkDecorator_(treeBuilder)
                 .addSuite(parentMochaSuite)
@@ -397,7 +397,7 @@ describe('test-reader/mocha-reader/tree-builder-decorator', () => {
                 Suite.create.returns(parentSuite);
 
                 const treeBuilder = sinon.createStubInstance(TreeBuilder);
-                const parentMochaSuite = mkMochaSuite_({'mocha_id': 'foo'});
+                const parentMochaSuite = mkMochaSuite_({id: 'foo'});
 
                 const decorator = mkDecorator_(treeBuilder)
                     .addSuite(parentMochaSuite);
