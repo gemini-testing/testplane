@@ -150,8 +150,8 @@ describe('test-reader/test-object/configurable-test-object', () => {
         ['disabled', false, true, false],
         ['silentSkip', false, true, false],
         ['timeout', 0, 100500, 500100],
-        ['browserId', '', 'foo', 'bar'],
-        ['browserVersion', '', '100500', '500100']
+        ['browserId', undefined, 'foo', 'bar'],
+        ['browserVersion', undefined, '100500', '500100']
     ].forEach(([property, defaultValue, testValue, valueToOverwrite]) => {
         describe(property, () => {
             it('should return default value if no parent', () => {
@@ -196,18 +196,6 @@ describe('test-reader/test-object/configurable-test-object', () => {
                 obj[property] = defaultValue;
 
                 assert.equal(obj[property], defaultValue);
-            });
-
-            it('should use parent value if current is set to undefined', () => {
-                const obj = mkObj_();
-                const parent = mkObj_();
-                obj.parent = parent;
-
-                parent[property] = testValue;
-                obj[property] = valueToOverwrite;
-                obj[property] = undefined;
-
-                assert.equal(obj[property], testValue);
             });
         });
     });
