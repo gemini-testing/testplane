@@ -1,0 +1,11 @@
+{
+    "extends": "./tsconfig.common.json",
+    "include": ["lib", "test"],
+    "compilerOptions": {
+        "baseUrl": ".",
+        "noEmit": true,
+        "paths": {
+            "lib/*": ["lib/*"]
+        }
+    }
+}

@@ -2,15 +2,23 @@
   "name": "hermione",
   "version": "6.1.1",
   "description": "Tests framework based on mocha and wdio",
-  "main": "lib/hermione.js",
+  "main": "build/hermione.js",
+  "files": [
+    "build",
+    "typings"
+  ],
   "types": "./typings/index.d.ts",
   "scripts": {
+    "build": "tsc",
+    "check-types": "tsc --project tsconfig.spec.json",
+    "clean": "rimraf build/ *.tsbuildinfo",
     "coverage": "nyc --reporter=text npm run test-unit",
     "lint": "eslint .",
-    "test-unit": "_mocha test/ --config test/.mocharc.js",
-    "test": "npm run test-unit && npm run lint",
+    "test-unit": "_mocha test/",
+    "test": "npm run check-types && npm run test-unit && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
+    "prepack": "npm run clean && npm run build",
     "preversion": "npm run lint && npm test",
     "commitmsg": "commitlint -e",
     "release": "standard-version"
@@ -68,7 +76,10 @@
   "devDependencies": {
     "@commitlint/cli": "^17.1.2",
     "@commitlint/config-conventional": "^17.1.0",
+    "@types/chai": "^4.3.4",
+    "@types/chai-as-promised": "^7.1.5",
     "@types/node": "^12.20.28",
+    "@types/sharp": "^0.31.1",
     "app-module-path": "^2.2.0",
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
@@ -81,8 +92,11 @@
     "jsdom-global": "^3.0.2",
     "nyc": "^15.1.0",
     "proxyquire": "^1.7.3",
+    "rimraf": "^4.1.2",
     "sinon": "^4.4.2",
     "sinon-chai": "^2.12.0",
-    "standard-version": "^9.5.0"
+    "standard-version": "^9.5.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.5"
   }
 }

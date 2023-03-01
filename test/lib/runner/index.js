@@ -12,7 +12,7 @@ const logger = require('lib/utils/logger');
 const WorkersRegistry = require('lib/utils/workers-registry');
 const Runner = require('lib/runner');
 const BrowserRunner = require('lib/runner/browser-runner');
-const TestCollection = require('lib/test-collection');
+const TestCollection = require('lib/test-collection').default;
 
 const {makeConfigStub} = require('../../utils');
 
