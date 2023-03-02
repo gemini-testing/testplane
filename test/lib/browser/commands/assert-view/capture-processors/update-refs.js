@@ -4,8 +4,8 @@ const {EventEmitter} = require('events');
 const _ = require('lodash');
 const Promise = require('bluebird');
 const fs = require('fs-extra');
-const {UPDATE_REFERENCE} = require('lib/worker/constants/runner-events');
-const {handleNoRefImage, handleImageDiff} = require('lib/browser/commands/assert-view/capture-processors/update-refs');
+const {UPDATE_REFERENCE} = require('src/worker/constants/runner-events');
+const {handleNoRefImage, handleImageDiff} = require('src/browser/commands/assert-view/capture-processors/update-refs');
 
 describe('browser/commands/assert-view/capture-processors/update-refs', () => {
     const sandbox = sinon.createSandbox();

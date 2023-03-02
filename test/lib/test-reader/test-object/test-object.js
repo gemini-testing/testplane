@@ -1,6 +1,6 @@
 'use strict';
 
-const {TestObject} = require('lib/test-reader/test-object/test-object');
+const {TestObject} = require('src/test-reader/test-object/test-object');
 
 describe('test-reader/test-object/test-object', () => {
     describe('assign', () => {

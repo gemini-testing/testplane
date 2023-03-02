@@ -1,6 +1,6 @@
 'use strict';
 
-const {MochaEventBus} = require('lib/test-reader/mocha-reader/mocha-event-bus');
+const {MochaEventBus} = require('src/test-reader/mocha-reader/mocha-event-bus');
 const {EventEmitter} = require('events');
 
 describe('test-reader/mocha-event-bus', () => {

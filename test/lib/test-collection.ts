@@ -1,8 +1,8 @@
 import _ from "lodash";
-import TestCollection from 'lib/test-collection';
-import {Test} from 'lib/test-reader/test-object';
+import TestCollection from 'src/test-collection';
+import {Test} from 'src/test-reader/test-object';
 
-import type {Suite} from "lib/test-reader/test-object/suite";
+import type {Suite} from "src/test-reader/test-object/suite";
 
 type TestAndBrowser = { test: Test, browser: string };
 

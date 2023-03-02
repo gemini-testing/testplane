@@ -1,7 +1,7 @@
 'use strict';
 
 const clearRequire = require('clear-require');
-const HermioneFacade = require('lib/worker/hermione-facade');
+const HermioneFacade = require('src/worker/hermione-facade');
 const Promise = require('bluebird');
 
 describe('worker', () => {
@@ -10,13 +10,13 @@ describe('worker', () => {
     beforeEach(() => {
         sandbox.stub(HermioneFacade.prototype);
 
-        clearRequire(require.resolve('lib/worker'));
+        clearRequire(require.resolve('src/worker'));
     });
 
     afterEach(() => sandbox.restore());
 
     it('should init hermione facade on require', () => {
-        require('lib/worker');
+        require('src/worker');
 
         assert.calledOnce(HermioneFacade.prototype.init);
     });
@@ -27,7 +27,7 @@ describe('worker', () => {
         beforeEach(() => {
             HermioneFacade.prototype.runTest.resolves();
 
-            const worker = require('lib/worker');
+            const worker = require('src/worker');
             runTest = worker.runTest;
         });
 

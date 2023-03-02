@@ -3,12 +3,12 @@
 const _ = require('lodash');
 const proxyquire = require('proxyquire').noCallThru();
 const pluginsLoader = require('plugins-loader');
-const Config = require('lib/config');
-const RunnerEvents = require('lib/constants/runner-events');
-const Errors = require('lib/errors');
-const TestCollection = require('lib/test-collection').default;
-const WorkerRunnerEvents = require('lib/worker/constants/runner-events');
-const Runner = require('lib/worker/runner');
+const Config = require('src/config');
+const RunnerEvents = require('src/constants/runner-events');
+const Errors = require('src/errors');
+const TestCollection = require('src/test-collection').default;
+const WorkerRunnerEvents = require('src/worker/constants/runner-events');
+const Runner = require('src/worker/runner');
 const {makeConfigStub, makeSuite} = require('../../utils');
 
 describe('worker/hermione', () => {
@@ -22,7 +22,7 @@ describe('worker/hermione', () => {
             setOptions: sandbox.stub()
         };
 
-        Hermione = proxyquire('lib/worker/hermione', {
+        Hermione = proxyquire('src/worker/hermione', {
             'expect-webdriverio': ExpectWebdriverio
         });
 

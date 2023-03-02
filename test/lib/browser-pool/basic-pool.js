@@ -1,10 +1,10 @@
 'use strict';
 
-const AsyncEmitter = require('lib/events/async-emitter');
-const BasicPool = require('lib/browser-pool/basic-pool');
-const Browser = require('lib/browser/new-browser');
-const CancelledError = require('lib/browser-pool/cancelled-error');
-const Events = require('lib/constants/runner-events');
+const AsyncEmitter = require('src/events/async-emitter');
+const BasicPool = require('src/browser-pool/basic-pool');
+const Browser = require('src/browser/new-browser');
+const CancelledError = require('src/browser-pool/cancelled-error');
+const Events = require('src/constants/runner-events');
 const {stubBrowser} = require('./util');
 const _ = require('lodash');
 const Promise = require('bluebird');

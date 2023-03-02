@@ -1,9 +1,9 @@
 'use strict';
 
-const CachingTestParser = require('lib/worker/runner/caching-test-parser');
-const SequenceTestParser = require('lib/worker/runner/sequence-test-parser');
-const RunnerEvents = require('lib/worker/constants/runner-events');
-const TestCollection = require('lib/test-collection').default;
+const CachingTestParser = require('src/worker/runner/caching-test-parser');
+const SequenceTestParser = require('src/worker/runner/sequence-test-parser');
+const RunnerEvents = require('src/worker/constants/runner-events');
+const TestCollection = require('src/test-collection').default;
 const {makeConfigStub, makeTest} = require('../../../utils');
 
 describe('worker/runner/caching-test-parser', () => {

@@ -3,9 +3,9 @@
 const path = require('path');
 const fs = require('fs');
 const Promise = require('bluebird');
-const Image = require('lib/image');
-const Calibrator = require('lib/browser/calibrator');
-const CoreError = require('lib/browser/core-error');
+const Image = require('src/image');
+const Calibrator = require('src/browser/calibrator');
+const CoreError = require('src/browser/core-error');
 
 describe('calibrator', () => {
     let browser, calibrator;

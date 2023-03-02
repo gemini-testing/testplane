@@ -1,8 +1,8 @@
 'use strict';
 
-const Image = require('lib/image');
-const ScreenShooter = require('lib/browser/screen-shooter');
-const Viewport = require('lib/browser/screen-shooter/viewport');
+const Image = require('src/image');
+const ScreenShooter = require('src/browser/screen-shooter');
+const Viewport = require('src/browser/screen-shooter/viewport');
 
 describe('screen-shooter', () => {
     const sandbox = sinon.sandbox.create();

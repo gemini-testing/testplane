@@ -1,7 +1,7 @@
 'use strict';
 
 const webdriverio = require('webdriverio');
-const clientBridge = require('lib/browser/client-bridge');
+const clientBridge = require('src/browser/client-bridge');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../utils');
 
 describe('"setOrientation" command', () => {

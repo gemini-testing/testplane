@@ -1,13 +1,13 @@
 'use strict';
 
-const RegularTestRunner = require('lib/runner/test-runner/regular-test-runner');
-const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
-const HighPriorityBrowserAgent = require('lib/runner/test-runner/high-priority-browser-agent');
-const Events = require('lib/constants/runner-events');
-const BrowserAgent = require('lib/runner/browser-agent');
-const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
-const NoRefImageError = require('lib/browser/commands/assert-view/errors/no-ref-image-error');
-const {Test} = require('lib/test-reader/test-object');
+const RegularTestRunner = require('src/runner/test-runner/regular-test-runner');
+const InsistantTestRunner = require('src/runner/test-runner/insistant-test-runner');
+const HighPriorityBrowserAgent = require('src/runner/test-runner/high-priority-browser-agent');
+const Events = require('src/constants/runner-events');
+const BrowserAgent = require('src/runner/browser-agent');
+const AssertViewError = require('src/browser/commands/assert-view/errors/assert-view-error');
+const NoRefImageError = require('src/browser/commands/assert-view/errors/no-ref-image-error');
+const {Test} = require('src/test-reader/test-object');
 
 const {makeConfigStub} = require('../../../utils');
 

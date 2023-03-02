@@ -3,16 +3,16 @@
 const _ = require('lodash');
 const Promise = require('bluebird');
 
-const temp = require('lib/temp');
-const BrowserPool = require('lib/browser-pool');
-const RuntimeConfig = require('lib/config/runtime-config');
-const RunnerStats = require('lib/stats');
-const RunnerEvents = require('lib/constants/runner-events');
-const logger = require('lib/utils/logger');
-const WorkersRegistry = require('lib/utils/workers-registry');
-const Runner = require('lib/runner');
-const BrowserRunner = require('lib/runner/browser-runner');
-const TestCollection = require('lib/test-collection').default;
+const temp = require('src/temp');
+const BrowserPool = require('src/browser-pool');
+const RuntimeConfig = require('src/config/runtime-config');
+const RunnerStats = require('src/stats');
+const RunnerEvents = require('src/constants/runner-events');
+const logger = require('src/utils/logger');
+const WorkersRegistry = require('src/utils/workers-registry');
+const Runner = require('src/runner');
+const BrowserRunner = require('src/runner/browser-runner');
+const TestCollection = require('src/test-collection').default;
 
 const {makeConfigStub} = require('../../utils');
 

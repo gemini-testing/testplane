@@ -1,9 +1,9 @@
 'use strict';
 
-const {OnlyController} = require('lib/test-reader/controllers/only-controller');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {ConfigurableTestObject} = require('lib/test-reader/test-object/configurable-test-object');
-const ReadEvents = require('lib/test-reader/read-events');
+const {OnlyController} = require('src/test-reader/controllers/only-controller');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {ConfigurableTestObject} = require('src/test-reader/test-object/configurable-test-object');
+const ReadEvents = require('src/test-reader/read-events');
 const {EventEmitter} = require('events');
 
 describe('test-reader/controllers/only-controller', () => {

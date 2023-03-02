@@ -1,15 +1,15 @@
 'use strict';
 
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {InstructionsList} = require('lib/test-reader/build-instructions');
-const {SkipController} = require('lib/test-reader/controllers/skip-controller');
-const {OnlyController} = require('lib/test-reader/controllers/only-controller');
-const {ConfigController} = require('lib/test-reader/controllers/config-controller');
-const browserVersionController = require('lib/test-reader/controllers/browser-version-controller');
-const TestParserAPI = require('lib/test-reader/test-parser-api');
-const {NEW_BUILD_INSTRUCTION} = require('lib/test-reader/read-events');
-const {Test, Suite} = require('lib/test-reader/test-object');
-const RunnerEvents = require('lib/constants/runner-events');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {InstructionsList} = require('src/test-reader/build-instructions');
+const {SkipController} = require('src/test-reader/controllers/skip-controller');
+const {OnlyController} = require('src/test-reader/controllers/only-controller');
+const {ConfigController} = require('src/test-reader/controllers/config-controller');
+const browserVersionController = require('src/test-reader/controllers/browser-version-controller');
+const TestParserAPI = require('src/test-reader/test-parser-api');
+const {NEW_BUILD_INSTRUCTION} = require('src/test-reader/read-events');
+const {Test, Suite} = require('src/test-reader/test-object');
+const RunnerEvents = require('src/constants/runner-events');
 const {makeConfigStub} = require('../../utils');
 const proxyquire = require('proxyquire').noCallThru();
 const path = require('path');
@@ -33,7 +33,7 @@ describe('test-reader/browser-test-parser', () => {
         clearRequire = sandbox.stub().named('clear-require');
         readFiles = sandbox.stub().named('readFiles').resolves();
 
-        BrowserTestParser = proxyquire('lib/test-reader/browser-test-parser', {
+        BrowserTestParser = proxyquire('src/test-reader/browser-test-parser', {
             'clear-require': clearRequire,
             './mocha-reader': {readFiles}
         }).BrowserTestParser;

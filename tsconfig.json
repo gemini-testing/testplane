@@ -1,7 +1,7 @@
 {
     "extends": "./tsconfig.common.json",
-    "include": ["lib"],
-    "exclude": ["lib/**/__*", "lib/**/*.test.ts"],
+    "include": ["src"],
+    "exclude": ["src/**/__*", "src/**/*.test.ts"],
     "compilerOptions": {
         "outDir": "build",
     }

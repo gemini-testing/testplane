@@ -1,8 +1,8 @@
 'use strict';
 
-const {InstructionsList} = require('lib/test-reader/build-instructions');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {Suite} = require('lib/test-reader/test-object');
+const {InstructionsList} = require('src/test-reader/build-instructions');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {Suite} = require('src/test-reader/test-object');
 
 describe('test-reader/build-instructions', () => {
     const sandbox = sinon.sandbox.create();

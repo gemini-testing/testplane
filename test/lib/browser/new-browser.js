@@ -1,11 +1,11 @@
 'use strict';
 
 const webdriverio = require('webdriverio');
-const logger = require('lib/utils/logger');
-const signalHandler = require('lib/signal-handler');
-const history = require('lib/browser/history');
+const logger = require('src/utils/logger');
+const signalHandler = require('src/signal-handler');
+const history = require('src/browser/history');
 const {mkNewBrowser_: mkBrowser_, mkSessionStub_} = require('./utils');
-const {WEBDRIVER_PROTOCOL} = require('lib/constants/config');
+const {WEBDRIVER_PROTOCOL} = require('src/constants/config');
 
 describe('NewBrowser', () => {
     const sandbox = sinon.sandbox.create();

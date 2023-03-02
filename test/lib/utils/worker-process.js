@@ -1,6 +1,6 @@
 'use strict';
 
-const WorkerProcess = require('lib/utils/worker-process');
+const WorkerProcess = require('src/utils/worker-process');
 
 describe('WorkerProcess', () => {
     describe('send', () => {

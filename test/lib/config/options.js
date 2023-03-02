@@ -1,9 +1,9 @@
 'use strict';
 
 const _ = require('lodash');
-const Config = require('lib/config');
-const defaults = require('lib/config/defaults');
-const parser = require('lib/config/options');
+const Config = require('src/config');
+const defaults = require('src/config/defaults');
+const parser = require('src/config/options');
 const {MissingOptionError} = require('gemini-configparser');
 
 describe('config options', () => {
