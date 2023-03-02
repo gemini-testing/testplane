@@ -21,7 +21,7 @@ exports.build = (browser, opts = {}) => {
         output: {screw_ie8: false} // eslint-disable-line camelcase
     }, 'uglifyify');
 
-    const lib = opts.calibration && opts.calibration.needsCompatLib ? './lib.compat.js' : './lib.native.js';
+    const lib = opts.calibration && opts.calibration.needsCompatLib ? './src.compat.js' : './src.native.js';
     const ignoreAreas = opts.supportDeprecated ? './ignore-areas.deprecated.js' : './ignore-areas.js';
 
     script.transform({
