@@ -9,7 +9,7 @@
   ],
   "types": "./typings/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && copyfiles --up 1 'src/browser/client-scripts/*' build",
     "check-types": "tsc --project tsconfig.spec.json",
     "clean": "rimraf build/ *.tsbuildinfo",
     "coverage": "nyc --reporter=text npm run test-unit",
@@ -84,6 +84,7 @@
     "app-module-path": "^2.2.0",
     "chai": "^4.1.1",
     "chai-as-promised": "^7.1.1",
+    "copyfiles": "^2.4.1",
     "doctoc": "^2.2.0",
     "escape-string-regexp": "1.0.5",
     "eslint": "^8.25.0",
