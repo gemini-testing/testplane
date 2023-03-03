@@ -9,8 +9,8 @@ describe('temp', () => {
 
     beforeEach(() => {
         sandbox.stub(nodeTemp);
-        clearRequire(require.resolve('lib/temp'));
-        temp = require('lib/temp');
+        clearRequire(require.resolve('src/temp'));
+        temp = require('src/temp');
     });
 
     afterEach(() => sandbox.restore());

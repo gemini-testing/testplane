@@ -3,9 +3,9 @@
 const proxyquire = require('proxyquire');
 const {EventEmitter} = require('events');
 const _ = require('lodash');
-const RuntimeConfig = require('lib/config/runtime-config');
-const Events = require('lib/constants/runner-events');
-const WorkerProcess = require('lib/utils/worker-process');
+const RuntimeConfig = require('src/config/runtime-config');
+const Events = require('src/constants/runner-events');
+const WorkerProcess = require('src/utils/worker-process');
 
 describe('WorkersRegistry', () => {
     const sandbox = sinon.sandbox.create();
@@ -17,7 +17,7 @@ describe('WorkersRegistry', () => {
             system: {}
         });
 
-        const WorkersRegistry = proxyquire('../../../lib/utils/workers-registry', {'worker-farm': workerFarm});
+        const WorkersRegistry = proxyquire('../../../src/utils/workers-registry', {'worker-farm': workerFarm});
         const workersRegistry = WorkersRegistry.create(config);
         workersRegistry.init();
 
@@ -61,7 +61,7 @@ describe('WorkersRegistry', () => {
                     maxRetries: 0,
                     onChild: sinon.match.func
                 },
-                sinon.match('lib/utils/processor.js')
+                sinon.match('src/utils/processor.js')
             );
         });
 
@@ -85,7 +85,7 @@ describe('WorkersRegistry', () => {
                     maxRetries: 0,
                     onChild: sinon.match.func
                 },
-                sinon.match('lib/utils/processor.js')
+                sinon.match('src/utils/processor.js')
             );
         });
     });

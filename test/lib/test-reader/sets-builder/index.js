@@ -2,9 +2,9 @@
 
 const globExtra = require('glob-extra');
 const fs = require('fs');
-const SetBuilder = require('lib/test-reader/sets-builder');
-const SetCollection = require('lib/test-reader/sets-builder/set-collection');
-const TestSet = require('lib/test-reader/sets-builder/test-set');
+const SetBuilder = require('src/test-reader/sets-builder');
+const SetCollection = require('src/test-reader/sets-builder/set-collection');
+const TestSet = require('src/test-reader/sets-builder/test-set');
 
 describe('test-reader/sets-builder', () => {
     const sandbox = sinon.sandbox.create();

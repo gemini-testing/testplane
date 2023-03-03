@@ -1,9 +1,9 @@
 'use strict';
 
-const {SkipController} = require('lib/test-reader/controllers/skip-controller');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {ConfigurableTestObject} = require('lib/test-reader/test-object/configurable-test-object');
-const ReadEvents = require('lib/test-reader/read-events');
+const {SkipController} = require('src/test-reader/controllers/skip-controller');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {ConfigurableTestObject} = require('src/test-reader/test-object/configurable-test-object');
+const ReadEvents = require('src/test-reader/read-events');
 const {EventEmitter} = require('events');
 
 describe('test-reader/controllers/skip-controller', () => {

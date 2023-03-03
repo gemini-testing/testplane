@@ -15,7 +15,7 @@ describe('reporters/informers', () => {
 
             sandbox.stub(fs, 'ensureDir');
 
-            ({initInformer} = proxyquire('lib/reporters/informers', {
+            ({initInformer} = proxyquire('src/reporters/informers', {
                 './file': {create: createFileInformer},
                 './console': {create: createConsoleInformer}
             }));

@@ -1,7 +1,7 @@
 'use strict';
 
-const Callstack = require('lib/browser/history/callstack');
-const {historyDataMap} = require('lib/browser/history/utils');
+const Callstack = require('src/browser/history/callstack');
+const {historyDataMap} = require('src/browser/history/utils');
 
 describe('commands-history', () => {
     describe('callstack', () => {

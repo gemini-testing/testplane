@@ -1,8 +1,8 @@
 'use strict';
 
-const {ConfigController} = require('lib/test-reader/controllers/config-controller');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const ReadEvents = require('lib/test-reader/read-events');
+const {ConfigController} = require('src/test-reader/controllers/config-controller');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const ReadEvents = require('src/test-reader/read-events');
 const {EventEmitter} = require('events');
 
 describe('test-reader/controllers/config-controller', () => {

@@ -1,9 +1,9 @@
 'use strict';
 
 const Promise = require('bluebird');
-const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const {Suite, Test, Hook} = require('lib/test-reader/test-object');
+const HookRunner = require('src/worker/runner/test-runner/hook-runner');
+const ExecutionThread = require('src/worker/runner/test-runner/execution-thread');
+const {Suite, Test, Hook} = require('src/test-reader/test-object');
 
 describe('worker/runner/test-runner/hook-runner', () => {
     const sandbox = sinon.sandbox.create();

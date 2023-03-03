@@ -3,10 +3,10 @@
 const Promise = require('bluebird');
 const _ = require('lodash');
 
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const {Test} = require('lib/test-reader/test-object');
+const AssertViewResults = require('src/browser/commands/assert-view/assert-view-results');
+const ExecutionThread = require('src/worker/runner/test-runner/execution-thread');
+const OneTimeScreenshooter = require('src/worker/runner/test-runner/one-time-screenshooter');
+const {Test} = require('src/test-reader/test-object');
 
 describe('worker/runner/test-runner/execution-thread', () => {
     const sandbox = sinon.sandbox.create();

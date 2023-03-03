@@ -1,11 +1,11 @@
 'use strict';
 
-const {MochaEventBus} = require('lib/test-reader/mocha-reader/mocha-event-bus');
-const {TreeBuilderDecorator} = require('lib/test-reader/mocha-reader/tree-builder-decorator');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {Test} = require('lib/test-reader/test-object');
-const ReadEvents = require('lib/test-reader/read-events');
-const RunnerEvents = require('lib/constants/runner-events');
+const {MochaEventBus} = require('src/test-reader/mocha-reader/mocha-event-bus');
+const {TreeBuilderDecorator} = require('src/test-reader/mocha-reader/tree-builder-decorator');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {Test} = require('src/test-reader/test-object');
+const ReadEvents = require('src/test-reader/read-events');
+const RunnerEvents = require('src/constants/runner-events');
 const Mocha = require('mocha');
 const proxyquire = require('proxyquire').noCallThru();
 const {EventEmitter} = require('events');
@@ -36,7 +36,7 @@ describe('test-reader/mocha-reader', () => {
         MochaConstructorStub = sinon.stub().returns(mkMochaStub_());
         MochaConstructorStub.Suite = Mocha.Suite;
 
-        readFiles = proxyquire('lib/test-reader/mocha-reader', {
+        readFiles = proxyquire('src/test-reader/mocha-reader', {
             'mocha': MochaConstructorStub
         }).readFiles;
 

@@ -2,10 +2,10 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
-const Image = require('lib/image');
-const ScreenShooter = require('lib/browser/screen-shooter');
-const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const logger = require('lib/utils/logger');
+const Image = require('src/image');
+const ScreenShooter = require('src/browser/screen-shooter');
+const OneTimeScreenshooter = require('src/worker/runner/test-runner/one-time-screenshooter');
+const logger = require('src/utils/logger');
 const {mkSessionStub_} = require('../../../browser/utils');
 
 describe('worker/runner/test-runner/one-time-screenshooter', () => {

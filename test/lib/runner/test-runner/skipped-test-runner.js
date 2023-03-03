@@ -1,8 +1,8 @@
 'use strict';
 
-const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
-const Events = require('lib/constants/runner-events');
-const {Test, Suite} = require('lib/test-reader/test-object');
+const SkippedTestRunner = require('src/runner/test-runner/skipped-test-runner');
+const Events = require('src/constants/runner-events');
+const {Test, Suite} = require('src/test-reader/test-object');
 
 describe('runner/test-runner/skipped-test-runner', () => {
     const sandbox = sinon.sandbox.create();

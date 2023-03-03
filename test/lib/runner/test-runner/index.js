@@ -1,10 +1,10 @@
 'use strict';
 
-const TestRunner = require('lib/runner/test-runner');
-const SkippedTestRunner = require('lib/runner/test-runner/skipped-test-runner');
-const InsistantTestRunner = require('lib/runner/test-runner/insistant-test-runner');
-const BrowserAgent = require('lib/runner/browser-agent');
-const {Test} = require('lib/test-reader/test-object');
+const TestRunner = require('src/runner/test-runner');
+const SkippedTestRunner = require('src/runner/test-runner/skipped-test-runner');
+const InsistantTestRunner = require('src/runner/test-runner/insistant-test-runner');
+const BrowserAgent = require('src/runner/browser-agent');
+const {Test} = require('src/test-reader/test-object');
 
 const {makeConfigStub} = require('../../../utils');
 

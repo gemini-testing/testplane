@@ -21,7 +21,7 @@ describe('"initReporters" method', () => {
         Reporter = createReporter(attachRunner);
         runner = new EventEmitter();
 
-        ({initReporters} = proxyquire('lib/reporters', {
+        ({initReporters} = proxyquire('src/reporters', {
             './reporter': Reporter
         }));
     });
@@ -68,7 +68,7 @@ describe('"initReporters" method', () => {
             const attachRunner1 = sandbox.stub();
             const attachRunner2 = sandbox.stub();
 
-            ({initReporters} = proxyquire('lib/reporters', {
+            ({initReporters} = proxyquire('src/reporters', {
                 './reporter-1': createReporter(attachRunner1),
                 './reporter-2': createReporter(attachRunner2)
             }));

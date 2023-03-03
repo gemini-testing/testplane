@@ -2,14 +2,14 @@
 
 const _ = require('lodash');
 const Promise = require('bluebird');
-const TestRunner = require('lib/worker/runner/test-runner');
-const HookRunner = require('lib/worker/runner/test-runner/hook-runner');
-const ExecutionThread = require('lib/worker/runner/test-runner/execution-thread');
-const OneTimeScreenshooter = require('lib/worker/runner/test-runner/one-time-screenshooter');
-const BrowserAgent = require('lib/worker/runner/browser-agent');
-const AssertViewError = require('lib/browser/commands/assert-view/errors/assert-view-error');
-const AssertViewResults = require('lib/browser/commands/assert-view/assert-view-results');
-const {Suite, Test} = require('lib/test-reader/test-object');
+const TestRunner = require('src/worker/runner/test-runner');
+const HookRunner = require('src/worker/runner/test-runner/hook-runner');
+const ExecutionThread = require('src/worker/runner/test-runner/execution-thread');
+const OneTimeScreenshooter = require('src/worker/runner/test-runner/one-time-screenshooter');
+const BrowserAgent = require('src/worker/runner/browser-agent');
+const AssertViewError = require('src/browser/commands/assert-view/errors/assert-view-error');
+const AssertViewResults = require('src/browser/commands/assert-view/assert-view-results');
+const {Suite, Test} = require('src/test-reader/test-object');
 const {makeConfigStub} = require('../../../../utils');
 
 describe('worker/runner/test-runner', () => {

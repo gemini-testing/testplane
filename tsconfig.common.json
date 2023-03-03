@@ -1,0 +1,19 @@
+{
+    "include": ["src"],
+    "compilerOptions": {
+        "allowJs": true,
+        "declaration": true,
+        "declarationMap": false,
+        "esModuleInterop": true,
+        "module": "commonjs",
+        "noEmitOnError": true,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitReturns": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "skipLibCheck": true,
+        "sourceMap": true,
+        "strict": true,
+        "target": "es2017"
+    }
+}

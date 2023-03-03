@@ -2,7 +2,7 @@
 
 const P = require('bluebird');
 
-const {normalizeCommandArgs, runWithHooks} = require('lib/browser/history/utils');
+const {normalizeCommandArgs, runWithHooks} = require('src/browser/history/utils');
 
 describe('commands-history', () => {
     describe('utils', () => {

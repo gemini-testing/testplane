@@ -1,8 +1,8 @@
 'use strict';
 
-const Camera = require('lib/browser/camera');
-const Image = require('lib/image');
-const utils = require('lib/browser/camera/utils');
+const Camera = require('src/browser/camera');
+const Image = require('src/image');
+const utils = require('src/browser/camera/utils');
 
 describe('browser/camera', () => {
     const sandbox = sinon.sandbox.create();

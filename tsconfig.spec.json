@@ -1,0 +1,11 @@
+{
+    "extends": "./tsconfig.common.json",
+    "include": ["src", "test"],
+    "compilerOptions": {
+        "baseUrl": ".",
+        "noEmit": true,
+        "paths": {
+            "src/*": ["src/*"]
+        }
+    }
+}

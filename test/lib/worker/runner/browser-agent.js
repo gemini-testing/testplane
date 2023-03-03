@@ -1,7 +1,7 @@
 'use strict';
 
-const BrowserAgent = require('lib/worker/runner/browser-agent');
-const BrowserPool = require('lib/worker/runner/browser-pool');
+const BrowserAgent = require('src/worker/runner/browser-agent');
+const BrowserPool = require('src/worker/runner/browser-pool');
 
 describe('worker/browser-agent', () => {
     let browserPool;

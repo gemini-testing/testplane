@@ -2,9 +2,9 @@
 
 const _ = require('lodash');
 
-const Image = require('lib/image');
-const Viewport = require('lib/browser/screen-shooter/viewport');
-const CoordValidator = require('lib/browser/screen-shooter/viewport/coord-validator');
+const Image = require('src/image');
+const Viewport = require('src/browser/screen-shooter/viewport');
+const CoordValidator = require('src/browser/screen-shooter/viewport/coord-validator');
 
 describe('Viewport', () => {
     const sandbox = sinon.sandbox.create();

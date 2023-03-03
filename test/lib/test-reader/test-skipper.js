@@ -1,7 +1,7 @@
 'use strict';
 
-const TestSkipper = require('lib/test-reader/test-skipper');
-const logger = require('lib/utils/logger');
+const TestSkipper = require('src/test-reader/test-skipper');
+const logger = require('src/utils/logger');
 
 describe('test-skipper', () => {
     const sandbox = sinon.sandbox.create();

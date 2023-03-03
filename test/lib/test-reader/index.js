@@ -1,11 +1,11 @@
 'use strict';
 
-const TestReader = require('lib/test-reader');
-const {BrowserTestParser: TestParser} = require('lib/test-reader/browser-test-parser');
-const TestSkipper = require('lib/test-reader/test-skipper');
-const Events = require('lib/constants/runner-events');
-const SetsBuilder = require('lib/test-reader/sets-builder');
-const SetCollection = require('lib/test-reader/sets-builder/set-collection');
+const TestReader = require('src/test-reader');
+const {BrowserTestParser: TestParser} = require('src/test-reader/browser-test-parser');
+const TestSkipper = require('src/test-reader/test-skipper');
+const Events = require('src/constants/runner-events');
+const SetsBuilder = require('src/test-reader/sets-builder');
+const SetCollection = require('src/test-reader/sets-builder/set-collection');
 const {makeConfigStub} = require('../../utils');
 const _ = require('lodash');
 const Promise = require('bluebird');

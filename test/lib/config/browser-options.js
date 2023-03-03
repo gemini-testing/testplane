@@ -2,9 +2,9 @@
 
 const _ = require('lodash');
 
-const Config = require('lib/config');
-const defaults = require('lib/config/defaults');
-const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL} = require('lib/constants/config');
+const Config = require('src/config');
+const defaults = require('src/config/defaults');
+const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL} = require('src/constants/config');
 
 describe('config browser-options', () => {
     const sandbox = sinon.sandbox.create();

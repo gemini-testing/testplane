@@ -1,7 +1,7 @@
 const fs = require('fs');
 const chalk = require('chalk');
-const logger = require('lib/utils/logger');
-const FileInformer = require('lib/reporters/informers/file');
+const logger = require('src/utils/logger');
+const FileInformer = require('src/reporters/informers/file');
 
 describe('reporter/informers/file', () => {
     const sandbox = sinon.sandbox.create();

@@ -1,9 +1,9 @@
 'use strict';
 
-const {TreeBuilderDecorator} = require('lib/test-reader/mocha-reader/tree-builder-decorator');
-const {TreeBuilder} = require('lib/test-reader/tree-builder');
-const {Suite, Test, Hook} = require('lib/test-reader/test-object');
-const crypto = require('lib/utils/crypto');
+const {TreeBuilderDecorator} = require('src/test-reader/mocha-reader/tree-builder-decorator');
+const {TreeBuilder} = require('src/test-reader/tree-builder');
+const {Suite, Test, Hook} = require('src/test-reader/test-object');
+const crypto = require('src/utils/crypto');
 
 describe('test-reader/mocha-reader/tree-builder-decorator', () => {
     const sandbox = sinon.sandbox.create();

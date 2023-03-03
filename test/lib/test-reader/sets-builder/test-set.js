@@ -11,7 +11,7 @@ describe('test-reader/sets-builder/test-set', () => {
         globExtraStub = {
             expandPaths: sinon.stub()
         };
-        TestSet = proxyquire('lib/test-reader/sets-builder/test-set', {
+        TestSet = proxyquire('src/test-reader/sets-builder/test-set', {
             'glob-extra': globExtraStub
         });
     });

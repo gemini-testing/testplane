@@ -1,9 +1,28 @@
-'use strict';
+import _ from "lodash";
+import TestCollection from 'src/test-collection';
+import {Test} from 'src/test-reader/test-object';
 
-const TestCollection = require('lib/test-collection');
-const {Test} = require('lib/test-reader/test-object');
+import type {Suite} from "src/test-reader/test-object/suite";
+
+type TestAndBrowser = { test: Test, browser: string };
 
 describe('test-collection', () => {
+    interface TestOpts {
+        title: string;
+        browserVersion: string;
+        parent: Suite;
+    }
+    const mkTest_ = (opts: Partial<TestOpts> = {}): Test => {
+        const paramNames = ['title'];
+
+        const test = new Test(_.pick(opts, paramNames) as any);
+        for (const [key, value] of _.entries(_.omit(opts, paramNames))) {
+            _.set(test, key, value);
+        }
+
+        return test;
+    }
+
     describe('getBrowsers', () => {
         it('should return browsers from passed specs', () => {
             const collection = TestCollection.create({
@@ -19,9 +38,9 @@ describe('test-collection', () => {
 
     describe('mapTests', () => {
         it('should map over tests for passed browser', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -40,9 +59,9 @@ describe('test-collection', () => {
         });
 
         it('should map over all tests for all if browser not specified', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -69,16 +88,16 @@ describe('test-collection', () => {
                 'bro2': []
             });
 
-            collection.sortTests('bro1', (a, b) => a.title < b.title);
+            collection.sortTests('bro1', (a, b) => Number(a.title < b.title));
 
             assert.deepEqual(collection.mapTests('bro1', (t) => t), []);
             assert.deepEqual(collection.mapTests('bro2', (t) => t), []);
         });
 
         it('should sort all tests for the specified browser', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1, test2, test3],
@@ -108,9 +127,9 @@ describe('test-collection', () => {
         });
 
         it('should sort all tests for all browsers if browser not specified', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1, test2, test3],
@@ -140,16 +159,16 @@ describe('test-collection', () => {
 
     describe('eachTest', () => {
         it('should iterate over tests for passed browser', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
                 'bro2': [test2, test3]
             });
 
-            const tests = [];
+            const tests: TestAndBrowser[] = [];
             collection.eachTest('bro2', (test, browser) => tests.push({test, browser}));
 
             assert.deepEqual(
@@ -162,16 +181,16 @@ describe('test-collection', () => {
         });
 
         it('should iterate over all tests for all if browser not specified', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2'};
-            const test3 = {title: 'test3'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
                 'bro2': [test2, test3]
             });
 
-            const tests = [];
+            const tests: TestAndBrowser[] = [];
             collection.eachTest((test, browser) => tests.push({test, browser}));
 
             assert.deepEqual(
@@ -187,16 +206,16 @@ describe('test-collection', () => {
 
     describe('eachTestByVersions', () => {
         it('should iterate by columns over tests', () => {
-            const test1 = {title: 'test1'};
-            const test2 = {title: 'test2', browserVersion: '1.0'};
-            const test3 = {title: 'test3', browserVersion: '1.0'};
-            const test4 = {title: 'test4', browserVersion: '2.0'};
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2', browserVersion: '1.0'});
+            const test3 = mkTest_({title: 'test3', browserVersion: '1.0'});
+            const test4 = mkTest_({title: 'test4', browserVersion: '2.0'});
 
             const collection = TestCollection.create({
                 'bro': [test1, test2, test3, test4]
             });
 
-            const tests = [];
+            const tests: { test: Test, browserId: string, browserVersion?: string }[] = [];
             collection.eachTestByVersions(
                 'bro',
                 (test, browserId, browserVersion) => tests.push({test, browserId, browserVersion})
@@ -216,9 +235,9 @@ describe('test-collection', () => {
 
     describe('disableAll', () => {
         it('should disable all tests', () => {
-            const test1 = new Test({title: 'test1'});
-            const test2 = new Test({title: 'test2'});
-            const test3 = new Test({title: 'test3'});
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -231,9 +250,9 @@ describe('test-collection', () => {
         });
 
         it('should disable all tests for specified browser', () => {
-            const test1 = new Test({title: 'test1'});
-            const test2 = new Test({title: 'test2'});
-            const test3 = new Test({title: 'test3'});
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
+            const test3 = mkTest_({title: 'test3'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -255,7 +274,7 @@ describe('test-collection', () => {
 
     describe('enableAll', () => {
         it('should do nothing for tests which were not disabled', () => {
-            const test = new Test({title: 'test'});
+            const test = mkTest_({title: 'test'});
 
             const collection = TestCollection.create({
                 'bro': [test]
@@ -267,8 +286,8 @@ describe('test-collection', () => {
         });
 
         it('should enable all previously disabled tests', () => {
-            const test1 = new Test({title: 'test1'});
-            const test2 = new Test({title: 'test2'});
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -282,7 +301,7 @@ describe('test-collection', () => {
         });
 
         it('should not enable tests which were originally disabled', () => {
-            const test = new Test({title: 'test'});
+            const test = mkTest_({title: 'test'});
             test.disable();
 
             const collection = TestCollection.create({
@@ -296,8 +315,8 @@ describe('test-collection', () => {
         });
 
         it('should enable all previously disabled tests for passed browser', () => {
-            const test1 = new Test({title: 'test1'});
-            const test2 = new Test({title: 'test2'});
+            const test1 = mkTest_({title: 'test1'});
+            const test2 = mkTest_({title: 'test2'});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -321,8 +340,8 @@ describe('test-collection', () => {
     describe('disableTest', () => {
         it('should disable test in all browsers', () => {
             const collection = TestCollection.create({
-                'bro1': [new Test({title: 'foo bar'})],
-                'bro2': [new Test({title: 'foo bar'})]
+                'bro1': [mkTest_({title: 'foo bar'})],
+                'bro2': [mkTest_({title: 'foo bar'})]
             });
 
             collection.disableTest('foo bar');
@@ -335,8 +354,8 @@ describe('test-collection', () => {
 
         it('should disable test in specified browser', () => {
             const collection = TestCollection.create({
-                'bro1': [new Test({title: 'foo bar'})],
-                'bro2': [new Test({title: 'foo bar'})]
+                'bro1': [mkTest_({title: 'foo bar'})],
+                'bro2': [mkTest_({title: 'foo bar'})]
             });
 
             collection.disableTest('foo bar', 'bro1');
@@ -347,8 +366,8 @@ describe('test-collection', () => {
 
         it('should disable test in all browsers where it exists', () => {
             const collection = TestCollection.create({
-                'bro1': [new Test({title: 'foo bar'})],
-                'bro2': [new Test({title: 'baz qux'})]
+                'bro1': [mkTest_({title: 'foo bar'})],
+                'bro2': [mkTest_({title: 'baz qux'})]
             });
 
             collection.disableTest('foo bar');
@@ -360,14 +379,14 @@ describe('test-collection', () => {
         it('should be chainable', () => {
             const collection = TestCollection.create({});
 
-            assert.equal(collection.disableTest(), collection);
+            assert.equal(collection.disableTest(""), collection);
         });
     });
 
     describe('enableTest', () => {
         it('should do nothing for tests which were not disabled', () => {
             const collection = TestCollection.create({
-                'bro': [new Test({title: 'foo bar'})]
+                'bro': [mkTest_({title: 'foo bar'})]
             });
 
             collection
@@ -382,8 +401,8 @@ describe('test-collection', () => {
 
         it('should enable test in all browsers', () => {
             const collection = TestCollection.create({
-                'bro1': [new Test({title: 'foo bar'})],
-                'bro2': [new Test({title: 'foo bar'})]
+                'bro1': [mkTest_({title: 'foo bar'})],
+                'bro2': [mkTest_({title: 'foo bar'})]
             });
 
             collection
@@ -398,7 +417,7 @@ describe('test-collection', () => {
 
         it('should enable previously disabled single test', () => {
             const collection = TestCollection.create({
-                'bro': [new Test({title: 'foo bar'})]
+                'bro': [mkTest_({title: 'foo bar'})]
             });
 
             collection
@@ -410,7 +429,7 @@ describe('test-collection', () => {
 
         it('should enable test even if it was disabled twice', () => {
             const collection = TestCollection.create({
-                'bro': [new Test({title: 'foo bar'})]
+                'bro': [mkTest_({title: 'foo bar'})]
             });
 
             collection
@@ -423,8 +442,8 @@ describe('test-collection', () => {
 
         it('should enable test in specified browser', () => {
             const collection = TestCollection.create({
-                'bro1': [new Test({title: 'foo bar'})],
-                'bro2': [new Test({title: 'foo bar'})]
+                'bro1': [mkTest_({title: 'foo bar'})],
+                'bro2': [mkTest_({title: 'foo bar'})]
             });
 
             collection
@@ -438,16 +457,16 @@ describe('test-collection', () => {
         it('should be chainable', () => {
             const collection = TestCollection.create({});
 
-            assert.equal(collection.enableTest(), collection);
+            assert.equal(collection.enableTest(""), collection);
         });
     });
 
     describe('getRootSuite', () => {
         it('should return root suite for browser', () => {
-            const root1 = {title: 'root1', root: true};
-            const root2 = {title: 'root2', root: true};
-            const test1 = {title: 'test1', parent: root1};
-            const test2 = {title: 'test2', parent: {parent: root2}};
+            const root1 = {title: 'root1', root: true} as Suite;
+            const root2 = {title: 'root2', root: true} as Suite;
+            const test1 = mkTest_({title: 'test1', parent: root1});
+            const test2 = mkTest_({title: 'test2', parent: {parent: root2} as Suite});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
@@ -469,32 +488,32 @@ describe('test-collection', () => {
 
     describe('eachRootSuite', () => {
         it('should iterate over all root suites', () => {
-            const root1 = {title: 'root1', root: true};
-            const root2 = {title: 'root2', root: true};
-            const test1 = {title: 'test1', parent: root1};
-            const test2 = {title: 'test2', parent: {parent: root2}};
+            const root1 = {title: 'root1', root: true} as Suite;
+            const root2 = {title: 'root2', root: true} as Suite;
+            const test1 = mkTest_({title: 'test1', parent: root1});
+            const test2 = mkTest_({title: 'test2', parent: {parent: root2} as Suite});
 
             const collection = TestCollection.create({
                 'bro1': [test1],
                 'bro2': [test2]
             });
 
-            const rootSuites = {};
+            const rootSuites: Record<string, Suite> = {};
             collection.eachRootSuite((root, browser) => rootSuites[browser] = root);
 
             assert.deepEqual(rootSuites, {bro1: root1, bro2: root2});
         });
 
         it('should ignore root suites without tests', () => {
-            const root = {title: 'root', root: true};
-            const test = {title: 'test', parent: root};
+            const root = {title: 'root', root: true} as Suite;
+            const test = mkTest_({title: 'test', parent: root});
 
             const collection = TestCollection.create({
                 'bro1': [test],
                 'bro2': []
             });
 
-            const rootSuites = {};
+            const rootSuites: Record<string, Suite> = {};
             collection.eachRootSuite((root, browser) => rootSuites[browser] = root);
 
             assert.deepEqual(rootSuites, {bro1: root});

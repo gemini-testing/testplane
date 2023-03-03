@@ -2,9 +2,9 @@
 
 const P = require('bluebird');
 const webdriverio = require('webdriverio');
-const cmds = require('../../../../lib/browser/history/commands');
-const Callstack = require('../../../../lib/browser/history/callstack');
-const {initCommandHistory} = require('../../../../lib/browser/history');
+const cmds = require('../../../../src/browser/history/commands');
+const Callstack = require('../../../../src/browser/history/callstack');
+const {initCommandHistory} = require('../../../../src/browser/history');
 const {mkNewBrowser_, mkExistingBrowser_, mkSessionStub_} = require('../utils');
 
 describe('commands-history', () => {

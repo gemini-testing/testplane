@@ -1,7 +1,7 @@
 'use strict';
 
-const {Test} = require('lib/test-reader/test-object');
-const {ConfigurableTestObject} = require('lib/test-reader/test-object/configurable-test-object');
+const {Test} = require('src/test-reader/test-object');
+const {ConfigurableTestObject} = require('src/test-reader/test-object/configurable-test-object');
 
 describe('test-reader/test-object/test', () => {
     const sandbox = sinon.sandbox.create();
