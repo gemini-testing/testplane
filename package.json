@@ -50,6 +50,7 @@
     "browserify": "^13.3.0",
     "chalk": "^1.1.1",
     "clear-require": "^1.0.1",
+    "date-fns": "^2.29.3",
     "debug": "^2.6.9",
     "expect-webdriverio": "^3.5.3",
     "fastq": "^1.13.0",

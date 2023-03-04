@@ -1,7 +1,14 @@
 'use strict';
 
+const {format} = require('date-fns');
+
+const withTimestampPrefix = (logFnName) => (...args) => {
+    const timestamp = format(new Date(), 'HH:mm:ss OO');
+    console[logFnName](`[${timestamp}]`, ...args);
+};
+
 module.exports = {
-    log: console.log,
-    warn: console.warn,
-    error: console.error
+    log: withTimestampPrefix('log'),
+    warn: withTimestampPrefix('warn'),
+    error: withTimestampPrefix('error')
 };
