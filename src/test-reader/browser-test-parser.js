@@ -44,16 +44,17 @@ class BrowserTestParser extends EventEmitter {
 
     async loadFiles(files) {
         const eventBus = new EventEmitter();
-        const browserConfig = this.#config.forBrowser(this.#browserId);
+        const {system: {ctx, mochaOpts}} = this.#config;
 
         global.hermione = {
             browser: browserVersionController.mkProvider(this.#config.getBrowserIds(), eventBus),
             config: ConfigController.create(eventBus),
-            ctx: _.clone(browserConfig.system.ctx),
+            ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),
             skip: SkipController.create(eventBus)
         };
 
+        const browserConfig = this.#config.forBrowser(this.#browserId);
         this.#decorateRootSuiteWithBrowserData(browserConfig);
         this.#decorateRootSuiteWithTimeout(browserConfig);
 
@@ -63,7 +64,7 @@ class BrowserTestParser extends EventEmitter {
         this.#clearRequireCach(files);
 
         const esmDecorator = (f) => f + `?browserId=${this.#browserId}`;
-        await readFiles(files, {esmDecorator, config: browserConfig.system.mochaOpts, eventBus});
+        await readFiles(files, {esmDecorator, config: mochaOpts, eventBus});
 
         return this;
     }

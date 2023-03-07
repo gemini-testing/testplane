@@ -111,17 +111,6 @@ describe('test-reader/browser-test-parser', () => {
     });
 
     describe('loadFiles', () => {
-        const mkConfigWithBrowserSection_ = (opts = {}) => {
-            const config = makeConfigStub();
-            sandbox.stub(config, 'forBrowser').returns({
-                system: {},
-                desiredCapabilities: {},
-                ...opts
-            });
-
-            return config;
-        };
-
         const loadFiles_ = async ({parser, files, config} = {}) => {
             parser = parser || mkBrowserTestParser_({config});
             return parser.loadFiles(files || []);
@@ -134,7 +123,7 @@ describe('test-reader/browser-test-parser', () => {
         });
 
         it('should get browser config for passed browser id', async () => {
-            const config = mkConfigWithBrowserSection_();
+            const config = makeConfigStub();
             const parser = mkBrowserTestParser_({config, browserId: 'foo'});
 
             await loadFiles_({parser});
@@ -151,7 +140,7 @@ describe('test-reader/browser-test-parser', () => {
 
             describe('hermione.ctx', () => {
                 it('should set hermione.ctx', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         system: {
                             ctx: {foo: 'bar'}
                         }
@@ -163,7 +152,7 @@ describe('test-reader/browser-test-parser', () => {
                 });
 
                 it('should set hermione.ctx before loading files', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         system: {
                             ctx: {foo: 'bar'}
                         }
@@ -293,7 +282,7 @@ describe('test-reader/browser-test-parser', () => {
 
             describe('browser version', () => {
                 it('root suite should be decorated with browser version if exists', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         desiredCapabilities: {
                             version: '100500',
                             browserVersion: '500100'
@@ -306,7 +295,7 @@ describe('test-reader/browser-test-parser', () => {
                 });
 
                 it('root suite should be decorated with version if no browser version specified', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         desiredCapabilities: {
                             version: '100500'
                         }
@@ -320,7 +309,7 @@ describe('test-reader/browser-test-parser', () => {
 
             describe('test timeout', () => {
                 it('root suite should not be decorated with timeout if "testTimeout" is not specified in config', async () => {
-                    const config = mkConfigWithBrowserSection_();
+                    const config = makeConfigStub();
 
                     await loadFiles_({config});
 
@@ -328,7 +317,7 @@ describe('test-reader/browser-test-parser', () => {
                 });
 
                 it('root suite should be decorated with timeout if "testTimeout" is specified in config', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         testTimeout: 100500
                     });
 
@@ -338,7 +327,7 @@ describe('test-reader/browser-test-parser', () => {
                 });
 
                 it('root suite should be decorated with timeout even if "testTimeout" is set to 0', async () => {
-                    const config = mkConfigWithBrowserSection_({
+                    const config = makeConfigStub({
                         testTimeout: 0
                     });
 
@@ -535,7 +524,7 @@ describe('test-reader/browser-test-parser', () => {
             });
 
             it('should pass mocha opts to reader', async () => {
-                const config = mkConfigWithBrowserSection_({
+                const config = makeConfigStub({
                     system: {
                         mochaOpts: {
                             foo: 'bar'

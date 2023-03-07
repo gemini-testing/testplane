@@ -37,22 +37,24 @@ function makeConfigStub(opts = {}) {
         configPath: opts.configPath
     };
 
-    opts.browsers.forEach(function(browserId) {
-        config.browsers[browserId] = {
-            retry: opts.retry,
-            shouldRetry: opts.shouldRetry,
-            sessionsPerBrowser: opts.sessionsPerBrowser,
-            testsPerSession: opts.testsPerSession,
-            desiredCapabilities: _.isEmpty(opts.desiredCapabilities)
-                ? {browserName: browserId, version: opts.version}
-                : opts.desiredCapabilities,
-            testTimeout: opts.testTimeout,
-            system: opts.system
-        };
+    const mkBrowserConfig_ = (browserId) => ({
+        retry: opts.retry,
+        shouldRetry: opts.shouldRetry,
+        sessionsPerBrowser: opts.sessionsPerBrowser,
+        testsPerSession: opts.testsPerSession,
+        desiredCapabilities: _.isEmpty(opts.desiredCapabilities)
+            ? {browserName: browserId, version: opts.version}
+            : opts.desiredCapabilities,
+        testTimeout: opts.testTimeout,
+        system: opts.system
     });
 
-    config.forBrowser = (browserId) => config.browsers[browserId];
-    config.getBrowserIds = () => _.keys(config.browsers);
+    opts.browsers.forEach((browserId) => {
+        config.browsers[browserId] = mkBrowserConfig_(browserId);
+    });
+
+    config.forBrowser = sinon.stub().callsFake((browserId) => config.browsers[browserId] || mkBrowserConfig_(browserId));
+    config.getBrowserIds = () => opts.browsers;
     config.serialize = sinon.stub().returns(config);
     config.mergeWith = sinon.stub();
 
