@@ -1152,8 +1152,8 @@ Property name             | Description
 Event                     | Description
 ------------------------- | -------------
 `INIT`                    | Will be triggered before any job start (`run` or `readTests`). If handler returns a promise then job will start only after the promise will be resolved. Emitted only once no matter how many times job will be performed.
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
-`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `hermione` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read via `readTests` or `run` methods with `TestCollection` object.
 `RUNNER_START`            | Will be triggered after worker farm initialization and before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after test execution and before worker farm ends. If a handler returns a promise, worker farm will be ended only after the promise is resolved. The handler accepts an object with tests execution statistics.
@@ -1179,8 +1179,8 @@ Event                     | Description
 
 Event                     | Description
 ------------------------- | -------------
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `browser` (browser id string), `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
-`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file`, `browser` (browser id string) and `hermione` (helper which will be available in test file) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `hermione` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read each time some file is being reading during test run.
 `NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier and version as the second.
 `UPDATE_REFERENCE`        | Will be triggered after updating reference image.
@@ -1627,10 +1627,10 @@ Adds controller to `hermione` object in test files.
 Example:
 ```js
 // in plugin
-hermione.on(hermione.events.BEFORE_FILE_READ, ({file, browser, testParser}) => {
+hermione.on(hermione.events.BEFORE_FILE_READ, ({file, testParser}) => {
     testParser.setController('logger', {
         log: function(prefix) {
-            console.log(`${prefix}: Just parsed ${this.fullTitle()} from file ${file} for browser ${browser}`);
+            console.log(`${prefix}: Just parsed ${this.fullTitle()} from file ${file}`);
         }
     });
 });
