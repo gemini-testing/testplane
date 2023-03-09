@@ -99,7 +99,6 @@ class BrowserTestParser extends EventEmitter {
         const passthroughEvent_ = (event, customOpts = {}) => {
             eventBus.on(event, (data) => this.emit(event, {
                 ...data,
-                browser: this.#browserId,
                 hermione,
                 ...customOpts
             }));

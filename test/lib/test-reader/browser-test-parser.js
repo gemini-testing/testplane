@@ -426,10 +426,10 @@ describe('test-reader/browser-test-parser', () => {
                         sandbox.spy(TestParserAPI, 'create');
                     });
 
-                    const init_ = ({browserId, eventData} = {}) => {
+                    const init_ = ({eventData} = {}) => {
                         const onEvent = sinon.stub().named(`on${eventName}`);
 
-                        const parser = mkBrowserTestParser_({browserId})
+                        const parser = mkBrowserTestParser_()
                             .on(RunnerEvents[eventName], onEvent);
 
                         readFiles.callsFake((files, {eventBus}) => {
@@ -450,16 +450,6 @@ describe('test-reader/browser-test-parser', () => {
                         await loadFiles();
 
                         assert.calledOnceWith(onEvent, sinon.match(eventData));
-                    });
-
-                    it(`should extend ${eventName} event data with browser id`, async () => {
-                        const {onEvent, loadFiles} = init_({browserId: 'bro'});
-
-                        await loadFiles();
-
-                        assert.calledOnceWith(onEvent, sinon.match({
-                            browser: 'bro'
-                        }));
                     });
 
                     it(`should extend ${eventName} event data with hermione object`, async () => {
