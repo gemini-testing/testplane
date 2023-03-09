@@ -1,8 +1,8 @@
-import _ from "lodash";
+import _ from 'lodash';
 import TestCollection from 'src/test-collection';
 import {Test} from 'src/test-reader/test-object';
 
-import type {Suite} from "src/test-reader/test-object/suite";
+import type {Suite} from 'src/test-reader/test-object/suite';
 
 type TestAndBrowser = { test: Test, browser: string };
 
@@ -21,7 +21,7 @@ describe('test-collection', () => {
         }
 
         return test;
-    }
+    };
 
     describe('getBrowsers', () => {
         it('should return browsers from passed specs', () => {
@@ -379,7 +379,7 @@ describe('test-collection', () => {
         it('should be chainable', () => {
             const collection = TestCollection.create({});
 
-            assert.equal(collection.disableTest(""), collection);
+            assert.equal(collection.disableTest(''), collection);
         });
     });
 
@@ -457,7 +457,7 @@ describe('test-collection', () => {
         it('should be chainable', () => {
             const collection = TestCollection.create({});
 
-            assert.equal(collection.enableTest(""), collection);
+            assert.equal(collection.enableTest(''), collection);
         });
     });
 

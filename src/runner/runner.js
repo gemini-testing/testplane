@@ -11,5 +11,6 @@ module.exports = class Runner extends AsyncEmitter {
         throw new Error('Not implemented');
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     cancel() {}
 };

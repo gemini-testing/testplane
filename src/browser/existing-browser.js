@@ -255,6 +255,7 @@ module.exports = class ExistingBrowser extends Browser {
             }
 
             if (_.isFunction(this._session[commandName])) {
+                // eslint-disable-next-line @typescript-eslint/no-empty-function
                 this._session.overwriteCommand(commandName, () => { });
             }
         }

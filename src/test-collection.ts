@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
-import type {Suite} from "./test-reader/test-object/suite";
-import type {Test} from "./test-reader/test-object/test";
+import type {Suite} from './test-reader/test-object/suite';
+import type {Test} from './test-reader/test-object/test';
 
 type RootSuite = Suite & { root: true };
 type TestDisabled = Test & { disabled: true };
@@ -68,7 +68,7 @@ export default class TestCollection {
 
         if (browserId) {
             if (this.#specs[browserId]?.length && this.#originalSpecs[browserId]?.length) {
-                let pairs = _.zip(this.#specs[browserId], this.#originalSpecs[browserId]) as [Test, Test][];
+                const pairs = _.zip(this.#specs[browserId], this.#originalSpecs[browserId]) as [Test, Test][];
 
                 pairs.sort((p1, p2) => (cb as SortTestsCallback)(p1[0], p2[0]));
 
@@ -168,4 +168,4 @@ export default class TestCollection {
 
         return this;
     }
-};
+}

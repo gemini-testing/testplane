@@ -100,4 +100,4 @@ declare namespace WebdriverIO {
     }
 }
 
-declare const expect: ExpectWebdriverIO.Expect
+declare const expect: ExpectWebdriverIO.Expect;

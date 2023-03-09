@@ -4,6 +4,7 @@ module.exports = class Pool {
     /**
      * @returns {Promise.<Browser>}
      */
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     getBrowser() {}
 
     /**
@@ -14,5 +15,6 @@ module.exports = class Pool {
         return Promise.resolve();
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     cancel() {}
 };

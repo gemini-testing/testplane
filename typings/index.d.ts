@@ -1,10 +1,13 @@
+/* eslint-disable @typescript-eslint/triple-slash-reference */
 /// <reference path='./global.d.ts' />
 /// <reference path='./webdriverio/index.d.ts' />
 /// <reference path='./mocha/index.d.ts' />
 /// <reference types='@gemini-testing/commander' />
 /// <reference types='@wdio/types' />
+/* eslint-enable @typescript-eslint/triple-slash-reference */
 
-class Hermione extends Hermione.AsyncEmitter implements Hermione.Process  {
+/* eslint-disable no-use-before-define */
+class Hermione extends Hermione.AsyncEmitter implements Hermione.Process {
     static create(config: string|Hermione.CommonConfig): Hermione;
     constructor(config: string|Hermione.CommonConfig);
 
@@ -110,7 +113,7 @@ class Hermione extends Hermione.AsyncEmitter implements Hermione.Process  {
 
     prependListener(event: Hermione.UPDATE_REFERENCE_EVENT, callback: (data: { state: string, refImg: Hermione.ImageInfo }) => void): this;
     prependListener(event: Hermione.NEW_BROWSER_EVENT, callback: Hermione.SyncSessionEventCallback): this;
-};
+}
 
 declare namespace Hermione {
     export class AsyncEmitter extends NodeJS.EventEmitter {
@@ -134,7 +137,7 @@ declare namespace Hermione {
         once(event: BEFORE_FILE_READ_EVENT, callback: (data: BeforeFileReadData) => void): this;
         once(event: AFTER_FILE_READ_EVENT, callback: (data: AfterFileReadData) => void): this;
         once(event: AFTER_TESTS_READ_EVENT, callback: (collection: TestCollection) => void): this;
-    };
+    }
 
     export interface Worker extends Process {
         init(): Promise<Array<unknown>>;
@@ -146,26 +149,26 @@ declare namespace Hermione {
 
         once(event: UPDATE_REFERENCE_EVENT, callback: (data: { state: string, refImg: ImageInfo }) => void): this;
         once(event: NEW_BROWSER_EVENT, callback: SyncSessionEventCallback): this;
-    };
+    }
 
     export interface WorkerRunTestResult {
         meta: { [name: string]: unknown };
         hermioneCtx: WorkerRunTestHermioneCtx;
-    };
+    }
 
     export interface WorkerRunTestHermioneCtx {
         assertViewResults: Array<AssertViewResultsSuccess>;
-    };
+    }
 
     export interface AssertViewResultsSuccess {
         stateName: string;
         refImg: ImageInfo;
-    };
+    }
 
     export interface ImageInfo {
         path: string;
         size: ImageSize;
-    };
+    }
 
     export interface ImageSize {
         width: number;
@@ -176,14 +179,14 @@ declare namespace Hermione {
         browserId: string;
         file: string;
         sessionId: string;
-    };
+    }
 
     type InterceptHandler = (arg: InterceptHandlerArg) => InterceptHandlerArg | void;
 
     export interface InterceptHandlerArg {
         event?: InterceptedEvent;
         data?: unknown;
-    };
+    }
 
     export interface RunOpts {
         browsers?: Array<string>;
@@ -192,7 +195,7 @@ declare namespace Hermione {
         updateRefs?: boolean;
         reporters?: Array<string>;
         inspectMode?: InspectMode;
-    };
+    }
 
     export interface ReadTestsOpts {
         browsers?: Array<string>;
@@ -200,7 +203,7 @@ declare namespace Hermione {
         grep?: string | RegExp;
         silent?: boolean;
         ignore?: string | Array<string>;
-    };
+    }
 
     type InspectMode = {
         inpect: boolean | string;
@@ -209,13 +212,13 @@ declare namespace Hermione {
 
     export interface Context {
         currentTest: Test;
-    };
+    }
 
     export interface Suite extends Hermione.MochaSuite {
         id(): string;
         browserId: string;
         history: History;
-    };
+    }
 
     /**
      * History of commands were called durung the test execution
@@ -240,23 +243,23 @@ declare namespace Hermione {
 
     export interface RootSuite extends Suite {
         root: true;
-    };
+    }
 
     export interface Hook extends Hermione.MochaRunnable {
         type: 'hook';
-    };
+    }
 
     export interface Test extends Hermione.MochaTest {
         id(): string;
         browserId: string;
         sessionId: string;
-    };
+    }
 
     export interface TestError extends Error {
         screenshot?: {
             base64: string;
         };
-    };
+    }
 
     export interface TestResult extends Test {
         startTime: number;
@@ -268,36 +271,36 @@ declare namespace Hermione {
         };
         history: History;
         err?: TestError;
-    };
+    }
 
     export interface TestResultWithRetries extends TestResult {
         retriesLeft: number;
-    };
+    }
 
     export interface TestHookDefinition {
         (callback: Hermione.TestDefinitionCallback): void;
-    };
+    }
 
     export interface TestDefinition {
         (expectation: string, callback?: TestDefinitionCallback): Test;
-    };
+    }
 
     type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, ctx: TestDefinitionCallbackCtx) => any;
 
     export interface TestDefinitionCallbackCtx {
         browser: WebdriverIO.Browser;
         currentTest: Test;
-    };
+    }
 
     export interface AfterFileReadData {
         hermione: GlobalHelper;
         browser: string;
         file: string;
-    };
+    }
 
     export interface BeforeFileReadData extends AfterFileReadData {
         testParser: TestParserAPI;
-    };
+    }
 
     export interface TestParserAPI {
         events: TEST_PARSER_API_EVENTS;
@@ -311,7 +314,7 @@ declare namespace Hermione {
         once(event: TEST_EVENT, callback: (test: Test) => void): this;
         once(event: SUITE_EVENT, callback: (suite: Suite) => void): this;
         once(event: HOOK_EVENT, callback: (hook: Hook) => void): this;
-    };
+    }
 
     export interface MainRunner extends GeminiCore.AsyncEmitter {
         init(): void;
@@ -319,7 +322,7 @@ declare namespace Hermione {
         addTestToRun(test: Test, browserId: string): boolean;
         cancel(): void;
         registerWorkers: RegisterWorkers;
-    };
+    }
 
     export type RegisterWorkers = <T extends string>(workerFilepath: string, exportedMethods: ReadonlyArray<T>) => {
         [K in typeof exportedMethods[number]]: (...args: Array<unknown>) => Promise<any> | any
@@ -332,7 +335,7 @@ declare namespace Hermione {
         addRetries(test: Test): void;
 
         getResult(): StatsResult;
-    };
+    }
 
     export interface StatsResult {
         total: number;
@@ -342,11 +345,11 @@ declare namespace Hermione {
         retries: number;
         skipped: number;
         perBrowser: Omit<StatsResult, 'perBrowser'>;
-    };
+    }
 
     export interface NewWorkerProcess {
         send(...args: Array<unknown>): boolean;
-    };
+    }
 
     export interface GlobalHelper {
         ctx: { [name: string]: any };
@@ -354,34 +357,34 @@ declare namespace Hermione {
         only: OnlyBuilder;
         browser: (browserName: string) => BrowserConfigurator
         config: ConfigController;
-    };
+    }
 
     export interface SkipBuilder {
         in(browserMatcher: string | RegExp | Array<string | RegExp>, comment?: string, opts?: SkipOpts): SkipBuilder;
         notIn(browserMatcher: string | RegExp | Array<string | RegExp>, comment?: string, opts?: SkipOpts): SkipBuilder;
-    };
+    }
 
     export interface OnlyBuilder {
         in(browserMatcher: string | RegExp | Array<string | RegExp>): OnlyBuilder;
         notIn(browserMatcher: string | RegExp | Array<string | RegExp>): OnlyBuilder;
-    };
+    }
 
     export interface BrowserConfigurator {
         version(browserVersion: string): BrowserConfigurator;
-    };
+    }
 
     export interface SkipOpts {
         negate?: boolean;
         silent?: boolean;
-    };
+    }
 
     export interface ConfigController {
         testTimeout(timeout: number): void;
-    };
+    }
 
     export interface CommonConfig {
         configPath?: string;
-        automationProtocol: "webdriver" | "devtools";
+        automationProtocol: 'webdriver' | 'devtools';
         desiredCapabilities: WebDriver.DesiredCapabilities | null;
         gridUrl: string;
         baseUrl: string;
@@ -424,18 +427,18 @@ declare namespace Hermione {
         headers: Record<string, string> | null;
 
         system: SystemConfig;
-    };
+    }
 
     export interface CompareOptsConfig {
         shouldCluster: boolean;
         clustersSize: number;
         stopOnFirstFail: boolean;
-    };
+    }
 
     export interface BuildDiffOptsConfig {
         ignoreAntialiasing: boolean;
         ignoreCaret: boolean;
-    };
+    }
 
     export interface AssertViewOptsConfig {
         /**
@@ -465,12 +468,12 @@ declare namespace Hermione {
          * @defaultValue `false`
          */
         allowViewportOverflow: boolean;
-    };
+    }
 
     export interface ExpectOptsConfig {
         wait: number;
         interval: number;
-    };
+    }
 
     export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
         /**
@@ -526,7 +529,7 @@ declare namespace Hermione {
          * @defaultValue `undefined`
          */
         selectorToScroll?: string;
-    };
+    }
 
     export interface SystemConfig {
         debug: boolean;
@@ -539,7 +542,7 @@ declare namespace Hermione {
         tempDir: string;
         parallelLimit: number;
         fileExtensions: Array<string>;
-    };
+    }
 
     export interface MochaOpts {
         /** milliseconds to wait before considering a test slow. */
@@ -550,7 +553,7 @@ declare namespace Hermione {
 
         /** string or regexp to filter tests with. */
         grep?: string | RegExp;
-    };
+    }
 
     export interface Config extends CommonConfig {
         browsers: { [name: string]: BrowserConfig };
@@ -562,19 +565,19 @@ declare namespace Hermione {
         getBrowserIds(): Array<string>;
         serialize(): Omit<Config, 'system'>;
         mergeWith(config: Config): void;
-    };
+    }
 
     export interface SetsConfig {
         files: string | Array<string>;
         ignoreFiles?: Array<string>;
         browsers?: Array<string>;
-    };
+    }
 
     export interface BrowserConfig extends CommonConfig {
         id: string;
         getScreenshotPath(test: Test, stateName: string): string;
         serialize(): Omit<BrowserConfig, 'system'>;
-    };
+    }
 
     // async events
     export type INIT_EVENT = 'init';
@@ -640,13 +643,13 @@ declare namespace Hermione {
         ERROR: ERROR_EVENT;
         UPDATE_REFERENCE: UPDATE_REFERENCE_EVENT;
         NEW_BROWSER: NEW_BROWSER_EVENT;
-    };
+    }
 
     export interface TEST_PARSER_API_EVENTS {
         TEST: TEST_EVENT;
         SUITE: SUITE_EVENT;
         HOOK: HOOK_EVENT;
-    };
+    }
 
     export type MasterEvent =
         | INIT_EVENT
@@ -700,11 +703,11 @@ declare namespace Hermione {
         AssertViewError: AssertViewError;
         ImageDiffError: ImageDiffError;
         NoRefImageError: NoRefImageError;
-    };
+    }
 
     export class AssertViewError extends Error {
         constructor(message: string);
-    };
+    }
 
     export class ImageDiffError {
         static create(stateName: string, currImg: ImageInfo, refImg: ImageInfo, diffOpts: unknown, diffAreas: unknown): ImageDiffError; // TODO: export types from looks-same
@@ -712,13 +715,13 @@ declare namespace Hermione {
         constructor(stateName: string, currImg: ImageInfo, refImg: ImageInfo, diffOpts: unknown, diffAreas: unknown);
 
         saveDiffTo(diffPath: string): void;
-    };
+    }
 
     export class NoRefImageError {
         static create(stateName: string, currImg: ImageInfo, refImg: ImageInfo): NoRefImageError;
         static fromObject(data: { stateName: string, currImg: ImageInfo, refImg: ImageInfo }): NoRefImageError;
         constructor(stateName: string, currImg: ImageInfo, refImg: ImageInfo);
-    };
+    }
 
     export interface TestCollection {
         getRootSuite(browserId: string): RootSuite;
@@ -726,8 +729,8 @@ declare namespace Hermione {
 
         getBrowsers(): string[];
 
-        mapTests<T extends unknown>(callback: TestsCallback<T>): Array<T>;
-        mapTests<T extends unknown>(browserId: string, callback: TestsCallback<T>): Array<T>;
+        mapTests<T>(callback: TestsCallback<T>): Array<T>;
+        mapTests<T>(browserId: string, callback: TestsCallback<T>): Array<T>;
 
         sortTests(callback: SortTestsCallback): TestCollection;
         sortTests(browserId: string, callback: SortTestsCallback): TestCollection;
@@ -742,27 +745,27 @@ declare namespace Hermione {
 
         enableAll(browserId?: string): TestCollection;
         enableTest(fullTitle: string, browserId?: string): TestCollection;
-    };
+    }
 
-    export type TestsCallback<T extends unknown> = (test: Test, browserId: string) => T;
+    export type TestsCallback<T> = (test: Test, browserId: string) => T;
     export type SortTestsCallback = (test1: Test, test2: Test) => boolean;
 
     export interface BrowserMeta {
         pid: number;
         browserVersion: string,
         [name: string]: unknown;
-    };
+    }
 
     export interface BrowserInfo {
         browserId: string;
         sessionId: string;
-    };
+    }
 
     export type AsyncSessionEventCallback = (browser: WebdriverIO.Browser, browserInfo: BrowserInfo) => Promise<void> | void;
     export type SyncSessionEventCallback = (browser: WebdriverIO.Browser, browserInfo: { browserId: string, browserVersion: string}) => void;
     export type TestEventCallback = (test: Test) => void;
-};
+}
 
-declare module "hermione" {
+declare module 'hermione' {
     export = Hermione;
 }

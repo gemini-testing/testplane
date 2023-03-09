@@ -1,0 +1,6 @@
+.idea
+build
+LICENSE
+package.json
+package-lock.json
+*.md

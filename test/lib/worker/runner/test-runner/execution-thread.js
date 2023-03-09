@@ -179,7 +179,7 @@ describe('worker/runner/test-runner/execution-thread', () => {
             let executionContext;
             const runnable = mkRunnable_({
                 fn: function() {
-                    _this = this;
+                    _this = this; // eslint-disable-line @typescript-eslint/no-this-alias
                     executionContext = this.browser.executionContext;
                 }
             });

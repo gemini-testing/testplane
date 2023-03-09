@@ -4,8 +4,8 @@ import _ from 'lodash';
 import * as process from "process";
 
 describe('utils/typescript', () => {
-    let processBackup = _.assign({}, process);
-    let processEnvBackup = _.assign({}, process.env);
+    const processBackup = _.assign({}, process);
+    const processEnvBackup = _.assign({}, process.env);
 
     let ts: typeof import('src/utils/typescript');
     let registerStub: SinonStub;
