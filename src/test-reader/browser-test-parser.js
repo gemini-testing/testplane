@@ -13,25 +13,20 @@ const clearRequire = require('clear-require');
 const path = require('path');
 
 class BrowserTestParser extends EventEmitter {
-    #browserId;
-    #config;
     #buildInstructions;
 
     static create(...args) {
         return new this(...args);
     }
 
-    constructor(browserId, config) {
+    constructor() {
         super();
-
-        this.#browserId = browserId;
-        this.#config = config;
 
         this.#buildInstructions = new InstructionsList();
     }
 
     addRootSuiteDecorator(fn) {
-        this.#buildInstructions.push(({treeBuilder}) => {
+        this.#buildInstructions.unshift(({treeBuilder}) => {
             treeBuilder.addTrap(fn);
         });
     }
@@ -42,50 +37,53 @@ class BrowserTestParser extends EventEmitter {
         });
     }
 
-    async loadFiles(files) {
+    async loadFiles(files, config, browserId) {
         const eventBus = new EventEmitter();
-        const {system: {ctx, mochaOpts}} = this.#config;
+        const {system: {ctx, mochaOpts}} = config;
 
         global.hermione = {
-            browser: browserVersionController.mkProvider(this.#config.getBrowserIds(), eventBus),
+            browser: browserVersionController.mkProvider(config.getBrowserIds(), eventBus),
             config: ConfigController.create(eventBus),
             ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),
             skip: SkipController.create(eventBus)
         };
 
-        const browserConfig = this.#config.forBrowser(this.#browserId);
-        this.#decorateRootSuiteWithBrowserData(browserConfig);
-        this.#decorateRootSuiteWithTimeout(browserConfig);
+        this.#decorateRootSuiteWithBrowserData();
+        this.#decorateRootSuiteWithTimeout();
 
         this.#applyInstructionsEvents(eventBus);
         this.#passthroughFileEvents(eventBus, global.hermione);
 
         this.#clearRequireCach(files);
 
-        const esmDecorator = (f) => f + `?browserId=${this.#browserId}`;
+        const esmDecorator = (f) => f + `?browserId=${browserId}`;
         await readFiles(files, {esmDecorator, config: mochaOpts, eventBus});
 
         return this;
     }
 
-    #decorateRootSuiteWithBrowserData(browserConfig) {
-        const {desiredCapabilities: {browserVersion, version}} = browserConfig;
+    #decorateRootSuiteWithBrowserData() {
+        this.#buildInstructions.push(({treeBuilder, browserId, config}) => {
+            const {desiredCapabilities: {browserVersion, version}} = config;
 
-        this.addRootSuiteDecorator((suite) => {
-            suite.browserId = this.#browserId;
-            suite.browserVersion = browserVersion || version;
+            treeBuilder.addTrap((suite) => {
+                suite.browserId = browserId;
+                suite.browserVersion = browserVersion || version;
+            });
         });
     }
 
-    #decorateRootSuiteWithTimeout(browserConfig) {
-        const {testTimeout} = browserConfig;
-        if (!_.isNumber(testTimeout)) {
-            return;
-        }
+    #decorateRootSuiteWithTimeout() {
+        this.#buildInstructions.push(({treeBuilder, config}) => {
+            const {testTimeout} = config;
+            if (!_.isNumber(testTimeout)) {
+                return;
+            }
 
-        this.addRootSuiteDecorator((suite) => {
-            suite.timeout = testTimeout;
+            treeBuilder.addTrap((suite) => {
+                suite.timeout = testTimeout;
+            });
         });
     }
 
@@ -116,8 +114,8 @@ class BrowserTestParser extends EventEmitter {
         });
     }
 
-    parse() {
-        const ctx = {};
+    parse(browserId, config) {
+        const ctx = {browserId, config};
         const rootSuite = this.#buildInstructions.exec(ctx);
 
         const tests = rootSuite.getTests();

@@ -13,6 +13,12 @@ class InstructionsList {
         return this;
     }
 
+    unshift(fn) {
+        this.#instructions.unshift(fn);
+
+        return this;
+    }
+
     exec(ctx = {}) {
         const treeBuilder = ctx.treeBuilder = new TreeBuilder();
 

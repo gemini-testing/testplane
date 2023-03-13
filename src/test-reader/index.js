@@ -36,9 +36,9 @@ module.exports = class TestReader extends EventEmitter {
 
         const filesByBro = setCollection.groupByBrowser();
 
-        const parsersWithFiles = Object.entries(filesByBro).map(([browserId, files]) => [this.#makeParser(browserId, grep), files]);
-        const loadedParsers = await Promise.mapSeries(parsersWithFiles, async ([parser, files]) => await parser.loadFiles(files));
-        const testGroups = loadedParsers.map((parser) => parser.parse());
+        const parsersWithFiles = Object.entries(filesByBro).map(([browserId, files]) => [browserId, this.#makeParser(grep), files]);
+        const loadedParsers = await Promise.mapSeries(parsersWithFiles, async ([browserId, parser, files]) => Promise.all([browserId, await parser.loadFiles(files, this.#config, browserId)]));
+        const testGroups = loadedParsers.map(([browserId, parser]) => this.#parse(parser, browserId));
         const testsByBro = _.zipObject(Object.keys(filesByBro), testGroups);
 
         validateTests(testsByBro, options);
@@ -46,23 +46,27 @@ module.exports = class TestReader extends EventEmitter {
         return testsByBro;
     }
 
-    #makeParser(browserId, grep) {
-        const parser = TestParser.create(browserId, this.#config);
+    #makeParser(grep) {
+        const parser = TestParser.create();
 
         passthroughEvent(parser, this, [
             Events.BEFORE_FILE_READ,
             Events.AFTER_FILE_READ
         ]);
 
-        if (this.#testSkipper.shouldBeSkipped(browserId)) {
-            parser.addRootSuiteDecorator(this.#testSkipper.getSuiteDecorator());
-        }
-
         if (grep) {
             parser.applyGrep(grep);
         }
 
         return parser;
+    }
+
+    #parse(parser, browserId) {
+        if (this.#testSkipper.shouldBeSkipped(browserId)) {
+            parser.addRootSuiteDecorator(this.#testSkipper.getSuiteDecorator());
+        }
+
+        return parser.parse(browserId, this.#config.forBrowser(browserId));
     }
 };
 
