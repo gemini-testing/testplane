@@ -15,7 +15,7 @@ describe('config browser-options', () => {
         });
     };
 
-    const createConfig = () => Config.create(defaults.config);
+    const createConfig = () => Config.create('some-config-path');
 
     beforeEach(() => {
         sandbox.stub(Config, 'read').returns({});

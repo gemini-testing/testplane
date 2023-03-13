@@ -2,10 +2,10 @@
 
 const path = require('path');
 const _ = require('lodash');
-const logger = require('../utils/logger');
-const parseOptions = require('./options');
-const defaults = require('./defaults');
 const BrowserConfig = require('./browser-config');
+const defaults = require('./defaults');
+const parseOptions = require('./options');
+const logger = require('../utils/logger');
 
 module.exports = class Config {
     static create(config) {
@@ -21,13 +21,28 @@ module.exports = class Config {
         }
     }
 
-    constructor(config = defaults.config) {
+    constructor(config) {
         let options;
         if (_.isObjectLike(config)) {
             options = config;
-        } else {
+        } else if (typeof config === 'string') {
             this.configPath = config;
             options = Config.read(config);
+        } else {
+            for (const configPath of defaults.configPaths) {
+                try {
+                    require(path.resolve(configPath));
+                    this.configPath = path.resolve(configPath);
+
+                    break;
+                } catch {} // eslint-disable-line no-empty
+            }
+
+            if (!this.configPath) {
+                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(', ')}`);
+            }
+
+            options = Config.read(this.configPath);
         }
 
         if (_.isFunction(options.prepareEnvironment)) {
