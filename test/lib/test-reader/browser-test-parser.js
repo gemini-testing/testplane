@@ -445,11 +445,22 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWithMatch(readFiles, sinon.match.any, {esmDecorator: sinon.match.func});
                 });
 
-                it('should decorate esm module name with browser id', async () => {
-                    await loadFiles_({browserId: 'bro'});
+                it('should decorate esm module name with some random', async () => {
+                    await loadFiles_();
 
                     const {esmDecorator} = readFiles.lastCall.args[1];
-                    assert.equal(esmDecorator('/some/file.mjs'), '/some/file.mjs?browserId=bro');
+                    assert.match(esmDecorator('/some/file.mjs'), /^\/some\/file\.mjs\?rand=0\.[0-9]+$/);
+                });
+
+                it('should decorate with different random between calls', async () => {
+                    await loadFiles_();
+                    await loadFiles_();
+
+                    const file = '/some/file.mjs';
+                    const firstCallModuleName = readFiles.firstCall.args[1].esmDecorator(file);
+                    const lastCallModuleName = readFiles.lastCall.args[1].esmDecorator(file);
+
+                    assert.notEqual(firstCallModuleName, lastCallModuleName);
                 });
             });
         });

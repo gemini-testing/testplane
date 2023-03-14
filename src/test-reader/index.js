@@ -37,7 +37,7 @@ module.exports = class TestReader extends EventEmitter {
         const filesByBro = setCollection.groupByBrowser();
 
         const parsersWithFiles = Object.entries(filesByBro).map(([browserId, files]) => [browserId, this.#makeParser(grep), files]);
-        const loadedParsers = await Promise.mapSeries(parsersWithFiles, async ([browserId, parser, files]) => Promise.all([browserId, await parser.loadFiles(files, this.#config, browserId)]));
+        const loadedParsers = await Promise.mapSeries(parsersWithFiles, async ([browserId, parser, files]) => Promise.all([browserId, await parser.loadFiles(files, this.#config)]));
         const testGroups = loadedParsers.map(([browserId, parser]) => this.#parse(parser, browserId));
         const testsByBro = _.zipObject(Object.keys(filesByBro), testGroups);
 
