@@ -14,6 +14,7 @@ const {makeConfigStub} = require('../../utils');
 const proxyquire = require('proxyquire').noCallThru();
 const path = require('path');
 const {EventEmitter} = require('events');
+const _ = require('lodash');
 
 describe('test-reader/browser-test-parser', () => {
     const sandbox = sinon.sandbox.create();
@@ -21,13 +22,6 @@ describe('test-reader/browser-test-parser', () => {
     let BrowserTestParser;
     let clearRequire;
     let readFiles;
-
-    const mkBrowserTestParser_ = (opts = {}) => {
-        const browserId = opts.browserId || 'default-bro';
-        const config = opts.config || makeConfigStub({browsers: [browserId]});
-
-        return BrowserTestParser.create(browserId, config);
-    };
 
     beforeEach(() => {
         clearRequire = sandbox.stub().named('clear-require');
@@ -39,6 +33,7 @@ describe('test-reader/browser-test-parser', () => {
         }).BrowserTestParser;
 
         sandbox.stub(InstructionsList.prototype, 'push');
+        sandbox.stub(InstructionsList.prototype, 'unshift');
         sandbox.stub(InstructionsList.prototype, 'exec').returns(new Suite());
     });
 
@@ -49,21 +44,20 @@ describe('test-reader/browser-test-parser', () => {
     });
 
     describe('addRootSuiteDecorator', () => {
-        it('should set build instruction', () => {
-            const parser = mkBrowserTestParser_();
-            InstructionsList.prototype.push.reset();
+        it('should prepend build instruction', () => {
+            const parser = BrowserTestParser.create();
 
             parser.addRootSuiteDecorator(() => {});
 
-            assert.calledOnceWith(InstructionsList.prototype.push, sinon.match.func);
+            assert.calledOnceWith(InstructionsList.prototype.unshift, sinon.match.func);
         });
 
         it('should set passed decorator as trap to tree builder', () => {
-            const parser = mkBrowserTestParser_();
+            const parser = BrowserTestParser.create();
             const decorator = sinon.spy();
             parser.addRootSuiteDecorator(decorator);
 
-            const buildInstruction = InstructionsList.prototype.push.lastCall.args[0];
+            const buildInstruction = InstructionsList.prototype.unshift.lastCall.args[0];
             const treeBuilder = sinon.createStubInstance(TreeBuilder);
 
             buildInstruction({treeBuilder});
@@ -82,7 +76,7 @@ describe('test-reader/browser-test-parser', () => {
         });
 
         it('should add filter to tree builder', () => {
-            const parser = mkBrowserTestParser_();
+            const parser = BrowserTestParser.create();
 
             parser.applyGrep(/fooBar/);
 
@@ -90,7 +84,7 @@ describe('test-reader/browser-test-parser', () => {
         });
 
         it('filter should accept matched runnable', () => {
-            const parser = mkBrowserTestParser_();
+            const parser = BrowserTestParser.create();
             parser.applyGrep(/fooBar/);
 
             const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
@@ -100,7 +94,7 @@ describe('test-reader/browser-test-parser', () => {
         });
 
         it('filter should ignore not matched runnable', () => {
-            const parser = mkBrowserTestParser_();
+            const parser = BrowserTestParser.create();
             parser.applyGrep(/fooBar/);
 
             const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
@@ -111,24 +105,17 @@ describe('test-reader/browser-test-parser', () => {
     });
 
     describe('loadFiles', () => {
-        const loadFiles_ = async ({parser, files, config} = {}) => {
-            parser = parser || mkBrowserTestParser_({config});
-            return parser.loadFiles(files || []);
+        const loadFiles_ = async ({parser, files, config, browserId} = {}) => {
+            parser = parser || BrowserTestParser.create();
+            config = config || makeConfigStub();
+
+            return parser.loadFiles(files || [], config, browserId);
         };
 
         it('should be chainable', async () => {
-            const testParser = mkBrowserTestParser_();
+            const testParser = BrowserTestParser.create();
 
-            assert.deepEqual(await testParser.loadFiles([]), testParser);
-        });
-
-        it('should get browser config for passed browser id', async () => {
-            const config = makeConfigStub();
-            const parser = mkBrowserTestParser_({config, browserId: 'foo'});
-
-            await loadFiles_({parser});
-
-            assert.calledOnceWith(config.forBrowser, 'foo');
+            assert.deepEqual(await testParser.loadFiles([], makeConfigStub()), testParser);
         });
 
         describe('globals', () => {
@@ -189,9 +176,8 @@ describe('test-reader/browser-test-parser', () => {
 
                 it('should create controller provider with list of known browsers', async () => {
                     const config = makeConfigStub({browsers: ['foo', 'bar']});
-                    const parser = mkBrowserTestParser_({browserId: 'foo', config});
 
-                    await loadFiles_({parser});
+                    await loadFiles_({config});
 
                     assert.calledWith(browserVersionController.mkProvider, ['foo', 'bar']);
                 });
@@ -253,87 +239,6 @@ describe('test-reader/browser-test-parser', () => {
                     await loadFiles_();
 
                     assert.calledWith(ConfigController.create, sinon.match.instanceOf(EventEmitter));
-                });
-            });
-        });
-
-        describe('root suite decorators', () => {
-            let rootSuite;
-
-            beforeEach(() => {
-                rootSuite = {};
-                sandbox.stub(BrowserTestParser.prototype, 'addRootSuiteDecorator')
-                    .callsFake((fn) => fn(rootSuite));
-            });
-
-            it('should set traps for root suite', async () => {
-                await loadFiles_();
-
-                assert.calledWith(BrowserTestParser.prototype.addRootSuiteDecorator, sinon.match.func);
-            });
-
-            it('root suite should be decorated with browser id', async () => {
-                const parser = mkBrowserTestParser_({browserId: 'bro'});
-
-                await loadFiles_({parser});
-
-                assert.propertyVal(rootSuite, 'browserId', 'bro');
-            });
-
-            describe('browser version', () => {
-                it('root suite should be decorated with browser version if exists', async () => {
-                    const config = makeConfigStub({
-                        desiredCapabilities: {
-                            version: '100500',
-                            browserVersion: '500100'
-                        }
-                    });
-
-                    await loadFiles_({config});
-
-                    assert.propertyVal(rootSuite, 'browserVersion', '500100');
-                });
-
-                it('root suite should be decorated with version if no browser version specified', async () => {
-                    const config = makeConfigStub({
-                        desiredCapabilities: {
-                            version: '100500'
-                        }
-                    });
-
-                    await loadFiles_({config});
-
-                    assert.propertyVal(rootSuite, 'browserVersion', '100500');
-                });
-            });
-
-            describe('test timeout', () => {
-                it('root suite should not be decorated with timeout if "testTimeout" is not specified in config', async () => {
-                    const config = makeConfigStub();
-
-                    await loadFiles_({config});
-
-                    assert.notProperty(rootSuite, 'timeout');
-                });
-
-                it('root suite should be decorated with timeout if "testTimeout" is specified in config', async () => {
-                    const config = makeConfigStub({
-                        testTimeout: 100500
-                    });
-
-                    await loadFiles_({config});
-
-                    assert.propertyVal(rootSuite, 'timeout', 100500);
-                });
-
-                it('root suite should be decorated with timeout even if "testTimeout" is set to 0', async () => {
-                    const config = makeConfigStub({
-                        testTimeout: 0
-                    });
-
-                    await loadFiles_({config});
-
-                    assert.propertyVal(rootSuite, 'timeout', 0);
                 });
             });
         });
@@ -429,7 +334,7 @@ describe('test-reader/browser-test-parser', () => {
                     const init_ = ({eventData} = {}) => {
                         const onEvent = sinon.stub().named(`on${eventName}`);
 
-                        const parser = mkBrowserTestParser_()
+                        const parser = BrowserTestParser.create()
                             .on(RunnerEvents[eventName], onEvent);
 
                         readFiles.callsFake((files, {eventBus}) => {
@@ -540,14 +445,8 @@ describe('test-reader/browser-test-parser', () => {
                     assert.calledWithMatch(readFiles, sinon.match.any, {esmDecorator: sinon.match.func});
                 });
 
-                it('should esm module name with browser id', async () => {
-                    const config = makeConfigStub({
-                        browsers: ['bro']
-                    });
-
-                    const parser = mkBrowserTestParser_({browserId: 'bro', config});
-
-                    await loadFiles_({parser});
+                it('should decorate esm module name with browser id', async () => {
+                    await loadFiles_({browserId: 'bro'});
 
                     const {esmDecorator} = readFiles.lastCall.args[1];
                     assert.equal(esmDecorator('/some/file.mjs'), '/some/file.mjs?browserId=bro');
@@ -557,31 +456,131 @@ describe('test-reader/browser-test-parser', () => {
     });
 
     describe('parse', () => {
+        const parse_ = async ({browserId, config} = {}) => {
+            config = _.defaults(config, {
+                desiredCapabilities: {}
+            });
+
+            const parser = BrowserTestParser.create();
+            await parser.loadFiles([], makeConfigStub(), browserId);
+            return parser.parse(browserId, config);
+        };
+
         beforeEach(() => {
             sandbox.stub(Suite.prototype, 'getTests').returns([]);
         });
 
-        it('should execute build instructions with tree builder', () => {
-            mkBrowserTestParser_()
-                .parse();
+        it('should execute build instructions', async () => {
+            await parse_();
 
-            assert.calledOnceWith(InstructionsList.prototype.exec, {});
+            assert.calledOnce(InstructionsList.prototype.exec);
         });
 
-        it('should return tree tests', () => {
+        it('should execute build instructions with passed browserId', async () => {
+            await parse_({browserId: 'bro'});
+
+            assert.calledWithMatch(InstructionsList.prototype.exec, {browserId: 'bro'});
+        });
+
+        it('should execute build instructions with passed config', async () => {
+            await parse_({config: {foo: 'bar'}});
+
+            assert.calledWithMatch(InstructionsList.prototype.exec, {config: {foo: 'bar'}});
+        });
+
+        it('should return tree tests', async () => {
             const tests = [new Test({file: 'foo/bar.js'})];
             Suite.prototype.getTests.returns(tests);
 
-            const parser = mkBrowserTestParser_();
-
-            const res = parser.parse();
+            const res = await parse_();
 
             assert.deepEqual(res, tests);
         });
 
+        describe('root suite decorators', () => {
+            let rootSuite;
+
+            beforeEach(() => {
+                rootSuite = {};
+
+                InstructionsList.prototype.exec.callsFake((ctx) => {
+                    ctx.treeBuilder = new TreeBuilder();
+                    for (let i = 0; i < InstructionsList.prototype.push.callCount; ++i) {
+                        InstructionsList.prototype.push.getCall(i).args[0](ctx);
+                    }
+
+                    return new Suite();
+                });
+
+                sandbox.stub(TreeBuilder.prototype, 'addTrap')
+                    .callsFake((fn) => fn(rootSuite));
+            });
+
+            it('root suite should be decorated with browser id', async () => {
+                await parse_({browserId: 'bro'});
+
+                assert.propertyVal(rootSuite, 'browserId', 'bro');
+            });
+
+            describe('browser version', () => {
+                it('root suite should be decorated with browser version if exists', async () => {
+                    const config = {
+                        desiredCapabilities: {
+                            version: '100500',
+                            browserVersion: '500100'
+                        }
+                    };
+
+                    await parse_({config});
+
+                    assert.propertyVal(rootSuite, 'browserVersion', '500100');
+                });
+
+                it('root suite should be decorated with version if no browser version specified', async () => {
+                    const config = {
+                        desiredCapabilities: {
+                            version: '100500'
+                        }
+                    };
+
+                    await parse_({config});
+
+                    assert.propertyVal(rootSuite, 'browserVersion', '100500');
+                });
+            });
+
+            describe('test timeout', () => {
+                it('root suite should not be decorated with timeout if "testTimeout" is not specified in config', async () => {
+                    await parse_();
+
+                    assert.notProperty(rootSuite, 'timeout');
+                });
+
+                it('root suite should be decorated with timeout if "testTimeout" is specified in config', async () => {
+                    const config = {
+                        testTimeout: 100500
+                    };
+
+                    await parse_({config});
+
+                    assert.propertyVal(rootSuite, 'timeout', 100500);
+                });
+
+                it('root suite should be decorated with timeout even if "testTimeout" is set to 0', async () => {
+                    const config = {
+                        testTimeout: 0
+                    };
+
+                    await parse_({config});
+
+                    assert.propertyVal(rootSuite, 'timeout', 0);
+                });
+            });
+        });
+
         describe('in case of duplicate test titles', () => {
             it('should reject for tests in the same file', async () => {
-                const parser = mkBrowserTestParser_();
+                const parser = BrowserTestParser.create();
 
                 Suite.prototype.getTests.returns([
                     new Test({title: 'some test', file: 'foo/bar.js'}),
@@ -595,7 +594,7 @@ describe('test-reader/browser-test-parser', () => {
             });
 
             it('should reject for tests in different files', async () => {
-                const parser = mkBrowserTestParser_();
+                const parser = BrowserTestParser.create();
 
                 Suite.prototype.getTests.returns([
                     new Test({title: 'some test', file: 'foo/bar.js'}),
