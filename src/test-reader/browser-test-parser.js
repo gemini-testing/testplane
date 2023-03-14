@@ -37,7 +37,7 @@ class BrowserTestParser extends EventEmitter {
         });
     }
 
-    async loadFiles(files, config, browserId) {
+    async loadFiles(files, config) {
         const eventBus = new EventEmitter();
         const {system: {ctx, mochaOpts}} = config;
 
@@ -57,7 +57,8 @@ class BrowserTestParser extends EventEmitter {
 
         this.#clearRequireCach(files);
 
-        const esmDecorator = (f) => f + `?browserId=${browserId}`;
+        const rand = Math.random();
+        const esmDecorator = (f) => f + `?rand=${rand}`;
         await readFiles(files, {esmDecorator, config: mochaOpts, eventBus});
 
         return this;

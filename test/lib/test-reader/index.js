@@ -185,8 +185,8 @@ describe('test-reader', () => {
             await readTests_({config: config});
 
             assert.calledTwice(TestParser.prototype.loadFiles);
-            assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file1'], config, 'bro1');
-            assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file2'], config, 'bro2');
+            assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file1'], config);
+            assert.calledWith(TestParser.prototype.loadFiles, ['common/file', 'file2'], config);
         });
 
         it('should return parsed tests grouped by browser', async () => {
