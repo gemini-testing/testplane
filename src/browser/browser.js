@@ -1,7 +1,9 @@
 'use strict';
 
 const _ = require('lodash');
+const {SAVE_HISTORY_MODE} = require('../constants/config');
 const history = require('./history');
+const addRunStepCommand = require('./commands/runStep');
 
 const CUSTOM_SESSION_OPTS = [
     'outputDir', 'agent', 'headers', 'transformRequest', 'transformResponse', 'strictSSL',
@@ -30,6 +32,7 @@ module.exports = class Browser {
     async attach(sessionId, sessionCaps, sessionOpts) {
         this._session = await this._attachSession(sessionId, sessionCaps, sessionOpts);
 
+        this._addSteps();
         this._addHistory();
         this._addCommands();
     }
@@ -46,12 +49,6 @@ module.exports = class Browser {
         this.setHttpTimeout(this._config.httpTimeout);
     }
 
-    flushHistory() {
-        return this._config.saveHistory
-            ? this._callstackHistory.flush()
-            : [];
-    }
-
     applyState(state) {
         _.extend(this._state, state);
     }
@@ -60,8 +57,12 @@ module.exports = class Browser {
         this._addExtendOptionsMethod(this._session);
     }
 
+    _addSteps() {
+        addRunStepCommand(this);
+    }
+
     _addHistory() {
-        if (this._config.saveHistory) {
+        if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
             this._callstackHistory = history.initCommandHistory(this._session);
         }
     }
@@ -110,5 +111,9 @@ module.exports = class Browser {
 
     get capabilities() {
         return this.publicAPI.capabilities;
+    }
+
+    get callstackHistory() {
+        return this._callstackHistory;
     }
 };

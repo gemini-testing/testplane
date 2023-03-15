@@ -41,6 +41,28 @@ declare namespace WebdriverIO {
          * "compositeImage", "screenshotDelay", "selectorToScroll"
          */
         assertView(state: string, selectors: string | Array<string>, opts?: Hermione.AssertViewOpts): Promise<void>;
+
+        /**
+         * Command that allows to add human-readable description for commands in history
+         * 
+         * @remarks
+         * For more details, see {@link https://github.com/gemini-testing/hermione#runstep documentation}
+         * 
+         * @example
+         * ```ts
+         * it('some test', async function () {
+         *     await this.browser.runStep('step name', async () => {
+         *         await this.browser.url('some/url');
+         *         ...
+         *     });
+         * })
+         * ```
+         * 
+         * @param stepName step name
+         * @param stepCb step callback
+         * @returns {Promise<any>} value, returned by `stepCb`
+         */
+        runStep(stepName: string, stepCb: () => (Promise<any> | any)): Promise<any>;
     }
 
     interface Element {

@@ -4,7 +4,7 @@ const _ = require('lodash');
 
 const MAX_STRING_LENGTH = 50;
 
-exports.normalizeCommandArgs = (name, args) => {
+exports.normalizeCommandArgs = (name, args = []) => {
     if (name === 'execute') {
         return ['code'];
     }
@@ -30,13 +30,17 @@ exports.historyDataMap = {
     TIME_START: 'ts',
     TIME_END: 'te',
     IS_OVERWRITTEN: 'o',
+    IS_GROUP: 'g',
+    IS_FAILED: 'f',
     CHILDREN: 'c',
     KEY: 'k'
 };
 
 const isPromise = (val) => typeof _.get(val, 'then') === 'function';
 
-exports.runWithHooks = ({fn, before, after}) => {
+exports.isGroup = node => Boolean(node && node[exports.historyDataMap.IS_GROUP]);
+
+exports.runWithHooks = ({fn, before, after, error}) => {
     let isReturnedValuePromise = false;
 
     before();
@@ -47,10 +51,20 @@ exports.runWithHooks = ({fn, before, after}) => {
         if (isPromise(value)) {
             isReturnedValuePromise = true;
 
-            return value.finally(after);
+            return value.catch(err => {
+                error();
+
+                throw err;
+            }).finally(after);
         }
 
         return value;
+    } catch (err) {
+        if (!isReturnedValuePromise) {
+            error();
+
+            throw err;
+        }
     } finally {
         if (!isReturnedValuePromise) {
             after();

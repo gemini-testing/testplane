@@ -38,7 +38,21 @@ module.exports = class Callstack {
             : parentNode[historyDataMap.CHILDREN].push(currentNode);
     }
 
-    flush() {
+    markError(shouldPropagateFn) {
+        let parentNode = null;
+        let currentNode = _.first(this._stack);
+        let shouldContinue = Boolean(currentNode);
+
+        while (shouldContinue) {
+            currentNode[historyDataMap.IS_FAILED] = true;
+
+            parentNode = currentNode;
+            currentNode = _.last(currentNode[historyDataMap.CHILDREN]);
+            shouldContinue = currentNode && shouldPropagateFn(parentNode, currentNode);
+        }
+    }
+
+    release() {
         const history = this._history;
 
         this._stack = [];

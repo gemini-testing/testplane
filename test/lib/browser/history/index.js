@@ -4,7 +4,7 @@ const P = require('bluebird');
 const webdriverio = require('webdriverio');
 const cmds = require('../../../../src/browser/history/commands');
 const Callstack = require('../../../../src/browser/history/callstack');
-const {initCommandHistory} = require('../../../../src/browser/history');
+const {initCommandHistory, runGroup} = require('../../../../src/browser/history');
 const {mkNewBrowser_, mkExistingBrowser_, mkSessionStub_} = require('../utils');
 
 describe('commands-history', () => {
@@ -38,7 +38,7 @@ describe('commands-history', () => {
 
             await session.foo('arg1', 'arg2');
 
-            const [node] = stack.flush();
+            const [node] = stack.release();
 
             assert.propertyVal(node, 'n', 'foo');
             assert.propertyVal(node, 's', 'b');
@@ -54,7 +54,7 @@ describe('commands-history', () => {
 
             await session.url('site.com');
 
-            const [node] = stack.flush();
+            const [node] = stack.release();
 
             assert.propertyVal(node, 'n', 'url');
             assert.propertyVal(node, 's', 'b');
@@ -113,7 +113,7 @@ describe('commands-history', () => {
             await session.url('site.com');
             await session.execute();
 
-            const [urlNode] = stack.flush();
+            const [urlNode] = stack.release();
 
             assert.propertyVal(urlNode, 'n', 'url');
             assert.propertyVal(urlNode, 's', 'b');
@@ -132,13 +132,37 @@ describe('commands-history', () => {
 
             await element.click('arg1');
 
-            const [clickNode] = stack.flush();
+            const [clickNode] = stack.release();
 
             assert.propertyVal(clickNode, 'n', 'click');
             assert.propertyVal(clickNode, 's', 'e');
             assert.notProperty(clickNode, 'o');
             assert.deepPropertyVal(clickNode, 'c', []);
             assert.deepPropertyVal(clickNode, 'a', ['arg1']);
+        });
+    });
+
+    describe('runGroup', () => {
+        let fnStub, callstackStub;
+
+        beforeEach(() => {
+            fnStub = sandbox.stub();
+            callstackStub = {
+                enter: sandbox.stub(),
+                leave: sandbox.stub()
+            };
+        });
+
+        it('should execute function, if callstack is not inited', () => {
+            runGroup(null, 'foo', fnStub);
+
+            assert.calledOnce(fnStub);
+        });
+
+        it('should execute function with callstack', () => {
+            runGroup(callstackStub, 'foo', fnStub);
+
+            assert.callOrder(callstackStub.enter, fnStub, callstackStub.leave);
         });
     });
 
@@ -151,7 +175,7 @@ describe('commands-history', () => {
                             getBrowser().publicAPI[systemCommandNameToTest](commandName, () => {});
                             getBrowser().publicAPI[commandName]('some-arg');
 
-                            assert.deepEqual(getBrowser().flushHistory(), []);
+                            assert.isTrue(getBrowser().callstackHistory.release().every(node => node.n !== commandName));
                         });
                     });
             });

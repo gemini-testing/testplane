@@ -5,6 +5,8 @@ const HookRunner = require('./hook-runner');
 const ExecutionThread = require('./execution-thread');
 const OneTimeScreenshooter = require('./one-time-screenshooter');
 const AssertViewError = require('../../../browser/commands/assert-view/errors/assert-view-error');
+const history = require('../../../browser/history');
+const {SAVE_HISTORY_MODE} = require('../../../constants/config');
 
 module.exports = class TestRunner {
     static create(...args) {
@@ -34,16 +36,25 @@ module.exports = class TestRunner {
         const screenshooter = OneTimeScreenshooter.create(this._config, browser);
         const executionThread = ExecutionThread.create({test, browser, hermioneCtx, screenshooter});
         const hookRunner = HookRunner.create(test, executionThread);
+        const {callstackHistory} = browser;
 
         let error;
 
         try {
-            // TODO: make it on browser.init when "actions" method will be implemented in all webdrivers
-            if (browser.config.resetCursor) {
-                await this._resetCursorPosition(browser);
+            const {resetCursor} = browser.config;
+            const shouldRunBeforeEach = resetCursor || hookRunner.hasBeforeEachHooks();
+
+            if (shouldRunBeforeEach) {
+                await history.runGroup(callstackHistory, 'beforeEach', async () => {
+                    if (resetCursor) {
+                        // TODO: make it on browser.init when "actions" method will be implemented in all webdrivers
+                        await history.runGroup(callstackHistory, 'resetCursor', () => this._resetCursorPosition(browser));
+                    }
+
+                    await hookRunner.runBeforeEachHooks();
+                });
             }
 
-            await hookRunner.runBeforeEachHooks();
             await executionThread.run(test);
         } catch (e) {
             error = e;
@@ -54,7 +65,11 @@ module.exports = class TestRunner {
         }
 
         try {
-            await hookRunner.runAfterEachHooks();
+            const needsAfterEach = hookRunner.hasAfterEachHooks();
+
+            if (needsAfterEach) {
+                await history.runGroup(callstackHistory, 'afterEach', () => hookRunner.runAfterEachHooks());
+            }
         } catch (e) {
             error = error || e;
         }
@@ -70,11 +85,18 @@ module.exports = class TestRunner {
 
         hermioneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
         const {meta} = browser;
+        const commandsHistory = callstackHistory ? callstackHistory.release() : [];
         const results = {
             hermioneCtx,
-            meta,
-            history: browser.flushHistory()
+            meta
         };
+
+        switch (browser.config.saveHistoryMode) {
+            case SAVE_HISTORY_MODE.ALL:
+            case error && SAVE_HISTORY_MODE.ONLY_FAILED:
+                results.history = commandsHistory;
+                break;
+        }
 
         this._browserAgent.freeBrowser(browser);
 

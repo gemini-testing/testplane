@@ -2,7 +2,7 @@
 
 const P = require('bluebird');
 
-const {normalizeCommandArgs, runWithHooks} = require('src/browser/history/utils');
+const {normalizeCommandArgs, runWithHooks, isGroup} = require('src/browser/history/utils');
 
 describe('commands-history', () => {
     describe('utils', () => {
@@ -122,6 +122,26 @@ describe('commands-history', () => {
                 const res = await prom;
 
                 assert.equal(res, 'result');
+            });
+        });
+
+        describe('isGroup', () => {
+            let mkNode;
+
+            beforeEach(() => {
+                mkNode = ({name, isGroup}) => ({n: name, g: isGroup});
+            });
+
+            it('should return "true"', () => {
+                const node = mkNode({name: 'foo', isGroup: true});
+
+                assert.isTrue(isGroup(node));
+            });
+
+            it('should return "false"', () => {
+                const node = mkNode({name: 'foo'});
+
+                assert.isFalse(isGroup(node));
             });
         });
     });

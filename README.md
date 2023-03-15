@@ -35,6 +35,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [Sharable meta info](#sharable-meta-info)
     - [Execution context](#execution-context)
   - [AssertView](#assertview)
+  - [RunStep](#runstep)
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
@@ -75,7 +76,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO v7
     - [strictTestsOrder](#stricttestsorder)
     - [compositeImage](#compositeimage)
     - [screenshotMode](#screenshotmode)
-    - [saveHistory](#savehistory)
+    - [saveHistoryMode](#savehistorymode)
     - [agent](#agent)
     - [headers](#headers)
     - [transformRequest](#transformrequest)
@@ -663,6 +664,57 @@ it('some test', async ({ browser }) => {
 
 For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
 
+### RunStep
+
+Command that allows to add human-readable description for commands in `history`, when it is enabled ([html-reporter](https://github.com/gemini-testing/html-reporter) required) with [saveHistoryMode](#savehistorymode). For example:
+
+```js
+it('some test', async ({browser}) => {
+    await browser.runStep('some step name', async () => {
+        await browser.url('some/url');
+        await browser.$('some-selector').click();
+    });
+
+    await browser.runStep('other step name', async () => {
+        await browser.runStep('some nested step', async () => {
+            await browser.$('not-exist').click();
+        });
+    });
+
+    await browser.runStep('another step', async () => {
+        ...
+    });
+});
+```
+
+Will produce the following history, if test fails on 'Can't call click on element with selector "not-exist" because element wasn't found':
+
+- hermione: init browser
+- some step name
+- other step name
+  - some nested step
+    - $("not-exist")
+    - click()
+      - waitForExist
+
+In this example step `some step name` is collapsed, because it is completed successfully.
+
+You can also return values from step:
+
+```js
+const parsedPage = await browser.runStep('parse page', async () => {
+    ...
+    return someData;
+});
+```
+
+Parameters:
+
+ - stepName (required) `String` – step name
+ - stepCb (required) `Function` – step callback
+
+*Note: [html-reporter](https://github.com/gemini-testing/html-reporter) v9.7.7+ provides better history representation.*
+
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
@@ -988,11 +1040,17 @@ Image capture mode. There are 3 allowed values for this option:
 
 By default, `screenshotMode` on android browsers is set to `viewport` to work around [the chromium bug](https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853).
 
-#### saveHistory
+#### saveHistoryMode
 
-Allows to save history of all executed commands. `true` by default.
+Allows to save history of all executed commands. `'all'` by default.
+
+Available options:
+ - `'all'` - history is enabled 
+ - `'none'` - history is disabled
+ - `'onlyFailed'` - history is saved for failed tests only
 
 Some plugins can rely on this history, for instance:
+ - [html-reporter](https://github.com/gemini-testing/html-reporter)
  - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
 
 The history is available from such events: `TEST_END`, `TEST_PASS`, `TEST_FAIL` through payload:

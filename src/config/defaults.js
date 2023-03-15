@@ -1,6 +1,6 @@
 'use strict';
 
-const {WEBDRIVER_PROTOCOL} = require('../constants/config');
+const {WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE} = require('../constants/config');
 
 module.exports = {
     baseUrl: 'http://localhost',
@@ -73,7 +73,7 @@ module.exports = {
     waitOrientationChange: true,
     resetCursor: true,
     strictTestsOrder: false,
-    saveHistory: true,
+    saveHistoryMode: SAVE_HISTORY_MODE.ALL,
     fileExtensions: ['.js', '.mjs'],
     outputDir: null,
     agent: null,
