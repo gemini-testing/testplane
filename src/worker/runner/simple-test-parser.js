@@ -17,15 +17,15 @@ module.exports = class SimpleTestParser extends EventEmitter {
     }
 
     async parse({file, browserId}) {
-        const parser = TestParser.create(browserId, this._config);
+        const parser = TestParser.create();
 
         passthroughEvent(parser, this, [
             RunnerEvents.BEFORE_FILE_READ,
             RunnerEvents.AFTER_FILE_READ
         ]);
 
-        await parser.loadFiles([file]);
+        await parser.loadFiles([file], this._config);
 
-        return parser.parse();
+        return parser.parse(browserId, this._config.forBrowser(browserId));
     }
 };
