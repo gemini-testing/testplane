@@ -13,9 +13,10 @@ describe('config', () => {
     const initConfig = (opts) => {
         opts = opts || {};
         parseOptions = sandbox.stub().returns(opts.configParserReturns);
-        const config = opts.config || defaults.config;
+        const config = Object.prototype.hasOwnProperty.call(opts, 'config') ? opts.config : 'some-config-path';
         const stubs = {
-            './options': parseOptions
+            './options': parseOptions,
+            ...(opts.stubs ?? {})
         };
 
         if (typeof config === 'string') {
@@ -24,7 +25,7 @@ describe('config', () => {
         }
         const Config = proxyquire('../../../src/config', stubs);
 
-        return Config.create(opts.config, opts.allowOverrides);
+        return Config.create(config, opts.allowOverrides);
     };
 
     afterEach(() => sandbox.restore());
@@ -73,6 +74,22 @@ describe('config', () => {
 
             assert.include(config.forBrowser('bro'), {id: 'bro'});
         });
+
+        for (const configPath of defaults.configPaths) {
+            it(`should look for ${configPath} by default`, () => {
+                const config = initConfig({
+                    config: null,
+                    configParserReturns: {
+                        system: {fileExtensions: []}
+                    },
+                    stubs: {
+                        [path.resolve(configPath)]: {}
+                    }
+                });
+
+                assert.equal(config.configPath, path.resolve(configPath));
+            });
+        }
     });
 
     describe('forBrowser', () => {

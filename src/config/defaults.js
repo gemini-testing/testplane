@@ -6,7 +6,6 @@ module.exports = {
     baseUrl: 'http://localhost',
     gridUrl: 'http://localhost:4444/wd/hub',
     browserWSEndpoint: null,
-    config: '.hermione.conf.js',
     desiredCapabilities: null,
     automationProtocol: WEBDRIVER_PROTOCOL,
     sessionEnvFlags: {},
@@ -74,7 +73,7 @@ module.exports = {
     resetCursor: true,
     strictTestsOrder: false,
     saveHistoryMode: SAVE_HISTORY_MODE.ALL,
-    fileExtensions: ['.js', '.mjs'],
+    fileExtensions: ['.js', '.mjs', '.ts', '.mts'],
     outputDir: null,
     agent: null,
     headers: null,
@@ -86,3 +85,5 @@ module.exports = {
     region: null,
     headless: null
 };
+
+module.exports.configPaths = ['.hermione.conf.ts', '.hermione.conf.js'];

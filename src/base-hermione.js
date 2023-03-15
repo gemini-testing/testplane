@@ -9,6 +9,7 @@ const RunnerEvents = require('./constants/runner-events');
 const AsyncEmitter = require('./events/async-emitter');
 const Errors = require('./errors');
 const WorkerRunnerEvents = require('./worker/constants/runner-events');
+const {tryToRegisterTsNode} = require('./utils/typescript');
 
 const PREFIX = require('../package').name + '-';
 
@@ -21,6 +22,8 @@ module.exports = class BaseHermione extends AsyncEmitter {
         super();
 
         this._interceptors = [];
+
+        tryToRegisterTsNode();
 
         this._config = Config.create(config);
         this._loadPlugins();
