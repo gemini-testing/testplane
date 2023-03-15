@@ -12,14 +12,14 @@ module.exports = class SetCollection {
     }
 
     groupByFile() {
-        const files = this.#getFiles();
+        const files = this.getAllFiles();
         const browsers = files.map(file => this.#getBrowsersForFile(file));
 
         return _.zipObject(files, browsers);
     }
 
-    #getFiles() {
-        return this.#getFromSets(set => set.getFiles());
+    getAllFiles() {
+        return _.uniq(this.#getFromSets(set => set.getFiles()));
     }
 
     #getBrowsersForFile(path) {

@@ -2,7 +2,7 @@
 
 const { EventEmitter } = require("events");
 const { passthroughEvent } = require("../../events/utils");
-const { BrowserTestParser: TestParser } = require("../../test-reader/browser-test-parser");
+const { TestParser } = require("../../test-reader/test-parser");
 const RunnerEvents = require("../constants/runner-events");
 
 module.exports = class SimpleTestParser extends EventEmitter {
@@ -17,12 +17,12 @@ module.exports = class SimpleTestParser extends EventEmitter {
     }
 
     async parse({ file, browserId }) {
-        const parser = TestParser.create();
+        const parser = new TestParser();
 
         passthroughEvent(parser, this, [RunnerEvents.BEFORE_FILE_READ, RunnerEvents.AFTER_FILE_READ]);
 
         await parser.loadFiles([file], this._config);
 
-        return parser.parse(browserId, this._config.forBrowser(browserId));
+        return parser.parse([file], { browserId, config: this._config.forBrowser(browserId) });
     }
 };

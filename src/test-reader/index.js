@@ -1,16 +1,13 @@
 const _ = require("lodash");
 const { EventEmitter } = require("events");
-const Promise = require("bluebird");
 const { passthroughEvent } = require("../events/utils");
 const SetsBuilder = require("./sets-builder");
-const { BrowserTestParser: TestParser } = require("./browser-test-parser");
-const TestSkipper = require("./test-skipper");
+const { TestParser } = require("./test-parser");
 const Events = require("../constants/runner-events");
 const env = require("../utils/env");
 
 module.exports = class TestReader extends EventEmitter {
     #config;
-    #testSkipper;
 
     static create(...args) {
         return new this(...args);
@@ -20,7 +17,6 @@ module.exports = class TestReader extends EventEmitter {
         super();
 
         this.#config = config;
-        this.#testSkipper = TestSkipper.create(this.#config);
     }
 
     async read(options = {}) {
@@ -33,53 +29,29 @@ module.exports = class TestReader extends EventEmitter {
             .useBrowsers(browsers)
             .build(process.cwd(), { ignore }, fileExtensions);
 
-        const filesByBro = setCollection.groupByBrowser();
+        const parser = new TestParser();
+        passthroughEvent(parser, this, [Events.BEFORE_FILE_READ, Events.AFTER_FILE_READ]);
 
-        const parsersWithFiles = Object.entries(filesByBro).map(([browserId, files]) => [
-            browserId,
-            this.#makeParser(grep),
-            files,
-        ]);
-        const loadedParsers = await Promise.mapSeries(parsersWithFiles, async ([browserId, parser, files]) =>
-            Promise.all([browserId, await parser.loadFiles(files, this.#config)]),
+        await parser.loadFiles(setCollection.getAllFiles(), this.#config);
+
+        const filesByBro = setCollection.groupByBrowser();
+        const testsByBro = _.mapValues(filesByBro, (files, browserId) =>
+            parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep }),
         );
-        const testGroups = loadedParsers.map(([browserId, parser]) => this.#parse(parser, browserId));
-        const testsByBro = _.zipObject(Object.keys(filesByBro), testGroups);
 
         validateTests(testsByBro, options);
 
         return testsByBro;
     }
-
-    #makeParser(grep) {
-        const parser = TestParser.create();
-
-        passthroughEvent(parser, this, [Events.BEFORE_FILE_READ, Events.AFTER_FILE_READ]);
-
-        if (grep) {
-            parser.applyGrep(grep);
-        }
-
-        return parser;
-    }
-
-    #parse(parser, browserId) {
-        if (this.#testSkipper.shouldBeSkipped(browserId)) {
-            parser.addRootSuiteDecorator(this.#testSkipper.getSuiteDecorator());
-        }
-
-        return parser.parse(browserId, this.#config.forBrowser(browserId));
-    }
 };
 
 function validateTests(testsByBro, options) {
     const tests = _.flatten(Object.values(testsByBro));
-    const stringifiedOpts = convertOptions(options);
-
     if (!_.isEmpty(tests) && tests.some(test => !test.silentSkip)) {
         return;
     }
 
+    const stringifiedOpts = convertOptions(options);
     if (_.isEmpty(stringifiedOpts)) {
         throw new Error(`There are no tests found. Try to specify [${Object.keys(options).join(", ")}] options`);
     } else {

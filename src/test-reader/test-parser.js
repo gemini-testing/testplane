@@ -1,9 +1,10 @@
 const { EventEmitter } = require("events");
-const { InstructionsList } = require("./build-instructions");
+const { InstructionsList, Instructions } = require("./build-instructions");
 const { SkipController } = require("./controllers/skip-controller");
 const { OnlyController } = require("./controllers/only-controller");
 const { ConfigController } = require("./controllers/config-controller");
 const browserVersionController = require("./controllers/browser-version-controller");
+const { TreeBuilder } = require("./tree-builder");
 const { readFiles } = require("./mocha-reader");
 const ReadEvents = require("./read-events");
 const TestParserAPI = require("./test-parser-api");
@@ -12,29 +13,13 @@ const _ = require("lodash");
 const clearRequire = require("clear-require");
 const path = require("path");
 
-class BrowserTestParser extends EventEmitter {
+class TestParser extends EventEmitter {
     #buildInstructions;
-
-    static create(...args) {
-        return new this(...args);
-    }
 
     constructor() {
         super();
 
         this.#buildInstructions = new InstructionsList();
-    }
-
-    addRootSuiteDecorator(fn) {
-        this.#buildInstructions.unshift(({ treeBuilder }) => {
-            treeBuilder.addTrap(fn);
-        });
-    }
-
-    applyGrep(re) {
-        this.#buildInstructions.push(({ treeBuilder }) => {
-            treeBuilder.addTestFilter(test => re.test(test.fullTitle()));
-        });
     }
 
     async loadFiles(files, config) {
@@ -51,8 +36,11 @@ class BrowserTestParser extends EventEmitter {
             skip: SkipController.create(eventBus),
         };
 
-        this.#decorateRootSuiteWithBrowserData();
-        this.#decorateRootSuiteWithTimeout();
+        this.#buildInstructions
+            .push(Instructions.extendWithBrowserId)
+            .push(Instructions.extendWithBrowserVersion)
+            .push(Instructions.extendWithTimeout)
+            .push(Instructions.buildGlobalSkipInstruction(config));
 
         this.#applyInstructionsEvents(eventBus);
         this.#passthroughFileEvents(eventBus, global.hermione);
@@ -62,40 +50,17 @@ class BrowserTestParser extends EventEmitter {
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
-
-        return this;
-    }
-
-    #decorateRootSuiteWithBrowserData() {
-        this.#buildInstructions.push(({ treeBuilder, browserId, config }) => {
-            const {
-                desiredCapabilities: { browserVersion, version },
-            } = config;
-
-            treeBuilder.addTrap(suite => {
-                suite.browserId = browserId;
-                suite.browserVersion = browserVersion || version;
-            });
-        });
-    }
-
-    #decorateRootSuiteWithTimeout() {
-        this.#buildInstructions.push(({ treeBuilder, config }) => {
-            const { testTimeout } = config;
-            if (!_.isNumber(testTimeout)) {
-                return;
-            }
-
-            treeBuilder.addTrap(suite => {
-                suite.timeout = testTimeout;
-            });
-        });
     }
 
     #applyInstructionsEvents(eventBus) {
-        eventBus.on(ReadEvents.NEW_BUILD_INSTRUCTION, instruction => {
-            this.#buildInstructions.push(instruction);
-        });
+        let currentFile;
+
+        eventBus
+            .on(RunnerEvents.BEFORE_FILE_READ, ({ file }) => (currentFile = file))
+            .on(RunnerEvents.AFTER_FILE_READ, () => (currentFile = undefined))
+            .on(ReadEvents.NEW_BUILD_INSTRUCTION, instruction =>
+                this.#buildInstructions.push(instruction, currentFile),
+            );
     }
 
     #passthroughFileEvents(eventBus, hermione) {
@@ -121,9 +86,16 @@ class BrowserTestParser extends EventEmitter {
         });
     }
 
-    parse(browserId, config) {
-        const ctx = { browserId, config };
-        const rootSuite = this.#buildInstructions.exec(ctx);
+    parse(files, { browserId, config, grep }) {
+        const treeBuilder = new TreeBuilder();
+
+        this.#buildInstructions.exec(files, { treeBuilder, browserId, config });
+
+        if (grep) {
+            treeBuilder.addTestFilter(test => grep.test(test.fullTitle()));
+        }
+
+        const rootSuite = treeBuilder.applyFilters().getRootSuite();
 
         const tests = rootSuite.getTests();
 
@@ -159,5 +131,5 @@ class BrowserTestParser extends EventEmitter {
 }
 
 module.exports = {
-    BrowserTestParser,
+    TestParser,
 };

@@ -2,7 +2,7 @@
 
 const SimpleTestParser = require("src/worker/runner/sequence-test-parser");
 const RunnerEvents = require("src/worker/constants/runner-events");
-const { BrowserTestParser: TestParser } = require("src/test-reader/browser-test-parser");
+const { TestParser } = require("src/test-reader/test-parser");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner/simple-test-parser", () => {
@@ -62,9 +62,9 @@ describe("worker/runner/simple-test-parser", () => {
 
             const simpleParser = mkSimpleParser_({ config });
 
-            await simpleParser.parse({ browserId });
+            await simpleParser.parse({ file: "foo.js", browserId });
 
-            assert.calledOnceWith(TestParser.prototype.parse, browserId, browserConfig);
+            assert.calledOnceWith(TestParser.prototype.parse, ["foo.js"], { browserId, config: browserConfig });
         });
 
         it("should return parsed tests", async () => {
