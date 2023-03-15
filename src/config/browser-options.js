@@ -1,11 +1,11 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const option = require('gemini-configparser').option;
-const defaults = require('./defaults');
-const optionsBuilder = require('./options-builder');
-const utils = require('./utils');
-const {WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE} = require('../constants/config');
+const _ = require("lodash");
+const option = require("gemini-configparser").option;
+const defaults = require("./defaults");
+const optionsBuilder = require("./options-builder");
+const utils = require("./utils");
+const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
 
 const is = utils.is;
 
@@ -15,7 +15,7 @@ function provideRootDefault(name) {
 
 exports.getTopLevel = () => {
     return buildBrowserOptions(provideRootDefault, {
-        desiredCapabilities: optionsBuilder(provideRootDefault).optionalObject('desiredCapabilities')
+        desiredCapabilities: optionsBuilder(provideRootDefault).optionalObject("desiredCapabilities"),
     });
 };
 
@@ -29,16 +29,16 @@ exports.getPerBrowser = () => {
                 if (_.isNull(value) && _.isNull(config.desiredCapabilities)) {
                     throw new Error('Each browser must have "desiredCapabilities" option');
                 } else {
-                    utils.assertOptionalObject(value, 'desiredCapabilities');
+                    utils.assertOptionalObject(value, "desiredCapabilities");
                 }
             },
-            map: (value, config) => _.extend({}, config.desiredCapabilities, value)
-        })
+            map: (value, config) => _.extend({}, config.desiredCapabilities, value),
+        }),
     });
 };
 
 function provideTopLevelDefault(name) {
-    return (config) => {
+    return config => {
         const value = config[name];
 
         if (_.isUndefined(value)) {
@@ -53,47 +53,47 @@ function buildBrowserOptions(defaultFactory, extra) {
     const options = optionsBuilder(defaultFactory);
 
     return _.extend(extra, {
-        gridUrl: options.string('gridUrl'),
+        gridUrl: options.string("gridUrl"),
 
         baseUrl: option({
-            defaultValue: defaultFactory('baseUrl'),
-            validate: is('string', 'baseUrl'),
+            defaultValue: defaultFactory("baseUrl"),
+            validate: is("string", "baseUrl"),
             map: (value, config) => {
                 return config.baseUrl && !value.match(/^https?:\/\//)
-                    ? [config.baseUrl.replace(/\/$/, ''), value.replace(/^\//, '')].join('/')
+                    ? [config.baseUrl.replace(/\/$/, ""), value.replace(/^\//, "")].join("/")
                     : value;
-            }
+            },
         }),
 
         browserWSEndpoint: option({
-            defaultValue: defaultFactory('browserWSEndpoint'),
-            validate: (value) => {
+            defaultValue: defaultFactory("browserWSEndpoint"),
+            validate: value => {
                 if (_.isNull(value)) {
                     return;
                 }
 
-                is('string', 'browserWSEndpoint')(value);
+                is("string", "browserWSEndpoint")(value);
 
                 if (!/wss?:\/\//.test(value)) {
                     throw new Error(`"browserWSEndpoint" must start with "ws://" or "wss://" prefix`);
                 }
-            }
+            },
         }),
 
         automationProtocol: option({
-            defaultValue: defaultFactory('automationProtocol'),
-            validate: (value) => {
-                is('string', 'automationProtocol')(value);
+            defaultValue: defaultFactory("automationProtocol"),
+            validate: value => {
+                is("string", "automationProtocol")(value);
 
                 if (value !== WEBDRIVER_PROTOCOL && value !== DEVTOOLS_PROTOCOL) {
                     throw new Error(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`);
                 }
-            }
+            },
         }),
 
         sessionEnvFlags: option({
-            defaultValue: defaultFactory('sessionEnvFlags'),
-            validate: (value) => {
+            defaultValue: defaultFactory("sessionEnvFlags"),
+            validate: value => {
                 if (!_.isPlainObject(value)) {
                     throw new Error('"sessionEnvFlags" must be an object');
                 }
@@ -103,82 +103,92 @@ function buildBrowserOptions(defaultFactory, extra) {
                 }
 
                 const availableSessionEnvFlags = [
-                    'isW3C', 'isChrome', 'isMobile', 'isIOS', 'isAndroid', 'isSauce', 'isSeleniumStandalone'
+                    "isW3C",
+                    "isChrome",
+                    "isMobile",
+                    "isIOS",
+                    "isAndroid",
+                    "isSauce",
+                    "isSeleniumStandalone",
                 ];
 
-                Object.keys(value).forEach((key) => {
+                Object.keys(value).forEach(key => {
                     if (!availableSessionEnvFlags.includes(key)) {
-                        throw new Error(`keys of "sessionEnvFlags" must be one of: ${availableSessionEnvFlags.join(', ')}`);
+                        throw new Error(
+                            `keys of "sessionEnvFlags" must be one of: ${availableSessionEnvFlags.join(", ")}`,
+                        );
                     }
 
                     if (!_.isBoolean(value[key])) {
                         throw new Error('values of "sessionEnvFlags" must be boolean');
                     }
                 });
-            }
+            },
         }),
 
-        sessionsPerBrowser: options.positiveInteger('sessionsPerBrowser'),
-        testsPerSession: options.positiveIntegerOrInfinity('testsPerSession'),
+        sessionsPerBrowser: options.positiveInteger("sessionsPerBrowser"),
+        testsPerSession: options.positiveIntegerOrInfinity("testsPerSession"),
 
-        retry: options.nonNegativeInteger('retry'),
-        shouldRetry: options.optionalFunction('shouldRetry'),
+        retry: options.nonNegativeInteger("retry"),
+        shouldRetry: options.optionalFunction("shouldRetry"),
 
-        httpTimeout: options.nonNegativeInteger('httpTimeout'),
-        urlHttpTimeout: options.optionalNonNegativeInteger('urlHttpTimeout'),
-        pageLoadTimeout: options.optionalNonNegativeInteger('pageLoadTimeout'),
-        sessionRequestTimeout: options.optionalNonNegativeInteger('sessionRequestTimeout'),
-        sessionQuitTimeout: options.optionalNonNegativeInteger('sessionQuitTimeout'),
-        testTimeout: options.optionalNonNegativeInteger('testTimeout'),
-        waitTimeout: options.positiveInteger('waitTimeout'),
-        waitInterval: options.positiveInteger('waitInterval'),
+        httpTimeout: options.nonNegativeInteger("httpTimeout"),
+        urlHttpTimeout: options.optionalNonNegativeInteger("urlHttpTimeout"),
+        pageLoadTimeout: options.optionalNonNegativeInteger("pageLoadTimeout"),
+        sessionRequestTimeout: options.optionalNonNegativeInteger("sessionRequestTimeout"),
+        sessionQuitTimeout: options.optionalNonNegativeInteger("sessionQuitTimeout"),
+        testTimeout: options.optionalNonNegativeInteger("testTimeout"),
+        waitTimeout: options.positiveInteger("waitTimeout"),
+        waitInterval: options.positiveInteger("waitInterval"),
 
         saveHistoryMode: option({
-            defaultValue: defaultFactory('saveHistoryMode'),
-            validate: (value) => {
+            defaultValue: defaultFactory("saveHistoryMode"),
+            validate: value => {
                 const availableValues = Object.values(SAVE_HISTORY_MODE);
 
                 if (!availableValues.includes(value)) {
-                    throw new Error(`"saveHistoryMode" must be one of: ${availableValues.join(', ')}`);
+                    throw new Error(`"saveHistoryMode" must be one of: ${availableValues.join(", ")}`);
                 }
-            }
+            },
         }),
 
         takeScreenshotOnFails: option({
-            defaultValue: defaultFactory('takeScreenshotOnFails'),
+            defaultValue: defaultFactory("takeScreenshotOnFails"),
             parseEnv: JSON.parse,
             parseCli: JSON.parse,
-            validate: (value) => {
+            validate: value => {
                 if (!_.isPlainObject(value)) {
                     throw new Error('"takeScreenshotOnFails" must be an object');
                 }
 
-                const allowedProps = ['assertViewFail', 'testFail'];
+                const allowedProps = ["assertViewFail", "testFail"];
                 const unknownProps = _.keys(value).filter(prop => !allowedProps.includes(prop));
 
                 if (unknownProps.length) {
-                    throw new Error(`"takeScreenshotOnFails" contains unknown properties: ${unknownProps}. Allowed: ${allowedProps}.`);
+                    throw new Error(
+                        `"takeScreenshotOnFails" contains unknown properties: ${unknownProps}. Allowed: ${allowedProps}.`,
+                    );
                 }
             },
             map: (value, config) => ({
-                ...defaultFactory('takeScreenshotOnFails')(config),
-                ...value
-            })
+                ...defaultFactory("takeScreenshotOnFails")(config),
+                ...value,
+            }),
         }),
-        takeScreenshotOnFailsTimeout: options.optionalNonNegativeInteger('takeScreenshotOnFailsTimeout'),
-        takeScreenshotOnFailsMode: options.enumeration('takeScreenshotOnFailsMode', ['fullpage', 'viewport']),
+        takeScreenshotOnFailsTimeout: options.optionalNonNegativeInteger("takeScreenshotOnFailsTimeout"),
+        takeScreenshotOnFailsMode: options.enumeration("takeScreenshotOnFailsMode", ["fullpage", "viewport"]),
 
-        prepareBrowser: options.optionalFunction('prepareBrowser'),
+        prepareBrowser: options.optionalFunction("prepareBrowser"),
 
-        screenshotsDir: options.stringOrFunction('screenshotsDir'),
+        screenshotsDir: options.stringOrFunction("screenshotsDir"),
 
-        calibrate: options.boolean('calibrate'),
+        calibrate: options.boolean("calibrate"),
 
-        compositeImage: options.boolean('compositeImage'),
+        compositeImage: options.boolean("compositeImage"),
 
-        strictTestsOrder: options.boolean('strictTestsOrder'),
+        strictTestsOrder: options.boolean("strictTestsOrder"),
 
-        screenshotMode: options.enumeration('screenshotMode', ['fullpage', 'viewport', 'auto'], {
+        screenshotMode: options.enumeration("screenshotMode", ["fullpage", "viewport", "auto"], {
             map: (value, config, currentNode) => {
                 if (value !== defaults.screenshotMode) {
                     return value;
@@ -187,54 +197,54 @@ function buildBrowserOptions(defaultFactory, extra) {
                 // Chrome mobile returns screenshots that are larger than visible viewport due to a bug:
                 // https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853
                 // Due to this, screenshot is cropped incorrectly.
-                const capabilities = _.get(currentNode, 'desiredCapabilities');
+                const capabilities = _.get(currentNode, "desiredCapabilities");
 
-                const isAndroid = capabilities && Boolean(
-                    (capabilities.platformName && capabilities.platformName.match(/Android/i)) ||
-                    (capabilities.browserName && capabilities.browserName.match(/Android/i))
-                );
+                const isAndroid =
+                    capabilities &&
+                    Boolean(
+                        (capabilities.platformName && capabilities.platformName.match(/Android/i)) ||
+                            (capabilities.browserName && capabilities.browserName.match(/Android/i)),
+                    );
 
-                return isAndroid ? 'viewport' : value;
-            }
+                return isAndroid ? "viewport" : value;
+            },
         }),
 
-        screenshotDelay: options.nonNegativeInteger('screenshotDelay'),
+        screenshotDelay: options.nonNegativeInteger("screenshotDelay"),
 
         tolerance: option({
-            defaultValue: defaultFactory('tolerance'),
+            defaultValue: defaultFactory("tolerance"),
             parseEnv: Number,
             parseCli: Number,
-            validate: (value) => utils.assertNonNegativeNumber(value, 'tolerance')
+            validate: value => utils.assertNonNegativeNumber(value, "tolerance"),
         }),
 
         antialiasingTolerance: option({
-            defaultValue: defaultFactory('antialiasingTolerance'),
+            defaultValue: defaultFactory("antialiasingTolerance"),
             parseEnv: Number,
             parseCli: Number,
-            validate: (value) => utils.assertNonNegativeNumber(value, 'antialiasingTolerance')
+            validate: value => utils.assertNonNegativeNumber(value, "antialiasingTolerance"),
         }),
 
-        compareOpts: options.optionalObject('compareOpts'),
+        compareOpts: options.optionalObject("compareOpts"),
 
-        buildDiffOpts: options.optionalObject('buildDiffOpts'),
+        buildDiffOpts: options.optionalObject("buildDiffOpts"),
 
         assertViewOpts: option({
-            defaultValue: defaultFactory('assertViewOpts'),
+            defaultValue: defaultFactory("assertViewOpts"),
             parseEnv: JSON.parse,
             parseCli: JSON.parse,
-            validate: (value) => utils.assertOptionalObject(value, 'assertViewOpts'),
-            map: (value) => {
-                return value === defaults.assertViewOpts
-                    ? value
-                    : {...defaults.assertViewOpts, ...value};
-            }
+            validate: value => utils.assertOptionalObject(value, "assertViewOpts"),
+            map: value => {
+                return value === defaults.assertViewOpts ? value : { ...defaults.assertViewOpts, ...value };
+            },
         }),
 
-        meta: options.optionalObject('meta'),
+        meta: options.optionalObject("meta"),
 
         windowSize: option({
-            defaultValue: defaultFactory('windowSize'),
-            validate: (value) => {
+            defaultValue: defaultFactory("windowSize"),
+            validate: value => {
                 if (_.isNull(value)) {
                     return;
                 }
@@ -251,47 +261,47 @@ function buildBrowserOptions(defaultFactory, extra) {
                     throw new Error('"windowSize" should have form of <width>x<height> (i.e. 1600x1200)');
                 }
             },
-            map: (value) => {
+            map: value => {
                 if (_.isNull(value) || _.isObject(value)) {
                     return value;
                 }
 
-                const [width, height] = value.split('x').map((v) => parseInt(v, 10));
+                const [width, height] = value.split("x").map(v => parseInt(v, 10));
 
-                return {width, height};
-            }
+                return { width, height };
+            },
         }),
 
         orientation: option({
-            defaultValue: defaultFactory('orientation'),
-            validate: (value) => {
+            defaultValue: defaultFactory("orientation"),
+            validate: value => {
                 if (_.isNull(value)) {
                     return;
                 }
 
-                is('string', 'orientation')(value);
+                is("string", "orientation")(value);
 
-                if (value !== 'landscape' && value !== 'portrait') {
+                if (value !== "landscape" && value !== "portrait") {
                     throw new Error('"orientation" must be "landscape" or "portrait"');
                 }
-            }
+            },
         }),
 
-        waitOrientationChange: options.boolean('waitOrientationChange'),
+        waitOrientationChange: options.boolean("waitOrientationChange"),
 
-        resetCursor: options.boolean('resetCursor'),
+        resetCursor: options.boolean("resetCursor"),
 
-        outputDir: options.optionalString('outputDir'),
+        outputDir: options.optionalString("outputDir"),
 
-        agent: options.optionalObject('agent'),
-        headers: options.optionalObject('headers'),
-        transformRequest: options.optionalFunction('transformRequest'),
-        transformResponse: options.optionalFunction('transformResponse'),
-        strictSSL: options.optionalBoolean('strictSSL'),
+        agent: options.optionalObject("agent"),
+        headers: options.optionalObject("headers"),
+        transformRequest: options.optionalFunction("transformRequest"),
+        transformResponse: options.optionalFunction("transformResponse"),
+        strictSSL: options.optionalBoolean("strictSSL"),
 
-        user: options.optionalString('user'),
-        key: options.optionalString('key'),
-        region: options.optionalString('region'),
-        headless: options.optionalBoolean('headless')
+        user: options.optionalString("user"),
+        key: options.optionalString("key"),
+        region: options.optionalString("region"),
+        headless: options.optionalBoolean("headless"),
     });
 }

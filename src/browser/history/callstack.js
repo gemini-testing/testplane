@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const {historyDataMap} = require('./utils');
+const _ = require("lodash");
+const { historyDataMap } = require("./utils");
 
 module.exports = class Callstack {
     constructor() {
@@ -13,7 +13,7 @@ module.exports = class Callstack {
         this._stack.push({
             ...data,
             [historyDataMap.TIME_START]: Date.now(),
-            [historyDataMap.CHILDREN]: []
+            [historyDataMap.CHILDREN]: [],
         });
     }
 
@@ -31,11 +31,10 @@ module.exports = class Callstack {
         const isCurrentNodeRoot = this._stack.length === 0;
 
         currentNode[historyDataMap.TIME_END] = Date.now();
-        currentNode[historyDataMap.DURATION] = currentNode[historyDataMap.TIME_END] - currentNode[historyDataMap.TIME_START];
+        currentNode[historyDataMap.DURATION] =
+            currentNode[historyDataMap.TIME_END] - currentNode[historyDataMap.TIME_START];
 
-        isCurrentNodeRoot
-            ? this._history.push(currentNode)
-            : parentNode[historyDataMap.CHILDREN].push(currentNode);
+        isCurrentNodeRoot ? this._history.push(currentNode) : parentNode[historyDataMap.CHILDREN].push(currentNode);
     }
 
     markError(shouldPropagateFn) {

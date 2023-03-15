@@ -5,7 +5,7 @@ class TestObject {
         return new this(...args);
     }
 
-    constructor({title}) {
+    constructor({ title }) {
         this.parent = null;
 
         this.#title = title;
@@ -20,10 +20,10 @@ class TestObject {
     }
 
     fullTitle() {
-        return `${this.parent && this.parent.fullTitle() || ''} ${this.title || ''}`.trim();
+        return `${(this.parent && this.parent.fullTitle()) || ""} ${this.title || ""}`.trim();
     }
 }
 
 module.exports = {
-    TestObject
+    TestObject,
 };

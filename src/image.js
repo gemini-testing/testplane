@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
-const looksSame = require('looks-same');
-const sharp = require('sharp');
+const Promise = require("bluebird");
+const looksSame = require("looks-same");
+const sharp = require("sharp");
 
 module.exports = class Image {
     static create(buffer) {
@@ -19,22 +19,25 @@ module.exports = class Image {
     async getSize() {
         const imgSizes = await Promise.map([this].concat(this._composeImages), img => img._img.metadata());
 
-        return imgSizes.reduce((totalSize, img) => {
-            return {
-                width: Math.max(totalSize.width, img.width),
-                height: totalSize.height + img.height
-            };
-        }, {width: 0, height: 0});
+        return imgSizes.reduce(
+            (totalSize, img) => {
+                return {
+                    width: Math.max(totalSize.width, img.width),
+                    height: totalSize.height + img.height,
+                };
+            },
+            { width: 0, height: 0 },
+        );
     }
 
     async crop(rect) {
-        const {height, width} = await this._img.metadata();
+        const { height, width } = await this._img.metadata();
 
         this._img.extract({
             left: rect.left,
             top: rect.top,
             width: Math.min(width, rect.left + rect.width) - rect.left,
-            height: Math.min(height, rect.top + rect.height) - rect.top
+            height: Math.min(height, rect.top + rect.height) - rect.top,
         });
 
         await this._forceRefreshImageData();
@@ -49,13 +52,13 @@ module.exports = class Image {
             return;
         }
 
-        const {height, width} = await this._img.metadata();
+        const { height, width } = await this._img.metadata();
         const imagesData = await Promise.all(this._composeImages.map(img => img._getImageData()));
         const compositeData = [];
 
         let newHeight = height;
 
-        for (const {data, info} of imagesData) {
+        for (const { data, info } of imagesData) {
             compositeData.push({
                 input: data,
                 left: 0,
@@ -63,8 +66,8 @@ module.exports = class Image {
                 raw: {
                     width: info.width,
                     height: info.height,
-                    channels: info.channels
-                }
+                    channels: info.channels,
+                },
             });
 
             newHeight += info.height;
@@ -73,27 +76,27 @@ module.exports = class Image {
         this._img.resize({
             width,
             height: newHeight,
-            fit: 'contain',
-            position: 'top'
+            fit: "contain",
+            position: "top",
         });
 
         this._img.composite(compositeData);
     }
 
-    async addClear({width, height, left, top}) {
-        const {channels} = await this._img.metadata();
+    async addClear({ width, height, left, top }) {
+        const { channels } = await this._img.metadata();
 
         this._ignoreData.push({
             input: {
                 create: {
                     channels,
-                    background: {r: 0, g: 0, b: 0, alpha: 1},
+                    background: { r: 0, g: 0, b: 0, alpha: 1 },
                     width,
-                    height
-                }
+                    height,
+                },
             },
             left,
-            top
+            top,
         });
     }
 
@@ -103,20 +106,20 @@ module.exports = class Image {
 
     async _getImageData() {
         if (!this._imageData) {
-            this._imageData = await this._img.raw().toBuffer({resolveWithObject: true});
+            this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
         }
 
         return this._imageData;
     }
 
     async _forceRefreshImageData() {
-        this._imageData = await this._img.raw().toBuffer({resolveWithObject: true});
+        this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
         this._img = sharp(this._imageData.data, {
             raw: {
                 width: this._imageData.info.width,
                 height: this._imageData.info.height,
-                channels: this._imageData.info.channels
-            }
+                channels: this._imageData.info.channels,
+            },
         });
 
         this._composeImages = [];
@@ -124,14 +127,14 @@ module.exports = class Image {
     }
 
     async getRGBA(x, y) {
-        const {data, info} = await this._getImageData();
+        const { data, info } = await this._getImageData();
         const idx = (info.width * y + x) * info.channels;
 
         return {
             r: data[idx],
             g: data[idx + 1],
             b: data[idx + 2],
-            a: info.channels === 4 ? data[idx + 3] : 1
+            a: info.channels === 4 ? data[idx + 3] : 1,
         };
     }
 
@@ -140,14 +143,14 @@ module.exports = class Image {
     }
 
     static fromBase64(base64) {
-        return new this(Buffer.from(base64, 'base64'));
+        return new this(Buffer.from(base64, "base64"));
     }
 
-    async toPngBuffer(opts = {resolveWithObject: true}) {
+    async toPngBuffer(opts = { resolveWithObject: true }) {
         const imgData = await this._img.png().toBuffer(opts);
 
         return opts.resolveWithObject
-            ? {data: imgData.data, size: {height: imgData.info.height, width: imgData.info.width}}
+            ? { data: imgData.data, size: { height: imgData.info.height, width: imgData.info.width } }
             : imgData;
     }
 
@@ -155,9 +158,9 @@ module.exports = class Image {
         const compareOptions = {
             ignoreCaret: opts.canHaveCaret,
             pixelRatio: opts.pixelRatio,
-            ...opts.compareOpts
+            ...opts.compareOpts,
         };
-        ['tolerance', 'antialiasingTolerance'].forEach((option) => {
+        ["tolerance", "antialiasingTolerance"].forEach(option => {
             if (option in opts) {
                 compareOptions[option] = opts[option];
             }
@@ -166,8 +169,8 @@ module.exports = class Image {
     }
 
     static buildDiff(opts) {
-        const {diffColor: highlightColor, ...otherOpts} = opts;
-        const diffOptions = {highlightColor, ...otherOpts};
+        const { diffColor: highlightColor, ...otherOpts } = opts;
+        const diffOptions = { highlightColor, ...otherOpts };
 
         return looksSame.createDiff(diffOptions);
     }

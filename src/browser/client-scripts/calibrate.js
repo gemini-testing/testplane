@@ -1,5 +1,5 @@
-(function(window) {
-    'use strict';
+(function (window) {
+    "use strict";
 
     // HACK: ie8 does not need to reset the body border,
     // while any other browser does.
@@ -13,10 +13,10 @@
     }
 
     function resetZoom() {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width,initial-scale=1.0,user-scalable=no';
-        document.getElementsByTagName('head')[0].appendChild(meta);
+        var meta = document.createElement("meta");
+        meta.name = "viewport";
+        meta.content = "width=device-width,initial-scale=1.0,user-scalable=no";
+        document.getElementsByTagName("head")[0].appendChild(meta);
     }
 
     function createPattern() {
@@ -28,12 +28,12 @@
             bodyStyle.border = 0;
         }
 
-        bodyStyle.backgroundColor = '#96fa00';
+        bodyStyle.backgroundColor = "#96fa00";
     }
 
     function hasCSS3Selectors() {
         try {
-            document.querySelector('body:nth-child(1)');
+            document.querySelector("body:nth-child(1)");
         } catch (e) {
             return false;
         }
@@ -41,10 +41,7 @@
     }
 
     function needsCompatLib() {
-        return !hasCSS3Selectors() ||
-            !window.getComputedStyle ||
-            !window.matchMedia ||
-            !String.prototype.trim;
+        return !hasCSS3Selectors() || !window.getComputedStyle || !window.matchMedia || !String.prototype.trim;
     }
 
     // In safari `window.innerWidth` always returns default 980px and and even viewport meta tag setting does not change it.
@@ -70,4 +67,4 @@
     resetZoom();
     createPattern();
     return getBrowserFeatures();
-}(window));
+})(window);

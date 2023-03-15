@@ -1,12 +1,12 @@
-const path = require('path');
-const globExtra = require('glob-extra');
-const _ = require('lodash');
-const Promise = require('bluebird');
+const path = require("path");
+const globExtra = require("glob-extra");
+const _ = require("lodash");
+const Promise = require("bluebird");
 
-const SetCollection = require('./set-collection');
-const TestSet = require('./test-set');
+const SetCollection = require("./set-collection");
+const TestSet = require("./test-set");
 
-const FILE_EXTENSIONS = ['.js', '.mjs'];
+const FILE_EXTENSIONS = [".js", ".mjs"];
 
 module.exports = class SetsBuilder {
     #sets;
@@ -17,7 +17,7 @@ module.exports = class SetsBuilder {
     }
 
     constructor(sets, opts) {
-        this.#sets = _.mapValues(sets, (set) => TestSet.create(set));
+        this.#sets = _.mapValues(sets, set => TestSet.create(set));
         this.#filesToUse = this.#hasFiles() ? [] : [opts.defaultDir];
     }
 
@@ -39,10 +39,10 @@ module.exports = class SetsBuilder {
             return;
         }
 
-        let error = `No such sets: ${unknownSets.join(', ')}.`;
+        let error = `No such sets: ${unknownSets.join(", ")}.`;
 
         if (!_.isEmpty(setsNames)) {
-            error += ` Use one of the specified sets: ${setsNames.join(', ')}`;
+            error += ` Use one of the specified sets: ${setsNames.join(", ")}`;
         }
 
         throw new Error(error);
@@ -57,23 +57,22 @@ module.exports = class SetsBuilder {
     }
 
     useBrowsers(browsers) {
-        _.forEach(this.#sets, (set) => set.useBrowsers(browsers));
+        _.forEach(this.#sets, set => set.useBrowsers(browsers));
 
         return this;
     }
 
     build(projectRoot, globOpts = {}, fileExtensions = FILE_EXTENSIONS) {
-        const expandOpts = {formats: fileExtensions, root: projectRoot};
+        const expandOpts = { formats: fileExtensions, root: projectRoot };
 
         if (globOpts.ignore) {
-            globOpts.ignore = [].concat(globOpts.ignore)
-                .map((ignorePattern) => path.resolve(projectRoot, ignorePattern));
+            globOpts.ignore = [].concat(globOpts.ignore).map(ignorePattern => path.resolve(projectRoot, ignorePattern));
         }
 
         return this.#transformDirsToMasks()
             .then(() => this.#resolvePaths(projectRoot))
             .then(() => globExtra.expandPaths(this.#filesToUse, expandOpts, globOpts))
-            .then((expandedFiles) => {
+            .then(expandedFiles => {
                 this.#validateFoundFiles(expandedFiles);
                 this.#useFiles(expandedFiles);
             })
@@ -82,7 +81,7 @@ module.exports = class SetsBuilder {
     }
 
     #transformDirsToMasks() {
-        return Promise.map(this.#getSets(), (set) => set.transformDirsToMasks());
+        return Promise.map(this.#getSets(), set => set.transformDirsToMasks());
     }
 
     #getSets() {
@@ -90,29 +89,29 @@ module.exports = class SetsBuilder {
     }
 
     #resolvePaths(projectRoot) {
-        _.forEach(this.#sets, (set) => set.resolveFiles(projectRoot));
+        _.forEach(this.#sets, set => set.resolveFiles(projectRoot));
     }
 
     #validateFoundFiles(foundFiles) {
         if (!_.isEmpty(this.#filesToUse) && _.isEmpty(foundFiles)) {
-            const paths = [].concat(this.#filesToUse).join(', ');
+            const paths = [].concat(this.#filesToUse).join(", ");
             throw new Error(`Cannot find files by specified paths: ${paths}`);
         }
     }
 
     #useFiles(filesToUse) {
-        _.forEach(this.#sets, (set) => set.useFiles(filesToUse));
+        _.forEach(this.#sets, set => set.useFiles(filesToUse));
 
         if (!this.#hasFiles()) {
-            throw new Error('Cannot find files by masks in sets');
+            throw new Error("Cannot find files by masks in sets");
         }
     }
 
     #expandFiles(expandOpts, globOpts) {
-        return Promise.map(this.#getSets(), (set) => set.expandFiles(expandOpts, globOpts));
+        return Promise.map(this.#getSets(), set => set.expandFiles(expandOpts, globOpts));
     }
 
     #hasFiles() {
-        return _.some(this.#sets, (set) => !_.isEmpty(set.getFiles()));
+        return _.some(this.#sets, set => !_.isEmpty(set.getFiles()));
     }
 };

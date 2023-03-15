@@ -1,7 +1,7 @@
-import _ from 'lodash';
+import _ from "lodash";
 
-import type {Suite} from "./test-reader/test-object/suite";
-import type {Test} from "./test-reader/test-object/test";
+import type { Suite } from "./test-reader/test-object/suite";
+import type { Test } from "./test-reader/test-object/test";
 
 type RootSuite = Suite & { root: true };
 type TestDisabled = Test & { disabled: true };
@@ -36,7 +36,7 @@ export default class TestCollection {
     }
 
     #getRoot(suite: Suite): RootSuite {
-        return suite.root ? suite as RootSuite : this.#getRoot(suite.parent);
+        return suite.root ? (suite as RootSuite) : this.#getRoot(suite.parent);
     }
 
     getBrowsers(): string[] {
@@ -52,7 +52,9 @@ export default class TestCollection {
         }
 
         const results: T[] = [];
-        this.eachTest(browserId, (test: Test, browserId: string) => results.push((cb as TestsCallback<T>)(test, browserId)));
+        this.eachTest(browserId, (test: Test, browserId: string) =>
+            results.push((cb as TestsCallback<T>)(test, browserId)),
+        );
 
         return results;
     }
@@ -68,14 +70,14 @@ export default class TestCollection {
 
         if (browserId) {
             if (this.#specs[browserId]?.length && this.#originalSpecs[browserId]?.length) {
-                let pairs = _.zip(this.#specs[browserId], this.#originalSpecs[browserId]) as [Test, Test][];
+                const pairs = _.zip(this.#specs[browserId], this.#originalSpecs[browserId]) as [Test, Test][];
 
                 pairs.sort((p1, p2) => (cb as SortTestsCallback)(p1[0], p2[0]));
 
                 [this.#specs[browserId], this.#originalSpecs[browserId]] = _.unzip(pairs);
             }
         } else {
-            this.getBrowsers().forEach((browserId) => this.sortTests(browserId, cb as SortTestsCallback));
+            this.getBrowsers().forEach(browserId => this.sortTests(browserId, cb as SortTestsCallback));
         }
 
         return this;
@@ -90,18 +92,19 @@ export default class TestCollection {
         }
 
         if (browserId) {
-            this.#specs[browserId].forEach((test) => (cb as TestsCallback<void>)(test, browserId as string));
+            this.#specs[browserId].forEach(test => (cb as TestsCallback<void>)(test, browserId as string));
         } else {
-            this.getBrowsers().forEach((browserId) => this.eachTest(browserId, cb as TestsCallback<void>));
+            this.getBrowsers().forEach(browserId => this.eachTest(browserId, cb as TestsCallback<void>));
         }
     }
 
     eachTestByVersions(browserId: string, cb: (test: Test, browserId: string, browserVersion: string) => void): void {
-        const groups = _.groupBy(this.#specs[browserId], 'browserVersion');
+        const groups = _.groupBy(this.#specs[browserId], "browserVersion");
         const versions = Object.keys(groups);
-        const maxLength = _(groups)
-            .map((tests) => tests.length)
-            .max() || 0;
+        const maxLength =
+            _(groups)
+                .map(tests => tests.length)
+                .max() || 0;
 
         for (let idx = 0; idx < maxLength; ++idx) {
             for (const version of versions) {
@@ -117,16 +120,16 @@ export default class TestCollection {
 
     disableAll(browserId?: string): this {
         if (browserId) {
-            this.#specs[browserId] = this.#originalSpecs[browserId].map((test) => this.#mkDisabledTest(test));
+            this.#specs[browserId] = this.#originalSpecs[browserId].map(test => this.#mkDisabledTest(test));
         } else {
-            this.getBrowsers().forEach((browserId) => this.disableAll(browserId));
+            this.getBrowsers().forEach(browserId => this.disableAll(browserId));
         }
 
         return this;
     }
 
     #mkDisabledTest(test: Test): TestDisabled {
-        return _.extend(test.clone(), {disabled: true});
+        return _.extend(test.clone(), { disabled: true });
     }
 
     disableTest(fullTitle: string, browserId?: string): this {
@@ -136,21 +139,21 @@ export default class TestCollection {
                 this.#specs[browserId].splice(idx, 1, this.#mkDisabledTest(this.#originalSpecs[browserId][idx]));
             }
         } else {
-            this.getBrowsers().forEach((browserId) => this.disableTest(fullTitle, browserId));
+            this.getBrowsers().forEach(browserId => this.disableTest(fullTitle, browserId));
         }
 
         return this;
     }
 
     #findTestIndex(fullTitle: string, browserId: string): number {
-        return this.#specs[browserId].findIndex((test) => test.fullTitle() === fullTitle);
+        return this.#specs[browserId].findIndex(test => test.fullTitle() === fullTitle);
     }
 
     enableAll(browserId?: string): this {
         if (browserId) {
             this.#specs[browserId] = _.clone(this.#originalSpecs[browserId]);
         } else {
-            this.getBrowsers().forEach((browserId) => this.enableAll(browserId));
+            this.getBrowsers().forEach(browserId => this.enableAll(browserId));
         }
 
         return this;
@@ -163,9 +166,9 @@ export default class TestCollection {
                 this.#specs[browserId].splice(idx, 1, this.#originalSpecs[browserId][idx]);
             }
         } else {
-            this.getBrowsers().forEach((browserId) => this.enableTest(fullTitle, browserId));
+            this.getBrowsers().forEach(browserId => this.enableTest(fullTitle, browserId));
         }
 
         return this;
     }
-};
+}

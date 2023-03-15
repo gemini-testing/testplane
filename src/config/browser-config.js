@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const _ = require('lodash');
+const path = require("path");
+const _ = require("lodash");
 
 module.exports = class BrowserConfig {
     constructor(browserOptions) {
@@ -10,7 +10,7 @@ module.exports = class BrowserConfig {
 
     getScreenshotPath(test, stateName) {
         const filename = `${stateName}.png`;
-        const {screenshotsDir} = this;
+        const { screenshotsDir } = this;
 
         return _.isFunction(screenshotsDir)
             ? path.resolve(screenshotsDir(test), filename)
@@ -18,6 +18,6 @@ module.exports = class BrowserConfig {
     }
 
     serialize() {
-        return _.omit(this, ['system']);
+        return _.omit(this, ["system"]);
     }
 };

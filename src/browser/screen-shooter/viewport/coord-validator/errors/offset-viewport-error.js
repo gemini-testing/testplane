@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 /**
  * Position of an element is outside of a viewport left, top or right bounds

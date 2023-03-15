@@ -1,8 +1,8 @@
-const {TestObject} = require('./test-object');
+const { TestObject } = require("./test-object");
 
 class Hook extends TestObject {
-    constructor({title, fn}) {
-        super({title});
+    constructor({ title, fn }) {
+        super({ title });
 
         this.fn = fn;
     }
@@ -10,12 +10,12 @@ class Hook extends TestObject {
     clone() {
         return new Hook({
             title: this.title,
-            fn: this.fn
+            fn: this.fn,
         }).assign(this);
     }
 
     get type() {
-        return 'hook';
+        return "hook";
     }
 
     get file() {
@@ -32,5 +32,5 @@ class Hook extends TestObject {
 }
 
 module.exports = {
-    Hook
+    Hook,
 };

@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const Image = require('../../../../image');
-const BaseStateError = require('./base-state-error');
+const Image = require("../../../../image");
+const BaseStateError = require("./base-state-error");
 
 module.exports = class ImageDiffError extends BaseStateError {
     static create(...args) {
@@ -9,11 +9,14 @@ module.exports = class ImageDiffError extends BaseStateError {
     }
 
     static fromObject(data) {
-        const {diffBounds, diffClusters} = data;
-        return new ImageDiffError(data.stateName, data.currImg, data.refImg, data.diffOpts, {diffBounds, diffClusters});
+        const { diffBounds, diffClusters } = data;
+        return new ImageDiffError(data.stateName, data.currImg, data.refImg, data.diffOpts, {
+            diffBounds,
+            diffClusters,
+        });
     }
 
-    constructor(stateName, currImg, refImg, diffOpts, {diffBounds, diffClusters} = {}) {
+    constructor(stateName, currImg, refImg, diffOpts, { diffBounds, diffClusters } = {}) {
         super(stateName, currImg, refImg);
 
         this.message = `images are different for "${stateName}" state`;
@@ -23,6 +26,6 @@ module.exports = class ImageDiffError extends BaseStateError {
     }
 
     saveDiffTo(diffPath) {
-        return Image.buildDiff({diff: diffPath, ...this.diffOpts});
+        return Image.buildDiff({ diff: diffPath, ...this.diffOpts });
     }
 };

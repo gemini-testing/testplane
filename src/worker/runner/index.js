@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const AsyncEmitter = require('../../events/async-emitter');
-const {passthroughEvent} = require('../../events/utils');
-const RunnerEvents = require('../constants/runner-events');
-const BrowserPool = require('./browser-pool');
-const BrowserAgent = require('./browser-agent');
-const TestRunner = require('./test-runner');
-const CachingTestParser = require('./caching-test-parser');
+const AsyncEmitter = require("../../events/async-emitter");
+const { passthroughEvent } = require("../../events/utils");
+const RunnerEvents = require("../constants/runner-events");
+const BrowserPool = require("./browser-pool");
+const BrowserAgent = require("./browser-agent");
+const TestRunner = require("./test-runner");
+const CachingTestParser = require("./caching-test-parser");
 
 module.exports = class Runner extends AsyncEmitter {
     static create(config) {
@@ -23,16 +23,16 @@ module.exports = class Runner extends AsyncEmitter {
         passthroughEvent(this._testParser, this, [
             RunnerEvents.BEFORE_FILE_READ,
             RunnerEvents.AFTER_FILE_READ,
-            RunnerEvents.AFTER_TESTS_READ
+            RunnerEvents.AFTER_TESTS_READ,
         ]);
     }
 
-    async runTest(fullTitle, {browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts}) {
-        const tests = await this._testParser.parse({file, browserId});
-        const test = tests.find((t) => t.fullTitle() === fullTitle);
+    async runTest(fullTitle, { browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts }) {
+        const tests = await this._testParser.parse({ file, browserId });
+        const test = tests.find(t => t.fullTitle() === fullTitle);
         const browserAgent = BrowserAgent.create(browserId, browserVersion, this._browserPool);
         const runner = TestRunner.create(test, this._config.forBrowser(browserId), browserAgent);
 
-        return runner.run({sessionId, sessionCaps, sessionOpts});
+        return runner.run({ sessionId, sessionCaps, sessionOpts });
     }
 };

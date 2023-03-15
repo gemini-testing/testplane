@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const HookRunner = require('./hook-runner');
-const ExecutionThread = require('./execution-thread');
-const OneTimeScreenshooter = require('./one-time-screenshooter');
-const AssertViewError = require('../../../browser/commands/assert-view/errors/assert-view-error');
-const history = require('../../../browser/history');
-const {SAVE_HISTORY_MODE} = require('../../../constants/config');
+const _ = require("lodash");
+const HookRunner = require("./hook-runner");
+const ExecutionThread = require("./execution-thread");
+const OneTimeScreenshooter = require("./one-time-screenshooter");
+const AssertViewError = require("../../../browser/commands/assert-view/errors/assert-view-error");
+const history = require("../../../browser/history");
+const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 
 module.exports = class TestRunner {
     static create(...args) {
@@ -21,34 +21,36 @@ module.exports = class TestRunner {
         this._browserAgent = browserAgent;
     }
 
-    async run({sessionId, sessionCaps, sessionOpts}) {
+    async run({ sessionId, sessionCaps, sessionOpts }) {
         const test = this._test;
         const hermioneCtx = test.hermioneCtx || {};
 
         let browser;
 
         try {
-            browser = await this._browserAgent.getBrowser({sessionId, sessionCaps, sessionOpts});
+            browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts });
         } catch (e) {
-            throw Object.assign(e, {hermioneCtx});
+            throw Object.assign(e, { hermioneCtx });
         }
 
         const screenshooter = OneTimeScreenshooter.create(this._config, browser);
-        const executionThread = ExecutionThread.create({test, browser, hermioneCtx, screenshooter});
+        const executionThread = ExecutionThread.create({ test, browser, hermioneCtx, screenshooter });
         const hookRunner = HookRunner.create(test, executionThread);
-        const {callstackHistory} = browser;
+        const { callstackHistory } = browser;
 
         let error;
 
         try {
-            const {resetCursor} = browser.config;
+            const { resetCursor } = browser.config;
             const shouldRunBeforeEach = resetCursor || hookRunner.hasBeforeEachHooks();
 
             if (shouldRunBeforeEach) {
-                await history.runGroup(callstackHistory, 'beforeEach', async () => {
+                await history.runGroup(callstackHistory, "beforeEach", async () => {
                     if (resetCursor) {
                         // TODO: make it on browser.init when "actions" method will be implemented in all webdrivers
-                        await history.runGroup(callstackHistory, 'resetCursor', () => this._resetCursorPosition(browser));
+                        await history.runGroup(callstackHistory, "resetCursor", () =>
+                            this._resetCursorPosition(browser),
+                        );
                     }
 
                     await hookRunner.runBeforeEachHooks();
@@ -68,7 +70,7 @@ module.exports = class TestRunner {
             const needsAfterEach = hookRunner.hasAfterEachHooks();
 
             if (needsAfterEach) {
-                await history.runGroup(callstackHistory, 'afterEach', () => hookRunner.runAfterEachHooks());
+                await history.runGroup(callstackHistory, "afterEach", () => hookRunner.runAfterEachHooks());
             }
         } catch (e) {
             error = error || e;
@@ -84,11 +86,11 @@ module.exports = class TestRunner {
         }
 
         hermioneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
-        const {meta} = browser;
+        const { meta } = browser;
         const commandsHistory = callstackHistory ? callstackHistory.release() : [];
         const results = {
             hermioneCtx,
-            meta
+            meta,
         };
 
         switch (browser.config.saveHistoryMode) {
@@ -107,17 +109,17 @@ module.exports = class TestRunner {
         return results;
     }
 
-    async _resetCursorPosition({publicAPI: session}) {
-        const body = await session.$('body');
+    async _resetCursorPosition({ publicAPI: session }) {
+        const body = await session.$("body");
         if (!body) {
             throw new Error('There is no "body" element on the page when resetting cursor position');
         }
 
         await body.scrollIntoView();
-        await body.moveTo({xOffset: 0, yOffset: 0});
+        await body.moveTo({ xOffset: 0, yOffset: 0 });
     }
 };
 
-function isSessionBroken(error, {system: {patternsOnReject}}) {
-    return error && patternsOnReject.some((p) => new RegExp(p).test(error.message));
+function isSessionBroken(error, { system: { patternsOnReject } }) {
+    return error && patternsOnReject.some(p => new RegExp(p).test(error.message));
 }

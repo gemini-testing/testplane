@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const AsyncEmitter = require('../events/async-emitter');
+const AsyncEmitter = require("../events/async-emitter");
 
 module.exports = class Runner extends AsyncEmitter {
     static create(...args) {
@@ -8,8 +8,9 @@ module.exports = class Runner extends AsyncEmitter {
     }
 
     run() {
-        throw new Error('Not implemented');
+        throw new Error("Not implemented");
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
     cancel() {}
 };

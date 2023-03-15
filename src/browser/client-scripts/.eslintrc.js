@@ -1,3 +1,3 @@
 module.exports = {
-    extends: 'gemini-testing/browser'
+    extends: "gemini-testing/browser"
 };

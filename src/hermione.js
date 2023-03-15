@@ -1,19 +1,19 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
+const _ = require("lodash");
 
-const RunnerStats = require('./stats');
-const BaseHermione = require('./base-hermione');
-const Runner = require('./runner');
-const RuntimeConfig = require('./config/runtime-config');
-const RunnerEvents = require('./constants/runner-events');
-const eventsUtils = require('./events/utils');
-const signalHandler = require('./signal-handler');
-const TestReader = require('./test-reader');
-const TestCollection = require('./test-collection').default;
-const validateUnknownBrowsers = require('./validators').validateUnknownBrowsers;
-const {initReporters} = require('./reporters');
-const logger = require('./utils/logger');
+const RunnerStats = require("./stats");
+const BaseHermione = require("./base-hermione");
+const Runner = require("./runner");
+const RuntimeConfig = require("./config/runtime-config");
+const RunnerEvents = require("./constants/runner-events");
+const eventsUtils = require("./events/utils");
+const signalHandler = require("./signal-handler");
+const TestReader = require("./test-reader");
+const TestCollection = require("./test-collection").default;
+const validateUnknownBrowsers = require("./validators").validateUnknownBrowsers;
+const { initReporters } = require("./reporters");
+const logger = require("./utils/logger");
 
 module.exports = class Hermione extends BaseHermione {
     constructor(config) {
@@ -26,16 +26,14 @@ module.exports = class Hermione extends BaseHermione {
         this.emit(RunnerEvents.CLI, parser);
     }
 
-    async run(testPaths, {browsers, sets, grep, updateRefs, requireModules, inspectMode, reporters = []} = {}) {
+    async run(testPaths, { browsers, sets, grep, updateRefs, requireModules, inspectMode, reporters = [] } = {}) {
         validateUnknownBrowsers(browsers, _.keys(this._config.browsers));
 
-        RuntimeConfig.getInstance().extend({updateRefs, requireModules, inspectMode});
+        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode });
 
         this._runner = Runner.create(this._config, this._interceptors);
 
-        this
-            .on(RunnerEvents.TEST_FAIL, () => this._fail())
-            .on(RunnerEvents.ERROR, (err) => this.halt(err));
+        this.on(RunnerEvents.TEST_FAIL, () => this._fail()).on(RunnerEvents.ERROR, err => this.halt(err));
 
         await initReporters(reporters, this);
 
@@ -45,7 +43,7 @@ module.exports = class Hermione extends BaseHermione {
 
         await this._init();
         this._runner.init();
-        await this._runner.run(await this._readTests(testPaths, {browsers, sets, grep}), RunnerStats.create(this));
+        await this._runner.run(await this._readTests(testPaths, { browsers, sets, grep }), RunnerStats.create(this));
 
         return !this.isFailed();
     }
@@ -58,7 +56,7 @@ module.exports = class Hermione extends BaseHermione {
         return this._runner ? this._runner.addTestToRun(test, browserId) : false;
     }
 
-    async readTests(testPaths, {browsers, sets, grep, silent, ignore} = {}) {
+    async readTests(testPaths, { browsers, sets, grep, silent, ignore } = {}) {
         const testReader = TestReader.create(this._config);
 
         if (!silent) {
@@ -66,16 +64,16 @@ module.exports = class Hermione extends BaseHermione {
 
             eventsUtils.passthroughEvent(testReader, this, [
                 RunnerEvents.BEFORE_FILE_READ,
-                RunnerEvents.AFTER_FILE_READ
+                RunnerEvents.AFTER_FILE_READ,
             ]);
         }
 
-        const specs = await testReader.read({paths: testPaths, browsers, ignore, sets, grep});
+        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep });
         const collection = TestCollection.create(specs, this._config);
 
-        collection.getBrowsers().forEach((bro) => {
+        collection.getBrowsers().forEach(bro => {
             if (this._config.forBrowser(bro).strictTestsOrder) {
-                collection.sortTests(bro, ({id: a}, {id: b}) => a < b ? -1 : 1);
+                collection.sortTests(bro, ({ id: a }, { id: b }) => (a < b ? -1 : 1));
             }
         });
 
@@ -109,7 +107,7 @@ module.exports = class Hermione extends BaseHermione {
         }
 
         setTimeout(() => {
-            logger.error('Forcing shutdown...');
+            logger.error("Forcing shutdown...");
             process.exit(1);
         }, timeout).unref();
     }

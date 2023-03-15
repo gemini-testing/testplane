@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
 module.exports = {
     recursive: true,
-    require: ['./test/setup', './test/assert-ext', './test/ts-node']
+    require: ["./test/setup", "./test/assert-ext", "./test/ts-node"],
 };

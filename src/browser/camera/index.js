@@ -1,8 +1,8 @@
-'use strict';
+"use strict";
 
-const Image = require('../../image');
-const _ = require('lodash');
-const utils = require('./utils');
+const Image = require("../../image");
+const _ = require("lodash");
+const utils = require("./utils");
 
 module.exports = class Camera {
     static create(screenshotMode, takeScreenshot) {
@@ -23,8 +23,8 @@ module.exports = class Camera {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
-        const {width, height} = await image.getSize();
-        const imageArea = {left: 0, top: 0, width, height};
+        const { width, height } = await image.getSize();
+        const imageArea = { left: 0, top: 0, width, height };
 
         const calibratedArea = this._calibrateArea(imageArea);
         const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, page);
@@ -41,9 +41,9 @@ module.exports = class Camera {
             return imageArea;
         }
 
-        const {left, top} = this._calibration;
+        const { left, top } = this._calibration;
 
-        return {left, top, width: imageArea.width - left, height: imageArea.height - top};
+        return { left, top, width: imageArea.width - left, height: imageArea.height - top };
     }
 
     _cropAreaToViewport(imageArea, page) {
@@ -55,14 +55,14 @@ module.exports = class Camera {
         const cropArea = _.clone(page.viewport);
 
         if (!isFullPage) {
-            _.extend(cropArea, {top: 0, left: 0});
+            _.extend(cropArea, { top: 0, left: 0 });
         }
 
         return {
             left: (imageArea.left + cropArea.left) * page.pixelRatio,
             top: (imageArea.top + cropArea.top) * page.pixelRatio,
             width: Math.min(imageArea.width - cropArea.left, cropArea.width) * page.pixelRatio,
-            height: Math.min(imageArea.height - cropArea.top, cropArea.height) * page.pixelRatio
+            height: Math.min(imageArea.height - cropArea.top, cropArea.height) * page.pixelRatio,
         };
     }
 };

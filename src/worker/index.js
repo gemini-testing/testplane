@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const HermioneFacade = require('./hermione-facade');
+const HermioneFacade = require("./hermione-facade");
 
 const hermioneFacade = HermioneFacade.create();
 hermioneFacade.init();

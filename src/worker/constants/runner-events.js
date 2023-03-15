@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const MainProcessRunnerEvents = require('../../constants/runner-events');
+const MainProcessRunnerEvents = require("../../constants/runner-events");
 
 module.exports = {
     INIT: MainProcessRunnerEvents.INIT,
@@ -13,7 +13,7 @@ module.exports = {
     TEST_FAIL: MainProcessRunnerEvents.TEST_FAIL,
     ERROR: MainProcessRunnerEvents.ERROR,
 
-    NEW_BROWSER: 'newBrowser',
+    NEW_BROWSER: "newBrowser",
 
-    UPDATE_REFERENCE: 'updateReference'
+    UPDATE_REFERENCE: "updateReference",
 };

@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class BaseStateError extends Error {
     constructor(stateName, currImg = {}, refImg = {}) {

@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class BrowserAgent {
     static create(browserId, browserVersion, pool) {
@@ -12,13 +12,13 @@ module.exports = class BrowserAgent {
         this._pool = pool;
     }
 
-    getBrowser({sessionId, sessionCaps, sessionOpts}) {
+    getBrowser({ sessionId, sessionCaps, sessionOpts }) {
         return this._pool.getBrowser({
             browserId: this.browserId,
             browserVersion: this.browserVersion,
             sessionId,
             sessionCaps,
-            sessionOpts
+            sessionOpts,
         });
     }
 

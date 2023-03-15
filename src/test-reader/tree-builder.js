@@ -50,7 +50,7 @@ class TreeBuilder {
     }
 
     #applyTraps(obj) {
-        this.#traps.forEach((trap) => trap(obj));
+        this.#traps.forEach(trap => trap(obj));
         this.#traps = [];
     }
 
@@ -62,8 +62,8 @@ class TreeBuilder {
 
     applyFilters() {
         if (this.#rootSuite && this.#filters.length !== 0) {
-            this.#rootSuite.filterTests((test) => {
-                return this.#filters.every((f) => f(test));
+            this.#rootSuite.filterTests(test => {
+                return this.#filters.every(f => f(test));
             });
         }
 
@@ -76,5 +76,5 @@ class TreeBuilder {
 }
 
 module.exports = {
-    TreeBuilder
+    TreeBuilder,
 };
