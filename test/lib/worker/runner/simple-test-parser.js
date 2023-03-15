@@ -14,31 +14,13 @@ describe('worker/runner/simple-test-parser', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(TestParser, 'create').returns(Object.create(TestParser.prototype));
         sandbox.stub(TestParser.prototype, 'loadFiles').resolvesThis();
         sandbox.stub(TestParser.prototype, 'parse').returns([]);
     });
 
     afterEach(() => sandbox.restore());
 
-    describe('constructor', () => {
-        it('should not create test parser', () => {
-            mkSimpleParser_();
-
-            assert.notCalled(TestParser.create);
-        });
-    });
-
     describe('parse', () => {
-        it('should create test parser', async () => {
-            const config = makeConfigStub();
-            const simpleParser = mkSimpleParser_({config});
-
-            await simpleParser.parse({browserId: 'bro'});
-
-            assert.calledOnceWith(TestParser.create, 'bro', config);
-        });
-
         [
             'BEFORE_FILE_READ',
             'AFTER_FILE_READ'
@@ -60,11 +42,12 @@ describe('worker/runner/simple-test-parser', () => {
         });
 
         it('should load file', async () => {
-            const simpleParser = mkSimpleParser_();
+            const config = makeConfigStub();
+            const simpleParser = mkSimpleParser_({config});
 
             await simpleParser.parse({file: 'some/file.js'});
 
-            assert.calledOnceWith(TestParser.prototype.loadFiles, ['some/file.js']);
+            assert.calledOnceWith(TestParser.prototype.loadFiles, ['some/file.js'], config);
         });
 
         it('should load file before parse', async () => {
@@ -76,6 +59,19 @@ describe('worker/runner/simple-test-parser', () => {
                 TestParser.prototype.loadFiles,
                 TestParser.prototype.parse
             );
+        });
+
+        it('should parse tests', async () => {
+            const config = makeConfigStub();
+            const browserId = 'bro';
+            const browserConfig = {foo: 'bar'};
+            config.forBrowser.withArgs(browserId).returns(browserConfig);
+
+            const simpleParser = mkSimpleParser_({config});
+
+            await simpleParser.parse({browserId});
+
+            assert.calledOnceWith(TestParser.prototype.parse, browserId, browserConfig);
         });
 
         it('should return parsed tests', async () => {
