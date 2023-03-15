@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
+const Promise = require("bluebird");
 
-const Image = require('../../../image');
-const ScreenShooter = require('../../../browser/screen-shooter');
-const logger = require('../../../utils/logger');
+const Image = require("../../../image");
+const ScreenShooter = require("../../../browser/screen-shooter");
+const logger = require("../../../utils/logger");
 
 module.exports = class OneTimeScreenshooter {
     static create(...args) {
@@ -53,13 +53,13 @@ module.exports = class OneTimeScreenshooter {
 
         this._screenshot = await Promise.resolve(this._makeScreenshot())
             .timeout(this._screenshotTimeout, `timed out after ${this._screenshotTimeout} ms`)
-            .catch((e) => logger.warn(`WARN: Failed to take screenshot on test fail: ${e}`));
+            .catch(e => logger.warn(`WARN: Failed to take screenshot on test fail: ${e}`));
 
         this._browser.restoreHttpTimeout();
     }
 
     async _makeScreenshot() {
-        if (this._config.takeScreenshotOnFailsMode === 'fullpage') {
+        if (this._config.takeScreenshotOnFailsMode === "fullpage") {
             return this._makeFullPageScreenshot();
         }
 
@@ -69,26 +69,31 @@ module.exports = class OneTimeScreenshooter {
     async _makeFullPageScreenshot() {
         const pageSize = await this._getPageSize();
 
-        const page = await this._browser.prepareScreenshot([{
-            left: 0,
-            top: 0,
-            width: pageSize.width,
-            height: pageSize.height
-        }], {
-            ignoreSelectors: [],
-            captureElementFromTop: true,
-            allowViewportOverflow: true
-        });
+        const page = await this._browser.prepareScreenshot(
+            [
+                {
+                    left: 0,
+                    top: 0,
+                    width: pageSize.width,
+                    height: pageSize.height,
+                },
+            ],
+            {
+                ignoreSelectors: [],
+                captureElementFromTop: true,
+                allowViewportOverflow: true,
+            },
+        );
 
         const image = await this._screenshooter.capture(page, {
             compositeImage: true,
-            allowViewportOverflow: true
+            allowViewportOverflow: true,
         });
 
-        const {data, size} = await image.toPngBuffer();
-        const base64 = data.toString('base64');
+        const { data, size } = await image.toPngBuffer();
+        const base64 = data.toString("base64");
 
-        return {base64, size};
+        return { base64, size };
     }
 
     async _getPageSize() {
@@ -103,7 +108,7 @@ module.exports = class OneTimeScreenshooter {
         const image = Image.fromBase64(base64);
         const size = await image.getSize();
 
-        return {base64, size};
+        return { base64, size };
     }
 
     getScreenshot() {

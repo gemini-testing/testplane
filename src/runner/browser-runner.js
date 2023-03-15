@@ -1,13 +1,13 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
+const _ = require("lodash");
 
-const Runner = require('./runner');
-const TestRunner = require('./test-runner');
-const Events = require('../constants/runner-events');
-const SuiteMonitor = require('./suite-monitor');
-const BrowserAgent = require('./browser-agent');
-const PromiseGroup = require('./promise-group');
+const Runner = require("./runner");
+const TestRunner = require("./test-runner");
+const Events = require("../constants/runner-events");
+const SuiteMonitor = require("./suite-monitor");
+const BrowserAgent = require("./browser-agent");
+const PromiseGroup = require("./promise-group");
 
 module.exports = class BrowserRunner extends Runner {
     constructor(browserId, config, browserPool, workers) {
@@ -18,10 +18,7 @@ module.exports = class BrowserRunner extends Runner {
         this._browserPool = browserPool;
 
         this._suiteMonitor = SuiteMonitor.create();
-        this._passthroughEvents(this._suiteMonitor, [
-            Events.SUITE_BEGIN,
-            Events.SUITE_END
-        ]);
+        this._passthroughEvents(this._suiteMonitor, [Events.SUITE_BEGIN, Events.SUITE_END]);
 
         this._activeTestRunners = new Set();
         this._workers = workers;
@@ -33,7 +30,7 @@ module.exports = class BrowserRunner extends Runner {
     }
 
     async run(testCollection) {
-        testCollection.eachTestByVersions(this._browserId, (test) => {
+        testCollection.eachTestByVersions(this._browserId, test => {
             this._running.add(this._runTest(test));
         });
 
@@ -54,7 +51,7 @@ module.exports = class BrowserRunner extends Runner {
         const browserAgent = BrowserAgent.create(this._browserId, test.browserVersion, this._browserPool);
         const runner = TestRunner.create(test, this._config, browserAgent);
 
-        runner.on(Events.TEST_BEGIN, (test) => this._suiteMonitor.testBegin(test));
+        runner.on(Events.TEST_BEGIN, test => this._suiteMonitor.testBegin(test));
 
         this._passthroughEvents(runner, [
             Events.TEST_BEGIN,
@@ -62,11 +59,11 @@ module.exports = class BrowserRunner extends Runner {
             Events.TEST_PASS,
             Events.TEST_FAIL,
             Events.TEST_PENDING,
-            Events.RETRY
+            Events.RETRY,
         ]);
 
-        runner.on(Events.TEST_END, (test) => this._suiteMonitor.testEnd(test));
-        runner.on(Events.RETRY, (test) => this._suiteMonitor.testRetry(test));
+        runner.on(Events.TEST_END, test => this._suiteMonitor.testEnd(test));
+        runner.on(Events.RETRY, test => this._suiteMonitor.testRetry(test));
 
         this._activeTestRunners.add(runner);
 
@@ -76,12 +73,12 @@ module.exports = class BrowserRunner extends Runner {
     }
 
     cancel() {
-        this._activeTestRunners.forEach((runner) => runner.cancel());
+        this._activeTestRunners.forEach(runner => runner.cancel());
     }
 
     _passthroughEvents(runner, events) {
-        events.forEach((event) => {
-            runner.on(event, (data) => this.emit(event, _.extend(data, {browserId: this._browserId})));
+        events.forEach(event => {
+            runner.on(event, data => this.emit(event, _.extend(data, { browserId: this._browserId })));
         });
     }
 };

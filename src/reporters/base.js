@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const chalk = require('chalk');
-const RunnerEvents = require('../constants/runner-events');
-const icons = require('./utils/icons');
-const helpers = require('./utils/helpers');
-const {initInformer} = require('./informers');
+const chalk = require("chalk");
+const RunnerEvents = require("../constants/runner-events");
+const icons = require("./utils/icons");
+const helpers = require("./utils/helpers");
+const { initInformer } = require("./informers");
 
 module.exports = class BaseReporter {
     static async create(opts = {}) {
@@ -18,15 +18,15 @@ module.exports = class BaseReporter {
     }
 
     attachRunner(runner) {
-        runner.on(RunnerEvents.TEST_PASS, (test) => this._onTestPass(test));
-        runner.on(RunnerEvents.TEST_FAIL, (test) => this._onTestFail(test));
-        runner.on(RunnerEvents.RETRY, (test) => this._onRetry(test));
-        runner.on(RunnerEvents.TEST_PENDING, (test) => this._onTestPending(test));
-        runner.on(RunnerEvents.RUNNER_END, (stats) => this._onRunnerEnd(stats));
+        runner.on(RunnerEvents.TEST_PASS, test => this._onTestPass(test));
+        runner.on(RunnerEvents.TEST_FAIL, test => this._onTestFail(test));
+        runner.on(RunnerEvents.RETRY, test => this._onRetry(test));
+        runner.on(RunnerEvents.TEST_PENDING, test => this._onTestPending(test));
+        runner.on(RunnerEvents.RUNNER_END, stats => this._onRunnerEnd(stats));
 
-        runner.on(RunnerEvents.WARNING, (info) => this._onWarning(info));
-        runner.on(RunnerEvents.ERROR, (error) => this._onError(error));
-        runner.on(RunnerEvents.INFO, (info) => this._onInfo(info));
+        runner.on(RunnerEvents.WARNING, info => this._onWarning(info));
+        runner.on(RunnerEvents.ERROR, error => this._onError(error));
+        runner.on(RunnerEvents.INFO, info => this._onInfo(info));
     }
 
     _onTestPass(test) {
@@ -52,10 +52,10 @@ module.exports = class BaseReporter {
             `Passed: ${chalk.green(stats.passed)}`,
             `Failed: ${chalk.red(stats.failed)}`,
             `Skipped: ${chalk.cyan(stats.skipped)}`,
-            `Retries: ${chalk.yellow(stats.retries)}`
+            `Retries: ${chalk.yellow(stats.retries)}`,
         ];
 
-        this.informer.log(message.join(' '));
+        this.informer.log(message.join(" "));
     }
 
     _onRunnerEnd(stats) {

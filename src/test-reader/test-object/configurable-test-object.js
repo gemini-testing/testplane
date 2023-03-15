@@ -1,22 +1,22 @@
-const {TestObject} = require('./test-object');
-const _ = require('lodash');
+const { TestObject } = require("./test-object");
+const _ = require("lodash");
 
 class ConfigurableTestObject extends TestObject {
     #data;
 
-    constructor({title, file, id}) {
-        super({title});
+    constructor({ title, file, id }) {
+        super({ title });
 
-        this.#data = {id, file};
+        this.#data = { id, file };
     }
 
     assign(src) {
-        this.#data = {...src.#data};
+        this.#data = { ...src.#data };
 
         return super.assign(src);
     }
 
-    skip({reason}) {
+    skip({ reason }) {
         this.pending = true;
         this.skipReason = reason;
     }
@@ -42,7 +42,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get pending() {
-        return this.#getInheritedProperty('pending', false);
+        return this.#getInheritedProperty("pending", false);
     }
 
     set skipReason(reason) {
@@ -50,7 +50,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get skipReason() {
-        return this.#getInheritedProperty('skipReason', '');
+        return this.#getInheritedProperty("skipReason", "");
     }
 
     set disabled(val) {
@@ -58,7 +58,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get disabled() {
-        return this.#getInheritedProperty('disabled', false);
+        return this.#getInheritedProperty("disabled", false);
     }
 
     set silentSkip(val) {
@@ -66,7 +66,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get silentSkip() {
-        return this.#getInheritedProperty('silentSkip', false);
+        return this.#getInheritedProperty("silentSkip", false);
     }
 
     set timeout(timeout) {
@@ -74,7 +74,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get timeout() {
-        return this.#getInheritedProperty('timeout', 0);
+        return this.#getInheritedProperty("timeout", 0);
     }
 
     set browserId(id) {
@@ -82,7 +82,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get browserId() {
-        return this.#getInheritedProperty('browserId', undefined);
+        return this.#getInheritedProperty("browserId", undefined);
     }
 
     set browserVersion(version) {
@@ -90,20 +90,18 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get browserVersion() {
-        return this.#getInheritedProperty('browserVersion', undefined);
+        return this.#getInheritedProperty("browserVersion", undefined);
     }
 
     get hasBrowserVersionOverwritten() {
-        return ('browserVersion' in this.#data);
+        return "browserVersion" in this.#data;
     }
 
     #getInheritedProperty(name, defaultValue) {
-        return name in this.#data
-            ? this.#data[name]
-            : _.get(this.parent, name, defaultValue);
+        return name in this.#data ? this.#data[name] : _.get(this.parent, name, defaultValue);
     }
 }
 
 module.exports = {
-    ConfigurableTestObject
+    ConfigurableTestObject,
 };

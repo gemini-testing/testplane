@@ -1,11 +1,9 @@
-'use strict';
+"use strict";
 
-var XPATH_SELECTORS_START = [
-    '/', '(', '../', './', '*/'
-];
+var XPATH_SELECTORS_START = ["/", "(", "../", "./", "*/"];
 
 function isXpathSelector(selector) {
-    return XPATH_SELECTORS_START.some(function(startString) {
+    return XPATH_SELECTORS_START.some(function (startString) {
         return selector.indexOf(startString) === 0;
     });
 }
@@ -16,7 +14,8 @@ function queryFirst(selector) {
 
 function queryAll(selector) {
     var elements = document.evaluate(selector, document, null, XPathResult.ANY_TYPE, null);
-    var node, nodes = [];
+    var node,
+        nodes = [];
     node = elements.iterateNext();
     while (node) {
         nodes.push(node);

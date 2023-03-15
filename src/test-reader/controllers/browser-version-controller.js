@@ -1,4 +1,4 @@
-const ReadEvents = require('../read-events');
+const ReadEvents = require("../read-events");
 
 class BrowserVersionController {
     #browserId;
@@ -14,8 +14,8 @@ class BrowserVersionController {
     }
 
     version(browserVersion) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({treeBuilder}) => {
-            treeBuilder.addTrap((obj) => {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+            treeBuilder.addTrap(obj => {
                 if (obj.browserId === this.#browserId) {
                     obj.browserVersion = browserVersion;
                 }
@@ -27,7 +27,7 @@ class BrowserVersionController {
 }
 
 function mkProvider(knownBrowsers, eventBus) {
-    return (browserId) => {
+    return browserId => {
         if (!knownBrowsers.includes(browserId)) {
             throw new Error(`browser "${browserId}" was not found in config file`);
         }
@@ -38,5 +38,5 @@ function mkProvider(knownBrowsers, eventBus) {
 
 module.exports = {
     mkProvider,
-    BrowserVersionController
+    BrowserVersionController,
 };

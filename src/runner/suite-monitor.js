@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const {EventEmitter} = require('events');
-const Events = require('../constants/runner-events');
+const { EventEmitter } = require("events");
+const Events = require("../constants/runner-events");
 
 module.exports = class SuiteMonitor extends EventEmitter {
     static create() {
@@ -27,7 +27,7 @@ module.exports = class SuiteMonitor extends EventEmitter {
 
         if (!this._suites.has(suite)) {
             this.emit(Events.SUITE_BEGIN, suite);
-            this._suites.set(suite, {runningTests: 1, retries: 0});
+            this._suites.set(suite, { runningTests: 1, retries: 0 });
         } else {
             const suiteInfo = this._suites.get(suite);
             ++suiteInfo.runningTests;

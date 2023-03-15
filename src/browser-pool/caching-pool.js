@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
-const Pool = require('./pool');
-const LimitedUseSet = require('./limited-use-set');
-const debug = require('debug');
-const {buildCompositeBrowserId} = require('./utils');
+const Promise = require("bluebird");
+const Pool = require("./pool");
+const LimitedUseSet = require("./limited-use-set");
+const debug = require("debug");
+const { buildCompositeBrowserId } = require("./utils");
 
 module.exports = class CachingPool extends Pool {
     /**
@@ -15,7 +15,7 @@ module.exports = class CachingPool extends Pool {
     constructor(underlyingPool, config) {
         super();
 
-        this.log = debug('hermione:pool:caching');
+        this.log = debug("hermione:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
         this._config = config;
@@ -35,7 +35,7 @@ module.exports = class CachingPool extends Pool {
     }
 
     getBrowser(id, opts = {}) {
-        const {version} = opts;
+        const { version } = opts;
         const cache = this._getCacheFor(id, version);
         const browser = cache.pop();
 
@@ -47,11 +47,11 @@ module.exports = class CachingPool extends Pool {
 
         this.log(`has cached browser ${browser.fullId}`);
 
-        return browser.reset()
-            .catch((e) => {
+        return browser
+            .reset()
+            .catch(e => {
                 const reject = Promise.reject.bind(null, e);
-                return this.underlyingPool.freeBrowser(browser)
-                    .then(reject, reject);
+                return this.underlyingPool.freeBrowser(browser).then(reject, reject);
             })
             .then(() => browser);
     }
@@ -59,15 +59,15 @@ module.exports = class CachingPool extends Pool {
     _initPool(browserId, version) {
         const compositeId = buildCompositeBrowserId(browserId, version);
         const freeBrowser = this.underlyingPool.freeBrowser.bind(this.underlyingPool);
-        const {testsPerSession} = this._config.forBrowser(browserId);
+        const { testsPerSession } = this._config.forBrowser(browserId);
 
         this._caches[compositeId] = new LimitedUseSet({
-            formatItem: (item) => item.fullId,
+            formatItem: item => item.fullId,
             // browser does not get put in a set on first usages, so if
             // we want to limit it usage to N times, we must set N-1 limit
             // for the set.
             useLimit: testsPerSession - 1,
-            finalize: freeBrowser
+            finalize: freeBrowser,
         });
     }
 
@@ -81,13 +81,13 @@ module.exports = class CachingPool extends Pool {
      */
     freeBrowser(browser, options = {}) {
         const shouldFreeForNextRequest = () => {
-            const {compositeIdForNextRequest} = options;
+            const { compositeIdForNextRequest } = options;
 
             if (!compositeIdForNextRequest) {
                 return false;
             }
 
-            const {hasFreeSlots} = options;
+            const { hasFreeSlots } = options;
             const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest];
 
             return !hasFreeSlots && !hasCacheForNextRequest;
@@ -106,7 +106,7 @@ module.exports = class CachingPool extends Pool {
     }
 
     cancel() {
-        this.log('cancel');
+        this.log("cancel");
         this.underlyingPool.cancel();
     }
 };

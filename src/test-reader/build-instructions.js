@@ -1,4 +1,4 @@
-const {TreeBuilder} = require('./tree-builder');
+const { TreeBuilder } = require("./tree-builder");
 
 class InstructionsList {
     #instructions;
@@ -20,16 +20,14 @@ class InstructionsList {
     }
 
     exec(ctx = {}) {
-        const treeBuilder = ctx.treeBuilder = new TreeBuilder();
+        const treeBuilder = (ctx.treeBuilder = new TreeBuilder());
 
-        this.#instructions.forEach((fn) => fn(ctx));
+        this.#instructions.forEach(fn => fn(ctx));
 
-        return treeBuilder
-            .applyFilters()
-            .getRootSuite();
+        return treeBuilder.applyFilters().getRootSuite();
     }
 }
 
 module.exports = {
-    InstructionsList
+    InstructionsList,
 };

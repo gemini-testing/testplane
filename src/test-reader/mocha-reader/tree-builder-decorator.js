@@ -1,5 +1,5 @@
-const {Suite, Test, Hook} = require('../test-object');
-const crypto = require('../../utils/crypto');
+const { Suite, Test, Hook } = require("../test-object");
+const crypto = require("../../utils/crypto");
 
 class TreeBuilderDecorator {
     #treeBuilder;
@@ -15,11 +15,9 @@ class TreeBuilderDecorator {
     }
 
     addSuite(mochaSuite) {
-        const {id: mochaId, file} = mochaSuite;
-        const id = mochaSuite.root
-            ? mochaId
-            : crypto.getShortMD5(file) + this.#suiteMap.size;
-        const suite = this.#mkTestObject(Suite, mochaSuite, {id});
+        const { id: mochaId, file } = mochaSuite;
+        const id = mochaSuite.root ? mochaId : crypto.getShortMD5(file) + this.#suiteMap.size;
+        const suite = this.#mkTestObject(Suite, mochaSuite, { id });
 
         this.#applyConfig(suite, mochaSuite);
         this.#treeBuilder.addSuite(suite, this.#getParent(mochaSuite, null));
@@ -29,9 +27,9 @@ class TreeBuilderDecorator {
     }
 
     addTest(mochaTest) {
-        const {fn} = mochaTest;
+        const { fn } = mochaTest;
         const id = crypto.getShortMD5(mochaTest.fullTitle());
-        const test = this.#mkTestObject(Test, mochaTest, {id, fn});
+        const test = this.#mkTestObject(Test, mochaTest, { id, fn });
 
         this.#applyConfig(test, mochaTest);
         this.#treeBuilder.addTest(test, this.#getParent(mochaTest));
@@ -40,22 +38,16 @@ class TreeBuilderDecorator {
     }
 
     addBeforeEachHook(mochaHook) {
-        return this.#addHook(
-            mochaHook,
-            (hook, parent) => this.#treeBuilder.addBeforeEachHook(hook, parent)
-        );
+        return this.#addHook(mochaHook, (hook, parent) => this.#treeBuilder.addBeforeEachHook(hook, parent));
     }
 
     addAfterEachHook(mochaHook) {
-        return this.#addHook(
-            mochaHook,
-            (hook, parent) => this.#treeBuilder.addAfterEachHook(hook, parent)
-        );
+        return this.#addHook(mochaHook, (hook, parent) => this.#treeBuilder.addAfterEachHook(hook, parent));
     }
 
     #addHook(mochaHook, cb) {
-        const {fn, title} = mochaHook;
-        const hook = Hook.create({fn, title});
+        const { fn, title } = mochaHook;
+        const hook = Hook.create({ fn, title });
 
         cb(hook, this.#getParent(mochaHook));
 
@@ -63,29 +55,29 @@ class TreeBuilderDecorator {
     }
 
     #mkTestObject(Constructor, mochaObject, customOpts) {
-        const {title, file} = mochaObject;
-        return Constructor.create({title, file, ...customOpts});
+        const { title, file } = mochaObject;
+        return Constructor.create({ title, file, ...customOpts });
     }
 
     #applyConfig(testObject, mochaObject) {
-        const {pending, parent} = mochaObject;
+        const { pending, parent } = mochaObject;
 
         if (!parent || mochaObject.timeout() !== parent.timeout()) {
             testObject.timeout = mochaObject.timeout();
         }
 
         if (pending) {
-            testObject.skip({reason: 'Skipped by mocha interface'});
+            testObject.skip({ reason: "Skipped by mocha interface" });
         }
     }
 
-    #getParent({parent}, defaultValue) {
+    #getParent({ parent }, defaultValue) {
         if (!parent) {
             if (defaultValue !== undefined) {
                 return defaultValue;
             }
 
-            throw new Error('Parent not set');
+            throw new Error("Parent not set");
         }
 
         return this.#suiteMap.get(parent.id);
@@ -115,5 +107,5 @@ class TreeBuilderDecorator {
 }
 
 module.exports = {
-    TreeBuilderDecorator
+    TreeBuilderDecorator,
 };

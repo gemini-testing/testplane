@@ -1,14 +1,22 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const {SAVE_HISTORY_MODE} = require('../constants/config');
-const history = require('./history');
-const addRunStepCommand = require('./commands/runStep');
+const _ = require("lodash");
+const { SAVE_HISTORY_MODE } = require("../constants/config");
+const history = require("./history");
+const addRunStepCommand = require("./commands/runStep");
 
 const CUSTOM_SESSION_OPTS = [
-    'outputDir', 'agent', 'headers', 'transformRequest', 'transformResponse', 'strictSSL',
+    "outputDir",
+    "agent",
+    "headers",
+    "transformRequest",
+    "transformResponse",
+    "strictSSL",
     // cloud service opts
-    'user', 'key', 'region', 'headless'
+    "user",
+    "key",
+    "region",
+    "headless",
 ];
 
 module.exports = class Browser {
@@ -25,7 +33,7 @@ module.exports = class Browser {
         this._session = null;
         this._callstackHistory = null;
         this._state = {
-            isBroken: false
+            isBroken: false,
         };
     }
 
@@ -42,7 +50,7 @@ module.exports = class Browser {
             timeout = this._config.httpTimeout;
         }
 
-        this._session.extendOptions({connectionRetryTimeout: timeout});
+        this._session.extendOptions({ connectionRetryTimeout: timeout });
     }
 
     restoreHttpTimeout() {
@@ -68,7 +76,7 @@ module.exports = class Browser {
     }
 
     _addExtendOptionsMethod(session) {
-        session.addCommand('extendOptions', (opts) => {
+        session.addCommand("extendOptions", opts => {
             _.extend(session.options, opts);
         });
     }
@@ -84,9 +92,7 @@ module.exports = class Browser {
     }
 
     get fullId() {
-        return this.version
-            ? `${this.id}.${this.version}`
-            : this.id;
+        return this.version ? `${this.id}.${this.version}` : this.id;
     }
 
     get publicAPI() {

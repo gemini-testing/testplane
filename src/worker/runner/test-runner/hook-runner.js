@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
+const Promise = require("bluebird");
 
 module.exports = class HookRunner {
     static create(...args) {
@@ -17,7 +17,7 @@ module.exports = class HookRunner {
     hasBeforeEachHooks() {
         const suite = this._test.parent;
 
-        return hasHooks(suite, 'beforeEach');
+        return hasHooks(suite, "beforeEach");
     }
 
     async runBeforeEachHooks() {
@@ -30,7 +30,7 @@ module.exports = class HookRunner {
         }
 
         try {
-            await Promise.mapSeries(suite.beforeEachHooks, (hook) => this._runHook(hook));
+            await Promise.mapSeries(suite.beforeEachHooks, hook => this._runHook(hook));
         } catch (e) {
             this._failedSuite = suite;
             throw e;
@@ -44,7 +44,7 @@ module.exports = class HookRunner {
     hasAfterEachHooks() {
         const suite = this._failedSuite || this._test.parent;
 
-        return hasHooks(suite, 'afterEach');
+        return hasHooks(suite, "afterEach");
     }
 
     async runAfterEachHooks() {
@@ -55,7 +55,7 @@ module.exports = class HookRunner {
         let error;
 
         try {
-            await Promise.mapSeries(suite.afterEachHooks, (hook) => this._runHook(hook));
+            await Promise.mapSeries(suite.afterEachHooks, hook => this._runHook(hook));
         } catch (e) {
             error = e;
         }

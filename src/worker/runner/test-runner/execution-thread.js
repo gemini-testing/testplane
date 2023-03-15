@@ -1,26 +1,28 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
+const Promise = require("bluebird");
 
 module.exports = class ExecutionThread {
     static create(...args) {
         return new this(...args);
     }
 
-    constructor({test, browser, hermioneCtx, screenshooter}) {
+    constructor({ test, browser, hermioneCtx, screenshooter }) {
         this._hermioneCtx = hermioneCtx;
         this._screenshooter = screenshooter;
         this._ctx = {
             browser: browser.publicAPI,
-            currentTest: test
+            currentTest: test,
         };
     }
 
     async run(runnable) {
-        this._setExecutionContext(Object.assign(runnable, {
-            hermioneCtx: this._hermioneCtx,
-            ctx: this._ctx
-        }));
+        this._setExecutionContext(
+            Object.assign(runnable, {
+                hermioneCtx: this._hermioneCtx,
+                ctx: this._ctx,
+            }),
+        );
 
         try {
             await this._call(runnable);
@@ -42,7 +44,7 @@ module.exports = class ExecutionThread {
         }
 
         return fnPromise
-            .tapCatch((e) => this._screenshooter.extendWithScreenshot(e))
+            .tapCatch(e => this._screenshooter.extendWithScreenshot(e))
             .finally(async () => {
                 if (this._hermioneCtx.assertViewResults && this._hermioneCtx.assertViewResults.hasFails()) {
                     await this._screenshooter.captureScreenshotOnAssertViewFail();

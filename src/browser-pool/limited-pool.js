@@ -1,12 +1,12 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const Promise = require('bluebird');
-const yallist = require('yallist');
-const Pool = require('./pool');
-const CancelledError = require('./cancelled-error');
-const debug = require('debug');
-const {buildCompositeBrowserId} = require('./utils');
+const _ = require("lodash");
+const Promise = require("bluebird");
+const yallist = require("yallist");
+const Pool = require("./pool");
+const CancelledError = require("./cancelled-error");
+const debug = require("debug");
+const { buildCompositeBrowserId } = require("./utils");
 
 module.exports = class LimitedPool extends Pool {
     static create(underlyingPool, opts) {
@@ -21,7 +21,7 @@ module.exports = class LimitedPool extends Pool {
     constructor(underlyingPool, opts) {
         super();
 
-        this.log = debug('hermione:pool:limited');
+        this.log = debug("hermione:pool:limited");
 
         this.underlyingPool = underlyingPool;
         this._limit = opts.limit;
@@ -39,11 +39,10 @@ module.exports = class LimitedPool extends Pool {
         this.log(`get browser ${id} with opts:${optsToPrint} (launched ${this._launched}, limit ${this._limit})`);
 
         ++this._requests;
-        return this._getBrowser(id, opts)
-            .catch((e) => {
-                --this._requests;
-                return Promise.reject(e);
-            });
+        return this._getBrowser(id, opts).catch(e => {
+            --this._requests;
+            return Promise.reject(e);
+        });
     }
 
     freeBrowser(browser, opts = {}) {
@@ -54,19 +53,17 @@ module.exports = class LimitedPool extends Pool {
         const hasFreeSlots = this._launched < this._limit;
         const shouldFreeUnusedResource = this._isSpecificBrowserLimiter && this._launched > this._requests;
         const force = opts.force || shouldFreeUnusedResource;
-        const optsForFree = {force, compositeIdForNextRequest, hasFreeSlots};
+        const optsForFree = { force, compositeIdForNextRequest, hasFreeSlots };
 
         this.log(`free browser ${browser.fullId} with opts:${JSON.stringify(optsForFree)}`);
 
-        return this.underlyingPool
-            .freeBrowser(browser, optsForFree)
-            .finally(() => this._launchNextBrowser());
+        return this.underlyingPool.freeBrowser(browser, optsForFree).finally(() => this._launchNextBrowser());
     }
 
     cancel() {
-        this.log('cancel');
+        this.log("cancel");
 
-        const reject_ = (entry) => entry.reject(new CancelledError());
+        const reject_ = entry => entry.reject(new CancelledError());
         this._highPriorityRequestQueue.forEach(reject_);
         this._requestQueue.forEach(reject_);
 
@@ -78,18 +75,18 @@ module.exports = class LimitedPool extends Pool {
 
     _getBrowser(id, opts = {}) {
         if (this._launched < this._limit) {
-            this.log('can launch one more');
+            this.log("can launch one more");
             this._launched++;
             return this._newBrowser(id, opts);
         }
 
-        this.log('queuing the request');
+        this.log("queuing the request");
 
         const queue = opts.highPriority ? this._highPriorityRequestQueue : this._requestQueue;
-        const {version} = opts;
+        const { version } = opts;
 
         return new Promise((resolve, reject) => {
-            queue.push({id, version, resolve, reject});
+            queue.push({ id, version, resolve, reject });
         });
     }
 
@@ -100,11 +97,10 @@ module.exports = class LimitedPool extends Pool {
     _newBrowser(id, opts) {
         this.log(`launching new browser ${id} with opts:${JSON.stringify(opts)}`);
 
-        return this.underlyingPool.getBrowser(id, opts)
-            .catch((e) => {
-                this._launchNextBrowser();
-                return Promise.reject(e);
-            });
+        return this.underlyingPool.getBrowser(id, opts).catch(e => {
+            this._launchNextBrowser();
+            return Promise.reject(e);
+        });
     }
 
     _lookAtNextRequest() {
@@ -119,8 +115,7 @@ module.exports = class LimitedPool extends Pool {
 
             this.log(`has queued requests for ${compositeId}`);
             this.log(`remaining queue length: ${this._requestQueue.length}`);
-            this._newBrowser(queued.id, {version: queued.version})
-                .then(queued.resolve, queued.reject);
+            this._newBrowser(queued.id, { version: queued.version }).then(queued.resolve, queued.reject);
         } else {
             this._launched--;
         }

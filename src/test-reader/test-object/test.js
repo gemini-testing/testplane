@@ -1,8 +1,8 @@
-const {ConfigurableTestObject} = require('./configurable-test-object');
+const { ConfigurableTestObject } = require("./configurable-test-object");
 
 class Test extends ConfigurableTestObject {
-    constructor({title, file, id, fn}) {
-        super({title, file, id});
+    constructor({ title, file, id, fn }) {
+        super({ title, file, id });
 
         this.fn = fn;
     }
@@ -12,15 +12,15 @@ class Test extends ConfigurableTestObject {
             title: this.title,
             file: this.file,
             id: this.id,
-            fn: this.fn
+            fn: this.fn,
         }).assign(this);
     }
 
     get type() {
-        return 'test';
+        return "test";
     }
 }
 
 module.exports = {
-    Test
+    Test,
 };

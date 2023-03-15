@@ -1,4 +1,4 @@
-const ReadEvents = require('../read-events');
+const ReadEvents = require("../read-events");
 
 class SkipController {
     #eventBus;
@@ -11,21 +11,21 @@ class SkipController {
         this.#eventBus = eventBus;
     }
 
-    in(matchers, reason, {silent} = {}) {
-        this.#addTrap((browserId) => this.#match(matchers, browserId), reason, {silent});
+    in(matchers, reason, { silent } = {}) {
+        this.#addTrap(browserId => this.#match(matchers, browserId), reason, { silent });
 
         return this;
     }
 
-    notIn(matchers, reason, {silent} = {}) {
-        this.#addTrap((browserId) => !this.#match(matchers, browserId), reason, {silent});
+    notIn(matchers, reason, { silent } = {}) {
+        this.#addTrap(browserId => !this.#match(matchers, browserId), reason, { silent });
 
         return this;
     }
 
-    #addTrap(match, reason, {silent} = {}) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({treeBuilder}) => {
-            treeBuilder.addTrap((obj) => {
+    #addTrap(match, reason, { silent } = {}) {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+            treeBuilder.addTrap(obj => {
                 if (!match(obj.browserId)) {
                     return;
                 }
@@ -33,19 +33,19 @@ class SkipController {
                 if (silent) {
                     obj.disable();
                 } else {
-                    obj.skip({reason});
+                    obj.skip({ reason });
                 }
             });
         });
     }
 
     #match(matchers, browserId) {
-        return [].concat(matchers).some((m) => {
-            return (m instanceof RegExp) ? m.test(browserId) : m === browserId;
+        return [].concat(matchers).some(m => {
+            return m instanceof RegExp ? m.test(browserId) : m === browserId;
         });
     }
 }
 
 module.exports = {
-    SkipController
+    SkipController,
 };

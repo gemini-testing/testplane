@@ -1,5 +1,5 @@
-const BaseInformer = require('./base');
-const logger = require('../../utils/logger');
+const BaseInformer = require("./base");
+const logger = require("../../utils/logger");
 
 module.exports = class ConsoleInformer extends BaseInformer {
     log(message) {

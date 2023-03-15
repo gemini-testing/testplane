@@ -1,13 +1,13 @@
-'use strict';
+"use strict";
 
 var SCROLL_DIR_NAME = {
-    top: 'scrollTop',
-    left: 'scrollLeft'
+    top: "scrollTop",
+    left: "scrollLeft"
 };
 
 var PAGE_OFFSET_NAME = {
-    x: 'pageXOffset',
-    y: 'pageYOffset'
+    x: "pageXOffset",
+    y: "pageYOffset"
 };
 
 exports.each = arrayUtil(Array.prototype.forEach, myForEach);
@@ -23,7 +23,7 @@ function arrayUtil(nativeFunc, shimFunc) {
  * first argument
  */
 function contextify(f) {
-    return function(ctx) {
+    return function (ctx) {
         var rest = Array.prototype.slice.call(arguments, 1);
         return f.apply(ctx, rest);
     };
@@ -61,24 +61,26 @@ function getScroll(scrollElem, direction, coord) {
         return scrollElem[scrollDir];
     }
 
-    if (typeof window[pageOffset] !== 'undefined') {
+    if (typeof window[pageOffset] !== "undefined") {
         return window[pageOffset];
     }
 
     return document.documentElement[scrollDir];
 }
 
-exports.getScrollTop = function(scrollElem) {
-    return getScroll(scrollElem, 'top', 'y');
+exports.getScrollTop = function (scrollElem) {
+    return getScroll(scrollElem, "top", "y");
 };
 
-exports.getScrollLeft = function(scrollElem) {
-    return getScroll(scrollElem, 'left', 'x');
+exports.getScrollLeft = function (scrollElem) {
+    return getScroll(scrollElem, "left", "x");
 };
 
-exports.isSafariMobile = function() {
-    return navigator
-        && typeof navigator.vendor === 'string'
-        && navigator.vendor.match(/apple/i)
-        && /(iPhone|iPad).*AppleWebKit.*Safari/i.test(navigator.userAgent);
+exports.isSafariMobile = function () {
+    return (
+        navigator &&
+        typeof navigator.vendor === "string" &&
+        navigator.vendor.match(/apple/i) &&
+        /(iPhone|iPad).*AppleWebKit.*Safari/i.test(navigator.userAgent)
+    );
 };

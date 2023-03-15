@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const Promise = require('bluebird');
-const ClientBridgeError = require('./error');
+const Promise = require("bluebird");
+const ClientBridgeError = require("./error");
 
 module.exports = class ClientBridge {
     static create(browser, script) {
@@ -18,24 +18,24 @@ module.exports = class ClientBridge {
     }
 
     _callCommand(command, injectAllowed) {
-        return this._browser.evalScript(command)
-            .then((result) => {
+        return this._browser
+            .evalScript(command)
+            .then(result => {
                 if (!result || !result.isClientScriptNotInjected) {
                     return Promise.resolve(result);
                 }
 
                 if (injectAllowed) {
-                    return this._inject()
-                        .then(() => this._callCommand(command, false));
+                    return this._inject().then(() => this._callCommand(command, false));
                 }
 
-                return Promise.reject(new ClientBridgeError('Unable to inject client script'));
+                return Promise.reject(new ClientBridgeError("Unable to inject client script"));
             })
-            .catch((e) => Promise.reject(new ClientBridgeError(e.message)));
+            .catch(e => Promise.reject(new ClientBridgeError(e.message)));
     }
 
     _clientMethodCommand(name, args) {
-        const params = args.map(JSON.stringify).join(', ');
+        const params = args.map(JSON.stringify).join(", ");
         const call = `__geminiCore.${name}(${params})`;
 
         return this._guardClientCall(call);

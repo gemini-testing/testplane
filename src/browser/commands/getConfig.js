@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-module.exports = (browser) => {
-    const {publicAPI: session, config} = browser;
-    session.addCommand('getConfig', () => config);
+module.exports = browser => {
+    const { publicAPI: session, config } = browser;
+    session.addCommand("getConfig", () => config);
 };

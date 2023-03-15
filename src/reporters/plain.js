@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const chalk = require('chalk');
+const chalk = require("chalk");
 
-const BaseReporter = require('./base');
-const icons = require('./utils/icons');
-const helpers = require('./utils/helpers');
+const BaseReporter = require("./base");
+const icons = require("./utils/icons");
+const helpers = require("./utils/helpers");
 
 module.exports = class PlainReporter extends BaseReporter {
     _logTestInfo(test, icon) {

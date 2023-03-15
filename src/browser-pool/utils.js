@@ -1,3 +1,1 @@
-exports.buildCompositeBrowserId = (browserId, version) => version
-    ? `${browserId}.${version}`
-    : browserId;
+exports.buildCompositeBrowserId = (browserId, version) => (version ? `${browserId}.${version}` : browserId);

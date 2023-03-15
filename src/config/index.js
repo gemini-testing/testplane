@@ -1,11 +1,11 @@
-'use strict';
+"use strict";
 
-const path = require('path');
-const _ = require('lodash');
-const BrowserConfig = require('./browser-config');
-const defaults = require('./defaults');
-const parseOptions = require('./options');
-const logger = require('../utils/logger');
+const path = require("path");
+const _ = require("lodash");
+const BrowserConfig = require("./browser-config");
+const defaults = require("./defaults");
+const parseOptions = require("./options");
+const logger = require("../utils/logger");
 
 module.exports = class Config {
     static create(config) {
@@ -25,7 +25,7 @@ module.exports = class Config {
         let options;
         if (_.isObjectLike(config)) {
             options = config;
-        } else if (typeof config === 'string') {
+        } else if (typeof config === "string") {
             this.configPath = config;
             options = Config.read(config);
         } else {
@@ -39,7 +39,7 @@ module.exports = class Config {
             }
 
             if (!this.configPath) {
-                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(', ')}`);
+                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
             }
 
             options = Config.read(this.configPath);
@@ -49,20 +49,20 @@ module.exports = class Config {
             options.prepareEnvironment();
         }
 
-        _.extend(this, parseOptions({
-            options,
-            env: process.env,
-            argv: process.argv
-        }));
+        _.extend(
+            this,
+            parseOptions({
+                options,
+                env: process.env,
+                argv: process.argv,
+            }),
+        );
 
         this.browsers = _.mapValues(this.browsers, (browser, id) => {
-            const browserOptions = _.extend({},
-                browser,
-                {
-                    id: id,
-                    system: this.system
-                }
-            );
+            const browserOptions = _.extend({}, browser, {
+                id: id,
+                system: this.system,
+            });
 
             return new BrowserConfig(browserOptions);
         });
@@ -78,7 +78,7 @@ module.exports = class Config {
 
     serialize() {
         return _.extend({}, this, {
-            browsers: _.mapValues(this.browsers, (broConf) => broConf.serialize())
+            browsers: _.mapValues(this.browsers, broConf => broConf.serialize()),
         });
     }
 

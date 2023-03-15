@@ -1,10 +1,13 @@
-'use strict';
+"use strict";
 
 exports.isFullPage = (imageArea, page, screenshotMode) => {
     switch (screenshotMode) {
-        case 'fullpage': return true;
-        case 'viewport': return false;
-        case 'auto': return compareDimensions(imageArea, page);
+        case "fullpage":
+            return true;
+        case "viewport":
+            return false;
+        case "auto":
+            return compareDimensions(imageArea, page);
     }
 };
 

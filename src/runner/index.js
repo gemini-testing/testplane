@@ -1,18 +1,18 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const eventsUtils = require('../events/utils');
-const temp = require('../temp');
+const _ = require("lodash");
+const eventsUtils = require("../events/utils");
+const temp = require("../temp");
 
-const pool = require('../browser-pool');
-const BrowserRunner = require('./browser-runner');
-const Events = require('../constants/runner-events');
-const Runner = require('./runner');
-const RuntimeConfig = require('../config/runtime-config');
-const WorkersRegistry = require('../utils/workers-registry');
-const PromiseGroup = require('./promise-group');
-const TestCollection = require('../test-collection').default;
-const logger = require('../utils/logger');
+const pool = require("../browser-pool");
+const BrowserRunner = require("./browser-runner");
+const Events = require("../constants/runner-events");
+const Runner = require("./runner");
+const RuntimeConfig = require("../config/runtime-config");
+const WorkersRegistry = require("../utils/workers-registry");
+const PromiseGroup = require("./promise-group");
+const TestCollection = require("../test-collection").default;
+const logger = require("../utils/logger");
 
 module.exports = class MainRunner extends Runner {
     constructor(config, interceptors) {
@@ -33,7 +33,7 @@ module.exports = class MainRunner extends Runner {
         eventsUtils.passthroughEvent(this._workersRegistry, this, [Events.NEW_WORKER_PROCESS]);
 
         temp.init(this._config.system.tempDir);
-        RuntimeConfig.getInstance().extend({tempOpts: temp.serialize()});
+        RuntimeConfig.getInstance().extend({ tempOpts: temp.serialize() });
     }
 
     init() {
@@ -42,7 +42,7 @@ module.exports = class MainRunner extends Runner {
         }
 
         this._workersRegistry.init();
-        this._workers = this._workersRegistry.register(require.resolve('../worker'), ['runTest']);
+        this._workers = this._workersRegistry.register(require.resolve("../worker"), ["runTest"]);
         this._browserPool = pool.create(this._config, this);
     }
 
@@ -56,7 +56,7 @@ module.exports = class MainRunner extends Runner {
         try {
             await this.emitAndWait(Events.RUNNER_START, this);
             this.emit(Events.BEGIN);
-            !this._cancelled && await this._runTests(testCollection);
+            !this._cancelled && (await this._runTests(testCollection));
         } finally {
             this.emit(Events.END);
             await this.emitAndWait(Events.RUNNER_END, stats.getResult()).catch(logger.warn);
@@ -74,14 +74,14 @@ module.exports = class MainRunner extends Runner {
             return true;
         }
 
-        const collection = TestCollection.create({[browserId]: [test]}, this._config);
+        const collection = TestCollection.create({ [browserId]: [test] }, this._config);
         this._running.add(this._runTestsInBrowser(collection, browserId));
 
         return true;
     }
 
     _runTests(testCollection) {
-        testCollection.getBrowsers().forEach((browserId) => {
+        testCollection.getBrowsers().forEach(browserId => {
             this._running.add(this._runTestsInBrowser(testCollection, browserId));
         });
 
@@ -106,14 +106,14 @@ module.exports = class MainRunner extends Runner {
     }
 
     _getEventsToIntercept() {
-        return _(this._interceptors).map('event').uniq().value();
+        return _(this._interceptors).map("event").uniq().value();
     }
 
     _interceptEvents(runner, events) {
-        events.forEach((event) => {
-            runner.on(event, (data) => {
+        events.forEach(event => {
+            runner.on(event, data => {
                 try {
-                    const toEmit = this._applyInterceptors({event, data}, this._interceptors);
+                    const toEmit = this._applyInterceptors({ event, data }, this._interceptors);
                     toEmit && toEmit.event && this.emit(toEmit.event, toEmit.data);
                 } catch (e) {
                     this.emit(Events.ERROR, e);
@@ -122,20 +122,23 @@ module.exports = class MainRunner extends Runner {
         });
     }
 
-    _applyInterceptors({event, data} = {}, interceptors) {
-        const interceptor = _.find(interceptors, {event});
+    _applyInterceptors({ event, data } = {}, interceptors) {
+        const interceptor = _.find(interceptors, { event });
         if (!interceptor) {
-            return {event, data};
+            return { event, data };
         }
 
-        return this._applyInterceptors(interceptor.handler({event, data}) || {event, data}, _.without(interceptors, interceptor));
+        return this._applyInterceptors(
+            interceptor.handler({ event, data }) || { event, data },
+            _.without(interceptors, interceptor),
+        );
     }
 
     cancel() {
         this._cancelled = true;
         this._browserPool.cancel();
 
-        this._activeBrowserRunners.forEach((runner) => runner.cancel());
+        this._activeBrowserRunners.forEach(runner => runner.cancel());
     }
 
     registerWorkers(workerFilepath, exportedMethods) {

@@ -44,10 +44,10 @@ declare namespace WebdriverIO {
 
         /**
          * Command that allows to add human-readable description for commands in history
-         * 
+         *
          * @remarks
          * For more details, see {@link https://github.com/gemini-testing/hermione#runstep documentation}
-         * 
+         *
          * @example
          * ```ts
          * it('some test', async function () {
@@ -57,12 +57,12 @@ declare namespace WebdriverIO {
          *     });
          * })
          * ```
-         * 
+         *
          * @param stepName step name
          * @param stepCb step callback
          * @returns {Promise<any>} value, returned by `stepCb`
          */
-        runStep(stepName: string, stepCb: () => (Promise<any> | any)): Promise<any>;
+        runStep(stepName: string, stepCb: () => Promise<any> | any): Promise<any>;
     }
 
     interface Element {
@@ -96,7 +96,7 @@ declare namespace WebdriverIO {
          * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
          * "compositeImage", "screenshotDelay", "selectorToScroll"
          */
-         assertView(state: string, opts?: Hermione.AssertViewOpts): Promise<void>;
+        assertView(state: string, opts?: Hermione.AssertViewOpts): Promise<void>;
     }
 }
 

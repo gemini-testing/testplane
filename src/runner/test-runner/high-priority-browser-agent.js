@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class HighPriorityBrowserAgent {
     static create(...args) {
@@ -10,7 +10,7 @@ module.exports = class HighPriorityBrowserAgent {
     }
 
     getBrowser() {
-        return this._browserAgent.getBrowser({highPriority: true});
+        return this._browserAgent.getBrowser({ highPriority: true });
     }
 
     freeBrowser(...args) {

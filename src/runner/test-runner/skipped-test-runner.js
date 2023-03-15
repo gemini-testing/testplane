@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-const Runner = require('../runner');
-const Events = require('../../constants/runner-events');
+const Runner = require("../runner");
+const Events = require("../../constants/runner-events");
 
 module.exports = class SkippedTestRunner extends Runner {
     constructor(test) {
@@ -20,7 +20,7 @@ module.exports = class SkippedTestRunner extends Runner {
         this.emit(Events.TEST_END, this._test);
     }
 
-    _isSilentlySkipped({silentSkip, parent}) {
-        return silentSkip || parent && this._isSilentlySkipped(parent);
+    _isSilentlySkipped({ silentSkip, parent }) {
+        return silentSkip || (parent && this._isSilentlySkipped(parent));
     }
 };

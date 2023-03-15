@@ -1,19 +1,19 @@
 /* global window, document */
-'use strict';
+"use strict";
 
-const url = require('url');
-const Promise = require('bluebird');
-const _ = require('lodash');
-const webdriverio = require('webdriverio');
-const {sessionEnvironmentDetector} = require('@wdio/utils');
-const Browser = require('./browser');
-const commandsList = require('./commands');
-const Camera = require('./camera');
-const clientBridge = require('./client-bridge');
-const history = require('./history');
-const logger = require('../utils/logger');
+const url = require("url");
+const Promise = require("bluebird");
+const _ = require("lodash");
+const webdriverio = require("webdriverio");
+const { sessionEnvironmentDetector } = require("@wdio/utils");
+const Browser = require("./browser");
+const commandsList = require("./commands");
+const Camera = require("./camera");
+const clientBridge = require("./client-bridge");
+const history = require("./history");
+const logger = require("../utils/logger");
 
-const OPTIONAL_SESSION_OPTS = ['transformRequest', 'transformResponse'];
+const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 module.exports = class ExistingBrowser extends Browser {
     static create(config, id, version, emitter) {
@@ -29,13 +29,13 @@ module.exports = class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async init({sessionId, sessionCaps, sessionOpts} = {}, calibrator) {
-        this._session = await this._attachSession({sessionId, sessionCaps, sessionOpts});
+    async init({ sessionId, sessionCaps, sessionOpts } = {}, calibrator) {
+        this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
 
         this._addSteps();
         this._addHistory();
 
-        await history.runGroup(this._callstackHistory, 'hermione: init browser', async () => {
+        await history.runGroup(this._callstackHistory, "hermione: init browser", async () => {
             this._addCommands();
 
             try {
@@ -53,7 +53,7 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     async reinit(sessionId, sessionOpts) {
-        await history.runGroup(this._callstackHistory, 'hermione: reinit browser', async () => {
+        await history.runGroup(this._callstackHistory, "hermione: reinit browser", async () => {
             this._session.extendOptions(sessionOpts);
             await this._prepareSession(sessionId);
         });
@@ -62,7 +62,7 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     markAsBroken() {
-        this.applyState({isBroken: true});
+        this.applyState({ isBroken: true });
 
         this._stubCommands();
     }
@@ -70,17 +70,19 @@ module.exports = class ExistingBrowser extends Browser {
     quit() {
         this.sessionId = null;
         this._meta = this._initMeta();
-        this._state = {isBroken: false};
+        this._state = { isBroken: false };
     }
 
     async prepareScreenshot(selectors, opts = {}) {
         opts = _.extend(opts, {
-            usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true
+            usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true,
         });
 
-        const result = await this._clientBridge.call('prepareScreenshot', [selectors, opts]);
+        const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
         if (result.error) {
-            throw new Error(`Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`);
+            throw new Error(
+                `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
+            );
         }
         return result;
     }
@@ -106,7 +108,7 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     scrollBy(params) {
-        return this._session.execute(function(params) {
+        return this._session.execute(function (params) {
             var elem, xVal, yVal;
 
             if (params.selector) {
@@ -114,9 +116,9 @@ module.exports = class ExistingBrowser extends Browser {
 
                 if (!elem) {
                     throw new Error(
-                        'Scroll screenshot failed with: ' +
-                        'Could not find element with css selector specified in "selectorToScroll" option: ' +
-                        params.selector
+                        "Scroll screenshot failed with: " +
+                            'Could not find element with css selector specified in "selectorToScroll" option: ' +
+                            params.selector,
                     );
                 }
 
@@ -132,10 +134,10 @@ module.exports = class ExistingBrowser extends Browser {
         }, params);
     }
 
-    _attachSession({sessionId, sessionCaps, sessionOpts = {}}) {
+    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps,
-            requestedCapabilities: sessionOpts.capabilities
+            requestedCapabilities: sessionOpts.capabilities,
         });
 
         const opts = {
@@ -144,9 +146,9 @@ module.exports = class ExistingBrowser extends Browser {
             ...this._getSessionOptsFromConfig(OPTIONAL_SESSION_OPTS),
             ...detectedSessionEnvFlags,
             ...this._config.sessionEnvFlags,
-            options: _.pick(sessionOpts, 'automationProtocol'),
-            capabilities: {...sessionOpts.capabilities, ...sessionCaps},
-            requestedCapabilities: sessionOpts.capabilities
+            options: _.pick(sessionOpts, "automationProtocol"),
+            capabilities: { ...sessionOpts.capabilities, ...sessionCaps },
+            requestedCapabilities: sessionOpts.capabilities,
         };
 
         return webdriverio.attach(opts);
@@ -156,7 +158,7 @@ module.exports = class ExistingBrowser extends Browser {
         return {
             pid: process.pid,
             browserVersion: this.version,
-            ...this._config.meta
+            ...this._config.meta,
         };
     }
 
@@ -168,18 +170,18 @@ module.exports = class ExistingBrowser extends Browser {
         this._addMetaAccessCommands(this._session);
         this._decorateUrlMethod(this._session);
 
-        commandsList.forEach((command) => require(`./commands/${command}`)(this));
+        commandsList.forEach(command => require(`./commands/${command}`)(this));
 
         super._addCommands();
     }
 
     _addMetaAccessCommands(session) {
-        session.addCommand('setMeta', (key, value) => this._meta[key] = value);
-        session.addCommand('getMeta', (key) => key ? this._meta[key] : this._meta);
+        session.addCommand("setMeta", (key, value) => (this._meta[key] = value));
+        session.addCommand("getMeta", key => (key ? this._meta[key] : this._meta));
     }
 
     _decorateUrlMethod(session) {
-        session.overwriteCommand('url', async (origUrlFn, uri) => {
+        session.overwriteCommand("url", async (origUrlFn, uri) => {
             if (!uri) {
                 return session.getUrl();
             }
@@ -198,7 +200,7 @@ module.exports = class ExistingBrowser extends Browser {
             }
 
             if (this._clientBridge) {
-                await this._clientBridge.call('resetZoom');
+                await this._clientBridge.call("resetZoom");
             }
 
             return result;
@@ -232,16 +234,16 @@ module.exports = class ExistingBrowser extends Browser {
             return Promise.resolve();
         }
 
-        return calibrator.calibrate(this)
-            .then((calibration) => {
-                this._calibration = calibration;
-                this._camera.calibrate(calibration);
-            });
+        return calibrator.calibrate(this).then(calibration => {
+            this._calibration = calibration;
+            this._camera.calibrate(calibration);
+        });
     }
 
     _buildClientScripts() {
-        return clientBridge.build(this, {calibration: this._calibration})
-            .then((clientBridge) => this._clientBridge = clientBridge);
+        return clientBridge
+            .build(this, { calibration: this._calibration })
+            .then(clientBridge => (this._clientBridge = clientBridge));
     }
 
     _attach(sessionId) {
@@ -250,13 +252,13 @@ module.exports = class ExistingBrowser extends Browser {
 
     _stubCommands() {
         for (let commandName of this._session.commandList) {
-            if (commandName === 'deleteSession') {
+            if (commandName === "deleteSession") {
                 continue;
             }
 
             if (_.isFunction(this._session[commandName])) {
                 // eslint-disable-next-line @typescript-eslint/no-empty-function
-                this._session.overwriteCommand(commandName, () => { });
+                this._session.overwriteCommand(commandName, () => {});
             }
         }
     }

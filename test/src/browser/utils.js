@@ -1,15 +1,15 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const NewBrowser = require('src/browser/new-browser');
-const ExistingBrowser = require('src/browser/existing-browser');
-const {WEBDRIVER_PROTOCOL} = require('src/constants/config');
+const _ = require("lodash");
+const NewBrowser = require("src/browser/new-browser");
+const ExistingBrowser = require("src/browser/existing-browser");
+const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
 function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
-        desiredCapabilities: {browserName: 'browser', version: '1.0'},
-        baseUrl: 'http://base_url',
-        gridUrl: 'http://test_host:4444/wd/hub?query=value',
+        desiredCapabilities: { browserName: "browser", version: "1.0" },
+        baseUrl: "http://base_url",
+        gridUrl: "http://test_host:4444/wd/hub?query=value",
         automationProtocol: WEBDRIVER_PROTOCOL,
         sessionEnvFlags: {},
         outputDir: null,
@@ -21,10 +21,10 @@ function createBrowserConfig_(opts = {}) {
         sessionQuitTimeout: null,
         screenshotDelay: 0,
         windowSize: null,
-        getScreenshotPath: () => '/some/path',
+        getScreenshotPath: () => "/some/path",
         system: opts.system || {},
         buildDiffOpts: {
-            ignoreCaret: true
+            ignoreCaret: true,
         },
         waitOrientationChange: true,
         agent: null,
@@ -36,53 +36,53 @@ function createBrowserConfig_(opts = {}) {
         key: null,
         region: null,
         headless: null,
-        saveHistory: true
+        saveHistory: true,
     });
 
     return {
-        baseUrl: 'http://main_url',
-        gridUrl: 'http://main_host:4444/wd/hub',
-        system: {debug: true},
-        forBrowser: () => browser
+        baseUrl: "http://main_url",
+        gridUrl: "http://main_host:4444/wd/hub",
+        system: { debug: true },
+        forBrowser: () => browser,
     };
 }
 
-exports.mkNewBrowser_ = (opts, browser = 'browser', version) => {
+exports.mkNewBrowser_ = (opts, browser = "browser", version) => {
     return NewBrowser.create(createBrowserConfig_(opts), browser, version);
 };
 
-exports.mkExistingBrowser_ = (opts, browser = 'browser', browserVersion, emitter = 'emitter') => {
+exports.mkExistingBrowser_ = (opts, browser = "browser", browserVersion, emitter = "emitter") => {
     return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter);
 };
 
 exports.mkSessionStub_ = () => {
     const session = {};
     const element = {
-        selector: '.selector',
-        click: sinon.stub().named('click').resolves(),
-        waitForExist: sinon.stub().named('waitForExist').resolves()
+        selector: ".selector",
+        click: sinon.stub().named("click").resolves(),
+        waitForExist: sinon.stub().named("waitForExist").resolves(),
     };
 
-    session.sessionId = '1234567890';
+    session.sessionId = "1234567890";
     session.isW3C = false;
 
     session.options = {};
     session.capabilities = {};
     session.commandList = [];
 
-    session.deleteSession = sinon.stub().named('end').resolves();
-    session.url = sinon.stub().named('url').resolves();
-    session.getUrl = sinon.stub().named('getUrl').resolves('');
-    session.execute = sinon.stub().named('execute').resolves();
-    session.takeScreenshot = sinon.stub().named('takeScreenshot').resolves('');
-    session.setWindowSize = sinon.stub().named('setWindowSize').resolves();
-    session.getOrientation = sinon.stub().named('orientation').resolves('');
-    session.setOrientation = sinon.stub().named('setOrientation').resolves();
-    session.waitUntil = sinon.stub().named('waitUntil').resolves();
-    session.setTimeout = sinon.stub().named('setTimeout').resolves();
-    session.setTimeouts = sinon.stub().named('setTimeouts').resolves();
-    session.getPuppeteer = sinon.stub().named('getPuppeteer').resolves({});
-    session.$ = sinon.stub().named('$').resolves(element);
+    session.deleteSession = sinon.stub().named("end").resolves();
+    session.url = sinon.stub().named("url").resolves();
+    session.getUrl = sinon.stub().named("getUrl").resolves("");
+    session.execute = sinon.stub().named("execute").resolves();
+    session.takeScreenshot = sinon.stub().named("takeScreenshot").resolves("");
+    session.setWindowSize = sinon.stub().named("setWindowSize").resolves();
+    session.getOrientation = sinon.stub().named("orientation").resolves("");
+    session.setOrientation = sinon.stub().named("setOrientation").resolves();
+    session.waitUntil = sinon.stub().named("waitUntil").resolves();
+    session.setTimeout = sinon.stub().named("setTimeout").resolves();
+    session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
+    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves({});
+    session.$ = sinon.stub().named("$").resolves(element);
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? element : session;

@@ -1,10 +1,10 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const Runner = require('../runner');
-const logger = require('../../utils/logger');
-const Events = require('../../constants/runner-events');
-const AssertViewResults = require('../../browser/commands/assert-view/assert-view-results');
+const _ = require("lodash");
+const Runner = require("../runner");
+const logger = require("../../utils/logger");
+const Events = require("../../constants/runner-events");
+const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
 
 module.exports = class RegularTestRunner extends Runner {
     constructor(test, browserAgent) {
@@ -22,7 +22,7 @@ module.exports = class RegularTestRunner extends Runner {
             const browser = await this._getBrowser();
 
             if (browser) {
-                workers.once(`worker.${browser.sessionId}.freeBrowser`, (browserState) => {
+                workers.once(`worker.${browser.sessionId}.freeBrowser`, browserState => {
                     freeBrowserPromise = this._freeBrowser(browserState);
                 });
             }
@@ -57,20 +57,17 @@ module.exports = class RegularTestRunner extends Runner {
             throw this._test.err;
         }
 
-        return await workers.runTest(
-            this._test.fullTitle(),
-            {
-                browserId: this._browser.id,
-                browserVersion: this._browser.version,
-                sessionId: this._browser.sessionId,
-                sessionCaps: this._browser.capabilities,
-                sessionOpts: this._browser.publicAPI.options,
-                file: this._test.file
-            }
-        );
+        return await workers.runTest(this._test.fullTitle(), {
+            browserId: this._browser.id,
+            browserVersion: this._browser.version,
+            sessionId: this._browser.sessionId,
+            sessionCaps: this._browser.capabilities,
+            sessionOpts: this._browser.publicAPI.options,
+            file: this._test.file,
+        });
     }
 
-    _applyTestResults({meta, hermioneCtx = {}, history = []}) {
+    _applyTestResults({ meta, hermioneCtx = {}, history = [] }) {
         hermioneCtx.assertViewResults = AssertViewResults.fromRawObject(hermioneCtx.assertViewResults || []);
         this._test.assertViewResults = hermioneCtx.assertViewResults.get();
 

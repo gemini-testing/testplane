@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 module.exports = class InvalidPngError extends Error {
     constructor(message) {

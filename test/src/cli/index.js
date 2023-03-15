@@ -1,20 +1,20 @@
-'use strict';
+"use strict";
 
-const {Command} = require('@gemini-testing/commander');
-const proxyquire = require('proxyquire').noCallThru();
-const hermioneCli = require('src/cli');
-const info = require('src/cli/info');
-const defaults = require('src/config/defaults');
-const Hermione = require('src/hermione');
-const logger = require('src/utils/logger');
+const { Command } = require("@gemini-testing/commander");
+const proxyquire = require("proxyquire").noCallThru();
+const hermioneCli = require("src/cli");
+const info = require("src/cli/info");
+const defaults = require("src/config/defaults");
+const Hermione = require("src/hermione");
+const logger = require("src/utils/logger");
 
 const any = sinon.match.any;
 
-describe('cli', () => {
+describe("cli", () => {
     const sandbox = sinon.sandbox.create();
 
-    const run_ = async (argv = '', cli) => {
-        process.argv = ['foo/bar/node', 'foo/bar/script', ...argv.split(' ')];
+    const run_ = async (argv = "", cli) => {
+        process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];
 
         cli = cli || hermioneCli;
         cli.run();
@@ -23,29 +23,29 @@ describe('cli', () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(Hermione, 'create').returns(Object.create(Hermione.prototype));
-        sandbox.stub(Hermione.prototype, 'run').resolves();
-        sandbox.stub(Hermione.prototype, 'extendCli');
+        sandbox.stub(Hermione, "create").returns(Object.create(Hermione.prototype));
+        sandbox.stub(Hermione.prototype, "run").resolves();
+        sandbox.stub(Hermione.prototype, "extendCli");
 
-        sandbox.stub(logger, 'log');
-        sandbox.stub(logger, 'error');
-        sandbox.stub(logger, 'warn');
+        sandbox.stub(logger, "log");
+        sandbox.stub(logger, "error");
+        sandbox.stub(logger, "warn");
 
-        sandbox.stub(process, 'exit');
+        sandbox.stub(process, "exit");
 
-        sandbox.spy(Command.prototype, 'action');
+        sandbox.spy(Command.prototype, "action");
     });
 
     afterEach(() => sandbox.restore());
 
     it('should show information about config overriding on "--help"', async () => {
-        await run_('--help');
+        await run_("--help");
 
         assert.calledOnce(logger.log);
         assert.calledWith(logger.log, info.configOverriding);
     });
 
-    it('should create Hermione instance', async () => {
+    it("should create Hermione instance", async () => {
         await run_();
 
         assert.calledOnce(Hermione.create);
@@ -53,125 +53,129 @@ describe('cli', () => {
 
     it('should require modules specified in "require" option', async () => {
         const fooRequire = sandbox.stub().returns({});
-        const stubHermioneCli = proxyquire('src/cli', {
-            foo: (() => fooRequire())()
+        const stubHermioneCli = proxyquire("src/cli", {
+            foo: (() => fooRequire())(),
         });
 
-        await run_('--require foo', stubHermioneCli);
+        await run_("--require foo", stubHermioneCli);
 
         assert.calledOnce(fooRequire);
     });
 
-    it('should create Hermione without config by default', async () => {
+    it("should create Hermione without config by default", async () => {
         await run_();
 
         assert.calledWith(Hermione.create, undefined);
     });
 
-    it('should use config path from cli', async () => {
-        await run_('--config .conf.hermione.js');
+    it("should use config path from cli", async () => {
+        await run_("--config .conf.hermione.js");
 
-        assert.calledWith(Hermione.create, '.conf.hermione.js');
+        assert.calledWith(Hermione.create, ".conf.hermione.js");
     });
 
-    it('should run hermione', async () => {
+    it("should run hermione", async () => {
         await run_();
 
         assert.calledOnce(Hermione.prototype.run);
     });
 
-    it('should run hermione with paths from args', async () => {
-        await run_('first.hermione.js second.hermione.js');
+    it("should run hermione with paths from args", async () => {
+        await run_("first.hermione.js second.hermione.js");
 
-        assert.calledWith(Hermione.prototype.run, ['first.hermione.js', 'second.hermione.js']);
+        assert.calledWith(Hermione.prototype.run, ["first.hermione.js", "second.hermione.js"]);
     });
 
-    it('should use default reporters when running hermione', async () => {
+    it("should use default reporters when running hermione", async () => {
         await run_();
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {reporters: defaults.reporters});
+        assert.calledWithMatch(Hermione.prototype.run, any, { reporters: defaults.reporters });
     });
 
-    it('should use reporters from cli', async () => {
-        await run_('--reporter first --reporter second');
+    it("should use reporters from cli", async () => {
+        await run_("--reporter first --reporter second");
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {reporters: ['first', 'second']});
+        assert.calledWithMatch(Hermione.prototype.run, any, { reporters: ["first", "second"] });
     });
 
-    it('should not pass any browsers if they were not specified from cli', async () => {
+    it("should not pass any browsers if they were not specified from cli", async () => {
         await run_();
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {browsers: undefined});
+        assert.calledWithMatch(Hermione.prototype.run, any, { browsers: undefined });
     });
 
-    it('should use browsers from cli', async () => {
-        await run_('--browser first --browser second');
+    it("should use browsers from cli", async () => {
+        await run_("--browser first --browser second");
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {browsers: ['first', 'second']});
+        assert.calledWithMatch(Hermione.prototype.run, any, { browsers: ["first", "second"] });
     });
 
-    describe('grep', () => {
-        it('should not pass any grep rule if it was not specified from cli', async () => {
+    describe("grep", () => {
+        it("should not pass any grep rule if it was not specified from cli", async () => {
             await run_();
 
-            assert.calledWithMatch(Hermione.prototype.run, any, {grep: undefined});
+            assert.calledWithMatch(Hermione.prototype.run, any, { grep: undefined });
         });
 
-        it('should convert grep rule to regexp', async () => {
-            await run_('--grep some-rule');
+        it("should convert grep rule to regexp", async () => {
+            await run_("--grep some-rule");
 
-            assert.calledWithMatch(Hermione.prototype.run, any, sinon.match({
-                grep: sinon.match.instanceOf(RegExp)
-            }));
+            assert.calledWithMatch(
+                Hermione.prototype.run,
+                any,
+                sinon.match({
+                    grep: sinon.match.instanceOf(RegExp),
+                }),
+            );
         });
 
-        it('should use grep rule from cli', async () => {
-            await run_('--grep some-rule');
+        it("should use grep rule from cli", async () => {
+            await run_("--grep some-rule");
 
-            assert.isTrue(Hermione.prototype.run.firstCall.args[1].grep.test('some-rule'));
+            assert.isTrue(Hermione.prototype.run.firstCall.args[1].grep.test("some-rule"));
         });
 
-        it('should accept invalid regex', async () => {
-            await run_('--grep (foo|bar');
+        it("should accept invalid regex", async () => {
+            await run_("--grep (foo|bar");
 
-            assert.isTrue(Hermione.prototype.run.firstCall.args[1].grep.test('(foo|bar'));
+            assert.isTrue(Hermione.prototype.run.firstCall.args[1].grep.test("(foo|bar"));
         });
 
-        it('should warn about invalid regex', async () => {
-            await run_('--grep (foo|bar');
+        it("should warn about invalid regex", async () => {
+            await run_("--grep (foo|bar");
 
-            assert.calledOnceWith(logger.warn, sinon.match('(foo|bar'));
+            assert.calledOnceWith(logger.warn, sinon.match("(foo|bar"));
         });
     });
 
-    it('should use update refs mode from cli', async () => {
-        await run_('--update-refs');
+    it("should use update refs mode from cli", async () => {
+        await run_("--update-refs");
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {updateRefs: true});
+        assert.calledWithMatch(Hermione.prototype.run, any, { updateRefs: true });
     });
 
-    it('should use require modules from cli', async () => {
-        const stubHermioneCli = proxyquire('src/cli', {foo: {}});
-        await run_('--require foo', stubHermioneCli);
+    it("should use require modules from cli", async () => {
+        const stubHermioneCli = proxyquire("src/cli", { foo: {} });
+        await run_("--require foo", stubHermioneCli);
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {requireModules: ['foo']});
+        assert.calledWithMatch(Hermione.prototype.run, any, { requireModules: ["foo"] });
     });
 
-    it('should allow hermione to extend cli', async () => {
+    it("should allow hermione to extend cli", async () => {
         await run_();
 
         assert.calledOnceWith(Hermione.prototype.extendCli, sinon.match.instanceOf(Command));
     });
 
-    it('should extend cli before parse', async () => {
-        sandbox.spy(Command.prototype, 'parse');
+    it("should extend cli before parse", async () => {
+        sandbox.spy(Command.prototype, "parse");
 
         await run_();
 
         assert.callOrder(Hermione.prototype.extendCli, Command.prototype.parse);
     });
 
-    it('should exit with code 0 if tests pass', async () => {
+    it("should exit with code 0 if tests pass", async () => {
         Hermione.prototype.run.resolves(true);
 
         await run_();
@@ -179,7 +183,7 @@ describe('cli', () => {
         assert.calledWith(process.exit, 0);
     });
 
-    it('should exit with code 1 if tests fail', async () => {
+    it("should exit with code 1 if tests fail", async () => {
         Hermione.prototype.run.resolves(false);
 
         await run_();
@@ -187,7 +191,7 @@ describe('cli', () => {
         assert.calledWith(process.exit, 1);
     });
 
-    it('should exit with code 1 on reject', async () => {
+    it("should exit with code 1 on reject", async () => {
         Hermione.prototype.run.rejects();
 
         await run_();
@@ -195,16 +199,16 @@ describe('cli', () => {
         assert.calledWith(process.exit, 1);
     });
 
-    it('should log an error stack on reject', async () => {
-        Hermione.prototype.run.rejects({stack: 'some-stack'});
+    it("should log an error stack on reject", async () => {
+        Hermione.prototype.run.rejects({ stack: "some-stack" });
 
         await run_();
 
-        assert.calledWith(logger.error, 'some-stack');
+        assert.calledWith(logger.error, "some-stack");
     });
 
-    it('should log an error on reject if stack does not exist', async () => {
-        const err = new Error('some-error');
+    it("should log an error on reject if stack does not exist", async () => {
+        const err = new Error("some-error");
         err.stack = undefined;
         Hermione.prototype.run.rejects(err);
 
@@ -213,15 +217,15 @@ describe('cli', () => {
         assert.calledWithMatch(logger.error, err);
     });
 
-    it('should turn on debug mode from cli', async () => {
-        await run_('--inspect');
+    it("should turn on debug mode from cli", async () => {
+        await run_("--inspect");
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {inspectMode: {inspect: true}});
+        assert.calledWithMatch(Hermione.prototype.run, any, { inspectMode: { inspect: true } });
     });
 
-    it('should turn on debug mode from cli with params', async () => {
-        await run_('--inspect-brk 9229');
+    it("should turn on debug mode from cli with params", async () => {
+        await run_("--inspect-brk 9229");
 
-        assert.calledWithMatch(Hermione.prototype.run, any, {inspectMode: {inspectBrk: '9229'}});
+        assert.calledWithMatch(Hermione.prototype.run, any, { inspectMode: { inspectBrk: "9229" } });
     });
 });

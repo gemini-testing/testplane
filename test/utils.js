@@ -1,32 +1,32 @@
-'use strict';
+"use strict";
 
-const _ = require('lodash');
-const Browser = require('../src/browser/new-browser');
+const _ = require("lodash");
+const Browser = require("../src/browser/new-browser");
 
 function browserWithId(id) {
-    const config = {browsers: {}, system: {debug: false}};
+    const config = { browsers: {}, system: { debug: false } };
 
-    config.forBrowser = () => ({capabilities: {browserName: id}});
+    config.forBrowser = () => ({ capabilities: { browserName: id } });
 
     return new Browser(config, id);
 }
 
 function makeConfigStub(opts = {}) {
     opts = _.defaults(opts, {
-        browsers: ['some-default-browser'],
-        version: '1.0',
+        browsers: ["some-default-browser"],
+        version: "1.0",
         desiredCapabilities: {},
         retry: 0,
         sessionsPerBrowser: 1,
         testsPerSession: Infinity,
-        configPath: 'some-default-config-path',
+        configPath: "some-default-config-path",
         resetCursor: true,
         system: {
             mochaOpts: {},
             expectOpts: {},
-            patternsOnReject: []
+            patternsOnReject: [],
         },
-        sets: {}
+        sets: {},
     });
 
     const config = {
@@ -34,26 +34,26 @@ function makeConfigStub(opts = {}) {
         plugins: opts.plugins,
         system: opts.system,
         sets: opts.sets,
-        configPath: opts.configPath
+        configPath: opts.configPath,
     };
 
-    const mkBrowserConfig_ = (browserId) => ({
+    const mkBrowserConfig_ = browserId => ({
         retry: opts.retry,
         shouldRetry: opts.shouldRetry,
         sessionsPerBrowser: opts.sessionsPerBrowser,
         testsPerSession: opts.testsPerSession,
         desiredCapabilities: _.isEmpty(opts.desiredCapabilities)
-            ? {browserName: browserId, version: opts.version}
+            ? { browserName: browserId, version: opts.version }
             : opts.desiredCapabilities,
         testTimeout: opts.testTimeout,
-        system: opts.system
+        system: opts.system,
     });
 
-    opts.browsers.forEach((browserId) => {
+    opts.browsers.forEach(browserId => {
         config.browsers[browserId] = mkBrowserConfig_(browserId);
     });
 
-    config.forBrowser = sinon.stub().callsFake((browserId) => config.browsers[browserId] || mkBrowserConfig_(browserId));
+    config.forBrowser = sinon.stub().callsFake(browserId => config.browsers[browserId] || mkBrowserConfig_(browserId));
     config.getBrowserIds = () => opts.browsers;
     config.serialize = sinon.stub().returns(config);
     config.mergeWith = sinon.stub();
@@ -64,21 +64,21 @@ function makeConfigStub(opts = {}) {
 function makeSuite(opts = {}) {
     return _.defaults(opts, {
         root: false,
-        id: () => 'default-id',
-        parent: {root: true},
-        title: 'default-suite',
-        fullTitle: () => 'default-suite',
-        eachTest: () => {}
+        id: () => "default-id",
+        parent: { root: true },
+        title: "default-suite",
+        fullTitle: () => "default-suite",
+        eachTest: () => {},
     });
 }
 
 function makeTest(opts = {}) {
     return _.defaults(opts, {
-        id: 'some-default-id',
+        id: "some-default-id",
         parent: makeSuite(),
-        title: 'default-test',
-        browserId: 'yabro',
-        fullTitle: () => 'default-test'
+        title: "default-test",
+        browserId: "yabro",
+        fullTitle: () => "default-test",
     });
 }
 
