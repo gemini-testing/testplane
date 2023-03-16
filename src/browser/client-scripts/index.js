@@ -52,23 +52,6 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     }
 
-    var rect,
-        selectors = [];
-
-    areas.forEach(function (area) {
-        if (Rect.isRect(area)) {
-            rect = rect ? rect.merge(new Rect(area)) : new Rect(area);
-        } else {
-            selectors.push(area);
-        }
-    });
-
-    rect = getCaptureRect(selectors, { allowViewportOverflow: allowViewportOverflow, scrollElem: scrollElem }, rect);
-
-    if (rect.error) {
-        return rect;
-    }
-
     var viewportWidth = document.documentElement.clientWidth,
         viewportHeight = document.documentElement.clientHeight,
         documentWidth = document.documentElement.scrollWidth,
@@ -79,7 +62,29 @@ function prepareScreenshotUnsafe(areas, opts) {
             width: viewportWidth,
             height: viewportHeight
         }),
-        pixelRatio = configurePixelRatio(opts.usePixelRatio);
+        pixelRatio = configurePixelRatio(opts.usePixelRatio),
+        rect,
+        selectors = [];
+
+    areas.forEach(function (area) {
+        if (Rect.isRect(area)) {
+            rect = rect ? rect.merge(new Rect(area)) : new Rect(area);
+        } else {
+            selectors.push(area);
+        }
+    });
+
+    rect = getCaptureRect(selectors, {
+        initialRect: rect,
+        allowViewportOverflow: allowViewportOverflow,
+        scrollElem: scrollElem,
+        viewportWidth: viewportWidth,
+        documentHeight: documentHeight
+    });
+
+    if (rect.error) {
+        return rect;
+    }
 
     if (captureElementFromTop && !viewPort.rectInside(rect)) {
         util.isSafariMobile()
@@ -98,16 +103,23 @@ function prepareScreenshotUnsafe(areas, opts) {
     }
 
     return {
-        captureArea: rect.serialize(),
-        ignoreAreas: findIgnoreAreas(opts.ignoreSelectors, scrollElem),
-        viewport: {
+        captureArea: rect.scale(pixelRatio).serialize(),
+        ignoreAreas: findIgnoreAreas(opts.ignoreSelectors, {
+            scrollElem: scrollElem,
+            pixelRatio: pixelRatio,
+            viewportWidth: viewportWidth,
+            documentHeight: documentHeight
+        }),
+        viewport: new Rect({
             left: util.getScrollLeft(scrollElem),
             top: util.getScrollTop(scrollElem),
-            width: Math.round(viewportWidth),
-            height: Math.round(viewportHeight)
-        },
-        documentHeight: Math.round(documentHeight),
-        documentWidth: Math.round(documentWidth),
+            width: viewportWidth,
+            height: viewportHeight
+        })
+            .scale(pixelRatio)
+            .serialize(),
+        documentHeight: Math.ceil(documentHeight * pixelRatio),
+        documentWidth: Math.ceil(documentWidth * pixelRatio),
         canHaveCaret: isEditable(document.activeElement),
         pixelRatio: pixelRatio
     };
@@ -124,10 +136,10 @@ exports.resetZoom = function () {
     meta.content = "width=device-width,initial-scale=1.0,user-scalable=no";
 };
 
-function getCaptureRect(selectors, opts, initialRect) {
+function getCaptureRect(selectors, opts) {
     var element,
         elementRect,
-        rect = initialRect;
+        rect = opts.initialRect;
     for (var i = 0; i < selectors.length; i++) {
         element = lib.queryFirst(selectors[i]);
         if (!element) {
@@ -166,22 +178,29 @@ function configurePixelRatio(usePixelRatio) {
     return window.screen.deviceXDPI / window.screen.logicalXDPI || 1;
 }
 
-function findIgnoreAreas(selectors, scrollElem) {
+function findIgnoreAreas(selectors, opts) {
     var result = [];
     util.each(selectors, function (selector) {
         var elements = queryIgnoreAreas(selector);
 
         util.each(elements, function (elem) {
-            return addIgnoreArea.call(result, elem, scrollElem);
+            return addIgnoreArea.call(result, elem, opts);
         });
     });
 
     return result;
 }
 
-function addIgnoreArea(element, scrollElem) {
-    var rect = element && getElementCaptureRect(element, { scrollElem: scrollElem });
-    rect && this.push(rect.round().serialize());
+function addIgnoreArea(element, opts) {
+    var rect = element && getElementCaptureRect(element, opts);
+
+    if (!rect) {
+        return;
+    }
+
+    var ignoreArea = rect.round().scale(opts.pixelRatio).serialize();
+
+    this.push(ignoreArea);
 }
 
 function isHidden(css, clientRect) {
@@ -197,7 +216,7 @@ function isHidden(css, clientRect) {
 function getElementCaptureRect(element, opts) {
     var pseudo = [":before", ":after"],
         css = lib.getComputedStyle(element),
-        clientRect = rect.getAbsoluteClientRect(element, opts.scrollElem);
+        clientRect = rect.getAbsoluteClientRect(element, opts);
 
     if (isHidden(css, clientRect)) {
         return null;
