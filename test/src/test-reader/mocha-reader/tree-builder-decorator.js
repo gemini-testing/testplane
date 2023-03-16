@@ -86,7 +86,7 @@ describe("test-reader/mocha-reader/tree-builder-decorator", () => {
             assert.calledWithMatch(Suite.create, { file: "foo/bar.js" });
         });
 
-        it("should pass id based on file and parse position to suite constructor", () => {
+        it("should pass id based on file and parse position in file to suite constructor", () => {
             crypto.getShortMD5.withArgs("foo/bar.js").returns("foobar").withArgs("baz/qux.js").returns("bazqux");
 
             mkDecorator_()
@@ -95,8 +95,8 @@ describe("test-reader/mocha-reader/tree-builder-decorator", () => {
                 .addSuite(mkMochaSuite_({ id: "02", file: "foo/bar.js" }));
 
             assert.calledWithMatch(Suite.create, { file: "foo/bar.js", id: "foobar0" });
-            assert.calledWithMatch(Suite.create, { file: "baz/qux.js", id: "bazqux1" });
-            assert.calledWithMatch(Suite.create, { file: "foo/bar.js", id: "foobar2" });
+            assert.calledWithMatch(Suite.create, { file: "baz/qux.js", id: "bazqux0" });
+            assert.calledWithMatch(Suite.create, { file: "foo/bar.js", id: "foobar1" });
         });
 
         it("should passthrough mocha id to suite constructor for root suite", () => {

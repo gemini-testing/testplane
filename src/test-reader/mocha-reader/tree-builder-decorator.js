@@ -4,6 +4,7 @@ const crypto = require("../../utils/crypto");
 class TreeBuilderDecorator {
     #treeBuilder;
     #suiteMap;
+    #suiteCounter;
 
     static create(...args) {
         return new this(...args);
@@ -12,16 +13,19 @@ class TreeBuilderDecorator {
     constructor(treeBuilder) {
         this.#treeBuilder = treeBuilder;
         this.#suiteMap = new Map();
+        this.#suiteCounter = new Map();
     }
 
     addSuite(mochaSuite) {
         const { id: mochaId, file } = mochaSuite;
-        const id = mochaSuite.root ? mochaId : crypto.getShortMD5(file) + this.#suiteMap.size;
+        const positionInFile = this.#suiteCounter.get(file) || 0;
+        const id = mochaSuite.root ? mochaId : crypto.getShortMD5(file) + positionInFile;
         const suite = this.#mkTestObject(Suite, mochaSuite, { id });
 
         this.#applyConfig(suite, mochaSuite);
         this.#treeBuilder.addSuite(suite, this.#getParent(mochaSuite, null));
         this.#suiteMap.set(mochaId, suite);
+        this.#suiteCounter.set(file, positionInFile + 1);
 
         return this;
     }
