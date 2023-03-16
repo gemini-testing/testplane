@@ -13,7 +13,7 @@
     "check-types": "tsc --project tsconfig.spec.json",
     "clean": "rimraf build/ *.tsbuildinfo",
     "coverage": "nyc --reporter=text npm run test-unit",
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint --cache . && prettier --check .",
     "reformat": "eslint --fix . && prettier --write .",
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
     "test-unit": "_mocha test/",
