@@ -80,18 +80,16 @@ function applyOnly(rootSuite, eventBus) {
         return;
     }
 
+    const titlesToRun = [];
+
+    // filterOnly modifies mocha tree removing links between test objects from top to bottom
+    // we are using links from bottom to top (i.e. parent property)
+    // so it is safe to use build instructions after modifying mocha tree
+    rootSuite.filterOnly();
+    rootSuite.eachTest(mochaTest => titlesToRun.push(mochaTest.fullTitle()));
+
     eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
-        let titles;
-
-        treeBuilder.addTestFilter(test => {
-            if (!titles) {
-                titles = [];
-                rootSuite.filterOnly();
-                rootSuite.eachTest(mochaTest => titles.push(mochaTest.fullTitle()));
-            }
-
-            return titles.includes(test.fullTitle());
-        });
+        treeBuilder.addTestFilter(test => titlesToRun.includes(test.fullTitle()));
     });
 }
 

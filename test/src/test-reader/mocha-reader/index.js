@@ -275,31 +275,12 @@ describe("test-reader/mocha-reader", () => {
                 assert.notCalled(onBuildInstruction);
             });
 
-            it("should add filter in case of .only-subjects", async () => {
+            it("should add filter in case of .only subjects", async () => {
                 const eventBus = initBus_();
 
                 await readFiles_({ eventBus });
 
                 assert.calledOnceWith(treeBuilder.addTestFilter, sinon.match.func);
-            });
-
-            it("mocha filterOnly should not be called until filter fn call", async () => {
-                const eventBus = initBus_();
-
-                await readFiles_({ eventBus });
-
-                assert.notCalled(Mocha.Suite.prototype.filterOnly);
-            });
-
-            it("mocha filterOnly should be called on first filter fn call", async () => {
-                const eventBus = initBus_();
-
-                await readFiles_({ eventBus });
-                const filter = treeBuilder.addTestFilter.lastCall.args[0];
-
-                filter(Test.create({}));
-
-                assert.calledOnce(Mocha.Suite.prototype.filterOnly);
             });
 
             it("mocha filterOnly should be called once for any number of filter fn call", async () => {
@@ -315,25 +296,27 @@ describe("test-reader/mocha-reader", () => {
             });
 
             it("filter fn should accept remaining tests", async () => {
-                const eventBus = initBus_();
-
-                await readFiles_({ eventBus });
-                const filter = treeBuilder.addTestFilter.lastCall.args[0];
                 Mocha.Suite.prototype.eachTest.callsFake(cb => {
                     cb({ fullTitle: () => "foo bar" });
                 });
+
+                const eventBus = initBus_();
+                await readFiles_({ eventBus });
+
+                const filter = treeBuilder.addTestFilter.lastCall.args[0];
 
                 assert.isTrue(filter(Test.create({ title: "foo bar" })));
             });
 
             it("filter fn should not accept inappropriate tests", async () => {
-                const eventBus = initBus_();
-
-                await readFiles_({ eventBus });
-                const filter = treeBuilder.addTestFilter.lastCall.args[0];
                 Mocha.Suite.prototype.eachTest.callsFake(cb => {
                     cb({ fullTitle: () => "foo bar" });
                 });
+
+                const eventBus = initBus_();
+                await readFiles_({ eventBus });
+
+                const filter = treeBuilder.addTestFilter.lastCall.args[0];
 
                 assert.isFalse(filter(Test.create({ title: "baz qux" })));
             });
