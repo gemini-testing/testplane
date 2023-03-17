@@ -1,26 +1,15 @@
 "use strict";
 
 const TestReader = require("src/test-reader");
-const { BrowserTestParser: TestParser } = require("src/test-reader/browser-test-parser");
-const TestSkipper = require("src/test-reader/test-skipper");
+const { TestParser } = require("src/test-reader/test-parser");
 const Events = require("src/constants/runner-events");
 const SetsBuilder = require("src/test-reader/sets-builder");
 const SetCollection = require("src/test-reader/sets-builder/set-collection");
 const { makeConfigStub } = require("../../utils");
 const _ = require("lodash");
-const Promise = require("bluebird");
 
 describe("test-reader", () => {
     const sandbox = sinon.sandbox.create();
-
-    const callsFakeLoadFiles_ = ({ cb = () => {}, tests = ["default-test"] } = {}) => {
-        TestParser.prototype.loadFiles.reset();
-        TestParser.prototype.loadFiles.callsFake(async function () {
-            await cb.call(this);
-            this._tests = tests;
-            return Promise.resolve(this);
-        });
-    };
 
     const readTests_ = ({ opts, config, reader } = {}) => {
         opts = _.defaults(opts, {
@@ -42,32 +31,19 @@ describe("test-reader", () => {
         sandbox.stub(SetsBuilder.prototype, "useFiles").returnsThis();
         sandbox.stub(SetsBuilder.prototype, "useSets").returnsThis();
         sandbox.stub(SetsBuilder.prototype, "useBrowsers").returnsThis();
-
-        sandbox.stub(TestParser, "create").callsFake(() => Object.create(TestParser.prototype));
-        sandbox.stub(TestParser.prototype, "addRootSuiteDecorator");
-        sandbox.stub(TestParser.prototype, "applyGrep").returnsThis();
-
-        sandbox.spy(TestSkipper, "create");
-        sandbox.stub(TestSkipper.prototype, "shouldBeSkipped").returns(true);
-        sandbox.stub(TestSkipper.prototype, "getSuiteDecorator").returns(sinon.spy());
-
         sandbox.stub(SetsBuilder.prototype, "build").callsFake(() => SetCollection.create());
 
-        sandbox.spy(TestReader, "create");
+        sandbox.stub(SetCollection.prototype, "getAllFiles").returns([]);
         sandbox.stub(SetCollection.prototype, "groupByBrowser").callsFake(() => {
             const config = TestReader.create.lastCall.args[0];
             const browsers = config.getBrowserIds();
             return _.fromPairs(browsers.map(p => [p, []]));
         });
 
-        sandbox.stub(TestParser.prototype, "loadFiles").callsFake(function () {
-            this._tests = [{ title: "default-test" }];
-            return Promise.resolve(this);
-        });
+        sandbox.stub(TestParser.prototype, "loadFiles").resolves();
+        sandbox.stub(TestParser.prototype, "parse").returns([{ title: "default-test" }]);
 
-        sandbox.stub(TestParser.prototype, "parse").callsFake(function () {
-            return this._tests;
-        });
+        sandbox.spy(TestReader, "create");
     });
 
     afterEach(() => {
@@ -104,7 +80,7 @@ describe("test-reader", () => {
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ["set1"]);
         });
 
-        it('should use sets from environment variable "HERMIONE_SETS"', async () => {
+        it("should use sets from environment variable HERMIONE_SETS", async () => {
             process.env.HERMIONE_SETS = "set1,set2";
 
             await readTests_({ opts: { sets: null } });
@@ -112,7 +88,7 @@ describe("test-reader", () => {
             assert.calledOnceWith(SetsBuilder.prototype.useSets, ["set1", "set2"]);
         });
 
-        it('should concat passed sets with sets from environment variable "HERMIONE_SETS"', async () => {
+        it("should concat passed sets with sets from environment variable HERMIONE_SETS", async () => {
             process.env.HERMIONE_SETS = "set2";
 
             await readTests_({ opts: { sets: ["set1"] } });
@@ -162,31 +138,71 @@ describe("test-reader", () => {
             );
         });
 
+        ["BEFORE_FILE_READ", "AFTER_FILE_READ"].forEach(event => {
+            it(`should passthrough ${event} event from test reader`, async () => {
+                const onEvent = sinon.spy().named(`on${event}`);
+                const reader = TestReader.create(makeConfigStub({ browsers: ["bro"] })).on(Events[event], onEvent);
+
+                TestParser.prototype.loadFiles.callsFake(function () {
+                    this.emit(Events[event], { foo: "bar" });
+                });
+
+                await readTests_({ reader });
+
+                assert.calledOnceWith(onEvent, { foo: "bar" });
+            });
+        });
+
+        it("should laod all files", async () => {
+            const config = makeConfigStub();
+            const files = ["file1.js", "file2.js"];
+            SetCollection.prototype.getAllFiles.returns(files);
+
+            await readTests_({ config });
+
+            assert.calledOnceWith(TestParser.prototype.loadFiles, files, config);
+        });
+
+        it("should load files before parsing", async () => {
+            const config = makeConfigStub({ browsers: ["bro"] });
+
+            await readTests_({ config });
+
+            assert.callOrder(TestParser.prototype.loadFiles, TestParser.prototype.parse);
+        });
+
         it("should group files by browser", async () => {
             await readTests_();
 
             assert.calledOnce(SetCollection.prototype.groupByBrowser);
         });
 
-        it("should create parser for each browser", async () => {
-            const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-            await readTests_({ config: config });
-
-            assert.calledTwice(TestParser.create);
-        });
-
-        it("should load files for each browser", async () => {
+        it("should parse files for each browser", async () => {
             SetCollection.prototype.groupByBrowser.returns({
                 bro1: ["common/file", "file1"],
                 bro2: ["common/file", "file2"],
             });
 
             const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-            await readTests_({ config: config });
+            const bro1Config = { foo: "bar" };
+            const bro2Config = { baz: "qux" };
+            config.forBrowser.withArgs("bro1").returns(bro1Config).withArgs("bro2").returns(bro2Config);
 
-            assert.calledTwice(TestParser.prototype.loadFiles);
-            assert.calledWith(TestParser.prototype.loadFiles, ["common/file", "file1"], config);
-            assert.calledWith(TestParser.prototype.loadFiles, ["common/file", "file2"], config);
+            const grep = "foo bar";
+
+            await readTests_({ config, opts: { grep } });
+
+            assert.calledTwice(TestParser.prototype.parse);
+            assert.calledWith(TestParser.prototype.parse, ["common/file", "file1"], {
+                browserId: "bro1",
+                config: bro1Config,
+                grep,
+            });
+            assert.calledWith(TestParser.prototype.parse, ["common/file", "file2"], {
+                browserId: "bro2",
+                config: bro2Config,
+                grep,
+            });
         });
 
         it("should return parsed tests grouped by browser", async () => {
@@ -200,21 +216,11 @@ describe("test-reader", () => {
             const test3 = { title: "test3" };
             const test4 = { title: "test4" };
 
-            TestParser.prototype.loadFiles
+            TestParser.prototype.parse
                 .withArgs(["file1"])
-                .callsFake(function () {
-                    this._tests = [test1, test2];
-                    return this;
-                })
+                .returns([test1, test2])
                 .withArgs(["file2"])
-                .callsFake(function () {
-                    this._tests = [test3, test4];
-                    return this;
-                });
-
-            TestParser.prototype.parse.callsFake(function () {
-                return this._tests;
-            });
+                .returns([test3, test4]);
 
             const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
             const specs = await readTests_({ config });
@@ -225,53 +231,12 @@ describe("test-reader", () => {
             });
         });
 
-        it("should apply grep for all browsers before loading any file", async () => {
-            const calls = [];
-            TestParser.prototype.applyGrep.reset();
-            TestParser.prototype.applyGrep.callsFake(function () {
-                calls.push("applyGrep");
-                return this;
-            });
-            callsFakeLoadFiles_({ cb: () => calls.push("loadFiles") });
-
-            const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-            await readTests_({ config, opts: { grep: "some-grep" } });
-
-            assert.deepEqual(calls, ["applyGrep", "applyGrep", "loadFiles", "loadFiles"]);
-        });
-
-        it("should load files for all browsers before parsing any", async () => {
-            const calls = [];
-            callsFakeLoadFiles_({ cb: () => calls.push("loadFiles") });
-            TestParser.prototype.parse.callsFake(() => calls.push("parse"));
-
-            const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-            await readTests_({ config: config });
-
-            assert.deepEqual(calls, ["loadFiles", "loadFiles", "parse", "parse"]);
-        });
-
-        it("should load files sequentially by browsers", async () => {
-            const calls = [];
-
-            callsFakeLoadFiles_({
-                cb: async () => {
-                    calls.push("loadFiles");
-                    await Promise.delay(1);
-                    calls.push("afterLoadFiles");
-                },
-            });
-
-            const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-            await readTests_({ config: config });
-
-            assert.deepEqual(calls, ["loadFiles", "afterLoadFiles", "loadFiles", "afterLoadFiles"]);
-        });
-
         describe("if there are no tests found", () => {
-            it("should throw error", async () => {
-                callsFakeLoadFiles_({ tests: [] });
+            beforeEach(() => {
+                TestParser.prototype.parse.returns([]);
+            });
 
+            it("should throw error", async () => {
                 await assert.isRejected(readTests_(), "There are no tests found");
             });
 
@@ -283,8 +248,6 @@ describe("test-reader", () => {
                 { name: "grep", value: "grep1", expectedMsg: "- grep: grep1\n" },
             ].forEach(({ name, value, expectedMsg }) => {
                 it(`should correctly print passed option ${name}`, async () => {
-                    callsFakeLoadFiles_({ tests: [] });
-
                     try {
                         await readTests_({ opts: { [`${name}`]: value } });
                     } catch (e) {
@@ -294,8 +257,6 @@ describe("test-reader", () => {
             });
 
             it(`should correctly print several passed options that have a value`, async () => {
-                callsFakeLoadFiles_({ opts: { tests: [] } });
-
                 const opts = {
                     paths: ["path1", "path2"],
                     browsers: ["browser1", "browser2"],
@@ -315,148 +276,17 @@ describe("test-reader", () => {
             });
 
             it("should print supported options if none are specified", async () => {
-                callsFakeLoadFiles_({ tests: [] });
-
                 await assert.isRejected(readTests_(), "Try to specify [paths, sets, ignore, browsers, grep] options");
             });
 
-            it("should throw error if there no tests after grep applying", async () => {
-                callsFakeLoadFiles_({ tests: [{ title: "foo", silentSkip: true }] });
+            it("should throw error if there are only silently skipped tests", async () => {
+                TestParser.prototype.parse.returns([{ title: "foo", silentSkip: true }]);
 
                 try {
                     await readTests_({ opts: { grep: "foo" } });
                 } catch (e) {
                     assert.equal(e.message, "There are no tests found by the specified options:\n" + "- grep: foo\n");
                 }
-            });
-        });
-
-        it("should not throw error if there is test mathed with grep pattern", async () => {
-            callsFakeLoadFiles_({
-                tests: [
-                    { title: "foo", silentSkip: false },
-                    { title: "bar", silentSkip: true },
-                ],
-            });
-
-            await assert.isFulfilled(readTests_({ opts: { grep: "bar" } }));
-        });
-
-        describe("for each browser", () => {
-            ["BEFORE_FILE_READ", "AFTER_FILE_READ"].forEach(event => {
-                it(`should passthrough ${event} event from test reader`, async () => {
-                    const onEvent = sinon.spy().named(`on${event}`);
-                    const reader = TestReader.create(makeConfigStub({ browsers: ["bro"] })).on(Events[event], onEvent);
-
-                    TestParser.prototype.parse.callsFake(function () {
-                        this.emit(Events[event], { foo: "bar" });
-                        return this._tests;
-                    });
-
-                    await readTests_({ reader });
-
-                    assert.calledOnceWith(onEvent, { foo: "bar" });
-                });
-            });
-
-            describe("apply global skip", () => {
-                it("should create test skipper", async () => {
-                    const config = makeConfigStub({ browsers: ["bro"] });
-
-                    await readTests_({ config });
-
-                    assert.calledOnceWith(TestSkipper.create, config);
-                });
-
-                it("should share test skipper between all parsers", async () => {
-                    const config = makeConfigStub({ browsers: ["bro1", "bro2"] });
-                    await readTests_({ config });
-
-                    assert.calledOnce(TestSkipper.create);
-                    assert.calledTwice(TestSkipper.prototype.shouldBeSkipped);
-                });
-
-                it("should apply skip only for browser that should be skipped", async () => {
-                    const barBroParser = Object.create(TestParser.prototype);
-                    TestParser.create.onCall(1).returns(barBroParser);
-
-                    TestSkipper.prototype.shouldBeSkipped.withArgs("foo").returns(false);
-
-                    const config = makeConfigStub({ browsers: ["foo", "bar"] });
-                    await readTests_({ config });
-
-                    assert.calledOnce(TestParser.prototype.addRootSuiteDecorator);
-                    assert.calledOn(TestParser.prototype.addRootSuiteDecorator, barBroParser);
-                });
-
-                it("should pass skip decorator function to sub parser", async () => {
-                    const skipSuite = sinon.spy();
-                    TestSkipper.prototype.getSuiteDecorator.returns(skipSuite);
-
-                    await readTests_();
-
-                    assert.calledOnceWith(TestParser.prototype.addRootSuiteDecorator, skipSuite);
-                });
-
-                it("should apply skip before parsing", async () => {
-                    const config = makeConfigStub({ browsers: ["foo", "bar"] });
-
-                    await readTests_({ config });
-
-                    assert.callOrder(TestParser.prototype.addRootSuiteDecorator, TestParser.prototype.parse);
-                });
-            });
-
-            describe("apply grep", () => {
-                it("should not apply grep to test parser if it is not set", async () => {
-                    const config = makeConfigStub({ browsers: ["bro"] });
-
-                    await readTests_({ config });
-
-                    assert.notCalled(TestParser.prototype.applyGrep);
-                });
-
-                it("should apply grep to test parser", async () => {
-                    const config = makeConfigStub({ browsers: ["bro"] });
-
-                    await readTests_({ config, opts: { grep: "foo bar" } });
-
-                    assert.calledOnceWith(TestParser.prototype.applyGrep, "foo bar");
-                });
-
-                it("should apply grep before loading files", async () => {
-                    const config = makeConfigStub({ browsers: ["foo", "bar"] });
-
-                    await readTests_({ config, opts: { grep: "foo bar" } });
-
-                    assert.callOrder(TestParser.prototype.applyGrep, TestParser.prototype.loadFiles);
-                });
-            });
-
-            it("should load files before parsing", async () => {
-                const config = makeConfigStub({ browsers: ["bro"] });
-
-                await readTests_({ config });
-
-                assert.callOrder(TestParser.prototype.loadFiles, TestParser.prototype.parse);
-            });
-
-            it("should pass browser id to parser", async () => {
-                const config = makeConfigStub({ browsers: ["bro"] });
-
-                await readTests_({ config });
-
-                assert.calledOnceWith(TestParser.prototype.parse, "bro");
-            });
-
-            it("should pass browser config to parser", async () => {
-                const browserConfig = { foo: "bar" };
-                const config = makeConfigStub({ browsers: ["bro"] });
-                config.forBrowser.returns(browserConfig);
-
-                await readTests_({ config });
-
-                assert.calledOnceWith(TestParser.prototype.parse, sinon.match.any, browserConfig);
             });
         });
     });

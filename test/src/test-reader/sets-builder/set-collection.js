@@ -47,4 +47,20 @@ describe("test-reader/sets-builder/set-collection", () => {
             bro3: ["some/files/file1.js", "other/files/file2.js"],
         });
     });
+
+    it("should get all files", () => {
+        const sets = {
+            set1: TestSet.create({
+                files: ["some/files/file1.js", "some/common/file.js"],
+                browsers: ["bro1"],
+            }),
+            set2: TestSet.create({
+                files: ["other/files/file2.js", "some/common/file.js"],
+                browsers: ["bro2"],
+            }),
+        };
+        const allFiles = SetCollection.create(sets).getAllFiles();
+
+        assert.deepEqual(allFiles, ["some/files/file1.js", "some/common/file.js", "other/files/file2.js"]);
+    });
 });
