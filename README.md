@@ -376,7 +376,7 @@ Hermione calls test and hook callback with one argument. This argument is an obj
 Example:
 ```js
 beforeEach(async ({ browser, currentTest }) => {
-    await browser.url(`/foo/bar?baz=${currentTest.id()}`);
+    await browser.url(`/foo/bar?baz=${currentTest.id}`);
 });
 
 afterEach(async ({ browser, currentTest }) => {
@@ -406,7 +406,7 @@ it('some test', async ({ browser, bar }) => {
 **browser** and **currentTest** also available through callback context:
 ```js
 beforeEach(async function() {
-    await this.browser.url(`/foo/bar?baz=${this.currentTest.id()}`);
+    await this.browser.url(`/foo/bar?baz=${this.currentTest.id}`);
 });
 
 afterEach(async function() {
@@ -1045,7 +1045,7 @@ By default, `screenshotMode` on android browsers is set to `viewport` to work ar
 Allows to save history of all executed commands. `'all'` by default.
 
 Available options:
- - `'all'` - history is enabled 
+ - `'all'` - history is enabled
  - `'none'` - history is disabled
  - `'onlyFailed'` - history is saved for failed tests only
 

@@ -93,7 +93,7 @@ describe("test-reader/test-object/configurable-test-object", () => {
         it("should allow to call as a method", () => {
             const obj = mkObj_({ id: "foo" });
 
-            assert.equal(obj.id(), "foo");
+            assert.equal(obj.id, "foo");
         });
     });
 

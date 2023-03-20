@@ -27,10 +27,7 @@ class ConfigurableTestObject extends TestObject {
     }
 
     get id() {
-        const id = () => this.#data.id;
-        id.toString = () => this.#data.id;
-
-        return id;
+        return this.#data.id;
     }
 
     get file() {

@@ -25,7 +25,7 @@ describe("BrowserConfig", () => {
 
     describe("getScreenshotPath", () => {
         it("should return full screenshot path for current test state", () => {
-            const test = { id: () => "12345" };
+            const test = { id: "12345" };
             const config = new BrowserConfig({ id: "bro", screenshotsDir: "scrs" });
             sandbox.stub(process, "cwd").returns("/def/path");
 
