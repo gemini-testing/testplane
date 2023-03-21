@@ -5,6 +5,7 @@ const Hermione = require("src/worker/hermione");
 const { makeConfigStub } = require("../../utils");
 const ipc = require("src/utils/ipc");
 const HermioneFacade = require("src/worker/hermione-facade");
+const { MASTER_INIT, MASTER_SYNC_CONFIG } = require("src/constants/process-messages");
 
 describe("worker/hermione-facade", () => {
     const sandbox = sinon.createSandbox();
@@ -15,8 +16,8 @@ describe("worker/hermione-facade", () => {
         const config = makeConfigStub();
 
         sandbox.stub(ipc);
-        ipc.on.withArgs("master.init").yieldsAsync({ runtimeConfig: {} });
-        ipc.on.withArgs("master.syncConfig").yieldsAsync({ config });
+        ipc.on.withArgs(MASTER_INIT).yieldsAsync({ runtimeConfig: {} });
+        ipc.on.withArgs(MASTER_SYNC_CONFIG).yieldsAsync({ config });
 
         sandbox.spy(HermioneFacade.prototype, "syncConfig");
 
@@ -50,7 +51,7 @@ describe("worker/hermione-facade", () => {
             );
             sandbox.stub(hermioneFacadeModule, "require");
 
-            ipc.on.withArgs("master.init").yieldsAsync({
+            ipc.on.withArgs(MASTER_INIT).yieldsAsync({
                 runtimeConfig: { requireModules: ["foo"] },
             });
 

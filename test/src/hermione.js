@@ -737,6 +737,12 @@ describe("hermione", () => {
             });
         });
 
+        it("should not cancel test runner if runner is not inited", () => {
+            hermione.halt(new Error("test error"));
+
+            assert.notCalled(Runner.prototype.cancel);
+        });
+
         it("should cancel test runner", () => {
             hermione.on(RunnerEvents.RUNNER_START, () => {
                 hermione.halt(new Error("test error"));

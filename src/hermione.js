@@ -100,7 +100,10 @@ module.exports = class Hermione extends BaseHermione {
         logger.error(`Terminating on critical error: ${err}`);
 
         this._fail();
-        this._runner.cancel();
+
+        if (this._runner) {
+            this._runner.cancel();
+        }
 
         if (timeout === 0) {
             return;
