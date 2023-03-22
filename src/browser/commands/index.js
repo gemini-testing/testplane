@@ -1,3 +1,3 @@
 "use strict";
 
-module.exports = ["assert-view", "getConfig", "getPuppeteer", "setOrientation"];
+module.exports = ["assert-view", "getConfig", "getPuppeteer", "setOrientation", "scrollIntoView"];
