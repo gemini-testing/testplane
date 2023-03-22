@@ -30,7 +30,7 @@
     "url": "git://github.com/gemini-testing/hermione.git"
   },
   "engines": {
-    "node": ">= 14.0.0"
+    "node": ">= 16.0.0"
   },
   "keywords": [
     "hermione",
