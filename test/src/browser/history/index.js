@@ -2,23 +2,24 @@
 
 const P = require("bluebird");
 const webdriverio = require("webdriverio");
-const cmds = require("../../../../src/browser/history/commands");
+const proxyquire = require("proxyquire");
 const Callstack = require("../../../../src/browser/history/callstack");
-const { initCommandHistory, runGroup } = require("../../../../src/browser/history");
 const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_ } = require("../utils");
 
 describe("commands-history", () => {
     const sandbox = sinon.sandbox.create();
+    let initCommandHistory, runGroup, getBrowserCommands, getElementCommands;
 
     beforeEach(() => {
-        sinon.stub(cmds, "getBrowserCommands").returns([]);
-        sinon.stub(cmds, "getElementCommands").returns([]);
+        getBrowserCommands = sandbox.stub().returns([]);
+        getElementCommands = sandbox.stub().returns([]);
+
+        ({ initCommandHistory, runGroup } = proxyquire("src/browser/history", {
+            "./commands": { getBrowserCommands, getElementCommands },
+        }));
     });
 
     afterEach(() => {
-        cmds.getBrowserCommands.restore();
-        cmds.getElementCommands.restore();
-
         sandbox.restore();
     });
 
@@ -113,7 +114,7 @@ describe("commands-history", () => {
         });
 
         it("should wrap browser commands", async () => {
-            cmds.getBrowserCommands.returns(["url"]);
+            getBrowserCommands.returns(["url"]);
 
             const session = mkSessionStub_();
             const stack = initCommandHistory(session);
@@ -131,7 +132,7 @@ describe("commands-history", () => {
         });
 
         it("should wrap element commands", async () => {
-            cmds.getElementCommands.returns(["click"]);
+            getElementCommands.returns(["click"]);
 
             const session = mkSessionStub_();
             const stack = initCommandHistory(session);

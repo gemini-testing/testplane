@@ -9,6 +9,8 @@ describe("commands-history", () => {
                 assert.deepEqual(cmds.getBrowserCommands(), [
                     "$$",
                     "$",
+                    "action",
+                    "actions",
                     "call",
                     "custom$$",
                     "custom$",
@@ -31,6 +33,7 @@ describe("commands-history", () => {
                     "savePDF",
                     "saveRecordingScreen",
                     "saveScreenshot",
+                    "scroll",
                     "setCookies",
                     "setTimeout",
                     "setWindowSize",
