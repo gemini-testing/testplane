@@ -9,13 +9,24 @@ const Hermione = require("../hermione");
 const pkg = require("../../package.json");
 const logger = require("../utils/logger");
 
+let hermione;
+
 process.on("uncaughtException", err => {
     logger.error(err.stack);
     process.exit(1);
 });
 
 process.on("unhandledRejection", (reason, p) => {
-    logger.error("Unhandled Rejection:\nPromise: ", p, "\nReason: ", reason);
+    const error = `Unhandled Rejection in hermione:master:${process.pid}:\nPromise: ${JSON.stringify(
+        p,
+    )}\nReason: ${reason}`;
+
+    if (hermione) {
+        hermione.halt(error);
+    } else {
+        logger.error(error);
+        process.exit(1);
+    }
 });
 
 exports.run = () => {
@@ -24,7 +35,7 @@ exports.run = () => {
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
 
     const configPath = preparseOption(program, "config");
-    const hermione = Hermione.create(configPath);
+    hermione = Hermione.create(configPath);
 
     program
         .on("--help", () => logger.log(info.configOverriding))

@@ -7,6 +7,14 @@ const _ = require("lodash");
 const Events = require("../constants/runner-events");
 const RuntimeConfig = require("../config/runtime-config");
 const WorkerProcess = require("./worker-process");
+const logger = require("../utils/logger");
+const {
+    MASTER_INIT,
+    MASTER_SYNC_CONFIG,
+    WORKER_INIT,
+    WORKER_SYNC_CONFIG,
+    WORKER_UNHANDLED_REJECTION,
+} = require("../constants/process-messages");
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -92,20 +100,34 @@ module.exports = class WorkersRegistry extends EventEmitter {
     }
 
     _initChild(child) {
+        child.once("exit", (code, signal) => {
+            if (code === 0) {
+                return;
+            }
+
+            const errMsg = code === null ? `signal: ${signal}` : `exit code: ${code}`;
+            logger.error(`hermione:worker:${child.pid} terminated unexpectedly with ${errMsg}`);
+        });
+
         child.on("message", (data = {}) => {
             switch (data.event) {
-                case "worker.init":
+                case WORKER_INIT:
                     child.send({
-                        event: "master.init",
+                        event: MASTER_INIT,
                         configPath: this._config.configPath,
                         runtimeConfig: RuntimeConfig.getInstance(),
                     });
                     break;
-                case "worker.syncConfig":
+                case WORKER_SYNC_CONFIG:
                     child.send({
-                        event: "master.syncConfig",
+                        event: MASTER_SYNC_CONFIG,
                         config: this._config.serialize(),
                     });
+                    break;
+                case WORKER_UNHANDLED_REJECTION:
+                    if (data.error) {
+                        this.emit(Events.ERROR, data.error);
+                    }
                     break;
                 default:
                     if (data.event) {

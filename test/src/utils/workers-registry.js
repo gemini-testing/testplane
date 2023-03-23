@@ -6,6 +6,14 @@ const _ = require("lodash");
 const RuntimeConfig = require("src/config/runtime-config");
 const Events = require("src/constants/runner-events");
 const WorkerProcess = require("src/utils/worker-process");
+const logger = require("src/utils/logger");
+const {
+    MASTER_INIT,
+    MASTER_SYNC_CONFIG,
+    WORKER_INIT,
+    WORKER_SYNC_CONFIG,
+    WORKER_UNHANDLED_REJECTION,
+} = require("src/constants/process-messages");
 
 describe("WorkersRegistry", () => {
     const sandbox = sinon.sandbox.create();
@@ -41,6 +49,7 @@ describe("WorkersRegistry", () => {
         workerFarm.end = sandbox.stub().yieldsRight();
 
         sandbox.stub(RuntimeConfig, "getInstance");
+        sandbox.stub(logger, "error");
     });
 
     afterEach(() => sandbox.restore());
@@ -101,10 +110,10 @@ describe("WorkersRegistry", () => {
 
             const child = initChild_();
 
-            child.emit("message", { event: "worker.init" });
+            child.emit("message", { event: WORKER_INIT });
 
             assert.calledOnceWith(child.send, {
-                event: "master.init",
+                event: MASTER_INIT,
                 configPath: "foo/bar",
                 runtimeConfig: { baz: "qux" },
             });
@@ -117,12 +126,25 @@ describe("WorkersRegistry", () => {
 
             const child = initChild_();
 
-            child.emit("message", { event: "worker.syncConfig" });
+            child.emit("message", { event: WORKER_SYNC_CONFIG });
 
             assert.calledOnceWith(child.send, {
-                event: "master.syncConfig",
+                event: MASTER_SYNC_CONFIG,
                 config: { foo: "bar" },
             });
+        });
+
+        it('should emit "ERROR" event on unhandled rejection from worker', () => {
+            const workersRegistry = mkWorkersRegistry_();
+            const onError = sinon.stub().named("onError");
+            workersRegistry.on(Events.ERROR, onError);
+
+            const child = initChild_();
+            const errorMsg = "o.O";
+
+            child.emit("message", { event: WORKER_UNHANDLED_REJECTION, error: errorMsg });
+
+            assert.calledOnceWith(onError, errorMsg);
         });
 
         describe("other events", () => {
@@ -219,6 +241,45 @@ describe("WorkersRegistry", () => {
 
             assert.calledOnceWith(onNewWorkerProcess, workerProcessStub);
             assert.calledOnceWith(WorkerProcess.create, child);
+        });
+    });
+
+    describe("child process termination", () => {
+        it("should not inform about error in child process if it ends correctly", () => {
+            mkWorkersRegistry_();
+            const child = initChild_();
+
+            child.emit("exit", 0, null);
+
+            assert.notCalled(logger.error);
+        });
+
+        describe("should inform about incorrect ends of child process with", () => {
+            it("exit code", () => {
+                mkWorkersRegistry_();
+                const child = initChild_();
+                child.pid = "12345";
+
+                child.emit("exit", 1, null);
+
+                assert.calledOnceWith(
+                    logger.error,
+                    `hermione:worker:${child.pid} terminated unexpectedly with exit code: 1`,
+                );
+            });
+
+            it("signal", () => {
+                mkWorkersRegistry_();
+                const child = initChild_();
+                child.pid = "12345";
+
+                child.emit("exit", null, "SIGINT");
+
+                assert.calledOnceWith(
+                    logger.error,
+                    `hermione:worker:${child.pid} terminated unexpectedly with signal: SIGINT`,
+                );
+            });
         });
     });
 });

@@ -30,7 +30,7 @@ module.exports = class MainRunner extends Runner {
 
         this._workersRegistry = WorkersRegistry.create(this._config);
         this._workers = null;
-        eventsUtils.passthroughEvent(this._workersRegistry, this, [Events.NEW_WORKER_PROCESS]);
+        eventsUtils.passthroughEvent(this._workersRegistry, this, [Events.NEW_WORKER_PROCESS, Events.ERROR]);
 
         temp.init(this._config.system.tempDir);
         RuntimeConfig.getInstance().extend({ tempOpts: temp.serialize() });

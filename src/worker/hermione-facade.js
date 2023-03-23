@@ -5,6 +5,7 @@ const RuntimeConfig = require("../config/runtime-config");
 const Promise = require("bluebird");
 const debug = require("debug")(`hermione:worker:${process.pid}`);
 const ipc = require("../utils/ipc");
+const { MASTER_INIT, MASTER_SYNC_CONFIG, WORKER_INIT, WORKER_SYNC_CONFIG } = require("../constants/process-messages");
 
 module.exports = class HermioneFacade {
     static create() {
@@ -42,7 +43,7 @@ module.exports = class HermioneFacade {
         return new Promise((resolve, reject) => {
             debug("init worker");
 
-            ipc.on("master.init", ({ configPath, runtimeConfig } = {}) => {
+            ipc.on(MASTER_INIT, ({ configPath, runtimeConfig } = {}) => {
                 try {
                     if (runtimeConfig.requireModules) {
                         runtimeConfig.requireModules.forEach(module => require(module));
@@ -59,7 +60,7 @@ module.exports = class HermioneFacade {
                 }
             });
 
-            ipc.emit("worker.init");
+            ipc.emit(WORKER_INIT);
         });
     }
 
@@ -67,7 +68,7 @@ module.exports = class HermioneFacade {
         return new Promise(resolve => {
             debug("sync config");
 
-            ipc.on("master.syncConfig", ({ config } = {}) => {
+            ipc.on(MASTER_SYNC_CONFIG, ({ config } = {}) => {
                 delete config.system.mochaOpts.grep; // grep affects only master
                 this._hermione.config.mergeWith(config);
 
@@ -75,7 +76,7 @@ module.exports = class HermioneFacade {
                 resolve();
             });
 
-            ipc.emit("worker.syncConfig");
+            ipc.emit(WORKER_SYNC_CONFIG);
         });
     }
 };

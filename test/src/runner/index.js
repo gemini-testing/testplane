@@ -111,7 +111,7 @@ describe("Runner", () => {
                 assert.calledOnceWith(WorkersRegistry.create, config);
             });
 
-            it("should passthrough NEW_WORKER_PROCESS events from workers registry", async () => {
+            it('should passthrough "NEW_WORKER_PROCESS" event from workers registry', async () => {
                 const workersRegistry = new WorkersRegistry();
                 workersRegistry.emit.restore();
                 workersRegistry.on.restore();
@@ -121,12 +121,32 @@ describe("Runner", () => {
                 WorkersRegistry.create.returns(workersRegistry);
 
                 const runner = new Runner(makeConfigStub());
-                const newWorkerProcess = sinon.stub().named("newWorkerProcess");
+                const newWorkerProcess = sinon.stub().named(RunnerEvents.NEW_WORKER_PROCESS);
                 runner.on(RunnerEvents.NEW_WORKER_PROCESS, newWorkerProcess);
 
                 await run_({ runner });
 
                 assert.calledOnce(newWorkerProcess);
+            });
+
+            it('should passthrough "ERROR" event from workers registry', async () => {
+                const workersRegistry = new WorkersRegistry();
+                const errorMsg = "o.O";
+
+                workersRegistry.emit.restore();
+                workersRegistry.on.restore();
+                workersRegistry.init.callsFake(() => {
+                    workersRegistry.emit(RunnerEvents.ERROR, errorMsg);
+                });
+                WorkersRegistry.create.returns(workersRegistry);
+
+                const runner = new Runner(makeConfigStub());
+                const errorHandler = sinon.stub().named(RunnerEvents.ERROR);
+                runner.on(RunnerEvents.ERROR, errorHandler);
+
+                await run_({ runner });
+
+                assert.calledOnceWith(errorHandler, errorMsg);
             });
 
             it("should create workers before RUNNER_START event", async () => {
