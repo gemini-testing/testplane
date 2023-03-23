@@ -31,11 +31,16 @@ module.exports = class Config {
         } else {
             for (const configPath of defaults.configPaths) {
                 try {
-                    require(path.resolve(configPath));
-                    this.configPath = path.resolve(configPath);
+                    const resolvedConfigPath = path.resolve(configPath);
+                    require(resolvedConfigPath);
+                    this.configPath = resolvedConfigPath;
 
                     break;
-                } catch {} // eslint-disable-line no-empty
+                } catch (err) {
+                    if (err.code !== "MODULE_NOT_FOUND") {
+                        throw err;
+                    }
+                }
             }
 
             if (!this.configPath) {
