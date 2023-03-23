@@ -30,7 +30,7 @@
     "url": "git://github.com/gemini-testing/hermione.git"
   },
   "engines": {
-    "node": ">= 14.0.0"
+    "node": ">= 16.0.0"
   },
   "keywords": [
     "hermione",
@@ -45,7 +45,7 @@
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
     "@types/mocha": "^10.0.1",
-    "@wdio/types": "^7.26.0",
+    "@wdio/types": "^8.4.0",
     "@wdio/utils": "^7.26.0",
     "aliasify": "^1.9.0",
     "bluebird": "^3.5.1",
@@ -72,7 +72,7 @@
     "uglifyify": "^3.0.4",
     "urijs": "^1.19.11",
     "url-join": "^4.0.1",
-    "webdriverio": "7.28.0",
+    "webdriverio": "^8.5.7",
     "worker-farm": "^1.7.0",
     "yallist": "^3.1.1"
   },
