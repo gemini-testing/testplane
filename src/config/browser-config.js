@@ -14,7 +14,7 @@ module.exports = class BrowserConfig {
 
         return _.isFunction(screenshotsDir)
             ? path.resolve(screenshotsDir(test), filename)
-            : path.resolve(process.cwd(), screenshotsDir, test.id(), this.id, filename);
+            : path.resolve(process.cwd(), screenshotsDir, test.id, this.id, filename);
     }
 
     serialize() {
