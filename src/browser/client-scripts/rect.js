@@ -86,6 +86,17 @@ Rect.prototype = {
         });
     },
 
+    scale: function (scaleFactor) {
+        var rect = new Rect({
+            top: this.top * scaleFactor,
+            left: this.left * scaleFactor,
+            right: this.right * scaleFactor,
+            bottom: this.bottom * scaleFactor
+        });
+
+        return util.isInteger(scaleFactor) ? rect : rect.round();
+    },
+
     serialize: function () {
         return {
             left: this.left,
@@ -138,7 +149,15 @@ Rect.prototype = {
 };
 
 exports.Rect = Rect;
-exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, scrollElem) {
-    var clientRect = new Rect(element.getBoundingClientRect());
-    return clientRect.translate(util.getScrollLeft(scrollElem), util.getScrollTop(scrollElem));
+exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
+    var coords = element.getBoundingClientRect();
+    var clientRect = new Rect({
+        left: coords.left,
+        top: coords.top,
+        // to correctly calculate "width" in devices with fractional pixelRatio
+        width: coords.width % opts.viewportWidth < 1 ? opts.viewportWidth : coords.width,
+        height: Math.min(coords.height, opts.documentHeight)
+    });
+
+    return clientRect.translate(util.getScrollLeft(opts.scrollElem), util.getScrollTop(opts.scrollElem));
 };

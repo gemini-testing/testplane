@@ -36,14 +36,15 @@ module.exports = class ScreenShooter {
     }
 
     async _extendImage(viewport, page, opts) {
-        const scrollHeight = Math.min(viewport.getVerticalOverflow(), page.viewport.height);
+        const physicalScrollHeight = Math.min(viewport.getVerticalOverflow(), page.viewport.height);
+        const logicalScrollHeight = Math.ceil(physicalScrollHeight / page.pixelRatio);
 
-        await this._browser.scrollBy({ x: 0, y: scrollHeight, selector: opts.selectorToScroll });
+        await this._browser.scrollBy({ x: 0, y: logicalScrollHeight, selector: opts.selectorToScroll });
 
-        page.viewport.top += scrollHeight;
+        page.viewport.top += physicalScrollHeight;
 
         const newImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
 
-        await viewport.extendBy(scrollHeight, newImage);
+        await viewport.extendBy(physicalScrollHeight, newImage);
     }
 };

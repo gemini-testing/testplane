@@ -84,3 +84,7 @@ exports.isSafariMobile = function () {
         /(iPhone|iPad).*AppleWebKit.*Safari/i.test(navigator.userAgent)
     );
 };
+
+exports.isInteger = function (num) {
+    return num % 1 === 0;
+};
