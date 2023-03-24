@@ -66,7 +66,7 @@ describe("assertView command", () => {
     };
 
     const initBrowser_ = ({ browser = stubBrowser_(), session = mkSessionStub_() } = {}) => {
-        session.executionContext = { hermioneCtx: {} };
+        session.executionContext = { hermioneCtx: {}, ctx: {} };
         sandbox.stub(webdriverio, "attach").resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });

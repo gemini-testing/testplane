@@ -8,7 +8,6 @@ const Image = require("../../../image");
 const ScreenShooter = require("../../screen-shooter");
 const temp = require("../../../temp");
 const { getCaptureProcessors } = require("./capture-processors");
-const { getTestContext } = require("../../../utils/mocha");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const BaseStateError = require("./errors/base-state-error");
@@ -60,7 +59,7 @@ module.exports = browser => {
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
-        const test = getTestContext(session.executionContext);
+        const test = session.executionContext.ctx.currentTest;
         const refImg = { path: config.getScreenshotPath(test, state), size: null };
         const { emitter } = browser;
 

@@ -567,7 +567,7 @@ it('test1', async ({ browser }) => {
 ```
 
 #### Execution context
-The execution context can be accessed by the `browser.executionContext` property, which contains the current test/hook mocha object extended with the browser id.
+The execution context can be accessed by the `browser.executionContext` property, which contains the current test/hook object extended with the browser id.
 
 Example:
 ```js
