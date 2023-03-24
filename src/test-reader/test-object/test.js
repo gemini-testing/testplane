@@ -15,10 +15,6 @@ class Test extends ConfigurableTestObject {
             fn: this.fn,
         }).assign(this);
     }
-
-    get type() {
-        return "test";
-    }
 }
 
 module.exports = {

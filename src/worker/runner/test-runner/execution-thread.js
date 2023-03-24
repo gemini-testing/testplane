@@ -39,7 +39,7 @@ module.exports = class ExecutionThread {
         let fnPromise = Promise.method(runnable.fn).call(this._ctx, this._ctx);
 
         if (runnable.timeout) {
-            const msg = `${runnable.type} '${runnable.fullTitle()}' timed out after ${runnable.timeout} ms`;
+            const msg = `'${runnable.fullTitle()}' timed out after ${runnable.timeout} ms`;
             fnPromise = fnPromise.timeout(runnable.timeout, msg);
         }
 

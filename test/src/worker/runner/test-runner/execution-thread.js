@@ -219,7 +219,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
 
             const executionThread = mkExecutionThread_();
 
-            await assert.isRejected(executionThread.run(runnable), /test 'bla bla' timed out/);
+            await assert.isRejected(executionThread.run(runnable), /'bla bla' timed out/);
         });
 
         it("should not set timeout if timeouts are disabled", async () => {
