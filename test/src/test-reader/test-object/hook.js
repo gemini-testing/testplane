@@ -82,14 +82,6 @@ describe("test-reader/test-object/hook", () => {
         });
     });
 
-    describe("type", () => {
-        it('should be "hook"', () => {
-            const hook = new Hook({});
-
-            assert.equal(hook.type, "hook");
-        });
-    });
-
     describe("file", () => {
         it("should return parent file", () => {
             const hook = new Hook({});

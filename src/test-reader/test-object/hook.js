@@ -14,10 +14,6 @@ class Hook extends TestObject {
         }).assign(this);
     }
 
-    get type() {
-        return "hook";
-    }
-
     get file() {
         return this.parent.file;
     }
