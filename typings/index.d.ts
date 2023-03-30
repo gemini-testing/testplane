@@ -426,7 +426,7 @@ declare namespace Hermione {
         sessionQuitTimeout: number | null;
         testTimeout: number | null;
         waitTimeout: number;
-        saveHistory: boolean;
+        saveHistoryMode: "all" | "none" | "onlyFailed";
         takeScreenshotOnFails: {
             testFail: boolean;
             assertViewFail: boolean;
