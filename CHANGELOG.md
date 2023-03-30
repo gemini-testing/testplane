@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.0.0](https://github.com/gemini-testing/hermione/compare/v6.1.1...v7.0.0) (2023-03-30)
+
+
+### ⚠ BREAKING CHANGES
+
+* - test.id() -> test.id
+- suite.id() -> suite.id
+* terminate tests execution on unhandled rejections
+* node versions less than 16.0.0 are no longer supported
+
+### Features
+
+* add ability to write test steps ([e7171b2](https://github.com/gemini-testing/hermione/commit/e7171b28df0bbe71e395c0c812939287e443dac9))
+* add logs timestamp ([3745c7d](https://github.com/gemini-testing/hermione/commit/3745c7dcc9d5bef28f317bd97bad119df4788b17))
+* bump webdriverio from 7 to 8 ([4d98965](https://github.com/gemini-testing/hermione/commit/4d9896543f33fe9917b34b1eeddf71be64d8c307))
+* do not pass browser id on file events ([e7cdb05](https://github.com/gemini-testing/hermione/commit/e7cdb050e8de0cf8d8df97d488a99b93ce2b8ffd))
+* do not use browserId as esmDecorator ([4d81dfb](https://github.com/gemini-testing/hermione/commit/4d81dfbe421a62cfe9a55515d55574762f962bdb))
+* drop node versions less than 16 ([01d53ec](https://github.com/gemini-testing/hermione/commit/01d53ec2b89322f4f6dd78e824e13c27a693beb6))
+* make id a plain property ([fcdea03](https://github.com/gemini-testing/hermione/commit/fcdea03131e1c46c148e957b0f70dee8a55431df))
+* move to mocha upstream ([2b1f0ef](https://github.com/gemini-testing/hermione/commit/2b1f0efae978dcf37c896366eeb8bb3521bb4765))
+* read test files in master only once ([1cb6b0c](https://github.com/gemini-testing/hermione/commit/1cb6b0c1b2e1cc5ae6e91d781c201ccb801b2d09))
+* remove runnable type property ([8ad298f](https://github.com/gemini-testing/hermione/commit/8ad298fee4befdad511a46ff5fd155f32ef2a541))
+* support tests and config on typescript ([c5f933d](https://github.com/gemini-testing/hermione/commit/c5f933df01cce6c88ad970fef430ad17aa411fc1))
+* use own test/suite/hook objects ([1384001](https://github.com/gemini-testing/hermione/commit/13840017d5203b43e3ae9bcb04f11e1460288680))
+
+
+### Bug Fixes
+
+* call BrowserTestParser methods correctly in workers ([c46ba8f](https://github.com/gemini-testing/hermione/commit/c46ba8fc6cb745f7e994d2cf3371439d31ec2044))
+* correctly screen elements on device with fractional pixel ratio ([7b153d9](https://github.com/gemini-testing/hermione/commit/7b153d95eb9867e6340d264a048dda812e7db8fd))
+* do not swallow errors in hermione config ([e262fae](https://github.com/gemini-testing/hermione/commit/e262fae9046a67eea6431dedddd017b2a72e7d7e))
+* handle unhandled rejections ([03676b3](https://github.com/gemini-testing/hermione/commit/03676b32a4d6b8c161c34992b986041c63a05335))
+* temporary overwrite "scrollIntoView" command with bug ([2fb4474](https://github.com/gemini-testing/hermione/commit/2fb4474bd169c85f555569b79d0a33fd674d7141))
+* use suite position in file instead of global position to generate id ([fd3716a](https://github.com/gemini-testing/hermione/commit/fd3716a3c03aab3a2362da6a9ba997a90aec9c1d))
+* use undefined as a default value for browserVersion and browserId properties ([ddfe85f](https://github.com/gemini-testing/hermione/commit/ddfe85f0c600370f1d7f6b0ed04616a656e33fbc))
+
 ### [6.1.1](https://github.com/gemini-testing/hermione/compare/v6.1.0...v6.1.1) (2023-01-30)
 
 ### [6.0.3](https://github.com/gemini-testing/hermione/compare/v6.0.2...v6.0.3) (2023-01-20)
