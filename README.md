@@ -824,7 +824,7 @@ Option name               | Description
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height. In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height. `true` by default.
 `screenshotMode`          | Image capture mode.
-`saveHistory`             | Allows to save history of all executed commands. `true` by default.
+`saveHistoryMode`         | Allows to save history of executed commands. `all` by default.
 `agent`                   | Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null`.
 `headers`                 | Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `null`.
 `transformRequest`        | Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`.
