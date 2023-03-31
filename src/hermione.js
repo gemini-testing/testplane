@@ -101,17 +101,15 @@ module.exports = class Hermione extends BaseHermione {
 
         this._fail();
 
+        if (timeout > 0) {
+            setTimeout(() => {
+                logger.error("Forcing shutdown...");
+                process.exit(1);
+            }, timeout).unref();
+        }
+
         if (this._runner) {
             this._runner.cancel();
         }
-
-        if (timeout === 0) {
-            return;
-        }
-
-        setTimeout(() => {
-            logger.error("Forcing shutdown...");
-            process.exit(1);
-        }, timeout).unref();
     }
 };

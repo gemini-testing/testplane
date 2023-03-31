@@ -764,6 +764,17 @@ describe("hermione", () => {
         });
 
         describe("shutdown timeout", () => {
+            it("should set timeout before cancel test runner", async () => {
+                sandbox.spy(global, "setTimeout");
+                hermione.on(RunnerEvents.RUNNER_START, () => {
+                    hermione.halt(new Error("test error", 100500));
+                });
+
+                await hermione.run();
+
+                assert.callOrder(global.setTimeout, Runner.prototype.cancel);
+            });
+
             it("should force exit if timeout is reached", () => {
                 hermione.on(RunnerEvents.RUNNER_START, () => {
                     hermione.halt(new Error("test error"), 250);
