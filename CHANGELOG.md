@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.2](https://github.com/gemini-testing/hermione/compare/v7.0.1...v7.0.2) (2023-04-03)
+
+
+### Bug Fixes
+
+* show error with stack trace on call hermione.halt method ([61cfc26](https://github.com/gemini-testing/hermione/commit/61cfc269ae356c342967126faed5bd31017ccdf8))
+
 ### [7.0.1](https://github.com/gemini-testing/hermione/compare/v7.0.0...v7.0.1) (2023-03-31)
 
 
