@@ -97,7 +97,7 @@ module.exports = class Hermione extends BaseHermione {
     }
 
     halt(err, timeout = 60000) {
-        logger.error(`Terminating on critical error: ${err}`);
+        logger.error("Terminating on critical error:", err);
 
         this._fail();
 

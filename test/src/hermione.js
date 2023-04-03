@@ -728,12 +728,14 @@ describe("hermione", () => {
         });
 
         it("should log provided error", () => {
+            const err = new Error("test error");
+
             hermione.on(RunnerEvents.RUNNER_START, () => {
-                hermione.halt(new Error("test error"));
+                hermione.halt(err);
             });
 
             return hermione.run().finally(() => {
-                assert.calledOnceWith(logger.error, sinon.match(/Error: test error/));
+                assert.calledOnceWith(logger.error, "Terminating on critical error:", err);
             });
         });
 
