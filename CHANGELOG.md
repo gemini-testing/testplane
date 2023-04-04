@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.3](https://github.com/gemini-testing/hermione/compare/v7.0.2...v7.0.3) (2023-04-04)
+
+
+### Bug Fixes
+
+* typings for browser interface ([e0f89b8](https://github.com/gemini-testing/hermione/commit/e0f89b844e0261df31123a6a55c14b4cfb9b61ad))
+
 ### [7.0.2](https://github.com/gemini-testing/hermione/compare/v7.0.1...v7.0.2) (2023-04-03)
 
 
