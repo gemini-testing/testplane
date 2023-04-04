@@ -1,4 +1,4 @@
-/// <reference types='webdriverio/async' />
+/// <reference types='@wdio/globals/types' />
 /// <reference types="expect-webdriverio/types/standalone"/>
 
 declare namespace WebdriverIO {

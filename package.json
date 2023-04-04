@@ -45,6 +45,7 @@
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
     "@types/mocha": "^10.0.1",
+    "@wdio/globals": "^8.5.7",
     "@wdio/types": "^8.4.0",
     "@wdio/utils": "^7.26.0",
     "aliasify": "^1.9.0",
