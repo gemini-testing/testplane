@@ -62,6 +62,25 @@ describe("hermione", () => {
             sandbox.stub(Runner, "create").returns(new EventEmitter());
         });
 
+        describe("logLevel", () => {
+            [
+                { debug: true, WDIO_LOG_LEVEL: "trace" },
+                { debug: false, WDIO_LOG_LEVEL: "error" },
+                { WDIO_LOG_LEVEL: "error" },
+            ].forEach(({ debug, WDIO_LOG_LEVEL }) => {
+                it(`should be "${WDIO_LOG_LEVEL}" if "debug" is "${debug}"`, () => {
+                    const previousWdioLogLevel = process.env.WDIO_LOG_LEVEL;
+                    delete process.env.WDIO_LOG_LEVEL;
+                    Config.create.returns(makeConfigStub({ system: { debug } }));
+
+                    Hermione.create("some-config-path.js");
+
+                    assert.equal(process.env.WDIO_LOG_LEVEL, WDIO_LOG_LEVEL);
+                    process.env.WDIO_LOG_LEVEL = previousWdioLogLevel;
+                });
+            });
+        });
+
         it("should create a config from the passed path", () => {
             Hermione.create("some-config-path.js");
 

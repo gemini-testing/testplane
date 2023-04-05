@@ -101,7 +101,6 @@ module.exports = class NewBrowser extends Browser {
             queryParams: this._getQueryParams(gridUri.query()),
             capabilities,
             automationProtocol: config.automationProtocol,
-            logLevel: this._debug ? "trace" : "error",
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
             connectionRetryCount: 0, // hermione has its own advanced retries
             baseUrl: config.baseUrl,

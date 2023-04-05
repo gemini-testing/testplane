@@ -33,7 +33,6 @@ describe("NewBrowser", () => {
                 automationProtocol: WEBDRIVER_PROTOCOL,
                 waitforTimeout: 100,
                 waitforInterval: 50,
-                logLevel: "trace",
                 connectionRetryTimeout: 3000,
                 connectionRetryCount: 0,
                 baseUrl: "http://base_url",

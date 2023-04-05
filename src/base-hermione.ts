@@ -36,6 +36,7 @@ export abstract class BaseHermione extends AsyncEmitter {
         tryToRegisterTsNode();
 
         this._config = Config.create(config);
+        this._setLogLevel();
         this._loadPlugins();
     }
 
@@ -63,6 +64,12 @@ export abstract class BaseHermione extends AsyncEmitter {
     }
 
     abstract isWorker(): boolean;
+
+    protected _setLogLevel(): void {
+        if (!process.env.WDIO_LOG_LEVEL) {
+            process.env.WDIO_LOG_LEVEL = _.get(this.config, "system.debug", false) ? "trace" : "error";
+        }
+    }
 
     protected _loadPlugins(): void {
         pluginsLoader.load(this, this.config.plugins, PREFIX);
