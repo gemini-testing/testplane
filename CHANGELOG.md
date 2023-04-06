@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.1.2](https://github.com/gemini-testing/hermione/compare/v6.1.1...v6.1.2) (2023-04-06)
+
+
+### Bug Fixes
+
+* reset cursor correctly for body with negative coords ([4478a01](https://github.com/gemini-testing/hermione/commit/4478a0162a77f2af07c7d49bb9ff4a52a7968c51))
+
 ### [6.1.1](https://github.com/gemini-testing/hermione/compare/v6.1.0...v6.1.1) (2023-01-30)
 
 ### [6.0.3](https://github.com/gemini-testing/hermione/compare/v6.0.2...v6.0.3) (2023-01-20)
