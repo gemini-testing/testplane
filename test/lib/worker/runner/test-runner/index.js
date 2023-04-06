@@ -30,6 +30,7 @@ describe('worker/runner/test-runner', () => {
 
     const mkElement_ = (proto) => {
         return _.defaults(proto, {
+            getLocation: sandbox.stub().named('getLocation').resolves({x: 0, y: 0}),
             scrollIntoView: sandbox.stub().named('scrollIntoView').resolves(),
             moveTo: sandbox.stub().named('moveTo').resolves()
         });
@@ -280,6 +281,14 @@ describe('worker/runner/test-runner', () => {
                     await run_();
 
                     assert.calledOnceWith(body.moveTo, {xOffset: 0, yOffset: 0});
+                });
+
+                it('should move cursor correctly if body element has negative coords', async () => {
+                    body.getLocation.resolves({x: -100, y: -500});
+
+                    await run_();
+
+                    assert.calledOnceWith(body.moveTo, {xOffset: 100, yOffset: 500});
                 });
 
                 it('should scroll before moving cursor', async () => {
