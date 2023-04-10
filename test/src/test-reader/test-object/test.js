@@ -78,4 +78,12 @@ describe("test-reader/test-object/test", () => {
             assert.calledOn(Test.prototype.assign, clonedTest);
         });
     });
+
+    describe("type", () => {
+        it("should return type name", () => {
+            const test = new Test({});
+
+            assert.equal(test.type, "test");
+        });
+    });
 });

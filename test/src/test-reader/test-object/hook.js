@@ -115,4 +115,12 @@ describe("test-reader/test-object/hook", () => {
             assert.equal(hook.browserId, "foo");
         });
     });
+
+    describe("type", () => {
+        it("should return type name", () => {
+            const hook = new Hook({});
+
+            assert.equal(hook.type, "hook");
+        });
+    });
 });

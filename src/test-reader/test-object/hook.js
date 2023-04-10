@@ -25,6 +25,10 @@ class Hook extends TestObject {
     get browserId() {
         return this.parent.browserId;
     }
+
+    get type() {
+        return "hook";
+    }
 }
 
 module.exports = {
