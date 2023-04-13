@@ -1,6 +1,6 @@
 'use strict';
 
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const logger = require('lib/utils/logger');
 const signalHandler = require('lib/signal-handler');
 const history = require('lib/browser/history');
