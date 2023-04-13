@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [6.1.3](https://github.com/gemini-testing/hermione/compare/v6.1.2...v6.1.3) (2023-04-13)
+
+
+### Bug Fixes
+
+* **devtools:** cannot unregister unknown handler shadow ([6d06b26](https://github.com/gemini-testing/hermione/commit/6d06b269463af443fc87f1f025cbbb1f38dddb9a))
+
 ### [6.1.2](https://github.com/gemini-testing/hermione/compare/v6.1.1...v6.1.2) (2023-04-06)
 
 
