@@ -35,6 +35,7 @@
   "dependencies": {
     "@gemini-testing/commander": "2.15.3",
     "@gemini-testing/mocha": "^9.3.0",
+    "@gemini-testing/webdriverio": "^7.28.3",
     "@types/mocha": "^9.0.0",
     "@wdio/types": "^7.26.0",
     "@wdio/utils": "^7.26.0",
@@ -61,7 +62,6 @@
     "uglifyify": "^3.0.4",
     "urijs": "^1.19.11",
     "url-join": "^4.0.1",
-    "webdriverio": "7.28.0",
     "worker-farm": "^1.7.0",
     "yallist": "^3.1.1"
   },

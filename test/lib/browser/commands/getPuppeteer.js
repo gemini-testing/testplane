@@ -1,7 +1,7 @@
 'use strict';
 
 const _ = require('lodash');
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const clientBridge = require('lib/browser/client-bridge');
 const {mkExistingBrowser_: mkBrowser_, mkSessionStub_} = require('../utils');
 

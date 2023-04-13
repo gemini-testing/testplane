@@ -1,7 +1,7 @@
 'use strict';
 
 const P = require('bluebird');
-const webdriverio = require('webdriverio');
+const webdriverio = require('@gemini-testing/webdriverio');
 const cmds = require('../../../../lib/browser/history/commands');
 const Callstack = require('../../../../lib/browser/history/callstack');
 const {initCommandHistory} = require('../../../../lib/browser/history');

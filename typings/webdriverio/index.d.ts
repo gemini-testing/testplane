@@ -1,4 +1,4 @@
-/// <reference types='webdriverio/async' />
+/// <reference types='@gemini-testing/webdriverio/async' />
 /// <reference types="expect-webdriverio/types/standalone"/>
 
 declare namespace WebdriverIO {
