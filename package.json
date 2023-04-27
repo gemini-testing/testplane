@@ -67,6 +67,7 @@
     "mocha": "^10.2.0",
     "plugins-loader": "^1.1.0",
     "png-validator": "1.1.0",
+    "serialize-error": "^8.1.0",
     "sharp": "~0.30.7",
     "sizzle": "^2.3.6",
     "temp": "^0.8.3",
