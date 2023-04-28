@@ -1,6 +1,6 @@
 "use strict";
 
-const { serializeError, deserializeError } = require("serialize-error");
+const _ = require("lodash");
 const { WORKER_UNHANDLED_REJECTION } = require("../constants/process-messages");
 const ipc = require("./ipc");
 
@@ -25,7 +25,17 @@ function sendError(err, cb) {
     try {
         cb(err);
     } catch {
-        const errWithoutCircularRefs = deserializeError(serializeError(err));
-        cb(errWithoutCircularRefs);
+        const shortenedErr = _.pick(err, [
+            "message",
+            "stack",
+            "code",
+            "screenshot",
+            // TODO: use fields from worker test-runner after rewrite on TS
+            "hermioneCtx",
+            "meta",
+            "history",
+        ]);
+
+        cb(shortenedErr);
     }
 }
