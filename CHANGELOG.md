@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.6](https://github.com/gemini-testing/hermione/compare/v7.0.5...v7.0.6) (2023-05-02)
+
+
+### Bug Fixes
+
+* handle rare cases with unhandled rejections due to circular refs ([fb873ad](https://github.com/gemini-testing/hermione/commit/fb873adc0c3eb9f1fb7cff4572ffae0b3bc37e92))
+
 ### [7.0.5](https://github.com/gemini-testing/hermione/compare/v7.0.4...v7.0.5) (2023-04-27)
 
 
