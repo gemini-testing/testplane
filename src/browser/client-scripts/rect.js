@@ -154,9 +154,9 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
     var clientRect = new Rect({
         left: coords.left,
         top: coords.top,
-        // to correctly calculate "width" in devices with fractional pixelRatio
+        // to correctly calculate "width" and "height" in devices with fractional pixelRatio
         width: coords.width % opts.viewportWidth < 1 ? opts.viewportWidth : coords.width,
-        height: Math.min(coords.height, opts.documentHeight)
+        height: coords.height % opts.documentHeight < 1 ? opts.documentHeight : coords.height
     });
 
     return clientRect.translate(util.getScrollLeft(opts.scrollElem), util.getScrollTop(opts.scrollElem));
