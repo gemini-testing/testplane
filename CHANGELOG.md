@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.7](https://github.com/gemini-testing/hermione/compare/v7.0.6...v7.0.7) (2023-05-02)
+
+
+### Bug Fixes
+
+* correctly calculate "height" in device with fractional pixel ratio ([7c2e066](https://github.com/gemini-testing/hermione/commit/7c2e066b0e9e38fc8fd5a8b30438786691c67531))
+
 ### [7.0.6](https://github.com/gemini-testing/hermione/compare/v7.0.5...v7.0.6) (2023-05-02)
 
 
