@@ -151,12 +151,15 @@ Rect.prototype = {
 exports.Rect = Rect;
 exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
     var coords = element.getBoundingClientRect();
+    var widthRatio = coords.width % opts.viewportWidth;
+    var heightRatio = coords.height % opts.documentHeight;
+
     var clientRect = new Rect({
         left: coords.left,
         top: coords.top,
         // to correctly calculate "width" and "height" in devices with fractional pixelRatio
-        width: coords.width % opts.viewportWidth < 1 ? opts.viewportWidth : coords.width,
-        height: coords.height % opts.documentHeight < 1 ? opts.documentHeight : coords.height
+        width: widthRatio > 0 && widthRatio < 1 ? opts.viewportWidth : coords.width,
+        height: heightRatio > 0 && heightRatio < 1 ? opts.documentHeight : coords.height
     });
 
     return clientRect.translate(util.getScrollLeft(opts.scrollElem), util.getScrollTop(opts.scrollElem));
