@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.8](https://github.com/gemini-testing/hermione/compare/v7.0.7...v7.0.8) (2023-05-03)
+
+
+### Bug Fixes
+
+* take into account zero height of ignore element ([d8a3afd](https://github.com/gemini-testing/hermione/commit/d8a3afdef6a5885929b5655b5caa0e70d166dcd7))
+
 ### [7.0.7](https://github.com/gemini-testing/hermione/compare/v7.0.6...v7.0.7) (2023-05-02)
 
 
