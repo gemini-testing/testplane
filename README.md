@@ -22,8 +22,10 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Prerequisites](#prerequisites)
   - [Selenium-standalone](#selenium-standalone)
 - [Quick start](#quick-start)
-  - [Chrome Devtools Protocol](#chrome-devtools-protocol)
-  - [Webdriver protocol](#webdriver-protocol)
+  - [Using create-hermione-app (a quick way)](#using-create-hermione-app-a-quick-way)
+  - [Configuring .hermione.conf.js by yourself (a slow way)](#configuring-hermioneconfjs-by-yourself-a-slow-way)
+    - [Chrome Devtools Protocol](#chrome-devtools-protocol)
+    - [Webdriver protocol](#webdriver-protocol)
 - [Tests API](#tests-api)
   - [Arguments](#arguments)
   - [Hooks](#hooks)
@@ -296,20 +298,28 @@ selenium-standalone start
 ## Quick start
 First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
 
-Install the package.
+Now you have two ways to configure project.
+
+### Using create-hermione-app (a quick way)
+
+You just need to run the cli command from [create-hermione-app](https://github.com/gemini-testing/create-hermione-app) tool and answer a few questions:
 ```
-npm install hermione chai
+npm init hermione-app YOUR_PROJECT_PATH
 ```
 
-Then put `.hermione.conf.js` in the project root. There are two configuration options depending on the method selected in the `prerequisites` block.
+To skip all questions just add the option `-y` at the end.
 
-### Chrome Devtools Protocol
+### Configuring .hermione.conf.js by yourself (a slow way)
+
+Create hermione config file with name `.hermione.conf.js` in the project root. There are two configuration options depending on the method selected in the `prerequisites` section.
+
+#### Chrome Devtools Protocol
 
 ```javascript
 module.exports = {
     sets: {
         desktop: {
-            files: 'tests/desktop'
+            files: 'tests/desktop/**/*.hermione.js'
         }
     },
 
@@ -324,7 +334,7 @@ module.exports = {
 };
 ```
 
-### Webdriver protocol
+#### Webdriver protocol
 
 ```javascript
 module.exports = {
@@ -332,7 +342,7 @@ module.exports = {
 
     sets: {
         desktop: {
-            files: 'tests/desktop'
+            files: 'tests/desktop/*.hermione.js'
         }
     },
 
@@ -347,16 +357,13 @@ module.exports = {
 };
 ```
 
-Write your first test in `tests/desktop/github.js` file.
+Write your first test in `tests/desktop/github.hermione.js` file.
 ```javascript
-const assert = require('chai').assert;
+describe('github', function() {
+    it('should check repository name', async ({ browser }) => {
+        await browser.url('https://github.com/gemini-testing/hermione');
 
-describe('github', async function() {
-    it('should find hermione', async function() {
-        await this.browser.url('https://github.com/gemini-testing/hermione');
-
-        const title = await this.browser.$('#readme h1').getText();
-        assert.equal(title, 'Hermione');
+        await expect(browser.$('#readme h1')).toHaveText('Hermione');
     });
 });
 ```
