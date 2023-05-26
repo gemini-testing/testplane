@@ -1,3 +1,4 @@
+/* global document */
 "use strict";
 
 const _ = require("lodash");
@@ -117,7 +118,9 @@ module.exports = class TestRunner {
 
         await body.scrollIntoView();
 
-        const { x, y } = await body.getLocation();
+        const { x = 0, y = 0 } = await session.execute(function () {
+            return document.body.getBoundingClientRect();
+        });
         await body.moveTo({ xOffset: -x, yOffset: -y });
     }
 };
