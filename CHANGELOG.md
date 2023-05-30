@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.9](https://github.com/gemini-testing/hermione/compare/v7.0.8...v7.0.9) (2023-05-30)
+
+
+### Bug Fixes
+
+* **test-runner:** out of bound error on cursor reset ([687b669](https://github.com/gemini-testing/hermione/commit/687b6691a19a23d83b69501c1cc81541f25646d3))
+
 ### [7.0.8](https://github.com/gemini-testing/hermione/compare/v7.0.7...v7.0.8) (2023-05-03)
 
 
