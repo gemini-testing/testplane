@@ -35,7 +35,6 @@ describe("worker/runner/test-runner", () => {
 
     const mkElement_ = proto => {
         return _.defaults(proto, {
-            getLocation: sandbox.stub().named("getLocation").resolves({ x: 0, y: 0 }),
             scrollIntoView: sandbox.stub().named("scrollIntoView").resolves(),
             moveTo: sandbox.stub().named("moveTo").resolves(),
         });
@@ -44,6 +43,7 @@ describe("worker/runner/test-runner", () => {
     const mkBrowser_ = ({ prototype, config, id } = {}) => {
         const publicAPI = _.defaults(prototype, {
             $: sandbox.stub().named("$").resolves(mkElement_()),
+            execute: sandbox.stub().named("execute").resolves({ x: 0, y: 0 }),
         });
         config = _.defaults(config, { resetCursor: true });
 
@@ -304,7 +304,7 @@ describe("worker/runner/test-runner", () => {
                 });
 
                 it("should move cursor correctly if body element has negative coords", async () => {
-                    body.getLocation.resolves({ x: -100, y: -500 });
+                    browser.publicAPI.execute.resolves({ x: -100, y: -500 });
 
                     await run_();
 
