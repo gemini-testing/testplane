@@ -1,75 +1,116 @@
-"use strict";
+import { CommanderStatic } from "@gemini-testing/commander";
+import * as _ from "lodash";
+import { Stats as RunnerStats } from "./stats";
+import { BaseHermione } from "./base-hermione";
+import { MainRunner } from "./runner";
+import RuntimeConfig from "./config/runtime-config";
+import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
+import eventsUtils from "./events/utils";
+import signalHandler from "./signal-handler";
+import TestReader from "./test-reader";
+import { TestCollection } from "./test-collection";
+import { validateUnknownBrowsers } from "./validators";
+import { initReporters } from "./reporters";
+import logger from "./utils/logger";
+import { ConfigInput } from "./config/types";
+import { MasterEventHandler, Test } from "./types";
 
-const _ = require("lodash");
+interface RunOpts {
+    browsers?: string[];
+    sets?: string[];
+    grep?: string;
+    updateRefs?: boolean;
+    requireModules?: string[];
+    inspectMode?: {
+        inspect: boolean;
+        inspectBrk: boolean;
+    };
+    reporters?: string[];
+}
 
-const RunnerStats = require("./stats");
-const BaseHermione = require("./base-hermione");
-const Runner = require("./runner");
-const RuntimeConfig = require("./config/runtime-config");
-const RunnerEvents = require("./constants/runner-events");
-const eventsUtils = require("./events/utils");
-const signalHandler = require("./signal-handler");
-const TestReader = require("./test-reader");
-const TestCollection = require("./test-collection").default;
-const validateUnknownBrowsers = require("./validators").validateUnknownBrowsers;
-const { initReporters } = require("./reporters");
-const logger = require("./utils/logger");
+interface ReadTestsOpts {
+    browsers: string[];
+    sets: string[];
+    grep: string | RegExp;
+    silent: boolean;
+    ignore: string | string[];
+}
 
-module.exports = class Hermione extends BaseHermione {
-    constructor(config) {
+export interface Hermione {
+    on: MasterEventHandler<this>;
+    once: MasterEventHandler<this>;
+    prependListener: MasterEventHandler<this>;
+}
+
+export class Hermione extends BaseHermione {
+    protected failed: boolean;
+    protected runner: MainRunner | null;
+
+    constructor(config?: string | ConfigInput) {
         super(config);
 
-        this._failed = false;
+        this.failed = false;
+        this.runner = null;
     }
 
-    extendCli(parser) {
-        this.emit(RunnerEvents.CLI, parser);
+    extendCli(parser: CommanderStatic): void {
+        this.emit(MasterEvents.CLI, parser);
     }
 
-    async run(testPaths, { browsers, sets, grep, updateRefs, requireModules, inspectMode, reporters = [] } = {}) {
+    async run(
+        testPaths: TestCollection | string[],
+        { browsers, sets, grep, updateRefs, requireModules, inspectMode, reporters = [] }: Partial<RunOpts> = {},
+    ): Promise<boolean> {
         validateUnknownBrowsers(browsers, _.keys(this._config.browsers));
 
         RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode });
 
-        this._runner = Runner.create(this._config, this._interceptors);
+        const runner = MainRunner.create(this._config, this._interceptors);
+        this.runner = runner;
 
-        this.on(RunnerEvents.TEST_FAIL, () => this._fail()).on(RunnerEvents.ERROR, err => this.halt(err));
+        this.on(MasterEvents.TEST_FAIL, () => this._fail()).on(MasterEvents.ERROR, (err: Error) => this.halt(err));
 
         await initReporters(reporters, this);
 
-        eventsUtils.passthroughEvent(this._runner, this, _.values(RunnerEvents.getSync()));
-        eventsUtils.passthroughEventAsync(this._runner, this, _.values(RunnerEvents.getAsync()));
-        eventsUtils.passthroughEventAsync(signalHandler, this, RunnerEvents.EXIT);
+        eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
+        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
+        eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
 
         await this._init();
-        this._runner.init();
-        await this._runner.run(await this._readTests(testPaths, { browsers, sets, grep }), RunnerStats.create(this));
+        runner.init();
+        await runner.run(await this._readTests(testPaths, { browsers, sets, grep }), RunnerStats.create(this));
 
         return !this.isFailed();
     }
 
-    async _readTests(testPaths, opts) {
+    protected async _readTests(
+        testPaths: string[] | TestCollection,
+        opts: Partial<ReadTestsOpts>,
+    ): Promise<TestCollection> {
         return testPaths instanceof TestCollection ? testPaths : await this.readTests(testPaths, opts);
     }
 
-    addTestToRun(test, browserId) {
-        return this._runner ? this._runner.addTestToRun(test, browserId) : false;
+    addTestToRun(test: Test, browserId: string): boolean {
+        return this.runner ? this.runner.addTestToRun(test, browserId) : false;
     }
 
-    async readTests(testPaths, { browsers, sets, grep, silent, ignore } = {}) {
+    async readTests(
+        testPaths: string[],
+        { browsers, sets, grep, silent, ignore }: Partial<ReadTestsOpts> = {},
+    ): Promise<TestCollection> {
         const testReader = TestReader.create(this._config);
 
         if (!silent) {
             await this._init();
 
             eventsUtils.passthroughEvent(testReader, this, [
-                RunnerEvents.BEFORE_FILE_READ,
-                RunnerEvents.AFTER_FILE_READ,
+                MasterEvents.BEFORE_FILE_READ,
+                MasterEvents.AFTER_FILE_READ,
             ]);
         }
 
         const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep });
-        const collection = TestCollection.create(specs, this._config);
+        const collection = TestCollection.create(specs);
 
         collection.getBrowsers().forEach(bro => {
             if (this._config.forBrowser(bro).strictTestsOrder) {
@@ -78,25 +119,25 @@ module.exports = class Hermione extends BaseHermione {
         });
 
         if (!silent) {
-            this.emit(RunnerEvents.AFTER_TESTS_READ, collection);
+            this.emit(MasterEvents.AFTER_TESTS_READ, collection);
         }
 
         return collection;
     }
 
-    isFailed() {
-        return this._failed;
+    isFailed(): boolean {
+        return this.failed;
     }
 
-    _fail() {
-        this._failed = true;
+    protected _fail(): void {
+        this.failed = true;
     }
 
-    isWorker() {
+    isWorker(): boolean {
         return false;
     }
 
-    halt(err, timeout = 60000) {
+    halt(err: Error, timeout = 60000): void {
         logger.error("Terminating on critical error:", err);
 
         this._fail();
@@ -108,8 +149,8 @@ module.exports = class Hermione extends BaseHermione {
             }, timeout).unref();
         }
 
-        if (this._runner) {
-            this._runner.cancel();
+        if (this.runner) {
+            this.runner.cancel();
         }
     }
-};
+}

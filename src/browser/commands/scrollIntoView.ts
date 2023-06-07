@@ -3,7 +3,7 @@ type Browser = {
 };
 
 // TODO: remove after fix https://github.com/webdriverio/webdriverio/issues/9620
-export = async (browser: Browser) => {
+export = async (browser: Browser): Promise<void> => {
     const { publicAPI: session } = browser;
 
     session.overwriteCommand(

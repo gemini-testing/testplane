@@ -1,6 +1,6 @@
 "use strict";
 
-const Hermione = require("./hermione");
+const { Hermione } = require("./hermione");
 const RuntimeConfig = require("../config/runtime-config");
 const Promise = require("bluebird");
 const debug = require("debug")(`hermione:worker:${process.pid}`);

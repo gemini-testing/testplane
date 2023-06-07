@@ -1,32 +1,52 @@
-"use strict";
+import _ from "lodash";
+import { MasterEvents } from "./events";
+import { Hermione } from "./hermione";
 
-const _ = require("lodash");
-const RunnerEvents = require("./constants/runner-events");
+import type { Test } from "./types";
 
-module.exports = class Stats {
-    static create(...args) {
-        return new this(...args);
+export interface StatsResult {
+    total: number;
+    passed: number;
+    failed: number;
+    retries: number;
+    skipped: number;
+    perBrowser: Record<string, Omit<StatsResult, "perBrowser">>;
+}
+
+type GroupName = Exclude<keyof StatsResult, "total" | "perBrowser">;
+
+type StatEvent = {
+    group: GroupName;
+    id: string;
+    browserId: string;
+};
+
+export class Stats {
+    private events: StatEvent[] = [];
+
+    static create<T extends Stats>(this: new (runner?: Hermione) => T, runner?: Hermione): T {
+        return new this(runner);
     }
 
-    constructor(runner) {
-        this._events = [];
-
+    constructor(runner?: Hermione) {
         const pushEvent_ =
-            group =>
-            ({ id, browserId }) =>
-                this._events.push({ group, id, browserId });
+            (group: GroupName) =>
+            ({ id, browserId }: Test): void => {
+                this.events.push({ group, id, browserId });
+            };
 
-        runner &&
+        if (runner) {
             runner
-                .on(RunnerEvents.TEST_PASS, pushEvent_("passed"))
-                .on(RunnerEvents.TEST_FAIL, pushEvent_("failed"))
-                .on(RunnerEvents.RETRY, pushEvent_("retries"))
-                .on(RunnerEvents.TEST_PENDING, pushEvent_("skipped"));
+                .on(MasterEvents.TEST_PASS, pushEvent_("passed"))
+                .on(MasterEvents.TEST_FAIL, pushEvent_("failed"))
+                .on(MasterEvents.RETRY, pushEvent_("retries"))
+                .on(MasterEvents.TEST_PENDING, pushEvent_("skipped"));
+        }
     }
 
-    getResult() {
-        const emptyStat = { passed: 0, failed: 0, retries: 0, skipped: 0, total: 0 };
-        const statsByBrowser = _(this._events)
+    getResult(): StatsResult {
+        const emptyStat: Partial<StatsResult> = { passed: 0, failed: 0, retries: 0, skipped: 0, total: 0 };
+        const statsByBrowser = _(this.events)
             .groupBy("browserId")
             .mapValues(events => {
                 const stats = _(events).groupBy("group").mapValues("length").value();
@@ -39,8 +59,8 @@ module.exports = class Stats {
             })
             .value();
 
-        const overall = _.mergeWith(emptyStat, ...Object.values(statsByBrowser), (a, b) => a + b);
+        const overall = _.mergeWith(emptyStat, ...Object.values(statsByBrowser), (a: number, b: number) => a + b);
 
         return { ...overall, perBrowser: statsByBrowser };
     }
-};
+}

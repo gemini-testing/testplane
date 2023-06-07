@@ -1,13 +1,15 @@
-"use strict";
+import _ from "lodash";
+import BasicPool from "./basic-pool";
+import LimitedPool from "./limited-pool";
+import PerBrowserLimitedPool from "./per-browser-limited-pool";
+import CachingPool from "./caching-pool";
+import { Config } from "../config";
+import { AsyncEmitter } from "../events";
 
-const _ = require("lodash");
-const BasicPool = require("./basic-pool");
-const LimitedPool = require("./limited-pool");
-const PerBrowserLimitedPool = require("./per-browser-limited-pool");
-const CachingPool = require("./caching-pool");
+export type BrowserPool = LimitedPool | PerBrowserLimitedPool;
 
-exports.create = function (config, emitter) {
-    var pool = BasicPool.create(config, emitter);
+export const create = function (config: Config, emitter: AsyncEmitter): BrowserPool {
+    let pool: BasicPool | CachingPool | PerBrowserLimitedPool | LimitedPool = BasicPool.create(config, emitter);
 
     pool = new CachingPool(pool, config);
     pool = new PerBrowserLimitedPool(pool, config);

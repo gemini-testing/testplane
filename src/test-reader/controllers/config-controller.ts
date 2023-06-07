@@ -1,25 +1,26 @@
-const ReadEvents = require("../read-events");
+import { TestReaderEvents as ReadEvents } from "../../events";
+import { EventEmitter } from "events";
 
-class ConfigController {
-    #eventBus;
+type TreeBuilder = {
+    addTrap: (trap: (obj: { timeout: number }) => void) => void;
+};
 
-    static create(...args) {
-        return new this(...args);
+export class ConfigController {
+    #eventBus: EventEmitter;
+
+    static create<T extends ConfigController>(this: new (eventBus: EventEmitter) => T, eventBus: EventEmitter): T {
+        return new this(eventBus);
     }
 
-    constructor(eventBus) {
+    constructor(eventBus: EventEmitter) {
         this.#eventBus = eventBus;
     }
 
-    testTimeout(timeout) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+    testTimeout(timeout: number): this {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }: { treeBuilder: TreeBuilder }) => {
             treeBuilder.addTrap(obj => (obj.timeout = timeout));
         });
 
         return this;
     }
 }
-
-module.exports = {
-    ConfigController,
-};

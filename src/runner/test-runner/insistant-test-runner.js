@@ -2,12 +2,12 @@
 
 const _ = require("lodash");
 
-const Runner = require("../runner");
+const { Runner } = require("../runner");
 const RegularTestRunner = require("./regular-test-runner");
 const HighPriorityBrowserAgent = require("./high-priority-browser-agent");
-const Events = require("../../constants/runner-events");
+const { MasterEvents } = require("../../events");
 const { passthroughEvent } = require("../../events/utils");
-const NoRefImageError = require("../../browser/commands/assert-view/errors/no-ref-image-error");
+const { NoRefImageError } = require("../../browser/commands/assert-view/errors/no-ref-image-error");
 
 module.exports = class InsistantTestRunner extends Runner {
     constructor(test, config, browserAgent) {
@@ -28,16 +28,16 @@ module.exports = class InsistantTestRunner extends Runner {
         const browserAgent =
             this._retriesPerformed > 0 ? HighPriorityBrowserAgent.create(this._browserAgent) : this._browserAgent;
 
-        const runner = RegularTestRunner.create(this._test, browserAgent).on(Events.TEST_FAIL, data => {
+        const runner = RegularTestRunner.create(this._test, browserAgent).on(MasterEvents.TEST_FAIL, data => {
             if (this._shouldRetry(data)) {
-                this.emit(Events.RETRY, _.extend(data, { retriesLeft: this._retriesLeft }));
+                this.emit(MasterEvents.RETRY, _.extend(data, { retriesLeft: this._retriesLeft }));
                 retry = true;
             } else {
-                this.emit(Events.TEST_FAIL, data);
+                this.emit(MasterEvents.TEST_FAIL, data);
             }
         });
 
-        passthroughEvent(runner, this, [Events.TEST_BEGIN, Events.TEST_PASS, Events.TEST_END]);
+        passthroughEvent(runner, this, [MasterEvents.TEST_BEGIN, MasterEvents.TEST_PASS, MasterEvents.TEST_END]);
 
         await runner.run(workers);
 

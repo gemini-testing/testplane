@@ -2,7 +2,7 @@
 
 const TestReader = require("src/test-reader");
 const { TestParser } = require("src/test-reader/test-parser");
-const Events = require("src/constants/runner-events");
+const { MasterEvents: Events } = require("src/events");
 const SetsBuilder = require("src/test-reader/sets-builder");
 const SetCollection = require("src/test-reader/sets-builder/set-collection");
 const { makeConfigStub } = require("../../utils");

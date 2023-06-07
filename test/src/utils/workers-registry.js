@@ -4,8 +4,8 @@ const proxyquire = require("proxyquire");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
 const RuntimeConfig = require("src/config/runtime-config");
-const Events = require("src/constants/runner-events");
-const WorkerProcess = require("src/utils/worker-process");
+const { MasterEvents: Events } = require("src/events");
+const { WorkerProcess } = require("src/utils/worker-process");
 const logger = require("src/utils/logger");
 const {
     MASTER_INIT,

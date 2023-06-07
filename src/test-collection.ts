@@ -1,18 +1,19 @@
 import _ from "lodash";
 
-import type { Suite } from "./test-reader/test-object/suite";
-import type { Test } from "./test-reader/test-object/test";
+import type { Suite, RootSuite, Test } from "./types";
 
-type RootSuite = Suite & { root: true };
 type TestDisabled = Test & { disabled: true };
 type TestsCallback<T> = (test: Test, browserId: string) => T;
 type SortTestsCallback = (test1: Test, test2: Test) => number;
 
-export default class TestCollection {
+export class TestCollection {
     readonly #specs: Record<string, Test[]>;
     readonly #originalSpecs: Record<string, Test[]>;
 
-    static create(specs: Record<string, Test[]>) {
+    static create<T extends TestCollection>(
+        this: new (specs: Record<string, Test[]>) => T,
+        specs: Record<string, Test[]>,
+    ): T {
         return new this(specs);
     }
 

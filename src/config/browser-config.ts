@@ -1,14 +1,14 @@
-"use strict";
+import * as path from "path";
+import * as _ from "lodash";
+import type { Test } from "../types";
+import type { CommonConfig } from "./types";
 
-const path = require("path");
-const _ = require("lodash");
-
-module.exports = class BrowserConfig {
-    constructor(browserOptions) {
+export class BrowserConfig {
+    constructor(browserOptions: CommonConfig) {
         _.extend(this, browserOptions);
     }
 
-    getScreenshotPath(test, stateName) {
+    getScreenshotPath(test: Test, stateName: string): string {
         const filename = `${stateName}.png`;
         const { screenshotsDir } = this;
 
@@ -17,7 +17,7 @@ module.exports = class BrowserConfig {
             : path.resolve(process.cwd(), screenshotsDir, test.id, this.id, filename);
     }
 
-    serialize() {
+    serialize(): Omit<this, "system"> {
         return _.omit(this, ["system"]);
     }
-};
+}

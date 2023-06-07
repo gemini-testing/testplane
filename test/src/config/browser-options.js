@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 
-const Config = require("src/config");
+const { Config } = require("src/config");
 const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 

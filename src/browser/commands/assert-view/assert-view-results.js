@@ -1,7 +1,7 @@
 "use strict";
 
-const ImageDiffError = require("./errors/image-diff-error");
-const NoRefImageError = require("./errors/no-ref-image-error");
+const { ImageDiffError } = require("./errors/image-diff-error");
+const { NoRefImageError } = require("./errors/no-ref-image-error");
 
 module.exports = class AssertViewResults {
     static fromRawObject(results) {

@@ -1,13 +1,17 @@
 "use strict";
 
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
-const ImageDiffError = require("src/browser/commands/assert-view/errors/image-diff-error");
-const NoRefImageError = require("src/browser/commands/assert-view/errors/no-ref-image-error");
+const { ImageDiffError } = require("src/browser/commands/assert-view/errors/image-diff-error");
+const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 
 describe("AssertViewResults", () => {
     describe("fromRawObject", () => {
         it("should create an instance form a raw object", () => {
-            const obj = [{ name: ImageDiffError.name }, { name: NoRefImageError.name }, { foo: "bar" }];
+            const obj = [
+                { name: ImageDiffError.name },
+                { name: NoRefImageError.name, currImg: {}, refImg: {} },
+                { foo: "bar" },
+            ];
 
             const results = AssertViewResults.fromRawObject(obj).get();
 

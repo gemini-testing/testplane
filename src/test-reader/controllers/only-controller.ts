@@ -1,30 +1,35 @@
-const ReadEvents = require("../read-events");
+import { TestReaderEvents as ReadEvents } from "../../events";
+import { EventEmitter } from "events";
 
-class OnlyController {
-    #eventBus;
+type TreeBuilder = {
+    addTrap: (trap: (obj: { browserId: string; disable: () => void }) => void) => void;
+};
 
-    static create(...args) {
-        return new this(...args);
+export class OnlyController {
+    #eventBus: EventEmitter;
+
+    static create<T extends OnlyController>(this: new (eventBus: EventEmitter) => T, eventBus: EventEmitter): T {
+        return new this(eventBus);
     }
 
-    constructor(eventBus) {
+    constructor(eventBus: EventEmitter) {
         this.#eventBus = eventBus;
     }
 
-    in(matchers) {
+    in(matchers: string | RegExp | Array<string | RegExp>): this {
         this.#addTrap(browserId => this.#match(browserId, matchers));
 
         return this;
     }
 
-    notIn(matchers) {
+    notIn(matchers: string | RegExp | Array<string | RegExp>): this {
         this.#addTrap(browserId => !this.#match(browserId, matchers));
 
         return this;
     }
 
-    #addTrap(match) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+    #addTrap(match: (browserId: string) => boolean): void {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }: { treeBuilder: TreeBuilder }) => {
             treeBuilder.addTrap(obj => {
                 if (!match(obj.browserId)) {
                     obj.disable();
@@ -33,13 +38,9 @@ class OnlyController {
         });
     }
 
-    #match(browserId, matchers) {
-        return [].concat(matchers).some(m => {
+    #match(browserId: string, matchers: string | RegExp | Array<string | RegExp>): boolean {
+        return ([] as Array<string | RegExp>).concat(matchers).some(m => {
             return m instanceof RegExp ? m.test(browserId) : m === browserId;
         });
     }
 }
-
-module.exports = {
-    OnlyController,
-};

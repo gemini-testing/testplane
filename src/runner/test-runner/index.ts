@@ -1,9 +1,12 @@
-"use strict";
+import SkippedTestRunner from "./skipped-test-runner";
+import InsistantTestRunner from "./insistant-test-runner";
+import { Config } from "../../config";
+import type { Test } from "../../types";
+import type BrowserAgent from "../browser-agent";
 
-const SkippedTestRunner = require("./skipped-test-runner");
-const InsistantTestRunner = require("./insistant-test-runner");
+export type TestRunner = SkippedTestRunner | InsistantTestRunner;
 
-exports.create = function (test, config, browserAgent) {
+export const create = function (test: Test, config: Config, browserAgent: BrowserAgent): TestRunner {
     return test.pending || test.disabled
         ? SkippedTestRunner.create(test)
         : InsistantTestRunner.create(test, config, browserAgent);

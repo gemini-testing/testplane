@@ -3,7 +3,7 @@
 const { OnlyController } = require("src/test-reader/controllers/only-controller");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
 const { ConfigurableTestObject } = require("src/test-reader/test-object/configurable-test-object");
-const ReadEvents = require("src/test-reader/read-events");
+const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/controllers/only-controller", () => {

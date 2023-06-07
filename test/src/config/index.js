@@ -3,7 +3,7 @@
 const path = require("path");
 const proxyquire = require("proxyquire").noCallThru();
 const defaults = require("src/config/defaults");
-const BrowserConfig = require("src/config/browser-config");
+const { BrowserConfig } = require("src/config/browser-config");
 
 describe("config", () => {
     const sandbox = sinon.sandbox.create();
@@ -23,7 +23,7 @@ describe("config", () => {
             const resolvedConfigPath = path.resolve(process.cwd(), config);
             stubs[resolvedConfigPath] = opts.requireConfigReturns || {};
         }
-        const Config = proxyquire("../../../src/config", stubs);
+        const Config = proxyquire("../../../src/config", stubs).Config;
 
         return Config.create(config, opts.allowOverrides);
     };

@@ -1,8 +1,8 @@
 "use strict";
 
-const TestParserAPI = require("src/test-reader/test-parser-api");
+const { TestParserAPI } = require("src/test-reader/test-parser-api");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
-const ReadEvents = require("src/test-reader/read-events");
+const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/test-parser-api", () => {

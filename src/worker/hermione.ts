@@ -1,42 +1,69 @@
-"use strict";
+import { passthroughEvent } from "../events/utils";
+import { WorkerEvents } from "../events";
+import Runner from "./runner";
+import { BaseHermione } from "../base-hermione";
+import { ImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 
-const eventsUtils = require("../events/utils");
+export interface WorkerRunTestOpts {
+    browserId: string;
+    browserVersion: string;
+    file: string;
+    sessionId: string;
+    sessionCaps: WdioBrowser["capabilities"];
+    sessionOpts: WdioBrowser["options"];
+}
 
-const RunnerEvents = require("./constants/runner-events");
-const Runner = require("./runner");
-const BaseHermione = require("../base-hermione");
+export interface AssertViewResultsSuccess {
+    stateName: string;
+    refImg: ImageInfo;
+}
 
-module.exports = class Hermione extends BaseHermione {
-    constructor(configPath) {
+export interface WorkerRunTestHermioneCtx {
+    assertViewResults: Array<AssertViewResultsSuccess>;
+}
+
+export interface WorkerRunTestResult {
+    meta: Record<string, unknown>;
+    hermioneCtx: WorkerRunTestHermioneCtx;
+}
+
+export interface Hermione {
+    on: WorkerEventHandler<this>;
+    once: WorkerEventHandler<this>;
+}
+
+export class Hermione extends BaseHermione {
+    protected runner: Runner;
+
+    constructor(configPath: string) {
         super(configPath);
 
-        this._runner = Runner.create(this._config);
+        this.runner = Runner.create(this._config);
 
-        eventsUtils.passthroughEvent(this._runner, this, [
-            RunnerEvents.BEFORE_FILE_READ,
-            RunnerEvents.AFTER_FILE_READ,
-
-            RunnerEvents.AFTER_TESTS_READ,
-
-            RunnerEvents.NEW_BROWSER,
-            RunnerEvents.UPDATE_REFERENCE,
+        passthroughEvent(this.runner, this, [
+            WorkerEvents.BEFORE_FILE_READ,
+            WorkerEvents.AFTER_FILE_READ,
+            WorkerEvents.AFTER_TESTS_READ,
+            WorkerEvents.NEW_BROWSER,
+            WorkerEvents.UPDATE_REFERENCE,
         ]);
     }
 
-    async init() {
+    async init(): Promise<void> {
         await this._init();
 
         if (!global.expect) {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { setOptions } = require("expect-webdriverio");
             setOptions(this._config.system.expectOpts);
         }
     }
 
-    runTest(fullTitle, options) {
-        return this._runner.runTest(fullTitle, options);
+    runTest(fullTitle: string, options: WorkerRunTestOpts): Promise<WorkerRunTestResult> {
+        return this.runner.runTest(fullTitle, options);
     }
 
-    isWorker() {
+    isWorker(): boolean {
         return true;
     }
-};
+}

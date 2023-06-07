@@ -1,7 +1,7 @@
 "use strict";
 
 const SkippedTestRunner = require("src/runner/test-runner/skipped-test-runner");
-const Events = require("src/constants/runner-events");
+const { MasterEvents: Events } = require("src/events");
 const { Test, Suite } = require("src/test-reader/test-object");
 
 describe("runner/test-runner/skipped-test-runner", () => {

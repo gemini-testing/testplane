@@ -1,18 +1,19 @@
-"use strict";
+import * as path from "path";
+import * as _ from "lodash";
+import defaults from "./defaults";
+import { BrowserConfig } from "./browser-config";
+import parseOptions from "./options";
+import logger from "../utils/logger";
+import { ConfigInput } from "./types";
 
-const path = require("path");
-const _ = require("lodash");
-const BrowserConfig = require("./browser-config");
-const defaults = require("./defaults");
-const parseOptions = require("./options");
-const logger = require("../utils/logger");
+export class Config {
+    configPath!: string;
 
-module.exports = class Config {
-    static create(config) {
+    static create(config?: string | ConfigInput): Config {
         return new Config(config);
     }
 
-    static read(configPath) {
+    static read(configPath: string): unknown {
         try {
             return require(path.resolve(process.cwd(), configPath));
         } catch (e) {
@@ -21,13 +22,13 @@ module.exports = class Config {
         }
     }
 
-    constructor(config) {
-        let options;
+    constructor(config?: string | ConfigInput) {
+        let options: ConfigInput;
         if (_.isObjectLike(config)) {
-            options = config;
+            options = config as ConfigInput;
         } else if (typeof config === "string") {
             this.configPath = config;
-            options = Config.read(config);
+            options = Config.read(config) as ConfigInput;
         } else {
             for (const configPath of defaults.configPaths) {
                 try {
@@ -36,7 +37,8 @@ module.exports = class Config {
                     this.configPath = resolvedConfigPath;
 
                     break;
-                } catch (err) {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                } catch (err: any) {
                     if (err.code !== "MODULE_NOT_FOUND") {
                         throw err;
                     }
@@ -47,7 +49,7 @@ module.exports = class Config {
                 throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
             }
 
-            options = Config.read(this.configPath);
+            options = Config.read(this.configPath) as ConfigInput;
         }
 
         if (_.isFunction(options.prepareEnvironment)) {
@@ -73,15 +75,15 @@ module.exports = class Config {
         });
     }
 
-    forBrowser(id) {
+    forBrowser(id: string): BrowserConfig {
         return this.browsers[id];
     }
 
-    getBrowserIds() {
+    getBrowserIds(): Array<string> {
         return _.keys(this.browsers);
     }
 
-    serialize() {
+    serialize(): Omit<Config, "system"> {
         return _.extend({}, this, {
             browsers: _.mapValues(this.browsers, broConf => broConf.serialize()),
         });
@@ -91,7 +93,7 @@ module.exports = class Config {
      * This method is used in subrocesses to merge a created config
      * in a subrocess with a config from the main process
      */
-    mergeWith(config) {
+    mergeWith(config: Config): void {
         _.mergeWith(this, config, (l, r) => {
             if (_.isObjectLike(l)) {
                 return;
@@ -102,4 +104,4 @@ module.exports = class Config {
             return typeof l === typeof r ? r : l;
         });
     }
-};
+}

@@ -5,7 +5,7 @@ const path = require("path");
 const Promise = require("bluebird");
 const _ = require("lodash");
 const looksSame = require("looks-same");
-const CoreError = require("./core-error");
+const { CoreError } = require("./core-error");
 
 const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, "client-scripts", "calibrate.js"), "utf8");
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" };

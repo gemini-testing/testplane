@@ -1,20 +1,23 @@
 "use strict";
 
 const Promise = require("bluebird");
-const BrowserRunner = require("src/runner/browser-runner");
+// const { BrowserRunner } = require("src/runner/browser-runner");
 const BrowserAgent = require("src/runner/browser-agent");
 const BrowserPool = require("src/browser-pool");
-const TestRunnerFabric = require("src/runner/test-runner");
+const { create } = require("src/runner/test-runner");
 const TestRunner = require("src/runner/test-runner/insistant-test-runner");
-const TestCollection = require("src/test-collection").default;
+const { TestCollection } = require("src/test-collection");
 const { Test } = require("src/test-reader/test-object");
 const SuiteMonitor = require("src/runner/suite-monitor");
-const Events = require("src/constants/runner-events");
+const { MasterEvents: Events } = require("src/events");
 
 const { makeConfigStub } = require("../../utils");
+const proxyquire = require("proxyquire");
 
 describe("runner/browser-runner", () => {
     const sandbox = sinon.sandbox.create();
+    let BrowserRunner;
+    let TestRunnerFabric = { create };
 
     const mkWorkers_ = () => {
         return {
@@ -67,6 +70,10 @@ describe("runner/browser-runner", () => {
         sandbox.stub(BrowserAgent, "create").returns(browserAgent);
 
         stubTestCollection_([Test.create({ title: "defaultTitle" })]);
+
+        BrowserRunner = proxyquire("src/runner/browser-runner", {
+            "./test-runner": TestRunnerFabric,
+        }).BrowserRunner;
     });
 
     afterEach(() => sandbox.restore());

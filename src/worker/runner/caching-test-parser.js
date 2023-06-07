@@ -3,8 +3,8 @@
 const { EventEmitter } = require("events");
 const { passthroughEvent } = require("../../events/utils");
 const SequenceTestParser = require("./sequence-test-parser");
-const TestCollection = require("../../test-collection").default;
-const RunnerEvents = require("../constants/runner-events");
+const { TestCollection } = require("../../test-collection");
+const { WorkerEvents } = require("../../events");
 
 module.exports = class CachingTestParser extends EventEmitter {
     static create(...args) {
@@ -18,7 +18,7 @@ module.exports = class CachingTestParser extends EventEmitter {
         this._cache = {};
 
         this._sequenceTestParser = SequenceTestParser.create(config);
-        passthroughEvent(this._sequenceTestParser, this, [RunnerEvents.BEFORE_FILE_READ, RunnerEvents.AFTER_FILE_READ]);
+        passthroughEvent(this._sequenceTestParser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
     }
 
     async parse({ file, browserId }) {
@@ -32,7 +32,7 @@ module.exports = class CachingTestParser extends EventEmitter {
 
         const tests = await testsPromise;
 
-        this.emit(RunnerEvents.AFTER_TESTS_READ, TestCollection.create({ [browserId]: tests }, this._config));
+        this.emit(WorkerEvents.AFTER_TESTS_READ, TestCollection.create({ [browserId]: tests }, this._config));
 
         return tests;
     }

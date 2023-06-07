@@ -1,147 +1,181 @@
-"use strict";
+import _ from "lodash";
+import * as eventsUtils from "../events/utils";
+import * as temp from "../temp";
+import * as pool from "../browser-pool";
+import { BrowserRunner } from "./browser-runner";
+import {
+    RunnerSyncEvents,
+    MasterEvents,
+    InterceptedEvent,
+    RunnerSyncEvent,
+    Interceptor,
+    InterceptData,
+} from "../events";
+import { Runner } from "./runner";
+import RuntimeConfig from "../config/runtime-config";
+import WorkersRegistry from "../utils/workers-registry";
+import PromiseGroup from "./promise-group";
+import { TestCollection } from "../test-collection";
+import * as logger from "../utils/logger";
+import { Config } from "../config";
+import type { runTest } from "../worker";
+import type { Stats as RunnerStats } from "../stats";
+import EventEmitter from "events";
+import { Test } from "../types";
 
-const _ = require("lodash");
-const eventsUtils = require("../events/utils");
-const temp = require("../temp");
+interface WorkerMethods {
+    runTest: typeof runTest;
+}
 
-const pool = require("../browser-pool");
-const BrowserRunner = require("./browser-runner");
-const Events = require("../constants/runner-events");
-const Runner = require("./runner");
-const RuntimeConfig = require("../config/runtime-config");
-const WorkersRegistry = require("../utils/workers-registry");
-const PromiseGroup = require("./promise-group");
-const TestCollection = require("../test-collection").default;
-const logger = require("../utils/logger");
+export interface Workers extends EventEmitter, WorkerMethods {}
 
-module.exports = class MainRunner extends Runner {
-    constructor(config, interceptors) {
+type MapOfMethods<T extends ReadonlyArray<string>> = {
+    [K in T[number]]: (...args: Array<unknown>) => Promise<unknown> | unknown;
+};
+
+type RegisterWorkers<T extends ReadonlyArray<string>> = EventEmitter & MapOfMethods<T>;
+
+export class MainRunner extends Runner {
+    protected config: Config;
+    protected interceptors: Interceptor[];
+    protected browserPool: pool.BrowserPool | null;
+    protected activeBrowserRunners: Map<string, BrowserRunner>;
+    protected running: PromiseGroup;
+    protected runned: boolean;
+    protected cancelled: boolean;
+    protected workersRegistry: WorkersRegistry;
+    protected workers: Workers | null;
+
+    constructor(config: Config, interceptors: Interceptor[]) {
         super();
 
-        this._config = config;
-        this._interceptors = interceptors;
-        this._browserPool = null;
+        this.config = config;
+        this.interceptors = interceptors;
+        this.browserPool = null;
 
-        this._activeBrowserRunners = new Map();
+        this.activeBrowserRunners = new Map();
 
-        this._running = new PromiseGroup();
-        this._runned = false;
-        this._cancelled = false;
+        this.running = new PromiseGroup();
+        this.runned = false;
+        this.cancelled = false;
 
-        this._workersRegistry = WorkersRegistry.create(this._config);
-        this._workers = null;
-        eventsUtils.passthroughEvent(this._workersRegistry, this, [Events.NEW_WORKER_PROCESS, Events.ERROR]);
+        this.workersRegistry = WorkersRegistry.create(this.config);
+        this.workers = null;
+        eventsUtils.passthroughEvent(this.workersRegistry, this, [MasterEvents.NEW_WORKER_PROCESS, MasterEvents.ERROR]);
 
-        temp.init(this._config.system.tempDir);
+        temp.init(this.config.system.tempDir);
         RuntimeConfig.getInstance().extend({ tempOpts: temp.serialize() });
     }
 
-    init() {
-        if (this._workers) {
+    init(): void {
+        if (this.workers) {
             return;
         }
 
-        this._workersRegistry.init();
-        this._workers = this._workersRegistry.register(require.resolve("../worker"), ["runTest"]);
-        this._browserPool = pool.create(this._config, this);
+        this.workersRegistry.init();
+        this.workers = this.workersRegistry.register(require.resolve("../worker"), ["runTest"]) as Workers;
+        this.browserPool = pool.create(this.config, this);
     }
 
-    _isRunning() {
-        return this._runned && !this._workersRegistry.isEnded() && !this._cancelled;
+    _isRunning(): boolean {
+        return this.runned && !this.workersRegistry.isEnded() && !this.cancelled;
     }
 
-    async run(testCollection, stats) {
-        this._runned = true;
+    async run(testCollection: TestCollection, stats: RunnerStats): Promise<void> {
+        this.runned = true;
 
         try {
-            await this.emitAndWait(Events.RUNNER_START, this);
-            this.emit(Events.BEGIN);
-            !this._cancelled && (await this._runTests(testCollection));
+            await this.emitAndWait(MasterEvents.RUNNER_START, this);
+            this.emit(MasterEvents.BEGIN);
+            !this.cancelled && (await this._runTests(testCollection));
         } finally {
-            this.emit(Events.END);
-            await this.emitAndWait(Events.RUNNER_END, stats.getResult()).catch(logger.warn);
-            await this._workersRegistry.end();
+            this.emit(MasterEvents.END);
+            await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
+            await this.workersRegistry.end();
         }
     }
 
-    addTestToRun(test, browserId) {
-        if (!this._isRunning() || this._running.isFulfilled()) {
+    addTestToRun(test: Test, browserId: string): boolean {
+        if (!this._isRunning() || this.running.isFulfilled()) {
             return false;
         }
 
-        const runner = this._activeBrowserRunners.get(browserId);
+        const runner = this.activeBrowserRunners.get(browserId);
         if (runner && runner.addTestToRun(test)) {
             return true;
         }
 
-        const collection = TestCollection.create({ [browserId]: [test] }, this._config);
-        this._running.add(this._runTestsInBrowser(collection, browserId));
+        const collection = TestCollection.create({ [browserId]: [test] });
+        this.running.add(this._runTestsInBrowser(collection, browserId));
 
         return true;
     }
 
-    _runTests(testCollection) {
-        testCollection.getBrowsers().forEach(browserId => {
-            this._running.add(this._runTestsInBrowser(testCollection, browserId));
+    protected async _runTests(testCollection: TestCollection): Promise<void> {
+        testCollection.getBrowsers().forEach((browserId: string) => {
+            this.running.add(this._runTestsInBrowser(testCollection, browserId));
         });
 
-        return this._running.done();
+        return this.running.done();
     }
 
-    async _runTestsInBrowser(testCollection, browserId) {
-        const runner = BrowserRunner.create(browserId, this._config, this._browserPool, this._workers);
+    protected async _runTestsInBrowser(testCollection: TestCollection, browserId: string): Promise<void> {
+        const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers);
 
-        eventsUtils.passthroughEvent(runner, this, this._getEventsToPassthrough());
-        this._interceptEvents(runner, this._getEventsToIntercept());
+        eventsUtils.passthroughEvent(runner, this, this.getEventsToPassthrough());
+        this.interceptEvents(runner, this.getEventsToIntercept());
 
-        this._activeBrowserRunners.set(browserId, runner);
+        this.activeBrowserRunners.set(browserId, runner);
 
         await runner.run(testCollection);
 
-        this._activeBrowserRunners.delete(browserId);
+        this.activeBrowserRunners.delete(browserId);
     }
 
-    _getEventsToPassthrough() {
-        return _(Events.getRunnerSync()).values().difference(this._getEventsToIntercept()).value();
+    protected getEventsToPassthrough(): RunnerSyncEvent[] {
+        return _(RunnerSyncEvents).values().difference(this.getEventsToIntercept()).value();
     }
 
-    _getEventsToIntercept() {
-        return _(this._interceptors).map("event").uniq().value();
+    protected getEventsToIntercept(): InterceptedEvent[] {
+        return _(this.interceptors).map("event").uniq().value();
     }
 
-    _interceptEvents(runner, events) {
-        events.forEach(event => {
+    protected interceptEvents(runner: BrowserRunner, events: InterceptedEvent[]): void {
+        events.forEach((event: InterceptedEvent) => {
             runner.on(event, data => {
                 try {
-                    const toEmit = this._applyInterceptors({ event, data }, this._interceptors);
+                    const toEmit = this.applyInterceptors({ event, data }, this.interceptors);
                     toEmit && toEmit.event && this.emit(toEmit.event, toEmit.data);
                 } catch (e) {
-                    this.emit(Events.ERROR, e);
+                    this.emit(MasterEvents.ERROR, e);
                 }
             });
         });
     }
 
-    _applyInterceptors({ event, data } = {}, interceptors) {
+    protected applyInterceptors(
+        { event, data }: Partial<InterceptData> = {},
+        interceptors: Interceptor[],
+    ): Partial<InterceptData> {
         const interceptor = _.find(interceptors, { event });
         if (!interceptor) {
             return { event, data };
         }
 
-        return this._applyInterceptors(
+        return this.applyInterceptors(
             interceptor.handler({ event, data }) || { event, data },
             _.without(interceptors, interceptor),
         );
     }
 
-    cancel() {
-        this._cancelled = true;
-        this._browserPool.cancel();
+    cancel(): void {
+        this.cancelled = true;
+        this.browserPool?.cancel();
 
-        this._activeBrowserRunners.forEach(runner => runner.cancel());
+        this.activeBrowserRunners.forEach(runner => runner.cancel());
     }
 
-    registerWorkers(workerFilepath, exportedMethods) {
-        return this._workersRegistry.register(workerFilepath, exportedMethods);
+    registerWorkers<T extends ReadonlyArray<string>>(workerFilepath: string, exportedMethods: T): RegisterWorkers<T> {
+        return this.workersRegistry.register(workerFilepath, exportedMethods) as RegisterWorkers<T>;
     }
-};
+}

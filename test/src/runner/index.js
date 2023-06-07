@@ -4,20 +4,21 @@ const _ = require("lodash");
 const Promise = require("bluebird");
 
 const temp = require("src/temp");
-const BrowserPool = require("src/browser-pool");
 const RuntimeConfig = require("src/config/runtime-config");
-const RunnerStats = require("src/stats");
-const RunnerEvents = require("src/constants/runner-events");
+const { Stats: RunnerStats } = require("src/stats");
+const { MasterEvents: RunnerEvents, RunnerSyncEvents } = require("src/events");
 const logger = require("src/utils/logger");
 const WorkersRegistry = require("src/utils/workers-registry");
-const Runner = require("src/runner");
-const BrowserRunner = require("src/runner/browser-runner");
-const TestCollection = require("src/test-collection").default;
+const { BrowserRunner } = require("src/runner/browser-runner");
+const { TestCollection } = require("src/test-collection");
 
 const { makeConfigStub } = require("../../utils");
+const proxyquire = require("proxyquire");
 
 describe("Runner", () => {
     const sandbox = sinon.sandbox.create();
+    let BrowserPool;
+    let Runner;
 
     const mkWorkers_ = () => {
         return {
@@ -42,22 +43,28 @@ describe("Runner", () => {
     };
 
     beforeEach(() => {
+        BrowserPool = {
+            create: sinon.stub().returns({ cancel: sandbox.spy() }),
+        };
+
         sandbox.stub(WorkersRegistry.prototype);
+
         sandbox.stub(WorkersRegistry, "create").returns(Object.create(WorkersRegistry.prototype));
-
-        sandbox.stub(BrowserPool, "create").returns({ cancel: sandbox.spy() });
-
         sandbox.stub(temp, "init");
+
         sandbox.stub(temp, "serialize");
-
         sandbox.stub(logger, "warn");
-        sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
 
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
         sandbox.stub(TestCollection.prototype);
 
         sandbox.spy(BrowserRunner, "create");
         sandbox.stub(BrowserRunner.prototype, "run").resolves();
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
+
+        Runner = proxyquire("src/runner", {
+            "../browser-pool": BrowserPool,
+        }).MainRunner;
     });
 
     afterEach(() => sandbox.restore());
@@ -296,7 +303,7 @@ describe("Runner", () => {
             assert.calledOnce(secondResolveMarker);
         });
 
-        _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
+        _.forEach(RunnerSyncEvents, (event, name) => {
             it(`should passthrough ${name} event from browser runner`, async () => {
                 onRun(browserRunner => browserRunner.emit(event, { foo: "bar" }));
 
@@ -310,7 +317,7 @@ describe("Runner", () => {
         });
 
         describe("interceptors", () => {
-            _.forEach(RunnerEvents.getRunnerSync(), (event, name) => {
+            _.forEach(RunnerSyncEvents, (event, name) => {
                 it(`should call interceptor for ${name} with event name and event data`, async () => {
                     onRun(browserRunner => browserRunner.emit(event, { foo: "bar" }));
 

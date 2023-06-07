@@ -1,12 +1,9 @@
-"use strict";
+import { ImageInfo } from "../../../../types";
 
-module.exports = class BaseStateError extends Error {
-    constructor(stateName, currImg = {}, refImg = {}) {
+export class BaseStateError extends Error {
+    constructor(public stateName: string, public currImg: ImageInfo, public refImg: ImageInfo) {
         super();
 
         this.name = this.constructor.name;
-        this.stateName = stateName;
-        this.currImg = currImg;
-        this.refImg = refImg;
     }
-};
+}

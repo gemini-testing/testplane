@@ -1,9 +1,7 @@
-"use strict";
+export class CoreError extends Error {
+    name = "CoreError";
 
-module.exports = class CoreError extends Error {
-    constructor(message) {
+    constructor(message: string) {
         super(message);
-
-        this.name = "CoreError";
     }
-};
+}

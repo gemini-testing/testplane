@@ -1,6 +1,7 @@
 {
     "include": ["src"],
     "compilerOptions": {
+        "lib": ["DOM", "es2021"],
         "allowJs": true,
         "declaration": true,
         "declarationMap": false,
@@ -14,6 +15,7 @@
         "skipLibCheck": true,
         "sourceMap": true,
         "strict": true,
-        "target": "es2017"
+        "target": "es2021",
+        "resolveJsonModule": true
     }
 }

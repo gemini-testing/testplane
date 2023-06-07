@@ -10,8 +10,8 @@ const temp = require("../../../temp");
 const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
-const BaseStateError = require("./errors/base-state-error");
-const AssertViewError = require("./errors/assert-view-error");
+const { BaseStateError } = require("./errors/base-state-error");
+const { AssertViewError } = require("./errors/assert-view-error");
 const InvalidPngError = require("./errors/invalid-png-error");
 
 module.exports = browser => {

@@ -4,7 +4,9 @@ const { EventEmitter } = require("events");
 const _ = require("lodash");
 const Promise = require("bluebird");
 const fs = require("fs-extra");
-const { UPDATE_REFERENCE } = require("src/worker/constants/runner-events");
+const {
+    WorkerEvents: { UPDATE_REFERENCE },
+} = require("src/events");
 const {
     handleNoRefImage,
     handleImageDiff,

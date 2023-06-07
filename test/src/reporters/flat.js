@@ -4,7 +4,7 @@ const chalk = require("chalk");
 const path = require("path");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
-const RunnerEvents = require("src/constants/runner-events");
+const { MasterEvents: RunnerEvents } = require("src/events");
 const { mkTestStub_, getDeserializedResult } = require("./utils");
 
 describe("Flat reporter", () => {

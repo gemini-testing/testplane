@@ -1,16 +1,12 @@
-"use strict";
+import { Constructor } from "type-fest";
+import { AsyncEmitter } from "../events";
 
-const AsyncEmitter = require("../events/async-emitter");
-
-module.exports = class Runner extends AsyncEmitter {
-    static create(...args) {
+export abstract class Runner extends AsyncEmitter {
+    static create<T>(this: Constructor<T>, ...args: unknown[]): T {
         return new this(...args);
     }
 
-    run() {
-        throw new Error("Not implemented");
-    }
+    abstract run(...args: unknown[]): Promise<void>;
 
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    cancel() {}
-};
+    abstract cancel(): void;
+}

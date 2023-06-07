@@ -1,8 +1,8 @@
 "use strict";
 
 const _ = require("lodash");
-const BaseStateError = require("src/browser/commands/assert-view/errors/base-state-error");
-const NoRefImageError = require("src/browser/commands/assert-view/errors/no-ref-image-error");
+const { BaseStateError } = require("src/browser/commands/assert-view/errors/base-state-error");
+const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 
 const mkNoRefImageError = (opts = {}) => {
     const { stateName, currImg, refImg } = _.defaults(opts, {

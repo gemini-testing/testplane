@@ -2,7 +2,7 @@
 
 const { mkProvider, BrowserVersionController } = require("src/test-reader/controllers/browser-version-controller");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
-const ReadEvents = require("src/test-reader/read-events");
+const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/controllers/browser-version-controller", () => {

@@ -5,7 +5,7 @@ const proxyquire = require("proxyquire").noCallThru();
 const hermioneCli = require("src/cli");
 const info = require("src/cli/info");
 const defaults = require("src/config/defaults");
-const Hermione = require("src/hermione");
+const { Hermione } = require("src/hermione");
 const logger = require("src/utils/logger");
 
 const any = sinon.match.any;

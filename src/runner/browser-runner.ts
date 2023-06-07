@@ -1,84 +1,96 @@
-"use strict";
+import { EventEmitter } from "events";
+import _ from "lodash";
+import { Runner } from "./runner";
+import * as TestRunner from "./test-runner";
+import { InterceptedEvent, MasterEvents } from "../events";
+import SuiteMonitor from "./suite-monitor";
+import BrowserAgent from "./browser-agent";
+import PromiseGroup from "./promise-group";
+import { Config } from "../config";
+import { BrowserPool } from "../browser-pool";
+import { Workers } from "./index";
+import type { Test } from "../types";
+import { TestCollection } from "../test-collection";
 
-const _ = require("lodash");
+export interface BrowserRunner {
+    on(event: InterceptedEvent, handler: (test: Test) => void): this;
+}
 
-const Runner = require("./runner");
-const TestRunner = require("./test-runner");
-const Events = require("../constants/runner-events");
-const SuiteMonitor = require("./suite-monitor");
-const BrowserAgent = require("./browser-agent");
-const PromiseGroup = require("./promise-group");
+export class BrowserRunner extends Runner {
+    private _browserId: string;
+    private config: Config;
+    private browserPool: BrowserPool;
+    private suiteMonitor: SuiteMonitor;
+    private activeTestRunners: Set<TestRunner.TestRunner>;
+    private workers: Workers;
+    private running: PromiseGroup;
 
-module.exports = class BrowserRunner extends Runner {
-    constructor(browserId, config, browserPool, workers) {
+    constructor(browserId: string, config: Config, browserPool: BrowserPool, workers: Workers) {
         super();
-
         this._browserId = browserId;
-        this._config = config;
-        this._browserPool = browserPool;
-
-        this._suiteMonitor = SuiteMonitor.create();
-        this._passthroughEvents(this._suiteMonitor, [Events.SUITE_BEGIN, Events.SUITE_END]);
-
-        this._activeTestRunners = new Set();
-        this._workers = workers;
-        this._running = new PromiseGroup();
+        this.config = config;
+        this.browserPool = browserPool;
+        this.suiteMonitor = SuiteMonitor.create();
+        this.passthroughEvents(this.suiteMonitor, [MasterEvents.SUITE_BEGIN, MasterEvents.SUITE_END]);
+        this.activeTestRunners = new Set();
+        this.workers = workers;
+        this.running = new PromiseGroup();
     }
 
-    get browserId() {
+    get browserId(): string {
         return this._browserId;
     }
 
-    async run(testCollection) {
-        testCollection.eachTestByVersions(this._browserId, test => {
-            this._running.add(this._runTest(test));
+    async run(testCollection: TestCollection): Promise<void> {
+        testCollection.eachTestByVersions(this._browserId, (test: Test) => {
+            this.running.add(this._runTest(test));
         });
 
-        await this._running.done();
+        await this.running.done();
     }
 
-    addTestToRun(test) {
-        if (this._running.isFulfilled()) {
+    addTestToRun(test: Test): boolean {
+        if (this.running.isFulfilled()) {
             return false;
         }
 
-        this._running.add(this._runTest(test));
+        this.running.add(this._runTest(test));
 
         return true;
     }
 
-    async _runTest(test) {
-        const browserAgent = BrowserAgent.create(this._browserId, test.browserVersion, this._browserPool);
-        const runner = TestRunner.create(test, this._config, browserAgent);
+    private async _runTest(test: Test): Promise<void> {
+        const browserAgent = BrowserAgent.create(this._browserId, test.browserVersion, this.browserPool);
+        const runner = TestRunner.create(test, this.config, browserAgent);
 
-        runner.on(Events.TEST_BEGIN, test => this._suiteMonitor.testBegin(test));
+        runner.on(MasterEvents.TEST_BEGIN, (test: Test) => this.suiteMonitor.testBegin(test));
 
-        this._passthroughEvents(runner, [
-            Events.TEST_BEGIN,
-            Events.TEST_END,
-            Events.TEST_PASS,
-            Events.TEST_FAIL,
-            Events.TEST_PENDING,
-            Events.RETRY,
+        this.passthroughEvents(runner, [
+            MasterEvents.TEST_BEGIN,
+            MasterEvents.TEST_END,
+            MasterEvents.TEST_PASS,
+            MasterEvents.TEST_FAIL,
+            MasterEvents.TEST_PENDING,
+            MasterEvents.RETRY,
         ]);
 
-        runner.on(Events.TEST_END, test => this._suiteMonitor.testEnd(test));
-        runner.on(Events.RETRY, test => this._suiteMonitor.testRetry(test));
+        runner.on(MasterEvents.TEST_END, (test: Test) => this.suiteMonitor.testEnd(test));
+        runner.on(MasterEvents.RETRY, (test: Test) => this.suiteMonitor.testRetry(test));
 
-        this._activeTestRunners.add(runner);
+        this.activeTestRunners.add(runner);
 
-        await runner.run(this._workers);
+        await runner.run(this.workers);
 
-        this._activeTestRunners.delete(runner);
+        this.activeTestRunners.delete(runner);
     }
 
-    cancel() {
-        this._activeTestRunners.forEach(runner => runner.cancel());
+    cancel(): void {
+        this.activeTestRunners.forEach(runner => runner.cancel());
     }
 
-    _passthroughEvents(runner, events) {
+    private passthroughEvents(runner: EventEmitter, events: InterceptedEvent[]): void {
         events.forEach(event => {
-            runner.on(event, data => this.emit(event, _.extend(data, { browserId: this._browserId })));
+            runner.on(event, (data: unknown) => this.emit(event, _.extend(data, { browserId: this._browserId })));
         });
     }
-};
+}

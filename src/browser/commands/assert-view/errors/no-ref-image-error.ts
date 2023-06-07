@@ -1,19 +1,31 @@
-"use strict";
+import { BaseStateError } from "./base-state-error";
+import { ImageInfo } from "../../../../types";
 
-const BaseStateError = require("./base-state-error");
+type NoRefImageErrorConstructor<T> = new (stateName: string, currImg: ImageInfo, refImg: ImageInfo) => T;
 
-module.exports = class NoRefImageError extends BaseStateError {
-    static create(...args) {
-        return new this(...args);
+interface NoRefImageErrorData {
+    stateName: string;
+    currImg: ImageInfo;
+    refImg: ImageInfo;
+}
+
+export class NoRefImageError extends BaseStateError {
+    static create<T extends NoRefImageError>(
+        this: NoRefImageErrorConstructor<T>,
+        stateName: string,
+        currImg: ImageInfo,
+        refImg: ImageInfo,
+    ): T {
+        return new this(stateName, currImg, refImg);
     }
 
-    static fromObject(data) {
-        return new NoRefImageError(data.stateName, data.currImg, data.refImg);
+    static fromObject<T extends NoRefImageError>(this: NoRefImageErrorConstructor<T>, data: NoRefImageErrorData): T {
+        return new this(data.stateName, data.currImg, data.refImg);
     }
 
-    constructor(stateName, currImg, refImg) {
+    constructor(stateName: string, currImg: ImageInfo, refImg: ImageInfo) {
         super(stateName, currImg, refImg);
 
         this.message = `can not find reference image at ${this.refImg.path} for "${stateName}" state`;
     }
-};
+}

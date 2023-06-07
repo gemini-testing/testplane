@@ -1,20 +1,29 @@
-const ReadEvents = require("../read-events");
+import { TestReaderEvents as ReadEvents } from "../../events";
+import { EventEmitter } from "events";
 
-class BrowserVersionController {
-    #browserId;
-    #eventBus;
+type TreeBuilder = {
+    addTrap: (trap: (obj: { browserId: string; browserVersion?: string }) => void) => void;
+};
 
-    static create(...args) {
-        return new this(...args);
+export class BrowserVersionController {
+    #browserId: string;
+    #eventBus: EventEmitter;
+
+    static create<T extends BrowserVersionController>(
+        this: new (browserId: string, eventBug: EventEmitter) => T,
+        browserId: string,
+        eventBug: EventEmitter,
+    ): T {
+        return new this(browserId, eventBug);
     }
 
-    constructor(browserId, eventBus) {
+    constructor(browserId: string, eventBus: EventEmitter) {
         this.#browserId = browserId;
         this.#eventBus = eventBus;
     }
 
-    version(browserVersion) {
-        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+    version(browserVersion: string): this {
+        this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }: { treeBuilder: TreeBuilder }) => {
             treeBuilder.addTrap(obj => {
                 if (obj.browserId === this.#browserId) {
                     obj.browserVersion = browserVersion;
@@ -26,7 +35,10 @@ class BrowserVersionController {
     }
 }
 
-function mkProvider(knownBrowsers, eventBus) {
+export function mkProvider(
+    knownBrowsers: string[],
+    eventBus: EventEmitter,
+): (browserId: string) => BrowserVersionController {
     return browserId => {
         if (!knownBrowsers.includes(browserId)) {
             throw new Error(`browser "${browserId}" was not found in config file`);
@@ -35,8 +47,3 @@ function mkProvider(knownBrowsers, eventBus) {
         return BrowserVersionController.create(browserId, eventBus);
     };
 }
-
-module.exports = {
-    mkProvider,
-    BrowserVersionController,
-};

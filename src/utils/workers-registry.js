@@ -4,9 +4,9 @@ const { EventEmitter } = require("events");
 const workerFarm = require("worker-farm");
 const Promise = require("bluebird");
 const _ = require("lodash");
-const Events = require("../constants/runner-events");
+const { MasterEvents } = require("../events");
 const RuntimeConfig = require("../config/runtime-config");
-const WorkerProcess = require("./worker-process");
+const { WorkerProcess } = require("./worker-process");
 const logger = require("../utils/logger");
 const {
     MASTER_INIT,
@@ -126,7 +126,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
                     break;
                 case WORKER_UNHANDLED_REJECTION:
                     if (data.error) {
-                        this.emit(Events.ERROR, data.error);
+                        this.emit(MasterEvents.ERROR, data.error);
                     }
                     break;
                 default:
@@ -137,6 +137,6 @@ module.exports = class WorkersRegistry extends EventEmitter {
             }
         });
 
-        this.emit(Events.NEW_WORKER_PROCESS, WorkerProcess.create(child));
+        this.emit(MasterEvents.NEW_WORKER_PROCESS, WorkerProcess.create(child));
     }
 };

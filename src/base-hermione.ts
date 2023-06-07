@@ -1,24 +1,34 @@
-"use strict";
+import _ from "lodash";
+import pluginsLoader from "plugins-loader";
+import { Config } from "./config";
+import {
+    AsyncEmitter,
+    InterceptedEvent,
+    MasterEvents,
+    WorkerEvents,
+    Events,
+    InterceptHandler,
+    Interceptor,
+} from "./events";
+import Errors from "./errors";
+import { tryToRegisterTsNode } from "./utils/typescript";
+import * as packageJson from "../package.json";
+import { ConfigInput } from "./config/types";
 
-const _ = require("lodash");
-const Promise = require("bluebird");
-const pluginsLoader = require("plugins-loader");
+const PREFIX = packageJson.name + "-";
 
-const Config = require("./config");
-const RunnerEvents = require("./constants/runner-events");
-const AsyncEmitter = require("./events/async-emitter");
-const Errors = require("./errors");
-const WorkerRunnerEvents = require("./worker/constants/runner-events");
-const { tryToRegisterTsNode } = require("./utils/typescript");
+export abstract class BaseHermione extends AsyncEmitter {
+    protected _interceptors: Interceptor[] = [];
+    protected _config: Config;
 
-const PREFIX = require("../package").name + "-";
-
-module.exports = class BaseHermione extends AsyncEmitter {
-    static create(config) {
+    static create<T extends BaseHermione>(
+        this: new (config?: string | ConfigInput) => T,
+        config?: string | ConfigInput,
+    ): T {
         return new this(config);
     }
 
-    constructor(config) {
+    protected constructor(config?: string | ConfigInput) {
         super();
 
         this._interceptors = [];
@@ -29,34 +39,32 @@ module.exports = class BaseHermione extends AsyncEmitter {
         this._loadPlugins();
     }
 
-    _init() {
-        this._init = () => Promise.resolve(); // init only once
-        return this.emitAndWait(RunnerEvents.INIT);
+    protected async _init(): Promise<void> {
+        this._init = (): Promise<void> => Promise.resolve(); // init only once
+        await this.emitAndWait(MasterEvents.INIT);
     }
 
-    get config() {
+    get config(): Config {
         return this._config;
     }
 
-    get events() {
-        return _.extend({}, RunnerEvents, WorkerRunnerEvents);
+    get events(): Events {
+        return _.extend({}, MasterEvents, WorkerEvents);
     }
 
-    get errors() {
+    get errors(): typeof Errors {
         return Errors;
     }
 
-    intercept(event, handler) {
+    intercept(event: InterceptedEvent, handler: InterceptHandler): this {
         this._interceptors.push({ event, handler });
 
         return this;
     }
 
-    isWorker() {
-        throw new Error("Method must be implemented in child classes");
-    }
+    abstract isWorker(): boolean;
 
-    _loadPlugins() {
+    protected _loadPlugins(): void {
         pluginsLoader.load(this, this.config.plugins, PREFIX);
     }
-};
+}

@@ -1,13 +1,17 @@
-"use strict";
+import { EventEmitter } from "events";
+import BluebirdPromise from "bluebird";
 
-const { EventEmitter } = require("events");
-const { method } = require("bluebird");
-
-module.exports = class AsyncEmitter extends EventEmitter {
-    async emitAndWait(event, ...args) {
-        const results = await Promise.allSettled(this.listeners(event).map(l => method(l).apply(this, args)));
+export class AsyncEmitter extends EventEmitter {
+    async emitAndWait(event: string | symbol, ...args: unknown[]): Promise<unknown[]> {
+        const results = await Promise.allSettled(
+            this.listeners(event).map(l =>
+                BluebirdPromise.method(l as (...args: unknown[]) => unknown).apply(this, args as []),
+            ),
+        );
 
         const rejected = results.find(({ status }) => status === "rejected");
-        return rejected ? Promise.reject(rejected.reason) : results.map(r => r.value);
+        return rejected
+            ? Promise.reject((rejected as PromiseRejectedResult).reason)
+            : results.map(r => (r as PromiseFulfilledResult<unknown>).value);
     }
-};
+}

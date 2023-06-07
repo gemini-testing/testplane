@@ -2,8 +2,8 @@
 
 const _ = require("lodash");
 const Browser = require("../browser/new-browser");
-const CancelledError = require("./cancelled-error");
-const Events = require("../constants/runner-events");
+const { CancelledError } = require("./cancelled-error");
+const { MasterEvents } = require("../events");
 const Pool = require("./pool");
 const debug = require("debug");
 
@@ -30,7 +30,7 @@ module.exports = class BasicPool extends Pool {
             await browser.init();
             this.log(`browser ${browser.fullId} started`);
 
-            await this._emit(Events.SESSION_START, browser);
+            await this._emit(MasterEvents.SESSION_START, browser);
 
             if (this._cancelled) {
                 throw new CancelledError();
@@ -55,7 +55,7 @@ module.exports = class BasicPool extends Pool {
         this.log(`stop browser ${browser.fullId}`);
 
         try {
-            await this._emit(Events.SESSION_END, browser);
+            await this._emit(MasterEvents.SESSION_END, browser);
         } catch (err) {
             console.warn((err && err.stack) || err);
         }
