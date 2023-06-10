@@ -72,7 +72,7 @@ module.exports = class NewBrowser extends Browser {
     _getSessionOpts() {
         const config = this._config;
         const gridUri = new URI(config.gridUrl);
-        const capabilities = this.version ? this._extendCapabilitiesByVersion() : config.desiredCapabilities;
+        const capabilities = this._extendCapabilities(config);
 
         const options = {
             protocol: gridUri.protocol(),
@@ -92,6 +92,37 @@ module.exports = class NewBrowser extends Browser {
         };
 
         return options;
+    }
+
+    _extendCapabilities(config) {
+        const capabilitiesExtendedByVersion = this.version
+            ? this._extendCapabilitiesByVersion()
+            : config.desiredCapabilities;
+        const capabilitiesWithAddedHeadless = this._addHeadlessCapability(
+            config.headless,
+            capabilitiesExtendedByVersion,
+        );
+        return capabilitiesWithAddedHeadless;
+    }
+
+    _addHeadlessCapability(headless, capabilities) {
+        if (!headless) {
+            return capabilities;
+        }
+        if (capabilities.browserName === "chrome") {
+            capabilities["goog:chromeOptions"] = [
+                ...(capabilities["goog:chromeOptions"] ?? []),
+                "headless",
+                "disable-gpu",
+            ];
+        }
+        if (capabilities.browserName === "firefox") {
+            capabilities["moz:firefoxOptions"] = [...(capabilities["goog:chromeOptions"] ?? []), "-headless"];
+        }
+        if (capabilities.browserName === "msedge") {
+            capabilities["ms:edgeOptions"] = [...(capabilities["goog:chromeOptions"] ?? []), "--headless"];
+        }
+        return capabilities;
     }
 
     _extendCapabilitiesByVersion() {
