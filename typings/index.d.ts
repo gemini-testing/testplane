@@ -454,6 +454,7 @@ declare namespace Hermione {
         headers: Record<string, string> | null;
 
         system: SystemConfig;
+        headless: boolean | null;
     }
 
     export interface CompareOptsConfig {
