@@ -46,8 +46,8 @@ describe("NewBrowser", () => {
             assert.calledWithMatch(webdriverio.remote, { port: 4444 });
         });
 
-        describe('should set "headless" setting in capabilities', () => {
-            it("in chrome", async () => {
+        describe("headless setting", () => {
+            it("should generate browser specific settings - chrome", async () => {
                 await mkBrowser_({
                     headless: true,
                     desiredCapabilities: { browserName: "chrome" },
@@ -61,7 +61,7 @@ describe("NewBrowser", () => {
                 });
             });
 
-            it("in firefox", async () => {
+            it("should generate browser specific settings - firefox", async () => {
                 await mkBrowser_({
                     headless: true,
                     desiredCapabilities: { browserName: "firefox" },
@@ -75,7 +75,7 @@ describe("NewBrowser", () => {
                 });
             });
 
-            it("in edge", async () => {
+            it("should generate browser specific settings - edge", async () => {
                 await mkBrowser_({
                     headless: true,
                     desiredCapabilities: { browserName: "msedge" },
@@ -86,7 +86,7 @@ describe("NewBrowser", () => {
                 });
             });
 
-            it("in chrome when chromeOptions already specified", async () => {
+            it("not override existing settings", async () => {
                 await mkBrowser_({
                     headless: true,
                     desiredCapabilities: {
@@ -101,6 +101,15 @@ describe("NewBrowser", () => {
                         "goog:chromeOptions": { args: ["my", "custom", "flags", "headless", "disable-gpu"] },
                     },
                 });
+            });
+
+            it("should issue a warning for an unsupported browser", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: { browserName: "safari" },
+                }).init();
+
+                assert.calledOnceWith(logger.warn, "WARNING: Headless setting is not supported for safari browserName");
             });
         });
 

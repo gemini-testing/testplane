@@ -134,7 +134,7 @@ module.exports = class NewBrowser extends Browser {
             };
             return capabilities;
         }
-        logger.warn(`Headless setting is not supported for ${capabilities.browserName} browserName`);
+        logger.warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
         return capabilities;
     }
 
