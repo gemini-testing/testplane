@@ -16,7 +16,6 @@ const CUSTOM_SESSION_OPTS = [
     "user",
     "key",
     "region",
-    "headless",
 ];
 
 module.exports = class Browser {
