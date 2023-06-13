@@ -117,10 +117,10 @@ module.exports = class NewBrowser extends Browser {
             ];
         }
         if (capabilities.browserName === "firefox") {
-            capabilities["moz:firefoxOptions"] = [...(capabilities["goog:chromeOptions"] ?? []), "-headless"];
+            capabilities["moz:firefoxOptions"] = [...(capabilities["moz:firefoxOptions"] ?? []), "-headless"];
         }
         if (capabilities.browserName === "msedge") {
-            capabilities["ms:edgeOptions"] = [...(capabilities["goog:chromeOptions"] ?? []), "--headless"];
+            capabilities["ms:edgeOptions"] = [...(capabilities["ms:edgeOptions"] ?? []), "--headless"];
         }
         return capabilities;
     }
