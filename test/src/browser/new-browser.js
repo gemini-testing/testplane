@@ -46,6 +46,73 @@ describe("NewBrowser", () => {
             assert.calledWithMatch(webdriverio.remote, { port: 4444 });
         });
 
+        describe("headless setting", () => {
+            it("should generate browser specific settings - chrome", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: { browserName: "chrome" },
+                }).init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    capabilities: {
+                        browserName: "chrome",
+                        "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
+                    },
+                });
+            });
+
+            it("should generate browser specific settings - firefox", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: { browserName: "firefox" },
+                }).init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    capabilities: {
+                        browserName: "firefox",
+                        "moz:firefoxOptions": { args: ["-headless"] },
+                    },
+                });
+            });
+
+            it("should generate browser specific settings - edge", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: { browserName: "msedge" },
+                }).init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    capabilities: { browserName: "msedge", "ms:edgeOptions": { args: ["--headless"] } },
+                });
+            });
+
+            it("not override existing settings", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: {
+                        browserName: "chrome",
+                        "goog:chromeOptions": { args: ["my", "custom", "flags"] },
+                    },
+                }).init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    capabilities: {
+                        browserName: "chrome",
+                        "goog:chromeOptions": { args: ["my", "custom", "flags", "headless", "disable-gpu"] },
+                    },
+                });
+            });
+
+            it("should issue a warning for an unsupported browser", async () => {
+                await mkBrowser_({
+                    headless: true,
+                    desiredCapabilities: { browserName: "safari" },
+                }).init();
+
+                assert.calledOnceWith(logger.warn, "WARNING: Headless setting is not supported for safari browserName");
+            });
+        });
+
         describe('should create session with extended "browserVersion" in desiredCapabilities if', () => {
             it("it is already exists in capabilities", async () => {
                 await mkBrowser_(

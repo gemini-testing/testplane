@@ -11,6 +11,25 @@ const logger = require("../utils/logger");
 
 const DEFAULT_PORT = 4444;
 
+const headlessBrowserOptions = {
+    chrome: {
+        capabilityName: "goog:chromeOptions",
+        args: ["headless", "disable-gpu"],
+    },
+    firefox: {
+        capabilityName: "moz:firefoxOptions",
+        args: ["-headless"],
+    },
+    msedge: {
+        capabilityName: "ms:edgeOptions",
+        args: ["--headless"],
+    },
+    edge: {
+        capabilityName: "ms:edgeOptions",
+        args: ["--headless"],
+    },
+};
+
 module.exports = class NewBrowser extends Browser {
     constructor(config, id, version) {
         super(config, id, version);
@@ -72,7 +91,7 @@ module.exports = class NewBrowser extends Browser {
     _getSessionOpts() {
         const config = this._config;
         const gridUri = new URI(config.gridUrl);
-        const capabilities = this.version ? this._extendCapabilitiesByVersion() : config.desiredCapabilities;
+        const capabilities = this._extendCapabilities(config);
 
         const options = {
             protocol: gridUri.protocol(),
@@ -92,6 +111,34 @@ module.exports = class NewBrowser extends Browser {
         };
 
         return options;
+    }
+
+    _extendCapabilities(config) {
+        const capabilitiesExtendedByVersion = this.version
+            ? this._extendCapabilitiesByVersion()
+            : config.desiredCapabilities;
+        const capabilitiesWithAddedHeadless = this._addHeadlessCapability(
+            config.headless,
+            capabilitiesExtendedByVersion,
+        );
+        return capabilitiesWithAddedHeadless;
+    }
+
+    _addHeadlessCapability(headless, capabilities) {
+        if (!headless) {
+            return capabilities;
+        }
+        const capabilitySettings = headlessBrowserOptions[capabilities.browserName];
+        if (!capabilitySettings) {
+            logger.warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
+            return capabilities;
+        }
+        const browserCapabilities = capabilities[capabilitySettings.capabilityName] ?? {};
+        capabilities[capabilitySettings.capabilityName] = {
+            ...browserCapabilities,
+            args: [...(browserCapabilities.args ?? []), ...capabilitySettings.args],
+        };
+        return capabilities;
     }
 
     _extendCapabilitiesByVersion() {
