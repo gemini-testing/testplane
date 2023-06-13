@@ -11,6 +11,25 @@ const logger = require("../utils/logger");
 
 const DEFAULT_PORT = 4444;
 
+const headlessBrowserOptions = {
+    chrome: {
+        capabilityName: "goog:chromeOptions",
+        args: ["headless", "disable-gpu"],
+    },
+    firefox: {
+        capabilityName: "moz:firefoxOptions",
+        args: ["-headless"],
+    },
+    msedge: {
+        capabilityName: "ms:edgeOptions",
+        args: ["--headless"],
+    },
+    edge: {
+        capabilityName: "ms:edgeOptions",
+        args: ["--headless"],
+    },
+};
+
 module.exports = class NewBrowser extends Browser {
     constructor(config, id, version) {
         super(config, id, version);
@@ -109,32 +128,16 @@ module.exports = class NewBrowser extends Browser {
         if (!headless) {
             return capabilities;
         }
-        if (capabilities.browserName === "chrome") {
-            const googleCapabilities = capabilities["goog:chromeOptions"] ?? {};
-            capabilities["goog:chromeOptions"] = {
-                ...googleCapabilities,
-                args: [...(googleCapabilities.args ?? []), "headless", "disable-gpu"],
-            };
+        const capabilitySettings = headlessBrowserOptions[capabilities.browserName];
+        if (!capabilitySettings) {
+            logger.warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
             return capabilities;
         }
-        if (capabilities.browserName === "firefox") {
-            const firefoxCapabilities = capabilities["moz:firefoxOptions"] ?? {};
-            capabilities["moz:firefoxOptions"] = {
-                ...firefoxCapabilities,
-                args: [...(firefoxCapabilities.args ?? []), "-headless"],
-            };
-            return capabilities;
-        }
-        if (capabilities.browserName === "msedge" || capabilities.browserName === "edge") {
-            const edgeCapabilities = capabilities["ms:edgeOptions"] ?? {};
-
-            capabilities["ms:edgeOptions"] = {
-                ...edgeCapabilities,
-                args: [...(edgeCapabilities.args ?? []), "--headless"],
-            };
-            return capabilities;
-        }
-        logger.warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
+        const browserCapabilities = capabilities[capabilitySettings.capabilityName] ?? {};
+        capabilities[capabilitySettings.capabilityName] = {
+            ...browserCapabilities,
+            args: [...(browserCapabilities.args ?? []), ...capabilitySettings.args],
+        };
         return capabilities;
     }
 
