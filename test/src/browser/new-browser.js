@@ -46,18 +46,17 @@ describe("NewBrowser", () => {
             assert.calledWithMatch(webdriverio.remote, { port: 4444 });
         });
 
-        describe('should set "headless" setting in desiredCapabilities - chrome', () => {
+        describe('should set "headless" setting in capabilities', () => {
             it("in chrome", async () => {
                 await mkBrowser_({
                     headless: true,
-                    desiredCapabilities: { browserName: "chrome", version: "1.0" },
+                    desiredCapabilities: { browserName: "chrome" },
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
                     capabilities: {
                         browserName: "chrome",
                         "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
-                        version: "1.0",
                     },
                 });
             });
@@ -65,14 +64,13 @@ describe("NewBrowser", () => {
             it("in firefox", async () => {
                 await mkBrowser_({
                     headless: true,
-                    desiredCapabilities: { browserName: "firefox", version: "1.0" },
+                    desiredCapabilities: { browserName: "firefox" },
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
                     capabilities: {
                         browserName: "firefox",
                         "moz:firefoxOptions": { args: ["-headless"] },
-                        version: "1.0",
                     },
                 });
             });
@@ -80,20 +78,19 @@ describe("NewBrowser", () => {
             it("in edge", async () => {
                 await mkBrowser_({
                     headless: true,
-                    desiredCapabilities: { browserName: "msedge", version: "1.0" },
+                    desiredCapabilities: { browserName: "msedge" },
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
-                    capabilities: { browserName: "msedge", "ms:edgeOptions": { args: ["--headless"] }, version: "1.0" },
+                    capabilities: { browserName: "msedge", "ms:edgeOptions": { args: ["--headless"] } },
                 });
             });
 
-            it("when chromeOptions already specified", async () => {
+            it("in chrome when chromeOptions already specified", async () => {
                 await mkBrowser_({
                     headless: true,
                     desiredCapabilities: {
                         browserName: "chrome",
-                        version: "1.0",
                         "goog:chromeOptions": { args: ["my", "custom", "flags"] },
                     },
                 }).init();
@@ -102,7 +99,6 @@ describe("NewBrowser", () => {
                     capabilities: {
                         browserName: "chrome",
                         "goog:chromeOptions": { args: ["my", "custom", "flags", "headless", "disable-gpu"] },
-                        version: "1.0",
                     },
                 });
             });
