@@ -110,17 +110,29 @@ module.exports = class NewBrowser extends Browser {
             return capabilities;
         }
         if (capabilities.browserName === "chrome") {
-            capabilities["goog:chromeOptions"] = [
-                ...(capabilities["goog:chromeOptions"] ?? []),
-                "headless",
-                "disable-gpu",
-            ];
+            const googleCapabilities = capabilities["goog:chromeOptions"] ?? {};
+            capabilities["goog:chromeOptions"] = {
+                ...googleCapabilities,
+                args: [...(googleCapabilities.args ?? []), "headless", "disable-gpu"],
+            };
+            return capabilities;
         }
         if (capabilities.browserName === "firefox") {
-            capabilities["moz:firefoxOptions"] = [...(capabilities["moz:firefoxOptions"] ?? []), "-headless"];
+            const firefoxCapabilities = capabilities["moz:firefoxOptions"] ?? {};
+            capabilities["moz:firefoxOptions"] = {
+                ...firefoxCapabilities,
+                args: [...(firefoxCapabilities.args ?? []), "-headless"],
+            };
+            return capabilities;
         }
-        if (capabilities.browserName === "msedge") {
-            capabilities["ms:edgeOptions"] = [...(capabilities["ms:edgeOptions"] ?? []), "--headless"];
+        if (capabilities.browserName === "msedge" || capabilities.browserName === "edge") {
+            const edgeCapabilities = capabilities["ms:edgeOptions"] ?? {};
+
+            capabilities["ms:edgeOptions"] = {
+                ...edgeCapabilities,
+                args: [...(edgeCapabilities.args ?? []), "--headless"],
+            };
+            return capabilities;
         }
         return capabilities;
     }

@@ -56,7 +56,7 @@ describe("NewBrowser", () => {
                 assert.calledWithMatch(webdriverio.remote, {
                     capabilities: {
                         browserName: "chrome",
-                        "goog:chromeOptions": ["headless", "disable-gpu"],
+                        "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
                         version: "1.0",
                     },
                 });
@@ -69,7 +69,11 @@ describe("NewBrowser", () => {
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
-                    capabilities: { browserName: "firefox", "moz:firefoxOptions": ["-headless"], version: "1.0" },
+                    capabilities: {
+                        browserName: "firefox",
+                        "moz:firefoxOptions": { args: ["-headless"] },
+                        version: "1.0",
+                    },
                 });
             });
 
@@ -80,7 +84,7 @@ describe("NewBrowser", () => {
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
-                    capabilities: { browserName: "msedge", "ms:edgeOptions": ["--headless"], version: "1.0" },
+                    capabilities: { browserName: "msedge", "ms:edgeOptions": { args: ["--headless"] }, version: "1.0" },
                 });
             });
 
@@ -90,14 +94,14 @@ describe("NewBrowser", () => {
                     desiredCapabilities: {
                         browserName: "chrome",
                         version: "1.0",
-                        "goog:chromeOptions": ["my", "custom", "flags"],
+                        "goog:chromeOptions": { args: ["my", "custom", "flags"] },
                     },
                 }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
                     capabilities: {
                         browserName: "chrome",
-                        "goog:chromeOptions": ["my", "custom", "flags", "headless", "disable-gpu"],
+                        "goog:chromeOptions": { args: ["my", "custom", "flags", "headless", "disable-gpu"] },
                         version: "1.0",
                     },
                 });
