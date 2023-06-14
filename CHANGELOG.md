@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.1.0](https://github.com/gemini-testing/hermione/compare/v7.0.9...v7.1.0) (2023-06-14)
+
+
+### Features
+
+* add "headless" setting for the main 3 browsers ([#768](https://github.com/gemini-testing/hermione/issues/768)) ([0400c33](https://github.com/gemini-testing/hermione/commit/0400c33f502530ffa8a3c13207d75696fcff0325))
+
 ### [7.0.9](https://github.com/gemini-testing/hermione/compare/v7.0.8...v7.0.9) (2023-05-30)
 
 
