@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.0.0-beta.0](https://github.com/gemini-testing/hermione/compare/v7.1.0...v8.0.0-beta.0) (2023-06-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* package exports have changed
+
+### Features
+
+* re-write major parts of hermione to typescript and get rid of typings ([c02e716](https://github.com/gemini-testing/hermione/commit/c02e716d62e3acd4537b0fb5f937b1a783c15d3d))
+
 ## [7.1.0](https://github.com/gemini-testing/hermione/compare/v7.0.9...v7.1.0) (2023-06-14)
 
 
