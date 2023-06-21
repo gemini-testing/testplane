@@ -2,7 +2,7 @@
 
 const Promise = require("bluebird");
 const LimitedPool = require("src/browser-pool/limited-pool");
-const CancelledError = require("src/browser-pool/cancelled-error");
+const { CancelledError } = require("src/browser-pool/cancelled-error");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/limited-pool", () => {

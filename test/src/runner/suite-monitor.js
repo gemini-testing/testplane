@@ -1,7 +1,7 @@
 "use strict";
 
 const SuiteMonitor = require("src/runner/suite-monitor");
-const Events = require("src/constants/runner-events");
+const { MasterEvents: Events } = require("src/events");
 const { makeSuite, makeTest } = require("../../utils");
 
 describe("suite-monitor", () => {

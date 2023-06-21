@@ -3,7 +3,7 @@ const { EventEmitter } = require("events");
 const { passthroughEvent } = require("../events/utils");
 const SetsBuilder = require("./sets-builder");
 const { TestParser } = require("./test-parser");
-const Events = require("../constants/runner-events");
+const { MasterEvents } = require("../events");
 const env = require("../utils/env");
 
 module.exports = class TestReader extends EventEmitter {
@@ -30,7 +30,7 @@ module.exports = class TestReader extends EventEmitter {
             .build(process.cwd(), { ignore }, fileExtensions);
 
         const parser = new TestParser();
-        passthroughEvent(parser, this, [Events.BEFORE_FILE_READ, Events.AFTER_FILE_READ]);
+        passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
 
         await parser.loadFiles(setCollection.getAllFiles(), this.#config);
 

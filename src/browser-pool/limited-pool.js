@@ -4,7 +4,7 @@ const _ = require("lodash");
 const Promise = require("bluebird");
 const yallist = require("yallist");
 const Pool = require("./pool");
-const CancelledError = require("./cancelled-error");
+const { CancelledError } = require("./cancelled-error");
 const debug = require("debug");
 const { buildCompositeBrowserId } = require("./utils");
 

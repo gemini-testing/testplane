@@ -1,5 +1,5 @@
 import _ from "lodash";
-import TestCollection from "src/test-collection";
+import { TestCollection } from "src/test-collection";
 import { Test } from "src/test-reader/test-object";
 
 import type { Suite } from "src/test-reader/test-object/suite";

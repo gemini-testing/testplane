@@ -93,8 +93,8 @@ const wdioElementCommands = [
     "waitUntil",
 ];
 
-export const getBrowserCommands = () => wdioBrowserCommands;
-export const getElementCommands = () => wdioElementCommands;
+export const getBrowserCommands = (): typeof wdioBrowserCommands => wdioBrowserCommands;
+export const getElementCommands = (): typeof wdioElementCommands => wdioElementCommands;
 export const createScope = (elementScope: boolean): `${Scopes}` => {
     return elementScope ? Scopes.ELEMENT : Scopes.BROWSER;
 };

@@ -1,7 +1,7 @@
 "use strict";
 
 const EventEmitter = require("events").EventEmitter;
-const RunnerEvents = require("src/constants/runner-events");
+const { MasterEvents: RunnerEvents } = require("src/events");
 const proxyquire = require("proxyquire");
 const mkTestStub_ = require("./utils").mkTestStub_;
 const getDeserializedResult = require("./utils").getDeserializedResult;

@@ -5,7 +5,7 @@ const _ = require("lodash");
 const HookRunner = require("./hook-runner");
 const ExecutionThread = require("./execution-thread");
 const OneTimeScreenshooter = require("./one-time-screenshooter");
-const AssertViewError = require("../../../browser/commands/assert-view/errors/assert-view-error");
+const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 

@@ -2,8 +2,8 @@
 
 const { MochaEventBus } = require("./mocha-event-bus");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
-const ReadEvents = require("../read-events");
-const RunnerEvents = require("../../constants/runner-events");
+const { TestReaderEvents } = require("../../events");
+const { MasterEvents } = require("../../events");
 const Mocha = require("mocha");
 
 async function readFiles(files, { esmDecorator, config, eventBus }) {
@@ -20,7 +20,7 @@ async function readFiles(files, { esmDecorator, config, eventBus }) {
 }
 
 function initBuildContext(outBus) {
-    outBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ctx => {
+    outBus.emit(TestReaderEvents.NEW_BUILD_INSTRUCTION, ctx => {
         ctx.treeBuilder = TreeBuilderDecorator.create(ctx.treeBuilder);
     });
 }
@@ -49,8 +49,8 @@ function forbidSuiteHooks(bus) {
 
 function passthroughFileEvents(inBus, outBus) {
     [
-        [MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, RunnerEvents.BEFORE_FILE_READ],
-        [MochaEventBus.events.EVENT_FILE_POST_REQUIRE, RunnerEvents.AFTER_FILE_READ],
+        [MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, MasterEvents.BEFORE_FILE_READ],
+        [MochaEventBus.events.EVENT_FILE_POST_REQUIRE, MasterEvents.AFTER_FILE_READ],
     ].forEach(([mochaEvent, ourEvent]) => {
         inBus.on(mochaEvent, (ctx, file) => outBus.emit(ourEvent, { file }));
     });
@@ -70,7 +70,9 @@ function registerTestObjects(inBus, outBus) {
         ],
     ].forEach(([event, instruction]) => {
         inBus.on(event, testObject => {
-            outBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => instruction(treeBuilder, testObject));
+            outBus.emit(TestReaderEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) =>
+                instruction(treeBuilder, testObject),
+            );
         });
     });
 }
@@ -88,7 +90,7 @@ function applyOnly(rootSuite, eventBus) {
     rootSuite.filterOnly();
     rootSuite.eachTest(mochaTest => titlesToRun.push(mochaTest.fullTitle()));
 
-    eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
+    eventBus.emit(TestReaderEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
         treeBuilder.addTestFilter(test => titlesToRun.includes(test.fullTitle()));
     });
 }

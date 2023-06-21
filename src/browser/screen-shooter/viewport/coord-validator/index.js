@@ -1,8 +1,8 @@
 "use strict";
 
 const debug = require("debug");
-const HeightViewportError = require("./errors/height-viewport-error");
-const OffsetViewportError = require("./errors/offset-viewport-error");
+const { HeightViewportError } = require("./errors/height-viewport-error");
+const { OffsetViewportError } = require("./errors/offset-viewport-error");
 
 const isOutsideOfViewport = (viewport, cropArea) =>
     cropArea.top < 0 || cropArea.left < 0 || cropArea.left + cropArea.width > viewport.width;

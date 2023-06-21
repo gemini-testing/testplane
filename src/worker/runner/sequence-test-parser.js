@@ -3,7 +3,7 @@
 const { EventEmitter } = require("events");
 const { passthroughEvent } = require("../../events/utils");
 const SimpleTestParser = require("./simple-test-parser");
-const RunnerEvents = require("../constants/runner-events");
+const { WorkerEvents } = require("../../events");
 const fastq = require("fastq");
 
 module.exports = class SequenceTestParser extends EventEmitter {
@@ -15,7 +15,7 @@ module.exports = class SequenceTestParser extends EventEmitter {
         super();
 
         this._parser = SimpleTestParser.create(config);
-        passthroughEvent(this._parser, this, [RunnerEvents.BEFORE_FILE_READ, RunnerEvents.AFTER_FILE_READ]);
+        passthroughEvent(this._parser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
 
         this._queue = fastq.promise(fn => fn(), 1);
     }

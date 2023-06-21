@@ -6,17 +6,17 @@ const pluginsLoader = require("plugins-loader");
 const Promise = require("bluebird");
 const proxyquire = require("proxyquire").noCallThru();
 
-const Config = require("src/config");
+const { Config } = require("src/config");
 const RuntimeConfig = require("src/config/runtime-config");
-const AsyncEmitter = require("src/events/async-emitter");
+const { AsyncEmitter } = require("src/events/async-emitter");
 const eventsUtils = require("src/events/utils");
-const Errors = require("src/errors");
-const RunnerStats = require("src/stats");
+const { default: Errors } = require("src/errors");
+const { Stats: RunnerStats } = require("src/stats");
 const TestReader = require("src/test-reader");
-const TestCollection = require("src/test-collection").default;
-const RunnerEvents = require("src/constants/runner-events");
+const { TestCollection } = require("src/test-collection");
+const { MasterEvents: RunnerEvents, CommonSyncEvents, MasterAsyncEvents, MasterSyncEvents } = require("src/events");
 const signalHandler = require("src/signal-handler");
-const Runner = require("src/runner");
+const { MainRunner: Runner } = require("src/runner");
 const logger = require("src/utils/logger");
 const { makeConfigStub } = require("../utils");
 
@@ -52,7 +52,7 @@ describe("hermione", () => {
 
         Hermione = proxyquire("src/hermione", {
             "./reporters": { initReporters },
-        });
+        }).Hermione;
     });
 
     afterEach(() => sandbox.restore());
@@ -343,7 +343,7 @@ describe("hermione", () => {
                 const hermione = mkHermione_();
 
                 return hermione.run().then(() => {
-                    _.forEach(RunnerEvents.getSync(), (event, name) => {
+                    _.forEach(CommonSyncEvents, (event, name) => {
                         const spy = sinon.spy().named(`${name} handler`);
                         hermione.on(event, spy);
 
@@ -364,7 +364,7 @@ describe("hermione", () => {
                         eventsUtils.passthroughEvent,
                         runner,
                         sinon.match.instanceOf(Hermione),
-                        _.values(RunnerEvents.getSync()),
+                        _.values(MasterSyncEvents),
                     );
                     assert.callOrder(eventsUtils.passthroughEvent, runner.run);
                 });
@@ -375,7 +375,7 @@ describe("hermione", () => {
                 const hermione = mkHermione_();
 
                 return hermione.run().then(() => {
-                    _.forEach(RunnerEvents.getAsync(), (event, name) => {
+                    _.forEach(MasterAsyncEvents, (event, name) => {
                         const spy = sinon.spy().named(`${name} handler`);
                         hermione.on(event, spy);
 
@@ -396,7 +396,7 @@ describe("hermione", () => {
                         eventsUtils.passthroughEventAsync,
                         runner,
                         sinon.match.instanceOf(Hermione),
-                        _.values(RunnerEvents.getAsync()),
+                        _.values(MasterAsyncEvents),
                     );
                     assert.callOrder(eventsUtils.passthroughEventAsync, runner.run);
                 });

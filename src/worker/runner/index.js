@@ -1,8 +1,8 @@
 "use strict";
 
-const AsyncEmitter = require("../../events/async-emitter");
+const { AsyncEmitter } = require("../../events/async-emitter");
 const { passthroughEvent } = require("../../events/utils");
-const RunnerEvents = require("../constants/runner-events");
+const { WorkerEvents } = require("../../events");
 const BrowserPool = require("./browser-pool");
 const BrowserAgent = require("./browser-agent");
 const TestRunner = require("./test-runner");
@@ -21,9 +21,9 @@ module.exports = class Runner extends AsyncEmitter {
 
         this._testParser = CachingTestParser.create(config);
         passthroughEvent(this._testParser, this, [
-            RunnerEvents.BEFORE_FILE_READ,
-            RunnerEvents.AFTER_FILE_READ,
-            RunnerEvents.AFTER_TESTS_READ,
+            WorkerEvents.BEFORE_FILE_READ,
+            WorkerEvents.AFTER_FILE_READ,
+            WorkerEvents.AFTER_TESTS_READ,
         ]);
     }
 

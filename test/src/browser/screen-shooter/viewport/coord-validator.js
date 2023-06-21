@@ -3,8 +3,12 @@
 const _ = require("lodash");
 
 const CoordValidator = require("src/browser/screen-shooter/viewport/coord-validator");
-const HeightViewportError = require("src/browser/screen-shooter/viewport/coord-validator/errors/height-viewport-error");
-const OffsetViewportError = require("src/browser/screen-shooter/viewport/coord-validator/errors/offset-viewport-error");
+const {
+    HeightViewportError,
+} = require("src/browser/screen-shooter/viewport/coord-validator/errors/height-viewport-error");
+const {
+    OffsetViewportError,
+} = require("src/browser/screen-shooter/viewport/coord-validator/errors/offset-viewport-error");
 
 describe("CoordValidator", () => {
     let coordValidator;

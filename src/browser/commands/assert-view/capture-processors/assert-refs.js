@@ -1,8 +1,8 @@
 "use strict";
 
 const Promise = require("bluebird");
-const ImageDiffError = require("../errors/image-diff-error");
-const NoRefImageError = require("../errors/no-ref-image-error");
+const { ImageDiffError } = require("../errors/image-diff-error");
+const { NoRefImageError } = require("../errors/no-ref-image-error");
 
 exports.handleNoRefImage = (currImg, refImg, state) => {
     return Promise.reject(NoRefImageError.create(state, currImg, refImg));

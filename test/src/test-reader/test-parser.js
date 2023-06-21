@@ -5,16 +5,16 @@ const { InstructionsList, Instructions } = require("src/test-reader/build-instru
 const { SkipController } = require("src/test-reader/controllers/skip-controller");
 const { OnlyController } = require("src/test-reader/controllers/only-controller");
 const { ConfigController } = require("src/test-reader/controllers/config-controller");
-const browserVersionController = require("src/test-reader/controllers/browser-version-controller");
-const TestParserAPI = require("src/test-reader/test-parser-api");
-const { NEW_BUILD_INSTRUCTION } = require("src/test-reader/read-events");
+const { TestParserAPI } = require("src/test-reader/test-parser-api");
 const { Test, Suite } = require("src/test-reader/test-object");
-const RunnerEvents = require("src/constants/runner-events");
+const { MasterEvents: RunnerEvents, TestReaderEvents } = require("src/events");
 const { makeConfigStub } = require("../../utils");
 const proxyquire = require("proxyquire").noCallThru();
 const path = require("path");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
+
+const { NEW_BUILD_INSTRUCTION } = TestReaderEvents;
 
 describe("test-reader/test-parser", () => {
     const sandbox = sinon.sandbox.create();
@@ -22,6 +22,9 @@ describe("test-reader/test-parser", () => {
     let TestParser;
     let clearRequire;
     let readFiles;
+    let browserVersionController = {
+        mkProvider: sinon.stub().returns(() => {}),
+    };
 
     beforeEach(() => {
         clearRequire = sandbox.stub().named("clear-require");
@@ -30,6 +33,7 @@ describe("test-reader/test-parser", () => {
         TestParser = proxyquire("src/test-reader/test-parser", {
             "clear-require": clearRequire,
             "./mocha-reader": { readFiles },
+            "./controllers/browser-version-controller": browserVersionController,
         }).TestParser;
 
         sandbox.stub(InstructionsList.prototype, "push").returnsThis();
@@ -85,10 +89,11 @@ describe("test-reader/test-parser", () => {
                     assert.deepEqual(ctx, { foo: "bar" });
                 });
             });
+            ``;
 
             describe("hermione.browser", () => {
                 beforeEach(() => {
-                    sandbox.stub(browserVersionController, "mkProvider").returns(() => {});
+                    // sandbox.stub(browserVersionController, "mkProvider").get(() => {});
                 });
 
                 it("should set controller provider", async () => {

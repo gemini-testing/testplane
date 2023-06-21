@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const Browser = require("../../browser/existing-browser");
 const Calibrator = require("../../browser/calibrator");
-const RunnerEvents = require("../constants/runner-events");
+const { WorkerEvents } = require("../../events");
 const ipc = require("../../utils/ipc");
 const { DEVTOOLS_PROTOCOL } = require("../../constants/config");
 
@@ -42,7 +42,7 @@ module.exports = class BrowserPool {
                 this._browsers[browserId].push(browser);
             }
 
-            this._emitter.emit(RunnerEvents.NEW_BROWSER, browser.publicAPI, { browserId: browser.id, browserVersion });
+            this._emitter.emit(WorkerEvents.NEW_BROWSER, browser.publicAPI, { browserId: browser.id, browserVersion });
 
             return browser;
         } catch (error) {

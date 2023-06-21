@@ -1,9 +1,9 @@
 "use strict";
 
 const _ = require("lodash");
-const Runner = require("../runner");
+const { Runner } = require("../runner");
 const logger = require("../../utils/logger");
-const Events = require("../../constants/runner-events");
+const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
 
 module.exports = class RegularTestRunner extends Runner {
@@ -27,23 +27,23 @@ module.exports = class RegularTestRunner extends Runner {
                 });
             }
 
-            this._emit(Events.TEST_BEGIN);
+            this._emit(MasterEvents.TEST_BEGIN);
 
             this._test.startTime = Date.now();
 
             const results = await this._runTest(workers);
             this._applyTestResults(results);
 
-            this._emit(Events.TEST_PASS);
+            this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
             this._test.err = error;
 
             this._applyTestResults(error);
 
-            this._emit(Events.TEST_FAIL);
+            this._emit(MasterEvents.TEST_FAIL);
         }
 
-        this._emit(Events.TEST_END);
+        this._emit(MasterEvents.TEST_END);
 
         await (freeBrowserPromise || this._freeBrowser());
     }

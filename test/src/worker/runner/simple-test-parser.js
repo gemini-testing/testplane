@@ -1,7 +1,7 @@
 "use strict";
 
 const SimpleTestParser = require("src/worker/runner/sequence-test-parser");
-const RunnerEvents = require("src/worker/constants/runner-events");
+const { WorkerEvents: RunnerEvents } = require("src/events");
 const { TestParser } = require("src/test-reader/test-parser");
 const { makeConfigStub, makeTest } = require("../../../utils");
 

@@ -1,7 +1,7 @@
 "use strict";
 
-const AsyncEmitter = require("src/events/async-emitter");
-const Hermione = require("src/worker/hermione");
+const { AsyncEmitter } = require("src/events/async-emitter");
+const { Hermione } = require("src/worker/hermione");
 const { makeConfigStub } = require("../../utils");
 const ipc = require("src/utils/ipc");
 const HermioneFacade = require("src/worker/hermione-facade");

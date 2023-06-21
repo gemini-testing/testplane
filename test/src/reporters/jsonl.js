@@ -2,7 +2,7 @@ const path = require("path");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
 const _ = require("lodash");
-const RunnerEvents = require("src/constants/runner-events");
+const { MasterEvents: RunnerEvents } = require("src/events");
 const { SUCCESS, FAIL, RETRY, SKIPPED } = require("src/constants/test-statuses");
 
 const testStates = {

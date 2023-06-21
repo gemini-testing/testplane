@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 const { handleImageDiff } = require("src/browser/commands/assert-view/capture-processors/assert-refs");
-const ImageDiffError = require("src/browser/commands/assert-view/errors/image-diff-error");
+const { ImageDiffError } = require("src/browser/commands/assert-view/errors/image-diff-error");
 
 describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
     const sandbox = sinon.createSandbox();

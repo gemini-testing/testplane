@@ -6,9 +6,9 @@ const { ConfigController } = require("./controllers/config-controller");
 const browserVersionController = require("./controllers/browser-version-controller");
 const { TreeBuilder } = require("./tree-builder");
 const { readFiles } = require("./mocha-reader");
-const ReadEvents = require("./read-events");
-const TestParserAPI = require("./test-parser-api");
-const RunnerEvents = require("../constants/runner-events");
+const { TestReaderEvents } = require("../events");
+const { TestParserAPI } = require("./test-parser-api");
+const { MasterEvents } = require("../events");
 const _ = require("lodash");
 const clearRequire = require("clear-require");
 const path = require("path");
@@ -56,9 +56,9 @@ class TestParser extends EventEmitter {
         let currentFile;
 
         eventBus
-            .on(RunnerEvents.BEFORE_FILE_READ, ({ file }) => (currentFile = file))
-            .on(RunnerEvents.AFTER_FILE_READ, () => (currentFile = undefined))
-            .on(ReadEvents.NEW_BUILD_INSTRUCTION, instruction =>
+            .on(MasterEvents.BEFORE_FILE_READ, ({ file }) => (currentFile = file))
+            .on(MasterEvents.AFTER_FILE_READ, () => (currentFile = undefined))
+            .on(TestReaderEvents.NEW_BUILD_INSTRUCTION, instruction =>
                 this.#buildInstructions.push(instruction, currentFile),
             );
     }
@@ -74,8 +74,8 @@ class TestParser extends EventEmitter {
             );
         };
 
-        passthroughEvent_(RunnerEvents.BEFORE_FILE_READ, { testParser: TestParserAPI.create(hermione, eventBus) });
-        passthroughEvent_(RunnerEvents.AFTER_FILE_READ);
+        passthroughEvent_(MasterEvents.BEFORE_FILE_READ, { testParser: TestParserAPI.create(hermione, eventBus) });
+        passthroughEvent_(MasterEvents.AFTER_FILE_READ);
     }
 
     #clearRequireCach(files) {

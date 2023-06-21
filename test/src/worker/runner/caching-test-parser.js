@@ -2,8 +2,8 @@
 
 const CachingTestParser = require("src/worker/runner/caching-test-parser");
 const SequenceTestParser = require("src/worker/runner/sequence-test-parser");
-const RunnerEvents = require("src/worker/constants/runner-events");
-const TestCollection = require("src/test-collection").default;
+const { WorkerEvents: RunnerEvents } = require("src/events");
+const { TestCollection } = require("src/test-collection");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner/caching-test-parser", () => {

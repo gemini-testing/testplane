@@ -1,7 +1,7 @@
 "use strict";
 
 const Promise = require("bluebird");
-const ClientBridgeError = require("./error");
+const { ClientBridgeError } = require("./error");
 
 module.exports = class ClientBridge {
     static create(browser, script) {

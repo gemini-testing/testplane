@@ -3,10 +3,10 @@
 const RegularTestRunner = require("src/runner/test-runner/regular-test-runner");
 const InsistantTestRunner = require("src/runner/test-runner/insistant-test-runner");
 const HighPriorityBrowserAgent = require("src/runner/test-runner/high-priority-browser-agent");
-const Events = require("src/constants/runner-events");
+const { MasterEvents: Events } = require("src/events");
 const BrowserAgent = require("src/runner/browser-agent");
-const AssertViewError = require("src/browser/commands/assert-view/errors/assert-view-error");
-const NoRefImageError = require("src/browser/commands/assert-view/errors/no-ref-image-error");
+const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
+const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 const { Test } = require("src/test-reader/test-object");
 
 const { makeConfigStub } = require("../../../utils");
@@ -229,7 +229,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
                     onEachTestRun_(innerRunner => {
                         const test = new Test({});
                         test.err = new AssertViewError();
-                        test.assertViewResults = [new NoRefImageError()];
+                        test.assertViewResults = [new NoRefImageError("some-state", {}, {})];
 
                         innerRunner.emit(Events.TEST_FAIL, test);
                     });
@@ -243,7 +243,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
                     onFirstTestRun_(innerRunner => {
                         const test = new Test({});
                         test.err = new Error();
-                        test.assertViewResults = [new NoRefImageError()];
+                        test.assertViewResults = [new NoRefImageError("some-state", {}, {})];
 
                         innerRunner.emit(Events.TEST_FAIL, test);
                     });
