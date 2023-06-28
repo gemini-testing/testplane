@@ -81,7 +81,12 @@ exports.mkSessionStub_ = () => {
     session.waitUntil = sinon.stub().named("waitUntil").resolves();
     session.setTimeout = sinon.stub().named("setTimeout").resolves();
     session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
-    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves({});
+    session.getPuppeteer = sinon
+        .stub()
+        .named("getPuppeteer")
+        .resolves({ createIncognitoBrowserContext: () => ({ newPage: () => {}, close: () => {} }) });
+    session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
+    session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
     session.$ = sinon.stub().named("$").resolves(element);
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {

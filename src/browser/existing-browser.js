@@ -12,9 +12,9 @@ const Camera = require("./camera");
 const clientBridge = require("./client-bridge");
 const history = require("./history");
 const logger = require("../utils/logger");
-const dns = require('node:dns');
+const dns = require("node:dns");
 
-dns.setDefaultResultOrder('ipv4first'); //https://github.com/webdriverio/webdriverio/issues/8279 
+dns.setDefaultResultOrder("ipv4first"); //https://github.com/webdriverio/webdriverio/issues/8279
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -88,7 +88,7 @@ module.exports = class ExistingBrowser extends Browser {
 
         for (let handle of currentOpenWindows) {
             try {
-                await  this._session.switchToWindow(handle)
+                await this._session.switchToWindow(handle);
                 await this._session.closeWindow();
             } catch (e) {
                 if (!e.message.includes("no such window")) {
@@ -96,14 +96,14 @@ module.exports = class ExistingBrowser extends Browser {
                 }
             }
         }
-        
+
         if (this._browserContext) {
             this._browserContext.close();
         }
         this._browserContext = context;
-        
+
         const [newWindow] = await this._session.getWindowHandles();
-        await  this._session.switchToWindow(newWindow)
+        await this._session.switchToWindow(newWindow);
     }
 
     markAsBroken() {
