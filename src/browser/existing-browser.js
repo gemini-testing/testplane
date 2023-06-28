@@ -66,8 +66,21 @@ module.exports = class ExistingBrowser extends Browser {
         return this;
     }
 
+    async getPuppeteer() {
+        try {
+            return await this._session.getPuppeteer();
+        } catch (e) {
+            // assuming browser does not support CDP
+            return null;
+        }
+    }
+
     async _cycleBrowserContext() {
-        const puppeteer = await this._session.getPuppeteer();
+        const puppeteer = await this.getPuppeteer();
+        if (!puppeteer) {
+            return;
+        }
+
         const currentOpenWindows = await this._session.getWindowHandles();
         const context = await puppeteer.createIncognitoBrowserContext();
         // first open the new page, then close the old pages, otherwise the session will close
