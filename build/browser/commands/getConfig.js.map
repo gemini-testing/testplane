@@ -1,0 +1,1 @@
+{"version":3,"file":"getConfig.js","sourceRoot":"","sources":["../../../src/browser/commands/getConfig.js"],"names":[],"mappings":"AAAA,YAAY,CAAC;AAEb,MAAM,CAAC,OAAO,GAAG,OAAO,CAAC,EAAE;IACvB,MAAM,EAAE,SAAS,EAAE,OAAO,EAAE,MAAM,EAAE,GAAG,OAAO,CAAC;IAC/C,OAAO,CAAC,UAAU,CAAC,WAAW,EAAE,GAAG,EAAE,CAAC,MAAM,CAAC,CAAC;AAClD,CAAC,CAAC"}

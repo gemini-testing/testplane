@@ -1,0 +1,126 @@
+{
+    "name": "hermione",
+    "version": "8.0.0-beta.0",
+    "description": "Tests framework based on mocha and wdio",
+    "main": "build/src/index.js",
+    "files": [
+        "build"
+    ],
+    "scripts": {
+        "build": "tsc && npm run copy-static",
+        "copy-static": "copyfiles 'src/browser/client-scripts/*' 'typings/*' build",
+        "check-types": "tsc --project tsconfig.spec.json",
+        "clean": "rimraf build/ *.tsbuildinfo",
+        "coverage": "nyc --reporter=text npm run test-unit",
+        "lint": "eslint --cache . && prettier --check .",
+        "reformat": "eslint --fix . && prettier --write .",
+        "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
+        "test-unit": "_mocha test/",
+        "test": "npm run test-unit && npm run check-types && npm run lint",
+        "toc": "doctoc README.md",
+        "precommit": "npm run lint",
+        "prepack": "npm run clean && npm run build",
+        "preversion": "npm run lint && npm test",
+        "commitmsg": "commitlint -e",
+        "release": "standard-version",
+        "watch": "npm run copy-static && tsc --watch"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/gemini-testing/hermione.git"
+    },
+    "engines": {
+        "node": ">= 16.0.0"
+    },
+    "keywords": [
+        "hermione",
+        "webdriverio",
+        "mocha",
+        "test"
+    ],
+    "bin": {
+        "hermione": "./bin/hermione"
+    },
+    "license": "MIT",
+    "dependencies": {
+        "@gemini-testing/commander": "2.15.3",
+        "@types/mocha": "^10.0.1",
+        "@wdio/globals": "^8.5.7",
+        "@wdio/types": "^8.4.0",
+        "@wdio/utils": "^7.26.0",
+        "aliasify": "^1.9.0",
+        "bluebird": "^3.5.1",
+        "browserify": "^13.3.0",
+        "chalk": "^1.1.1",
+        "clear-require": "^1.0.1",
+        "date-fns": "^2.29.3",
+        "debug": "^2.6.9",
+        "expect-webdriverio": "^3.5.3",
+        "fastq": "^1.13.0",
+        "fs-extra": "^5.0.0",
+        "gemini-configparser": "^1.3.0",
+        "glob-extra": "^5.0.2",
+        "inherit": "^2.2.2",
+        "lodash": "^4.17.21",
+        "looks-same": "^8.1.0",
+        "micromatch": "^4.0.5",
+        "mocha": "^10.2.0",
+        "plugins-loader": "^1.2.0",
+        "png-validator": "1.1.0",
+        "sharp": "~0.30.7",
+        "sizzle": "^2.3.6",
+        "temp": "^0.8.3",
+        "uglifyify": "^3.0.4",
+        "urijs": "^1.19.11",
+        "url-join": "^4.0.1",
+        "webdriverio": "^8.5.7",
+        "worker-farm": "^1.7.0",
+        "yallist": "^3.1.1"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^17.1.2",
+        "@commitlint/config-conventional": "^17.1.0",
+        "@swc/core": "^1.3.40",
+        "@types/bluebird": "^3.5.38",
+        "@types/chai": "^4.3.4",
+        "@types/chai-as-promised": "^7.1.5",
+        "@types/lodash": "^4.14.191",
+        "@types/node": "^12.20.28",
+        "@types/proxyquire": "^1.3.28",
+        "@types/sharp": "^0.31.1",
+        "@types/sinon": "^4.3.3",
+        "@typescript-eslint/eslint-plugin": "^5.54.1",
+        "@typescript-eslint/parser": "^5.54.1",
+        "app-module-path": "^2.2.0",
+        "chai": "^4.1.1",
+        "chai-as-promised": "^7.1.1",
+        "copyfiles": "^2.4.1",
+        "doctoc": "^2.2.0",
+        "escape-string-regexp": "1.0.5",
+        "eslint": "^8.25.0",
+        "eslint-config-gemini-testing": "^2.8.0",
+        "eslint-config-prettier": "^8.7.0",
+        "husky": "^0.11.4",
+        "jsdom": "^16.6.0",
+        "jsdom-global": "^3.0.2",
+        "nyc": "^15.1.0",
+        "onchange": "^7.1.0",
+        "prettier": "^2.8.4",
+        "proxyquire": "^1.7.3",
+        "rimraf": "^4.1.2",
+        "sinon": "^4.4.2",
+        "sinon-chai": "^2.12.0",
+        "standard-version": "^9.5.0",
+        "ts-node": "^10.9.1",
+        "type-fest": "^3.10.0",
+        "typescript": "^4.9.5"
+    },
+    "peerDependencies": {
+        "ts-node": ">=10.5.0"
+    },
+    "peerDependenciesMeta": {
+        "ts-node": {
+            "optional": true
+        }
+    }
+}
