@@ -80,7 +80,7 @@ module.exports = class ExistingBrowser extends Browser {
             }
         }
         if (this._browserContext) {
-            this._browserContext.close();
+            await this._browserContext.close();
         }
         this._browserContext = context;
         const [newWindow] = await this._session.getWindowHandles();
