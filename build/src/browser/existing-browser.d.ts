@@ -2,7 +2,6 @@ export = ExistingBrowser;
 declare class ExistingBrowser extends Browser {
     static create(config: any, id: any, version: any, emitter: any): import("./existing-browser");
     constructor(config: any, id: any, version: any, emitter: any);
-    _browserContext: null;
     _emitter: any;
     _camera: Camera;
     _meta: any;

@@ -23,8 +23,6 @@ module.exports = class ExistingBrowser extends Browser {
         return new this(config, id, version, emitter);
     }
 
-    _browserContext = null;
-
     constructor(config, id, version, emitter) {
         super(config, id, version);
 
@@ -81,31 +79,28 @@ module.exports = class ExistingBrowser extends Browser {
             return;
         }
 
-        const currentOpenWindows = await this._session.getWindowHandles();
+        const currentPages = await puppeteer.pages();
         const context = await puppeteer.createIncognitoBrowserContext();
         // first open the new page, then close the old pages, otherwise the session will close
-        const page = await context.newPage();
-        await new Promise((res) => page.once("frameattached", res));
+        await context.newPage();
 
-        for (let handle of currentOpenWindows) {
+        for (let page of currentPages) {
             try {
-                await this._session.switchToWindow(handle);
-                await this._session.closeWindow();
-            } catch (e) {
-                if (!e.message.includes("no such window")) {
-                    throw e;
+                await page.close();
+                const context = page.browserContext();
+                if (context.isIncognito()) {
+                    await context.close();
                 }
+            } catch (e) {
+                console.error(e);
+                // assume already closed
             }
         }
-
-        if (this._browserContext) {
-            await this._browserContext.close();
-        }
-        this._browserContext = context;
 
         const [newWindow] = await this._session.getWindowHandles();
         await this._session.switchToWindow(newWindow);
     }
+
 
     markAsBroken() {
         this.applyState({ isBroken: true });
