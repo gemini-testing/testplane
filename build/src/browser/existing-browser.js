@@ -20,11 +20,15 @@ module.exports = class ExistingBrowser extends Browser {
     }
     constructor(config, id, version, emitter) {
         super(config, id, version);
+        this.originalSessionId = null;
+        this.originalCaps = null;
+        this._browserContext = null;
         this._emitter = emitter;
         this._camera = Camera.create(this._config.screenshotMode, () => this._takeScreenshot());
         this._meta = this._initMeta();
     }
     async init({ sessionId, sessionCaps, sessionOpts } = {}, calibrator) {
+        this.originalSessionId = sessionId;
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
         this._addSteps();
         this._addHistory();
@@ -40,17 +44,28 @@ module.exports = class ExistingBrowser extends Browser {
             await this._performCalibration(calibrator);
             await this._buildClientScripts();
         });
+        this.originalCaps = this._session.capabilities;
         return this;
     }
-    async reinit(sessionId, sessionOpts) {
+    async reinit(sessionId, sessionOpts, sessionCaps) {
+        // console.log({sessionOpts: JSON.stringify(sessionOpts)})
         await history.runGroup(this._callstackHistory, "hermione: reinit browser", async () => {
             this._session.extendOptions(sessionOpts);
+            const opts = this._getOptions({ sessionId, sessionCaps, sessionOpts });
+            this._session.capabilities = opts.capabilities;
+            // this._session.requestedCapabilities = opts.requestedCapabilities;
+            // this._session.options = opts.options;
             await this._prepareSession(sessionId);
         });
         return this;
     }
     async getPuppeteer() {
         try {
+            // console.log("----getPuppeteer")
+            // console.log(this._session.getPuppeteer.toString())
+            // const puppeteer = await this._session.getPuppeteer();
+            // console.log(puppeteer.disconnect());
+            // console.log(puppeteer.isConnected());
             return await this._session.getPuppeteer();
         }
         catch (e) {
@@ -63,25 +78,55 @@ module.exports = class ExistingBrowser extends Browser {
         if (!puppeteer) {
             return;
         }
+        // console.log({puppeteer: JSON.stringify(puppeteer)})
+        // console.log(Object.getOwnPropertyNames(puppeteer));
+        // console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(puppeteer)));
         const currentPages = await puppeteer.pages();
         const context = await puppeteer.createIncognitoBrowserContext();
         // first open the new page, then close the old pages, otherwise the session will close
-        await context.newPage();
-        for (let page of currentPages) {
-            try {
-                await page.close();
-                const context = page.browserContext();
-                if (context.isIncognito()) {
-                    await context.close();
-                }
-            }
-            catch (e) {
-                console.error(e);
-                // assume already closed
-            }
-        }
-        const [newWindow] = await this._session.getWindowHandles();
-        await this._session.switchToWindow(newWindow);
+        const page = await context.newPage();
+        // for (let page of currentPages) {
+        //     try {
+        //         await page.close();
+        //         const context = page.browserContext();
+        //         if (context.isIncognito()) {
+        //             await context.close();
+        //         }
+        //     } catch (e) {
+        //         console.error(e);
+        //         // assume already closed
+        //     }
+        // }
+        // let found = false;
+        // while (!found) {
+        //     const handles = await this._session.getWindowHandles();
+        //     console.log({handles, currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), sessionId: this.sessionId, originalSessionId: this.originalSessionId, originalCaps: inspect(this.originalCaps, {depth: null}), newCaps: this._session.capabilities});
+        //     console.log(page.target()._targetId)
+        //     console.log({wsend: puppeteer.wsEndpoint(), sess: this.sessionId})
+        //     if (handles.includes(page.target()._targetId)) {
+        //         found = true;
+        //     }
+        // }
+        await this._session.switchToWindow(page.target()._targetId);
+        puppeteer.disconnect();
+        // let switchedToNewPage = false;
+        // for (const handle of await this._session.getWindowHandles()) {
+        //     try {
+        //         await this._session.switchToWindow(handle);
+        //         if (await this._session.getUrl() === url) {
+        //             switchedToNewPage = true;
+        //         }
+        //     } catch (e) {
+        //         // ignore
+        //     }
+        // }
+        // if (!switchedToNewPage) {
+        //     throw new Error(`Error switching to new page`);
+        // }
+        // const handles = await this._session.getWindowHandles();
+        // console.log({handles});
+        // const [newWindow] = handles;
+        // await this._session.switchToWindow(newWindow);
     }
     markAsBroken() {
         this.applyState({ isBroken: true });
@@ -138,7 +183,7 @@ module.exports = class ExistingBrowser extends Browser {
             return elem.scrollTo(xVal, yVal);
         }, params);
     }
-    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
+    _getOptions({ sessionId, sessionCaps, sessionOpts = {} }) {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps,
             requestedCapabilities: sessionOpts.capabilities,
@@ -153,6 +198,11 @@ module.exports = class ExistingBrowser extends Browser {
             capabilities: { ...sessionOpts.capabilities, ...sessionCaps },
             requestedCapabilities: sessionOpts.capabilities,
         };
+        // console.log({opts: JSON.stringify(opts)})
+        return opts;
+    }
+    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
+        const opts = this._getOptions({ sessionId, sessionCaps, sessionOpts });
         return webdriverio.attach(opts);
     }
     _initMeta() {

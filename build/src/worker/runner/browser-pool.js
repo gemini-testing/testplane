@@ -25,7 +25,7 @@ module.exports = class BrowserPool {
         });
         try {
             if (browser) {
-                return await browser.reinit(sessionId, sessionOpts);
+                return await browser.reinit(sessionId, sessionOpts, sessionCaps);
             }
             browser = Browser.create(this._config, browserId, browserVersion, this._emitter);
             await browser.init({ sessionId, sessionCaps, sessionOpts }, this._calibrator);
