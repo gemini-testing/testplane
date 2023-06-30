@@ -67,7 +67,8 @@ module.exports = class ExistingBrowser extends Browser {
         const currentOpenWindows = await this._session.getWindowHandles();
         const context = await puppeteer.createIncognitoBrowserContext();
         // first open the new page, then close the old pages, otherwise the session will close
-        await context.newPage();
+        const page = await context.newPage();
+        await new Promise((res) => page.once("frameattached", res));
         for (let handle of currentOpenWindows) {
             try {
                 await this._session.switchToWindow(handle);
