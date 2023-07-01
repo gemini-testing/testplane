@@ -130,16 +130,16 @@ module.exports = class ExistingBrowser extends Browser {
         // try {
         //     await this._session.switchToWindow(page.target()._targetId);
         // } catch (e) {
-        //     console.error({
-        //         error: e, 
-        //         webdriverHandles: await this._session.getWindowHandles(), 
-        //         currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), 
-        //         sessionId: this.sessionId, 
-        //         originalSessionId: this.originalSessionId, 
-        //         originalCaps: inspect(this.originalCaps, {depth: null}), 
-        //         newCaps: this._session.capabilities
-        //     })
-        //     throw e;
+            // console.error({
+            //     error: e, 
+            //     webdriverHandles: await this._session.getWindowHandles(), 
+            //     currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), 
+            //     sessionId: this.sessionId, 
+            //     originalSessionId: this.originalSessionId, 
+            //     originalCaps: inspect(this.originalCaps, {depth: null}), 
+            //     newCaps: this._session.capabilities
+            // })
+            // throw e;
         // }
         // let switchedToNewPage = false;
         // for (const handle of await this._session.getWindowHandles()) {
@@ -158,8 +158,20 @@ module.exports = class ExistingBrowser extends Browser {
         // }
 
         const handles = await this._session.getWindowHandles();
-        // console.log({handles});
-        const [newWindow] = handles;
+        const newWindow = handles.find(h => h.includes(page.target()._targetId))
+        if (!newWindow) {
+            console.error({
+                webdriverHandles: await this._session.getWindowHandles(),
+                puppeteerPages: (await puppeteer.pages()).map(page => page.target()._targetId),
+                sessionId: this.sessionId,
+                originalSessionId: this.originalSessionId,
+                originalCaps: inspect(this.originalCaps, { depth: null }),
+                newCaps: inspect(this._session.capabilities, { depth: null }),
+            });
+            await this._session.switchToWindow(`CDwindow-${page.target()._targetId}`);
+            puppeteer.disconnect();
+            return;
+        }
         await this._session.switchToWindow(newWindow);
         puppeteer.disconnect()
     }
