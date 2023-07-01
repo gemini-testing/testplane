@@ -23,6 +23,8 @@ const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 module.exports = class ExistingBrowser extends Browser {
     originalSessionId = null
     originalCaps = null;
+    originalOpts = null;
+    newOpts = null;
     static create(config, id, version, emitter) {
         return new this(config, id, version, emitter);
     }
@@ -67,6 +69,7 @@ module.exports = class ExistingBrowser extends Browser {
         await history.runGroup(this._callstackHistory, "hermione: reinit browser", async () => {
             this._session.extendOptions(sessionOpts);
             const opts = this._getOptions({sessionId, sessionCaps, sessionOpts});
+            this.newOpts = opts;
             this._session.capabilities = opts.capabilities;
             // this._session.requestedCapabilities = opts.requestedCapabilities;
             // this._session.options = opts.options;
@@ -167,6 +170,8 @@ module.exports = class ExistingBrowser extends Browser {
                 originalSessionId: this.originalSessionId,
                 originalCaps: inspect(this.originalCaps, { depth: null }),
                 newCaps: inspect(this._session.capabilities, { depth: null }),
+                originalOpts: inspect(this.originalOpts, { depth: null }),
+                newOpts: inspect(this.newOpts, { depth: null }),
             });
             await this._session.switchToWindow(`CDwindow-${page.target()._targetId}`);
             puppeteer.disconnect();
@@ -272,6 +277,7 @@ module.exports = class ExistingBrowser extends Browser {
     _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
 
         const opts = this._getOptions({sessionId, sessionCaps, sessionOpts});
+        this.originalOpts = opts;
         return webdriverio.attach(opts);
     }
 

@@ -4,6 +4,8 @@ declare class ExistingBrowser extends Browser {
     constructor(config: any, id: any, version: any, emitter: any);
     originalSessionId: null;
     originalCaps: null;
+    originalOpts: null;
+    newOpts: null;
     _browserContext: null;
     _emitter: any;
     _camera: Camera;
