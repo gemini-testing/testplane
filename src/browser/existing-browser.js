@@ -13,6 +13,7 @@ const clientBridge = require("./client-bridge");
 const history = require("./history");
 const logger = require("../utils/logger");
 const dns = require("node:dns");
+const {inspect} = require("util");
 
 dns.setDefaultResultOrder("ipv4first"); //https://github.com/webdriverio/webdriverio/issues/8279
 
@@ -104,18 +105,18 @@ module.exports = class ExistingBrowser extends Browser {
         // first open the new page, then close the old pages, otherwise the session will close
         const page = await context.newPage();
 
-        // for (let page of currentPages) {
-        //     try {
-        //         await page.close();
-        //         const context = page.browserContext();
-        //         if (context.isIncognito()) {
-        //             await context.close();
-        //         }
-        //     } catch (e) {
-        //         console.error(e);
-        //         // assume already closed
-        //     }
-        // }
+        for (let page of currentPages) {
+            try {
+                await page.close();
+                const context = page.browserContext();
+                if (context.isIncognito()) {
+                    await context.close();
+                }
+            } catch (e) {
+                console.error(e);
+                // assume already closed
+            }
+        }
         // let found = false;
         // while (!found) {
         //     const handles = await this._session.getWindowHandles();
@@ -126,8 +127,20 @@ module.exports = class ExistingBrowser extends Browser {
         //         found = true;
         //     }
         // }
-        await this._session.switchToWindow(page.target()._targetId);
-        puppeteer.disconnect()
+        // try {
+        //     await this._session.switchToWindow(page.target()._targetId);
+        // } catch (e) {
+        //     console.error({
+        //         error: e, 
+        //         webdriverHandles: await this._session.getWindowHandles(), 
+        //         currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), 
+        //         sessionId: this.sessionId, 
+        //         originalSessionId: this.originalSessionId, 
+        //         originalCaps: inspect(this.originalCaps, {depth: null}), 
+        //         newCaps: this._session.capabilities
+        //     })
+        //     throw e;
+        // }
         // let switchedToNewPage = false;
         // for (const handle of await this._session.getWindowHandles()) {
         //     try {
@@ -144,10 +157,11 @@ module.exports = class ExistingBrowser extends Browser {
         //     throw new Error(`Error switching to new page`);
         // }
 
-        // const handles = await this._session.getWindowHandles();
+        const handles = await this._session.getWindowHandles();
         // console.log({handles});
-        // const [newWindow] = handles;
-        // await this._session.switchToWindow(newWindow);
+        const [newWindow] = handles;
+        await this._session.switchToWindow(newWindow);
+        puppeteer.disconnect()
     }
 
     markAsBroken() {
