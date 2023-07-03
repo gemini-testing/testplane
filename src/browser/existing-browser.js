@@ -54,7 +54,7 @@ module.exports = class ExistingBrowser extends Browser {
         return this;
     }
 
-    async getPuppeteer() {
+    async _getPuppeteer() {
         try {
             return await this._session.getPuppeteer();
         } catch (e) {
@@ -64,7 +64,7 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     async _cycleBrowserContext() {
-        const puppeteer = await this.getPuppeteer();
+        const puppeteer = await this._getPuppeteer();
         if (!puppeteer) {
             return;
         }

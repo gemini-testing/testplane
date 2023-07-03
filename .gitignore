@@ -1,5 +1,6 @@
 .DS_store
 .DS_Store
+build
 
 .idea
 .vscode
@@ -9,7 +10,6 @@
 .fuse*
 .project
 node_modules
-build
 artifacts
 npm-debug.log
 .editorconfig
