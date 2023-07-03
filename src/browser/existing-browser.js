@@ -18,7 +18,6 @@ dns.setDefaultResultOrder("ipv4first"); //https://github.com/webdriverio/webdriv
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
-
 module.exports = class ExistingBrowser extends Browser {
     static create(config, id, version, emitter) {
         return new this(config, id, version, emitter);
