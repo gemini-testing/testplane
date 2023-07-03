@@ -20,15 +20,9 @@ const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 
 module.exports = class ExistingBrowser extends Browser {
-    originalSessionId = null
-    originalCaps = null;
-    originalOpts = null;
-    newOpts = null;
     static create(config, id, version, emitter) {
         return new this(config, id, version, emitter);
     }
-
-    _browserContext = null;
 
     constructor(config, id, version, emitter) {
         super(config, id, version);
@@ -40,7 +34,6 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     async init({ sessionId, sessionCaps, sessionOpts } = {}, calibrator) {
-        this.originalSessionId = sessionId;
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
 
         this._addSteps();
@@ -59,7 +52,6 @@ module.exports = class ExistingBrowser extends Browser {
             await this._performCalibration(calibrator);
             await this._buildClientScripts();
         });
-        this.originalCaps = this._session.capabilities;
         return this;
     }
 
@@ -173,7 +165,7 @@ module.exports = class ExistingBrowser extends Browser {
         }, params);
     }
 
-    _getOptions({ sessionId, sessionCaps, sessionOpts = {} }) {
+    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps,
             requestedCapabilities: sessionOpts.capabilities,
@@ -189,14 +181,6 @@ module.exports = class ExistingBrowser extends Browser {
             capabilities: { ...sessionOpts.capabilities, ...sessionCaps },
             requestedCapabilities: sessionOpts.capabilities,
         };
-        // console.log({opts: JSON.stringify(opts)})
-        return opts;
-    }
-
-    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
-
-        const opts = this._getOptions({sessionId, sessionCaps, sessionOpts});
-        this.originalOpts = opts;
         return webdriverio.attach(opts);
     }
 

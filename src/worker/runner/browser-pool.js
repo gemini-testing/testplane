@@ -20,7 +20,6 @@ module.exports = class BrowserPool {
     }
 
     async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts }) {
-        const browserConfig = this._config.forBrowser(browserId);
         this._browsers[browserId] = this._browsers[browserId] || [];
 
         let browser = _.find(this._browsers[browserId], browser => {
@@ -30,17 +29,8 @@ module.exports = class BrowserPool {
         });
 
         try {
-            // if (browser) {
-            //     return await browser.reinit(sessionId, sessionOpts, sessionCaps);
-            // }
-
             browser = Browser.create(this._config, browserId, browserVersion, this._emitter);
             await browser.init({ sessionId, sessionCaps, sessionOpts }, this._calibrator);
-
-            // TODO: use caching browser pool from master for webdriver and basic for devtools
-            // if (browserConfig.automationProtocol !== DEVTOOLS_PROTOCOL) {
-            //     this._browsers[browserId].push(browser);
-            // }
 
             this._emitter.emit(WorkerEvents.NEW_BROWSER, browser.publicAPI, { browserId: browser.id, browserVersion });
 

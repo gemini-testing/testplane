@@ -2,11 +2,6 @@ export = ExistingBrowser;
 declare class ExistingBrowser extends Browser {
     static create(config: any, id: any, version: any, emitter: any): import("./existing-browser");
     constructor(config: any, id: any, version: any, emitter: any);
-    originalSessionId: null;
-    originalCaps: null;
-    originalOpts: null;
-    newOpts: null;
-    _browserContext: null;
     _emitter: any;
     _camera: Camera;
     _meta: any;
@@ -15,7 +10,6 @@ declare class ExistingBrowser extends Browser {
         sessionCaps: any;
         sessionOpts: any;
     } | undefined, calibrator: any): globalThis.Promise<import("./existing-browser")>;
-    reinit(sessionId: any, sessionOpts: any, sessionCaps: any): globalThis.Promise<import("./existing-browser")>;
     getPuppeteer(): globalThis.Promise<any>;
     _cycleBrowserContext(): globalThis.Promise<void>;
     markAsBroken(): void;
@@ -26,11 +20,6 @@ declare class ExistingBrowser extends Browser {
     injectScript(script: any): any;
     captureViewportImage(page: any, screenshotDelay: any): globalThis.Promise<import("../image")>;
     scrollBy(params: any): any;
-    _getOptions({ sessionId, sessionCaps, sessionOpts }: {
-        sessionId: any;
-        sessionCaps: any;
-        sessionOpts?: {} | undefined;
-    }): any;
     _attachSession({ sessionId, sessionCaps, sessionOpts }: {
         sessionId: any;
         sessionCaps: any;
