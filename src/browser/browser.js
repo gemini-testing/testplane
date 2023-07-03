@@ -102,10 +102,6 @@ module.exports = class Browser {
         return this.publicAPI.sessionId;
     }
 
-    set sessionId(id) {
-        this.publicAPI.sessionId = id;
-    }
-
     get config() {
         return this._config;
     }

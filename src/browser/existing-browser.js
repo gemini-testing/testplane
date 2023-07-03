@@ -44,18 +44,9 @@ module.exports = class ExistingBrowser extends Browser {
                 logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, e.stack);
             }
 
-            await this._prepareSession(sessionId);
+            await this._prepareSession();
             await this._performCalibration(calibrator);
             await this._buildClientScripts();
-        });
-
-        return this;
-    }
-
-    async reinit(sessionId, sessionOpts) {
-        await history.runGroup(this._callstackHistory, "hermione: reinit browser", async () => {
-            this._session.extendOptions(sessionOpts);
-            await this._prepareSession(sessionId);
         });
 
         return this;
@@ -68,7 +59,6 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     quit() {
-        this.sessionId = null;
         this._meta = this._initMeta();
         this._state = { isBroken: false };
     }
@@ -211,8 +201,7 @@ module.exports = class ExistingBrowser extends Browser {
         return this._config.baseUrl ? url.resolve(this._config.baseUrl, uri) : uri;
     }
 
-    async _prepareSession(sessionId) {
-        this._attach(sessionId);
+    async _prepareSession() {
         await this._setOrientation(this.config.orientation);
         await this._setWindowSize(this.config.windowSize);
     }
@@ -244,10 +233,6 @@ module.exports = class ExistingBrowser extends Browser {
         return clientBridge
             .build(this, { calibration: this._calibration })
             .then(clientBridge => (this._clientBridge = clientBridge));
-    }
-
-    _attach(sessionId) {
-        this.sessionId = sessionId;
     }
 
     _stubCommands() {
