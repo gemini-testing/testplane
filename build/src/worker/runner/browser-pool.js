@@ -24,15 +24,15 @@ module.exports = class BrowserPool {
                 : _.isNil(browser.sessionId);
         });
         try {
-            if (browser) {
-                return await browser.reinit(sessionId, sessionOpts, sessionCaps);
-            }
+            // if (browser) {
+            //     return await browser.reinit(sessionId, sessionOpts, sessionCaps);
+            // }
             browser = Browser.create(this._config, browserId, browserVersion, this._emitter);
             await browser.init({ sessionId, sessionCaps, sessionOpts }, this._calibrator);
             // TODO: use caching browser pool from master for webdriver and basic for devtools
-            if (browserConfig.automationProtocol !== DEVTOOLS_PROTOCOL) {
-                this._browsers[browserId].push(browser);
-            }
+            // if (browserConfig.automationProtocol !== DEVTOOLS_PROTOCOL) {
+            //     this._browsers[browserId].push(browser);
+            // }
             this._emitter.emit(WorkerEvents.NEW_BROWSER, browser.publicAPI, { browserId: browser.id, browserVersion });
             return browser;
         }
