@@ -9,6 +9,7 @@
 .fuse*
 .project
 node_modules
+build
 artifacts
 npm-debug.log
 .editorconfig

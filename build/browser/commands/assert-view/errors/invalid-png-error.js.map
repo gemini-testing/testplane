@@ -1,1 +1,0 @@
-{"version":3,"file":"invalid-png-error.js","sourceRoot":"","sources":["../../../../../src/browser/commands/assert-view/errors/invalid-png-error.js"],"names":[],"mappings":"AAAA,YAAY,CAAC;AAEb,MAAM,CAAC,OAAO,GAAG,MAAM,eAAgB,SAAQ,KAAK;IAChD,YAAY,OAAO;QACf,KAAK,EAAE,CAAC;QAER,IAAI,CAAC,IAAI,GAAG,IAAI,CAAC,WAAW,CAAC,IAAI,CAAC;QAClC,IAAI,CAAC,OAAO,GAAG,OAAO,CAAC;IAC3B,CAAC;CACJ,CAAC"}
