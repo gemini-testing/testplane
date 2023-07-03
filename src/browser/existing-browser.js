@@ -13,7 +13,6 @@ const clientBridge = require("./client-bridge");
 const history = require("./history");
 const logger = require("../utils/logger");
 const dns = require("node:dns");
-const {inspect} = require("util");
 
 dns.setDefaultResultOrder("ipv4first"); //https://github.com/webdriverio/webdriverio/issues/8279
 
@@ -64,28 +63,8 @@ module.exports = class ExistingBrowser extends Browser {
         return this;
     }
 
-    async reinit(sessionId, sessionOpts, sessionCaps) {
-        // console.log({sessionOpts: JSON.stringify(sessionOpts)})
-        await history.runGroup(this._callstackHistory, "hermione: reinit browser", async () => {
-            this._session.extendOptions(sessionOpts);
-            const opts = this._getOptions({sessionId, sessionCaps, sessionOpts});
-            this.newOpts = opts;
-            this._session.capabilities = opts.capabilities;
-            // this._session.requestedCapabilities = opts.requestedCapabilities;
-            // this._session.options = opts.options;
-            await this._prepareSession(sessionId);
-        });
-
-        return this;
-    }
-
     async getPuppeteer() {
         try {
-            // console.log("----getPuppeteer")
-            // console.log(this._session.getPuppeteer.toString())
-            // const puppeteer = await this._session.getPuppeteer();
-            // console.log(puppeteer.disconnect());
-            // console.log(puppeteer.isConnected());
             return await this._session.getPuppeteer();
         } catch (e) {
             // assuming browser does not support CDP
@@ -99,14 +78,10 @@ module.exports = class ExistingBrowser extends Browser {
             return;
         }
 
-        // console.log({puppeteer: JSON.stringify(puppeteer)})
-        // console.log(Object.getOwnPropertyNames(puppeteer));
-        // console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(puppeteer)));
-
         const currentPages = await puppeteer.pages();
         const context = await puppeteer.createIncognitoBrowserContext();
         // first open the new page, then close the old pages, otherwise the session will close
-        const page = await context.newPage();
+        await context.newPage();
 
         for (let page of currentPages) {
             try {
@@ -116,69 +91,13 @@ module.exports = class ExistingBrowser extends Browser {
                     await context.close();
                 }
             } catch (e) {
-                console.error(e);
                 // assume already closed
+                console.error(`Can't close page, ignoring error: ${e}`);
             }
         }
-        // let found = false;
-        // while (!found) {
-        //     const handles = await this._session.getWindowHandles();
-        //     console.log({handles, currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), sessionId: this.sessionId, originalSessionId: this.originalSessionId, originalCaps: inspect(this.originalCaps, {depth: null}), newCaps: this._session.capabilities});
-        //     console.log(page.target()._targetId)
-        //     console.log({wsend: puppeteer.wsEndpoint(), sess: this.sessionId})
-        //     if (handles.includes(page.target()._targetId)) {
-        //         found = true;
-        //     }
-        // }
-        // try {
-        //     await this._session.switchToWindow(page.target()._targetId);
-        // } catch (e) {
-            // console.error({
-            //     error: e, 
-            //     webdriverHandles: await this._session.getWindowHandles(), 
-            //     currentPages: (await puppeteer.pages()).map(page => page.target()._targetId), 
-            //     sessionId: this.sessionId, 
-            //     originalSessionId: this.originalSessionId, 
-            //     originalCaps: inspect(this.originalCaps, {depth: null}), 
-            //     newCaps: this._session.capabilities
-            // })
-            // throw e;
-        // }
-        // let switchedToNewPage = false;
-        // for (const handle of await this._session.getWindowHandles()) {
-        //     try {
-        //         await this._session.switchToWindow(handle);
-        //         if (await this._session.getUrl() === url) {
-        //             switchedToNewPage = true;
-        //         }
-        //     } catch (e) {
-        //         // ignore
-        //     }
-        // }
 
-        // if (!switchedToNewPage) {
-        //     throw new Error(`Error switching to new page`);
-        // }
-
-        const handles = await this._session.getWindowHandles();
-        const newWindow = handles.find(h => h.includes(page.target()._targetId))
-        if (!newWindow) {
-            console.error({
-                webdriverHandles: await this._session.getWindowHandles(),
-                puppeteerPages: (await puppeteer.pages()).map(page => page.target()._targetId),
-                sessionId: this.sessionId,
-                originalSessionId: this.originalSessionId,
-                originalCaps: inspect(this.originalCaps, { depth: null }),
-                newCaps: inspect(this._session.capabilities, { depth: null }),
-                originalOpts: inspect(this.originalOpts, { depth: null }),
-                newOpts: inspect(this.newOpts, { depth: null }),
-            });
-            await this._session.switchToWindow(`CDwindow-${page.target()._targetId}`);
-            puppeteer.disconnect();
-            return;
-        }
+        const [newWindow] = await this._session.getWindowHandles();
         await this._session.switchToWindow(newWindow);
-        puppeteer.disconnect()
     }
 
     markAsBroken() {
