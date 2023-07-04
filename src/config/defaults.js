@@ -27,6 +27,12 @@ module.exports = {
         captureElementFromTop: true,
         allowViewportOverflow: false,
     },
+    openAndWaitOpts: {
+        waitNetworkIdle: true,
+        waitNetworkIdleTimeout: 500,
+        failOnNetworkError: true,
+        ignoreNetworkErrorsPatterns: [],
+    },
     calibrate: false,
     screenshotMode: "auto",
     screenshotDelay: 0,

@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const EventEmitter = require("events");
 const NewBrowser = require("src/browser/new-browser");
 const ExistingBrowser = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
@@ -55,6 +56,16 @@ exports.mkExistingBrowser_ = (opts, browser = "browser", browserVersion, emitter
     return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter);
 };
 
+exports.mkMockStub_ = () => {
+    const eventEmitter = new EventEmitter();
+
+    return {
+        on: sinon.spy(eventEmitter, "on"),
+        emit: sinon.spy(eventEmitter, "emit"),
+        restore: sinon.stub().resolves(),
+    };
+};
+
 exports.mkSessionStub_ = () => {
     const session = {};
     const element = {
@@ -83,6 +94,7 @@ exports.mkSessionStub_ = () => {
     session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
     session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves({});
     session.$ = sinon.stub().named("$").resolves(element);
+    session.mock = sinon.stub().named("mock").resolves(exports.mkMockStub_());
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? element : session;
