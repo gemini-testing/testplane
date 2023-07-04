@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [5.6.4](https://github.com/gemini-testing/hermione/compare/v5.6.3...v5.6.4) (2023-07-04)
+
+
+### Bug Fixes
+
+* do not reinit cached browser session in worker ([fd2a21e](https://github.com/gemini-testing/hermione/commit/fd2a21ed70f97181cabd285ad849b04a710b0c5a))
+
 ### [5.6.3](https://github.com/gemini-testing/hermione/compare/v5.6.2...v5.6.3) (2023-04-06)
 
 
