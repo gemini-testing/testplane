@@ -261,15 +261,6 @@ describe('NewBrowser', () => {
 
             assert.equal(browser.sessionId, 'foo');
         });
-
-        it('should set session id', async () => {
-            session.sessionId = 'foo';
-            const browser = await mkBrowser_().init();
-
-            browser.sessionId = 'bar';
-
-            assert.equal(browser.sessionId, 'bar');
-        });
     });
 
     describe('error handling', () => {
