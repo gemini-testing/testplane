@@ -375,12 +375,6 @@ describe('ExistingBrowser', () => {
             assert.calledOnce(logger.warn);
         });
 
-        it('should attach a browser to a provided session', async () => {
-            const browser = await initBrowser_(mkBrowser_(), {sessionId: '100-500'});
-
-            assert.equal(browser.sessionId, '100-500');
-        });
-
         describe('set browser orientation', () => {
             it('should not set orientation if it is not specified in a config', async () => {
                 await initBrowser_();
@@ -444,10 +438,10 @@ describe('ExistingBrowser', () => {
             it('should perform calibration after attaching of a session', async () => {
                 const browser = mkBrowser_({calibrate: true});
 
-                await initBrowser_(browser, {sessionId: '100-500'}, calibrator);
+                await initBrowser_(browser, {}, calibrator);
 
                 const calibratorArg = calibrator.calibrate.lastCall.args[0];
-                assert.equal(calibratorArg.sessionId, '100-500');
+                assert.equal(calibratorArg, browser);
             });
         });
 
@@ -459,80 +453,6 @@ describe('ExistingBrowser', () => {
             await initBrowser_(browser, {}, calibrator);
 
             assert.calledOnceWith(clientBridge.build, browser, {calibration: {foo: 'bar'}});
-        });
-    });
-
-    describe('reinit', () => {
-        it('should attach a browser to a provided session', async () => {
-            const browser = await initBrowser_();
-
-            await browser.reinit('100-500');
-
-            assert.equal(browser.sessionId, '100-500');
-        });
-
-        it('should redefine session options', async () => {
-            const browser = await initBrowser_(mkBrowser_(), {sessionOpts: {foo: 'bar'}});
-
-            await browser.reinit('100-500', {bar: 'foo'});
-
-            assert.deepEqual(browser.publicAPI.options, {bar: 'foo'});
-        });
-
-        describe('set browser orientation', () => {
-            it('should not set orientation if it is not specified in a config', async () => {
-                const browser = await initBrowser_();
-
-                await browser.reinit();
-
-                assert.notCalled(session.setOrientation);
-            });
-
-            it('should set orientation again after init', async () => {
-                const browser = mkBrowser_({orientation: 'portrait'});
-                await initBrowser_(browser);
-
-                await browser.reinit();
-
-                assert.calledTwice(session.setOrientation);
-            });
-
-            it('should set orientation on reinit with specified value from config', async () => {
-                const browser = mkBrowser_({orientation: 'portrait'});
-                await initBrowser_(browser);
-
-                await browser.reinit();
-
-                assert.calledWith(session.setOrientation.secondCall, 'portrait');
-            });
-        });
-
-        describe('set winidow size', () => {
-            it('should not set window size if it is not specified in a config', async () => {
-                const browser = await initBrowser_();
-
-                await browser.reinit();
-
-                assert.notCalled(session.setWindowSize);
-            });
-
-            it('should set window size again after init', async () => {
-                const browser = mkBrowser_({windowSize: {width: 100500, height: 500100}});
-                await initBrowser_(browser);
-
-                await browser.reinit();
-
-                assert.calledTwice(session.setWindowSize);
-            });
-
-            it('should set window size on reinit with specified values from config', async () => {
-                const browser = mkBrowser_({windowSize: {width: 100500, height: 500100}});
-                await initBrowser_(browser);
-
-                await browser.reinit();
-
-                assert.calledWith(session.setWindowSize.secondCall, 100500, 500100);
-            });
         });
     });
 
