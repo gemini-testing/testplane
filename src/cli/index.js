@@ -17,6 +17,11 @@ process.on("uncaughtException", err => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
+    if (reason && reason.name === "ProtocolError") {
+        logger.warn(`Unhandled Rejection "${reason}" in hermione:master:${process.pid} was ignored`);
+        return;
+    }
+
     const error = `Unhandled Rejection in hermione:master:${process.pid}:\nPromise: ${JSON.stringify(
         p,
     )}\nReason: ${reason}`;
