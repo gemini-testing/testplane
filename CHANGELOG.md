@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.2](https://github.com/gemini-testing/hermione/compare/v7.1.1...v7.1.2) (2023-08-04)
+
+
+### Bug Fixes
+
+* ignore protocol error ([0955098](https://github.com/gemini-testing/hermione/commit/09550981fcd303eda1fba0d1ba49c273f4dedf0a))
+
 ### [7.1.1](https://github.com/gemini-testing/hermione/compare/v7.1.0...v7.1.1) (2023-07-04)
 
 
