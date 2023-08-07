@@ -10,19 +10,27 @@ module.exports = class ImageDiffError extends BaseStateError {
 
     static fromObject(data) {
         const { diffBounds, diffClusters } = data;
-        return new ImageDiffError(data.stateName, data.currImg, data.refImg, data.diffOpts, {
-            diffBounds,
-            diffClusters,
-        });
+        return new ImageDiffError(
+            data.stateName,
+            data.currImg,
+            data.refImg,
+            data.diffOpts,
+            {
+                diffBounds,
+                diffClusters,
+            },
+            data.diffBuffer,
+        );
     }
 
-    constructor(stateName, currImg, refImg, diffOpts, { diffBounds, diffClusters } = {}) {
+    constructor(stateName, currImg, refImg, diffOpts, { diffBounds, diffClusters } = {}, diffBuffer) {
         super(stateName, currImg, refImg);
 
         this.message = `images are different for "${stateName}" state`;
         this.diffOpts = diffOpts;
         this.diffBounds = diffBounds;
         this.diffClusters = diffClusters;
+        this.diffBuffer = diffBuffer;
     }
 
     saveDiffTo(diffPath) {

@@ -90,14 +90,24 @@ module.exports = browser => {
             equal,
             diffBounds,
             diffClusters,
+            diffImage,
             metaInfo = {},
         } = await Image.compare(refBuffer, currBuffer, imageCompareOpts);
         Object.assign(refImg, metaInfo.refImg);
 
         if (!equal) {
+            const diffBuffer = await diffImage.createBuffer("png");
             const diffAreas = { diffBounds, diffClusters };
             const { tolerance, antialiasingTolerance } = opts;
-            const imageDiffOpts = { tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config, emitter };
+            const imageDiffOpts = {
+                tolerance,
+                antialiasingTolerance,
+                canHaveCaret,
+                diffAreas,
+                config,
+                emitter,
+                diffBuffer,
+            };
 
             await fs.outputFile(currImg.path, currBuffer);
 
