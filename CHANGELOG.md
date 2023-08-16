@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.3](https://github.com/gemini-testing/hermione/compare/v7.1.2...v7.1.3) (2023-08-16)
+
+
+### Bug Fixes
+
+* use exact version of webdriverio@8.13.4 ([591d6e0](https://github.com/gemini-testing/hermione/commit/591d6e077477a612551fd668bb7a9d8bb556cb49))
+
 ### [7.1.2](https://github.com/gemini-testing/hermione/compare/v7.1.1...v7.1.2) (2023-08-04)
 
 
