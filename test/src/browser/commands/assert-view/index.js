@@ -74,7 +74,7 @@ describe("assertView command", () => {
 
     beforeEach(() => {
         sandbox.stub(Image, "create").returns(Object.create(Image.prototype));
-        sandbox.stub(Image, "compare").resolves(true);
+        sandbox.stub(Image, "compare").resolves({ diffImage: { createBuffer: sandbox.stub() } });
         sandbox.stub(Image.prototype, "getSize");
 
         sandbox.stub(fs, "readFileSync");
@@ -494,7 +494,7 @@ describe("assertView command", () => {
 
             describe("image compare", () => {
                 it("should add opts from runtime config to temp", async () => {
-                    Image.compare.resolves({ equal: true });
+                    Image.compare.resolves({ equal: true, diffImage: { createBuffer: sandbox.stub() } });
                     RuntimeConfig.getInstance.returns({ tempOpts: { some: "opts" } });
                     const browser = await initBrowser_();
 
@@ -506,7 +506,7 @@ describe("assertView command", () => {
                 it("should compare a current image with a reference", async () => {
                     const config = mkConfig_({ getScreenshotPath: () => "/ref/path" });
                     const image = stubImage_();
-                    Image.compare.resolves({ equal: true });
+                    Image.compare.resolves({ equal: true, diffImage: { createBuffer: sandbox.stub() } });
                     temp.path.returns("/curr/path");
                     fs.readFile.withArgs("/ref/path").resolves("refPngBuffer");
                     ScreenShooter.prototype.capture.resolves(image);
@@ -525,7 +525,9 @@ describe("assertView command", () => {
                     });
                     fs.readFile.withArgs("/ref/path").resolves("refPngBuffer");
                     image.toPngBuffer.resolves("currPngBuffer");
-                    Image.compare.withArgs("refPngBuffer", "currPngBuffer").resolves({ equal: true });
+                    Image.compare
+                        .withArgs("refPngBuffer", "currPngBuffer")
+                        .resolves({ equal: true, diffImage: { createBuffer: sandbox.stub() } });
                     ScreenShooter.prototype.capture.resolves(image);
 
                     await fn(browser);
@@ -589,7 +591,7 @@ describe("assertView command", () => {
 
                 describe("if images are not equal", () => {
                     beforeEach(() => {
-                        Image.compare.resolves({ equal: false });
+                        Image.compare.resolves({ equal: false, diffImage: { createBuffer: sandbox.stub() } });
                     });
 
                     describe("assert refs", () => {
@@ -613,6 +615,7 @@ describe("assertView command", () => {
                             Image.compare.resolves({
                                 equal: false,
                                 metaInfo: { refImg: { size: { width: 300, height: 400 } } },
+                                diffImage: { createBuffer: sandbox.stub() },
                             });
 
                             await fn(browser, "state");
@@ -664,7 +667,10 @@ describe("assertView command", () => {
                             });
 
                             it("should pass diff bounds to error", async () => {
-                                Image.compare.resolves({ diffBounds: { left: 0, top: 0, right: 10, bottom: 10 } });
+                                Image.compare.resolves({
+                                    diffBounds: { left: 0, top: 0, right: 10, bottom: 10 },
+                                    diffImage: { createBuffer: sandbox.stub() },
+                                });
                                 const browser = await initBrowser_();
 
                                 await fn(browser);
@@ -675,7 +681,10 @@ describe("assertView command", () => {
                             });
 
                             it("should pass diff clusters to error", async () => {
-                                Image.compare.resolves({ diffClusters: [{ left: 0, top: 0, right: 10, bottom: 10 }] });
+                                Image.compare.resolves({
+                                    diffClusters: [{ left: 0, top: 0, right: 10, bottom: 10 }],
+                                    diffImage: { createBuffer: sandbox.stub() },
+                                });
                                 const browser = await initBrowser_();
 
                                 await fn(browser);
