@@ -239,7 +239,7 @@ declare namespace Hermione {
     }
 
     export interface Suite extends Hermione.MochaSuite {
-        id(): string;
+        id: string;
         browserId: string;
         history: History;
     }
@@ -274,7 +274,7 @@ declare namespace Hermione {
     }
 
     export interface Test extends Hermione.MochaTest {
-        id(): string;
+        id: string;
         browserId: string;
         sessionId: string;
     }
