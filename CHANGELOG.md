@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.4](https://github.com/gemini-testing/hermione/compare/v7.1.3...v7.1.4) (2023-08-22)
+
+
+### Bug Fixes
+
+* fix test id to be property and not a method in typings ([93e2006](https://github.com/gemini-testing/hermione/commit/93e200678e74d166ec534a51e367cd170d56a658))
+
 ### [7.1.3](https://github.com/gemini-testing/hermione/compare/v7.1.2...v7.1.3) (2023-08-16)
 
 
