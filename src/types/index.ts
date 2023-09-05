@@ -12,6 +12,7 @@ import { SkipController } from "../test-reader/controllers/skip-controller";
 import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
 import { WorkerProcess } from "../utils/worker-process";
 import { BaseHermione } from "../base-hermione";
+import { CoordBounds, LooksSameOptions } from "looks-same";
 
 export { Suite as RunnerSuite, Test as RunnerTest } from "mocha";
 
@@ -31,15 +32,25 @@ export interface BrowserInfo {
 
 export type AsyncSessionEventCallback = (browser: Browser, browserInfo: BrowserInfo) => Promise<void> | void;
 
-export interface TestError extends Error {
-    screenshot?: {
-        base64: string;
-    };
-}
-
 export interface ImageSize {
     width: number;
     height: number;
+}
+
+export interface ImageBase64 {
+    base64: string;
+    size: ImageSize;
+}
+
+export interface ErrorDetails {
+    title: string;
+    data?: unknown;
+    filePath: string;
+}
+
+export interface TestError extends Error {
+    screenshot?: ImageBase64;
+    details: ErrorDetails;
 }
 
 export interface ImageInfo {
@@ -47,10 +58,39 @@ export interface ImageInfo {
     size: ImageSize;
 }
 
-export interface AssertViewResultsSuccess {
-    stateName: string;
+export interface AssertViewResultSuccess {
     refImg: ImageInfo;
+    stateName: string;
 }
+
+export interface DiffOptions extends LooksSameOptions {
+    current: string;
+    reference: string;
+    diffColor: string;
+}
+
+export interface AssertViewResultDiff {
+    currImg: ImageInfo;
+    diffBuffer?: ArrayBuffer;
+    diffClusters: CoordBounds[];
+    diffOpts: DiffOptions;
+    message: string;
+    name: "ImageDiffError";
+    refImg: ImageInfo;
+    stack: string;
+    stateName: string;
+}
+
+export interface AssertViewResultNoRefImage {
+    currImg: ImageInfo;
+    message: string;
+    name: "NoRefImageError";
+    refImg: ImageInfo;
+    stack: string;
+    stateName: string;
+}
+
+export type AssertViewResult = AssertViewResultSuccess | AssertViewResultDiff | AssertViewResultNoRefImage;
 
 export interface CommandHistory {
     /** Name: command name */
@@ -70,15 +110,17 @@ export interface CommandHistory {
 }
 
 export interface TestResult extends Test {
-    startTime: number;
+    assertViewResults: Array<AssertViewResult>;
+    description?: string;
     duration: number;
-    assertViewResults: Array<AssertViewResultsSuccess>;
-    meta: { [name: string]: unknown };
+    err?: TestError;
     hermioneCtx: {
-        assertViewResults: Array<AssertViewResultsSuccess>;
+        assertViewResults: Array<AssertViewResult>;
     };
     history: CommandHistory;
-    err?: TestError;
+    meta: { [name: string]: unknown };
+    sessionId: string;
+    startTime: number;
 }
 
 export interface TestResultWithRetries extends TestResult {
