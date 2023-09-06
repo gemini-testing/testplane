@@ -1,6 +1,6 @@
 {
   "name": "hermione",
-  "version": "8.0.0-beta.1",
+  "version": "8.0.0-beta.2",
   "description": "Tests framework based on mocha and wdio",
   "main": "build/src/index.js",
   "files": [

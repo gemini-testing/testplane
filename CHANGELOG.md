@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.0.0-beta.2](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.1...v8.0.0-beta.2) (2023-09-06)
+
+
+### Bug Fixes
+
+* export TestResult and Suite types ([#786](https://github.com/gemini-testing/hermione/issues/786)) ([0d24037](https://github.com/gemini-testing/hermione/commit/0d2403764d5f292826e01a061c019a8b32bb39f7))
+* ignore ProtocolError unhandled rejections ([bf80946](https://github.com/gemini-testing/hermione/commit/bf8094658e2469b3e5cf9313b584c9d1e4d324b3))
+* system.debug config field ([4f3e01c](https://github.com/gemini-testing/hermione/commit/4f3e01cf5c61021e13b7f70b2041fe938dfe6929))
+* use exact version of webdriverio@8.13.4 ([f7ea267](https://github.com/gemini-testing/hermione/commit/f7ea267decebc00397276d999694532bb2aabfa4))
+
 ## [8.0.0-beta.1](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.0...v8.0.0-beta.1) (2023-07-04)
 
 
