@@ -240,6 +240,14 @@ function buildBrowserOptions(defaultFactory, extra) {
             },
         }),
 
+        openAndWaitOpts: option({
+            defaultValue: defaultFactory("openAndWaitOpts"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "openAndWaitOpts"),
+            map: value => ({ ...defaults.openAndWaitOpts, ...value }),
+        }),
+
         meta: options.optionalObject("meta"),
 
         windowSize: option({
