@@ -159,6 +159,7 @@ module.exports = class Image {
             ignoreCaret: opts.canHaveCaret,
             pixelRatio: opts.pixelRatio,
             ...opts.compareOpts,
+            createDiffImage: true,
         };
         ["tolerance", "antialiasingTolerance"].forEach(option => {
             if (option in opts) {

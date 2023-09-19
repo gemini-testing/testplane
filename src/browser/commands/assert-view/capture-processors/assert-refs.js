@@ -9,7 +9,7 @@ exports.handleNoRefImage = (currImg, refImg, state) => {
 };
 
 exports.handleImageDiff = (currImg, refImg, state, opts) => {
-    const { tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config } = opts;
+    const { tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config, diffBuffer } = opts;
     const {
         buildDiffOpts,
         system: { diffColor },
@@ -25,5 +25,5 @@ exports.handleImageDiff = (currImg, refImg, state, opts) => {
         ...buildDiffOpts,
     };
 
-    return Promise.reject(ImageDiffError.create(state, currImg, refImg, diffOpts, diffAreas));
+    return Promise.reject(ImageDiffError.create(state, currImg, refImg, diffOpts, diffAreas, diffBuffer));
 };

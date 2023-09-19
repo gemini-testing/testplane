@@ -277,6 +277,7 @@ describe("Image", () => {
             tolerance: 250,
             antialiasingTolerance: 100500,
             stopOnFirstFail: true,
+            createDiffImage: true,
         });
     });
 
