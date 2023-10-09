@@ -1160,8 +1160,8 @@ describe("config browser-options", () => {
         });
     }
 
-    ["calibrate", "compositeImage", "resetCursor", "strictTestsOrder", "waitOrientationChange"].forEach(option =>
-        describe(option, () => testBooleanOption(option)),
+    ["calibrate", "compositeImage", "resetCursor", "strictTestsOrder", "waitOrientationChange", "isolation"].forEach(
+        option => describe(option, () => testBooleanOption(option)),
     );
 
     describe("saveHistoryMode", () => {

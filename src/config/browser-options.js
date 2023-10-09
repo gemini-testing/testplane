@@ -311,5 +311,6 @@ function buildBrowserOptions(defaultFactory, extra) {
         key: options.optionalString("key"),
         region: options.optionalString("region"),
         headless: options.optionalBoolean("headless"),
+        isolation: options.boolean("isolation"),
     });
 }
