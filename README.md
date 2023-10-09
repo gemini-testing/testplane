@@ -88,6 +88,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [key](#key)
     - [region](#region)
     - [headless](#headless)
+    - [isolation](#isolation)
   - [system](#system)
     - [debug](#debug)
     - [mochaOpts](#mochaopts)
@@ -841,6 +842,7 @@ Option name               | Description
 `key`                     | Cloud service access key or secret key. Default value is `null`.
 `region`                  | Ability to choose different datacenters for run in cloud service. Default value is `null`.
 `headless`                | Ability to run headless browser in cloud service. Default value is `null`.
+`isolation`               | Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). Default value is `false`.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -1104,6 +1106,9 @@ Ability to choose different datacenters for run in cloud service. Default value 
 
 ####  headless
 Ability to run headless browser in cloud service. Default value is `null`.
+
+####  isolation
+Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `false`.
 
 ### system
 

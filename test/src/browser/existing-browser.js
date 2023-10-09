@@ -11,8 +11,16 @@ const Camera = require("src/browser/camera");
 const clientBridge = require("src/browser/client-bridge");
 const logger = require("src/utils/logger");
 const history = require("src/browser/history");
-const { SAVE_HISTORY_MODE } = require("src/constants/config");
-const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("./utils");
+const { SAVE_HISTORY_MODE, WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } = require("src/constants/config");
+const { MIN_CHROME_VERSION_SUPPORT_ISOLATION } = require("src/constants/browser");
+const {
+    mkExistingBrowser_: mkBrowser_,
+    mkSessionStub_,
+    mkCDPStub_,
+    mkCDPBrowserCtx_,
+    mkCDPPage_,
+    mkCDPTarget_,
+} = require("./utils");
 
 describe("ExistingBrowser", () => {
     const sandbox = sinon.sandbox.create();
@@ -387,6 +395,156 @@ describe("ExistingBrowser", () => {
                 await initBrowser_();
 
                 assert.calledWith(session.overwriteCommand, "setOrientation");
+            });
+        });
+
+        describe("perform isolation", () => {
+            let cdp, incognitoBrowserCtx, incognitoPage, incognitoTarget;
+
+            beforeEach(() => {
+                incognitoTarget = mkCDPTarget_();
+                incognitoPage = mkCDPPage_();
+                incognitoPage.target.returns(incognitoTarget);
+
+                incognitoBrowserCtx = mkCDPBrowserCtx_();
+                incognitoBrowserCtx.newPage.resolves(incognitoPage);
+                incognitoBrowserCtx.isIncognito.returns(true);
+
+                cdp = mkCDPStub_();
+                cdp.createIncognitoBrowserContext.resolves(incognitoBrowserCtx);
+
+                session.getPuppeteer.resolves(cdp);
+            });
+
+            describe("should do nothing if", () => {
+                it("'isolation' option is not specified", async () => {
+                    await initBrowser_(mkBrowser_({ isolation: false }));
+
+                    assert.notCalled(session.getPuppeteer);
+                    assert.notCalled(logger.warn);
+                });
+
+                it("test wasn't run in chrome", async () => {
+                    const sessionCaps = { browserName: "firefox", browserVersion: "104.0" };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                    assert.notCalled(session.getPuppeteer);
+                });
+
+                it(`test wasn't run in chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} or higher`, async () => {
+                    const sessionCaps = { browserName: "chrome", browserVersion: "90.0" };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                    assert.notCalled(session.getPuppeteer);
+                });
+            });
+
+            describe("should warn that isolation doesn't work in", () => {
+                it("chrome browser (w3c)", async () => {
+                    const sessionCaps = { browserName: "chrome", browserVersion: "90.0" };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                    assert.calledOnceWith(
+                        logger.warn,
+                        `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
+                            "but got chrome@90.0",
+                    );
+                });
+
+                it("chrome browser (jsonwp)", async () => {
+                    const sessionCaps = { browserName: "chrome", version: "70.0" };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                    assert.calledOnceWith(
+                        logger.warn,
+                        `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
+                            "but got chrome@70.0",
+                    );
+                });
+            });
+
+            it("should create incognito browser context", async () => {
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.calledOnceWithExactly(cdp.createIncognitoBrowserContext);
+            });
+
+            it("should get current browser contexts before create incognito", async () => {
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.callOrder(cdp.browserContexts, cdp.createIncognitoBrowserContext);
+            });
+
+            it("should create new page inside incognito browser context", async () => {
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.calledOnceWithExactly(incognitoBrowserCtx.newPage);
+            });
+
+            describe(`in "${WEBDRIVER_PROTOCOL}" protocol`, () => {
+                it("should switch to incognito window", async () => {
+                    incognitoTarget._targetId = "456";
+                    session.getWindowHandles.resolves(["window_123", "window_456", "window_789"]);
+
+                    const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+                    const sessionOpts = { automationProtocol: WEBDRIVER_PROTOCOL };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
+
+                    assert.calledOnceWith(session.switchToWindow, "window_456");
+                    assert.callOrder(incognitoBrowserCtx.newPage, session.getWindowHandles);
+                });
+            });
+
+            describe(`in "${DEVTOOLS_PROTOCOL}" protocol`, () => {
+                it("should not switch to incognito window", async () => {
+                    const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+                    const sessionOpts = { automationProtocol: DEVTOOLS_PROTOCOL };
+
+                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
+
+                    assert.notCalled(session.getWindowHandles);
+                    assert.notCalled(session.switchToWindow);
+                });
+            });
+
+            it("should close pages in default browser context", async () => {
+                const defaultBrowserCtx = mkCDPBrowserCtx_();
+                const page1 = mkCDPPage_();
+                const page2 = mkCDPPage_();
+                defaultBrowserCtx.pages.resolves([page1, page2]);
+
+                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.calledOnceWithExactly(page1.close);
+                assert.calledOnceWithExactly(page2.close);
+                assert.notCalled(incognitoPage.close);
+            });
+
+            it("should close incognito browser context", async () => {
+                const defaultBrowserCtx = mkCDPBrowserCtx_();
+                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.calledOnceWithExactly(incognitoBrowserCtx.close);
+                assert.notCalled(defaultBrowserCtx.close);
             });
         });
 
