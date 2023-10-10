@@ -54,6 +54,16 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
      * @defaultValue `undefined`
      */
     selectorToScroll?: string;
+    /**
+     * Ability to disable animations and transitions while making a screenshot
+     *
+     * @remarks
+     * Usefull when you capture screenshot of a page, having animations and transitions.
+     * Iframe animations are only disabled when using webdriver protocol.
+     *
+     * @defaultValue `true`
+     */
+    disableAnimation?: boolean;
 }
 
 export type AssertViewCommand = (state: string, selectors: string | string[], opts?: AssertViewOpts) => Promise<void>;

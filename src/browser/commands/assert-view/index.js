@@ -17,7 +17,15 @@ const InvalidPngError = require("./errors/invalid-png-error");
 module.exports = browser => {
     const screenShooter = ScreenShooter.create(browser);
     const { publicAPI: session, config } = browser;
-    const { assertViewOpts, compareOpts, compositeImage, screenshotDelay, tolerance, antialiasingTolerance } = config;
+    const {
+        assertViewOpts,
+        compareOpts,
+        compositeImage,
+        screenshotDelay,
+        tolerance,
+        antialiasingTolerance,
+        disableAnimation,
+    } = config;
 
     const { handleNoRefImage, handleImageDiff } = getCaptureProcessors();
 
@@ -27,6 +35,7 @@ module.exports = browser => {
             screenshotDelay,
             tolerance,
             antialiasingTolerance,
+            disableAnimation,
         });
 
         const { hermioneCtx } = session.executionContext;
@@ -44,6 +53,7 @@ module.exports = browser => {
             allowViewportOverflow: opts.allowViewportOverflow,
             captureElementFromTop: opts.captureElementFromTop,
             selectorToScroll: opts.selectorToScroll,
+            disableAnimation: opts.disableAnimation,
         });
 
         const { tempOpts } = RuntimeConfig.getInstance();
@@ -55,7 +65,9 @@ module.exports = browser => {
             "screenshotDelay",
             "selectorToScroll",
         ]);
-        const currImgInst = await screenShooter.capture(page, screenshoterOpts);
+        const currImgInst = await screenShooter
+            .capture(page, screenshoterOpts)
+            .finally(() => browser.cleanupScreenshot(opts));
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
