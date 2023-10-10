@@ -226,6 +226,8 @@ function buildBrowserOptions(defaultFactory, extra) {
             validate: value => utils.assertNonNegativeNumber(value, "antialiasingTolerance"),
         }),
 
+        disableAnimation: options.boolean("disableAnimation"),
+
         compareOpts: options.optionalObject("compareOpts"),
 
         buildDiffOpts: options.optionalObject("buildDiffOpts"),

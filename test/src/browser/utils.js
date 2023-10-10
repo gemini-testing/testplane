@@ -58,10 +58,13 @@ exports.mkExistingBrowser_ = (opts, browser = "browser", browserVersion, emitter
 
 exports.mkSessionStub_ = () => {
     const session = {};
-    const element = {
+    const wdioElement = {
         selector: ".selector",
         click: sinon.stub().named("click").resolves(),
         waitForExist: sinon.stub().named("waitForExist").resolves(),
+    };
+    const wdElement = {
+        "element-6066-11e4-a52e-4f735466cecf": "95777D6590AF653A2FD8EB0ADD20B333_element_1",
     };
 
     session.sessionId = "1234567890";
@@ -83,19 +86,22 @@ exports.mkSessionStub_ = () => {
     session.setTimeout = sinon.stub().named("setTimeout").resolves();
     session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
     session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves(exports.mkCDPStub_());
-    session.$ = sinon.stub().named("$").resolves(element);
+    session.$ = sinon.stub().named("$").resolves(wdioElement);
     session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
     session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
+    session.findElements = sinon.stub().named("findElements").resolves([wdElement]);
+    session.switchToFrame = sinon.stub().named("switchToFrame").resolves();
+    session.switchToParentFrame = sinon.stub().named("switchToParentFrame").resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
-        const target = isElement ? element : session;
+        const target = isElement ? wdioElement : session;
 
         target[name] = command.bind(target);
         sinon.spy(target, name);
     });
 
     session.overwriteCommand = sinon.stub().callsFake((name, command, isElement) => {
-        const target = isElement ? element : session;
+        const target = isElement ? wdioElement : session;
 
         target[name] = command.bind(target, target[name]);
         sinon.spy(target, name);

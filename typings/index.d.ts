@@ -496,6 +496,16 @@ declare namespace Hermione {
          * @defaultValue `false`
          */
         allowViewportOverflow: boolean;
+        /**
+         * Ability to disable animations and transitions while making a screenshot
+         *
+         * @remarks
+         * Usefull when you capture screenshot of a page, having animations and transitions.
+         * Iframe animations are only disabled when using webdriver protocol.
+         *
+         * @defaultValue `false`
+         */
+        disableAnimation?: boolean;
     }
 
     export interface ExpectOptsConfig {
