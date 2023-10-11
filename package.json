@@ -62,7 +62,7 @@
     "glob-extra": "^5.0.2",
     "inherit": "^2.2.2",
     "lodash": "^4.17.21",
-    "looks-same": "^8.2.3",
+    "looks-same": "^8.2.4",
     "micromatch": "^4.0.5",
     "mocha": "^10.2.0",
     "plugins-loader": "^1.2.0",
