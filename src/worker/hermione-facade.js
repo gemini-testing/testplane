@@ -6,6 +6,7 @@ const Promise = require("bluebird");
 const debug = require("debug")(`hermione:worker:${process.pid}`);
 const ipc = require("../utils/ipc");
 const { MASTER_INIT, MASTER_SYNC_CONFIG, WORKER_INIT, WORKER_SYNC_CONFIG } = require("../constants/process-messages");
+const { requireModule } = require("../utils/module");
 
 module.exports = class HermioneFacade {
     static create() {
@@ -45,15 +46,21 @@ module.exports = class HermioneFacade {
 
             ipc.on(MASTER_INIT, ({ configPath, runtimeConfig } = {}) => {
                 try {
+                    const promise = Promise.resolve();
+
                     if (runtimeConfig.requireModules) {
-                        runtimeConfig.requireModules.forEach(module => require(module));
+                        runtimeConfig.requireModules.forEach(modulePath => {
+                            promise.then(requireModule(modulePath));
+                        });
                     }
 
                     RuntimeConfig.getInstance().extend(runtimeConfig);
                     const hermione = Hermione.create(configPath);
 
-                    debug("worker initialized");
-                    resolve(hermione);
+                    promise.then(() => {
+                        debug("worker initialized");
+                        resolve(hermione);
+                    });
                 } catch (e) {
                     debug("worker initialization failed");
                     reject(e);
