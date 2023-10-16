@@ -112,7 +112,18 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [HERMIONE_SETS](#hermione_sets)
   - [Debug mode](#debug-mode)
 - [Programmatic API](#programmatic-api)
-  - [init](#init)
+  - [config](#config)
+  - [events](#events)
+  - [errors](#errors)
+    - [CoreError](#coreerror)
+    - [CancelledError](#cancellederror)
+    - [ClientBridgeError](#clientbridgeerror)
+    - [HeightViewportError](#heightviewporterror)
+    - [OffsetViewportError](#offsetviewporterror)
+    - [AssertViewError](#assertviewerror)
+    - [ImageDiffError](#imagedifferror)
+    - [NoRefImageError](#norefimageerror)
+  - [intercept](#intercept)
   - [run](#run)
   - [addTestToRun](#addtesttorun)
   - [readTests](#readtests)
@@ -1550,35 +1561,192 @@ Use this mode with option `sessionsPerBrowser=1` in order to debug tests one at 
 
 ## Programmatic API
 
-With the API, you can use Hermione programmatically in your scripts or build tools.
+With the API, you can use Hermione programmatically in your scripts or build tools. To do this, you must require `hermione` module and create instance:
 
 ```js
 const Hermione = require('hermione');
-
 const hermione = new Hermione(config);
 ```
 
 * **config** (required) `Object|String` – Configuration object or path to the configuration file that will be read relative to `process.cwd`.
 
-### init
+Next, you will have access to the following parameters and methods:
+
+Name           | Description
+-------------- | -------------
+`config`       | Returns parsed hermione config.
+`events`       | Returns hermione events on which you can subscribe to.
+`errors`       | Errors which hermione may return.
+`intercept`    | Method to intercept Hermione's events.
+`run`          | Starts running tests. By default run all tests from the config. Can also run only the specified tests.
+`addTestToRun` | Adds test to the current run.
+`readTests`    | Starts reading tests. By default read all tests from the config. Can also read only the specified tests.
+`isFailed`     | Returns `true` or `false` depending on whether there has been an error or a test fail while running tests.
+`isWorker`     | Returns `true` or `false` depending on whether you call the method in one of the workers or in the master process.
+`halt`         | Abnormal termination of the test run in case of a terminal error.
+
+### config
+
+Returns parsed hermione config. Useful when you need to read some field from the config.
 
 ```js
-hermione.init().done();
+// create hermione instance
+console.log('plugins:', hermione.config.plugins);
 ```
 
-Initializes hermione instance, load all plugins ans so on.
+### events
+
+Returns hermione events on which you can subscribe to. Useful when you need to subscribe to a specific event.
+
+```js
+// create hermione instance
+hermione.on(hermione.events.INIT, async () => {
+    console.info('INIT event is being processed...');
+});
+```
+
+### errors
+
+Hermione may return errors of the following type:
+
+- [CoreError](#coreerror)
+- [CancelledError](#cancellederror)
+- [ClientBridgeError](#clientbridgeerror)
+- [HeightViewportError](#heightviewporterror)
+- [OffsetViewportError](#offsetviewporterror)
+- [AssertViewError](#assertviewerror)
+- [ImageDiffError](#imagedifferror)
+- [NoRefImageError](#norefimageerror)
+
+#### CoreError
+
+A `CoreError` is returned if the browser fails to calibrate a blank page (about:blank). The error contains the following message:
+
+```
+Could not calibrate. This could be due to calibration page has failed to open properly
+```
+
+#### CancelledError
+
+The `CanceledEror` error is returned if the [halt](#halt) command terminates abnormally. The error contains the following message:
+
+```
+Browser request was cancelled
+```
+
+#### ClientBridgeError
+
+A `ClientBridgeError` is returned when JavaScript injection on the client (browser) side fails. Hermione injects the code using the [execute](https://webdriver.io/docs/api/browser/execute/) WebDriverIO command. The error contains the following message:
+
+```
+Unable to inject client script
+```
+
+#### HeightViewportError
+
+The `HeightViewportError` is returned when trying to take a screenshot of an area whose bottom border does not fit into the viewport area. The error contains the following message:
+
+```
+Can not capture the specified region of the viewport.
+The region bottom bound is outside of the viewport height.
+Alternatively, you can test such cases by setting "true" value to option "compositeImage" in the config file
+or setting "false" to "compositeImage" and "true" to option "allowViewportOverflow" in "assertView" command.
+Element position: <cropArea.left>, <cropArea.top>; size: <cropArea.width>, <cropArea.height>.
+Viewport size: <viewport.width>, <viewport.height>.
+```
+
+In this case, the message prompts the Hermione user what settings need to be set in the Hermione config in order to be able to take a screenshot for the specified area.
+
+#### OffsetViewportError
+
+An `OffsetViewportError` is returned when attempting to take a screenshot of an area whose borders on the left, right, or top extend beyond the viewport. The error contains the following message:
+
+```
+Can not capture the specified region of the viewport.
+Position of the region is outside of the viewport left, top or right bounds.
+Check that elements:
+- does not overflow the document
+- does not overflow browser viewport
+Alternatively, you can increase browser window size using
+"setWindowSize" or "windowSize" option in the config file.
+But if viewport overflow is expected behavior then you can use
+option "allowViewportOverflow" in "assertView" command.
+```
+
+In this case, the message prompts the Hermione user what settings need to be set in the Hermione config in order to be able to take a screenshot for the specified area.
+
+#### AssertViewError
+
+An `AssertViewError` is returned when an attempt to take a screenshot fails. The error may contain one of the following messages, depending on the cause of the crash:
+
+```
+duplicate name for "<state>" state
+```
+
+```
+element ("<selector>") still not existing after <this.options.waitforTimeout> ms
+```
+
+```
+element ("<this.selector>") still not existing after <this.options.waitforTimeout> ms
+```
+
+#### ImageDiffError
+
+An `ImageDiffError` is returned from the [assertView](#assertview) command if a diff (difference in images) is detected when taking and comparing a screenshot with a reference screenshot. The error contains the following message:
+
+```
+images are different for "<stateName>" state
+```
+
+In addition, the `ImageDiffError` error contains the following data:
+
+* **stateName** `String` - Name of the state for which the screenshot was taken.
+* **currImg** `Object` - Link to actual image.
+* **refImg** `Object` - Link to reference image.
+* **diffOpts** `Object` - Diff detection settings.
+* **diffBounds** `Object` - Boundaries of areas with diffs in the image.
+* **diffClusters** `Object` - Clusters with diffs in the image.
+
+Read more about [diffBounds](https://github.com/gemini-testing/looks-same/blob/master/README.md#getting-diff-bounds) and [diffClusters](https://github.com/gemini-testing/looks-same/blob/master/README.md#getting-diff-clusters) in the documentation of the [looks-same](https://github.com/gemini-testing/looks-same) package.
+
+#### NoRefImageError
+
+The `NoRefImageError` error is returned from the [assertView](#assertview) command if, when taking and comparing a screenshot, Hermione does not find a reference screenshot on the file system. The error contains the following message:
+
+```
+can not find reference image at <refImg.path> for "<stateName>" state
+```
+
+In addition, the `NoRefImageError` error contains the following data:
+
+* **stateName** `String` - Name of the state for which the screenshot was taken.
+* **currImg** `Object` - Link to actual image.
+* **refImg** `Object` - Link to reference image.
+
+### intercept
+
+Method to intercept Hermione's events. The first argument of the method is the event that needs to be intercepted, and the second is the event handler. Example:
+
+```js
+// create hermione instance
+hermione.intercept(hermione.events.TEST_FAIL, ({ event, data }) => {
+    return {event: hermione.events.TEST_PASS, test}; // make the test successful
+});
+```
+
+Read more about event interception in the section [about plugins](#plugins).
 
 ### run
 
+Starts running tests. By default run all tests from the config. Can also run only the specified tests. Returns `true` if the test run succeeded, and `false` if it failed. Example:
+
 ```js
-hermione.run(testPaths, options)
-    .then((success) => process.exit(success ? 0 : 1))
-    .catch((e) => {
-        console.log(e.stack);
-        process.exit(1);
-    })
-    .done();
+// create hermione instance
+const success = await hermione.run(testPaths, options);
 ```
+
+Available parameters:
 
 * **testPaths** (optional) `String[]|TestCollection` – Paths to tests relative to `process.cwd`. Also accepts test collection returned by `readTests`.
 * **options** (optional) `Object`
@@ -1589,21 +1757,23 @@ hermione.run(testPaths, options)
 
 ### addTestToRun
 
-```js
-hermione.addTestToRun(test, browser);
-```
+Adds test to the current run. Returns `false` if the current run has already ended or has been cancelled. Otherwise returns `true`. Example:
 
-Adds test to the current run.
+```js
+// create hermione instance
+const success = hermione.addTestToRun(test, browserId);
+```
 
 * **test** (required) `Test` – Test to run.
 * **browserId** (required) `String` – Browser to run test in.
 
-Returns `false` if current run is ended or cancelled, `true` otherwise.
-
 ### readTests
 
+Starts reading tests. By default read all tests from the config. Can also read only the specified tests. Returns promise which resolves to the instance of [TestCollection](#test-collection) initialized by parsed tests. Example:
+
 ```js
-hermione.readTests(testPaths, options).done();
+// create hermione instance
+await hermione.readTests(testPaths, options);
 ```
 
 * **testPaths** (required) `String[]` – Paths to tests relative to `process.cwd`.
@@ -1611,26 +1781,21 @@ hermione.readTests(testPaths, options).done();
   * **browsers** (optional) `String[]` – Read tests only for the specified browsers.
   * **silent** (optional) `Boolean` – flag to disable events emitting while reading tests; default is `false`.
   * **ignore** (optional) `String|Glob|Array<String|Glob>` - patterns to exclude paths from the test search.
-
-Returns promise which resolves to the instance of `TestCollection` initialized by parsed tests
+  * **sets** (optional) `String[]`– Sets to run tests in.
+  * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
 
 ### isFailed
 
-```js
-hermione.isFailed();
-```
+Returns `true` or `false` depending on whether there has been an error or a test fail while running tests. Can be useful in plugins to determine Hermione's current status. Example:
 
-Returns `true` or `false` depending on whether there has been an error or a test fail while running tests; can be useful in plugins to
-determine current Hermione status.
+```js
+// create hermione instance
+const failed = hermione.isFailed();
+```
 
 ### isWorker
 
-```js
-hermione.isWorker();
-```
-
-Returns `true` or `false` depending on whether you call the method in one of the workers or in the master process; can be useful in plugins to share some code execution between the master process and its workers, for example:
-
+Returns `true` or `false` depending on whether you call the method in one of the workers or in the master process. Can be useful in plugins in order to distinguish the code execution context. Example:
 
 ```js
 // implementation of some plugin
@@ -1644,11 +1809,13 @@ module.exports = (hermione) => {
 ```
 
 ### halt
+
+Abnormal termination of the test run in case of a terminal error. If process fails to gracefully shutdown in `timeout` milliseconds, it would be forcibly terminated (unless `timeout` is explicitly set to `0`).
+
 ```js
+// create hermione instance
 hermione.halt(error, [timeout=60000ms]);
 ```
-
-Method for abnormal termination of the test run in case of a terminal error. If process fails to gracefully shutdown in `timeout` milliseconds, it would be forcibly terminated (unless `timeout` is explicitly set to `0`).
 
 ### Test Collection
 
