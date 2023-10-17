@@ -38,6 +38,7 @@ function createBrowserConfig_(opts = {}) {
         region: null,
         headless: null,
         saveHistory: true,
+        isolation: false,
     });
 
     return {
@@ -92,9 +93,11 @@ exports.mkSessionStub_ = () => {
     session.waitUntil = sinon.stub().named("waitUntil").resolves();
     session.setTimeout = sinon.stub().named("setTimeout").resolves();
     session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
-    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves({});
+    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves(exports.mkCDPStub_());
     session.$ = sinon.stub().named("$").resolves(element);
     session.mock = sinon.stub().named("mock").resolves(exports.mkMockStub_());
+    session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
+    session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? element : session;
@@ -112,3 +115,27 @@ exports.mkSessionStub_ = () => {
 
     return session;
 };
+
+exports.mkCDPStub_ = () => ({
+    browserContexts: sinon.stub().named("browserContexts").returns([]),
+    createIncognitoBrowserContext: sinon
+        .stub()
+        .named("createIncognitoBrowserContext")
+        .resolves(exports.mkCDPBrowserCtx_()),
+});
+
+exports.mkCDPBrowserCtx_ = () => ({
+    newPage: sinon.stub().named("newPage").resolves(exports.mkCDPPage_()),
+    isIncognito: sinon.stub().named("isIncognito").returns(false),
+    pages: sinon.stub().named("pages").resolves([]),
+    close: sinon.stub().named("close").resolves(),
+});
+
+exports.mkCDPPage_ = () => ({
+    target: sinon.stub().named("target").returns(exports.mkCDPTarget_()),
+    close: sinon.stub().named("close").resolves(),
+});
+
+exports.mkCDPTarget_ = () => ({
+    _targetId: "12345",
+});

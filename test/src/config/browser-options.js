@@ -1160,9 +1160,47 @@ describe("config browser-options", () => {
         });
     }
 
-    ["calibrate", "compositeImage", "resetCursor", "strictTestsOrder", "waitOrientationChange"].forEach(option =>
-        describe(option, () => testBooleanOption(option)),
+    ["calibrate", "compositeImage", "resetCursor", "strictTestsOrder", "waitOrientationChange", "isolation"].forEach(
+        option => describe(option, () => testBooleanOption(option)),
     );
+
+    describe("isolation", () => {
+        it("should set to 'true' if browser support isolation", () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "101.0",
+                        },
+                    }),
+                },
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.isTrue(config.browsers.b1.isolation);
+        });
+
+        it("should set to 'false' if browser doesn't support isolation", () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "90.0",
+                        },
+                    }),
+                },
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.isFalse(config.browsers.b1.isolation);
+        });
+    });
 
     describe("saveHistoryMode", () => {
         it("should throw an error if value is not available", () => {

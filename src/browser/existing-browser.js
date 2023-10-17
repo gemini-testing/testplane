@@ -12,6 +12,9 @@ const Camera = require("./camera");
 const clientBridge = require("./client-bridge");
 const history = require("./history");
 const logger = require("../utils/logger");
+const { WEBDRIVER_PROTOCOL } = require("../constants/config");
+const { MIN_CHROME_VERSION_SUPPORT_ISOLATION } = require("../constants/browser");
+const { isSupportIsolation } = require("../utils/browser");
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -37,6 +40,8 @@ module.exports = class ExistingBrowser extends Browser {
 
         await history.runGroup(this._callstackHistory, "hermione: init browser", async () => {
             this._addCommands();
+
+            await this._performIsolation({ sessionCaps, sessionOpts });
 
             try {
                 this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
@@ -199,6 +204,47 @@ module.exports = class ExistingBrowser extends Browser {
 
     _resolveUrl(uri) {
         return this._config.baseUrl ? url.resolve(this._config.baseUrl, uri) : uri;
+    }
+
+    async _performIsolation({ sessionCaps, sessionOpts }) {
+        if (!this._config.isolation) {
+            return;
+        }
+
+        const { browserName, browserVersion = "", version = "" } = sessionCaps;
+        const { automationProtocol } = sessionOpts;
+
+        if (!isSupportIsolation(browserName, browserVersion)) {
+            logger.warn(
+                `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
+                    `but got ${browserName}@${browserVersion || version}`,
+            );
+            return;
+        }
+
+        const puppeteer = await this._session.getPuppeteer();
+        const browserCtxs = puppeteer.browserContexts();
+
+        const incognitoCtx = await puppeteer.createIncognitoBrowserContext();
+        const page = await incognitoCtx.newPage();
+
+        if (automationProtocol === WEBDRIVER_PROTOCOL) {
+            const windowIds = await this._session.getWindowHandles();
+            const incognitoWindowId = windowIds.find(id => id.includes(page.target()._targetId));
+
+            await this._session.switchToWindow(incognitoWindowId);
+        }
+
+        for (const ctx of browserCtxs) {
+            if (ctx.isIncognito()) {
+                await ctx.close();
+                continue;
+            }
+
+            for (const page of await ctx.pages()) {
+                await page.close();
+            }
+        }
     }
 
     async _prepareSession() {

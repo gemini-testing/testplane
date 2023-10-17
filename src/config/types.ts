@@ -119,6 +119,7 @@ export interface CommonConfig {
 
     system: SystemConfig;
     headless: boolean | null;
+    isolation: boolean;
 }
 
 export interface SetsConfig {
