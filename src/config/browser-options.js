@@ -6,6 +6,7 @@ const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
+const { isSupportIsolation } = require("../utils/browser");
 
 const is = utils.is;
 
@@ -311,6 +312,21 @@ function buildBrowserOptions(defaultFactory, extra) {
         key: options.optionalString("key"),
         region: options.optionalString("region"),
         headless: options.optionalBoolean("headless"),
-        isolation: options.boolean("isolation"),
+
+        isolation: option({
+            defaultValue: defaultFactory("isolation"),
+            parseCli: value => utils.parseBoolean(value, "isolation"),
+            parseEnv: value => utils.parseBoolean(value, "isolation"),
+            validate: is("boolean", "isolation"),
+            map: (value, config, currentNode, meta) => {
+                if (meta.isSpecified) {
+                    return value;
+                }
+
+                const caps = _.get(currentNode, "desiredCapabilities");
+
+                return caps && isSupportIsolation(caps.browserName, caps.browserVersion) ? true : value;
+            },
+        }),
     });
 }

@@ -853,7 +853,7 @@ Option name               | Description
 `key`                     | Cloud service access key or secret key. Default value is `null`.
 `region`                  | Ability to choose different datacenters for run in cloud service. Default value is `null`.
 `headless`                | Ability to run headless browser in cloud service. Default value is `null`.
-`isolation`               | Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). Default value is `false`.
+`isolation`               | Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). Default value is `false`, but `true` for chrome@93 and higher.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -1119,7 +1119,7 @@ Ability to choose different datacenters for run in cloud service. Default value 
 Ability to run headless browser in cloud service. Default value is `null`.
 
 ####  isolation
-Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `false`.
+Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `false`, but `true` for chrome@93 and higher.
 
 ### system
 
