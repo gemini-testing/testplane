@@ -1057,6 +1057,18 @@ describe("ExistingBrowser", () => {
             const result = await session.foo();
             assert.isUndefined(result);
         });
+
+        it("should not mark session as broken twice", async () => {
+            session.commandList = ["foo"];
+            session.foo = () => "foo";
+            const browser = await initBrowser_();
+
+            browser.markAsBroken();
+            session.overwriteCommand.resetHistory();
+            browser.markAsBroken();
+
+            assert.notCalled(session.overwriteCommand);
+        });
     });
 
     describe("quit", () => {

@@ -58,6 +58,10 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     markAsBroken() {
+        if (this.state.isBroken) {
+            return;
+        }
+
         this.applyState({ isBroken: true });
 
         this._stubCommands();
