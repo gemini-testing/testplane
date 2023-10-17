@@ -86,6 +86,13 @@ module.exports = class TestRunner {
             }
         }
 
+        // we need to check session twice:
+        // 1. before afterEach hook to prevent work with broken sessions
+        // 2. after collecting all assertView errors (including afterEach section)
+        if (!browser.state.isBroken && isSessionBroken(error, this._config)) {
+            browser.markAsBroken();
+        }
+
         hermioneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
         const { meta } = browser;
         const commandsHistory = callstackHistory ? callstackHistory.release() : [];
