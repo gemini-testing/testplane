@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.2.0](https://github.com/gemini-testing/hermione/compare/v7.1.6...v7.2.0) (2023-10-18)
+
+
+### Features
+
+* ability to run tests in isolated environment ([d8909f3](https://github.com/gemini-testing/hermione/commit/d8909f3f6ac9c63a31ae55c9fb28543faead790e))
+
 ### [7.1.6](https://github.com/gemini-testing/hermione/compare/v7.1.5...v7.1.6) (2023-09-27)
 
 ### [7.1.5](https://github.com/gemini-testing/hermione/compare/v7.1.4...v7.1.5) (2023-09-26)
