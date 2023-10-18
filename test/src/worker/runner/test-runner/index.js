@@ -44,6 +44,7 @@ describe("worker/runner/test-runner", () => {
         const publicAPI = _.defaults(prototype, {
             $: sandbox.stub().named("$").resolves(mkElement_()),
             execute: sandbox.stub().named("execute").resolves({ x: 0, y: 0 }),
+            assertView: sandbox.stub().named("assertView").resolves(),
         });
         config = _.defaults(config, { resetCursor: true });
 
@@ -52,8 +53,14 @@ describe("worker/runner/test-runner", () => {
             publicAPI,
             config,
             meta: {},
-            state: {},
-            markAsBroken: sandbox.stub(),
+            state: {
+                isBroken: false,
+            },
+            markAsBroken: sandbox.stub().callsFake(() => {
+                this.state.isBroken = true;
+
+                return sandbox.stub();
+            }),
         };
     };
 
@@ -548,16 +555,41 @@ describe("worker/runner/test-runner", () => {
             });
 
             describe('in "afterEach" hook', () => {
-                it("should not mark even if session is broken", async () => {
+                it("should mark if session is broken", async () => {
                     const config = makeConfigStub({ system: { patternsOnReject: ["FOO_BAR"] } });
-                    const runner = mkRunner_({ config });
+                    const test = mkTest_({ fn: sinon.stub().resolves() });
+                    const runner = mkRunner_({ config, test });
                     const browser = mkBrowser_();
                     BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.hasAfterEachHooks.returns(true);
                     HookRunner.prototype.runAfterEachHooks.rejects(new Error("FOO_BAR"));
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.notCalled(browser.markAsBroken);
+                    assert.calledOnce(browser.markAsBroken);
+                });
+            });
+
+            describe("with assertView errors", () => {
+                it("should mark if test fails with screenshot error", async () => {
+                    const config = makeConfigStub({ system: { patternsOnReject: ["image comparison failed"] } });
+                    const runner = mkRunner_({ config });
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    const assertViewResults = AssertViewResults.create([new Error("image error")]);
+
+                    ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                        ExecutionThread.prototype.run.callsFake(() => {
+                            hermioneCtx.assertViewResults = assertViewResults;
+                        });
+
+                        return Object.create(ExecutionThread.prototype);
+                    });
+
+                    await run_({ runner }).catch(() => {});
+
+                    assert.calledOnce(browser.markAsBroken);
                 });
             });
         });
