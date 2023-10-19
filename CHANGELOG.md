@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.3.0](https://github.com/gemini-testing/hermione/compare/v7.2.0...v7.3.0) (2023-10-19)
+
+
+### Features
+
+* add ability to disable animations in assertView ([d4c7a3a](https://github.com/gemini-testing/hermione/commit/d4c7a3a3a96bfe0cb58c9ebe8343e9c585be20e8))
+
 ## [7.2.0](https://github.com/gemini-testing/hermione/compare/v7.1.6...v7.2.0) (2023-10-18)
 
 
