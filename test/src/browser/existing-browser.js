@@ -35,6 +35,14 @@ describe("ExistingBrowser", () => {
         return browser.init(sessionData, calibrator);
     };
 
+    const stubClientBridge_ = () => {
+        const bridge = { call: sandbox.stub().resolves({}) };
+
+        clientBridge.build.resolves(bridge);
+
+        return bridge;
+    };
+
     beforeEach(() => {
         session = mkSessionStub_();
         sandbox.stub(webdriverio, "attach").resolves(session);
@@ -648,14 +656,6 @@ describe("ExistingBrowser", () => {
     });
 
     describe("prepareScreenshot", () => {
-        const stubClientBridge_ = () => {
-            const bridge = { call: sandbox.stub().resolves({}) };
-
-            clientBridge.build.resolves(bridge);
-
-            return bridge;
-        };
-
         it("should prepare screenshot", async () => {
             const clientBridge = stubClientBridge_();
             clientBridge.call.withArgs("prepareScreenshot").resolves({ foo: "bar" });
@@ -720,6 +720,93 @@ describe("ExistingBrowser", () => {
                 browser.prepareScreenshot(),
                 "Prepare screenshot failed with error type 'JS' and error message: stub error",
             );
+        });
+
+        it("should disable animations if 'disableAnimation: true' and 'automationProtocol: webdriver'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+            const [wdElement] = await browser.publicAPI.findElements("css selector", ".some-selector");
+
+            await browser.prepareScreenshot(".selector", { disableAnimation: true });
+
+            assert.calledWith(clientBridge.call, "prepareScreenshot", [
+                ".selector",
+                sinon.match({ disableAnimation: true }),
+            ]);
+            assert.calledOnceWith(browser.publicAPI.switchToFrame, wdElement);
+            assert.calledWith(clientBridge.call, "disableFrameAnimations");
+        });
+
+        it("should not disable iframe animations if 'disableAnimation: true' and 'automationProtocol: devtools'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "devtools" }));
+
+            await browser.prepareScreenshot(".selector", { disableAnimation: true });
+
+            assert.calledWith(clientBridge.call, "prepareScreenshot", [
+                ".selector",
+                sinon.match({ disableAnimation: true }),
+            ]);
+            assert.notCalled(browser.publicAPI.switchToFrame);
+            assert.neverCalledWith(clientBridge.call, "disableFrameAnimations");
+        });
+
+        it("should not disable animations if 'disableAnimation: false'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+            const [wdElement] = await browser.publicAPI.findElements("css selector", ".some-selector");
+
+            await browser.prepareScreenshot(".selector", { disableAnimation: false });
+
+            assert.neverCalledWith(clientBridge.call, "prepareScreenshot", [
+                ".selector",
+                sinon.match({ disableAnimation: true }),
+            ]);
+            assert.neverCalledWith(browser.publicAPI.switchToFrame, wdElement);
+            assert.neverCalledWith(clientBridge.call, "disableFrameAnimations");
+        });
+    });
+
+    describe("cleanupScreenshot", () => {
+        it("should cleanup parent frame if 'disableAnimation: true'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+
+            await browser.cleanupScreenshot({ disableAnimation: true });
+
+            assert.calledWith(clientBridge.call, "cleanupFrameAnimations");
+        });
+
+        it("should not cleanup frames if 'disableAnimation: false'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+
+            await browser.cleanupScreenshot({ disableAnimation: false });
+
+            assert.neverCalledWith(clientBridge.call, "cleanupFrameAnimations");
+        });
+
+        it("should cleanup animations in iframe if 'automationProtocol: webdriver'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+            const [wdElement] = await browser.publicAPI.findElements("css selector", ".some-selector");
+
+            await browser.cleanupScreenshot({ disableAnimation: true });
+
+            assert.calledOnceWith(browser.publicAPI.switchToFrame, wdElement);
+            assert.calledWith(clientBridge.call, "cleanupFrameAnimations");
+            assert.callOrder(browser.publicAPI.switchToFrame, clientBridge.call);
+        });
+
+        it("should not cleanup animations in iframe if 'automationProtocol: devtools'", async () => {
+            const clientBridge = stubClientBridge_();
+            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "devtools" }));
+            const [wdElement] = await browser.publicAPI.findElements("css selector", ".some-selector");
+
+            await browser.cleanupScreenshot({ disableAnimation: true });
+
+            assert.notCalled(browser.publicAPI.switchToFrame);
+            assert.neverCalledWith(clientBridge.call, "cleanupFrameAnimations", wdElement);
         });
     });
 

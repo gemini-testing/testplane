@@ -646,6 +646,7 @@ Parameters:
    - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
    - screenshotDelay (optional) `Number` - overrides config [browsers](#browsers).[screenshotDelay](#screenshotDelay) value
    - selectorToScroll (optional) `String` - DOM-node selector which should be scroll when the captured element does not completely fit on the screen. Useful when you capture the modal (popup). In this case a duplicate of the modal appears on the screenshot. That happens because we scroll the page using `window` selector, which scroll only the background of the modal, and the modal itself remains in place. Works only when `compositeImage` is `true`.
+   - disableAnimation (optional): `Boolean` - ability to disable animations and transitions while capturing a screenshot.
 
 All options inside `assertView` command override the same options in the [browsers](#browsers).[assertViewOpts](#assertViewOpts).
 
@@ -1020,7 +1021,8 @@ Default options used when calling [assertView](https://github.com/gemini-testing
 ```javascript
     ignoreElements: [],
     captureElementFromTop: true,
-    allowViewportOverflow: false
+    allowViewportOverflow: false,
+    disableAnimation: false
 ```
 
 #### screenshotsDir

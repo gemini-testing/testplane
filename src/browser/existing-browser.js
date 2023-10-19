@@ -79,7 +79,19 @@ module.exports = class ExistingBrowser extends Browser {
                 `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
             );
         }
+
+        // https://github.com/webdriverio/webdriverio/issues/11396
+        if (this._config.automationProtocol === "webdriver" && opts.disableAnimation) {
+            await this._disableIframeAnimations();
+        }
+
         return result;
+    }
+
+    async cleanupScreenshot(opts = {}) {
+        if (opts.disableAnimation) {
+            await this._cleanupPageAnimations();
+        }
     }
 
     open(url) {
@@ -279,6 +291,51 @@ module.exports = class ExistingBrowser extends Browser {
         return clientBridge
             .build(this, { calibration: this._calibration })
             .then(clientBridge => (this._clientBridge = clientBridge));
+    }
+
+    async _runInEachIframe(cb) {
+        const iframes = await this._session.findElements("css selector", "iframe");
+
+        try {
+            for (const iframe of iframes) {
+                await this._session.switchToFrame(iframe);
+                await cb();
+            }
+        } finally {
+            await this._session.switchToParentFrame();
+        }
+    }
+
+    async _disableFrameAnimations() {
+        const result = await this._clientBridge.call("disableFrameAnimations");
+
+        if (result && result.error) {
+            throw new Error(
+                `Disable animations failed with error type '${result.error}' and error message: ${result.message}`,
+            );
+        }
+
+        return result;
+    }
+
+    async _disableIframeAnimations() {
+        await this._runInEachIframe(() => this._disableFrameAnimations());
+    }
+
+    async _cleanupFrameAnimations() {
+        return this._clientBridge.call("cleanupFrameAnimations");
+    }
+
+    async _cleanupIframeAnimations() {
+        await this._runInEachIframe(() => this._cleanupFrameAnimations());
+    }
+
+    async _cleanupPageAnimations() {
+        await this._cleanupFrameAnimations();
+
+        if (this._config.automationProtocol === "webdriver") {
+            await this._cleanupIframeAnimations();
+        }
     }
 
     _stubCommands() {
