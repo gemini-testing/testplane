@@ -13,6 +13,7 @@ module.exports = {
     diffColor: "#ff00ff",
     tolerance: 2.3,
     antialiasingTolerance: 4,
+    disableAnimation: true,
     compareOpts: {
         shouldCluster: false,
         clustersSize: 10,

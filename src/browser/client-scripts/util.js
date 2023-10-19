@@ -88,3 +88,19 @@ exports.isSafariMobile = function () {
 exports.isInteger = function (num) {
     return num % 1 === 0;
 };
+
+exports.forEachRoot = function (cb) {
+    function traverseRoots(root) {
+        cb(root);
+
+        var treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+
+        for (var node = treeWalker.currentNode; node !== null; node = treeWalker.nextNode()) {
+            if (node instanceof Element && node.shadowRoot) {
+                traverseRoots(node.shadowRoot);
+            }
+        }
+    }
+
+    traverseRoots(document.documentElement);
+};

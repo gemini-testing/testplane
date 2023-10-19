@@ -33,9 +33,27 @@ exports.prepareScreenshot = function prepareScreenshot(areas, opts) {
     }
 };
 
+exports.disableFrameAnimations = function disableFrameAnimations() {
+    try {
+        return disableFrameAnimationsUnsafe();
+    } catch (e) {
+        return {
+            error: "JS",
+            message: e.stack || e.message
+        };
+    }
+};
+
+exports.cleanupFrameAnimations = function cleanupFrameAnimations() {
+    if (window.__cleanupAnimation) {
+        window.__cleanupAnimation();
+    }
+};
+
 function prepareScreenshotUnsafe(areas, opts) {
     var allowViewportOverflow = opts.allowViewportOverflow;
     var captureElementFromTop = opts.captureElementFromTop;
+    var disableAnimation = opts.disableAnimation;
     var scrollElem = window;
 
     if (opts.selectorToScroll) {
@@ -102,6 +120,10 @@ function prepareScreenshotUnsafe(areas, opts) {
         };
     }
 
+    if (disableAnimation) {
+        disableFrameAnimationsUnsafe();
+    }
+
     return {
         captureArea: rect.scale(pixelRatio).serialize(),
         ignoreAreas: findIgnoreAreas(opts.ignoreSelectors, {
@@ -122,6 +144,43 @@ function prepareScreenshotUnsafe(areas, opts) {
         documentWidth: Math.ceil(documentWidth * pixelRatio),
         canHaveCaret: isEditable(document.activeElement),
         pixelRatio: pixelRatio
+    };
+}
+
+function disableFrameAnimationsUnsafe() {
+    var everyElementSelector = "*:not(#hermione-q.hermione-w.hermione-e.hermione-r.hermione-t.hermione-y)";
+    var everythingSelector = ["", "::before", "::after"]
+        .map(function (pseudo) {
+            return everyElementSelector + pseudo;
+        })
+        .join(", ");
+
+    var styleElements = [];
+
+    util.forEachRoot(function (root) {
+        var styleElement = document.createElement("style");
+        styleElement.innerHTML =
+            everythingSelector +
+            [
+                "{",
+                "    animation-delay: 0ms !important;",
+                "    animation-duration: 0ms !important;",
+                "    animation-timing-function: step-start !important;",
+                "    transition-timing-function: step-start !important;",
+                "    scroll-behavior: auto !important;",
+                "}"
+            ].join("\n");
+
+        root.appendChild(styleElement);
+        styleElements.push(styleElement);
+    });
+
+    window.__cleanupAnimation = function () {
+        for (var i = 0; i < styleElements.length; i++) {
+            styleElements[i].remove();
+        }
+
+        delete window.__cleanupAnimation;
     };
 }
 
