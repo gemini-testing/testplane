@@ -8,6 +8,7 @@ const info = require("./info");
 const { Hermione } = require("../hermione");
 const pkg = require("../../package.json");
 const logger = require("../utils/logger");
+const { requireModule } = require("../utils/module");
 
 let hermione;
 
@@ -58,7 +59,7 @@ exports.run = () => {
         .arguments("[paths...]")
         .action(async paths => {
             try {
-                handleRequires(program.require);
+                await handleRequires(program.require);
 
                 const isTestsSuccess = await hermione.run(paths, {
                     reporters: program.reporter || defaults.reporters,
@@ -99,15 +100,17 @@ function preparseOption(program, option) {
     return configFileParser[option];
 }
 
-function handleRequires(requires = []) {
-    requires.forEach(module => require(module));
-}
-
 function compileGrep(grep) {
     try {
         return new RegExp(`(${grep})|(${escapeRe(grep)})`);
     } catch (error) {
         logger.warn(`Invalid regexp provided to grep, searching by its string representation. ${error}`);
         return new RegExp(escapeRe(grep));
+    }
+}
+
+async function handleRequires(requires = []) {
+    for (const modulePath of requires) {
+        await requireModule(modulePath);
     }
 }

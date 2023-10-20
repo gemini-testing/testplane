@@ -1,5 +1,6 @@
 "use strict";
 
+const proxyquire = require("proxyquire");
 const { AsyncEmitter } = require("src/events/async-emitter");
 const { Hermione } = require("src/worker/hermione");
 const { makeConfigStub } = require("../../utils");
@@ -46,18 +47,18 @@ describe("worker/hermione-facade", () => {
         });
 
         it("should require passed modules", async () => {
-            const hermioneFacadeModule = module.children.find(({ filename }) =>
-                /\/hermione-facade\.js$/.test(filename),
-            );
-            sandbox.stub(hermioneFacadeModule, "require");
+            const requireModule = sinon.stub();
+            const HermioneFacadeModule = proxyquire("src/worker/hermione-facade", {
+                "../utils/module": { requireModule },
+            });
 
             ipc.on.withArgs(MASTER_INIT).yieldsAsync({
                 runtimeConfig: { requireModules: ["foo"] },
             });
 
-            await hermioneFacade.init();
+            await HermioneFacadeModule.create().init();
 
-            assert.calledOnceWith(hermioneFacadeModule.require, "foo");
+            assert.calledOnceWith(requireModule, "foo");
         });
     });
 

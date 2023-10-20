@@ -52,14 +52,14 @@ describe("cli", () => {
     });
 
     it('should require modules specified in "require" option', async () => {
-        const fooRequire = sandbox.stub().returns({});
+        const requireModule = sandbox.stub();
         const stubHermioneCli = proxyquire("src/cli", {
-            foo: (() => fooRequire())(),
+            "../utils/module": { requireModule },
         });
 
         await run_("--require foo", stubHermioneCli);
 
-        assert.calledOnce(fooRequire);
+        assert.calledOnceWith(requireModule, "foo");
     });
 
     it("should create Hermione without config by default", async () => {
@@ -155,7 +155,9 @@ describe("cli", () => {
     });
 
     it("should use require modules from cli", async () => {
-        const stubHermioneCli = proxyquire("src/cli", { foo: {} });
+        const stubHermioneCli = proxyquire("src/cli", {
+            "../utils/module": { requireModule: sandbox.stub() },
+        });
         await run_("--require foo", stubHermioneCli);
 
         assert.calledWithMatch(Hermione.prototype.run, any, { requireModules: ["foo"] });
