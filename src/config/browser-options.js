@@ -2,6 +2,7 @@
 
 const _ = require("lodash");
 const option = require("gemini-configparser").option;
+const uuid = require("uuid");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
@@ -305,7 +306,13 @@ function buildBrowserOptions(defaultFactory, extra) {
         outputDir: options.optionalString("outputDir"),
 
         agent: options.optionalObject("agent"),
-        headers: options.optionalObject("headers"),
+        headers: option({
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            defaultValue: defaultFactory("headers"),
+            validate: value => utils.assertObject(value, "headers"),
+            map: value => (value["X-Request-ID"] ? value : { "X-Request-ID": uuid.v4(), ...value }),
+        }),
         transformRequest: options.optionalFunction("transformRequest"),
         transformResponse: options.optionalFunction("transformResponse"),
         strictSSL: options.optionalBoolean("strictSSL"),

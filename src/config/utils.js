@@ -20,6 +20,12 @@ exports.assertNonNegativeNumber = (value, name) => {
     }
 };
 
+exports.assertObject = (value, name) => {
+    if (!_.isPlainObject(value)) {
+        throw new Error(`"${name}" must be an object`);
+    }
+};
+
 exports.assertOptionalObject = (value, name) => {
     if (!_.isNull(value) && !_.isPlainObject(value)) {
         throw new Error(`"${name}" must be an object`);

@@ -74,6 +74,12 @@ describe("ExistingBrowser", () => {
                 assert.propertyVal(browser.meta, "browserVersion", "10.1");
             });
 
+            it("should extend meta-info with 'X-Request-ID' from headers", () => {
+                const browser = mkBrowser_({ headers: { "X-Request-ID": "uniq-req-id" } });
+
+                assert.propertyVal(browser.meta, "X-Request-ID", "uniq-req-id");
+            });
+
             it("should set meta-info with provided meta option", () => {
                 const browser = mkBrowser_({ meta: { k1: "v1" } });
 

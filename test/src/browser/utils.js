@@ -29,7 +29,7 @@ function createBrowserConfig_(opts = {}) {
         },
         waitOrientationChange: true,
         agent: null,
-        headers: null,
+        headers: {},
         transformRequest: null,
         transformResponse: null,
         strictSSL: null,
