@@ -1,0 +1,12 @@
+export function assertNonNegativeNumber(value: any, name: any): void;
+export function assertObject(value: any, name: any): void;
+export function assertOptionalObject(value: any, name: any): void;
+export function assertOptionalArray(value: any, name: any): void;
+export function assertNonNegativeInteger(value: any, name: any): void;
+export function assertEnum(enumValues: any, value: any, name: any): void;
+export function assertPositiveInteger(value: any, name: any): void;
+export function assertPositiveIntegerOrInfinity(value: any, name: any): void;
+export const parseBoolean: any;
+export const parsePrimitive: any;
+export function resolveWithProjectDir(value: any): any;
+export function is(type: any, name: any): (value: any) => void;

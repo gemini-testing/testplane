@@ -1,0 +1,1 @@
+{"version":3,"file":"core-error.js","sourceRoot":"","sources":["../../src/browser/core-error.js"],"names":[],"mappings":"AAAA,YAAY,CAAC;AAEb,MAAM,CAAC,OAAO,GAAG,MAAM,SAAU,SAAQ,KAAK;IAC1C,YAAY,OAAO;QACf,KAAK,CAAC,OAAO,CAAC,CAAC;QAEf,IAAI,CAAC,IAAI,GAAG,WAAW,CAAC;IAC5B,CAAC;CACJ,CAAC"}
