@@ -169,6 +169,7 @@ module.exports = class ExistingBrowser extends Browser {
         return {
             pid: process.pid,
             browserVersion: this.version,
+            "X-Request-ID": this._config.headers["X-Request-ID"],
             ...this._config.meta,
         };
     }
