@@ -18,10 +18,19 @@ export const tryToRegisterTsNode = (): void => {
             swc = true;
         } catch {} // eslint-disable-line no-empty
 
-        register({
-            skipProject: JSON.parse(process.env.TS_NODE_SKIP_PROJECT ?? "true"),
-            transpileOnly: JSON.parse(process.env.TS_NODE_TRANSPILE_ONLY ?? "true"),
-            swc: JSON.parse(process.env.TS_NODE_SWC ?? swc.toString()),
-        });
+        const skipProjectRaw = process.env.TS_NODE_SKIP_PROJECT ?? "true";
+        const transpileOnlyRaw = process.env.TS_NODE_TRANSPILE_ONLY ?? "true";
+        const swcRaw = process.env.TS_NODE_SWC ?? swc.toString();
+
+        try {
+            register({
+                skipProject: JSON.parse(skipProjectRaw),
+                transpileOnly: JSON.parse(transpileOnlyRaw),
+                swc: JSON.parse(swcRaw),
+            });
+        } catch (err) {
+            const params = `swc: "${swcRaw}", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
+            console.error(`hermione: an error occured while trying to register ts-node (${params}):`, err);
+        }
     } catch {} // eslint-disable-line no-empty
 };
