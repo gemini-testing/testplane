@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.0.0-beta.3](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.1...v8.0.0-beta.3) (2023-11-14)
+
+
+### Features
+
+* export TestCollection and Test types ([#806](https://github.com/gemini-testing/hermione/issues/806)) ([a4771a2](https://github.com/gemini-testing/hermione/commit/a4771a24fc0f10ef647b989461096b5cfe4d50ad))
+
 ## [8.0.0-beta.2](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.1...v8.0.0-beta.2) (2023-09-06)
 
 
