@@ -2,9 +2,15 @@
 
 const _ = require("lodash");
 const { WORKER_UNHANDLED_REJECTION } = require("../constants/process-messages");
+const logger = require("./logger");
 const ipc = require("./ipc");
 
 process.on("unhandledRejection", (reason, p) => {
+    if (reason && reason.name === "ProtocolError") {
+        logger.warn(`Unhandled Rejection "${reason}" in hermione:worker:${process.pid} was ignored`);
+        return;
+    }
+
     const error = `Unhandled Rejection in hermione:worker:${process.pid}:\nPromise: ${JSON.stringify(
         p,
     )}\nReason: ${reason}`;
