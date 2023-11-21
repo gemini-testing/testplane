@@ -11,6 +11,7 @@ module.exports = {
             files: ["*.ts"],
             rules: {
                 "@typescript-eslint/explicit-function-return-type": "error",
+                "@typescript-eslint/no-unsafe-declaration-merging": "off",
             },
         },
         {
