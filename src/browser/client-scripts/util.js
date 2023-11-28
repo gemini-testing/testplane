@@ -93,7 +93,8 @@ exports.forEachRoot = function (cb) {
     function traverseRoots(root) {
         cb(root);
 
-        var treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+        // In IE 11, we need to pass the third and fourth arguments
+        var treeWalker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null, false);
 
         for (var node = treeWalker.currentNode; node !== null; node = treeWalker.nextNode()) {
             if (node instanceof Element && node.shadowRoot) {
