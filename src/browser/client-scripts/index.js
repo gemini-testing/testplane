@@ -177,7 +177,8 @@ function disableFrameAnimationsUnsafe() {
 
     window.__cleanupAnimation = function () {
         for (var i = 0; i < styleElements.length; i++) {
-            styleElements[i].remove();
+            // IE11 doesn't have remove() on node
+            styleElements[i].parentNode.removeChild(styleElements[i]);
         }
 
         delete window.__cleanupAnimation;
