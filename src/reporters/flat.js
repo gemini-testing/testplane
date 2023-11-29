@@ -4,6 +4,7 @@ const _ = require("lodash");
 const BaseReporter = require("./base");
 const helpers = require("./utils/helpers");
 const icons = require("./utils/icons");
+const { stringifyError } = require("../utils/logger");
 
 module.exports = class FlatReporter extends BaseReporter {
     constructor(...args) {
@@ -37,7 +38,7 @@ module.exports = class FlatReporter extends BaseReporter {
                 const icon = testCase.isFailed ? icons.FAIL : icons.RETRY;
 
                 this.informer.log(`   ${testCase.browserId}`);
-                this.informer.log(`     ${icon} ${testCase.error}`);
+                this.informer.log(`     ${icon} ${stringifyError(testCase.error)}`);
             });
         });
     }

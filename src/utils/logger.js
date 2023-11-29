@@ -9,8 +9,17 @@ const withTimestampPrefix =
         console[logFnName](`[${timestamp}]`, ...args);
     };
 
+const stringifyError = error => {
+    try {
+        return error.toString() === "[object Object]" ? JSON.stringify(error) : error;
+    } catch {
+        return error;
+    }
+};
+
 module.exports = {
     log: withTimestampPrefix("log"),
     warn: withTimestampPrefix("warn"),
     error: withTimestampPrefix("error"),
+    stringifyError,
 };

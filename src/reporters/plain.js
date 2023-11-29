@@ -5,6 +5,7 @@ const chalk = require("chalk");
 const BaseReporter = require("./base");
 const icons = require("./utils/icons");
 const helpers = require("./utils/helpers");
+const { stringifyError } = require("../utils/logger");
 
 module.exports = class PlainReporter extends BaseReporter {
     _logTestInfo(test, icon) {
@@ -14,7 +15,7 @@ module.exports = class PlainReporter extends BaseReporter {
             const testInfo = helpers.getTestInfo(test);
 
             this.informer.log(`   in file ${testInfo.file}`);
-            this.informer.log(`   ${chalk.red(testInfo.error)}`);
+            this.informer.log(`   ${chalk.red(stringifyError(testInfo.error))}`);
         }
     }
 };
