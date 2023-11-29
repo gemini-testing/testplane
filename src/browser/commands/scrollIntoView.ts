@@ -14,7 +14,9 @@ export = async (browser: Browser) => {
             options: ScrollIntoViewOptions | boolean = { block: "start", inline: "nearest" },
         ): Promise<void> {
             await session.execute<Promise<void>, [WebdriverIO.Element, ScrollIntoViewOptions | boolean]>(
-                (elem, options) => elem.scrollIntoView(options),
+                function (elem, options) {
+                    return elem.scrollIntoView(options);
+                },
                 this,
                 options,
             );
