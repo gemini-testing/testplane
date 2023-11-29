@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.3.1](https://github.com/gemini-testing/hermione/compare/v7.3.0...v7.3.1) (2023-11-29)
+
+
+### Bug Fixes
+
+* fix client code to work on IE11 ([#812](https://github.com/gemini-testing/hermione/issues/812)) ([197e057](https://github.com/gemini-testing/hermione/commit/197e057af7e9337eae54202fa44a52ce3235c14a))
+* ignore puppeteer ProtocolError in workers ([cce174b](https://github.com/gemini-testing/hermione/commit/cce174bee8512604ef5703ee5e636552ae2ac097))
+* log an error while trying to register ts-node ([5ef3447](https://github.com/gemini-testing/hermione/commit/5ef344785c4dd0906c8dd366850305bd5373f5e0))
+
 ## [7.3.0](https://github.com/gemini-testing/hermione/compare/v7.2.0...v7.3.0) (2023-10-19)
 
 
