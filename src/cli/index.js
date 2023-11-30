@@ -1,5 +1,6 @@
 "use strict";
 
+const _ = require("lodash");
 const { Command } = require("@gemini-testing/commander");
 const escapeRe = require("escape-string-regexp");
 
@@ -22,9 +23,11 @@ process.on("unhandledRejection", (reason, p) => {
         return;
     }
 
-    const error = `Unhandled Rejection in hermione:master:${process.pid}:\nPromise: ${JSON.stringify(
-        p,
-    )}\nReason: ${reason}`;
+    const error = [
+        `Unhandled Rejection in hermione:master:${process.pid}:`,
+        `Promise: ${JSON.stringify(p)}`,
+        `Reason: ${_.get(reason, "stack", reason)}`,
+    ].join("\n");
 
     if (hermione) {
         hermione.halt(error);
