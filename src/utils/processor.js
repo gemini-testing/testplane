@@ -11,9 +11,11 @@ process.on("unhandledRejection", (reason, p) => {
         return;
     }
 
-    const error = `Unhandled Rejection in hermione:worker:${process.pid}:\nPromise: ${JSON.stringify(
-        p,
-    )}\nReason: ${reason}`;
+    const error = [
+        `Unhandled Rejection in hermione:worker:${process.pid}:`,
+        `Promise: ${JSON.stringify(p)}`,
+        `Reason: ${_.get(reason, "stack", reason)}`,
+    ].join("\n");
 
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
 });
