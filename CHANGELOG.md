@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.4.0](https://github.com/gemini-testing/hermione/compare/v7.3.1...v7.4.0) (2023-12-01)
+
+
+### Features
+
+* add basic unhandled rejection stack trace ([eadc05f](https://github.com/gemini-testing/hermione/commit/eadc05fb0626b9ecb99f75740f6cd8383353c53e))
+
 ### [7.3.1](https://github.com/gemini-testing/hermione/compare/v7.3.0...v7.3.1) (2023-11-29)
 
 
