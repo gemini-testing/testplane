@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.1](https://github.com/gemini-testing/hermione/compare/v7.4.0...v7.4.1) (2023-12-19)
+
+
+### Bug Fixes
+
+* correctly disable animations in inframes for ios ([d53c157](https://github.com/gemini-testing/hermione/commit/d53c157ac7bd5f91ba285f0241e0ad21a7c34d9a))
+
 ## [7.4.0](https://github.com/gemini-testing/hermione/compare/v7.3.1...v7.4.0) (2023-12-01)
 
 
