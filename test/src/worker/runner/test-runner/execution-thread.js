@@ -7,6 +7,8 @@ const AssertViewResults = require("src/browser/commands/assert-view/assert-view-
 const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { Test } = require("src/test-reader/test-object");
+const RuntimeConfig = require("src/config/runtime-config");
+const logger = require("src/utils/logger");
 
 describe("worker/runner/test-runner/execution-thread", () => {
     const sandbox = sinon.sandbox.create();
@@ -31,6 +33,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
             config,
             publicAPI: Object.create({
                 getCommandHistory: sinon.stub().resolves([]),
+                switchToRepl: sinon.stub().resolves(),
             }),
         };
     };
@@ -47,6 +50,8 @@ describe("worker/runner/test-runner/execution-thread", () => {
     beforeEach(() => {
         sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").callsFake(e => Promise.resolve(e));
         sandbox.stub(OneTimeScreenshooter.prototype, "captureScreenshotOnAssertViewFail").resolves();
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { onFail: false } });
+        sandbox.stub(logger, "log");
     });
 
     afterEach(() => sandbox.restore());
@@ -304,6 +309,115 @@ describe("worker/runner/test-runner/execution-thread", () => {
                 const executionThread = mkExecutionThread_();
 
                 await assert.isRejected(executionThread.run(runnable), /foo/);
+            });
+        });
+
+        describe("REPL mode", () => {
+            describe("beforeTest", () => {
+                it("should do nothing if flag is not specified", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: false } });
+
+                    const browser = mkBrowser_();
+                    const runnable = mkRunnable_({ fn: () => Promise.resolve() });
+
+                    await mkExecutionThread_({ browser }).run(runnable);
+
+                    assert.notCalled(browser.publicAPI.switchToRepl);
+                });
+
+                describe("if flag is specified", () => {
+                    beforeEach(() => {
+                        RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
+                    });
+
+                    it("should switch to REPL before execute runnable", async () => {
+                        const browser = mkBrowser_();
+                        const onRunnable = sandbox.stub().named("runnable");
+                        const runnable = mkRunnable_({ fn: onRunnable });
+
+                        await mkExecutionThread_({ browser }).run(runnable);
+
+                        assert.callOrder(browser.publicAPI.switchToRepl, onRunnable);
+                    });
+
+                    it("should switch to REPL only once for one execution thread", async () => {
+                        const browser = mkBrowser_();
+                        const runnable1 = mkRunnable_({ fn: () => Promise.resolve() });
+                        const runnable2 = mkRunnable_({ fn: () => Promise.resolve() });
+                        const executionThread = mkExecutionThread_({ browser });
+
+                        await executionThread.run(runnable1);
+                        await executionThread.run(runnable2);
+
+                        await assert.calledOnce(browser.publicAPI.switchToRepl);
+                    });
+
+                    it("should switch to REPL for each new execution thread", async () => {
+                        const browser = mkBrowser_();
+                        const runnable1 = mkRunnable_({ fn: () => Promise.resolve() });
+                        const runnable2 = mkRunnable_({ fn: () => Promise.resolve() });
+                        const executionThread1 = mkExecutionThread_({ browser });
+                        const executionThread2 = mkExecutionThread_({ browser });
+
+                        await executionThread1.run(runnable1);
+                        await executionThread2.run(runnable2);
+
+                        await assert.calledTwice(browser.publicAPI.switchToRepl);
+                    });
+                });
+            });
+
+            describe("onFail", () => {
+                it("should do nothing if flag is not specified", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { onFail: false } });
+
+                    const browser = mkBrowser_();
+                    const runnable = mkRunnable_({
+                        fn: () => Promise.reject(new Error()),
+                    });
+
+                    await mkExecutionThread_({ browser })
+                        .run(runnable)
+                        .catch(() => {});
+
+                    await assert.notCalled(browser.publicAPI.switchToRepl);
+                });
+
+                describe("if flag is specified", () => {
+                    beforeEach(() => {
+                        RuntimeConfig.getInstance.returns({ replMode: { onFail: true } });
+                    });
+
+                    it("should switch to REPL on error", async () => {
+                        const browser = mkBrowser_();
+                        const runnable = mkRunnable_({
+                            fn: () => Promise.reject(new Error()),
+                        });
+
+                        await mkExecutionThread_({ browser })
+                            .run(runnable)
+                            .catch(() => {});
+
+                        await assert.calledOnce(browser.publicAPI.switchToRepl);
+                    });
+
+                    it("should print error before swith to REPL", async () => {
+                        const browser = mkBrowser_();
+                        const err = new Error();
+                        const runnable = mkRunnable_({
+                            fn: () => Promise.reject(err),
+                        });
+
+                        await mkExecutionThread_({ browser })
+                            .run(runnable)
+                            .catch(() => {});
+
+                        await assert.callOrder(
+                            logger.log.withArgs("Caught error:", err),
+                            browser.publicAPI.switchToRepl,
+                        );
+                    });
+                });
             });
         });
     });

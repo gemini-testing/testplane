@@ -1,9 +1,18 @@
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
+import type { BrowserConfig } from "./../config/browser-config";
+import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
 
 export interface BrowserMeta {
     pid: number;
     browserVersion: string;
     [name: string]: unknown;
+}
+
+export interface Browser {
+    publicAPI: WebdriverIO.Browser;
+    config: BrowserConfig;
+    state: Record<string, unknown>;
+    applyState: (state: Record<string, unknown>) => void;
 }
 
 declare global {
@@ -70,6 +79,17 @@ declare global {
              * @returns {Promise<any>} value, returned by `stepCb`
              */
             runStep(stepName: string, stepCb: () => Promise<unknown> | unknown): Promise<unknown>;
+
+            // TODO: describe executionContext more precisely
+            executionContext: (RunnerTest | RunnerHook) & {
+                hermioneCtx: {
+                    assertViewResults: Array<AssertViewResult>;
+                };
+                ctx: {
+                    browser: WebdriverIO.Browser;
+                    currentTest: RunnerTest;
+                };
+            };
         }
 
         interface Element {

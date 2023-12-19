@@ -176,20 +176,48 @@ describe("hermione", () => {
             );
         });
 
-        it("should init runtime config", () => {
+        it("should init runtime config", async () => {
             mkRunnerStub_();
 
-            return runHermione([], { updateRefs: true, requireModules: ["foo"], inspectMode: { inspect: true } }).then(
-                () => {
-                    assert.calledOnce(RuntimeConfig.getInstance);
-                    assert.calledOnceWith(RuntimeConfig.getInstance.lastCall.returnValue.extend, {
-                        updateRefs: true,
-                        requireModules: ["foo"],
-                        inspectMode: { inspect: true },
-                    });
-                    assert.callOrder(RuntimeConfig.getInstance, Runner.create);
+            await runHermione([], {
+                updateRefs: true,
+                requireModules: ["foo"],
+                inspectMode: {
+                    inspect: true,
                 },
-            );
+                replMode: {
+                    enabled: true,
+                },
+            });
+
+            assert.calledOnce(RuntimeConfig.getInstance);
+            assert.calledOnceWith(RuntimeConfig.getInstance.lastCall.returnValue.extend, {
+                updateRefs: true,
+                requireModules: ["foo"],
+                inspectMode: { inspect: true },
+                replMode: { enabled: true },
+            });
+            assert.callOrder(RuntimeConfig.getInstance, Runner.create);
+        });
+
+        describe("repl mode", () => {
+            it("should not reset test timeout to 0 if run not in repl", async () => {
+                mkRunnerStub_();
+                const hermione = mkHermione_({ system: { mochaOpts: { timeout: 100500 } } });
+
+                await hermione.run([], { replMode: { enabled: false } });
+
+                assert.equal(hermione.config.system.mochaOpts.timeout, 100500);
+            });
+
+            it("should reset test timeout to 0 if run in repl", async () => {
+                mkRunnerStub_();
+                const hermione = mkHermione_({ system: { mochaOpts: { timeout: 100500 } } });
+
+                await hermione.run([], { replMode: { enabled: true } });
+
+                assert.equal(hermione.config.system.mochaOpts.timeout, 0);
+            });
         });
 
         describe("INIT", () => {
@@ -270,12 +298,13 @@ describe("hermione", () => {
                 const browsers = ["bro1", "bro2"];
                 const grep = "baz.*";
                 const sets = ["set1", "set2"];
+                const replMode = { enabled: false };
 
                 sandbox.spy(Hermione.prototype, "readTests");
 
-                await runHermione(testPaths, { browsers, grep, sets });
+                await runHermione(testPaths, { browsers, grep, sets, replMode });
 
-                assert.calledOnceWith(Hermione.prototype.readTests, testPaths, { browsers, grep, sets });
+                assert.calledOnceWith(Hermione.prototype.readTests, testPaths, { browsers, grep, sets, replMode });
             });
 
             it("should accept test collection as first parameter", async () => {
@@ -550,6 +579,7 @@ describe("hermione", () => {
                 ignore: "baz/qux",
                 sets: ["s1", "s2"],
                 grep: "grep",
+                replMode: { enabled: false },
             });
 
             assert.calledOnceWith(TestReader.prototype.read, {
@@ -558,6 +588,7 @@ describe("hermione", () => {
                 ignore: "baz/qux",
                 sets: ["s1", "s2"],
                 grep: "grep",
+                replMode: { enabled: false },
             });
         });
 

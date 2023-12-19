@@ -16,7 +16,7 @@ type MockStub = {
 };
 
 const waitUntilMock = (condition: () => boolean, opts?: WaitForOptions): Promise<void> => {
-    let rejectingTimeout: number;
+    let rejectingTimeout: NodeJS.Timeout;
     let destroyed = false;
 
     return new Promise<void>((resolve, reject) => {

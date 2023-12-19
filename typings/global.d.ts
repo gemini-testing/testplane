@@ -28,3 +28,8 @@ interface SuiteDefinition {
     only: (title: string, fn: (this: Mocha.Suite) => void) => Mocha.Suite;
     skip: (title: string, fn: (this: Mocha.Suite) => void) => Mocha.Suite;
 }
+
+declare namespace globalThis {
+    // eslint-disable-next-line no-var
+    var expect: ExpectWebdriverIO.Expect;
+}

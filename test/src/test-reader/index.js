@@ -289,5 +289,59 @@ describe("test-reader", () => {
                 }
             });
         });
+
+        describe("repl mode", () => {
+            it("should not throw error if there are only one test that should be run", async () => {
+                TestParser.prototype.parse.returns([
+                    { title: "test1", browserId: "yabro", pending: false, disabled: false },
+                    { title: "test2", browserId: "yabro", pending: true, disabled: false },
+                    { title: "test3", browserId: "yabro", pending: true, disabled: true },
+                ]);
+
+                await assert.isFulfilled(readTests_({ opts: { replMode: { enabled: true } } }));
+            });
+
+            it("should throw error if tests not found", async () => {
+                TestParser.prototype.parse.returns([]);
+
+                try {
+                    await readTests_({ opts: { replMode: { enabled: true } } });
+                } catch (e) {
+                    assert.match(e.message, /In repl mode only 1 test in 1 browser should be run, but found 0 tests\./);
+                }
+            });
+
+            it("should throw error if found few tests in one browser", async () => {
+                TestParser.prototype.parse.returns([
+                    { title: "test1", browserId: "yabro", pending: false, disabled: false },
+                    { title: "test2", browserId: "yabro", pending: false, disabled: false },
+                ]);
+
+                try {
+                    await readTests_({ opts: { replMode: { enabled: true } } });
+                } catch (e) {
+                    assert.match(
+                        e.message,
+                        /In repl mode only 1 test in 1 browser should be run, but found 2 tests that run in yabro browsers\./,
+                    );
+                }
+            });
+
+            it("should throw error if found one test in few browsers", async () => {
+                TestParser.prototype.parse.returns([
+                    { title: "test1", browserId: "yabro", pending: false, disabled: false },
+                    { title: "test1", browserId: "broya", pending: false, disabled: false },
+                ]);
+
+                try {
+                    await readTests_({ opts: { replMode: { enabled: true } } });
+                } catch (e) {
+                    assert.match(
+                        e.message,
+                        /In repl mode only 1 test in 1 browser should be run, but found 2 tests that run in yabro, broya browsers\./,
+                    );
+                }
+            });
+        });
     });
 });

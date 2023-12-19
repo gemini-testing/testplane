@@ -59,21 +59,45 @@ exports.run = () => {
         )
         .option("--inspect [inspect]", "nodejs inspector on [=[host:]port]")
         .option("--inspect-brk [inspect-brk]", "nodejs inspector with break at the start")
+        .option(
+            "--repl [type]",
+            "run one test, call `browser.switchToRepl` in test code to open repl interface",
+            Boolean,
+            false,
+        )
+        .option("--repl-before-test [type]", "open repl interface before test run", Boolean, false)
+        .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
         .arguments("[paths...]")
         .action(async paths => {
             try {
-                await handleRequires(program.require);
+                const {
+                    reporter: reporters,
+                    browser: browsers,
+                    set: sets,
+                    grep,
+                    updateRefs,
+                    require: requireModules,
+                    inspect,
+                    inspectBrk,
+                    repl,
+                    replBeforeTest,
+                    replOnFail,
+                } = program;
+
+                await handleRequires(requireModules);
 
                 const isTestsSuccess = await hermione.run(paths, {
-                    reporters: program.reporter || defaults.reporters,
-                    browsers: program.browser,
-                    sets: program.set,
-                    grep: program.grep,
-                    updateRefs: program.updateRefs,
-                    requireModules: program.require,
-                    inspectMode: (program.inspect || program.inspectBrk) && {
-                        inspect: program.inspect,
-                        inspectBrk: program.inspectBrk,
+                    reporters: reporters || defaults.reporters,
+                    browsers,
+                    sets,
+                    grep,
+                    updateRefs,
+                    requireModules,
+                    inspectMode: (inspect || inspectBrk) && { inspect, inspectBrk },
+                    replMode: {
+                        enabled: repl || replBeforeTest || replOnFail,
+                        beforeTest: replBeforeTest,
+                        onFail: replOnFail,
                     },
                 });
 

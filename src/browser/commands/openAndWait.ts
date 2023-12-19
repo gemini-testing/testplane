@@ -1,24 +1,7 @@
 import _ from "lodash";
 import { Matches } from "webdriverio";
 import PageLoader from "../../utils/page-loader";
-
-interface Browser {
-    publicAPI: WebdriverIO.Browser;
-    config: {
-        desiredCapabilities: {
-            browserName: string;
-        };
-        automationProtocol: "webdriver" | "devtools";
-        pageLoadTimeout: number;
-        openAndWaitOpts: {
-            timeout?: number;
-            waitNetworkIdle: boolean;
-            waitNetworkIdleTimeout: number;
-            failOnNetworkError: boolean;
-            ignoreNetworkErrorsPatterns: Array<RegExp | string>;
-        };
-    };
-}
+import type { Browser } from "../types";
 
 interface WaitOpts {
     selector?: string | string[];
@@ -43,7 +26,7 @@ const is: Record<string, (match: Matches) => boolean> = {
 export = (browser: Browser): void => {
     const { publicAPI: session, config } = browser;
     const { openAndWaitOpts } = config;
-    const isChrome = config.desiredCapabilities.browserName === "chrome";
+    const isChrome = config.desiredCapabilities?.browserName === "chrome";
     const isCDP = config.automationProtocol === "devtools";
 
     function openAndWait(
@@ -56,7 +39,7 @@ export = (browser: Browser): void => {
             failOnNetworkError = openAndWaitOpts?.failOnNetworkError,
             shouldThrowError = shouldThrowErrorDefault,
             ignoreNetworkErrorsPatterns = openAndWaitOpts?.ignoreNetworkErrorsPatterns,
-            timeout = openAndWaitOpts?.timeout || config?.pageLoadTimeout,
+            timeout = openAndWaitOpts?.timeout || config?.pageLoadTimeout || 0,
         }: WaitOpts = {},
     ): Promise<string | void> {
         waitNetworkIdle &&= isChrome || isCDP;

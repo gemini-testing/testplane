@@ -1,5 +1,6 @@
 const fs = require("fs");
-const chalk = require("chalk");
+const stripAnsi = require("strip-ansi");
+
 const BaseInformer = require("./base");
 const logger = require("../../utils/logger");
 
@@ -34,6 +35,6 @@ module.exports = class FileInformer extends BaseInformer {
     }
 
     _prepareMsg(msg) {
-        return typeof msg === "object" ? JSON.stringify(msg) : chalk.stripColor(msg);
+        return typeof msg === "object" ? JSON.stringify(msg) : stripAnsi(msg);
     }
 };

@@ -1,6 +1,8 @@
 "use strict";
 
 const Promise = require("bluebird");
+const RuntimeConfig = require("../../../config/runtime-config");
+const logger = require("../../../utils/logger");
 
 module.exports = class ExecutionThread {
     static create(...args) {
@@ -14,6 +16,9 @@ module.exports = class ExecutionThread {
             browser: browser.publicAPI,
             currentTest: test,
         };
+
+        this._runtimeConfig = RuntimeConfig.getInstance();
+        this._isReplBeforeTestOpened = false;
     }
 
     async run(runnable) {
@@ -35,7 +40,14 @@ module.exports = class ExecutionThread {
         }
     }
 
-    _call(runnable) {
+    async _call(runnable) {
+        const { replMode } = this._runtimeConfig;
+
+        if (replMode?.beforeTest && !this._isReplBeforeTestOpened) {
+            await this._ctx.browser.switchToRepl();
+            this._isReplBeforeTestOpened = true;
+        }
+
         let fnPromise = Promise.method(runnable.fn).call(this._ctx, this._ctx);
 
         if (runnable.timeout) {
@@ -44,7 +56,14 @@ module.exports = class ExecutionThread {
         }
 
         return fnPromise
-            .tapCatch(e => this._screenshooter.extendWithScreenshot(e))
+            .tapCatch(async e => {
+                if (replMode?.onFail) {
+                    logger.log("Caught error:", e);
+                    await this._ctx.browser.switchToRepl();
+                }
+
+                return this._screenshooter.extendWithScreenshot(e);
+            })
             .finally(async () => {
                 if (this._hermioneCtx.assertViewResults && this._hermioneCtx.assertViewResults.hasFails()) {
                     await this._screenshooter.captureScreenshotOnAssertViewFail();

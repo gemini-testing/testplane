@@ -1,6 +1,6 @@
 "use strict";
 
-const chalk = require("chalk");
+const stripAnsi = require("strip-ansi");
 const _ = require("lodash");
 
 exports.mkTestStub_ = opts => {
@@ -14,5 +14,5 @@ exports.mkTestStub_ = opts => {
 };
 
 exports.getDeserializedResult = log => {
-    return chalk.stripColor(log).substr(2); // remove first symbol (icon)
+    return stripAnsi(log).substr(2); // remove first symbol (icon)
 };

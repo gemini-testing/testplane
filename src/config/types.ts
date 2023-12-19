@@ -120,6 +120,14 @@ export interface CommonConfig {
     system: SystemConfig;
     headless: boolean | null;
     isolation: boolean;
+
+    openAndWaitOpts: {
+        timeout?: number;
+        waitNetworkIdle: boolean;
+        waitNetworkIdleTimeout: number;
+        failOnNetworkError: boolean;
+        ignoreNetworkErrorsPatterns: Array<RegExp | string>;
+    };
 }
 
 export interface SetsConfig {
