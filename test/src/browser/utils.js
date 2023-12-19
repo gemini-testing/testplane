@@ -63,9 +63,6 @@ exports.mkSessionStub_ = () => {
         click: sinon.stub().named("click").resolves(),
         waitForExist: sinon.stub().named("waitForExist").resolves(),
     };
-    const wdElement = {
-        "element-6066-11e4-a52e-4f735466cecf": "95777D6590AF653A2FD8EB0ADD20B333_element_1",
-    };
 
     session.sessionId = "1234567890";
     session.isW3C = false;
@@ -89,9 +86,8 @@ exports.mkSessionStub_ = () => {
     session.$ = sinon.stub().named("$").resolves(wdioElement);
     session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
     session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
-    session.findElements = sinon.stub().named("findElements").resolves([wdElement]);
+    session.findElements = sinon.stub().named("findElements").resolves([]);
     session.switchToFrame = sinon.stub().named("switchToFrame").resolves();
-    session.switchToParentFrame = sinon.stub().named("switchToParentFrame").resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? wdioElement : session;
