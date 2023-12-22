@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+
 const { Config } = require("src/config");
 const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
@@ -1625,74 +1626,33 @@ describe("config browser-options", () => {
         });
     });
 
-    describe("agent", () => {
-        it(`should throw error if "agent" is not an object`, () => {
-            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ agent: "string" }));
+    ["agent", "headers"].forEach(option => {
+        describe(option, () => {
+            it(`should throw error if "${option}" is not an object`, () => {
+                const readConfig = _.set({}, "browsers.b1", mkBrowser_({ [option]: "string" }));
 
-            Config.read.returns(readConfig);
+                Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, `"agent" must be an object`);
-        });
+                assert.throws(() => createConfig(), Error, `"${option}" must be an object`);
+            });
 
-        it("should set a default value if it is not set in config", () => {
-            const readConfig = _.set({}, "browsers.b1", mkBrowser_());
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.agent, defaults.option);
-        });
-
-        it("should set provided value", () => {
-            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ agent: { k1: "v1", k2: "v2" } }));
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.deepEqual(config.browsers.b1.agent, { k1: "v1", k2: "v2" });
-        });
-    });
-
-    describe("headers", () => {
-        it("should throw error if option is not an object", () => {
-            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ headers: null }));
-
-            Config.read.returns(readConfig);
-
-            assert.throws(() => createConfig(), Error, `"headers" must be an object`);
-        });
-
-        describe("should generate 'X-Request-ID'", () => {
-            it("if value is not set in config", () => {
+            it("should set a default value if it is not set in config", () => {
                 const readConfig = _.set({}, "browsers.b1", mkBrowser_());
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.typeOf(config.browsers.b1.headers["X-Request-ID"], "string");
-                assert.isAbove(config.browsers.b1.headers["X-Request-ID"].length, 20);
+                assert.equal(config[option], defaults[option]);
             });
 
-            it("if it is not specified in value", () => {
-                const readConfig = _.set({}, "browsers.b1", mkBrowser_({ headers: { k1: "v1" } }));
+            it("should set provided value", () => {
+                const readConfig = _.set({}, "browsers.b1", mkBrowser_({ [option]: { k1: "v1", k2: "v2" } }));
                 Config.read.returns(readConfig);
 
                 const config = createConfig();
 
-                assert.typeOf(config.browsers.b1.headers["X-Request-ID"], "string");
-                assert.isAbove(config.browsers.b1.headers["X-Request-ID"].length, 20);
-                assert.equal(config.browsers.b1.headers.k1, "v1");
+                assert.deepEqual(config.browsers.b1[option], { k1: "v1", k2: "v2" });
             });
-        });
-
-        it("should not generate 'X-Request-ID' if it is specified by user", () => {
-            const headers = { "X-Request-ID": "my-req-id" };
-            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ headers }));
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.deepEqual(config.browsers.b1.headers, headers);
         });
     });
 

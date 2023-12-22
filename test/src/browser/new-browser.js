@@ -36,7 +36,6 @@ describe("NewBrowser", () => {
                 connectionRetryTimeout: 3000,
                 connectionRetryCount: 0,
                 baseUrl: "http://base_url",
-                headers: {},
             });
         });
 
