@@ -33,13 +33,13 @@ describe("browser-pool/basic-pool", () => {
 
         await mkPool_({ config }).getBrowser("broId");
 
-        assert.calledWith(Browser.create, config, "broId");
+        assert.calledWith(Browser.create, config, { id: "broId" });
     });
 
     it("should create new browser with specified version when requested", async () => {
         await mkPool_().getBrowser("broId", { version: "1.0" });
 
-        assert.calledWith(Browser.create, sinon.match.any, "broId", "1.0");
+        assert.calledWith(Browser.create, sinon.match.any, { id: "broId", version: "1.0" });
     });
 
     it("should init browser", async () => {

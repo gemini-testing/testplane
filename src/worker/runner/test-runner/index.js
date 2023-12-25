@@ -22,14 +22,14 @@ module.exports = class TestRunner {
         this._browserAgent = browserAgent;
     }
 
-    async run({ sessionId, sessionCaps, sessionOpts }) {
+    async run({ sessionId, sessionCaps, sessionOpts, testXReqId }) {
         const test = this._test;
         const hermioneCtx = test.hermioneCtx || {};
 
         let browser;
 
         try {
-            browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts });
+            browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts, testXReqId });
         } catch (e) {
             throw Object.assign(e, { hermioneCtx });
         }

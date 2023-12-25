@@ -1,11 +1,11 @@
 "use strict";
 
 module.exports = class BrowserAgent {
-    static create(id, version, pool) {
-        return new this(id, version, pool);
+    static create(opts = {}) {
+        return new this(opts);
     }
 
-    constructor(id, version, pool) {
+    constructor({ id, version, pool }) {
         this.browserId = id;
 
         this._version = version;

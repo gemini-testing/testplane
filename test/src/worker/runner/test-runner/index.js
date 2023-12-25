@@ -99,7 +99,12 @@ describe("worker/runner/test-runner", () => {
 
         it("should request browser for passed session", async () => {
             const runner = mkRunner_();
-            const opts = { sessionId: "100500", sessionCaps: "some-caps", sessionOpts: "some-opts" };
+            const opts = {
+                sessionId: "100500",
+                sessionCaps: "some-caps",
+                sessionOpts: "some-opts",
+                testXReqId: "12345",
+            };
 
             await runner.run(opts);
 

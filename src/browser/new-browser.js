@@ -31,8 +31,8 @@ const headlessBrowserOptions = {
 };
 
 module.exports = class NewBrowser extends Browser {
-    constructor(config, id, version) {
-        super(config, id, version);
+    constructor(config, opts) {
+        super(config, opts);
 
         signalHandler.on("exit", () => this.quit());
     }

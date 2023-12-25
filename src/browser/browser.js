@@ -1,7 +1,9 @@
 "use strict";
 
+const crypto = require("crypto");
 const _ = require("lodash");
 const { SAVE_HISTORY_MODE } = require("../constants/config");
+const { X_REQUEST_ID_DELIMITER } = require("../constants/browser");
 const history = require("./history");
 const addRunStepCommand = require("./commands/runStep");
 
@@ -19,13 +21,14 @@ const CUSTOM_SESSION_OPTS = [
 ];
 
 module.exports = class Browser {
-    static create(config, id, version) {
-        return new this(config, id, version);
+    static create(config, opts) {
+        return new this(config, opts);
     }
 
-    constructor(config, id, version) {
-        this.id = id;
-        this.version = version;
+    constructor(config, opts) {
+        this.id = opts.id;
+        this.version = opts.version;
+        this.testXReqId = opts.testXReqId;
 
         this._config = config.forBrowser(this.id);
         this._debug = config.system.debug;
@@ -82,7 +85,21 @@ module.exports = class Browser {
 
     _getSessionOptsFromConfig(optNames = CUSTOM_SESSION_OPTS) {
         return optNames.reduce((options, optName) => {
-            if (!_.isNull(this._config[optName])) {
+            if (optName === "transformRequest") {
+                options[optName] = req => {
+                    if (!_.isNull(this._config[optName])) {
+                        req = this._config[optName](req);
+                    }
+
+                    if (!req.headers["X-Request-ID"]) {
+                        req.headers["X-Request-ID"] = `${
+                            this.testXReqId
+                        }${X_REQUEST_ID_DELIMITER}${crypto.randomUUID()}`;
+                    }
+
+                    return req;
+                };
+            } else if (!_.isNull(this._config[optName])) {
                 options[optName] = this._config[optName];
             }
 

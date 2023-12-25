@@ -48,7 +48,11 @@ module.exports = class BrowserRunner extends Runner {
     }
 
     async _runTest(test) {
-        const browserAgent = BrowserAgent.create(this._browserId, test.browserVersion, this._browserPool);
+        const browserAgent = BrowserAgent.create({
+            id: this._browserId,
+            version: test.browserVersion,
+            pool: this._browserPool,
+        });
         const runner = TestRunner.create(test, this._config, browserAgent);
 
         runner.on(Events.TEST_BEGIN, test => this._suiteMonitor.testBegin(test));
