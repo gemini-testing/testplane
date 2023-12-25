@@ -1,10 +1,12 @@
 "use strict";
 
+const crypto = require("crypto");
 const webdriverio = require("webdriverio");
 const logger = require("src/utils/logger");
 const signalHandler = require("src/signal-handler");
 const history = require("src/browser/history");
 const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
+const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const { mkNewBrowser_: mkBrowser_, mkSessionStub_ } = require("./utils");
 
 describe("NewBrowser", () => {
@@ -36,6 +38,7 @@ describe("NewBrowser", () => {
                 connectionRetryTimeout: 3000,
                 connectionRetryCount: 0,
                 baseUrl: "http://base_url",
+                transformRequest: sinon.match.func,
             });
         });
 
@@ -116,8 +119,7 @@ describe("NewBrowser", () => {
             it("it is already exists in capabilities", async () => {
                 await mkBrowser_(
                     { desiredCapabilities: { browserName: "browser", browserVersion: "1.0" } },
-                    "browser",
-                    "2.0",
+                    { id: "browser", version: "2.0" },
                 ).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
@@ -126,7 +128,7 @@ describe("NewBrowser", () => {
             });
 
             it("w3c protocol is used", async () => {
-                await mkBrowser_({ sessionEnvFlags: { isW3C: true } }, "browser", "2.0").init();
+                await mkBrowser_({ sessionEnvFlags: { isW3C: true } }, { id: "browser", version: "2.0" }).init();
 
                 assert.calledWithMatch(webdriverio.remote, {
                     capabilities: { browserName: "browser", browserVersion: "2.0" },
@@ -186,6 +188,66 @@ describe("NewBrowser", () => {
 
             assert.notCalled(session.setTimeout);
             assert.notCalled(session.setTimeouts);
+        });
+
+        describe("transformRequest option", () => {
+            beforeEach(() => {
+                sandbox.stub(crypto, "randomUUID").returns("00000");
+            });
+
+            it("should call user handler from config", async () => {
+                const request = { headers: {} };
+                const transformRequestStub = sinon.stub().returns(request);
+
+                await mkBrowser_({ transformRequest: transformRequestStub }).init();
+
+                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                transformRequest(request);
+
+                assert.calledOnceWith(transformRequestStub, request);
+            });
+
+            it('should not add "X-Request-ID" header if it is already add by user', async () => {
+                const request = { headers: {} };
+                const transformRequestStub = req => {
+                    req.headers["X-Request-ID"] = "100500";
+                    return req;
+                };
+
+                await mkBrowser_({ transformRequest: transformRequestStub }).init();
+
+                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                transformRequest(request);
+
+                assert.equal(request.headers["X-Request-ID"], "100500");
+            });
+
+            it('should add "X-Request-ID" header', async () => {
+                crypto.randomUUID.returns("67890");
+                const testXReqId = "12345";
+                const request = { headers: {} };
+
+                await mkBrowser_({}, { testXReqId }).init();
+
+                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                transformRequest(request);
+
+                assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
+            });
+        });
+
+        describe("transformResponse option", () => {
+            it("should call user handler from config", async () => {
+                const transformResponseStub = sinon.stub();
+                const response = {};
+
+                await mkBrowser_({ transformResponse: transformResponseStub }).init();
+
+                const { transformResponse } = webdriverio.remote.lastCall.args[0];
+                transformResponse(response);
+
+                assert.calledOnceWith(transformResponseStub, response);
+            });
         });
 
         describe("commands-history", () => {

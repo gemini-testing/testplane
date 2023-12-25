@@ -27,12 +27,12 @@ module.exports = class Runner extends AsyncEmitter {
         ]);
     }
 
-    async runTest(fullTitle, { browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts }) {
+    async runTest(fullTitle, { browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts, testXReqId }) {
         const tests = await this._testParser.parse({ file, browserId });
         const test = tests.find(t => t.fullTitle() === fullTitle);
-        const browserAgent = BrowserAgent.create(browserId, browserVersion, this._browserPool);
+        const browserAgent = BrowserAgent.create({ id: browserId, version: browserVersion, pool: this._browserPool });
         const runner = TestRunner.create(test, this._config.forBrowser(browserId), browserAgent);
 
-        return runner.run({ sessionId, sessionCaps, sessionOpts });
+        return runner.run({ sessionId, sessionCaps, sessionOpts, testXReqId });
     }
 };

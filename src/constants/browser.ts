@@ -1,1 +1,2 @@
 export const MIN_CHROME_VERSION_SUPPORT_ISOLATION = 93;
+export const X_REQUEST_ID_DELIMITER = "__";

@@ -1,6 +1,7 @@
 "use strict";
 
 const { EventEmitter } = require("events");
+const crypto = require("crypto");
 const _ = require("lodash");
 const Promise = require("bluebird");
 const webdriverio = require("webdriverio");
@@ -12,7 +13,7 @@ const clientBridge = require("src/browser/client-bridge");
 const logger = require("src/utils/logger");
 const history = require("src/browser/history");
 const { SAVE_HISTORY_MODE, WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } = require("src/constants/config");
-const { MIN_CHROME_VERSION_SUPPORT_ISOLATION } = require("src/constants/browser");
+const { MIN_CHROME_VERSION_SUPPORT_ISOLATION, X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const {
     mkExistingBrowser_: mkBrowser_,
     mkSessionStub_,
@@ -56,7 +57,7 @@ describe("ExistingBrowser", () => {
         it("should set emitter", () => {
             const emitter = new EventEmitter();
 
-            const browser = mkBrowser_({}, "bro", null, emitter);
+            const browser = mkBrowser_({}, { emitter });
 
             assert.deepEqual(browser.emitter, emitter);
         });
@@ -69,7 +70,7 @@ describe("ExistingBrowser", () => {
             });
 
             it("should extend meta-info with browserVersion by default", () => {
-                const browser = mkBrowser_({}, "bro-id", "10.1");
+                const browser = mkBrowser_({}, { id: "bro-id", version: "10.1" });
 
                 assert.propertyVal(browser.meta, "browserVersion", "10.1");
             });
@@ -78,6 +79,12 @@ describe("ExistingBrowser", () => {
                 const browser = mkBrowser_({ meta: { k1: "v1" } });
 
                 assert.propertyVal(browser.meta, "k1", "v1");
+            });
+
+            it('should extend meta-info with "testXReqId" field', () => {
+                const browser = mkBrowser_({}, { testXReqId: "12345" });
+
+                assert.propertyVal(browser.meta, "testXReqId", "12345");
             });
         });
 
@@ -136,21 +143,63 @@ describe("ExistingBrowser", () => {
             assert.calledWithMatch(webdriverio.attach, { foo: "bar" });
         });
 
-        it('should attach to browser with "transform*" options from browser config', async () => {
-            const transformRequestStub = sinon.stub();
-            const transformResponseStub = sinon.stub();
+        describe("transformRequest option", () => {
+            beforeEach(() => {
+                sandbox.stub(crypto, "randomUUID").returns("00000");
+            });
 
-            await initBrowser_(
-                mkBrowser_({
-                    transformRequest: transformRequestStub,
-                    transformResponse: transformResponseStub,
-                }),
-            );
+            it("should call user handler from config", async () => {
+                const request = { headers: {} };
+                const transformRequestStub = sinon.stub().returns(request);
 
-            assert.calledOnce(webdriverio.attach);
-            assert.calledWithMatch(webdriverio.attach, {
-                transformRequest: transformRequestStub,
-                transformResponse: transformResponseStub,
+                await initBrowser_(mkBrowser_({ transformRequest: transformRequestStub }));
+
+                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                transformRequest(request);
+
+                assert.calledOnceWith(transformRequestStub, request);
+            });
+
+            it('should not add "X-Request-ID" header if it is already add by user', async () => {
+                const request = { headers: {} };
+                const transformRequestStub = req => {
+                    req.headers["X-Request-ID"] = "100500";
+                    return req;
+                };
+
+                await initBrowser_(mkBrowser_({ transformRequest: transformRequestStub }));
+
+                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                transformRequest(request);
+
+                assert.equal(request.headers["X-Request-ID"], "100500");
+            });
+
+            it('should add "X-Request-ID" header', async () => {
+                crypto.randomUUID.returns("67890");
+                const testXReqId = "12345";
+                const request = { headers: {} };
+
+                await initBrowser_(mkBrowser_({}, { testXReqId }));
+
+                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                transformRequest(request);
+
+                assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
+            });
+        });
+
+        describe("transformResponse option", () => {
+            it("should call user handler from config", async () => {
+                const transformResponseStub = sinon.stub();
+                const response = {};
+
+                await initBrowser_(mkBrowser_({ transformResponse: transformResponseStub }));
+
+                const { transformResponse } = webdriverio.attach.lastCall.args[0];
+                transformResponse(response);
+
+                assert.calledOnceWith(transformResponseStub, response);
             });
         });
 

@@ -1098,6 +1098,20 @@ Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#o
 (RequestOptions) => RequestOptions
 ```
 
+In runtime a unique `X-Request-ID` header is generated for each browser request which consists of `${FIRST_X_REQ_ID}__${LAST_X_REQ_ID}`, where:
+- `FIRST_X_REQ_ID` - unique uuid for each test (different for each retry), allows to find all requests related to a single test run;
+- `LAST_X_REQ_ID` - unique uuid for each browser request, allows to find one unique request in one test (together with `FIRST_X_REQ_ID`).
+
+Header `X-Request-ID` can be useful if you manage the cloud with browsers yourself and collect logs with requests. Real-world example: `2f31ffb7-369d-41f4-bbb8-77744615d2eb__e8d011d8-bb76-42b9-b80e-02f03b8d6fe1`.
+
+To override generated `X-Request-ID` to your own value you need specify it in `transformRequest` handler. Example:
+
+```javascript
+transformRequest: (req) => {
+    req.handler["X-Request-ID"] = "my_x_req_id";
+}
+```
+
 ####  transformResponse
 Allows to intercept [HTTP response object](https://github.com/sindresorhus/got#response) after a WebDriver response has arrived. Default value is `null`. If function is passed then it takes `Response` (original response object) as the first and `RequestOptions` as the second argument. Should return modified `Response`. Example:
 

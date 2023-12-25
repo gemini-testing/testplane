@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("crypto");
 const _ = require("lodash");
 
 const BrowserAgent = require("src/runner/browser-agent");
@@ -32,7 +33,7 @@ describe("runner/test-runner/regular-test-runner", () => {
 
     const mkRunner_ = (opts = {}) => {
         const test = opts.test || new Test({ title: "defaultTest" });
-        const browserAgent = opts.browserAgent || BrowserAgent.create();
+        const browserAgent = opts.browserAgent || BrowserAgent.create({});
 
         return RegularTestRunner.create(test, browserAgent);
     };
@@ -70,6 +71,7 @@ describe("runner/test-runner/regular-test-runner", () => {
         sandbox.stub(AssertViewResults.prototype, "get").returns({});
 
         sandbox.stub(logger, "warn");
+        sandbox.stub(crypto, "randomUUID").returns("");
     });
 
     afterEach(() => sandbox.restore());
@@ -87,7 +89,9 @@ describe("runner/test-runner/regular-test-runner", () => {
 
     describe("run", () => {
         it("should get browser before running test", async () => {
-            BrowserAgent.prototype.getBrowser.resolves(
+            const testXReqId = "12345";
+            crypto.randomUUID.returns(testXReqId);
+            BrowserAgent.prototype.getBrowser.withArgs({ testXReqId }).resolves(
                 stubBrowser_({
                     id: "bro",
                     version: "1.0",
@@ -96,6 +100,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     publicAPI: {
                         options: { foo: "bar" },
                     },
+                    testXReqId,
                 }),
             );
             const workers = mkWorkers_();
@@ -111,6 +116,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     sessionId: "100500",
                     sessionCaps: { browserName: "bro" },
                     sessionOpts: { foo: "bar" },
+                    testXReqId,
                 }),
             );
         });
