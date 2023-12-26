@@ -1200,6 +1200,46 @@ describe("config browser-options", () => {
 
             assert.isFalse(config.browsers.b1.isolation);
         });
+
+        describe("should set to 'false' by user even if browser support isolation", () => {
+            it("in top level config", () => {
+                const readConfig = {
+                    isolation: false,
+                    browsers: {
+                        b1: mkBrowser_({
+                            desiredCapabilities: {
+                                browserName: "chrome",
+                                browserVersion: "101.0",
+                            },
+                        }),
+                    },
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.isFalse(config.browsers.b1.isolation);
+            });
+
+            it("in browser config", () => {
+                const readConfig = {
+                    browsers: {
+                        b1: mkBrowser_({
+                            isolation: false,
+                            desiredCapabilities: {
+                                browserName: "chrome",
+                                browserVersion: "101.0",
+                            },
+                        }),
+                    },
+                };
+                Config.read.returns(readConfig);
+
+                const config = createConfig();
+
+                assert.isFalse(config.browsers.b1.isolation);
+            });
+        });
     });
 
     describe("saveHistoryMode", () => {

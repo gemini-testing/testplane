@@ -1135,7 +1135,7 @@ Ability to choose different datacenters for run in cloud service. Default value 
 Ability to run headless browser in cloud service. Default value is `null`.
 
 ####  isolation
-Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `false`, but `true` for chrome@93 and higher.
+Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `null`, but `true` for chrome@93 and higher.
 
 ### system
 
