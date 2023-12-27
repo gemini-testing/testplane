@@ -319,15 +319,15 @@ function buildBrowserOptions(defaultFactory, extra) {
             defaultValue: defaultFactory("isolation"),
             parseCli: value => utils.parseBoolean(value, "isolation"),
             parseEnv: value => utils.parseBoolean(value, "isolation"),
-            validate: is("boolean", "isolation"),
+            validate: value => _.isNull(value) || is("boolean", "isolation")(value),
             map: (value, config, currentNode, meta) => {
-                if (meta.isSpecified) {
+                if (meta.isSetByUser || !_.isNull(value)) {
                     return value;
                 }
 
                 const caps = _.get(currentNode, "desiredCapabilities");
 
-                return caps && isSupportIsolation(caps.browserName, caps.browserVersion) ? true : value;
+                return caps ? isSupportIsolation(caps.browserName, caps.browserVersion) : value;
             },
         }),
     });

@@ -91,7 +91,7 @@ module.exports = {
     key: null,
     region: null,
     headless: null,
-    isolation: false,
+    isolation: null,
 };
 
 module.exports.configPaths = [".hermione.conf.ts", ".hermione.conf.js"];
