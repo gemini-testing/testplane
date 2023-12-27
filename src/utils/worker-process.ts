@@ -1,5 +1,7 @@
 import { ChildProcess } from "child_process";
 
+type Serializable = string | object | number | boolean | bigint;
+
 export class WorkerProcess {
     protected process: ChildProcess;
 
@@ -11,7 +13,7 @@ export class WorkerProcess {
         this.process = process;
     }
 
-    send(message: unknown): boolean {
+    send(message: Serializable): boolean {
         if (!this.process.connected) {
             return false;
         }

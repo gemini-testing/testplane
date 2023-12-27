@@ -47,6 +47,20 @@ module.exports = class TestReader extends EventEmitter {
 
 function validateTests(testsByBro, options) {
     const tests = _.flatten(Object.values(testsByBro));
+
+    if (options.replMode?.enabled) {
+        const testsToRun = tests.filter(test => !test.disabled && !test.pending);
+        const browsersToRun = _.uniq(testsToRun.map(test => test.browserId));
+
+        if (testsToRun.length !== 1) {
+            throw new Error(
+                `In repl mode only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
+                    `${testsToRun.length === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
+                    `Try to specify cli-options: "--grep" and "--browser" or use "hermione.only.in" in the test file.`,
+            );
+        }
+    }
+
     if (!_.isEmpty(tests) && tests.some(test => !test.silentSkip)) {
         return;
     }

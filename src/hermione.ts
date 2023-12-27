@@ -16,22 +16,24 @@ import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test } from "./types";
 
 interface RunOpts {
-    browsers?: string[];
-    sets?: string[];
-    grep?: string;
-    updateRefs?: boolean;
-    requireModules?: string[];
-    inspectMode?: {
+    browsers: string[];
+    sets: string[];
+    grep: RegExp;
+    updateRefs: boolean;
+    requireModules: string[];
+    inspectMode: {
         inspect: boolean;
         inspectBrk: boolean;
     };
-    reporters?: string[];
+    reporters: string[];
+    replMode: {
+        enabled: boolean;
+        beforeTest: boolean;
+        onFail: boolean;
+    };
 }
 
-interface ReadTestsOpts {
-    browsers: string[];
-    sets: string[];
-    grep: string | RegExp;
+interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
     silent: boolean;
     ignore: string | string[];
 }
@@ -59,11 +61,24 @@ export class Hermione extends BaseHermione {
 
     async run(
         testPaths: TestCollection | string[],
-        { browsers, sets, grep, updateRefs, requireModules, inspectMode, reporters = [] }: Partial<RunOpts> = {},
+        {
+            browsers,
+            sets,
+            grep,
+            updateRefs,
+            requireModules,
+            inspectMode,
+            replMode,
+            reporters = [],
+        }: Partial<RunOpts> = {},
     ): Promise<boolean> {
         validateUnknownBrowsers(browsers, _.keys(this._config.browsers));
 
-        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode });
+        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode });
+
+        if (replMode?.enabled) {
+            this._config.system.mochaOpts.timeout = 0;
+        }
 
         const runner = MainRunner.create(this._config, this._interceptors);
         this.runner = runner;
@@ -78,7 +93,10 @@ export class Hermione extends BaseHermione {
 
         await this._init();
         runner.init();
-        await runner.run(await this._readTests(testPaths, { browsers, sets, grep }), RunnerStats.create(this));
+        await runner.run(
+            await this._readTests(testPaths, { browsers, sets, grep, replMode }),
+            RunnerStats.create(this),
+        );
 
         return !this.isFailed();
     }
@@ -96,7 +114,7 @@ export class Hermione extends BaseHermione {
 
     async readTests(
         testPaths: string[],
-        { browsers, sets, grep, silent, ignore }: Partial<ReadTestsOpts> = {},
+        { browsers, sets, grep, silent, ignore, replMode }: Partial<ReadTestsOpts> = {},
     ): Promise<TestCollection> {
         const testReader = TestReader.create(this._config);
 
@@ -109,7 +127,7 @@ export class Hermione extends BaseHermione {
             ]);
         }
 
-        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep });
+        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep, replMode });
         const collection = TestCollection.create(specs);
 
         collection.getBrowsers().forEach(bro => {

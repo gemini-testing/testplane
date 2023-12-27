@@ -1,6 +1,7 @@
 "use strict";
 
 const chalk = require("chalk");
+const stripAnsi = require("strip-ansi");
 const path = require("path");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
@@ -90,7 +91,7 @@ describe("Flat reporter", () => {
             retries: 2,
         });
 
-        const deserealizedResult = chalk.stripColor(informer.log.firstCall.args[0]);
+        const deserealizedResult = stripAnsi(informer.log.firstCall.args[0]);
 
         assert.equal(deserealizedResult, "Total: 5 Passed: 2 Failed: 2 Skipped: 1 Retries: 2");
     });

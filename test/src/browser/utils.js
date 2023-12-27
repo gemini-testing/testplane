@@ -84,6 +84,13 @@ exports.mkSessionStub_ = () => {
     session.options = {};
     session.capabilities = {};
     session.commandList = [];
+    session.executionContext = {
+        ctx: {
+            currentTest: {
+                file: "/default",
+            },
+        },
+    };
 
     session.deleteSession = sinon.stub().named("end").resolves();
     session.url = sinon.stub().named("url").resolves();
@@ -103,6 +110,8 @@ exports.mkSessionStub_ = () => {
     session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
     session.findElements = sinon.stub().named("findElements").resolves([]);
     session.switchToFrame = sinon.stub().named("switchToFrame").resolves();
+    session.switchToParentFrame = sinon.stub().named("switchToParentFrame").resolves();
+    session.switchToRepl = sinon.stub().named("switchToRepl").resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? wdioElement : session;

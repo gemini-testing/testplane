@@ -1,6 +1,4 @@
-type Browser = {
-    publicAPI: WebdriverIO.Browser;
-};
+import type { Browser } from "../types";
 
 // TODO: remove after fix https://github.com/webdriverio/webdriverio/issues/9620
 export = async (browser: Browser): Promise<void> => {

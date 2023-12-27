@@ -45,7 +45,7 @@ class TestParser extends EventEmitter {
         this.#applyInstructionsEvents(eventBus);
         this.#passthroughFileEvents(eventBus, global.hermione);
 
-        this.#clearRequireCach(files);
+        this.#clearRequireCache(files);
 
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
@@ -78,7 +78,7 @@ class TestParser extends EventEmitter {
         passthroughEvent_(MasterEvents.AFTER_FILE_READ);
     }
 
-    #clearRequireCach(files) {
+    #clearRequireCache(files) {
         files.forEach(filename => {
             if (path.extname(filename) !== ".mjs") {
                 clearRequire(path.resolve(filename));

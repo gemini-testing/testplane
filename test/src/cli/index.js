@@ -230,4 +230,54 @@ describe("cli", () => {
 
         assert.calledWithMatch(Hermione.prototype.run, any, { inspectMode: { inspectBrk: "9229" } });
     });
+
+    describe("repl mode", () => {
+        it("should be disabled by default", async () => {
+            await run_();
+
+            assert.calledWithMatch(Hermione.prototype.run, any, {
+                replMode: {
+                    enabled: false,
+                    beforeTest: false,
+                    onFail: false,
+                },
+            });
+        });
+
+        it('should be enabled when specify "repl" flag', async () => {
+            await run_("--repl");
+
+            assert.calledWithMatch(Hermione.prototype.run, any, {
+                replMode: {
+                    enabled: true,
+                    beforeTest: false,
+                    onFail: false,
+                },
+            });
+        });
+
+        it('should be enabled when specify "beforeTest" flag', async () => {
+            await run_("--repl-before-test");
+
+            assert.calledWithMatch(Hermione.prototype.run, any, {
+                replMode: {
+                    enabled: true,
+                    beforeTest: true,
+                    onFail: false,
+                },
+            });
+        });
+
+        it('should be enabled when specify "onFail" flag', async () => {
+            await run_("--repl-on-fail");
+
+            assert.calledWithMatch(Hermione.prototype.run, any, {
+                replMode: {
+                    enabled: true,
+                    beforeTest: false,
+                    onFail: true,
+                },
+            });
+        });
+    });
 });
