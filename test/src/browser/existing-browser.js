@@ -771,20 +771,33 @@ describe("ExistingBrowser", () => {
             );
         });
 
-        it("should disable animations if 'disableAnimation: true' and 'automationProtocol: webdriver'", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-            const iframeElement = { "element-12345": "67890_element_1" };
-            browser.publicAPI.findElements.withArgs("css selector", "iframe").resolves([iframeElement]);
+        describe("'disableAnimation: true' and 'automationProtocol: webdriver'", () => {
+            it("should disable animations", async () => {
+                const clientBridge = stubClientBridge_();
+                const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
+                const iframeElement1 = { "element-12345": "67890_element_1" };
+                const iframeElement2 = { "element-54321": "09876_element_2" };
+                browser.publicAPI.findElements
+                    .withArgs("css selector", "iframe")
+                    .resolves([iframeElement1, iframeElement2]);
 
-            await browser.prepareScreenshot(".selector", { disableAnimation: true });
+                await browser.prepareScreenshot(".selector", { disableAnimation: true });
 
-            assert.calledWith(clientBridge.call, "prepareScreenshot", [
-                ".selector",
-                sinon.match({ disableAnimation: true }),
-            ]);
-            assert.calledWith(browser.publicAPI.switchToFrame, iframeElement);
-            assert.calledWith(clientBridge.call, "disableFrameAnimations");
+                assert.callOrder(
+                    clientBridge.call.withArgs("prepareScreenshot", [
+                        ".selector",
+                        sinon.match({ disableAnimation: true }),
+                    ]),
+
+                    browser.publicAPI.switchToFrame.withArgs(iframeElement1),
+                    clientBridge.call.withArgs("disableFrameAnimations"),
+                    browser.publicAPI.switchToFrame.withArgs(null),
+
+                    browser.publicAPI.switchToFrame.withArgs(iframeElement2),
+                    clientBridge.call.withArgs("disableFrameAnimations"),
+                    browser.publicAPI.switchToFrame.withArgs(null),
+                );
+            });
         });
 
         it("should not disable iframe animations if 'disableAnimation: true' and 'automationProtocol: devtools'", async () => {
