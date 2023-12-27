@@ -29,7 +29,7 @@ function createBrowserConfig_(opts = {}) {
         },
         waitOrientationChange: true,
         agent: null,
-        headers: {},
+        headers: null,
         transformRequest: null,
         transformResponse: null,
         strictSSL: null,
@@ -49,12 +49,15 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkNewBrowser_ = (opts, browser = "browser", version) => {
-    return NewBrowser.create(createBrowserConfig_(opts), browser, version);
+exports.mkNewBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", testXReqId: "" }) => {
+    return NewBrowser.create(createBrowserConfig_(configOpts), opts);
 };
 
-exports.mkExistingBrowser_ = (opts, browser = "browser", browserVersion, emitter = "emitter") => {
-    return ExistingBrowser.create(createBrowserConfig_(opts), browser, browserVersion, emitter);
+exports.mkExistingBrowser_ = (
+    configOpts,
+    opts = { id: "browser", version: "1.0", testXReqId: "", emitter: "emitter" },
+) => {
+    return ExistingBrowser.create(createBrowserConfig_(configOpts), opts);
 };
 
 exports.mkMockStub_ = () => {

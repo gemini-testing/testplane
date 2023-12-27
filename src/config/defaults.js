@@ -83,7 +83,7 @@ module.exports = {
     fileExtensions: [".js", ".mjs", ".ts", ".mts"],
     outputDir: null,
     agent: null,
-    headers: {},
+    headers: null,
     transformRequest: null,
     transformResponse: null,
     strictSSL: null,

@@ -11,6 +11,7 @@ export interface WorkerRunTestOpts {
     sessionId: string;
     sessionCaps: WdioBrowser["capabilities"];
     sessionOpts: WdioBrowser["options"];
+    testXReqId: string;
 }
 
 export interface AssertViewResultsSuccess {

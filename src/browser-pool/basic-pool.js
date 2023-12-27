@@ -23,8 +23,7 @@ module.exports = class BasicPool extends Pool {
     }
 
     async getBrowser(id, opts = {}) {
-        const { version } = opts;
-        const browser = Browser.create(this._config, id, version);
+        const browser = Browser.create(this._config, { ...opts, id });
 
         try {
             await browser.init();

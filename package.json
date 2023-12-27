@@ -73,7 +73,6 @@
     "uglifyify": "^3.0.4",
     "urijs": "^1.19.11",
     "url-join": "^4.0.1",
-    "uuid": "^9.0.1",
     "webdriverio": "8.13.4",
     "worker-farm": "^1.7.0",
     "yallist": "^3.1.1"

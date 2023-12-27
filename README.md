@@ -1089,13 +1089,27 @@ module.exports = (hermione) => {
 Allows to use a custom `http`/`https`/`http2` [agent](https://www.npmjs.com/package/got#agent) to make requests. Default value is `null` (it means that will be used default http-agent from got).
 
 ####  headers
-Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `{'X-Request-ID': '<some-uniq-request-id>'}`. One `X-Request-ID` is generated for the entire test run. It can be useful if you manage the cloud with browsers yourself and collect logs with requests.
+Allows to set custom [headers](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers) to pass into every webdriver request. These headers aren't passed into browser request. Read more about this option in [wdio](https://github.com/sindresorhus/got/blob/main/documentation/2-options.md#headers). Default value is `null`.
 
 ####  transformRequest
 Allows to intercept [HTTP request options](https://github.com/sindresorhus/got#options) before a WebDriver request is made. Default value is `null`. If function is passed then it takes `RequestOptions` as the first argument and should return modified `RequestOptions`. Example:
 
 ```javascript
 (RequestOptions) => RequestOptions
+```
+
+In runtime a unique `X-Request-ID` header is generated for each browser request which consists of `${FIRST_X_REQ_ID}__${LAST_X_REQ_ID}`, where:
+- `FIRST_X_REQ_ID` - unique uuid for each test (different for each retry), allows to find all requests related to a single test run;
+- `LAST_X_REQ_ID` - unique uuid for each browser request, allows to find one unique request in one test (together with `FIRST_X_REQ_ID`).
+
+Header `X-Request-ID` can be useful if you manage the cloud with browsers yourself and collect logs with requests. Real-world example: `2f31ffb7-369d-41f4-bbb8-77744615d2eb__e8d011d8-bb76-42b9-b80e-02f03b8d6fe1`.
+
+To override generated `X-Request-ID` to your own value you need specify it in `transformRequest` handler. Example:
+
+```javascript
+transformRequest: (req) => {
+    req.handler["X-Request-ID"] = "my_x_req_id";
+}
 ```
 
 ####  transformResponse

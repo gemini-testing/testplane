@@ -19,14 +19,14 @@ const { isSupportIsolation } = require("../utils/browser");
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 module.exports = class ExistingBrowser extends Browser {
-    static create(config, id, version, emitter) {
-        return new this(config, id, version, emitter);
+    static create(config, opts) {
+        return new this(config, opts);
     }
 
-    constructor(config, id, version, emitter) {
-        super(config, id, version);
+    constructor(config, opts) {
+        super(config, opts);
 
-        this._emitter = emitter;
+        this._emitter = opts.emitter;
         this._camera = Camera.create(this._config.screenshotMode, () => this._takeScreenshot());
 
         this._meta = this._initMeta();
@@ -169,7 +169,7 @@ module.exports = class ExistingBrowser extends Browser {
         return {
             pid: process.pid,
             browserVersion: this.version,
-            "X-Request-ID": this._config.headers["X-Request-ID"],
+            testXReqId: this.testXReqId,
             ...this._config.meta,
         };
     }
