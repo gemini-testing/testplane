@@ -300,12 +300,12 @@ module.exports = class ExistingBrowser extends Browser {
             for (const iframe of iframes) {
                 await this._session.switchToFrame(iframe);
                 await cb();
-            }
-        } finally {
-            if (!_.isEmpty(iframes)) {
                 // switchToParentFrame does not work in ios - https://github.com/appium/appium/issues/14882
                 await this._session.switchToFrame(null);
             }
+        } catch (e) {
+            await this._session.switchToFrame(null);
+            throw e;
         }
     }
 
