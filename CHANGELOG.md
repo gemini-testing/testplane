@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.5.0](https://github.com/gemini-testing/hermione/compare/v7.4.1...v7.5.0) (2023-12-28)
+
+
+### Features
+
+* generate "X-Request-ID" header for each browser request ([0c87eb4](https://github.com/gemini-testing/hermione/commit/0c87eb415df9d3e92f5b60ff518c31a33579f7ea))
+
+
+### Bug Fixes
+
+* correctly switch between iframes on disable animation ([fb31fd7](https://github.com/gemini-testing/hermione/commit/fb31fd7548a7495b80d0217797d793376b76555e))
+
 ### [7.4.1](https://github.com/gemini-testing/hermione/compare/v7.4.0...v7.4.1) (2023-12-19)
 
 
