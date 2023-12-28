@@ -17,14 +17,16 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
+                    testXReqId: "12345",
                 })
                 .returns({ some: "browser" });
-            const browserAgent = BrowserAgent.create("bro-id", null, browserPool);
+            const browserAgent = BrowserAgent.create({ id: "bro-id", version: null, pool: browserPool });
 
             const browser = browserAgent.getBrowser({
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                testXReqId: "12345",
             });
 
             assert.deepEqual(browser, { some: "browser" });
@@ -38,14 +40,16 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
+                    testXReqId: "12345",
                 })
                 .returns({ some: "browser" });
-            const browserAgent = BrowserAgent.create("bro-id", "10.1", browserPool);
+            const browserAgent = BrowserAgent.create({ id: "bro-id", version: "10.1", pool: browserPool });
 
             const browser = browserAgent.getBrowser({
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                testXReqId: "12345",
             });
 
             assert.deepEqual(browser, { some: "browser" });
@@ -54,7 +58,7 @@ describe("worker/browser-agent", () => {
 
     describe("freeBrowser", () => {
         it("should free the browser in the pool", () => {
-            BrowserAgent.create(null, null, browserPool).freeBrowser({ some: "browser" });
+            BrowserAgent.create({ pool: browserPool }).freeBrowser({ some: "browser" });
 
             assert.calledOnceWith(browserPool.freeBrowser, { some: "browser" });
         });

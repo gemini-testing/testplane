@@ -11,7 +11,7 @@ describe("runner/browser-agent", () => {
         version = version || "some.default.version";
         pool = pool || Object.create(BrowserPool.prototype);
 
-        return BrowserAgent.create(id, version, pool);
+        return BrowserAgent.create({ id, version, pool });
     }
 
     function mkBrowser_(opts = {}) {

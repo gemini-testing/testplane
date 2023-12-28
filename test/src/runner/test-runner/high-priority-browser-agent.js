@@ -5,13 +5,13 @@ const HighPriorityBrowserAgent = require("src/runner/test-runner/high-priority-b
 
 describe("runner/test-runner/high-priority-browser-agent", () => {
     describe("getBrowser", () => {
-        it("should call base browser agent getBrowser with highPriority option", () => {
+        it("should call base browser agent getBrowser with p highPriority option", () => {
             const browserAgent = sinon.createStubInstance(BrowserAgent);
             const highPriorityBrowserAgent = HighPriorityBrowserAgent.create(browserAgent);
 
-            highPriorityBrowserAgent.getBrowser();
+            highPriorityBrowserAgent.getBrowser({ foo: "bar" });
 
-            assert.calledOnceWith(browserAgent.getBrowser, { highPriority: true });
+            assert.calledOnceWith(browserAgent.getBrowser, { foo: "bar", highPriority: true });
         });
 
         it("should return base browser agent getBrowser result", () => {

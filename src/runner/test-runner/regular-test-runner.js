@@ -1,5 +1,6 @@
 "use strict";
 
+const crypto = require("crypto");
 const _ = require("lodash");
 const Runner = require("../runner");
 const logger = require("../../utils/logger");
@@ -64,6 +65,7 @@ module.exports = class RegularTestRunner extends Runner {
             sessionCaps: this._browser.capabilities,
             sessionOpts: this._browser.publicAPI.options,
             file: this._test.file,
+            testXReqId: this._browser.testXReqId,
         });
     }
 
@@ -80,7 +82,7 @@ module.exports = class RegularTestRunner extends Runner {
 
     async _getBrowser() {
         try {
-            this._browser = await this._browserAgent.getBrowser();
+            this._browser = await this._browserAgent.getBrowser({ testXReqId: crypto.randomUUID() });
             this._test.sessionId = this._browser.sessionId;
 
             return this._browser;

@@ -9,8 +9,8 @@ module.exports = class HighPriorityBrowserAgent {
         this._browserAgent = browserAgent;
     }
 
-    getBrowser() {
-        return this._browserAgent.getBrowser({ highPriority: true });
+    getBrowser(opts = {}) {
+        return this._browserAgent.getBrowser({ ...opts, highPriority: true });
     }
 
     freeBrowser(...args) {

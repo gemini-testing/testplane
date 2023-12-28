@@ -52,24 +52,16 @@ describe("worker/browser-pool", () => {
             const config = stubConfig();
             const emitter = new EventEmitter();
             const browserPool = createPool({ config, emitter });
-            const browser = stubBrowser({ browserId: "bro-id" });
-            Browser.create.withArgs(config, "bro-id", undefined, emitter).returns(browser);
+            Browser.create.returns(stubBrowser({ browserId: "bro-id" }));
 
-            await browserPool.getBrowser({ browserId: "bro-id" });
+            await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "1.0", testXReqId: "12345" });
 
-            assert.calledOnceWith(Browser.create, config, "bro-id", undefined, emitter);
-        });
-
-        it("should create specific version of browser with correct args", async () => {
-            const config = stubConfig();
-            const emitter = new EventEmitter();
-            const browserPool = createPool({ config, emitter });
-            const browser = stubBrowser({ browserId: "bro-id" });
-            Browser.create.withArgs(config, "bro-id", "10.1", emitter).returns(browser);
-
-            await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "10.1" });
-
-            assert.calledOnceWith(Browser.create, config, "bro-id", "10.1", emitter);
+            assert.calledOnceWith(Browser.create, config, {
+                id: "bro-id",
+                version: "1.0",
+                testXReqId: "12345",
+                emitter,
+            });
         });
 
         it("should init a new created browser ", async () => {
@@ -108,20 +100,9 @@ describe("worker/browser-pool", () => {
             const config = stubConfig();
             const browserPool = createPool({ config });
             const browser = stubBrowser({ browserId: "bro-id" });
-
-            Browser.create.withArgs(config, "bro-id").returns(browser);
+            Browser.create.returns(browser);
 
             return assert.becomes(browserPool.getBrowser({ browserId: "bro-id" }), browser);
-        });
-
-        it("should return a new createt browser with specific version", () => {
-            const config = stubConfig();
-            const browserPool = createPool({ config });
-            const browser = stubBrowser({ browserId: "bro-id" });
-
-            Browser.create.withArgs(config, "bro-id", "10.1").returns(browser);
-
-            return assert.becomes(browserPool.getBrowser({ browserId: "bro-id", browserVersion: "10.1" }), browser);
         });
 
         describe("getting of browser fails", () => {

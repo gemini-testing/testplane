@@ -148,8 +148,8 @@ describe("runner/browser-runner", () => {
             await run_({ runner });
 
             assert.calledTwice(BrowserAgent.create);
-            assert.calledWith(BrowserAgent.create.firstCall, "bro", "1.0", pool);
-            assert.calledWith(BrowserAgent.create.secondCall, "bro", "1.0", pool);
+            assert.calledWith(BrowserAgent.create.firstCall, { id: "bro", version: "1.0", pool });
+            assert.calledWith(BrowserAgent.create.secondCall, { id: "bro", version: "1.0", pool });
         });
 
         it("should create test runner for each test in collection", async () => {

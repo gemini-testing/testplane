@@ -93,15 +93,17 @@ describe("worker/runner", () => {
         });
 
         it("should create browser agent for test runner", async () => {
+            const pool = { browser: "pool" };
+            BrowserPool.create.returns(pool);
             const runner = mkRunner_();
 
             const test = makeTest({ fullTitle: () => "some test" });
             CachingTestParser.prototype.parse.resolves([test]);
 
             const browserAgent = Object.create(BrowserAgent.prototype);
-            BrowserAgent.create.withArgs("bro").returns(browserAgent);
+            BrowserAgent.create.withArgs({ id: "bro", version: "1.0", pool }).returns(browserAgent);
 
-            await runner.runTest("some test", { browserId: "bro" });
+            await runner.runTest("some test", { browserId: "bro", browserVersion: "1.0" });
 
             assert.calledOnceWith(TestRunner.create, test, sinon.match.any, browserAgent);
         });
@@ -128,12 +130,14 @@ describe("worker/runner", () => {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                testXReqId: "12345",
             });
 
             assert.calledOnceWith(TestRunner.prototype.run, {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
+                testXReqId: "12345",
             });
         });
     });
