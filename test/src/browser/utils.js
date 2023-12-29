@@ -93,6 +93,7 @@ exports.mkSessionStub_ = () => {
     };
 
     session.deleteSession = sinon.stub().named("end").resolves();
+    session.clearSession = sinon.stub().named("clearSession").resolves();
     session.url = sinon.stub().named("url").resolves();
     session.getUrl = sinon.stub().named("getUrl").resolves("");
     session.execute = sinon.stub().named("execute").resolves();
@@ -112,6 +113,7 @@ exports.mkSessionStub_ = () => {
     session.switchToFrame = sinon.stub().named("switchToFrame").resolves();
     session.switchToParentFrame = sinon.stub().named("switchToParentFrame").resolves();
     session.switchToRepl = sinon.stub().named("switchToRepl").resolves();
+    session.deleteAllCookies = sinon.stub().named("deleteAllCookies").resolves();
 
     session.addCommand = sinon.stub().callsFake((name, command, isElement) => {
         const target = isElement ? wdioElement : session;
