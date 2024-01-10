@@ -157,7 +157,7 @@ module.exports = class ExistingBrowser extends Browser {
             ...this._getSessionOptsFromConfig(OPTIONAL_SESSION_OPTS),
             ...detectedSessionEnvFlags,
             ...this._config.sessionEnvFlags,
-            options: _.pick(sessionOpts, "automationProtocol"),
+            options: sessionOpts,
             capabilities: { ...sessionOpts.capabilities, ...sessionCaps },
             requestedCapabilities: sessionOpts.capabilities,
         };

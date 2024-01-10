@@ -1,12 +1,9 @@
-"use strict";
-
-import webdriverio from "webdriverio";
 import sinon, { SinonStub } from "sinon";
+import proxyquire from "proxyquire";
 import FakeTimers from "@sinonjs/fake-timers";
-import clientBridge from "src/browser/client-bridge";
 import PageLoader from "src/utils/page-loader";
 import { DEVTOOLS_PROTOCOL } from "src/constants/config";
-import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ as mkSessionStubOrigin_ } from "../utils";
+import { mkSessionStub_ as mkSessionStubOrigin_, mkExistingBrowser_ } from "../utils";
 import type ExistingBrowser from "src/browser/existing-browser";
 
 type SessionOrigin = ReturnType<typeof mkSessionStubOrigin_>;
@@ -19,8 +16,15 @@ const mkSessionStub_ = (): Session => {
 describe('"openAndWait" command', () => {
     const sandbox = sinon.sandbox.create();
     let clock: FakeTimers.InstalledClock;
+    const wdioAttachStub = sandbox.stub().resolves(mkSessionStub_());
+    let mkBrowser_: typeof mkExistingBrowser_;
 
     beforeEach(() => {
+        ({ mkExistingBrowser_: mkBrowser_ } = proxyquire("../utils", {
+            webdriverio: { attach: wdioAttachStub, "@global": true },
+            "./client-bridge": { build: sandbox.stub().resolves(), "@global": true },
+        }));
+
         clock = FakeTimers.install();
         sandbox.stub(PageLoader.prototype, "unsubscribe");
     });
@@ -77,8 +81,7 @@ describe('"openAndWait" command', () => {
     };
 
     const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
-        sandbox.stub(webdriverio, "attach").resolves(session);
-        sandbox.stub(clientBridge, "build").resolves();
+        wdioAttachStub.resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: {} });
     };

@@ -1,6 +1,6 @@
 import repl, { type REPLServer } from "node:repl";
 import { EventEmitter } from "node:events";
-import webdriverio from "webdriverio";
+import * as webdriverio from "webdriverio";
 import chalk from "chalk";
 import sinon, { type SinonStub, type SinonSpy } from "sinon";
 
