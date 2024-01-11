@@ -385,6 +385,30 @@ Finally, run tests (be sure that you have already run `selenium-standalone start
 node_modules/.bin/hermione
 ```
 
+## Commands API
+
+Since Hermione is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Hermione also has her own commands.
+
+### clearSession
+
+Browser command that clears session state (deletes cookies, clears local and session storages). For example:
+
+```js
+it('', async ({ browser }) => {
+    await browser.url('https://github.com/gemini-testing/hermione');
+
+    (await browser.getCookies()).length; // 5
+    await browser.execute(() => localStorage.length); // 2
+    await browser.execute(() => sessionStorage.length); // 1
+
+    await browser.clearSession();
+
+    (await browser.getCookies()).length; // 0
+    await browser.execute(() => localStorage.length); // 0
+    await browser.execute(() => sessionStorage.length); // 0
+});
+```
+
 ## Tests API
 
 ### Arguments
@@ -1640,8 +1664,6 @@ Another command features:
     // foo: 1
     ```
 
-
-
 #### Test development in runtime
 
 For quick test development without restarting the test or the browser, you can run the test in the terminal of IDE with enabled REPL mode:
@@ -1651,6 +1673,10 @@ npx hermione --repl-before-test --grep "foo" -b "chrome"
 ```
 
 After that, you need to configure the hotkey in IDE to run the selected one or more lines of code in the terminal. As a result, each new written line can be sent to the terminal using a hotkey and due to this, you can write a test much faster.
+
+Also, during the test development process, it may be necessary to execute commands in a clean environment (without side effects from already executed commands). You can achieve this with the following commands:
+- [clearSession](#clearsession) - clears session state (deletes cookies, clears local and session storages). In some cases, the environment may contain side effects from already executed commands;
+- [reloadSession](https://webdriver.io/docs/api/browser/reloadSession/) - creates a new session with a completely clean environment.
 
 ##### How to set up using VSCode
 

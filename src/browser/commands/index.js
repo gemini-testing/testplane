@@ -2,6 +2,7 @@
 
 module.exports = [
     "assert-view",
+    "clearSession",
     "getConfig",
     "getPuppeteer",
     "setOrientation",
