@@ -65,7 +65,6 @@ module.exports = class ExistingBrowser extends Browser {
 
     quit() {
         this._meta = this._initMeta();
-        this._state = { isBroken: false };
     }
 
     async prepareScreenshot(selectors, opts = {}) {
@@ -165,7 +164,7 @@ module.exports = class ExistingBrowser extends Browser {
         return {
             pid: process.pid,
             browserVersion: this.version,
-            testXReqId: this.testXReqId,
+            testXReqId: this.state.testXReqId,
             ...this._config.meta,
         };
     }

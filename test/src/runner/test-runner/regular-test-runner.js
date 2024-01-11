@@ -89,9 +89,9 @@ describe("runner/test-runner/regular-test-runner", () => {
 
     describe("run", () => {
         it("should get browser before running test", async () => {
-            const testXReqId = "12345";
-            crypto.randomUUID.returns(testXReqId);
-            BrowserAgent.prototype.getBrowser.withArgs({ testXReqId }).resolves(
+            const state = { testXReqId: "12345" };
+            crypto.randomUUID.returns(state.testXReqId);
+            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(
                 stubBrowser_({
                     id: "bro",
                     version: "1.0",
@@ -100,7 +100,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     publicAPI: {
                         options: { foo: "bar" },
                     },
-                    testXReqId,
+                    state,
                 }),
             );
             const workers = mkWorkers_();
@@ -116,9 +116,23 @@ describe("runner/test-runner/regular-test-runner", () => {
                     sessionId: "100500",
                     sessionCaps: { browserName: "bro" },
                     sessionOpts: { foo: "bar" },
-                    testXReqId,
+                    state,
                 }),
             );
+        });
+
+        it("should modify state if 'testXReqId' is not actual", async () => {
+            const state = { testXReqId: "12345" };
+            crypto.randomUUID.returns(state.testXReqId);
+            const browser = stubBrowser_({
+                state: { testXReqId: "67890" },
+            });
+            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(browser);
+            const workers = mkWorkers_();
+
+            await run_({ workers });
+
+            assert.calledWith(browser.applyState.firstCall, state);
         });
 
         it("should run test in workers", async () => {
@@ -517,7 +531,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     },
                 });
 
-                assert.calledOnceWith(browser.applyState, { foo: "bar" });
+                assert.calledWith(browser.applyState, { foo: "bar" });
                 assert.callOrder(browser.applyState, BrowserAgent.prototype.freeBrowser);
             });
 

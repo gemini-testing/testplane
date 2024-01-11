@@ -82,7 +82,7 @@ describe("ExistingBrowser", () => {
             });
 
             it('should extend meta-info with "testXReqId" field', () => {
-                const browser = mkBrowser_({}, { testXReqId: "12345" });
+                const browser = mkBrowser_({}, { state: { testXReqId: "12345" } });
 
                 assert.propertyVal(browser.meta, "testXReqId", "12345");
             });
@@ -177,10 +177,10 @@ describe("ExistingBrowser", () => {
 
             it('should add "X-Request-ID" header', async () => {
                 crypto.randomUUID.returns("67890");
-                const testXReqId = "12345";
+                const state = { testXReqId: "12345" };
                 const request = { headers: {} };
 
-                await initBrowser_(mkBrowser_({}, { testXReqId }));
+                await initBrowser_(mkBrowser_({}, { state }));
 
                 const { transformRequest } = webdriverio.attach.lastCall.args[0];
                 transformRequest(request);
@@ -1060,15 +1060,6 @@ describe("ExistingBrowser", () => {
     });
 
     describe("quit", () => {
-        it("should overwrite state field", async () => {
-            const browser = await initBrowser_();
-            const state = browser.state;
-
-            browser.quit();
-
-            assert.notEqual(state, browser.state);
-        });
-
         it("should keep process id in meta", async () => {
             const browser = await initBrowser_();
             const pid = browser.meta.pid;
