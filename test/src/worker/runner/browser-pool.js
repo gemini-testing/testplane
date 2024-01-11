@@ -54,12 +54,12 @@ describe("worker/browser-pool", () => {
             const browserPool = createPool({ config, emitter });
             Browser.create.returns(stubBrowser({ browserId: "bro-id" }));
 
-            await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "1.0", testXReqId: "12345" });
+            await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "1.0", state: {} });
 
             assert.calledOnceWith(Browser.create, config, {
                 id: "bro-id",
                 version: "1.0",
-                testXReqId: "12345",
+                state: {},
                 emitter,
             });
         });

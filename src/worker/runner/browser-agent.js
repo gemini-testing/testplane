@@ -12,14 +12,14 @@ module.exports = class BrowserAgent {
         this._pool = pool;
     }
 
-    getBrowser({ sessionId, sessionCaps, sessionOpts, testXReqId }) {
+    getBrowser({ sessionId, sessionCaps, sessionOpts, state }) {
         return this._pool.getBrowser({
             browserId: this.browserId,
             browserVersion: this.browserVersion,
             sessionId,
             sessionCaps,
             sessionOpts,
-            testXReqId,
+            state,
         });
     }
 

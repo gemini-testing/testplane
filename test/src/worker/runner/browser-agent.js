@@ -17,7 +17,7 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
-                    testXReqId: "12345",
+                    state: {},
                 })
                 .returns({ some: "browser" });
             const browserAgent = BrowserAgent.create({ id: "bro-id", version: null, pool: browserPool });
@@ -26,7 +26,7 @@ describe("worker/browser-agent", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
-                testXReqId: "12345",
+                state: {},
             });
 
             assert.deepEqual(browser, { some: "browser" });
@@ -40,7 +40,7 @@ describe("worker/browser-agent", () => {
                     sessionId: "100-500",
                     sessionCaps: "some-caps",
                     sessionOpts: "some-opts",
-                    testXReqId: "12345",
+                    state: {},
                 })
                 .returns({ some: "browser" });
             const browserAgent = BrowserAgent.create({ id: "bro-id", version: "10.1", pool: browserPool });
@@ -49,7 +49,7 @@ describe("worker/browser-agent", () => {
                 sessionId: "100-500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
-                testXReqId: "12345",
+                state: {},
             });
 
             assert.deepEqual(browser, { some: "browser" });

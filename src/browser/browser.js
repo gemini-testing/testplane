@@ -28,13 +28,13 @@ module.exports = class Browser {
     constructor(config, opts) {
         this.id = opts.id;
         this.version = opts.version;
-        this.testXReqId = opts.testXReqId;
 
         this._config = config.forBrowser(this.id);
         this._debug = config.system.debug;
         this._session = null;
         this._callstackHistory = null;
         this._state = {
+            ...opts.state,
             isBroken: false,
         };
     }
@@ -93,7 +93,7 @@ module.exports = class Browser {
 
                     if (!req.headers["X-Request-ID"]) {
                         req.headers["X-Request-ID"] = `${
-                            this.testXReqId
+                            this.state.testXReqId
                         }${X_REQUEST_ID_DELIMITER}${crypto.randomUUID()}`;
                     }
 
