@@ -65,7 +65,7 @@ module.exports = class RegularTestRunner extends Runner {
             sessionCaps: this._browser.capabilities,
             sessionOpts: this._browser.publicAPI.options,
             file: this._test.file,
-            testXReqId: this._browser.testXReqId,
+            state: this._browser.state,
         });
     }
 
@@ -82,7 +82,15 @@ module.exports = class RegularTestRunner extends Runner {
 
     async _getBrowser() {
         try {
-            this._browser = await this._browserAgent.getBrowser({ testXReqId: crypto.randomUUID() });
+            const state = { testXReqId: crypto.randomUUID() };
+
+            this._browser = await this._browserAgent.getBrowser({ state });
+
+            // use correct state for cached browsers
+            if (this._browser.state.testXReqId !== state.testXReqId) {
+                this._browser.applyState(state);
+            }
+
             this._test.sessionId = this._browser.sessionId;
 
             return this._browser;

@@ -48,14 +48,11 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkNewBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", testXReqId: "" }) => {
+exports.mkNewBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", state: {} }) => {
     return NewBrowser.create(createBrowserConfig_(configOpts), opts);
 };
 
-exports.mkExistingBrowser_ = (
-    configOpts,
-    opts = { id: "browser", version: "1.0", testXReqId: "", emitter: "emitter" },
-) => {
+exports.mkExistingBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" }) => {
     return ExistingBrowser.create(createBrowserConfig_(configOpts), opts);
 };
 

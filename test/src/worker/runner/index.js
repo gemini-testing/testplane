@@ -130,14 +130,14 @@ describe("worker/runner", () => {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
-                testXReqId: "12345",
+                state: {},
             });
 
             assert.calledOnceWith(TestRunner.prototype.run, {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
-                testXReqId: "12345",
+                state: {},
             });
         });
     });
