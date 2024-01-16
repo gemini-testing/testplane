@@ -8,6 +8,8 @@ const Browser = require("./browser");
 const signalHandler = require("../signal-handler");
 const history = require("./history");
 const logger = require("../utils/logger");
+const RuntimeConfig = require("../config/runtime-config");
+const { DEVTOOLS_PROTOCOL } = require("../constants/config");
 
 const DEFAULT_PORT = 4444;
 
@@ -92,6 +94,7 @@ module.exports = class NewBrowser extends Browser {
         const config = this._config;
         const gridUri = new URI(config.gridUrl);
         const capabilities = this._extendCapabilities(config);
+        const { devtools } = RuntimeConfig.getInstance();
 
         const options = {
             protocol: gridUri.protocol(),
@@ -100,7 +103,7 @@ module.exports = class NewBrowser extends Browser {
             path: gridUri.path(),
             queryParams: this._getQueryParams(gridUri.query()),
             capabilities,
-            automationProtocol: config.automationProtocol,
+            automationProtocol: devtools ? DEVTOOLS_PROTOCOL : config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
             connectionRetryCount: 0, // hermione has its own advanced retries
             baseUrl: config.baseUrl,

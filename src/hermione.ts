@@ -31,6 +31,7 @@ interface RunOpts {
         beforeTest: boolean;
         onFail: boolean;
     };
+    devtools: boolean;
 }
 
 interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
@@ -69,12 +70,13 @@ export class Hermione extends BaseHermione {
             requireModules,
             inspectMode,
             replMode,
+            devtools,
             reporters = [],
         }: Partial<RunOpts> = {},
     ): Promise<boolean> {
         validateUnknownBrowsers(browsers, _.keys(this._config.browsers));
 
-        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode });
+        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode, devtools });
 
         if (replMode?.enabled) {
             this._config.system.mochaOpts.timeout = 0;
