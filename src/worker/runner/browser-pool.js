@@ -16,11 +16,11 @@ module.exports = class BrowserPool {
         this._calibrator = new Calibrator();
     }
 
-    async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts, testXReqId }) {
+    async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts, state }) {
         const browser = Browser.create(this._config, {
             id: browserId,
             version: browserVersion,
-            testXReqId,
+            state,
             emitter: this._emitter,
         });
 

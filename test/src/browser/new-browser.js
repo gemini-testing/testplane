@@ -224,10 +224,10 @@ describe("NewBrowser", () => {
 
             it('should add "X-Request-ID" header', async () => {
                 crypto.randomUUID.returns("67890");
-                const testXReqId = "12345";
+                const state = { testXReqId: "12345" };
                 const request = { headers: {} };
 
-                await mkBrowser_({}, { testXReqId }).init();
+                await mkBrowser_({}, { state }).init();
 
                 const { transformRequest } = webdriverio.remote.lastCall.args[0];
                 transformRequest(request);

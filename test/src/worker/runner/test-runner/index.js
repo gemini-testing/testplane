@@ -110,7 +110,7 @@ describe("worker/runner/test-runner", () => {
                 sessionId: "100500",
                 sessionCaps: "some-caps",
                 sessionOpts: "some-opts",
-                testXReqId: "12345",
+                state: {},
             };
 
             await runner.run(opts);
