@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.1](https://github.com/gemini-testing/hermione/compare/v7.5.0...v7.5.1) (2024-01-16)
+
+
+### Bug Fixes
+
+* correctly generate test x request id for each test in one browser ([373be4a](https://github.com/gemini-testing/hermione/commit/373be4a26f1a2b7dd74ca292aa3c7e90b7a3af39))
+
 ## [7.5.0](https://github.com/gemini-testing/hermione/compare/v7.4.1...v7.5.0) (2023-12-28)
 
 
