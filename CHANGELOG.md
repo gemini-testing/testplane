@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.0.0](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.3...v8.0.0) (2024-01-17)
+
+
+### Features
+
+* add "clearSession" browser command ([7114cd5](https://github.com/gemini-testing/hermione/commit/7114cd57bcec93a9a0b4d35ae300151ef5865a07))
+* add ability to use devtools procotol through cli option ([852f375](https://github.com/gemini-testing/hermione/commit/852f375f899a26cfa7e57b1bfded87a0aa8284ff))
+* add basic unhandled rejection stack trace ([5b1db43](https://github.com/gemini-testing/hermione/commit/5b1db438e7bb51b375aad13f6d3c6aedcd2feca3))
+* generate "X-Request-ID" header for each browser request ([d40cd6a](https://github.com/gemini-testing/hermione/commit/d40cd6a9e9bf9182ab1552c52e0199cf8e1d00c5))
+* implement REPL interface to debug tests ([8c17648](https://github.com/gemini-testing/hermione/commit/8c1764810da85258ff86dcac0d12f35b6eb7e1dc))
+
+
+### Bug Fixes
+
+* ability to disable tests isolation ([51b87fd](https://github.com/gemini-testing/hermione/commit/51b87fd21ddfefe0ee46bb1105ee61ccc14d5d92))
+* correctly disable animations in inframes for ios ([5db5fa8](https://github.com/gemini-testing/hermione/commit/5db5fa87bec3e645204bca6bc7fbe580e0954ba6))
+* correctly generate test x request id for each test in one browser ([443056b](https://github.com/gemini-testing/hermione/commit/443056bb7f4b29b2694516d041e4c0403b9669e3))
+* correctly switch between iframes on disable animation ([eabea08](https://github.com/gemini-testing/hermione/commit/eabea08feaa7bbb1b1f4e74a7a473115be72444a))
+* fix client code to work on IE11 ([#811](https://github.com/gemini-testing/hermione/issues/811)) ([35159c8](https://github.com/gemini-testing/hermione/commit/35159c8142a3ce925d987e4e226547ed8d647a7a))
+* ignore puppeteer ProtocolError in workers ([d46f8f6](https://github.com/gemini-testing/hermione/commit/d46f8f6bb3100c5cafba878c28675b2465800697))
+
 ## [8.0.0-beta.3](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.1...v8.0.0-beta.3) (2023-11-14)
 
 
