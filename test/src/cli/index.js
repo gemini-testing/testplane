@@ -280,4 +280,10 @@ describe("cli", () => {
             });
         });
     });
+
+    it("should turn on devtools mode from cli", async () => {
+        await run_("--devtools");
+
+        assert.calledWithMatch(Hermione.prototype.run, any, { devtools: true });
+    });
 });

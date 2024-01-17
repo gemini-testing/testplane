@@ -188,6 +188,7 @@ describe("hermione", () => {
                 replMode: {
                     enabled: true,
                 },
+                devtools: true,
             });
 
             assert.calledOnce(RuntimeConfig.getInstance);
@@ -196,6 +197,7 @@ describe("hermione", () => {
                 requireModules: ["foo"],
                 inspectMode: { inspect: true },
                 replMode: { enabled: true },
+                devtools: true,
             });
             assert.callOrder(RuntimeConfig.getInstance, Runner.create);
         });

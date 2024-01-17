@@ -67,6 +67,7 @@ exports.run = () => {
         )
         .option("--repl-before-test [type]", "open repl interface before test run", Boolean, false)
         .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
+        .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .arguments("[paths...]")
         .action(async paths => {
             try {
@@ -82,6 +83,7 @@ exports.run = () => {
                     repl,
                     replBeforeTest,
                     replOnFail,
+                    devtools,
                 } = program;
 
                 await handleRequires(requireModules);
@@ -99,6 +101,7 @@ exports.run = () => {
                         beforeTest: replBeforeTest,
                         onFail: replOnFail,
                     },
+                    devtools: devtools || false,
                 });
 
                 process.exit(isTestsSuccess ? 0 : 1);

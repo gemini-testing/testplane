@@ -5,8 +5,9 @@ const webdriverio = require("webdriverio");
 const logger = require("src/utils/logger");
 const signalHandler = require("src/signal-handler");
 const history = require("src/browser/history");
-const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
+const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
+const RuntimeConfig = require("src/config/runtime-config");
 const { mkNewBrowser_: mkBrowser_, mkSessionStub_ } = require("./utils");
 
 describe("NewBrowser", () => {
@@ -17,6 +18,8 @@ describe("NewBrowser", () => {
         session = mkSessionStub_();
         sandbox.stub(logger);
         sandbox.stub(webdriverio, "remote").resolves(session);
+
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined });
     });
 
     afterEach(() => sandbox.restore());
@@ -40,6 +43,14 @@ describe("NewBrowser", () => {
                 baseUrl: "http://base_url",
                 transformRequest: sinon.match.func,
             });
+        });
+
+        it("should use devtools protocol if hermione runs in devtools mode", async () => {
+            RuntimeConfig.getInstance.returns({ devtools: true });
+
+            await mkBrowser_().init();
+
+            assert.calledWithMatch(webdriverio.remote, { automationProtocol: DEVTOOLS_PROTOCOL });
         });
 
         it("should pass default port if it is not specified in grid url", async () => {
