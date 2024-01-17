@@ -1,0 +1,1 @@
+{"version":3,"file":"cancelled-error.js","sourceRoot":"","sources":["../../src/browser-pool/cancelled-error.js"],"names":[],"mappings":"AAAA,YAAY,CAAC;AAEb,MAAM,CAAC,OAAO,GAAG,MAAM,cAAe,SAAQ,KAAK;IAC/C;QACI,KAAK,EAAE,CAAC;QAER,IAAI,CAAC,IAAI,GAAG,gBAAgB,CAAC;QAC7B,IAAI,CAAC,OAAO,GAAG,+BAA+B,CAAC;QAC/C,KAAK,CAAC,iBAAiB,CAAC,IAAI,EAAE,cAAc,CAAC,CAAC;IAClD,CAAC;CACJ,CAAC"}
