@@ -1,6 +1,7 @@
 const _ = require("lodash");
 const validators = require("../validators");
 const env = require("../utils/env");
+const RuntimeConfig = require("../config/runtime-config");
 
 class InstructionsList {
     #commonInstructions;
@@ -51,7 +52,9 @@ function extendWithBrowserVersion({ treeBuilder, config }) {
 
 function extendWithTimeout({ treeBuilder, config }) {
     const { testTimeout } = config;
-    if (!_.isNumber(testTimeout)) {
+    const { replMode } = RuntimeConfig.getInstance();
+
+    if (!_.isNumber(testTimeout) || replMode?.enabled) {
         return;
     }
 

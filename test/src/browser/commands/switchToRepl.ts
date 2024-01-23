@@ -84,7 +84,9 @@ describe('"switchToRepl" command', () => {
             await switchToRepl_({ session });
 
             assert.callOrder(
-                (logger.log as SinonStub).withArgs(chalk.yellow("You have entered REPL mode via terminal")),
+                (logger.log as SinonStub).withArgs(
+                    chalk.yellow("You have entered to REPL mode via terminal (test execution timeout is disabled)."),
+                ),
                 repl.start as SinonStub,
             );
         });

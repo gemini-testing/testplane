@@ -54,7 +54,7 @@ export = async (browser: Browser): Promise<void> => {
             return;
         }
 
-        logger.log(chalk.yellow("You have entered REPL mode via terminal"));
+        logger.log(chalk.yellow("You have entered to REPL mode via terminal (test execution timeout is disabled)."));
 
         const currCwd = process.cwd();
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
