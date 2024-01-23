@@ -90,6 +90,10 @@ declare global {
                     currentTest: RunnerTest;
                 };
             };
+
+            switchToRepl: (ctx?: Record<string, unknown>) => Promise<void>;
+
+            clearSession: () => Promise<void>;
         }
 
         interface Element {
