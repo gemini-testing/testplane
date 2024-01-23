@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.0.1](https://github.com/gemini-testing/hermione/compare/v8.0.0...v8.0.1) (2024-01-23)
+
+
+### Bug Fixes
+
+* add typings for "switchToRepl" and "clearSession" commands ([0e85f3b](https://github.com/gemini-testing/hermione/commit/0e85f3ba6efb00778ecccde9a17260c65a7e842a))
+
 ## [8.0.0](https://github.com/gemini-testing/hermione/compare/v8.0.0-beta.3...v8.0.0) (2024-01-17)
 
 
