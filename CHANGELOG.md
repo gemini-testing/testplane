@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.0.2](https://github.com/gemini-testing/hermione/compare/v8.0.1...v8.0.2) (2024-01-24)
+
+
+### Bug Fixes
+
+* do not require .d.ts file ([#831](https://github.com/gemini-testing/hermione/issues/831)) ([91708d2](https://github.com/gemini-testing/hermione/commit/91708d2eec83c790591494706d607e1dcc8c4b77))
+* ignore objectId puppeteer error ([#832](https://github.com/gemini-testing/hermione/issues/832)) ([f7fa626](https://github.com/gemini-testing/hermione/commit/f7fa6265238388a83fd562e7f3ce49475e79e2dc))
+
 ### [8.0.1](https://github.com/gemini-testing/hermione/compare/v8.0.0...v8.0.1) (2024-01-23)
 
 
