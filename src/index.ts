@@ -1,5 +1,6 @@
 // Declares global hooks
-import "../typings/global";
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/// <reference path="../typings/global.d.ts" />
 // Augments browser and element methods
 import "./browser/types";
 // Declares global expect function
