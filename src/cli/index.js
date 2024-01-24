@@ -9,6 +9,7 @@ const info = require("./info");
 const Hermione = require("../hermione");
 const pkg = require("../../package.json");
 const logger = require("../utils/logger");
+const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
 
 let hermione;
 
@@ -18,7 +19,7 @@ process.on("uncaughtException", err => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
-    if (reason && reason.name === "ProtocolError") {
+    if (shouldIgnoreUnhandledRejection(reason)) {
         logger.warn(`Unhandled Rejection "${reason}" in hermione:master:${process.pid} was ignored`);
         return;
     }
