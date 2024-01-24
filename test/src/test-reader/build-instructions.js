@@ -5,6 +5,7 @@ const { InstructionsList, Instructions } = require("src/test-reader/build-instru
 const { TreeBuilder } = require("src/test-reader/tree-builder");
 const validators = require("src/validators");
 const env = require("src/utils/env");
+const RuntimeConfig = require("src/config/runtime-config");
 const { makeConfigStub } = require("../../utils");
 
 describe("test-reader/build-instructions", () => {
@@ -164,10 +165,28 @@ describe("test-reader/build-instructions", () => {
         });
 
         describe("extendWithTimeout", () => {
-            it("should not add decorator to tree builder if 'testTimeout' is not specified in config", () => {
-                execTrapInstruction_(Instructions.extendWithTimeout, { config: {} });
+            beforeEach(() => {
+                sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { enabled: false } });
+            });
 
-                assert.notCalled(TreeBuilder.prototype.addTrap);
+            describe("should not add decorator to tree builder if", () => {
+                it("'testTimeout' is not specified in config", () => {
+                    execTrapInstruction_(Instructions.extendWithTimeout, { config: {} });
+
+                    assert.notCalled(TreeBuilder.prototype.addTrap);
+                });
+
+                it("'replMode' is enabled (even if 'testTimeout' is specified)", () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { enabled: true } });
+
+                    execTrapInstruction_(Instructions.extendWithTimeout, {
+                        config: {
+                            testTimeout: 100500,
+                        },
+                    });
+
+                    assert.notCalled(TreeBuilder.prototype.addTrap);
+                });
             });
 
             it("should decorate with timeout if 'testTimeout' is specified in config", () => {
