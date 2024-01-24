@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.2](https://github.com/gemini-testing/hermione/compare/v7.5.1...v7.5.2) (2024-01-24)
+
+
+### Bug Fixes
+
+* ignore objectId puppeteer error ([#833](https://github.com/gemini-testing/hermione/issues/833)) ([71db82b](https://github.com/gemini-testing/hermione/commit/71db82ba45705663997b309b24f49b536ff7331b))
+
 ### [7.5.1](https://github.com/gemini-testing/hermione/compare/v7.5.0...v7.5.1) (2024-01-16)
 
 
