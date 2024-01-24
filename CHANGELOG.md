@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.0.3](https://github.com/gemini-testing/hermione/compare/v8.0.2...v8.0.3) (2024-01-24)
+
+
+### Bug Fixes
+
+* correctly disable test execution timeout in repl mode ([bc91823](https://github.com/gemini-testing/hermione/commit/bc918235fb259b31d21c33cce23eae5b07119778))
+
 ### [8.0.2](https://github.com/gemini-testing/hermione/compare/v8.0.1...v8.0.2) (2024-01-24)
 
 
