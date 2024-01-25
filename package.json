@@ -4,11 +4,12 @@
   "description": "Tests framework based on mocha and wdio",
   "main": "build/src/index.js",
   "files": [
-    "build"
+    "build",
+    "typings"
   ],
   "scripts": {
     "build": "tsc && npm run copy-static",
-    "copy-static": "copyfiles 'src/browser/client-scripts/*' 'typings/*' build",
+    "copy-static": "copyfiles 'src/browser/client-scripts/*' build",
     "check-types": "tsc --project tsconfig.spec.json",
     "clean": "rimraf build/ *.tsbuildinfo",
     "coverage": "nyc --reporter=text npm run test-unit",
