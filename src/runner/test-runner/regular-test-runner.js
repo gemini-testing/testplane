@@ -86,7 +86,7 @@ module.exports = class RegularTestRunner extends Runner {
 
             this._browser = await this._browserAgent.getBrowser({ state });
 
-            // use correct state for cached browsers
+            // TODO: move logic to caching pool (in order to use correct state for cached browsers)
             if (this._browser.state.testXReqId !== state.testXReqId) {
                 this._browser.applyState(state);
             }
