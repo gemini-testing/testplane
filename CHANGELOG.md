@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.0.5](https://github.com/gemini-testing/hermione/compare/v8.0.4...v8.0.5) (2024-01-31)
+
+
+### Bug Fixes
+
+* round xOffset and yOffset when resetting cursor ([#837](https://github.com/gemini-testing/hermione/issues/837)) ([79786cd](https://github.com/gemini-testing/hermione/commit/79786cd030a845e26d0bbe677a7bb90e5887456f))
+
 ### [8.0.4](https://github.com/gemini-testing/hermione/compare/v8.0.3...v8.0.4) (2024-01-25)
 
 
