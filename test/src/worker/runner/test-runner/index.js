@@ -328,6 +328,14 @@ describe("worker/runner/test-runner", () => {
 
                     assert.callOrder(body.scrollIntoView, body.moveTo);
                 });
+
+                it("should floor coords if body element has fractional coords", async () => {
+                    browser.publicAPI.execute.resolves({ x: 10.123, y: 15.899 });
+
+                    await run_();
+
+                    assert.calledOnceWith(body.moveTo, { xOffset: -10, yOffset: -15 });
+                });
             });
         });
 

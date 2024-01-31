@@ -128,7 +128,8 @@ module.exports = class TestRunner {
         const { x = 0, y = 0 } = await session.execute(function () {
             return document.body.getBoundingClientRect();
         });
-        await body.moveTo({ xOffset: -x, yOffset: -y });
+        // x and y must be integer, wdio will throw error otherwise
+        await body.moveTo({ xOffset: -Math.floor(x), yOffset: -Math.floor(y) });
     }
 };
 
