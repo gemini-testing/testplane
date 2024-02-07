@@ -49,7 +49,8 @@ module.exports = class LimitedPool extends Pool {
         --this._requests;
 
         const nextRequest = this._lookAtNextRequest();
-        const compositeIdForNextRequest = nextRequest && buildCompositeBrowserId(nextRequest.id, nextRequest.version);
+        const compositeIdForNextRequest =
+            nextRequest && buildCompositeBrowserId(nextRequest.id, nextRequest.opts.version);
         const hasFreeSlots = this._launched < this._limit;
         const shouldFreeUnusedResource = this._isSpecificBrowserLimiter && this._launched > this._requests;
         const force = opts.force || shouldFreeUnusedResource;
@@ -83,10 +84,9 @@ module.exports = class LimitedPool extends Pool {
         this.log("queuing the request");
 
         const queue = opts.highPriority ? this._highPriorityRequestQueue : this._requestQueue;
-        const { version } = opts;
 
         return new Promise((resolve, reject) => {
-            queue.push({ id, version, resolve, reject });
+            queue.push({ id, opts, resolve, reject });
         });
     }
 
@@ -111,11 +111,12 @@ module.exports = class LimitedPool extends Pool {
         const queued = this._highPriorityRequestQueue.shift() || this._requestQueue.shift();
 
         if (queued) {
-            const compositeId = buildCompositeBrowserId(queued.id, queued.version);
+            const compositeId = buildCompositeBrowserId(queued.id, queued.opts.version);
 
             this.log(`has queued requests for ${compositeId}`);
             this.log(`remaining queue length: ${this._requestQueue.length}`);
-            this._newBrowser(queued.id, { version: queued.version }).then(queued.resolve, queued.reject);
+
+            this._newBrowser(queued.id, queued.opts).then(queued.resolve, queued.reject);
         } else {
             this._launched--;
         }
