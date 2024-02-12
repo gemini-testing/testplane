@@ -26,6 +26,11 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [Configuring .hermione.conf.js by yourself (a slow way)](#configuring-hermioneconfjs-by-yourself-a-slow-way)
     - [Chrome Devtools Protocol](#chrome-devtools-protocol)
     - [Webdriver protocol](#webdriver-protocol)
+- [Commands API](#commands-api)
+  - [Browser commands](#browser-commands)
+    - [clearSession](#clearsession)
+  - [Element commands](#element-commands)
+    - [moveCursorTo](#movecursorto)
 - [Tests API](#tests-api)
   - [Arguments](#arguments)
   - [Hooks](#hooks)
@@ -110,10 +115,15 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [Reporters](#reporters)
   - [Require modules](#require-modules)
   - [Overriding settings](#overriding-settings)
+  - [Debug mode](#debug-mode)
+  - [REPL mode](#repl-mode)
+    - [switchToRepl](#switchtorepl)
+    - [Test development in runtime](#test-development-in-runtime)
+      - [How to set up using VSCode](#how-to-set-up-using-vscode)
+      - [How to set up using Webstorm](#how-to-set-up-using-webstorm)
   - [Environment variables](#environment-variables)
     - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
     - [HERMIONE_SETS](#hermione_sets)
-  - [Debug mode](#debug-mode)
 - [Programmatic API](#programmatic-api)
   - [config](#config)
   - [events](#events)
@@ -391,12 +401,14 @@ node_modules/.bin/hermione
 
 Since Hermione is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Hermione also has her own commands.
 
-### clearSession
+### Browser commands
+
+#### clearSession
 
 Browser command that clears session state (deletes cookies, clears local and session storages). For example:
 
 ```js
-it('', async ({ browser }) => {
+it('test', async ({ browser }) => {
     await browser.url('https://github.com/gemini-testing/hermione');
 
     (await browser.getCookies()).length; // 5
@@ -410,6 +422,25 @@ it('', async ({ browser }) => {
     await browser.execute(() => sessionStorage.length); // 0
 });
 ```
+
+### Element commands
+
+#### moveCursorTo
+
+> This command is temporary and will be removed in the next major (hermione@9). Differs from the standard [moveTo](https://webdriver.io/docs/api/element/moveTo/) in that it moves the cursor relative to the top-left corner of the element (like it was in hermione@7).
+
+Move the mouse by an offset of the specified element. If offset is not specified then mouse will be moved to the top-left corder of the element.
+
+Usage:
+
+```typescript
+await browser.$(selector).moveCursorTo({ xOffset, yOffset });
+```
+
+Available parameters:
+
+* **xOffset** (optional) `Number` – X offset to move to, relative to the top-left corner of the element;
+* **yOffset** (optional) `Number` – Y offset to move to, relative to the top-left corner of the element.
 
 ## Tests API
 
