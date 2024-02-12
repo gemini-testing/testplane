@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.4](https://github.com/gemini-testing/hermione/compare/v7.5.2...v7.5.4) (2024-02-12)
+
+
+### Bug Fixes
+
+* do not lost "testXReqId" when using "parallelLimit" ([a3448ce](https://github.com/gemini-testing/hermione/commit/a3448ceedd5a46a1da967f4a74153101c9ee5208))
+
+### [7.5.3](https://github.com/gemini-testing/hermione/compare/v7.5.2...v7.5.3) (2024-02-12)
+
+
+### Bug Fixes
+
+* do not lost "testXReqId" when using "parallelLimit" ([a3448ce](https://github.com/gemini-testing/hermione/commit/a3448ceedd5a46a1da967f4a74153101c9ee5208))
+
 ### [7.5.2](https://github.com/gemini-testing/hermione/compare/v7.5.1...v7.5.2) (2024-01-24)
 
 
