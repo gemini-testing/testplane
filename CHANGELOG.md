@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.0.6](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.0.6) (2024-02-12)
+
+
+### Bug Fixes
+
+* do not lost "testXReqId" when using "parallelLimit" ([8d6d82a](https://github.com/gemini-testing/hermione/commit/8d6d82a3ff810c8be437a014f40fee7b70cddd9f))
+
 ### [8.0.5](https://github.com/gemini-testing/hermione/compare/v8.0.4...v8.0.5) (2024-01-31)
 
 
