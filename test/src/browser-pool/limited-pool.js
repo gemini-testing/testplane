@@ -32,13 +32,33 @@ describe("browser-pool/limited-pool", () => {
             assert.equal(bro, browser);
         });
 
-        it("should pass opts to underlying pool", async () => {
-            const browser = stubBrowser("bro");
-            underlyingPool.getBrowser.returns(Promise.resolve(browser));
+        describe("should pass opts to underlying pool from", () => {
+            it("first requested browser", async () => {
+                const browser = stubBrowser("bro");
+                underlyingPool.getBrowser.returns(Promise.resolve(browser));
 
-            await makePool_().getBrowser("bro", { some: "opt" });
+                await makePool_().getBrowser("bro", { some: "opt" });
 
-            assert.calledOnceWith(underlyingPool.getBrowser, "bro", { some: "opt" });
+                assert.calledOnceWith(underlyingPool.getBrowser, "bro", { some: "opt" });
+            });
+
+            it("queued browser", async () => {
+                const browser1 = stubBrowser("bro");
+                const browser2 = stubBrowser("bro");
+                underlyingPool.getBrowser
+                    .onFirstCall()
+                    .returns(Promise.resolve(browser1))
+                    .onSecondCall()
+                    .returns(Promise.resolve(browser2));
+
+                const pool = await makePool_({ limit: 1 });
+                await pool.getBrowser("bro", { some: "opt1" });
+                // should be called without await
+                Promise.delay(100).then(() => pool.freeBrowser(browser1));
+                await pool.getBrowser("bro", { another: "opt2" });
+
+                assert.calledWith(underlyingPool.getBrowser.secondCall, "bro", { another: "opt2" });
+            });
         });
     });
 
