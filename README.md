@@ -38,6 +38,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [Execution context](#execution-context)
   - [AssertView](#assertview)
   - [RunStep](#runstep)
+  - [OpenAndWait](#openandwait)
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
@@ -74,6 +75,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [compareOpts](#compareopts)
     - [buildDiffOpts](#builddiffopts)
     - [assertViewOpts](#assertviewopts)
+    - [openAndWaitOpts](#openandwaitopts)
     - [screenshotsDir](#screenshotsdir)
     - [strictTestsOrder](#stricttestsorder)
     - [compositeImage](#compositeimage)
@@ -759,6 +761,39 @@ Parameters:
 
 *Note: [html-reporter](https://github.com/gemini-testing/html-reporter) v9.7.7+ provides better history representation.*
 
+### OpenAndWait
+
+Command that allows to open page and wait until it loads (by combination of the specified factors). For example:
+
+```js
+it('some test', async ({browser}) => {
+    await browser.openAndWait('some/url', {
+        selector: ['.some', '.selector'],
+        predicate: () => document.isReady,
+        ignoreNetworkErrorsPatterns: ['https://mc.yandex.ru'],
+        waitNetworkIdle: true,
+        waitNetworkIdleTimeout: 500,
+        failOnNetworkError: true,
+        timeout: 20000,
+    });
+});
+```
+
+In this example, page will be considered as loaded, if elements with selectors `.some` and `.selector` exists, `document.isReady` is `true`, it has been 500 ms since the last network request succeeded, and there were no errors, while trying to load images, fonts and stylesheets.
+
+Parameters:
+
+ - url (required) `String` – page url
+ - waitOpts (optional) `Object`:
+   - selector (optional) `String|String[]` – Selector(s) to element(s), which should exist on the page.
+   - predicate (optional) `() => Promise<bool> | bool` – Predicate, which should return `true` if page is loaded. Predicate is being executed in the browser context: [waitUntil](https://webdriver.io/docs/api/element/waitUntil).
+   - waitNetworkIdle (optional) `Boolean` – Waits until all network requests are done. `true` by default. Only works in chrome browser or when using [Chrome Devtools Protocol](#chrome-devtools-protocol).
+   - waitNetworkIdleTimeout (optional) `Number` - Time (ms) after all network requests are resolved to consider network idle. 500 by default.
+   - failOnNetworkError (optional) `Boolean` – If `true`, throws an error when network requests are failed. `true` by default. Only works in chrome browser or when using [Chrome Devtools Protocol](#chrome-devtools-protocol).
+   - shouldThrowError (optional) `(match) => Boolean` - Predicate, which should return `true` on [Match](https://webdriver.io/docs/api/mock#match), if network error is considered critical for page load. By default, throws an error on image, stylesheet and font load error.
+   - ignoreNetworkErrorsPatterns (optional) `Array<String | RegExp>` - Array of url patterns to ignore network requests errors. Has a priority over `shouldThrowError`
+   - timeout (optional) `Number` - Page load timeout. [pageLoadTimeout](#pageloadtimeout) by default. Throws an error, if selectors are still not exist after timeout, or predicate is still resolving false.
+
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
@@ -864,6 +899,7 @@ Option name               | Description
 `compareOpts`             | Options for comparing images.
 `buildDiffOpts`           | Options for building diff image.
 `assertViewOpts`          | Options for `assertView` command, used by default.
+`openAndWaitOpts`         | Options for `openAndWaitOpts` command, used by default
 `screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
 `strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height. In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height. `true` by default.
@@ -1058,6 +1094,15 @@ Default options used when calling [assertView](https://github.com/gemini-testing
     captureElementFromTop: true,
     allowViewportOverflow: false,
     disableAnimation: true
+```
+
+#### openAndWaitOpts
+Default options used when calling [openAndWait](https://github.com/gemini-testing/hermione/#openandwait), can be overriden by `openAndWait` options. Default values are:
+```javascript
+    waitNetworkIdle: true,
+    waitNetworkIdleTimeout: 500,
+    failOnNetworkError: true,
+    ignoreNetworkErrorsPatterns: []
 ```
 
 #### screenshotsDir
