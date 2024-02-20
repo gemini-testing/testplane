@@ -36,15 +36,31 @@ describe("worker/runner/test-runner", () => {
     const mkElement_ = proto => {
         return _.defaults(proto, {
             scrollIntoView: sandbox.stub().named("scrollIntoView").resolves(),
-            moveTo: sandbox.stub().named("moveTo").resolves(),
+            getSize: sandbox.stub().named("getSize").resolves({ width: 100, height: 500 }),
+            elementId: 100500,
         });
     };
 
+    const mkActionAPI_ = () => {
+        const actionStub = {};
+        actionStub.move = sandbox.stub().named("move").returns(actionStub);
+        actionStub.perform = sandbox.stub().named("perform").resolves();
+
+        return actionStub;
+    };
+
     const mkBrowser_ = ({ prototype, config, id } = {}) => {
+        const actionStub = {};
+        actionStub.move = sandbox.stub().named("move").returns(actionStub);
+        actionStub.perform = sandbox.stub().named("perform").resolves();
+
         const publicAPI = _.defaults(prototype, {
             $: sandbox.stub().named("$").resolves(mkElement_()),
             execute: sandbox.stub().named("execute").resolves({ x: 0, y: 0 }),
             assertView: sandbox.stub().named("assertView").resolves(),
+            moveToElement: sandbox.stub().named("moveToElement").resolves(),
+            action: sandbox.stub().named("getSize").returns(mkActionAPI_()),
+            isW3C: true,
         });
         config = _.defaults(config, { resetCursor: true });
 
@@ -272,7 +288,7 @@ describe("worker/runner/test-runner", () => {
                 it('should not move cursor to position "0,0" on body element', async () => {
                     await run_();
 
-                    assert.notCalled(body.moveTo);
+                    assert.notCalled(browser.publicAPI.action);
                 });
             });
 
@@ -309,32 +325,60 @@ describe("worker/runner/test-runner", () => {
                     assert.calledOnceWith(body.scrollIntoView);
                 });
 
-                it('should move cursor to position "0,0" on body element', async () => {
-                    await run_();
+                describe("in jsonwp protocol", () => {
+                    beforeEach(() => {
+                        browser.publicAPI.isW3C = false;
+                    });
 
-                    assert.calledOnceWith(body.moveTo, { xOffset: 0, yOffset: 0 });
+                    it("should scroll before moving cursor", async () => {
+                        await run_();
+
+                        assert.callOrder(body.scrollIntoView, browser.publicAPI.moveToElement);
+                    });
+
+                    it('should move cursor to position "0,0"', async () => {
+                        browser.publicAPI.execute.resolves({ x: 5, y: 5 });
+                        body.elementId = 12345;
+
+                        await run_();
+
+                        assert.calledOnceWith(browser.publicAPI.moveToElement, 12345, -5, -5);
+                    });
+
+                    it("should floor coords if body element has fractional coords", async () => {
+                        browser.publicAPI.execute.resolves({ x: 10.123, y: 15.899 });
+                        body.elementId = 12345;
+
+                        await run_();
+
+                        assert.calledOnceWith(browser.publicAPI.moveToElement, 12345, -10, -15);
+                    });
                 });
 
-                it("should move cursor correctly if body element has negative coords", async () => {
-                    browser.publicAPI.execute.resolves({ x: -100, y: -500 });
+                describe("in w3c protocol", () => {
+                    beforeEach(() => {
+                        browser.publicAPI.isW3C = true;
+                    });
 
-                    await run_();
+                    it("should scroll before moving cursor", async () => {
+                        await run_();
 
-                    assert.calledOnceWith(body.moveTo, { xOffset: 100, yOffset: 500 });
-                });
+                        assert.callOrder(body.scrollIntoView, browser.publicAPI.action);
+                    });
 
-                it("should scroll before moving cursor", async () => {
-                    await run_();
+                    it('should move cursor to position "0,0"', async () => {
+                        const actionAPI = mkActionAPI_();
+                        browser.publicAPI.action.returns(actionAPI);
 
-                    assert.callOrder(body.scrollIntoView, body.moveTo);
-                });
+                        await run_();
 
-                it("should floor coords if body element has fractional coords", async () => {
-                    browser.publicAPI.execute.resolves({ x: 10.123, y: 15.899 });
-
-                    await run_();
-
-                    assert.calledOnceWith(body.moveTo, { xOffset: -10, yOffset: -15 });
+                        assert.calledOnceWith(browser.publicAPI.action, "pointer", {
+                            parameters: { pointerType: "mouse" },
+                        });
+                        assert.calledOnceWith(actionAPI.move, { x: 0, y: 0 });
+                        assert.calledOnce(actionAPI.perform);
+                        assert.callOrder(browser.publicAPI.action, actionAPI.move, actionAPI.perform);
+                    });
                 });
             });
         });
