@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.1.0](https://github.com/gemini-testing/hermione/compare/v8.0.6...v8.1.0) (2024-02-20)
+
+
+### Features
+
+* add new command `moveCursorTo` which move cursro from left-top corener of the element
+
+
+### Bug Fixes
+
+* move cursor relative to the center of body when using "resetCursor" option ([36c4f36](https://github.com/gemini-testing/hermione/commit/36c4f367cf2e2a360dda5f7bb9bbceecdb188fcf))
+
 ### [8.0.6](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.0.6) (2024-02-12)
 
 
