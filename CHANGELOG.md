@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.1.0](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.1.0) (2024-02-20)
+
+
+### Features
+
+* issue templates ([7b112dc](https://github.com/gemini-testing/hermione/commit/7b112dc09f33014bda2dfe636145f49145b82ffa))
+
+
+### Bug Fixes
+
+* do not lost "testXReqId" when using "parallelLimit" ([8d6d82a](https://github.com/gemini-testing/hermione/commit/8d6d82a3ff810c8be437a014f40fee7b70cddd9f))
+* move cursor relative to the center of body when using "resetCursor" option ([36c4f36](https://github.com/gemini-testing/hermione/commit/36c4f367cf2e2a360dda5f7bb9bbceecdb188fcf))
+
 ### [8.0.6](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.0.6) (2024-02-12)
 
 
