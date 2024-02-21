@@ -45,26 +45,14 @@ describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
                 };
 
                 await handleImageDiff_({ config }).catch(() => {
-                    assert.calledOnceWith(
-                        ImageDiffError.create,
-                        sinon.match.any,
-                        sinon.match.any,
-                        sinon.match.any,
-                        sinon.match({ foo: "bar", baz: "qux" }),
-                    );
+                    assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { foo: "bar", baz: "qux" } }));
                 });
             });
 
             ["tolerance", "antialiasingTolerance"].forEach(option => {
                 it(`"${option}" option`, async () => {
                     await handleImageDiff_({ [option]: 1 }).catch(() => {
-                        assert.calledOnceWith(
-                            ImageDiffError.create,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match({ [option]: 1 }),
-                        );
+                        assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { [option]: 1 } }));
                     });
                 });
 
@@ -74,13 +62,7 @@ describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
                     };
 
                     await handleImageDiff_({ [option]: 2, config }).catch(() => {
-                        assert.calledOnceWith(
-                            ImageDiffError.create,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match({ [option]: 1 }),
-                        );
+                        assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { [option]: 1 } }));
                     });
                 });
             });
@@ -92,13 +74,7 @@ describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
                     };
 
                     await handleImageDiff_({ config, canHaveCaret: false }).catch(() => {
-                        assert.calledOnceWith(
-                            ImageDiffError.create,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match({ ignoreCaret: false }),
-                        );
+                        assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { ignoreCaret: false } }));
                     });
                 });
 
@@ -108,13 +84,7 @@ describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
                     };
 
                     await handleImageDiff_({ config, canHaveCaret: true }).catch(() => {
-                        assert.calledOnceWith(
-                            ImageDiffError.create,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match.any,
-                            sinon.match({ ignoreCaret: false }),
-                        );
+                        assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { ignoreCaret: false } }));
                     });
                 });
             });
@@ -125,13 +95,7 @@ describe("browser/commands/assert-view/capture-processors/assert-refs", () => {
                 };
 
                 await handleImageDiff_({ config, canHaveCaret: true }).catch(() => {
-                    assert.calledOnceWith(
-                        ImageDiffError.create,
-                        sinon.match.any,
-                        sinon.match.any,
-                        sinon.match.any,
-                        sinon.match({ ignoreCaret: true }),
-                    );
+                    assert.calledOnceWith(ImageDiffError.create, sinon.match({ diffOpts: { ignoreCaret: true } }));
                 });
             });
         });

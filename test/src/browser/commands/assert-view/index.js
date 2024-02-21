@@ -622,9 +622,11 @@ describe("assertView command", () => {
 
                             assert.calledOnceWith(
                                 ImageDiffError.create,
-                                "state",
-                                { path: "/curr/path", size: { width: 100, height: 200 } },
-                                { path: "/ref/path", size: { width: 300, height: 400 } },
+                                sinon.match({
+                                    stateName: "state",
+                                    currImg: { path: "/curr/path", size: { width: 100, height: 200 } },
+                                    refImg: { path: "/ref/path", size: { width: 300, height: 400 } },
+                                }),
                             );
                         });
 
@@ -776,6 +778,83 @@ describe("assertView command", () => {
                                 sinon.match.any,
                                 sinon.match({ emitter: browser.emitter }),
                             );
+                        });
+                    });
+                });
+
+                describe("if ignoreDiffPixelCount is specified", () => {
+                    beforeEach(() => {
+                        sandbox.stub(ImageDiffError, "create").returns(Object.create(ImageDiffError.prototype));
+                        Image.compare.resolves({
+                            equal: false,
+                            diffImage: { createBuffer: sandbox.stub() },
+                            differentPixels: 10,
+                            totalPixels: 50,
+                        });
+                    });
+
+                    describe("as number", () => {
+                        it("and images are still considered not same", async () => {
+                            const browser = await initBrowser_();
+
+                            await fn(browser, "state", "selector", { ignoreDiffPixelCount: 5 });
+
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match({
+                                    differentPixels: 10,
+                                    diffRatio: 0.2,
+                                }),
+                            );
+                        });
+
+                        it("and images are considered the same", async () => {
+                            const browser = await initBrowser_();
+
+                            await fn(browser, "state", "selector", { ignoreDiffPixelCount: 20 });
+
+                            assert.notCalled(ImageDiffError.create);
+                        });
+                    });
+
+                    describe("as percent string", () => {
+                        it("and images are still considered not same", async () => {
+                            const browser = await initBrowser_();
+
+                            await fn(browser, "state", "selector", { ignoreDiffPixelCount: "10%" });
+
+                            assert.calledOnceWith(
+                                ImageDiffError.create,
+                                sinon.match({
+                                    differentPixels: 10,
+                                    diffRatio: 0.2,
+                                }),
+                            );
+                        });
+
+                        it("and images are considered the same", async () => {
+                            const browser = await initBrowser_();
+
+                            await fn(browser, "state", "selector", { ignoreDiffPixelCount: "40%" });
+
+                            assert.notCalled(ImageDiffError.create);
+                        });
+
+                        describe("and value is not valid", () => {
+                            [
+                                { caseName: "negative value", value: "-4%" },
+                                { caseName: "more than 100", value: "146%" },
+                                { caseName: "not a percent number", value: "5" },
+                                { caseName: "not a number", value: "foo" },
+                            ].forEach(({ caseName, value }) => {
+                                it(caseName, async () => {
+                                    const browser = await initBrowser_();
+
+                                    await assert.isRejected(
+                                        fn(browser, "state", "selector", { ignoreDiffPixelCount: value }),
+                                    );
+                                });
+                            });
                         });
                     });
                 });
