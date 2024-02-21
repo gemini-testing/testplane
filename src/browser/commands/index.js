@@ -9,4 +9,5 @@ module.exports = [
     "scrollIntoView",
     "openAndWait",
     "switchToRepl",
+    "moveCursorTo",
 ];
