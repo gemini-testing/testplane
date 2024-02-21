@@ -125,11 +125,18 @@ module.exports = class TestRunner {
 
         await body.scrollIntoView();
 
-        const { x = 0, y = 0 } = await session.execute(function () {
-            return document.body.getBoundingClientRect();
-        });
-        // x and y must be integer, wdio will throw error otherwise
-        await body.moveTo({ xOffset: -Math.floor(x), yOffset: -Math.floor(y) });
+        if (!session.isW3C) {
+            const { x = 0, y = 0 } = await session.execute(function () {
+                return document.body.getBoundingClientRect();
+            });
+
+            return session.moveToElement(body.elementId, -Math.floor(x), -Math.floor(y));
+        }
+
+        await session
+            .action("pointer", { parameters: { pointerType: "mouse" } })
+            .move({ x: 0, y: 0 })
+            .perform();
     }
 };
 
