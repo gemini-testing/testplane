@@ -4,12 +4,21 @@ const Promise = require("bluebird");
 const { ImageDiffError } = require("../errors/image-diff-error");
 const { NoRefImageError } = require("../errors/no-ref-image-error");
 
-exports.handleNoRefImage = (currImg, refImg, state) => {
-    return Promise.reject(NoRefImageError.create(state, currImg, refImg));
+exports.handleNoRefImage = (currImg, refImg, stateName) => {
+    return Promise.reject(NoRefImageError.create(stateName, currImg, refImg));
 };
 
-exports.handleImageDiff = (currImg, refImg, state, opts) => {
-    const { tolerance, antialiasingTolerance, canHaveCaret, diffAreas, config, diffBuffer } = opts;
+exports.handleImageDiff = (currImg, refImg, stateName, opts) => {
+    const {
+        tolerance,
+        antialiasingTolerance,
+        canHaveCaret,
+        diffAreas,
+        config,
+        diffBuffer,
+        differentPixels,
+        diffRatio,
+    } = opts;
     const {
         buildDiffOpts,
         system: { diffColor },
@@ -25,5 +34,16 @@ exports.handleImageDiff = (currImg, refImg, state, opts) => {
         ...buildDiffOpts,
     };
 
-    return Promise.reject(ImageDiffError.create(state, currImg, refImg, diffOpts, diffAreas, diffBuffer));
+    return Promise.reject(
+        ImageDiffError.create({
+            stateName,
+            currImg,
+            refImg,
+            diffOpts,
+            diffAreas,
+            diffBuffer,
+            differentPixels,
+            diffRatio,
+        }),
+    );
 };

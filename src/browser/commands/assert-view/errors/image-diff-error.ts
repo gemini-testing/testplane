@@ -14,14 +14,16 @@ interface DiffOptions extends LooksSameOptions {
 
 type DiffAreas = Pick<LooksSameResult, "diffClusters" | "diffBounds">;
 
-type ImageDiffErrorConstructor<T> = new (
-    stateName: string,
-    currImg: ImageInfo,
-    refImg: ImageInfo,
-    diffOpts: DiffOptions,
-    diffAreas: DiffAreas,
-    diffBuffer: Buffer,
-) => T;
+type ImageDiffErrorConstructor<T> = new (params: {
+    stateName: string;
+    currImg: ImageInfo;
+    refImg: ImageInfo;
+    diffOpts: DiffOptions;
+    diffAreas: DiffAreas;
+    diffBuffer: Buffer;
+    differentPixels: number;
+    diffRatio: number;
+}) => T;
 
 interface ImageDiffErrorData {
     stateName: string;
@@ -31,6 +33,8 @@ interface ImageDiffErrorData {
     diffBounds: LooksSameResult["diffBounds"];
     diffClusters: LooksSameResult["diffClusters"];
     diffBuffer: Buffer;
+    differentPixels: number;
+    diffRatio: number;
 }
 
 export class ImageDiffError extends BaseStateError {
@@ -39,42 +43,58 @@ export class ImageDiffError extends BaseStateError {
     diffBounds?: DiffAreas["diffBounds"];
     diffClusters?: DiffAreas["diffClusters"];
     diffBuffer: Buffer;
+    differentPixels: number;
+    diffRatio: number;
 
     static create<T extends ImageDiffError>(
         this: ImageDiffErrorConstructor<T>,
-        stateName: string,
-        currImg: ImageInfo,
-        refImg: ImageInfo,
-        diffOpts: DiffOptions,
-        diffAreas = {} as DiffAreas,
-        diffBuffer: Buffer,
+        {
+            stateName,
+            currImg,
+            refImg,
+            diffOpts,
+            diffAreas = {} as DiffAreas,
+            diffBuffer,
+            differentPixels,
+            diffRatio,
+        }: {
+            stateName: string;
+            currImg: ImageInfo;
+            refImg: ImageInfo;
+            diffOpts: DiffOptions;
+            diffAreas?: DiffAreas;
+            diffBuffer: Buffer;
+            differentPixels: number;
+            diffRatio: number;
+        },
     ): T {
-        return new this(stateName, currImg, refImg, diffOpts, diffAreas, diffBuffer);
+        return new this({ stateName, currImg, refImg, diffOpts, diffAreas, diffBuffer, differentPixels, diffRatio });
     }
 
     static fromObject<T>(this: ImageDiffErrorConstructor<T>, data: ImageDiffErrorData): T {
-        const { diffBounds, diffClusters } = data;
-        return new this(
-            data.stateName,
-            data.currImg,
-            data.refImg,
-            data.diffOpts,
-            {
-                diffBounds,
-                diffClusters,
-            },
-            data.diffBuffer,
-        );
+        const { diffBounds, diffClusters, ...rest } = data;
+        return new this({ ...rest, diffAreas: { diffBounds, diffClusters } });
     }
 
-    constructor(
-        stateName: string,
-        currImg: ImageInfo,
-        refImg: ImageInfo,
-        diffOpts: DiffOptions,
-        { diffBounds, diffClusters } = {} as DiffAreas,
-        diffBuffer: Buffer,
-    ) {
+    constructor({
+        stateName,
+        currImg,
+        refImg,
+        diffOpts,
+        diffAreas: { diffBounds, diffClusters } = {} as DiffAreas,
+        diffBuffer,
+        differentPixels,
+        diffRatio,
+    }: {
+        stateName: string;
+        currImg: ImageInfo;
+        refImg: ImageInfo;
+        diffOpts: DiffOptions;
+        diffAreas?: DiffAreas;
+        diffBuffer: Buffer;
+        differentPixels: number;
+        diffRatio: number;
+    }) {
         super(stateName, currImg, refImg);
 
         this.message = `images are different for "${stateName}" state`;
@@ -82,6 +102,8 @@ export class ImageDiffError extends BaseStateError {
         this.diffBounds = diffBounds;
         this.diffClusters = diffClusters;
         this.diffBuffer = diffBuffer;
+        this.differentPixels = differentPixels;
+        this.diffRatio = diffRatio;
     }
 
     saveDiffTo(diffPath: string): Promise<null> {

@@ -13,7 +13,7 @@ const mkImageDiffError = (opts = {}) => {
         diffOpts: { foo: "bar" },
     });
 
-    return new ImageDiffError(stateName, currImg, refImg, diffOpts);
+    return new ImageDiffError({ stateName, currImg, refImg, diffOpts });
 };
 
 describe("ImageDiffError", () => {

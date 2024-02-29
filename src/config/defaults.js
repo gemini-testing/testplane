@@ -27,6 +27,7 @@ module.exports = {
         ignoreElements: [],
         captureElementFromTop: true,
         allowViewportOverflow: false,
+        ignoreDiffPixelCount: 0,
     },
     openAndWaitOpts: {
         waitNetworkIdle: true,

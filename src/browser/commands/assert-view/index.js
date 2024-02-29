@@ -14,6 +14,20 @@ const { BaseStateError } = require("./errors/base-state-error");
 const { AssertViewError } = require("./errors/assert-view-error");
 const InvalidPngError = require("./errors/invalid-png-error");
 
+const getIgnoreDiffPixelCountRatio = value => {
+    const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
+
+    if (percent === false || _.isNaN(percent)) {
+        throw new Error(`Invalid ignoreDiffPixelCount value: got ${value}, but expected number or '\${number}%'`);
+    }
+
+    if (percent > 100 || percent < 0) {
+        throw new Error(`Invalid ignoreDiffPixelCount value: percent should be in range between 0 and 100`);
+    }
+
+    return percent / 100;
+};
+
 module.exports = browser => {
     const screenShooter = ScreenShooter.create(browser);
     const { publicAPI: session, config } = browser;
@@ -104,10 +118,17 @@ module.exports = browser => {
             diffClusters,
             diffImage,
             metaInfo = {},
+            differentPixels,
+            totalPixels,
         } = await Image.compare(refBuffer, currBuffer, imageCompareOpts);
         Object.assign(refImg, metaInfo.refImg);
 
-        if (!equal) {
+        const diffRatio = differentPixels / totalPixels;
+        const isMinorDiff = _.isString(opts.ignoreDiffPixelCount)
+            ? diffRatio <= getIgnoreDiffPixelCountRatio(opts.ignoreDiffPixelCount)
+            : differentPixels <= opts.ignoreDiffPixelCount;
+
+        if (!equal && !isMinorDiff) {
             const diffBuffer = await diffImage.createBuffer("png");
             const diffAreas = { diffBounds, diffClusters };
             const { tolerance, antialiasingTolerance } = opts;
@@ -119,6 +140,8 @@ module.exports = browser => {
                 config,
                 emitter,
                 diffBuffer,
+                differentPixels,
+                diffRatio,
             };
 
             await fs.outputFile(currImg.path, currBuffer);

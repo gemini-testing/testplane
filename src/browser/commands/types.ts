@@ -64,6 +64,21 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
      * @defaultValue `true`
      */
     disableAnimation?: boolean;
+    /**
+     * Ability to ignore a small amount of different pixels to classify screenshots as being "identical"
+     *
+     * @example 5
+     * @example '1.5%'
+     *
+     * @remarks
+     * Useful when you encounter a few pixels difference that cannot be eliminated using the tolerance and antialiasingTolerance settings.
+     *
+     * @note
+     * This should be considered a last resort and only used in small number of cases where necessary.
+     *
+     * @defaultValue `0`
+     */
+    ignoreDiffPixelCount?: `${number}%` | number;
 }
 
 export type AssertViewCommand = (state: string, selectors: string | string[], opts?: AssertViewOpts) => Promise<void>;

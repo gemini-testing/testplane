@@ -709,6 +709,7 @@ Parameters:
    - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
    - antialiasingTolerance (optional) `Number` – overrides config [browsers](#browsers).[antialiasingTolerance](#antialiasingTolerance) value
+   - ignoreDiffPixelCount (optional) `Number | string` - the maximum amount of different pixels to still consider screenshots "the same". For example, when set to 5, it means that if there are 5 or fewer different pixels between two screenshots, they will still be considered the same. Alternatively, you can also define the maximum difference as a percentage (for example, 3%) of the image size. This option is useful when you encounter a few pixels difference that cannot be eliminated using the tolerance and antialiasingTolerance settings. The default value is 0.
    - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. And in this case if browser option [compositeImage](#compositeimage) set to `false`, then only visible part of the element will be captured. But if [compositeImage](#compositeimage) set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.
    - captureElementFromTop (optional) `Boolean` - ability to set capture element from the top area or from current position. In the first case viewport will be scrolled to the top of the element. Default value is `true`
    - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
@@ -1124,7 +1125,8 @@ Default options used when calling [assertView](https://github.com/gemini-testing
     ignoreElements: [],
     captureElementFromTop: true,
     allowViewportOverflow: false,
-    disableAnimation: true
+    disableAnimation: true,
+    ignoreDiffPixelCount: 0,
 ```
 
 #### openAndWaitOpts
