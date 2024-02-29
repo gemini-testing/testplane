@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.2.0](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.2.0) (2024-02-29)
+
+
+### Features
+
+* add ability to specify ignoreDiffPixelCount in assertView ([32242e1](https://github.com/gemini-testing/hermione/commit/32242e15d3ed84ac52a126ca93e5a1cb4a97c34c))
+* export TestError type ([#848](https://github.com/gemini-testing/hermione/issues/848)) ([f860b7c](https://github.com/gemini-testing/hermione/commit/f860b7c3a93e7c1cbac8347d63d27d64c00817ea))
+
 ## [8.1.0](https://github.com/gemini-testing/hermione/compare/v8.0.6...v8.1.0) (2024-02-20)
 
 
