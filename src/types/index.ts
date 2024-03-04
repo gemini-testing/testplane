@@ -79,6 +79,8 @@ export interface AssertViewResultDiff {
     refImg: ImageInfo;
     stack: string;
     stateName: string;
+    differentPixels: number;
+    diffRatio: number;
 }
 
 export interface AssertViewResultNoRefImage {
