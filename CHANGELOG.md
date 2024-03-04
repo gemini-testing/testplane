@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.2.1](https://github.com/gemini-testing/hermione/compare/v8.2.0...v8.2.1) (2024-03-04)
+
+
+### Bug Fixes
+
+* extend AssertViewResultDiff type ([45d1105](https://github.com/gemini-testing/hermione/commit/45d110586092316424db4b1080212fa463382d53))
+
 ## [8.2.0](https://github.com/gemini-testing/hermione/compare/v8.0.5...v8.2.0) (2024-02-29)
 
 
