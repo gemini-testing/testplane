@@ -68,7 +68,7 @@
     "mocha": "10.2.0",
     "plugins-loader": "1.2.0",
     "png-validator": "1.1.0",
-    "sharp": "0.30.7",
+    "sharp": "0.32.6",
     "sizzle": "2.3.6",
     "strip-ansi": "6.0.1",
     "temp": "0.8.3",
