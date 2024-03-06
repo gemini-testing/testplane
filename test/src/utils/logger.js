@@ -26,7 +26,7 @@ describe("utils/logger", () => {
             it("should start with timestamp message", () => {
                 logger[logFnName]("message", "another message");
 
-                assert.calledOnceWith(console[logFnName], "[14:21:04 GMT+3]", "message", "another message");
+                assert.calledOnceWith(console[logFnName], "[14:21:04 +0300]", "message", "another message");
             });
         });
     });

@@ -1,11 +1,11 @@
 "use strict";
 
-const { format } = require("date-fns");
+const format = require("strftime");
 
 const withTimestampPrefix =
     logFnName =>
     (...args) => {
-        const timestamp = format(new Date(), "HH:mm:ss OO");
+        const timestamp = format("%H:%M:%S %z");
         console[logFnName](`[${timestamp}]`, ...args);
     };
 
