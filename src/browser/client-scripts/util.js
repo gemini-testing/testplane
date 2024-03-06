@@ -105,3 +105,38 @@ exports.forEachRoot = function (cb) {
 
     traverseRoots(document.documentElement);
 };
+
+exports.getOwnerWindow = function (node) {
+    if (!node.ownerDocument) {
+        return null;
+    }
+
+    return node.ownerDocument.defaultView;
+};
+
+exports.getOwnerIframe = function (node) {
+    var nodeWindow = exports.getOwnerWindow(node);
+    if (nodeWindow) {
+        return nodeWindow.frameElement;
+    }
+
+    return null;
+};
+
+exports.getMainDocumentElem = function (currDocumentElem) {
+    if (!currDocumentElem) {
+        currDocumentElem = document.documentElement;
+    }
+
+    var currIframe = exports.getOwnerIframe(currDocumentElem);
+    if (!currIframe) {
+        return currDocumentElem;
+    }
+
+    var currWindow = exports.getOwnerWindow(currIframe);
+    if (!currWindow) {
+        return currDocumentElem;
+    }
+
+    return exports.getMainDocumentElem(currWindow.document.documentElement);
+};

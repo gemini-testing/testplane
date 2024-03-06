@@ -150,7 +150,7 @@ Rect.prototype = {
 
 exports.Rect = Rect;
 exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
-    var coords = element.getBoundingClientRect();
+    var coords = getNestedBoundingClientRect(element, window);
     var widthRatio = coords.width % opts.viewportWidth;
     var heightRatio = coords.height % opts.documentHeight;
 
@@ -164,3 +164,76 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
 
     return clientRect.translate(util.getScrollLeft(opts.scrollElem), util.getScrollTop(opts.scrollElem));
 };
+
+function getNestedBoundingClientRect(node, boundaryWindow) {
+    var ownerIframe = util.getOwnerIframe(node);
+    if (ownerIframe === null || util.getOwnerWindow(ownerIframe) === boundaryWindow) {
+        return node.getBoundingClientRect();
+    }
+
+    var rects = [node.getBoundingClientRect()];
+    var currentIframe = ownerIframe;
+
+    while (currentIframe) {
+        var rect = getBoundingClientRectWithBorderOffset(currentIframe);
+        rects.push(rect);
+
+        currentIframe = util.getOwnerIframe(currentIframe);
+        if (currentIframe && util.getOwnerWindow(currentIframe) === boundaryWindow) {
+            rect = getBoundingClientRectWithBorderOffset(currentIframe);
+            rects.push(rect);
+            break;
+        }
+    }
+
+    return mergeRectOffsets(rects);
+}
+
+function getBoundingClientRectWithBorderOffset(node) {
+    var dimensions = getElementDimensions(node);
+
+    return mergeRectOffsets([
+        node.getBoundingClientRect(),
+        {
+            top: dimensions.borderTop,
+            left: dimensions.borderLeft,
+            bottom: dimensions.borderBottom,
+            right: dimensions.borderRight,
+            x: dimensions.borderLeft,
+            y: dimensions.borderTop
+        }
+    ]);
+}
+
+function getElementDimensions(element) {
+    var calculatedStyle = util.getOwnerWindow(element).getComputedStyle(element);
+
+    return {
+        borderLeft: parseFloat(calculatedStyle.borderLeftWidth),
+        borderRight: parseFloat(calculatedStyle.borderRightWidth),
+        borderTop: parseFloat(calculatedStyle.borderTopWidth),
+        borderBottom: parseFloat(calculatedStyle.borderBottomWidth)
+    };
+}
+
+function mergeRectOffsets(rects) {
+    return rects.reduce(function (previousRect, rect) {
+        if (previousRect === null) {
+            return rect;
+        }
+
+        var nextTop = previousRect.top + rect.top;
+        var nextLeft = previousRect.left + rect.left;
+
+        return {
+            top: nextTop,
+            left: nextLeft,
+            width: previousRect.width,
+            height: previousRect.height,
+            bottom: nextTop + previousRect.height,
+            right: nextLeft + previousRect.width,
+            x: nextLeft,
+            y: nextTop
+        };
+    });
+}
