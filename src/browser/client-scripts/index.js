@@ -70,10 +70,11 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     }
 
-    var viewportWidth = document.documentElement.clientWidth,
-        viewportHeight = document.documentElement.clientHeight,
-        documentWidth = document.documentElement.scrollWidth,
-        documentHeight = document.documentElement.scrollHeight,
+    var mainDocumentElem = util.getMainDocumentElem(),
+        viewportWidth = mainDocumentElem.clientWidth,
+        viewportHeight = mainDocumentElem.clientHeight,
+        documentWidth = mainDocumentElem.scrollWidth,
+        documentHeight = mainDocumentElem.scrollHeight,
         viewPort = new Rect({
             left: util.getScrollLeft(scrollElem),
             top: util.getScrollTop(scrollElem),
@@ -381,8 +382,9 @@ function isEditable(element) {
 }
 
 function scrollToCaptureAreaInSafari(viewportCurr, captureArea, scrollElem) {
-    var documentHeight = Math.round(document.documentElement.scrollHeight);
-    var viewportHeight = Math.round(document.documentElement.clientHeight);
+    var mainDocumentElem = util.getMainDocumentElem();
+    var documentHeight = Math.round(mainDocumentElem.scrollHeight);
+    var viewportHeight = Math.round(mainDocumentElem.clientHeight);
     var maxScrollByY = documentHeight - viewportHeight;
 
     scrollElem.scrollTo(viewportCurr.left, Math.min(captureArea.top, maxScrollByY));
