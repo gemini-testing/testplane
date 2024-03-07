@@ -13,6 +13,4 @@ node_modules
 artifacts
 npm-debug.log
 .editorconfig
-coverage/
-.nyc_output/
 .eslintcache
