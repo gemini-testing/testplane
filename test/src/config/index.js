@@ -43,6 +43,12 @@ describe("config", () => {
             assert.calledWithMatch(parseOptions, { options: "some-options", env: process.env, argv: process.argv });
         });
 
+        it("should support default export", () => {
+            initConfig({ requireConfigReturns: { __esModule: true, default: { foo: "bar" } } });
+
+            assert.calledWithMatch(parseOptions, { options: { foo: "bar" }, env: process.env, argv: process.argv });
+        });
+
         it("should parse config from object", () => {
             initConfig({ config: { someOption: "some-value" } });
 

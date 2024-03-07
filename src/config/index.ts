@@ -15,7 +15,10 @@ export class Config {
 
     static read(configPath: string): unknown {
         try {
-            return require(path.resolve(process.cwd(), configPath));
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const configModule = require(path.resolve(process.cwd(), configPath));
+
+            return configModule.__esModule ? configModule.default : configModule;
         } catch (e) {
             logger.error(`Unable to read config from path ${configPath}`);
             throw e;
