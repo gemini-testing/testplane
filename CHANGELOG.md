@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [9.0.0-rc.0](https://github.com/gemini-testing/hermione/compare/v8.2.0...v9.0.0-rc.0) (2024-03-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* node versions less than 18.17.0 are no longer supported
+
+### Bug Fixes
+
+* extend AssertViewResultDiff type ([45d1105](https://github.com/gemini-testing/hermione/commit/45d110586092316424db4b1080212fa463382d53))
+* drop node versions less than 18.17.0 ([920dba7](https://github.com/gemini-testing/hermione/commit/920dba70d0b2fc1ad14de72b536a76af3b39f321))
+
 ### [8.29.5](https://github.com/gemini-testing/testplane/compare/v8.29.4...v8.29.5) (2025-06-24)
 
 
