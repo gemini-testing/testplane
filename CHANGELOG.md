@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [9.0.0-rc.1](https://github.com/gemini-testing/hermione/compare/v9.0.0-rc.0...v9.0.0-rc.1) (2024-03-07)
+
 ## [9.0.0-rc.0](https://github.com/gemini-testing/hermione/compare/v8.2.0...v9.0.0-rc.0) (2024-03-07)
 
 
