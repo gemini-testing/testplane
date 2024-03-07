@@ -6,7 +6,7 @@ const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/controllers/browser-version-controller", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.stub(TreeBuilder.prototype, "addTrap");

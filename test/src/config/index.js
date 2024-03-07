@@ -6,7 +6,7 @@ const defaults = require("src/config/defaults");
 const { BrowserConfig } = require("src/config/browser-config");
 
 describe("config", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let parseOptions;
 

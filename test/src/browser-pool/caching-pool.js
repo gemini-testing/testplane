@@ -6,7 +6,7 @@ const { buildCompositeBrowserId } = require("src/browser-pool/utils");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/caching-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let underlyingPool;
 

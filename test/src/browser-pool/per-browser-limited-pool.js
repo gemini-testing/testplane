@@ -7,7 +7,7 @@ const BasicPool = require("src/browser-pool/basic-pool");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/per-browser-limited-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.stub(LimitedPool, "create").returns(sinon.createStubInstance(LimitedPool));

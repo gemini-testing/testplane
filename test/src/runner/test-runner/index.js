@@ -9,7 +9,7 @@ const { Test } = require("src/test-reader/test-object");
 const { makeConfigStub } = require("../../../utils");
 
 describe("runner/test-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => sandbox.restore());
 

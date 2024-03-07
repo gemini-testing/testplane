@@ -4,7 +4,7 @@ const logger = require("src/utils/logger");
 const FileInformer = require("src/reporters/informers/file");
 
 describe("reporter/informers/file", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let fsStream;
 
     beforeEach(() => {

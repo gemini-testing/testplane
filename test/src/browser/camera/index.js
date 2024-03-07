@@ -5,7 +5,7 @@ const Image = require("src/image");
 const utils = require("src/browser/camera/utils");
 
 describe("browser/camera", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let image;
 
     beforeEach(() => {

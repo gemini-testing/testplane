@@ -4,7 +4,7 @@ const { MochaEventBus } = require("src/test-reader/mocha-reader/mocha-event-bus"
 const { EventEmitter } = require("events");
 
 describe("test-reader/mocha-event-bus", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => {
         sandbox.restore();

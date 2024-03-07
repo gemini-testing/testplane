@@ -6,7 +6,7 @@ const { Suite, Test, Hook } = require("src/test-reader/test-object");
 const crypto = require("src/utils/crypto");
 
 describe("test-reader/mocha-reader/tree-builder-decorator", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkDecorator_ = baseDecorator => {
         return TreeBuilderDecorator.create(baseDecorator || sinon.createStubInstance(TreeBuilder));

@@ -9,7 +9,7 @@ const logger = require("src/utils/logger");
 const { mkSessionStub_ } = require("../../../browser/utils");
 
 describe("worker/runner/test-runner/one-time-screenshooter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkBrowser_ = (opts = {}) => {
         const session = mkSessionStub_();

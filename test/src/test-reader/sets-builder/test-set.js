@@ -4,7 +4,7 @@ const fs = require("fs");
 const proxyquire = require("proxyquire");
 
 describe("test-reader/sets-builder/test-set", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let TestSet, globExtraStub;
 
     beforeEach(() => {

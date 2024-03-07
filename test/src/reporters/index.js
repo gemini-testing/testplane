@@ -3,7 +3,7 @@ const Promise = require("bluebird");
 const proxyquire = require("proxyquire").noCallThru();
 
 describe('"initReporters" method', () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let initReporters, Reporter, attachRunner, runner;
 
     const createReporter = attachRunner => {

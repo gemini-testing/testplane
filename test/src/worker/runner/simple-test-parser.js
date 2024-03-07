@@ -6,7 +6,7 @@ const { TestParser } = require("src/test-reader/test-parser");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner/simple-test-parser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkSimpleParser_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();

@@ -15,7 +15,7 @@ const { SAVE_HISTORY_MODE } = require("src/constants/config");
 const { makeConfigStub } = require("../../../../utils");
 
 describe("worker/runner/test-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();

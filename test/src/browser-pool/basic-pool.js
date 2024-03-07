@@ -11,7 +11,7 @@ const Promise = require("bluebird");
 const { makeConfigStub } = require("../../utils");
 
 describe("browser-pool/basic-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkPool_ = opts => {
         opts = _.defaults(opts, {

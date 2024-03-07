@@ -7,7 +7,7 @@ const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/controllers/skip-controller", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkController_ = () => {
         const eventBus = new EventEmitter().on(ReadEvents.NEW_BUILD_INSTRUCTION, instruction =>

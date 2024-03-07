@@ -15,7 +15,7 @@ const { makeConfigStub } = require("../../utils");
 const proxyquire = require("proxyquire");
 
 describe("runner/browser-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let BrowserRunner;
     let TestRunnerFabric = { create };
 

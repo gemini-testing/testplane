@@ -16,7 +16,7 @@ const {
 } = require("src/constants/process-messages");
 
 describe("WorkersRegistry", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let workersImpl, workerFarm;
 

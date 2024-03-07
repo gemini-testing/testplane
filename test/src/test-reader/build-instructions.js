@@ -9,7 +9,7 @@ const RuntimeConfig = require("src/config/runtime-config");
 const { makeConfigStub } = require("../../utils");
 
 describe("test-reader/build-instructions", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => {
         sandbox.restore();

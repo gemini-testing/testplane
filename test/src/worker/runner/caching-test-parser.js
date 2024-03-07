@@ -7,7 +7,7 @@ const { TestCollection } = require("src/test-collection");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner/caching-test-parser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkCachingParser_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();

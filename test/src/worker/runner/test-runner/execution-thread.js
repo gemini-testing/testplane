@@ -11,7 +11,7 @@ const RuntimeConfig = require("src/config/runtime-config");
 const logger = require("src/utils/logger");
 
 describe("worker/runner/test-runner/execution-thread", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();

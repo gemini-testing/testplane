@@ -5,7 +5,7 @@ const HermioneFacade = require("src/worker/hermione-facade");
 const Promise = require("bluebird");
 
 describe("worker", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.stub(HermioneFacade.prototype);

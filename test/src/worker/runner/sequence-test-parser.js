@@ -7,7 +7,7 @@ const { makeConfigStub, makeTest } = require("../../../utils");
 const Promise = require("bluebird");
 
 describe("worker/runner/sequence-test-parser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkSequenceParser_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();

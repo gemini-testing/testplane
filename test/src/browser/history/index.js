@@ -7,7 +7,7 @@ const Callstack = require("../../../../src/browser/history/callstack");
 const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_ } = require("../utils");
 
 describe("commands-history", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let initCommandHistory, runGroup, getBrowserCommands, getElementCommands;
 
     beforeEach(() => {

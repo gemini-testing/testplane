@@ -9,7 +9,7 @@ const { MasterEvents: RunnerEvents } = require("src/events");
 const { mkTestStub_, getDeserializedResult } = require("./utils");
 
 describe("Flat reporter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let FlatReporter, initInformer, informer, emitter, test, stdout;
 
     const emit = (event, data) => {

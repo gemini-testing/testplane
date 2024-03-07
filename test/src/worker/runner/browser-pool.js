@@ -10,7 +10,7 @@ const logger = require("src/utils/logger");
 const ipc = require("src/utils/ipc");
 
 describe("worker/browser-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const stubConfig = browserConfig => {
         return {

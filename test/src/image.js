@@ -3,7 +3,7 @@
 const proxyquire = require("proxyquire");
 
 describe("Image", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let Image;
     let image;
     let looksSameStub;

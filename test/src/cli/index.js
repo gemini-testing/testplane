@@ -11,7 +11,7 @@ const logger = require("src/utils/logger");
 const any = sinon.match.any;
 
 describe("cli", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const run_ = async (argv = "", cli) => {
         process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];

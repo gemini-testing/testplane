@@ -17,7 +17,7 @@ const mkImageDiffError = (opts = {}) => {
 };
 
 describe("ImageDiffError", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.stub(Image, "buildDiff").resolves();

@@ -24,7 +24,7 @@ const {
 } = require("./utils");
 
 describe("ExistingBrowser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let session;
 
     const initBrowser_ = (browser = mkBrowser_(), sessionData = {}, calibrator) => {

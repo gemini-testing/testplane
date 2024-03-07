@@ -7,7 +7,7 @@ const mkTestStub_ = require("./utils").mkTestStub_;
 const getDeserializedResult = require("./utils").getDeserializedResult;
 
 describe("Plain reporter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let PlainReporter, initInformer, informer, emitter, test, stdout;
 
     const emit = (event, data) => {

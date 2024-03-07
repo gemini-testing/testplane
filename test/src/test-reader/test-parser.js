@@ -17,7 +17,7 @@ const _ = require("lodash");
 const { NEW_BUILD_INSTRUCTION } = TestReaderEvents;
 
 describe("test-reader/test-parser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let TestParser;
     let clearRequire;

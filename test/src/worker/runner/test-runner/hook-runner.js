@@ -6,7 +6,7 @@ const ExecutionThread = require("src/worker/runner/test-runner/execution-thread"
 const { Suite, Test, Hook } = require("src/test-reader/test-object");
 
 describe("worker/runner/test-runner/hook-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkHook_ = fn => {
         return new Hook({

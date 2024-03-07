@@ -21,7 +21,7 @@ const logger = require("src/utils/logger");
 const { makeConfigStub } = require("../utils");
 
 describe("hermione", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let Hermione, initReporters;
 
     const mkHermione_ = config => {

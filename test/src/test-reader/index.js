@@ -9,7 +9,7 @@ const { makeConfigStub } = require("../../utils");
 const _ = require("lodash");
 
 describe("test-reader", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const readTests_ = ({ opts, config, reader } = {}) => {
         opts = _.defaults(opts, {

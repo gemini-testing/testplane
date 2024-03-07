@@ -4,7 +4,7 @@ const { TreeBuilder } = require("src/test-reader/tree-builder");
 const { Suite, Test, Hook } = require("src/test-reader/test-object");
 
 describe("test-reader/tree-builder", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {});
 

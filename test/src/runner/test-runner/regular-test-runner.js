@@ -14,7 +14,7 @@ const Promise = require("bluebird");
 const { EventEmitter } = require("events");
 
 describe("runner/test-runner/regular-test-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const stubTestResult_ = (opts = {}) => {
         return _.defaults(opts, {

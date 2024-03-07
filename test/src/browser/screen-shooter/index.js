@@ -5,7 +5,7 @@ const ScreenShooter = require("src/browser/screen-shooter");
 const Viewport = require("src/browser/screen-shooter/viewport");
 
 describe("screen-shooter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.spy(Viewport, "create");

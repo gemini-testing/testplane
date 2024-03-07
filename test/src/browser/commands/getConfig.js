@@ -5,7 +5,7 @@ const clientBridge = require("src/browser/client-bridge");
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../utils");
 
 describe('"getConfig" command', () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
         sandbox.stub(webdriverio, "attach");

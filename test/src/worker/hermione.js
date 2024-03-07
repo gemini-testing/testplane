@@ -12,7 +12,7 @@ const Runner = require("src/worker/runner");
 const { makeConfigStub, makeSuite } = require("../../utils");
 
 describe("worker/hermione", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let ExpectWebdriverio;
     let Hermione;

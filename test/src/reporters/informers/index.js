@@ -2,7 +2,7 @@ const fs = require("fs-extra");
 const proxyquire = require("proxyquire");
 
 describe("reporters/informers", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => sandbox.restore());
 
