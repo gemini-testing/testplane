@@ -15,7 +15,7 @@
     "lint": "eslint --cache . && prettier --check .",
     "reformat": "eslint --fix . && prettier --write .",
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
-    "test-unit": "_mocha test/",
+    "test-unit": "_mocha test/ --coverage",
     "test": "npm run test-unit && npm run check-types && npm run lint",
     "toc": "doctoc README.md",
     "precommit": "npm run lint",
