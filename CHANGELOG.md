@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.2.2](https://github.com/gemini-testing/hermione/compare/v8.2.1...v8.2.2) (2024-03-07)
+
+
+### Bug Fixes
+
+* correctly screen elements inside iframes ([9ecf164](https://github.com/gemini-testing/hermione/commit/9ecf164f972b067084c1fa3d4b0d58c0dd3ee91f))
+
 ## [8.2.1](https://github.com/gemini-testing/hermione/compare/v8.2.0...v8.2.1) (2024-03-04)
 
 
