@@ -6,7 +6,7 @@ const { CancelledError } = require("src/browser-pool/cancelled-error");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/limited-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let underlyingPool;
 
     const makePool_ = ({ limit = 1, isSpecificBrowserLimiter = true } = {}) =>

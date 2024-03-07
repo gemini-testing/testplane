@@ -18,7 +18,7 @@ const updateRefs = require("src/browser/commands/assert-view/capture-processors/
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../../utils");
 
 describe("assertView command", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const assertViewBrowser = async (browser, state = "plain", selector = ".selector", opts = {}) => {
         return browser.publicAPI.assertView(state, selector, opts);

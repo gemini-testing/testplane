@@ -14,7 +14,7 @@ const mkSessionStub_ = (): Session => {
 };
 
 describe('"openAndWait" command', () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let clock: FakeTimers.InstalledClock;
     const wdioAttachStub = sandbox.stub().resolves(mkSessionStub_());
     let mkBrowser_: typeof mkExistingBrowser_;

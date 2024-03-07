@@ -4,7 +4,7 @@ const { Suite, Test, Hook } = require("src/test-reader/test-object");
 const { ConfigurableTestObject } = require("src/test-reader/test-object/configurable-test-object");
 
 describe("test-reader/test-object/suite", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => {
         sandbox.restore();

@@ -4,7 +4,7 @@ const nodeTemp = require("temp");
 const clearRequire = require("clear-require");
 
 describe("temp", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let temp;
 
     beforeEach(() => {

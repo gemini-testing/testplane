@@ -7,7 +7,7 @@ const SetCollection = require("src/test-reader/sets-builder/set-collection");
 const TestSet = require("src/test-reader/sets-builder/test-set");
 
 describe("test-reader/sets-builder", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     const setCollection = sinon.createStubInstance(SetCollection);
 
     const createSetBuilder = (sets, opts) => SetBuilder.create(sets || { all: { files: ["some/path"] } }, opts || {});

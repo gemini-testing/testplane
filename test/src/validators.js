@@ -4,7 +4,7 @@ const { validateUnknownBrowsers } = require("src/validators");
 const logger = require("src/utils/logger");
 
 describe("validators", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => {
         sandbox.restore();

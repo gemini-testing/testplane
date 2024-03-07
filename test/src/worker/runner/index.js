@@ -9,7 +9,7 @@ const TestRunner = require("src/worker/runner/test-runner");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkRunner_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();

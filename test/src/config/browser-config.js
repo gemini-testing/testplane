@@ -3,7 +3,7 @@
 const { BrowserConfig } = require("src/config/browser-config");
 
 describe("BrowserConfig", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => sandbox.restore());
 

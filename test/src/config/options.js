@@ -7,7 +7,7 @@ const parser = require("src/config/options");
 const { MissingOptionError } = require("gemini-configparser");
 
 describe("config options", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const createConfig = () => Config.create("some-config-path");
 

@@ -4,7 +4,7 @@ const { AsyncEmitter } = require("src/events/async-emitter");
 const Promise = require("bluebird");
 
 describe("events/async-emitter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let emitter;
 
     beforeEach(() => {

@@ -4,7 +4,7 @@ const proxyquire = require("proxyquire");
 const ClientBridge = require("src/browser/client-bridge/client-bridge");
 
 describe("clientBridge", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let clientBridge, browserify, script;
 

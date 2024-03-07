@@ -11,7 +11,7 @@ const RuntimeConfig = require("src/config/runtime-config");
 const { mkNewBrowser_: mkBrowser_, mkSessionStub_ } = require("./utils");
 
 describe("NewBrowser", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let session;
 
     beforeEach(() => {

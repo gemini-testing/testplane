@@ -4,7 +4,7 @@ const BrowserAgent = require("src/runner/browser-agent");
 const BrowserPool = require("src/browser-pool/basic-pool");
 
 describe("runner/browser-agent", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     function mkAgent_({ id, version, pool } = {}) {
         id = id || "some-default-browser";

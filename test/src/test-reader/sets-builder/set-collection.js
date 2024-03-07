@@ -4,7 +4,7 @@ const SetCollection = require("src/test-reader/sets-builder/set-collection");
 const TestSet = require("src/test-reader/sets-builder/test-set");
 
 describe("test-reader/sets-builder/set-collection", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => sandbox.restore());
 

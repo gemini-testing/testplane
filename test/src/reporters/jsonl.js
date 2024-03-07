@@ -11,7 +11,7 @@ const testStates = {
 };
 
 describe("Jsonl reporter", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let JsonlReporter, initInformer, informer, emitter;
 
     const emit = (event, data) => {

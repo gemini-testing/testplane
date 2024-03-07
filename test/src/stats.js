@@ -6,7 +6,7 @@ const { Stats } = require("src/stats");
 const { makeTest } = require("../utils");
 
 describe("Stats", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let stats;
     let runner;

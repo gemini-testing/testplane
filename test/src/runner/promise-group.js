@@ -5,7 +5,7 @@ const Promise = require("bluebird");
 const PromiseGroup = require("src/runner/promise-group");
 
 describe("runner/promise-group", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     describe("add", () => {
         it("resolves promise if group is not fulfilled", async () => {

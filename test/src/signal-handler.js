@@ -5,7 +5,7 @@ const clearRequire = require("clear-require");
 const Promise = require("bluebird");
 
 describe("src/signal-handler", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let signalHandler;
 

@@ -12,7 +12,7 @@ const { Test } = require("src/test-reader/test-object");
 const { makeConfigStub } = require("../../../utils");
 
 describe("runner/test-runner/insistant-test-runner", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkWorkers_ = () => {
         return {

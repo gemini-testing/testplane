@@ -7,7 +7,7 @@ const Viewport = require("src/browser/screen-shooter/viewport");
 const CoordValidator = require("src/browser/screen-shooter/viewport/coord-validator");
 
 describe("Viewport", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
     let image;
 
     const createViewport = (opts = {}) =>

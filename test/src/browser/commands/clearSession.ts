@@ -8,7 +8,7 @@ import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 import type ExistingBrowser from "src/browser/existing-browser";
 
 describe('"clearSession" command', () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
         (webdriverio.attach as SinonStub).resolves(session);

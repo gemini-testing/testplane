@@ -4,7 +4,7 @@ const { TestObject } = require("src/test-reader/test-object/test-object");
 const { ConfigurableTestObject } = require("src/test-reader/test-object/configurable-test-object");
 
 describe("test-reader/test-object/configurable-test-object", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkObj_ = (opts = {}) => {
         return new ConfigurableTestObject(opts);

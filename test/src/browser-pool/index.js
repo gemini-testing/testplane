@@ -9,7 +9,7 @@ const { EventEmitter } = require("events");
 const { makeConfigStub } = require("../../utils");
 
 describe("browser-pool", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     afterEach(() => sandbox.restore());
 

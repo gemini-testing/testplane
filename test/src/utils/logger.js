@@ -6,7 +6,7 @@ describe("utils/logger", () => {
     ["log", "warn", "error"].forEach(logFnName => {
         describe(logFnName, () => {
             let clock;
-            const sandbox = sinon.sandbox.create();
+            const sandbox = sinon.createSandbox();
             const originalTZ = process.env.TZ;
 
             beforeEach(() => {

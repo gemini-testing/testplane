@@ -6,7 +6,7 @@ const { TestReaderEvents: ReadEvents } = require("src/events");
 const { EventEmitter } = require("events");
 
 describe("test-reader/test-parser-api", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const init_ = () => {
         const ctx = {};

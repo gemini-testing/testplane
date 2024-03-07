@@ -11,7 +11,7 @@ const proxyquire = require("proxyquire").noCallThru();
 const { EventEmitter } = require("events");
 
 describe("test-reader/mocha-reader", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     let MochaConstructorStub;
     let readFiles;

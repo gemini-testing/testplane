@@ -7,7 +7,7 @@ const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 
 describe("config browser-options", () => {
-    const sandbox = sinon.sandbox.create();
+    const sandbox = sinon.createSandbox();
 
     const mkBrowser_ = opts => {
         return _.defaults(opts || {}, {
