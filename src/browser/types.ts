@@ -92,9 +92,9 @@ declare global {
              *
              * @param stepName step name
              * @param stepCb step callback
-             * @returns {Promise<any>} value, returned by `stepCb`
+             * @returns {Promise<T>} value, returned by `stepCb`
              */
-            runStep(stepName: string, stepCb: () => Promise<unknown> | unknown): Promise<unknown>;
+            runStep<T = unknown>(stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
 
             // TODO: describe executionContext more precisely
             executionContext: (RunnerTest | RunnerHook) & {
