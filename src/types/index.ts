@@ -1,4 +1,3 @@
-import type { Browser } from "webdriverio";
 import { Events } from "../events";
 import { MainRunner } from "../runner";
 import { TestCollection } from "../test-collection";
@@ -32,7 +31,10 @@ export interface BrowserInfo {
     sessionId: string;
 }
 
-export type AsyncSessionEventCallback = (browser: Browser, browserInfo: BrowserInfo) => Promise<void> | void;
+export type AsyncSessionEventCallback = (
+    browser: WebdriverIO.Browser,
+    browserInfo: BrowserInfo,
+) => Promise<void> | void;
 
 export interface ImageSize {
     width: number;
@@ -150,7 +152,7 @@ export interface BeforeFileReadData extends AfterFileReadData {
 }
 
 export type SyncSessionEventCallback = (
-    browser: Browser,
+    browser: WebdriverIO.Browser,
     browserInfo: { browserId: string; browserVersion: string },
 ) => void;
 
