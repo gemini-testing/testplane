@@ -33,6 +33,19 @@ describe("utils/typescript", () => {
             assert.notCalled(registerStub);
         });
 
+        it("should pass 'allowJs' option", () => {
+            ts.tryToRegisterTsNode();
+
+            assert.calledOnceWith(
+                registerStub,
+                sinon.match({
+                    compilerOptions: {
+                        allowJs: true,
+                    },
+                }),
+            );
+        });
+
         it("should respect env vars", () => {
             process.env.TS_NODE_SKIP_PROJECT = "false";
             process.env.TS_NODE_TRANSPILE_ONLY = "false";

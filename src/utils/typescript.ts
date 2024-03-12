@@ -27,6 +27,9 @@ export const tryToRegisterTsNode = (): void => {
                 skipProject: JSON.parse(skipProjectRaw),
                 transpileOnly: JSON.parse(transpileOnlyRaw),
                 swc: JSON.parse(swcRaw),
+                compilerOptions: {
+                    allowJs: true,
+                },
             });
         } catch (err) {
             const params = `swc: "${swcRaw}", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
