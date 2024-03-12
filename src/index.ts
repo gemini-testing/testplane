@@ -9,7 +9,7 @@ import "expect-webdriverio";
 import { GlobalHelper } from "./types";
 export { Hermione as default } from "./hermione";
 
-export type { WdioBrowser, TestResult, Test, Suite, TestError } from "./types";
+export type { WdioBrowser, TestResult, Test, Suite, TestError, AssertViewOpts } from "./types";
 export type { Config } from "./config";
 export type { ConfigInput } from "./config/types";
 export type { TestCollection } from "./test-collection";
