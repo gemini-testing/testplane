@@ -18,6 +18,12 @@ export interface Browser {
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace WebdriverIO {
+        type OverwriteCommandFn<IsElement extends boolean = false> = (
+            this: IsElement extends true ? WebdriverIO.Element : WebdriverIO.Browser,
+            origCommand: (...args: any[]) => Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+            ...args: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
+        ) => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
         interface Browser {
             getMeta(): Promise<BrowserMeta>;
             getMeta(key: string): Promise<unknown>;
@@ -27,6 +33,14 @@ declare global {
             extendOptions(opts: { [name: string]: unknown }): Promise<void>;
 
             getConfig(): Promise<BrowserConfig>;
+
+            overwriteCommand<IsElement extends boolean = false>(
+                name: string,
+                func: OverwriteCommandFn<IsElement>,
+                attachToElement?: IsElement,
+                proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+                instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
+            ): void;
 
             /**
              * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
