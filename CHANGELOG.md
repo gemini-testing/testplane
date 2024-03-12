@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.3.0](https://github.com/gemini-testing/hermione/compare/v8.2.2...v8.3.0) (2024-03-12)
+
+
+### Features
+
+* add ability to use default export in .hermione.conf file ([b4e1d6c](https://github.com/gemini-testing/hermione/commit/b4e1d6c9748c0d67381b5ac5e043a59675aaff56))
+* add ability to use import and export in test files ([8bb43e7](https://github.com/gemini-testing/hermione/commit/8bb43e70a892368653189db5a53b169840838db2))
+
+
+### Bug Fixes
+
+* add ability to specify runStep resolved value ([e7f1130](https://github.com/gemini-testing/hermione/commit/e7f113071f26b40d3f82514fbeb77c06fdca4598))
+* add getConfig command typings ([5889066](https://github.com/gemini-testing/hermione/commit/5889066aab9634f402eeb971bb908fcc5e919a08))
+* add typings for overwriteCommand: custom commands ([420ec8b](https://github.com/gemini-testing/hermione/commit/420ec8bb3d86a2eac8ebb0aea6b02e592a92365b))
+* export AssertViewOpts type ([2b1a4dd](https://github.com/gemini-testing/hermione/commit/2b1a4ddb9dbdc17e9077d3561ce1718403eded7e))
+* use WebdriverIO.Browser instead of webdriverio browser ([fcd6c50](https://github.com/gemini-testing/hermione/commit/fcd6c5098e739ec99426041198240bc13d7b8c6e))
+
 ### [8.2.2](https://github.com/gemini-testing/hermione/compare/v8.2.1...v8.2.2) (2024-03-07)
 
 
