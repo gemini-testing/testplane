@@ -26,6 +26,8 @@ declare global {
 
             extendOptions(opts: { [name: string]: unknown }): Promise<void>;
 
+            getConfig(): Promise<BrowserConfig>;
+
             /**
              * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
              *
