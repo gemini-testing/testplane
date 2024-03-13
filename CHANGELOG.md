@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.4.0](https://github.com/gemini-testing/hermione/compare/v8.3.0...v8.4.0) (2024-03-13)
+
+
+### Features
+
+* add ability to use plugin's default export ([f1799b0](https://github.com/gemini-testing/hermione/commit/f1799b0246feae24d34c21fae226e96c534d6be5))
+
 ## [8.3.0](https://github.com/gemini-testing/hermione/compare/v8.2.2...v8.3.0) (2024-03-12)
 
 
