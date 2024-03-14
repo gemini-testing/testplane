@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.4.1](https://github.com/gemini-testing/hermione/compare/v8.4.0...v8.4.1) (2024-03-14)
+
+
+### Bug Fixes
+
+* ignore TargetCloseError ([305c6c1](https://github.com/gemini-testing/hermione/commit/305c6c1610312e025b02f49bf0692e446739fa1f))
+
 ## [8.4.0](https://github.com/gemini-testing/hermione/compare/v8.3.0...v8.4.0) (2024-03-13)
 
 
