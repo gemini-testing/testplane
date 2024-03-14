@@ -3,7 +3,7 @@ export const shouldIgnoreUnhandledRejection = (err: Error | undefined): boolean 
         return false;
     }
 
-    if (err.name === "ProtocolError") {
+    if (err.name === "ProtocolError" || err.name === "TargetCloseError") {
         return true;
     }
 
