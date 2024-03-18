@@ -118,7 +118,7 @@ export interface CommonConfig {
     headers: Record<string, string> | null;
 
     system: SystemConfig;
-    headless: boolean | null;
+    headless: "old" | "new" | boolean | null;
     isolation: boolean;
 
     openAndWaitOpts: {

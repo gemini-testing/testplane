@@ -1234,7 +1234,7 @@ Cloud service access key or secret key. Default value is `null`.
 Ability to choose different datacenters for run in cloud service. Default value is `null`.
 
 ####  headless
-Ability to run headless browser in cloud service. Default value is `null`.
+Ability to run headless browser in cloud service. Default value is `null`. Can be set as a Boolean (the default value of the browser will be used). For Chrome browsers starting from version 112 also can be specified as a string with "new"|"old" values  - this will enable the new headless mode (see [Chrome's blog post](https://developer.chrome.com/docs/chromium/new-headless)).
 
 ####  isolation
 Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `null`, but `true` for chrome@93 and higher.

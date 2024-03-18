@@ -60,17 +60,33 @@ describe("NewBrowser", () => {
         });
 
         describe("headless setting", () => {
-            it("should generate browser specific settings - chrome", async () => {
-                await mkBrowser_({
-                    headless: true,
-                    desiredCapabilities: { browserName: "chrome" },
-                }).init();
+            describe("chrome", () => {
+                it("should generate browser specific settings", async () => {
+                    await mkBrowser_({
+                        headless: true,
+                        desiredCapabilities: { browserName: "chrome" },
+                    }).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
-                    capabilities: {
-                        browserName: "chrome",
-                        "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
-                    },
+                    assert.calledWithMatch(webdriverio.remote, {
+                        capabilities: {
+                            browserName: "chrome",
+                            "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
+                        },
+                    });
+                });
+
+                it("should add passed value to args if string was passed", async () => {
+                    await mkBrowser_({
+                        headless: "new",
+                        desiredCapabilities: { browserName: "chrome" },
+                    }).init();
+
+                    assert.calledWithMatch(webdriverio.remote, {
+                        capabilities: {
+                            browserName: "chrome",
+                            "goog:chromeOptions": { args: ["headless=new", "disable-gpu"] },
+                        },
+                    });
                 });
             });
 

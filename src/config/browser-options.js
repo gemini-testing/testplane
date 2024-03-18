@@ -313,7 +313,22 @@ function buildBrowserOptions(defaultFactory, extra) {
         user: options.optionalString("user"),
         key: options.optionalString("key"),
         region: options.optionalString("region"),
-        headless: options.optionalBoolean("headless"),
+        headless: option({
+            defaultValue: defaultFactory("headless"),
+            validate: value => {
+                if (_.isNull(value) || _.isBoolean(value)) {
+                    return;
+                }
+
+                if (typeof value !== "string") {
+                    throw new Error('"headless" option should be boolean or string with "new" or "old" values');
+                }
+
+                if (value !== "old" && value !== "new") {
+                    throw new Error(`"headless" option should be "new" or "old", but got "${value}"`);
+                }
+            },
+        }),
 
         isolation: option({
             defaultValue: defaultFactory("isolation"),

@@ -16,19 +16,23 @@ const DEFAULT_PORT = 4444;
 const headlessBrowserOptions = {
     chrome: {
         capabilityName: "goog:chromeOptions",
-        args: ["headless", "disable-gpu"],
+        getArgs: headlessMode => {
+            const headlessValue = _.isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
+
+            return [headlessValue, "disable-gpu"];
+        },
     },
     firefox: {
         capabilityName: "moz:firefoxOptions",
-        args: ["-headless"],
+        getArgs: () => ["-headless"],
     },
     msedge: {
         capabilityName: "ms:edgeOptions",
-        args: ["--headless"],
+        getArgs: () => ["--headless"],
     },
     edge: {
         capabilityName: "ms:edgeOptions",
-        args: ["--headless"],
+        getArgs: () => ["--headless"],
     },
 };
 
@@ -138,7 +142,7 @@ module.exports = class NewBrowser extends Browser {
         const browserCapabilities = capabilities[capabilitySettings.capabilityName] ?? {};
         capabilities[capabilitySettings.capabilityName] = {
             ...browserCapabilities,
-            args: [...(browserCapabilities.args ?? []), ...capabilitySettings.args],
+            args: [...(browserCapabilities.args ?? []), ...capabilitySettings.getArgs(headless)],
         };
         return capabilities;
     }
