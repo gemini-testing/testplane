@@ -1736,40 +1736,85 @@ describe("config browser-options", () => {
         });
     });
 
-    ["strictSSL", "headless"].forEach(option => {
-        describe(option, () => {
-            it(`should throw error if ${option} is not a null or boolean`, () => {
-                const readConfig = _.set({}, "browsers.b1", mkBrowser_({ [option]: "string" }));
+    describe("strictSSL", () => {
+        it(`should throw error if option is not a null or boolean`, () => {
+            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ strictSSL: "string" }));
 
-                Config.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, `"${option}" must be a boolean`);
-            });
+            assert.throws(() => createConfig(), Error, `"strictSSL" must be a boolean`);
+        });
 
-            it("should set a default value if it is not set in config", () => {
-                const readConfig = _.set({}, "browsers.b1", mkBrowser_());
-                Config.read.returns(readConfig);
+        it("should set a default value if it is not set in config", () => {
+            const readConfig = _.set({}, "browsers.b1", mkBrowser_());
+            Config.read.returns(readConfig);
 
-                const config = createConfig();
+            const config = createConfig();
 
-                assert.equal(config[option], defaults[option]);
-            });
+            assert.equal(config.strictSSL, defaults.strictSSL);
+        });
 
-            it(`should override ${option} option`, () => {
-                const readConfig = {
-                    [option]: false,
-                    browsers: {
-                        b1: mkBrowser_(),
-                        b2: mkBrowser_({ [option]: true }),
-                    },
-                };
-                Config.read.returns(readConfig);
+        it(`should override "strictSSL" option`, () => {
+            const readConfig = {
+                strictSSL: false,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({ strictSSL: true }),
+                },
+            };
+            Config.read.returns(readConfig);
 
-                const config = createConfig();
+            const config = createConfig();
 
-                assert.isFalse(config.browsers.b1[option]);
-                assert.isTrue(config.browsers.b2[option]);
-            });
+            assert.isFalse(config.browsers.b1.strictSSL);
+            assert.isTrue(config.browsers.b2.strictSSL);
+        });
+    });
+
+    describe("headless", () => {
+        it("should throw error if option is not a null, boolean or string", () => {
+            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ headless: { a: 1 } }));
+
+            Config.read.returns(readConfig);
+
+            assert.throws(
+                () => createConfig(),
+                Error,
+                '"headless" option should be boolean or string with "new" or "old" values',
+            );
+        });
+
+        it("should throw error if option is string with invalid values", () => {
+            const readConfig = _.set({}, "browsers.b1", mkBrowser_({ headless: "some" }));
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"headless" option should be "new" or "old", but got "some"');
+        });
+
+        it("should set a default value if it is not set in config", () => {
+            const readConfig = _.set({}, "browsers.b1", mkBrowser_());
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.headless, defaults.headless);
+        });
+
+        it("should override 'headless' option", () => {
+            const readConfig = {
+                headless: false,
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({ headless: true }),
+                },
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.isFalse(config.browsers.b1.headless);
+            assert.isTrue(config.browsers.b2.headless);
         });
     });
 });
