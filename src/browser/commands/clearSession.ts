@@ -1,7 +1,7 @@
 import type { Browser } from "../types";
 import logger from "../../utils/logger";
 
-export = async (browser: Browser): Promise<void> => {
+export default async (browser: Browser): Promise<void> => {
     const { publicAPI: session } = browser;
 
     const clearStorage = async (storageName: "localStorage" | "sessionStorage"): Promise<void> => {

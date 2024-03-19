@@ -2,6 +2,7 @@ import _ from "lodash";
 import { Matches } from "webdriverio";
 import PageLoader from "../../utils/page-loader";
 import type { Browser } from "../types";
+import { BrowserConfig } from "../../config/browser-config";
 
 interface WaitOpts {
     selector?: string | string[];
@@ -23,25 +24,23 @@ const is: Record<string, (match: Matches) => boolean> = {
     favicon: match => _.isString(match.url) && match.url.endsWith("/favicon.ico"),
 };
 
-export = (browser: Browser): void => {
-    const { publicAPI: session, config } = browser;
-    const { openAndWaitOpts } = config;
-    const isChrome = config.desiredCapabilities?.browserName === "chrome";
-    const isCDP = config.automationProtocol === "devtools";
-
+const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Browser) =>
     function openAndWait(
         uri: string,
         {
             selector = [],
             predicate,
-            waitNetworkIdle = openAndWaitOpts?.waitNetworkIdle,
-            waitNetworkIdleTimeout = openAndWaitOpts?.waitNetworkIdleTimeout,
-            failOnNetworkError = openAndWaitOpts?.failOnNetworkError,
+            waitNetworkIdle = config.openAndWaitOpts?.waitNetworkIdle,
+            waitNetworkIdleTimeout = config.openAndWaitOpts?.waitNetworkIdleTimeout,
+            failOnNetworkError = config.openAndWaitOpts?.failOnNetworkError,
             shouldThrowError = shouldThrowErrorDefault,
-            ignoreNetworkErrorsPatterns = openAndWaitOpts?.ignoreNetworkErrorsPatterns,
-            timeout = openAndWaitOpts?.timeout || config?.pageLoadTimeout || 0,
+            ignoreNetworkErrorsPatterns = config.openAndWaitOpts?.ignoreNetworkErrorsPatterns,
+            timeout = config.openAndWaitOpts?.timeout || config?.pageLoadTimeout || 0,
         }: WaitOpts = {},
     ): Promise<string | void> {
+        const isChrome = config.desiredCapabilities?.browserName === "chrome";
+        const isCDP = config.automationProtocol === "devtools";
+
         waitNetworkIdle &&= isChrome || isCDP;
 
         if (!uri || uri === emptyPageUrl) {
@@ -110,9 +109,14 @@ export = (browser: Browser): void => {
 
             pageLoader.load(goToPage).then(checkLoaded);
         }).finally(() => pageLoader.unsubscribe());
-    }
+    };
 
-    session.addCommand("openAndWait", openAndWait);
+export type OpenAndWaitCommand = ReturnType<typeof makeOpenAndWaitCommand>;
+
+export default (browser: Browser): void => {
+    const { publicAPI: session, config } = browser;
+
+    session.addCommand("openAndWait", makeOpenAndWaitCommand(config, session));
 };
 
 function isMatchPatterns(patterns: Array<RegExp | string> = [], str: string): boolean {

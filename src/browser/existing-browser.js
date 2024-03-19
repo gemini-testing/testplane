@@ -181,7 +181,7 @@ module.exports = class ExistingBrowser extends Browser {
         this._addMetaAccessCommands(this._session);
         this._decorateUrlMethod(this._session);
 
-        commandsList.forEach(command => require(`./commands/${command}`)(this));
+        commandsList.forEach(command => require(`./commands/${command}`).default(this));
 
         super._addCommands();
     }

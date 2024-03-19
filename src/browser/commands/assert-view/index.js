@@ -28,7 +28,7 @@ const getIgnoreDiffPixelCountRatio = value => {
     return percent / 100;
 };
 
-module.exports = browser => {
+module.exports.default = browser => {
     const screenShooter = ScreenShooter.create(browser);
     const { publicAPI: session, config } = browser;
     const {
