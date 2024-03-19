@@ -1,7 +1,7 @@
 {
     "extends": "./tsconfig.common.json",
     "include": ["src"],
-    "exclude": ["src/**/__*", "src/**/*.test.ts", "src/browser/client-scripts"],
+    "exclude": ["src/**/__*", "src/**/*.test.ts", "src/browser/client-scripts", "src/bundle"],
     "compilerOptions": {
         "outDir": "build"
     }

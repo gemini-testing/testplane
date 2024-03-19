@@ -22,6 +22,7 @@ describe("test-reader/test-parser", () => {
     let TestParser;
     let clearRequire;
     let readFiles;
+    let setupTransformHook;
     let browserVersionController = {
         mkProvider: sinon.stub().returns(() => {}),
     };
@@ -29,11 +30,13 @@ describe("test-reader/test-parser", () => {
     beforeEach(() => {
         clearRequire = sandbox.stub().named("clear-require");
         readFiles = sandbox.stub().named("readFiles").resolves();
+        setupTransformHook = sandbox.stub().named("setupTransformHook").returns(sinon.stub());
 
         TestParser = proxyquire("src/test-reader/test-parser", {
             "clear-require": clearRequire,
             "./mocha-reader": { readFiles },
             "./controllers/browser-version-controller": browserVersionController,
+            "./test-transformer": { setupTransformHook },
         }).TestParser;
 
         sandbox.stub(InstructionsList.prototype, "push").returnsThis();
@@ -367,6 +370,23 @@ describe("test-reader/test-parser", () => {
                     const lastCallModuleName = readFiles.lastCall.args[1].esmDecorator(file);
 
                     assert.notEqual(firstCallModuleName, lastCallModuleName);
+                });
+            });
+
+            describe("transform hook", () => {
+                it("should setup hook before read files", async () => {
+                    await loadFiles_({ files: ["foo/bar", "baz/qux"] });
+
+                    assert.callOrder(setupTransformHook, readFiles);
+                });
+
+                it("should call revert transformation after read files", async () => {
+                    const revertFn = sinon.stub();
+                    setupTransformHook.returns(revertFn);
+
+                    await loadFiles_({ files: ["foo/bar", "baz/qux"] });
+
+                    assert.callOrder(readFiles, revertFn);
                 });
             });
         });
