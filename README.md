@@ -30,7 +30,7 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 
 ## Getting started
 
-> Note: if you prefer manual installation, you can run `npm i -D testplane`. Check out [the Docs](docs/quick-start.md) for details.  
+> Note: if you prefer manual installation, you can run `npm i -D testplane`. Check out [the Docs](docs/quick-start.md) for details.
 
 1. Use the CLI wizard to set up testplane and generate basic configuration:
 
@@ -42,11 +42,11 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 
 2. Open the newly generated file `testplane-tests/example.testplane.ts`. We’ll modify the test to ensure the description includes expected text:
 
-    ```typescript 
+    ```typescript
     describe("test", () => {
         it("example", async ({browser}) => {
             await browser.url("https://example.com/");
-    
+
             const description = await browser.$("p");
 
             expect(description).toHaveTextContaining("for use in illustrative examples in documents");
@@ -94,7 +94,7 @@ This project was formerly known as "hermione", but eventually some copyright and
 
 Our mission with this repository is to make the Testplane development process open, while continuing to improve upon its features, performance and ease of use. We hope other organizations find value in our project and benefit from our work.
 
-We welcome and appreciate community contributions. To ensure our efforts are in sync, we recommend to raise an issue or leave a comment beforehand. 
+We welcome and appreciate community contributions. To ensure our efforts are in sync, we recommend to raise an issue or leave a comment beforehand.
 
 Visit our [contributing guide](CONTRIBUTING.md) to understand more about our development process and how to get involved.
 

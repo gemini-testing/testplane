@@ -81,8 +81,6 @@ Using `-r` or `--require` option you can load external modules, which exists in 
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
 
-Be sure to update [fileExtensions](#fileExtensions) apropriately, if you are planning to import anything other than `.js`.
-
 ### Overriding settings
 
 All options can also be overridden via command-line flags or environment variables. Priorities are the following:

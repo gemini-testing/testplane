@@ -549,7 +549,7 @@ The maximum number of tests to be run in one worker before it will be restarted.
 By default, Testplane will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers Testplane will try to run in parallel. Default value is `Infinity`.
 
 #### fileExtensions
-Ability to set file extensions, which Testplane will search on the file system. Default value is `[.js]`.
+Ability to set file extensions, which Testplane will search on the file system. Default value is `[".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"]`.
 
 ### plugins
 Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
