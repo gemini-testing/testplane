@@ -1300,7 +1300,7 @@ The maximum number of tests to be run in one worker before it will be restarted.
 By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers `hermione` will try to run in parallel. Default value is `Infinity`.
 
 #### fileExtensions
-Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
+Ability to set file extensions, which hermione will search on the file system. Default value is `[".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"]`.
 
 ### plugins
 `Hermione` plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands).
@@ -1620,8 +1620,6 @@ Using `-r` or `--require` option you can load external modules, which exists in 
 
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
-
-Be sure to update [fileExtensions](#fileExtensions) apropriately, if you are planning to import anything other than `.js`.
 
 ### Overriding settings
 

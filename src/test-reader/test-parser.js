@@ -8,6 +8,7 @@ const { TreeBuilder } = require("./tree-builder");
 const { readFiles } = require("./mocha-reader");
 const { TestReaderEvents } = require("../events");
 const { TestParserAPI } = require("./test-parser-api");
+const { setupTransformHook } = require("./test-transformer");
 const { MasterEvents } = require("../events");
 const _ = require("lodash");
 const clearRequire = require("clear-require");
@@ -47,9 +48,13 @@ class TestParser extends EventEmitter {
 
         this.#clearRequireCache(files);
 
+        const revertTransformHook = setupTransformHook();
+
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
+
+        revertTransformHook();
     }
 
     #applyInstructionsEvents(eventBus) {
