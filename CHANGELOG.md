@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.5.1](https://github.com/gemini-testing/hermione/compare/v8.5.0...v8.5.1) (2024-03-20)
+
+
+### Bug Fixes
+
+* add missing command types (moveCursorTo and openAndWait) ([#876](https://github.com/gemini-testing/hermione/issues/876)) ([5268a44](https://github.com/gemini-testing/hermione/commit/5268a4435a42e42b2aad4b245e8ae93a136f676f))
+
 ## [8.5.0](https://github.com/gemini-testing/hermione/compare/v8.4.1...v8.5.0) (2024-03-18)
 
 
