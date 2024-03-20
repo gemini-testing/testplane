@@ -2,7 +2,7 @@
 
 const urljoin = require("url-join");
 
-module.exports = browser => {
+module.exports.default = browser => {
     const { publicAPI: session, config } = browser;
 
     if (!config.browserWSEndpoint || !session.getPuppeteer) {

@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 
-module.exports = browser => {
+module.exports.default = browser => {
     const { publicAPI: session } = browser;
     session.addCommand("runStep", (stepName, stepCb) => {
         if (!_.isString(stepName)) {

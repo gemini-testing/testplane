@@ -1,6 +1,8 @@
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
 import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
+import { MoveCursorToCommand } from "./commands/moveCursorTo";
+import { OpenAndWaitCommand } from "./commands/openAndWait";
 
 export interface BrowserMeta {
     pid: number;
@@ -107,6 +109,8 @@ declare global {
                 };
             };
 
+            openAndWait: OpenAndWaitCommand;
+
             switchToRepl: (ctx?: Record<string, unknown>) => Promise<void>;
 
             clearSession: () => Promise<void>;
@@ -144,6 +148,8 @@ declare global {
              * "compositeImage", "screenshotDelay", "selectorToScroll"
              */
             assertView: AssertViewElementCommand;
+
+            moveCursorTo: MoveCursorToCommand;
         }
     }
 }

@@ -5,7 +5,7 @@ const _ = require("lodash");
 const { SAVE_HISTORY_MODE } = require("../constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("../constants/browser");
 const history = require("./history");
-const addRunStepCommand = require("./commands/runStep");
+const addRunStepCommand = require("./commands/runStep").default;
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
