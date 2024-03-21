@@ -2,7 +2,8 @@ import { CommanderStatic } from "@gemini-testing/commander";
 import _ from "lodash";
 import { Stats as RunnerStats } from "./stats";
 import { BaseTestplane } from "./base-testplane";
-import { MainRunner } from "./runner";
+import { MainRunner as NodejsEnvRunner } from "./runner";
+import { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
 import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
@@ -12,6 +13,7 @@ import { TestCollection } from "./test-collection";
 import { validateUnknownBrowsers } from "./validators";
 import { initReporters } from "./reporters";
 import logger from "./utils/logger";
+import { isRunInNodeJsEnv } from "./utils/config";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test } from "./types";
 
@@ -47,7 +49,7 @@ export interface Testplane {
 
 export class Testplane extends BaseTestplane {
     protected failed: boolean;
-    protected runner: MainRunner | null;
+    protected runner: NodejsEnvRunner | BrowserEnvRunner | null;
 
     constructor(config?: string | ConfigInput) {
         super(config);
@@ -82,7 +84,10 @@ export class Testplane extends BaseTestplane {
             this._config.system.mochaOpts.timeout = 0;
         }
 
-        const runner = MainRunner.create(this._config, this._interceptors);
+        const runner = (isRunInNodeJsEnv(this._config) ? NodejsEnvRunner : BrowserEnvRunner).create(
+            this._config,
+            this._interceptors,
+        );
         this.runner = runner;
 
         this.on(MasterEvents.TEST_FAIL, () => this._fail()).on(MasterEvents.ERROR, (err: Error) => this.halt(err));
