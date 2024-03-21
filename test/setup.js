@@ -16,3 +16,6 @@ process.on("unhandledRejection", (reason, p) => {
     console.error("Unhandled Rejection:\nPromise: ", p, "\nReason: ", reason);
     process.exit(1);
 });
+
+// remove after migrate to esm
+process.env.VITE_CJS_IGNORE_WARNING = "1";

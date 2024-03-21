@@ -4,6 +4,7 @@ import type { BrowserConfig } from "./../config/browser-config";
 import type { RunnerTest, RunnerHook, ExecutionThreadToolCtx } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
+import Callstack from "./history/callstack";
 
 export interface BrowserMeta {
     pid: number;
@@ -16,6 +17,7 @@ export interface Browser {
     config: BrowserConfig;
     state: Record<string, unknown>;
     applyState: (state: Record<string, unknown>) => void;
+    callstackHistory: Callstack;
 }
 
 type FunctionProperties<T> = Exclude<
