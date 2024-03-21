@@ -15,7 +15,8 @@ const { Stats: RunnerStats } = require("src/stats");
 const TestReader = require("src/test-reader");
 const { TestCollection } = require("src/test-collection");
 const { MasterEvents: RunnerEvents, CommonSyncEvents, MasterAsyncEvents, MasterSyncEvents } = require("src/events");
-const { MainRunner: Runner } = require("src/runner");
+const { MainRunner: NodejsEnvRunner } = require("src/runner");
+const { MainRunner: BrowserEnvRunner } = require("src/runner/browser-env");
 const logger = require("src/utils/logger");
 const { makeConfigStub } = require("../utils");
 
@@ -28,16 +29,18 @@ describe("testplane", () => {
         return Testplane.create();
     };
 
-    const mkRunnerStub_ = runFn => {
+    const mkRunnerStubHelper_ = (RunnerCls, runFn) => {
         const runner = new AsyncEmitter();
 
-        runner.run = sandbox.stub(Runner.prototype, "run").callsFake(runFn && runFn.bind(null, runner));
-        runner.addTestToRun = sandbox.stub(Runner.prototype, "addTestToRun");
-        runner.init = sandbox.stub(Runner.prototype, "init").named("RunnerInit");
+        runner.run = sandbox.stub(RunnerCls.prototype, "run").callsFake(runFn && runFn.bind(null, runner));
+        runner.addTestToRun = sandbox.stub(RunnerCls.prototype, "addTestToRun");
+        runner.init = sandbox.stub(RunnerCls.prototype, "init").named("RunnerInit");
 
-        sandbox.stub(Runner, "create").returns(runner);
+        sandbox.stub(RunnerCls, "create").returns(runner);
         return runner;
     };
+
+    const mkNodejsEnvRunner_ = runFn => mkRunnerStubHelper_(NodejsEnvRunner, runFn);
 
     beforeEach(() => {
         sandbox.stub(logger, "warn");
@@ -60,7 +63,7 @@ describe("testplane", () => {
 
     describe("constructor", () => {
         beforeEach(() => {
-            sandbox.stub(Runner, "create").returns(new EventEmitter());
+            sandbox.stub(NodejsEnvRunner, "create").returns(new EventEmitter());
         });
 
         describe("logLevel", () => {
@@ -138,40 +141,47 @@ describe("testplane", () => {
             sandbox.stub(Testplane.prototype, "halt");
         });
 
-        it("should create runner", () => {
-            mkRunnerStub_();
+        [
+            { name: "nodejs", mkRunner_: mkNodejsEnvRunner_, RunnerCls: NodejsEnvRunner },
+            { name: "browser", mkRunner_: mkNodejsEnvRunner_, RunnerCls: BrowserEnvRunner },
+        ].forEach(({ name, mkRunner_, RunnerCls }) => {
+            describe(`${name} environment runner`, () => {
+                it("should create runner", () => {
+                    mkRunner_();
 
-            return runTestplane().then(() => assert.calledOnce(Runner.create));
-        });
+                    return runTestplane().then(() => assert.calledOnce(RunnerCls.create));
+                });
 
-        it("should create runner with config", () => {
-            mkRunnerStub_();
+                it("should create runner with config", () => {
+                    mkRunner_();
 
-            const config = makeConfigStub();
-            Config.create.returns(config);
+                    const config = makeConfigStub();
+                    Config.create.returns(config);
 
-            return mkTestplane_(config).run(() => assert.calledWith(Runner.create, config));
-        });
+                    return mkTestplane_(config).run(() => assert.calledWith(RunnerCls.create, config));
+                });
 
-        it("should create runner with interceptors", async () => {
-            mkRunnerStub_();
+                it("should create runner with interceptors", async () => {
+                    mkRunner_();
 
-            const testplane = mkTestplane_();
-            const fooHandler = () => {};
-            const barHandler = () => {};
+                    const testplane = mkTestplane_();
+                    const fooHandler = () => {};
+                    const barHandler = () => {};
 
-            testplane.intercept("foo", fooHandler).intercept("bar", barHandler);
+                    testplane.intercept("foo", fooHandler).intercept("bar", barHandler);
 
-            await testplane.run();
+                    await testplane.run();
 
-            assert.calledWith(Runner.create, sinon.match.any, [
-                { event: "foo", handler: fooHandler },
-                { event: "bar", handler: barHandler },
-            ]);
+                    assert.calledWith(RunnerCls.create, sinon.match.any, [
+                        { event: "foo", handler: fooHandler },
+                        { event: "bar", handler: barHandler },
+                    ]);
+                });
+            });
         });
 
         it("should warn about unknown browsers from cli", () => {
-            mkRunnerStub_();
+            mkNodejsEnvRunner_();
 
             return runTestplane([], { browsers: ["bro3"] }).then(() =>
                 assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/),
@@ -179,7 +189,7 @@ describe("testplane", () => {
         });
 
         it("should init runtime config", async () => {
-            mkRunnerStub_();
+            mkNodejsEnvRunner_();
 
             await runTestplane([], {
                 updateRefs: true,
@@ -201,12 +211,12 @@ describe("testplane", () => {
                 replMode: { enabled: true },
                 devtools: true,
             });
-            assert.callOrder(RuntimeConfig.getInstance, Runner.create);
+            assert.callOrder(RuntimeConfig.getInstance, NodejsEnvRunner.create);
         });
 
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
                 const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
 
                 await testplane.run([], { replMode: { enabled: false } });
@@ -215,7 +225,7 @@ describe("testplane", () => {
             });
 
             it("should reset test timeout to 0 if run in repl", async () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
                 const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
 
                 await testplane.run([], { replMode: { enabled: true } });
@@ -225,7 +235,7 @@ describe("testplane", () => {
         });
 
         describe("INIT", () => {
-            beforeEach(() => mkRunnerStub_());
+            beforeEach(() => mkNodejsEnvRunner_());
 
             it("should emit INIT on run", () => {
                 const onInit = sinon.spy();
@@ -244,14 +254,14 @@ describe("testplane", () => {
                 const afterInit = sinon.spy();
                 const testplane = mkTestplane_().on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
 
-                return testplane.run().then(() => assert.callOrder(afterInit, Runner.prototype.run));
+                return testplane.run().then(() => assert.callOrder(afterInit, NodejsEnvRunner.prototype.run));
             });
 
             it("should init runner after emit INIT", () => {
                 const onInit = sinon.spy();
                 const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
 
-                return testplane.run().then(() => assert.callOrder(onInit, Runner.prototype.init));
+                return testplane.run().then(() => assert.callOrder(onInit, NodejsEnvRunner.prototype.init));
             });
 
             it("should send INIT event only once", () => {
@@ -270,7 +280,7 @@ describe("testplane", () => {
             let runner;
 
             beforeEach(() => {
-                runner = mkRunnerStub_();
+                runner = mkNodejsEnvRunner_();
             });
 
             it("should initialize passed reporters", async () => {
@@ -295,7 +305,7 @@ describe("testplane", () => {
         });
 
         describe("reading the tests", () => {
-            beforeEach(() => mkRunnerStub_());
+            beforeEach(() => mkNodejsEnvRunner_());
 
             it("should read tests", async () => {
                 const testPaths = ["foo/bar"];
@@ -316,7 +326,7 @@ describe("testplane", () => {
 
                 await runTestplane(testCollection);
 
-                assert.calledOnceWith(Runner.prototype.run, testCollection);
+                assert.calledOnceWith(NodejsEnvRunner.prototype.run, testCollection);
             });
 
             it("should not read tests if test collection passed instead of paths", async () => {
@@ -331,24 +341,24 @@ describe("testplane", () => {
 
         describe("running of tests", () => {
             it("should run tests", () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
-                return runTestplane().then(() => assert.calledOnce(Runner.prototype.run));
+                return runTestplane().then(() => assert.calledOnce(NodejsEnvRunner.prototype.run));
             });
 
             it("should use read tests", async () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
                 const testCollection = TestCollection.create();
                 sandbox.stub(Testplane.prototype, "readTests").resolves(testCollection);
 
                 await runTestplane();
 
-                assert.calledWith(Runner.prototype.run, testCollection);
+                assert.calledWith(NodejsEnvRunner.prototype.run, testCollection);
             });
 
             it("should create runner stats", async () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
                 const testplane = mkTestplane_();
 
@@ -358,23 +368,23 @@ describe("testplane", () => {
             });
 
             it("should use created runner stats ", async () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
                 RunnerStats.create.returns("foo bar");
 
                 await runTestplane();
 
-                assert.calledWith(Runner.prototype.run, sinon.match.any, "foo bar");
+                assert.calledWith(NodejsEnvRunner.prototype.run, sinon.match.any, "foo bar");
             });
 
             it('should return "true" if there are no failed tests', () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
                 return runTestplane().then(success => assert.isTrue(success));
             });
 
             it('should return "false" if there are failed tests', () => {
-                mkRunnerStub_(runner => runner.emit(RunnerEvents.TEST_FAIL));
+                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL));
 
                 return runTestplane().then(success => assert.isFalse(success));
             });
@@ -383,7 +393,7 @@ describe("testplane", () => {
                 const testplane = mkTestplane_();
                 const err = new Error();
 
-                mkRunnerStub_(runner => runner.emit(RunnerEvents.ERROR, err));
+                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
 
                 return testplane.run().then(() => assert.calledOnceWith(testplane.halt, err));
             });
@@ -391,7 +401,7 @@ describe("testplane", () => {
 
         describe("should passthrough", () => {
             it("all synchronous runner events", () => {
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -408,7 +418,7 @@ describe("testplane", () => {
 
             it('synchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEvent");
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -423,7 +433,7 @@ describe("testplane", () => {
             });
 
             it("all asynchronous runner events", () => {
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -440,7 +450,7 @@ describe("testplane", () => {
 
             it('asynchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -455,7 +465,7 @@ describe("testplane", () => {
             });
 
             it("all runner events with passed event data", () => {
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
                 const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
 
@@ -472,7 +482,7 @@ describe("testplane", () => {
             });
 
             it("exit event from signalHandler", () => {
-                mkRunnerStub_();
+                mkNodejsEnvRunner_();
 
                 const testplane = mkTestplane_();
                 const onExit = sinon.spy().named("onExit");
@@ -489,7 +499,7 @@ describe("testplane", () => {
             it('exit event before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
 
-                const runner = mkRunnerStub_();
+                const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -507,7 +517,7 @@ describe("testplane", () => {
 
     describe("addTestToRun", () => {
         it("should pass test to the existing runner", async () => {
-            const runner = mkRunnerStub_();
+            const runner = mkNodejsEnvRunner_();
             const testplane = mkTestplane_();
             const test = {};
 
@@ -518,7 +528,7 @@ describe("testplane", () => {
         });
 
         it("should return false when testplane is not running", () => {
-            const runner = mkRunnerStub_();
+            const runner = mkNodejsEnvRunner_();
             const testplane = mkTestplane_();
 
             const added = testplane.addTestToRun({});
@@ -741,7 +751,7 @@ describe("testplane", () => {
         });
 
         it('should return "false" if there are no failed tests or errors', () => {
-            mkRunnerStub_();
+            mkNodejsEnvRunner_();
 
             const testplane = mkTestplane_();
 
@@ -751,7 +761,7 @@ describe("testplane", () => {
         it('should return "true" after some test fail', () => {
             const testplane = mkTestplane_();
 
-            mkRunnerStub_(runner => {
+            mkNodejsEnvRunner_(runner => {
                 runner.emit(RunnerEvents.TEST_FAIL);
 
                 assert.isTrue(testplane.isFailed());
@@ -777,8 +787,10 @@ describe("testplane", () => {
 
             sandbox.stub(logger, "error");
             sandbox.stub(process, "exit");
-            sandbox.stub(Runner.prototype, "run").callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
-            sandbox.stub(Runner.prototype, "cancel");
+            sandbox
+                .stub(NodejsEnvRunner.prototype, "run")
+                .callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
+            sandbox.stub(NodejsEnvRunner.prototype, "cancel");
         });
 
         it("should log provided error", () => {
@@ -796,7 +808,7 @@ describe("testplane", () => {
         it("should not cancel test runner if runner is not inited", () => {
             testplane.halt(new Error("test error"));
 
-            assert.notCalled(Runner.prototype.cancel);
+            assert.notCalled(NodejsEnvRunner.prototype.cancel);
         });
 
         it("should cancel test runner", () => {
@@ -805,7 +817,7 @@ describe("testplane", () => {
             });
 
             return testplane.run().finally(() => {
-                assert.calledOnce(Runner.prototype.cancel);
+                assert.calledOnce(NodejsEnvRunner.prototype.cancel);
             });
         });
 
@@ -828,7 +840,7 @@ describe("testplane", () => {
 
                 await testplane.run();
 
-                assert.callOrder(global.setTimeout, Runner.prototype.cancel);
+                assert.callOrder(global.setTimeout, NodejsEnvRunner.prototype.cancel);
             });
 
             it("should force exit if timeout is reached", () => {
