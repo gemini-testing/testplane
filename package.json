@@ -24,7 +24,9 @@
     "preversion": "npm run lint && npm test",
     "commitmsg": "commitlint -e",
     "release": "standard-version",
-    "watch": "npm run copy-static && tsc --watch"
+    "watch": "npm run copy-static && concurrently -c 'auto' 'npm:watch:src' 'npm:watch:bundle'",
+    "watch:src": "tsc --watch",
+    "watch:bundle": "npm run build-bundle -- --watch"
   },
   "repository": {
     "type": "git",
@@ -106,6 +108,7 @@
     "app-module-path": "2.2.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
+    "concurrently": "8.2.2",
     "copyfiles": "2.4.1",
     "doctoc": "2.2.0",
     "esbuild": "0.20.2",
