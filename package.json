@@ -2,11 +2,20 @@
   "name": "hermione",
   "version": "8.5.1",
   "description": "Tests framework based on mocha and wdio",
-  "main": "build/src/index.js",
+  "module": "./build/esm/src/index.js",
+  "main": "./build/cjs/src/index.cjs",
+  "type": "module",
   "files": [
     "build",
     "typings"
   ],
+  "exports": {
+    ".": {
+      "import": "./build/esm/src/index.js",
+      "require": "./build/cjs/src/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc && npm run copy-static",
     "copy-static": "copyfiles 'src/browser/client-scripts/*' build",
