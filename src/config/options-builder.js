@@ -1,24 +1,19 @@
-"use strict";
+import _ from "lodash";
+import { option, map } from "gemini-configparser";
 
-const _ = require("lodash");
-const configparser = require("gemini-configparser");
+import {
+    assertNonNegativeInteger,
+    assertPositiveInteger,
+    assertPositiveIntegerOrInfinity,
+    assertOptionalObject,
+    assertOptionalArray,
+    assertEnum,
+    parseBoolean,
+    parsePrimitive,
+    is,
+} from "./utils.js";
 
-const utils = require("./utils");
-
-const option = configparser.option;
-const map = configparser.map;
-
-const assertNonNegativeInteger = utils.assertNonNegativeInteger;
-const assertPositiveInteger = utils.assertPositiveInteger;
-const assertPositiveIntegerOrInfinity = utils.assertPositiveIntegerOrInfinity;
-const assertOptionalObject = utils.assertOptionalObject;
-const assertOptionalArray = utils.assertOptionalArray;
-const assertEnum = utils.assertEnum;
-const parseBoolean = utils.parseBoolean;
-const parsePrimitive = utils.parsePrimitive;
-const is = utils.is;
-
-module.exports = defaultFactory => {
+export default defaultFactory => {
     return {
         boolean,
         optionalBoolean,

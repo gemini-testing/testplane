@@ -1,8 +1,6 @@
-"use strict";
-
-const path = require("path");
-const chalk = require("chalk");
-const _ = require("lodash");
+import path from "node:path";
+import chalk from "chalk";
+import _ from "lodash";
 
 const getSkipReason = test => test && (getSkipReason(test.parent) || test.skipReason);
 const getFilePath = test => (test && test.file) || (test.parent && getFilePath(test.parent));
@@ -18,7 +16,7 @@ const getTestError = test => {
     return error;
 };
 
-exports.formatTestInfo = test => {
+export const formatTestInfo = test => {
     const suiteName = test.fullTitle().replace(test.title, "");
     const sessionId = test.sessionId ? `:${test.sessionId}` : "";
     const reason = test.pending && ` reason: ${chalk.red(getSkipReason(test) || "no comment")}`;
@@ -29,7 +27,7 @@ exports.formatTestInfo = test => {
     );
 };
 
-exports.getTestInfo = test => {
+export const getTestInfo = test => {
     const file = getFilePath(test);
     const testInfo = {
         fullTitle: test.fullTitle(),
@@ -52,11 +50,11 @@ exports.getTestInfo = test => {
     return testInfo;
 };
 
-exports.extendTestInfo = (test, opts) => {
-    return _.extend(exports.getTestInfo(test), opts);
+export const extendTestInfo = (test, opts) => {
+    return _.extend(getTestInfo(test), opts);
 };
 
-exports.formatFailedTests = tests => {
+export const formatFailedTests = tests => {
     const formattedTests = [];
 
     tests.forEach(test => {

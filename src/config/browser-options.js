@@ -1,12 +1,10 @@
-"use strict";
-
-const _ = require("lodash");
-const option = require("gemini-configparser").option;
-const defaults = require("./defaults");
-const optionsBuilder = require("./options-builder");
-const utils = require("./utils");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
-const { isSupportIsolation } = require("../utils/browser");
+import _ from "lodash";
+import { option } from "gemini-configparser";
+import defaults from "./defaults.js";
+import optionsBuilder from "./options-builder.js";
+import * as utils from "./utils.js";
+import { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } from "../constants/config.js";
+import { isSupportIsolation } from "../utils/browser.js";
 
 const is = utils.is;
 
@@ -14,13 +12,13 @@ function provideRootDefault(name) {
     return () => defaults[name];
 }
 
-exports.getTopLevel = () => {
+export const getTopLevel = () => {
     return buildBrowserOptions(provideRootDefault, {
         desiredCapabilities: optionsBuilder(provideRootDefault).optionalObject("desiredCapabilities"),
     });
 };
 
-exports.getPerBrowser = () => {
+export const getPerBrowser = () => {
     return buildBrowserOptions(provideTopLevelDefault, {
         desiredCapabilities: option({
             defaultValue: defaults.desiredCapabilities,

@@ -1,12 +1,11 @@
-"use strict";
+import Promise from "bluebird";
+import debug from "debug";
 
-const Promise = require("bluebird");
-const Pool = require("./pool");
-const LimitedUseSet = require("./limited-use-set");
-const debug = require("debug");
-const { buildCompositeBrowserId } = require("./utils");
+import Pool from "./pool.js";
+import LimitedUseSet from "./limited-use-set.js";
+import { buildCompositeBrowserId } from "./utils.js";
 
-module.exports = class CachingPool extends Pool {
+export default class CachingPool extends Pool {
     /**
      * @constructor
      * @extends BasicPool
@@ -109,4 +108,4 @@ module.exports = class CachingPool extends Pool {
         this.log("cancel");
         this.underlyingPool.cancel();
     }
-};
+}

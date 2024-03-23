@@ -1,5 +1,3 @@
-"use strict";
-
 const mkPassthroughFn = methodName => {
     const passEvents = (from, to, event) => {
         if (typeof event === "string") {
@@ -12,5 +10,5 @@ const mkPassthroughFn = methodName => {
     return passEvents;
 };
 
-exports.passthroughEvent = mkPassthroughFn("emit");
-exports.passthroughEventAsync = mkPassthroughFn("emitAndWait");
+export const passthroughEvent = mkPassthroughFn("emit");
+export const passthroughEventAsync = mkPassthroughFn("emitAndWait");

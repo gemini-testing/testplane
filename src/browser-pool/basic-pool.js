@@ -1,13 +1,12 @@
-"use strict";
+import _ from "lodash";
+import debug from "debug";
 
-const _ = require("lodash");
-const Browser = require("../browser/new-browser");
-const { CancelledError } = require("./cancelled-error");
-const { MasterEvents } = require("../events");
-const Pool = require("./pool");
-const debug = require("debug");
+import Browser from "../browser/new-browser.js";
+import { CancelledError } from "./cancelled-error.js";
+import { MasterEvents } from "../events/index.js";
+import Pool from "./pool.js";
 
-module.exports = class BasicPool extends Pool {
+export default class BasicPool extends Pool {
     static create(config, emitter) {
         return new BasicPool(config, emitter);
     }
@@ -76,4 +75,4 @@ module.exports = class BasicPool extends Pool {
 
         this._activeSessions = {};
     }
-};
+}

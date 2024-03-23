@@ -1,16 +1,14 @@
-"use strict";
+import _ from "lodash";
+import { Command } from "@gemini-testing/commander";
+import escapeRe from "escape-string-regexp";
 
-const _ = require("lodash");
-const { Command } = require("@gemini-testing/commander");
-const escapeRe = require("escape-string-regexp");
-
-const defaults = require("../config/defaults");
-const info = require("./info");
-const { Hermione } = require("../hermione");
-const pkg = require("../../package.json");
-const logger = require("../utils/logger");
-const { requireModule } = require("../utils/module");
-const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
+import defaults from "../config/defaults.js";
+import * as info from "./info.js";
+import { Hermione } from "../hermione.js";
+import pkg from "../../package.json" assert { type: "json" };
+import logger from "../utils/logger.js";
+import { requireModule } from "../utils/module.js";
+import { shouldIgnoreUnhandledRejection } from "../utils/errors.js";
 
 let hermione;
 
@@ -39,7 +37,7 @@ process.on("unhandledRejection", (reason, p) => {
     }
 });
 
-exports.run = () => {
+export const run = () => {
     const program = new Command();
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");

@@ -1,10 +1,11 @@
-import * as path from "path";
+import * as path from "node:path";
 import * as _ from "lodash";
-import defaults from "./defaults";
-import { BrowserConfig } from "./browser-config";
-import parseOptions from "./options";
-import logger from "../utils/logger";
-import { ConfigInput } from "./types";
+
+import { configPaths as defaultConfigPaths } from "./defaults.js";
+import { BrowserConfig } from "./browser-config.js";
+import parseOptions from "./options.js";
+import logger from "../utils/logger.js";
+import { ConfigInput } from "./types.js";
 
 export class Config {
     configPath!: string;
@@ -33,7 +34,7 @@ export class Config {
             this.configPath = config;
             options = Config.read(config) as ConfigInput;
         } else {
-            for (const configPath of defaults.configPaths) {
+            for (const configPath of defaultConfigPaths) {
                 try {
                     const resolvedConfigPath = path.resolve(configPath);
                     require(resolvedConfigPath);
@@ -49,7 +50,7 @@ export class Config {
             }
 
             if (!this.configPath) {
-                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
+                throw new Error(`Unable to read config from paths: ${defaultConfigPaths.join(", ")}`);
             }
 
             options = Config.read(this.configPath) as ConfigInput;

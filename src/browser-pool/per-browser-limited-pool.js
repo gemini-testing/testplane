@@ -1,11 +1,9 @@
-"use strict";
+import _ from "lodash";
+import debug from "debug";
+import Pool from "./pool.js";
+import LimitedPool from "./limited-pool.js";
 
-const _ = require("lodash");
-const Pool = require("./pool");
-const LimitedPool = require("./limited-pool");
-const debug = require("debug");
-
-module.exports = class PerBrowserLimitedPool extends Pool {
+export default class PerBrowserLimitedPool extends Pool {
     constructor(underlyingPool, config) {
         super();
 
@@ -38,4 +36,4 @@ module.exports = class PerBrowserLimitedPool extends Pool {
         this.log("cancel");
         _.forEach(this._browserPools, pool => pool.cancel());
     }
-};
+}

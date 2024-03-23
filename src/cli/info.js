@@ -1,6 +1,6 @@
 "use strict";
 
-exports.configOverriding = `  Overriding config
+export const configOverriding = `  Overriding config
     To override any config option use full option path converted to --kebab-case
 
     Examples:

@@ -1,12 +1,10 @@
-"use strict";
+import chalk from "chalk";
 
-const chalk = require("chalk");
+import BaseReporter from "./base";
+import icons from "./utils/icons";
+import helpers from "./utils/helpers";
 
-const BaseReporter = require("./base");
-const icons = require("./utils/icons");
-const helpers = require("./utils/helpers");
-
-module.exports = class PlainReporter extends BaseReporter {
+export default class PlainReporter extends BaseReporter {
     _logTestInfo(test, icon) {
         super._logTestInfo(test, icon);
 
@@ -17,4 +15,4 @@ module.exports = class PlainReporter extends BaseReporter {
             this.informer.log(`   ${chalk.red(testInfo.error)}`);
         }
     }
-};
+}

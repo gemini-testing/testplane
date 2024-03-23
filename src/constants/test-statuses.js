@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     SUCCESS: "success",
     FAIL: "fail",
     RETRY: "retry",

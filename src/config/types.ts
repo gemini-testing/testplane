@@ -1,6 +1,6 @@
 import type { SetRequired } from "type-fest";
-import type { BrowserConfig } from "./browser-config";
-import type { Test } from "../types";
+import type { BrowserConfig } from "./browser-config.js";
+import type { Test } from "../types/index.js";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;

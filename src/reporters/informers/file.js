@@ -1,10 +1,10 @@
-const fs = require("fs");
-const stripAnsi = require("strip-ansi");
+import fs from "node:fs";
+import stripAnsi from "strip-ansi";
 
-const BaseInformer = require("./base");
-const logger = require("../../utils/logger");
+import BaseInformer from "./base.js";
+import logger from "../../utils/logger.js";
 
-module.exports = class FileInformer extends BaseInformer {
+export default class FileInformer extends BaseInformer {
     constructor(opts) {
         super(opts);
 
@@ -37,4 +37,4 @@ module.exports = class FileInformer extends BaseInformer {
     _prepareMsg(msg) {
         return typeof msg === "object" ? JSON.stringify(msg) : stripAnsi(msg);
     }
-};
+}

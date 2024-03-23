@@ -1,5 +1,5 @@
-import { InterceptedEvent } from ".";
-import { Test } from "../test-reader/test-object/test";
+import { Test } from "../test-reader/test-object/test.js";
+import type { InterceptedEvent } from "./index.js";
 
 export interface InterceptData {
     event?: InterceptedEvent;

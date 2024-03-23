@@ -1,12 +1,10 @@
-"use strict";
+import chalk from "chalk";
+import { MasterEvents } from "../events/index.js";
+import icons from "./utils/icons.js";
+import * as helpers from "./utils/helpers.js";
+import { initInformer } from "./informers/index.js";
 
-const chalk = require("chalk");
-const { MasterEvents } = require("../events");
-const icons = require("./utils/icons");
-const helpers = require("./utils/helpers");
-const { initInformer } = require("./informers");
-
-module.exports = class BaseReporter {
+export default class BaseReporter {
     static async create(opts = {}) {
         const informer = await initInformer(opts);
 
@@ -79,4 +77,4 @@ module.exports = class BaseReporter {
     _logTestInfo(test, icon) {
         this.informer.log(`${icon}${helpers.formatTestInfo(test)}`);
     }
-};
+}

@@ -1,7 +1,7 @@
-const BaseInformer = require("./base");
-const logger = require("../../utils/logger");
+import BaseInformer from "./base.js";
+import logger from "../../utils/logger.js";
 
-module.exports = class ConsoleInformer extends BaseInformer {
+export default class ConsoleInformer extends BaseInformer {
     log(message) {
         logger.log(message);
     }
@@ -19,4 +19,4 @@ module.exports = class ConsoleInformer extends BaseInformer {
             logger.log(message);
         }
     }
-};
+}

@@ -1,11 +1,9 @@
-"use strict";
+import _ from "lodash";
+import BaseReporter from "./base.js";
+import * as helpers from "./utils/helpers.js";
+import icons from "./utils/icons.js";
 
-const _ = require("lodash");
-const BaseReporter = require("./base");
-const helpers = require("./utils/helpers");
-const icons = require("./utils/icons");
-
-module.exports = class FlatReporter extends BaseReporter {
+export default class FlatReporter extends BaseReporter {
     constructor(...args) {
         super(...args);
 
@@ -41,4 +39,4 @@ module.exports = class FlatReporter extends BaseReporter {
             });
         });
     }
-};
+}

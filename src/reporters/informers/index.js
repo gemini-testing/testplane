@@ -1,12 +1,12 @@
-const path = require("path");
-const fs = require("fs-extra");
+import path from "node:path";
+import fs from "fs-extra";
 
-exports.initInformer = async opts => {
+export const initInformer = async opts => {
     if (opts.path) {
         await fs.ensureDir(path.dirname(opts.path));
     }
 
     const informerType = opts.path ? "file" : "console";
 
-    return require(`./${informerType}`).create(opts);
+    return await import(`./${informerType}.js`).create(opts);
 };

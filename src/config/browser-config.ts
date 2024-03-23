@@ -1,7 +1,7 @@
-import * as path from "path";
-import * as _ from "lodash";
-import type { Test } from "../types";
-import type { CommonConfig } from "./types";
+import path from "node:path";
+import _ from "lodash";
+import type { Test } from "../types/index.js";
+import type { CommonConfig } from "./types.js";
 
 export class BrowserConfig {
     constructor(browserOptions: CommonConfig) {

@@ -1,5 +1,22 @@
-exports.initReporters = async (rawReporters, runner) => {
+export const initReporters = async (rawReporters, runner) => {
     await Promise.all([].concat(rawReporters).map(rawReporter => applyReporter(rawReporter, runner)));
+};
+
+const initReporter = async reporter => {
+    let Reporter;
+
+    try {
+        Reporter = await import(`./${reporter.type}.js`);
+    } catch (e) {
+        if (e.code === "MODULE_NOT_FOUND") {
+            throw new Error(`No such reporter: "${reporter.type}"`);
+        }
+        throw e;
+    }
+
+    validateReporter(Reporter);
+
+    return Reporter.create(reporter);
 };
 
 const reporterHandlers = [
@@ -48,23 +65,6 @@ async function applyReporter(rawReporter, runner) {
 
         return reporter.attachRunner(runner);
     }
-}
-
-function initReporter(reporter) {
-    let Reporter;
-
-    try {
-        Reporter = require(`./${reporter.type}`);
-    } catch (e) {
-        if (e.code === "MODULE_NOT_FOUND") {
-            throw new Error(`No such reporter: "${reporter.type}"`);
-        }
-        throw e;
-    }
-
-    validateReporter(Reporter);
-
-    return Reporter.create(reporter);
 }
 
 function getReporterDefinition(rawReporter, parser) {

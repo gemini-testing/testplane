@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * @singleton
  */
@@ -17,7 +15,7 @@ class RuntimeConfig {
 
 let runtimeConfig;
 
-exports.getInstance = () => {
+export const getInstance = () => {
     if (!runtimeConfig) {
         runtimeConfig = RuntimeConfig.create();
     }

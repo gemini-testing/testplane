@@ -1,1 +1,1 @@
-exports.buildCompositeBrowserId = (browserId, version) => (version ? `${browserId}.${version}` : browserId);
+export const buildCompositeBrowserId = (browserId, version) => (version ? `${browserId}.${version}` : browserId);

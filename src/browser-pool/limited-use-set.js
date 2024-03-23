@@ -1,7 +1,5 @@
-"use strict";
-
-const _ = require("lodash");
-const debug = require("debug");
+import _ from "lodash";
+import debug from "debug";
 
 /**
  * Set implementation which allows to get and put an object
@@ -14,7 +12,7 @@ const debug = require("debug");
  * @param {Function} finalize callback which will be called when value in
  * set needs to be finalized.
  */
-module.exports = class LimitedUseSet {
+export default class LimitedUseSet {
     constructor(opts) {
         this._useCounts = new WeakMap();
         this._useLimit = opts.useLimit;
@@ -65,4 +63,4 @@ module.exports = class LimitedUseSet {
 
         return result;
     }
-};
+}

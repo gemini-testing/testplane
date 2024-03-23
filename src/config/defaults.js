@@ -1,8 +1,6 @@
-"use strict";
+import { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE } from "../constants/config.js";
 
-const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
-
-module.exports = {
+export default {
     baseUrl: "http://localhost",
     gridUrl: "http://localhost:4444/wd/hub",
     browserWSEndpoint: null,
@@ -95,4 +93,4 @@ module.exports = {
     isolation: null,
 };
 
-module.exports.configPaths = [".hermione.conf.ts", ".hermione.conf.js"];
+export const configPaths = [".hermione.conf.ts", ".hermione.conf.js"];

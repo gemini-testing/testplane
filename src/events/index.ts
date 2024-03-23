@@ -1,7 +1,7 @@
 import { ValueOf } from "type-fest";
 
-export * from "./async-emitter";
-export * from "./types";
+export * from "./async-emitter/index.js";
+export * from "./types.js";
 
 export const TestReaderEvents = {
     NEW_BUILD_INSTRUCTION: "newBuildInstruction",

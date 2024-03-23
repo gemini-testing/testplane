@@ -1,14 +1,12 @@
-"use strict";
-
-const _ = require("lodash");
-const { root, section, map, option } = require("gemini-configparser");
-const browserOptions = require("./browser-options");
-const defaults = require("./defaults");
-const optionsBuilder = require("./options-builder");
+import _ from "lodash";
+import { root, section, map, option } from "gemini-configparser";
+import * as browserOptions from "./browser-options.js";
+import defaults from "./defaults.js";
+import optionsBuilder from "./options-builder.js";
+import pkg from "../../package.json" assert { type: "json" };
 
 const options = optionsBuilder(_.propertyOf(defaults));
-
-const ENV_PREFIX = `${require("../../package").name}_`;
+const ENV_PREFIX = `${pkg.name}_`;
 
 const rootSection = section(
     _.extend(browserOptions.getTopLevel(), {
@@ -104,4 +102,4 @@ const rootSection = section(
     }),
 );
 
-module.exports = root(rootSection, { envPrefix: ENV_PREFIX });
+export default root(rootSection, { envPrefix: ENV_PREFIX });

@@ -1,14 +1,13 @@
-"use strict";
+import _ from "lodash";
+import Promise from "bluebird";
+import yallist from "yallist";
+import debug from "debug";
 
-const _ = require("lodash");
-const Promise = require("bluebird");
-const yallist = require("yallist");
-const Pool = require("./pool");
-const { CancelledError } = require("./cancelled-error");
-const debug = require("debug");
-const { buildCompositeBrowserId } = require("./utils");
+import Pool from "./pool.js";
+import { CancelledError } from "./cancelled-error.js";
+import { buildCompositeBrowserId } from "./utils.js";
 
-module.exports = class LimitedPool extends Pool {
+export default class LimitedPool extends Pool {
     static create(underlyingPool, opts) {
         return new LimitedPool(underlyingPool, opts);
     }
@@ -121,4 +120,4 @@ module.exports = class LimitedPool extends Pool {
             this._launched--;
         }
     }
-};
+}

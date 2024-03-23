@@ -1,8 +1,6 @@
-"use strict";
+import chalk from "chalk";
 
-const chalk = require("chalk");
-
-module.exports = {
+export default {
     SUCCESS: chalk.green("\u2713"),
     WARN: chalk.bold.yellow("!"),
     FAIL: chalk.red("\u2718"),

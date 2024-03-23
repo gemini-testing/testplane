@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = {
+export default {
     WEBDRIVER_PROTOCOL: "webdriver",
     DEVTOOLS_PROTOCOL: "devtools",
     SAVE_HISTORY_MODE: {

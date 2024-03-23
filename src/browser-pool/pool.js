@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = class Pool {
+export default class Pool {
     /**
      * @returns {Promise.<Browser>}
      */
@@ -17,4 +15,4 @@ module.exports = class Pool {
 
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     cancel() {}
-};
+}

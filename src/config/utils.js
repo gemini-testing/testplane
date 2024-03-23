@@ -1,9 +1,7 @@
-"use strict";
+import path from "node:path";
+import _ from "lodash";
 
-const path = require("path");
-const _ = require("lodash");
-
-const is = (type, name) => {
+export const is = (type, name) => {
     return value => {
         if (typeof value !== type) {
             throw new Error(`"${name}" must be a ${type}`);
@@ -11,34 +9,32 @@ const is = (type, name) => {
     };
 };
 
-exports.is = is;
-
-exports.assertNonNegativeNumber = (value, name) => {
+export const assertNonNegativeNumber = (value, name) => {
     is("number", name)(value);
     if (value < 0) {
         throw new Error(`"${name}" must be non-negative`);
     }
 };
 
-exports.assertOptionalObject = (value, name) => {
+export const assertOptionalObject = (value, name) => {
     if (!_.isNull(value) && !_.isPlainObject(value)) {
         throw new Error(`"${name}" must be an object`);
     }
 };
 
-exports.assertOptionalArray = (value, name) => {
+export const assertOptionalArray = (value, name) => {
     if (!_.isArray(value)) {
         throw new Error(`"${name}" must be an array`);
     }
 };
 
-exports.assertNonNegativeInteger = (value, name) => {
+export const assertNonNegativeInteger = (value, name) => {
     if (!Number.isInteger(value) || value < 0) {
         throw new Error(`"${name}" must be a non-negative integer`);
     }
 };
 
-exports.assertEnum = (enumValues, value, name) => {
+export const assertEnum = (enumValues, value, name) => {
     is("string", name)(value);
 
     if (!_.includes(enumValues, value)) {
@@ -48,19 +44,19 @@ exports.assertEnum = (enumValues, value, name) => {
 
 const isPositiveInteger = value => Number.isInteger(value) && value > 0;
 
-exports.assertPositiveInteger = (value, name) => {
+export const assertPositiveInteger = (value, name) => {
     if (!isPositiveInteger(value)) {
         throw new Error(`"${name}" must be a positive integer`);
     }
 };
 
-exports.assertPositiveIntegerOrInfinity = (value, name) => {
+export const assertPositiveIntegerOrInfinity = (value, name) => {
     if (!isPositiveInteger(value) && value !== Infinity) {
         throw new Error(`"${name}" must be a positive integer or Infinity`);
     }
 };
 
-exports.parseBoolean = exports.parseBoolean = (value, name) => {
+export const parseBoolean = (value, name) => {
     switch (value.toLowerCase()) {
         case "1":
         case "yes":
@@ -75,7 +71,7 @@ exports.parseBoolean = exports.parseBoolean = (value, name) => {
     }
 };
 
-exports.parsePrimitive = exports.parsePrimitive = str => {
+export const parsePrimitive = str => {
     try {
         return JSON.parse(str);
     } catch (error) {
@@ -83,4 +79,4 @@ exports.parsePrimitive = exports.parsePrimitive = str => {
     }
 };
 
-exports.resolveWithProjectDir = value => (value ? path.resolve(process.cwd(), value) : value);
+export const resolveWithProjectDir = value => (value ? path.resolve(process.cwd(), value) : value);

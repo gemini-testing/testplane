@@ -1,10 +1,8 @@
-"use strict";
+import BaseReporter from "./base.js";
+import { extendTestInfo } from "./utils/helpers.js";
+import { SUCCESS, FAIL, RETRY, SKIPPED } from "../constants/test-statuses.js";
 
-const BaseReporter = require("./base");
-const { extendTestInfo } = require("./utils/helpers");
-const { SUCCESS, FAIL, RETRY, SKIPPED } = require("../constants/test-statuses");
-
-module.exports = class JsonlReporter extends BaseReporter {
+export default class JsonlReporter extends BaseReporter {
     _onTestPass(test) {
         const testInfo = extendTestInfo(test, { status: SUCCESS });
         this.informer.log(testInfo);
@@ -37,4 +35,4 @@ module.exports = class JsonlReporter extends BaseReporter {
     _onInfo() {
         // do nothing
     }
-};
+}

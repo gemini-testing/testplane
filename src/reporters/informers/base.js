@@ -1,4 +1,4 @@
-module.exports = class BaseInformer {
+export default class BaseInformer {
     static create(...args) {
         return new this(...args);
     }
@@ -18,4 +18,4 @@ module.exports = class BaseInformer {
     end() {
         throw new Error("Method must be implemented in child classes");
     }
-};
+}
