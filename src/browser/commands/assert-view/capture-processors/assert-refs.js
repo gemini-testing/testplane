@@ -1,14 +1,12 @@
-"use strict";
+import Promise from "bluebird";
+import { ImageDiffError } from "../errors/image-diff-error.js";
+import { NoRefImageError } from "../errors/no-ref-image-error.js";
 
-const Promise = require("bluebird");
-const { ImageDiffError } = require("../errors/image-diff-error");
-const { NoRefImageError } = require("../errors/no-ref-image-error");
-
-exports.handleNoRefImage = (currImg, refImg, stateName) => {
+export const handleNoRefImage = (currImg, refImg, stateName) => {
     return Promise.reject(NoRefImageError.create(stateName, currImg, refImg));
 };
 
-exports.handleImageDiff = (currImg, refImg, stateName, opts) => {
+export const handleImageDiff = (currImg, refImg, stateName, opts) => {
     const {
         tolerance,
         antialiasingTolerance,

@@ -1,8 +1,8 @@
 import _ from "lodash";
 import { Matches } from "webdriverio";
-import PageLoader from "../../utils/page-loader";
-import type { Browser } from "../types";
-import { BrowserConfig } from "../../config/browser-config";
+import PageLoader from "../../utils/page-loader.js";
+import type { Browser } from "../types.js";
+import { BrowserConfig } from "../../config/browser-config.js";
 
 interface WaitOpts {
     selector?: string | string[];

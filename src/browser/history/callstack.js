@@ -1,9 +1,7 @@
-"use strict";
+import _ from "lodash";
+import { historyDataMap } from "./utils.js";
 
-const _ = require("lodash");
-const { historyDataMap } = require("./utils");
-
-module.exports = class Callstack {
+export default class Callstack {
     constructor() {
         this._history = [];
         this._stack = [];
@@ -59,4 +57,4 @@ module.exports = class Callstack {
 
         return history;
     }
-};
+}

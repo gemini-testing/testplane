@@ -1,7 +1,5 @@
-"use strict";
-
-const Promise = require("bluebird");
-const { ClientBridgeError } = require("./error");
+import Promise from "bluebird";
+import { ClientBridgeError } from "./error.js";
 
 module.exports = class ClientBridge {
     static create(browser, script) {

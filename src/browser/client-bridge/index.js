@@ -1,13 +1,11 @@
-"use strict";
+import path from "node:path";
+import Promise from "bluebird";
+import browserify from "browserify";
+import ClientBridge from "./client-bridge.js";
 
-const path = require("path");
-const Promise = require("bluebird");
-const browserify = require("browserify");
-const ClientBridge = require("./client-bridge");
+export { ClientBridge };
 
-exports.ClientBridge = ClientBridge;
-
-exports.build = (browser, opts = {}) => {
+export const build = (browser, opts = {}) => {
     const script = browserify({
         entries: "./index",
         basedir: path.join(__dirname, "..", "client-scripts"),

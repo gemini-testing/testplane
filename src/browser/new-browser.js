@@ -1,15 +1,14 @@
-"use strict";
+import { URLSearchParams } from "node:url";
+import URI from "urijs";
+import _ from "lodash";
+import webdriverio from "webdriverio";
 
-const { URLSearchParams } = require("url");
-const URI = require("urijs");
-const _ = require("lodash");
-const webdriverio = require("webdriverio");
-const Browser = require("./browser");
-const signalHandler = require("../signal-handler");
-const history = require("./history");
-const logger = require("../utils/logger");
-const RuntimeConfig = require("../config/runtime-config");
-const { DEVTOOLS_PROTOCOL } = require("../constants/config");
+import Browser from "./browser";
+import signalHandler from "../signal-handler";
+import history from "./history";
+import logger from "../utils/logger";
+import RuntimeConfig from "../config/runtime-config";
+import { DEVTOOLS_PROTOCOL } from "../constants/config";
 
 const DEFAULT_PORT = 4444;
 
@@ -36,7 +35,7 @@ const headlessBrowserOptions = {
     },
 };
 
-module.exports = class NewBrowser extends Browser {
+export default class NewBrowser extends Browser {
     constructor(config, opts) {
         super(config, opts);
 
@@ -173,4 +172,4 @@ module.exports = class NewBrowser extends Browser {
         const urlParams = new URLSearchParams(query);
         return Object.fromEntries(urlParams);
     }
-};
+}

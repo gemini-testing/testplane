@@ -1,16 +1,15 @@
-"use strict";
+import path from "node:path";
+import fs from "fs";
+import Promise from "bluebird";
+import _ from "lodash";
+import looksSame from "looks-same";
 
-const fs = require("fs");
-const path = require("path");
-const Promise = require("bluebird");
-const _ = require("lodash");
-const looksSame = require("looks-same");
-const { CoreError } = require("./core-error");
+import { CoreError } from "./core-error.js";
 
 const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, "client-scripts", "calibrate.js"), "utf8");
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" };
 
-module.exports = class Calibrator {
+export default class Calibrator {
     constructor() {
         this._cache = {};
     }
@@ -65,7 +64,7 @@ module.exports = class Calibrator {
 
         return null;
     }
-};
+}
 
 async function analyzeRow(row, image, params = {}) {
     const markerStart = await findMarkerInRow(row, image, DIRECTION.FORWARD);

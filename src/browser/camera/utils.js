@@ -1,6 +1,4 @@
-"use strict";
-
-exports.isFullPage = (imageArea, page, screenshotMode) => {
+export const isFullPage = (imageArea, page, screenshotMode) => {
     switch (screenshotMode) {
         case "fullpage":
             return true;

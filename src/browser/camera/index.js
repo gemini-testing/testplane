@@ -1,10 +1,8 @@
-"use strict";
+import _ from "lodash";
+import Image from "../../image.js";
+import * as utils from "./utils.js";
 
-const Image = require("../../image");
-const _ = require("lodash");
-const utils = require("./utils");
-
-module.exports = class Camera {
+export default class Camera {
     static create(screenshotMode, takeScreenshot) {
         return new this(screenshotMode, takeScreenshot);
     }
@@ -65,4 +63,4 @@ module.exports = class Camera {
             height: Math.min(imageArea.height - cropArea.top, cropArea.height),
         };
     }
-};
+}

@@ -2,13 +2,13 @@ import repl from "node:repl";
 import path from "node:path";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
-import RuntimeConfig from "../../config/runtime-config";
-import logger from "../../utils/logger";
-import type { Browser } from "../types";
+import * as RuntimeConfig from "../../config/runtime-config.js";
+import logger from "../../utils/logger.js";
+import type { Browser } from "../types.js";
 
 const REPL_LINE_EVENT = "line";
 
-export default async (browser: Browser): Promise<void> => {
+export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     const applyContext = (replServer: repl.REPLServer, ctx: Record<string, unknown> = {}): void => {

@@ -1,8 +1,8 @@
-import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
-import type { BrowserConfig } from "./../config/browser-config";
-import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
-import { MoveCursorToCommand } from "./commands/moveCursorTo";
-import { OpenAndWaitCommand } from "./commands/openAndWait";
+import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types.js";
+import type { BrowserConfig } from "./../config/browser-config.js";
+import type { AssertViewResult, RunnerTest, RunnerHook } from "../types/index.js";
+import { MoveCursorToCommand } from "./commands/moveCursorTo.js";
+import { OpenAndWaitCommand } from "./commands/openAndWait.js";
 
 export interface BrowserMeta {
     pid: number;

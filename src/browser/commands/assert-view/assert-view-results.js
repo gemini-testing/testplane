@@ -1,9 +1,7 @@
-"use strict";
+import { ImageDiffError } from "./errors/image-diff-error.js";
+import { NoRefImageError } from "./errors/no-ref-image-error.js";
 
-const { ImageDiffError } = require("./errors/image-diff-error");
-const { NoRefImageError } = require("./errors/no-ref-image-error");
-
-module.exports = class AssertViewResults {
+export default class AssertViewResults {
     static fromRawObject(results) {
         return AssertViewResults.create(
             results.map(res => {
@@ -43,4 +41,4 @@ module.exports = class AssertViewResults {
     get() {
         return this._results;
     }
-};
+}

@@ -1,4 +1,4 @@
-import { AssertViewOptsConfig } from "../../config/types";
+import { AssertViewOptsConfig } from "../../config/types.js";
 
 export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     /**

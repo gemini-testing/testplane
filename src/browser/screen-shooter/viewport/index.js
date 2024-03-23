@@ -1,10 +1,7 @@
-"use strict";
+import _ from "lodash";
+import CoordValidator from "./coord-validator/index.js";
 
-const _ = require("lodash");
-
-const CoordValidator = require("./coord-validator");
-
-module.exports = class Viewport {
+export default class Viewport {
     static create(...args) {
         return new this(...args);
     }
@@ -122,7 +119,7 @@ module.exports = class Viewport {
     _transformToViewportOrigin(area) {
         return this._shiftArea(area, { left: -this._viewport.left, top: -this._viewport.top - this._summaryHeight });
     }
-};
+}
 
 function getAreaBottom(area) {
     return area.top + area.height;

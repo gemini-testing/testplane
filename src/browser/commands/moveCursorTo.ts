@@ -1,4 +1,4 @@
-import type { Browser } from "../types";
+import type { Browser } from "../types.js";
 
 type MoveToOptions = {
     xOffset?: number;
@@ -29,7 +29,7 @@ const makeMoveCursorToCommand = (session: WebdriverIO.Browser) =>
     };
 
 // TODO: remove after next major version
-export default async (browser: Browser): Promise<void> => {
+export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     session.addCommand("moveCursorTo", makeMoveCursorToCommand(session), true);

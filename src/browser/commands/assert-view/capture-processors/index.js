@@ -1,8 +1,5 @@
-"use strict";
+import * as RuntimeConfig from "../../../../config/runtime-config.js";
+import assertRefs from "./assert-refs.js";
+import updateRefs from "./update-refs.js";
 
-const RuntimeConfig = require("../../../../config/runtime-config");
-
-const assertRefs = require("./assert-refs");
-const updateRefs = require("./update-refs");
-
-exports.getCaptureProcessors = () => (RuntimeConfig.getInstance().updateRefs ? updateRefs : assertRefs);
+export const getCaptureProcessors = () => (RuntimeConfig.getInstance().updateRefs ? updateRefs : assertRefs);

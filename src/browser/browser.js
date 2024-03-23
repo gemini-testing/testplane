@@ -1,11 +1,9 @@
-"use strict";
-
-const crypto = require("crypto");
-const _ = require("lodash");
-const { SAVE_HISTORY_MODE } = require("../constants/config");
-const { X_REQUEST_ID_DELIMITER } = require("../constants/browser");
-const history = require("./history");
-const addRunStepCommand = require("./commands/runStep").default;
+import crypto from "node:crypto";
+import _ from "lodash";
+import { SAVE_HISTORY_MODE } from "../constants/config.js";
+import { X_REQUEST_ID_DELIMITER } from "../constants/browser.js";
+import * as history from "./history/index.js";
+import addRunStepCommand from "./commands/runStep.js";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -20,7 +18,7 @@ const CUSTOM_SESSION_OPTS = [
     "region",
 ];
 
-module.exports = class Browser {
+export default class Browser {
     static create(config, opts) {
         return new this(config, opts);
     }
@@ -134,4 +132,4 @@ module.exports = class Browser {
     get callstackHistory() {
         return this._callstackHistory;
     }
-};
+}

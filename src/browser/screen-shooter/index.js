@@ -1,8 +1,6 @@
-"use strict";
+import Viewport from "./viewport/index.js";
 
-const Viewport = require("./viewport");
-
-module.exports = class ScreenShooter {
+export default class ScreenShooter {
     static create(browser) {
         return new this(browser);
     }
@@ -47,4 +45,4 @@ module.exports = class ScreenShooter {
 
         await viewport.extendBy(physicalScrollHeight, newImage);
     }
-};
+}

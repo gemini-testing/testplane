@@ -1,8 +1,6 @@
-"use strict";
+import urljoin from "url-join";
 
-const urljoin = require("url-join");
-
-module.exports.default = browser => {
+export default browser => {
     const { publicAPI: session, config } = browser;
 
     if (!config.browserWSEndpoint || !session.getPuppeteer) {

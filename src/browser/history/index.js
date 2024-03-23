@@ -1,8 +1,6 @@
-"use strict";
-
-const Callstack = require("./callstack");
-const cmds = require("./commands");
-const { runWithHooks, normalizeCommandArgs, historyDataMap, isGroup } = require("./utils");
+import Callstack from "./callstack.js";
+import * as cmds from "./commands.js";
+import { runWithHooks, normalizeCommandArgs, historyDataMap, isGroup } from "./utils.js";
 
 const shouldNotWrapCommand = commandName =>
     ["addCommand", "overwriteCommand", "extendOptions", "setMeta", "getMeta", "runStep"].includes(commandName);
@@ -26,6 +24,8 @@ const mkHistoryNode = ({ name, args, elementScope, key, overwrite, isGroup }) =>
     return map;
 };
 
+export const shouldPropagateFn = (parentNode, currentNode) => isGroup(parentNode) || isGroup(currentNode);
+
 const runWithHistoryHooks = ({ callstack, nodeData, fn }) => {
     nodeData.key = nodeData.key || Symbol();
 
@@ -33,7 +33,7 @@ const runWithHistoryHooks = ({ callstack, nodeData, fn }) => {
         before: () => callstack.enter(mkHistoryNode(nodeData)),
         fn,
         after: () => callstack.leave(nodeData.key),
-        error: () => callstack.markError(exports.shouldPropagateFn),
+        error: () => callstack.markError(shouldPropagateFn),
     });
 };
 
@@ -100,24 +100,7 @@ const overwriteElementCommands = (session, callstack) =>
         elementScope: true,
     });
 
-const overwriteRunStepCommand = (session, callstack) =>
-    session.overwriteCommand("runStep", (origCommand, stepName, stepCb) => {
-        return exports.runGroup(callstack, stepName, () => origCommand(stepName, stepCb));
-    });
-
-exports.initCommandHistory = session => {
-    const callstack = new Callstack();
-
-    overwriteAddCommand(session, callstack);
-    overwriteBrowserCommands(session, callstack);
-    overwriteElementCommands(session, callstack);
-    overwriteOverwriteCommand(session, callstack);
-    overwriteRunStepCommand(session, callstack);
-
-    return callstack;
-};
-
-exports.runGroup = (callstack, name, fn) => {
+export const runGroup = (callstack, name, fn) => {
     if (!callstack) {
         return fn();
     }
@@ -129,4 +112,19 @@ exports.runGroup = (callstack, name, fn) => {
     });
 };
 
-exports.shouldPropagateFn = (parentNode, currentNode) => isGroup(parentNode) || isGroup(currentNode);
+const overwriteRunStepCommand = (session, callstack) =>
+    session.overwriteCommand("runStep", (origCommand, stepName, stepCb) => {
+        return runGroup(callstack, stepName, () => origCommand(stepName, stepCb));
+    });
+
+export const initCommandHistory = session => {
+    const callstack = new Callstack();
+
+    overwriteAddCommand(session, callstack);
+    overwriteBrowserCommands(session, callstack);
+    overwriteElementCommands(session, callstack);
+    overwriteOverwriteCommand(session, callstack);
+    overwriteRunStepCommand(session, callstack);
+
+    return callstack;
+};

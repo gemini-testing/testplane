@@ -1,9 +1,8 @@
-"use strict";
+import fs from "fs-extra";
+import { WorkerEvents } from "../../../../events/index.js";
 
-const fs = require("fs-extra");
-const { WorkerEvents } = require("../../../../events");
-
-exports.handleNoRefImage = exports.handleImageDiff = async (currImg, refImg, state, { emitter }) => {
+export const handleNoRefImage = async (currImg, refImg, state, { emitter }) => {
     await fs.copy(currImg.path, refImg.path);
     emitter.emit(WorkerEvents.UPDATE_REFERENCE, { state, refImg });
 };
+export const handleImageDiff = handleNoRefImage;

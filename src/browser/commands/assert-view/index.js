@@ -1,18 +1,17 @@
-"use strict";
+import fs from "fs-extra";
+import _ from "lodash";
+import Promise from "bluebird";
+import { pngValidator as validatePng } from "png-validator";
 
-const fs = require("fs-extra");
-const _ = require("lodash");
-const Promise = require("bluebird");
-const { pngValidator: validatePng } = require("png-validator");
-const Image = require("../../../image");
-const ScreenShooter = require("../../screen-shooter");
-const temp = require("../../../temp");
-const { getCaptureProcessors } = require("./capture-processors");
-const RuntimeConfig = require("../../../config/runtime-config");
-const AssertViewResults = require("./assert-view-results");
-const { BaseStateError } = require("./errors/base-state-error");
-const { AssertViewError } = require("./errors/assert-view-error");
-const InvalidPngError = require("./errors/invalid-png-error");
+import Image from "../../../image.js";
+import ScreenShooter from "../../screen-shooter/index.js";
+import temp from "../../../temp.js";
+import { getCaptureProcessors } from "./capture-processors/index.js";
+import RuntimeConfig from "../../../config/runtime-config.js";
+import AssertViewResults from "./assert-view-results.js";
+import { BaseStateError } from "./errors/base-state-error.js";
+import { AssertViewError } from "./errors/assert-view-error.js";
+import InvalidPngError from "./errors/invalid-png-error.js";
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -28,7 +27,7 @@ const getIgnoreDiffPixelCountRatio = value => {
     return percent / 100;
 };
 
-module.exports.default = browser => {
+export default browser => {
     const screenShooter = ScreenShooter.create(browser);
     const { publicAPI: session, config } = browser;
     const {

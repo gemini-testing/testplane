@@ -1,10 +1,8 @@
-"use strict";
-
-const _ = require("lodash");
+import _ from "lodash";
 
 const MAX_STRING_LENGTH = 50;
 
-exports.normalizeCommandArgs = (name, args = []) => {
+export const normalizeCommandArgs = (name, args = []) => {
     if (name === "execute") {
         return ["code"];
     }
@@ -22,7 +20,7 @@ exports.normalizeCommandArgs = (name, args = []) => {
     });
 };
 
-exports.historyDataMap = {
+export const historyDataMap = {
     NAME: "n",
     ARGS: "a",
     SCOPE: "s",
@@ -38,9 +36,9 @@ exports.historyDataMap = {
 
 const isPromise = val => typeof _.get(val, "then") === "function";
 
-exports.isGroup = node => Boolean(node && node[exports.historyDataMap.IS_GROUP]);
+export const isGroup = node => Boolean(node && node[historyDataMap.IS_GROUP]);
 
-exports.runWithHooks = ({ fn, before, after, error }) => {
+export const runWithHooks = ({ fn, before, after, error }) => {
     let isReturnedValuePromise = false;
 
     before();

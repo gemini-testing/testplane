@@ -1,7 +1,5 @@
 /* global document */
-"use strict";
-
-module.exports.default = browser => {
+export default browser => {
     const { publicAPI: session, config } = browser;
 
     if (!session.setOrientation) {

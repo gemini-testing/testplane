@@ -1,5 +1,5 @@
-import { BaseStateError } from "./base-state-error";
-import { ImageInfo } from "../../../../types";
+import { BaseStateError } from "./base-state-error.js";
+import { ImageInfo } from "../../../../types/index.js";
 
 type NoRefImageErrorConstructor<T> = new (stateName: string, currImg: ImageInfo, refImg: ImageInfo) => T;
 

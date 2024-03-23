@@ -1,7 +1,7 @@
-import { ImageInfo } from "../../../../types";
+import { ImageInfo } from "../../../../types/index.js";
 
-import Image from "../../../../image";
-import { BaseStateError } from "./base-state-error";
+import Image from "../../../../image.js";
+import { BaseStateError } from "./base-state-error.js";
 
 import type { LooksSameOptions, LooksSameResult } from "looks-same";
 

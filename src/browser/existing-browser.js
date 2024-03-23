@@ -1,24 +1,23 @@
 /* global window, document */
-"use strict";
+import url from "node:url";
+import Promise from "bluebird";
+import _ from "lodash";
+import webdriverio from "webdriverio";
+import { sessionEnvironmentDetector } from "@wdio/utils";
 
-const url = require("url");
-const Promise = require("bluebird");
-const _ = require("lodash");
-const webdriverio = require("webdriverio");
-const { sessionEnvironmentDetector } = require("@wdio/utils");
-const Browser = require("./browser");
-const commandsList = require("./commands");
-const Camera = require("./camera");
-const clientBridge = require("./client-bridge");
-const history = require("./history");
-const logger = require("../utils/logger");
-const { WEBDRIVER_PROTOCOL } = require("../constants/config");
-const { MIN_CHROME_VERSION_SUPPORT_ISOLATION } = require("../constants/browser");
-const { isSupportIsolation } = require("../utils/browser");
+import Browser from "./browser.js";
+import commandsList from "./commands/index.js";
+import Camera from "./camera/index.js";
+import clientBridge from "./client-bridge/index.js";
+import * as history from "./history/index.js";
+import logger from "../utils/logger.js";
+import { WEBDRIVER_PROTOCOL } from "../constants/config.js";
+import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser.js";
+import { isSupportIsolation } from "../utils/browser.js";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
-module.exports = class ExistingBrowser extends Browser {
+export default class ExistingBrowser extends Browser {
     static create(config, opts) {
         return new this(config, opts);
     }
@@ -39,7 +38,7 @@ module.exports = class ExistingBrowser extends Browser {
         this._addHistory();
 
         await history.runGroup(this._callstackHistory, "hermione: init browser", async () => {
-            this._addCommands();
+            await this._addCommands();
 
             await this._performIsolation({ sessionCaps, sessionOpts });
 
@@ -177,11 +176,13 @@ module.exports = class ExistingBrowser extends Browser {
         return this._session.takeScreenshot();
     }
 
-    _addCommands() {
+    async _addCommands() {
         this._addMetaAccessCommands(this._session);
         this._decorateUrlMethod(this._session);
 
-        commandsList.forEach(command => require(`./commands/${command}`).default(this));
+        for (const command of commandsList) {
+            (await import(`./commands/${command}.js`)).default(this);
+        }
 
         super._addCommands();
     }
@@ -365,4 +366,4 @@ module.exports = class ExistingBrowser extends Browser {
     get emitter() {
         return this._emitter;
     }
-};
+}

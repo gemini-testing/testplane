@@ -1,13 +1,11 @@
-"use strict";
-
-const debug = require("debug");
-const { HeightViewportError } = require("./errors/height-viewport-error");
-const { OffsetViewportError } = require("./errors/offset-viewport-error");
+import debug from "debug";
+import { HeightViewportError } from "./errors/height-viewport-error.js";
+import { OffsetViewportError } from "./errors/offset-viewport-error.js";
 
 const isOutsideOfViewport = (viewport, cropArea) =>
     cropArea.top < 0 || cropArea.left < 0 || cropArea.left + cropArea.width > viewport.width;
 
-module.exports = class CoordValidator {
+export default class CoordValidator {
     static create(...args) {
         return new CoordValidator(...args);
     }
@@ -87,4 +85,4 @@ module.exports = class CoordValidator {
 
         throw new HeightViewportError(message);
     }
-};
+}

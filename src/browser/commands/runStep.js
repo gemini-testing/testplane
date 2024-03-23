@@ -1,8 +1,6 @@
-"use strict";
+import _ from "lodash";
 
-const _ = require("lodash");
-
-module.exports.default = browser => {
+export default browser => {
     const { publicAPI: session } = browser;
     session.addCommand("runStep", (stepName, stepCb) => {
         if (!_.isString(stepName)) {
