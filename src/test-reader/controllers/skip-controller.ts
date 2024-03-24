@@ -1,6 +1,6 @@
-import { Test } from "../../types";
-import { TestReaderEvents as ReadEvents } from "../../events";
-import { EventEmitter } from "events";
+import { Test } from "../../types/index.js";
+import { TestReaderEvents as ReadEvents } from "../../events/index.js";
+import { EventEmitter } from "node:events";
 
 interface TreeBuilder {
     addTrap: (trap: (test: Test) => void) => void;

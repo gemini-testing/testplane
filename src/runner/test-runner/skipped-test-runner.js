@@ -1,9 +1,7 @@
-"use strict";
+import { Runner } from "../runner.js";
+import { MasterEvents } from "../../events/index.js";
 
-const { Runner } = require("../runner");
-const { MasterEvents } = require("../../events");
-
-module.exports = class SkippedTestRunner extends Runner {
+export default class SkippedTestRunner extends Runner {
     constructor(test) {
         super();
 
@@ -23,4 +21,4 @@ module.exports = class SkippedTestRunner extends Runner {
     _isSilentlySkipped({ silentSkip, parent }) {
         return silentSkip || (parent && this._isSilentlySkipped(parent));
     }
-};
+}

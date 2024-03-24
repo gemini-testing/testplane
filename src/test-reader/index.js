@@ -1,12 +1,12 @@
-const _ = require("lodash");
-const { EventEmitter } = require("events");
-const { passthroughEvent } = require("../events/utils");
-const SetsBuilder = require("./sets-builder");
-const { TestParser } = require("./test-parser");
-const { MasterEvents } = require("../events");
-const env = require("../utils/env");
+import { EventEmitter } from "node:events";
+import _ from "lodash";
+import { passthroughEvent } from "../events/utils.js";
+import SetsBuilder from "./sets-builder/index.js";
+import { TestParser } from "./test-parser.js";
+import { MasterEvents } from "../events/index.js";
+import * as env from "../utils/env.js";
 
-module.exports = class TestReader extends EventEmitter {
+export default class TestReader extends EventEmitter {
     #config;
 
     static create(...args) {
@@ -43,7 +43,7 @@ module.exports = class TestReader extends EventEmitter {
 
         return testsByBro;
     }
-};
+}
 
 function validateTests(testsByBro, options) {
     const tests = _.flatten(Object.values(testsByBro));

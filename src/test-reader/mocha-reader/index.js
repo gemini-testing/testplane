@@ -1,12 +1,10 @@
-"use strict";
+import Mocha from "mocha";
+import { MochaEventBus } from "./mocha-event-bus.js";
+import { TreeBuilderDecorator } from "./tree-builder-decorator.js";
+import { TestReaderEvents } from "../../events/index.js";
+import { MasterEvents } from "../../events/index.js";
 
-const { MochaEventBus } = require("./mocha-event-bus");
-const { TreeBuilderDecorator } = require("./tree-builder-decorator");
-const { TestReaderEvents } = require("../../events");
-const { MasterEvents } = require("../../events");
-const Mocha = require("mocha");
-
-async function readFiles(files, { esmDecorator, config, eventBus }) {
+export const readFiles = async (files, { esmDecorator, config, eventBus }) => {
     const mocha = new Mocha(config);
     mocha.fullTrace();
 
@@ -17,7 +15,7 @@ async function readFiles(files, { esmDecorator, config, eventBus }) {
     await mocha.loadFilesAsync({ esmDecorator });
 
     applyOnly(mocha.suite, eventBus);
-}
+};
 
 function initBuildContext(outBus) {
     outBus.emit(TestReaderEvents.NEW_BUILD_INSTRUCTION, ctx => {
@@ -94,7 +92,3 @@ function applyOnly(rootSuite, eventBus) {
         treeBuilder.addTestFilter(test => titlesToRun.includes(test.fullTitle()));
     });
 }
-
-module.exports = {
-    readFiles,
-};

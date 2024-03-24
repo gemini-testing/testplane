@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = class PromiseGroup {
+export default class PromiseGroup {
     constructor() {
         this._count = 0;
         this._fulfilledCount = 0;
@@ -36,4 +34,4 @@ module.exports = class PromiseGroup {
     done() {
         return this._count > 0 ? this._promise : Promise.resolve();
     }
-};
+}

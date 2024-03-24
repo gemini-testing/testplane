@@ -1,26 +1,27 @@
-import { Events } from "../events";
-import { MainRunner } from "../runner";
-import { TestCollection } from "../test-collection";
-import type { Test } from "../test-reader/test-object/test";
-import type { Suite } from "../test-reader/test-object/suite";
-import type { TestParserAPI } from "../test-reader/test-parser-api";
-import { StatsResult } from "../stats";
-import { ConfigController } from "../test-reader/controllers/config-controller";
-import { OnlyController } from "../test-reader/controllers/only-controller";
-import { SkipController } from "../test-reader/controllers/skip-controller";
-import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
-import { WorkerProcess } from "../utils/worker-process";
-import { BaseHermione } from "../base-hermione";
 import { CoordBounds, LooksSameOptions } from "looks-same";
+
+import { Events } from "../events/index.js";
+import { MainRunner } from "../runner/index.js";
+import { TestCollection } from "../test-collection.js";
+import type { Test } from "../test-reader/test-object/test.js";
+import type { Suite } from "../test-reader/test-object/suite.js";
+import type { TestParserAPI } from "../test-reader/test-parser-api.js";
+import { StatsResult } from "../stats.js";
+import { ConfigController } from "../test-reader/controllers/config-controller.js";
+import { OnlyController } from "../test-reader/controllers/only-controller.js";
+import { SkipController } from "../test-reader/controllers/skip-controller.js";
+import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller.js";
+import { WorkerProcess } from "../utils/worker-process.js";
+import { BaseHermione } from "../base-hermione.js";
 
 export { Suite as RunnerSuite, Test as RunnerTest, Hook as RunnerHook } from "mocha";
 
 export type { Browser as WdioBrowser } from "webdriverio";
 
-export type { Test } from "../test-reader/test-object/test";
-export type { Suite } from "../test-reader/test-object/suite";
+export type { Test } from "../test-reader/test-object/test.js";
+export type { Suite } from "../test-reader/test-object/suite.js";
 
-export type { AssertViewOpts } from "../browser/commands/types";
+export type { AssertViewOpts } from "../browser/commands/types.js";
 
 export interface RootSuite extends Suite {
     root: true;

@@ -1,15 +1,12 @@
-"use strict";
+import _ from "lodash";
+import { Runner } from "../runner.js";
+import RegularTestRunner from "./regular-test-runner.js";
+import HighPriorityBrowserAgent from "./high-priority-browser-agent.js";
+import { MasterEvents } from "../../events/index.js";
+import { passthroughEvent } from "../../events/utils.js";
+import { NoRefImageError } from "../../browser/commands/assert-view/errors/no-ref-image-error.js";
 
-const _ = require("lodash");
-
-const { Runner } = require("../runner");
-const RegularTestRunner = require("./regular-test-runner");
-const HighPriorityBrowserAgent = require("./high-priority-browser-agent");
-const { MasterEvents } = require("../../events");
-const { passthroughEvent } = require("../../events/utils");
-const { NoRefImageError } = require("../../browser/commands/assert-view/errors/no-ref-image-error");
-
-module.exports = class InsistantTestRunner extends Runner {
+export default class InsistantTestRunner extends Runner {
     constructor(test, config, browserAgent) {
         super();
 
@@ -77,4 +74,4 @@ module.exports = class InsistantTestRunner extends Runner {
     cancel() {
         this._cancelled = true;
     }
-};
+}

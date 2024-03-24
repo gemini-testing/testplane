@@ -1,16 +1,17 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import _ from "lodash";
-import { Runner } from "./runner";
-import * as TestRunner from "./test-runner";
-import { InterceptedEvent, MasterEvents } from "../events";
-import SuiteMonitor from "./suite-monitor";
-import BrowserAgent from "./browser-agent";
-import PromiseGroup from "./promise-group";
-import { Config } from "../config";
-import { BrowserPool } from "../browser-pool";
-import { Workers } from "./index";
-import type { Test } from "../types";
-import { TestCollection } from "../test-collection";
+import { Runner } from "./runner.js";
+import * as TestRunner from "./test-runner/index.js";
+import { InterceptedEvent, MasterEvents } from "../events/index.js";
+import SuiteMonitor from "./suite-monitor.js";
+import BrowserAgent from "./browser-agent.js";
+import PromiseGroup from "./promise-group.js";
+import { Config } from "../config/index.js";
+
+import type { BrowserPool } from "../browser-pool/index.js";
+import type { Workers } from "./index.js";
+import type { Test } from "../types/index.js";
+import type { TestCollection } from "../test-collection.js";
 
 export interface BrowserRunner {
     on(event: InterceptedEvent, handler: (test: Test) => void): this;

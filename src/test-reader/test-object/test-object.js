@@ -1,4 +1,4 @@
-class TestObject {
+export class TestObject {
     #title;
 
     static create(...args) {
@@ -23,7 +23,3 @@ class TestObject {
         return `${(this.parent && this.parent.fullTitle()) || ""} ${this.title || ""}`.trim();
     }
 }
-
-module.exports = {
-    TestObject,
-};

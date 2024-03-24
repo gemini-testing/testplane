@@ -1,22 +1,21 @@
-"use strict";
+import { EventEmitter } from "node:events";
+import workerFarm from "worker-farm";
+import Promise from "bluebird";
+import _ from "lodash";
 
-const { EventEmitter } = require("events");
-const workerFarm = require("worker-farm");
-const Promise = require("bluebird");
-const _ = require("lodash");
-const { MasterEvents } = require("../events");
-const RuntimeConfig = require("../config/runtime-config");
-const { WorkerProcess } = require("./worker-process");
-const logger = require("../utils/logger");
-const {
+import { MasterEvents } from "../events/index.js";
+import * as RuntimeConfig from "../config/runtime-config.js";
+import { WorkerProcess } from "./worker-process.js";
+import logger from "../utils/logger.js";
+import {
     MASTER_INIT,
     MASTER_SYNC_CONFIG,
     WORKER_INIT,
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
-} = require("../constants/process-messages");
+} from "../constants/process-messages.js";
 
-module.exports = class WorkersRegistry extends EventEmitter {
+export default class WorkersRegistry extends EventEmitter {
     static create(...args) {
         return new WorkersRegistry(...args);
     }
@@ -139,4 +138,4 @@ module.exports = class WorkersRegistry extends EventEmitter {
 
         this.emit(MasterEvents.NEW_WORKER_PROCESS, WorkerProcess.create(child));
     }
-};
+}

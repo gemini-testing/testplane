@@ -1,12 +1,13 @@
-const globExtra = require("glob-extra");
-const _ = require("lodash");
-const mm = require("micromatch");
-const path = require("path");
-const Promise = require("bluebird");
+import path from "node:path";
+import fs from "node:fs";
+import globExtra from "glob-extra";
+import _ from "lodash";
+import mm from "micromatch";
+import Promise from "bluebird";
 
-const fs = Promise.promisifyAll(require("fs"));
+const fsp = Promise.promisifyAll(fs);
 
-module.exports = class TestSet {
+export default class TestSet {
     #set;
 
     static create(set) {
@@ -33,7 +34,7 @@ module.exports = class TestSet {
                 return file;
             }
 
-            return fs
+            return fsp
                 .statAsync(file)
                 .then(stat => (stat.isDirectory() ? path.join(file, "**") : file))
                 .catch(() => Promise.reject(new Error(`Cannot read such file or directory: '${file}'`)));
@@ -71,4 +72,4 @@ module.exports = class TestSet {
     useBrowsers(browsers) {
         this.#set.browsers = _.isEmpty(browsers) ? this.#set.browsers : _.intersection(this.#set.browsers, browsers);
     }
-};
+}

@@ -1,7 +1,8 @@
-import { TestReaderEvents } from "../events";
-import { EventEmitter } from "events";
-import { GlobalHelper } from "../types";
-import type { TreeBuilder } from "./tree-builder";
+import { TestReaderEvents } from "../events/index.js";
+
+import type { EventEmitter } from "node:events";
+import type { GlobalHelper } from "../types/index.js";
+import type { TreeBuilder } from "./tree-builder.js";
 
 type Context = GlobalHelper & Record<string, Record<string, unknown>>;
 type Methods = Record<string, (...args: unknown[]) => unknown>;

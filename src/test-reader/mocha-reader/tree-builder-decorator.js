@@ -1,7 +1,7 @@
-const { Suite, Test, Hook } = require("../test-object");
-const crypto = require("../../utils/crypto");
+import { Suite, Test, Hook } from "../test-object/index.js";
+import crypto from "../../utils/crypto.js";
 
-class TreeBuilderDecorator {
+export class TreeBuilderDecorator {
     #treeBuilder;
     #suiteMap;
     #suiteCounter;
@@ -109,7 +109,3 @@ class TreeBuilderDecorator {
         return this.#treeBuilder.getRootSuite();
     }
 }
-
-module.exports = {
-    TreeBuilderDecorator,
-};

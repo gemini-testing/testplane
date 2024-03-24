@@ -1,6 +1,6 @@
-const _ = require("lodash");
+import _ from "lodash";
 
-module.exports = class SetCollection {
+export default class SetCollection {
     #sets;
 
     static create(sets) {
@@ -44,4 +44,4 @@ module.exports = class SetCollection {
     #getFromSets(cb) {
         return _(this.#sets).map(cb).flatten().uniq().value();
     }
-};
+}

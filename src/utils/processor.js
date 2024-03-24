@@ -1,10 +1,8 @@
-"use strict";
-
-const _ = require("lodash");
-const { WORKER_UNHANDLED_REJECTION } = require("../constants/process-messages");
-const logger = require("./logger");
-const ipc = require("./ipc");
-const { shouldIgnoreUnhandledRejection } = require("./errors");
+import _ from "lodash";
+import { WORKER_UNHANDLED_REJECTION } from "../constants/process-messages.js";
+import logger from "./logger.js";
+import ipc from "./ipc.js";
+import { shouldIgnoreUnhandledRejection } from "./errors.js";
 
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {
@@ -21,7 +19,7 @@ process.on("unhandledRejection", (reason, p) => {
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
 });
 
-module.exports = async (module, methodName, args, cb) => {
+export default async (module, methodName, args, cb) => {
     try {
         const result = await require(module)[methodName](...args);
         cb(null, result);

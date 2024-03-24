@@ -1,4 +1,4 @@
-class TreeBuilder {
+export class TreeBuilder {
     #traps;
     #filters;
     #rootSuite;
@@ -74,7 +74,3 @@ class TreeBuilder {
         return this.#rootSuite;
     }
 }
-
-module.exports = {
-    TreeBuilder,
-};

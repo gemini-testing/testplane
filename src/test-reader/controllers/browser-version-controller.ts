@@ -1,5 +1,5 @@
-import { TestReaderEvents as ReadEvents } from "../../events";
-import { EventEmitter } from "events";
+import { TestReaderEvents as ReadEvents } from "../../events/index.js";
+import { EventEmitter } from "node:events";
 
 type TreeBuilder = {
     addTrap: (trap: (obj: { browserId: string; browserVersion?: string }) => void) => void;

@@ -1,6 +1,6 @@
-import { TestReaderEvents as ReadEvents } from "../../events";
-import { EventEmitter } from "events";
-import RuntimeConfig from "../../config/runtime-config";
+import { TestReaderEvents as ReadEvents } from "../../events/index.js";
+import { EventEmitter } from "node:events";
+import * as RuntimeConfig from "../../config/runtime-config.js";
 
 type TreeBuilder = {
     addTrap: (trap: (obj: { timeout: number }) => void) => void;

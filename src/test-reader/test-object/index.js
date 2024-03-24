@@ -1,9 +1,5 @@
-const { Suite } = require("./suite");
-const { Test } = require("./test");
-const { Hook } = require("./hook");
+import { Suite } from "./suite";
+import { Test } from "./test";
+import { Hook } from "./hook";
 
-module.exports = {
-    Suite,
-    Test,
-    Hook,
-};
+export { Suite, Test, Hook };

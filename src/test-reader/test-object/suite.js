@@ -1,8 +1,8 @@
-const { ConfigurableTestObject } = require("./configurable-test-object");
-const { Hook } = require("./hook");
-const _ = require("lodash");
+import _ from "lodash";
+import { ConfigurableTestObject } from "./configurable-test-object.js";
+import { Hook } from "./hook.js";
 
-class Suite extends ConfigurableTestObject {
+export class Suite extends ConfigurableTestObject {
     #suites;
     #tests;
     #beforeEachHooks;
@@ -87,7 +87,3 @@ class Suite extends ConfigurableTestObject {
         return this.#afterEachHooks;
     }
 }
-
-module.exports = {
-    Suite,
-};

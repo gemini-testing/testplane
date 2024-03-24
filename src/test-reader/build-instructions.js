@@ -1,9 +1,9 @@
-const _ = require("lodash");
-const validators = require("../validators");
-const env = require("../utils/env");
-const RuntimeConfig = require("../config/runtime-config");
+import _ from "lodash";
+import * as validators from "../validators.js";
+import * as env from "../utils/env.js";
+import * as RuntimeConfig from "../config/runtime-config.js";
 
-class InstructionsList {
+export class InstructionsList {
     #commonInstructions;
     #fileInstructions;
 
@@ -78,12 +78,9 @@ function buildGlobalSkipInstruction(config) {
     };
 }
 
-module.exports = {
-    InstructionsList,
-    Instructions: {
-        extendWithBrowserId,
-        extendWithBrowserVersion,
-        extendWithTimeout,
-        buildGlobalSkipInstruction,
-    },
+export const Instructions = {
+    extendWithBrowserId,
+    extendWithBrowserVersion,
+    extendWithTimeout,
+    buildGlobalSkipInstruction,
 };

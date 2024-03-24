@@ -1,9 +1,7 @@
-"use strict";
+import { EventEmitter } from "node:events";
+import { MasterEvents } from "../events";
 
-const { EventEmitter } = require("events");
-const { MasterEvents } = require("../events");
-
-module.exports = class SuiteMonitor extends EventEmitter {
+export default class SuiteMonitor extends EventEmitter {
     static create() {
         return new SuiteMonitor();
     }
@@ -68,4 +66,4 @@ module.exports = class SuiteMonitor extends EventEmitter {
 
         this._addRetry(suite.parent);
     }
-};
+}

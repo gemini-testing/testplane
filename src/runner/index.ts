@@ -1,8 +1,10 @@
+import EventEmitter from "node:events";
 import _ from "lodash";
-import * as eventsUtils from "../events/utils";
-import * as temp from "../temp";
-import * as pool from "../browser-pool";
-import { BrowserRunner } from "./browser-runner";
+
+import * as eventsUtils from "../events/utils.js";
+import * as temp from "../temp.js";
+import * as pool from "../browser-pool/index.js";
+import { BrowserRunner } from "./browser-runner.js";
 import {
     RunnerSyncEvents,
     MasterEvents,
@@ -10,18 +12,18 @@ import {
     RunnerSyncEvent,
     Interceptor,
     InterceptData,
-} from "../events";
-import { Runner } from "./runner";
-import RuntimeConfig from "../config/runtime-config";
-import WorkersRegistry from "../utils/workers-registry";
-import PromiseGroup from "./promise-group";
-import { TestCollection } from "../test-collection";
-import * as logger from "../utils/logger";
-import { Config } from "../config";
-import type { runTest } from "../worker";
-import type { Stats as RunnerStats } from "../stats";
-import EventEmitter from "events";
-import { Test } from "../types";
+} from "../events/index.js";
+import { Runner } from "./runner.js";
+import * as RuntimeConfig from "../config/runtime-config.js";
+import WorkersRegistry from "../utils/workers-registry.js";
+import PromiseGroup from "./promise-group.js";
+import { TestCollection } from "../test-collection.js";
+import * as logger from "../utils/logger.js";
+import { Config } from "../config/index.js";
+
+import type { runTest } from "../worker/index.js";
+import type { Stats as RunnerStats } from "../stats.js";
+import type { Test } from "../types/index.js";
 
 interface WorkerMethods {
     runTest: typeof runTest;

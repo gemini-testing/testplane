@@ -1,7 +1,7 @@
-const { TestObject } = require("./test-object");
-const _ = require("lodash");
+import _ from "lodash";
+import { TestObject } from "./test-object.js";
 
-class ConfigurableTestObject extends TestObject {
+export class ConfigurableTestObject extends TestObject {
     #data;
 
     constructor({ title, file, id }) {
@@ -98,7 +98,3 @@ class ConfigurableTestObject extends TestObject {
         return name in this.#data ? this.#data[name] : _.get(this.parent, name, defaultValue);
     }
 }
-
-module.exports = {
-    ConfigurableTestObject,
-};

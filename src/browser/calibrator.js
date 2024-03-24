@@ -1,5 +1,5 @@
 import path from "node:path";
-import fs from "fs";
+import fs from "node:fs";
 import Promise from "bluebird";
 import _ from "lodash";
 import looksSame from "looks-same";

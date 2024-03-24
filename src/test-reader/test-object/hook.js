@@ -1,6 +1,6 @@
-const { TestObject } = require("./test-object");
+import { TestObject } from "./test-object.js";
 
-class Hook extends TestObject {
+export class Hook extends TestObject {
     constructor({ title, fn }) {
         super({ title });
 
@@ -26,7 +26,3 @@ class Hook extends TestObject {
         return this.parent.browserId;
     }
 }
-
-module.exports = {
-    Hook,
-};

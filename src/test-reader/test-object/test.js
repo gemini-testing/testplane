@@ -1,6 +1,6 @@
-const { ConfigurableTestObject } = require("./configurable-test-object");
+import { ConfigurableTestObject } from "./configurable-test-object.js";
 
-class Test extends ConfigurableTestObject {
+export class Test extends ConfigurableTestObject {
     constructor({ title, file, id, fn }) {
         super({ title, file, id });
 
@@ -16,7 +16,3 @@ class Test extends ConfigurableTestObject {
         }).assign(this);
     }
 }
-
-module.exports = {
-    Test,
-};

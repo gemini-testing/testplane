@@ -1,4 +1,4 @@
-exports.parseCommaSeparatedValue = name => {
+export const parseCommaSeparatedValue = name => {
     const value = process.env[name];
 
     return value ? value.split(/, */) : [];

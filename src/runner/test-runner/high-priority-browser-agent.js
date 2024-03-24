@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = class HighPriorityBrowserAgent {
+export default class HighPriorityBrowserAgent {
     static create(...args) {
         return new this(...args);
     }
@@ -16,4 +14,4 @@ module.exports = class HighPriorityBrowserAgent {
     freeBrowser(...args) {
         return this._browserAgent.freeBrowser(...args);
     }
-};
+}

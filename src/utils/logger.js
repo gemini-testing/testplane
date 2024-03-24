@@ -1,6 +1,4 @@
-"use strict";
-
-const format = require("strftime");
+import format from "strftime";
 
 const withTimestampPrefix =
     logFnName =>
@@ -9,7 +7,7 @@ const withTimestampPrefix =
         console[logFnName](`[${timestamp}]`, ...args);
     };
 
-module.exports = {
+export default {
     log: withTimestampPrefix("log"),
     warn: withTimestampPrefix("warn"),
     error: withTimestampPrefix("error"),

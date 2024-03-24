@@ -1,14 +1,14 @@
-const path = require("path");
-const globExtra = require("glob-extra");
-const _ = require("lodash");
-const Promise = require("bluebird");
+import path from "node:path";
+import globExtra from "glob-extra";
+import _ from "lodash";
+import Promise from "bluebird";
 
-const SetCollection = require("./set-collection");
-const TestSet = require("./test-set");
+import SetCollection from "./set-collection.js";
+import TestSet from "./test-set.js";
 
 const FILE_EXTENSIONS = [".js", ".mjs"];
 
-module.exports = class SetsBuilder {
+export default class SetsBuilder {
     #sets;
     #filesToUse;
 
@@ -114,4 +114,4 @@ module.exports = class SetsBuilder {
     #hasFiles() {
         return _.some(this.#sets, set => !_.isEmpty(set.getFiles()));
     }
-};
+}

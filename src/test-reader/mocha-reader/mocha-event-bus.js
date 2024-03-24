@@ -1,5 +1,5 @@
-const { EventEmitter } = require("events");
-const Mocha = require("mocha");
+import { EventEmitter } from "node:events";
+import Mocha from "mocha";
 
 const {
     EVENT_FILE_PRE_REQUIRE,
@@ -12,7 +12,7 @@ const {
     EVENT_SUITE_ADD_HOOK_AFTER_EACH,
 } = Mocha.Suite.constants;
 
-class MochaEventBus extends EventEmitter {
+export class MochaEventBus extends EventEmitter {
     static events = Mocha.Suite.constants;
 
     static create(...args) {
@@ -46,7 +46,3 @@ class MochaEventBus extends EventEmitter {
         suite.on(event, cb);
     }
 }
-
-module.exports = {
-    MochaEventBus,
-};

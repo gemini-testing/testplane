@@ -1,13 +1,11 @@
-"use strict";
+import crypto from "node:crypto";
+import _ from "lodash";
+import { Runner } from "../runner.js";
+import logger from "../../utils/logger.js";
+import { MasterEvents } from "../../events/index.js";
+import AssertViewResults from "../../browser/commands/assert-view/assert-view-results.js";
 
-const crypto = require("crypto");
-const _ = require("lodash");
-const { Runner } = require("../runner");
-const logger = require("../../utils/logger");
-const { MasterEvents } = require("../../events");
-const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
-
-module.exports = class RegularTestRunner extends Runner {
+export default class RegularTestRunner extends Runner {
     constructor(test, browserAgent) {
         super();
 
@@ -115,4 +113,4 @@ module.exports = class RegularTestRunner extends Runner {
             logger.warn(`WARNING: can not release browser: ${error}`);
         }
     }
-};
+}

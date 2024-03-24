@@ -1,19 +1,20 @@
-const { EventEmitter } = require("events");
-const { InstructionsList, Instructions } = require("./build-instructions");
-const { SkipController } = require("./controllers/skip-controller");
-const { OnlyController } = require("./controllers/only-controller");
-const { ConfigController } = require("./controllers/config-controller");
-const browserVersionController = require("./controllers/browser-version-controller");
-const { TreeBuilder } = require("./tree-builder");
-const { readFiles } = require("./mocha-reader");
-const { TestReaderEvents } = require("../events");
-const { TestParserAPI } = require("./test-parser-api");
-const { MasterEvents } = require("../events");
-const _ = require("lodash");
-const clearRequire = require("clear-require");
-const path = require("path");
+import path from "node:path";
+import { EventEmitter } from "node:events";
+import _ from "lodash";
+import clearRequire from "clear-require";
 
-class TestParser extends EventEmitter {
+import { InstructionsList, Instructions } from "./build-instructions.js";
+import { SkipController } from "./controllers/skip-controller.js";
+import { OnlyController } from "./controllers/only-controller.js";
+import { ConfigController } from "./controllers/config-controller.js";
+import browserVersionController from "./controllers/browser-version-controller.js";
+import { TreeBuilder } from "./tree-builder.js";
+import { readFiles } from "./mocha-reader/index.js";
+import { TestReaderEvents } from "../events/index.js";
+import { TestParserAPI } from "./test-parser-api.js";
+import { MasterEvents } from "../events/index.js";
+
+export class TestParser extends EventEmitter {
     #buildInstructions;
 
     constructor() {
@@ -129,7 +130,3 @@ class TestParser extends EventEmitter {
         });
     }
 }
-
-module.exports = {
-    TestParser,
-};

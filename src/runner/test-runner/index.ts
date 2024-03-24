@@ -1,8 +1,8 @@
-import SkippedTestRunner from "./skipped-test-runner";
-import InsistantTestRunner from "./insistant-test-runner";
-import { Config } from "../../config";
-import type { Test } from "../../types";
-import type BrowserAgent from "../browser-agent";
+import SkippedTestRunner from "./skipped-test-runner.js";
+import InsistantTestRunner from "./insistant-test-runner.js";
+import { Config } from "../../config/index.js";
+import type { Test } from "../../types/index.js";
+import type BrowserAgent from "../browser-agent.js";
 
 export type TestRunner = SkippedTestRunner | InsistantTestRunner;
 
