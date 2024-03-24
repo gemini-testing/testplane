@@ -1,5 +1,5 @@
 import { AsyncEmitter } from "./events/async-emitter/index.js";
-import { log } from "./utils/logger.js";
+import logger from "./utils/logger.js";
 
 const signalHandler = new AsyncEmitter();
 
@@ -18,7 +18,7 @@ function notifyAndExit(signalNo) {
 
     return function () {
         if (callCount++ > 0) {
-            log("Force quit.");
+            logger.log("Force quit.");
             process.exit(exitCode);
         }
 

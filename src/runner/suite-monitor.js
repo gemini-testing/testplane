@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { MasterEvents } from "../events";
+import { MasterEvents } from "../events/index.js";
 
 export default class SuiteMonitor extends EventEmitter {
     static create() {

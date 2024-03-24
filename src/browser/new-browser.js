@@ -1,14 +1,14 @@
 import { URLSearchParams } from "node:url";
 import URI from "urijs";
 import _ from "lodash";
-import webdriverio from "webdriverio";
+import * as webdriverio from "webdriverio";
 
-import Browser from "./browser";
-import signalHandler from "../signal-handler";
-import history from "./history";
-import logger from "../utils/logger";
-import RuntimeConfig from "../config/runtime-config";
-import { DEVTOOLS_PROTOCOL } from "../constants/config";
+import Browser from "./browser.js";
+import signalHandler from "../signal-handler.js";
+import * as history from "./history/index.js";
+import logger from "../utils/logger.js";
+import * as RuntimeConfig from "../config/runtime-config.js";
+import { DEVTOOLS_PROTOCOL } from "../constants/config.js";
 
 const DEFAULT_PORT = 4444;
 

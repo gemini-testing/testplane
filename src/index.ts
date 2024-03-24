@@ -2,7 +2,7 @@
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../typings/global.d.ts" />
 // Augments browser and element methods
-import "./browser/types";
+import "./browser/types.js";
 // Declares global expect function
 import "expect-webdriverio";
 

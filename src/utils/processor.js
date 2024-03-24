@@ -21,7 +21,7 @@ process.on("unhandledRejection", (reason, p) => {
 
 export default async (module, methodName, args, cb) => {
     try {
-        const result = await require(module)[methodName](...args);
+        const result = (await import(module))[methodName](...args);
         cb(null, result);
     } catch (err) {
         sendError(err, cb);

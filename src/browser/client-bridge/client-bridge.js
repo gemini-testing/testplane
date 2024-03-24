@@ -1,7 +1,7 @@
 import Promise from "bluebird";
 import { ClientBridgeError } from "./error.js";
 
-module.exports = class ClientBridge {
+export default class ClientBridge {
     static create(browser, script) {
         return new ClientBridge(browser, script);
     }

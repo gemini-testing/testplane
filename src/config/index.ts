@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import * as _ from "lodash";
+import _ from "lodash";
 
 import { configPaths as defaultConfigPaths } from "./defaults.js";
 import { BrowserConfig } from "./browser-config.js";
@@ -16,6 +16,8 @@ export class Config {
 
     static read(configPath: string): unknown {
         try {
+            console.log('configPath:', configPath);
+
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const configModule = require(path.resolve(process.cwd(), configPath));
 
@@ -35,8 +37,12 @@ export class Config {
             options = Config.read(config) as ConfigInput;
         } else {
             for (const configPath of defaultConfigPaths) {
+                console.log('configPath:', configPath);
+
                 try {
                     const resolvedConfigPath = path.resolve(configPath);
+                    console.log('resolvedConfigPath:', resolvedConfigPath);
+
                     require(resolvedConfigPath);
                     this.configPath = resolvedConfigPath;
 

@@ -1,5 +1,5 @@
 import { Suite, Test, Hook } from "../test-object/index.js";
-import crypto from "../../utils/crypto.js";
+import * as crypto from "../../utils/crypto.js";
 
 export class TreeBuilderDecorator {
     #treeBuilder;

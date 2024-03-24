@@ -7,7 +7,7 @@ import { InstructionsList, Instructions } from "./build-instructions.js";
 import { SkipController } from "./controllers/skip-controller.js";
 import { OnlyController } from "./controllers/only-controller.js";
 import { ConfigController } from "./controllers/config-controller.js";
-import browserVersionController from "./controllers/browser-version-controller.js";
+import { mkProvider as mkBrowserVersionControllerProvider } from "./controllers/browser-version-controller.js";
 import { TreeBuilder } from "./tree-builder.js";
 import { readFiles } from "./mocha-reader/index.js";
 import { TestReaderEvents } from "../events/index.js";
@@ -30,7 +30,7 @@ export class TestParser extends EventEmitter {
         } = config;
 
         global.hermione = {
-            browser: browserVersionController.mkProvider(config.getBrowserIds(), eventBus),
+            browser: mkBrowserVersionControllerProvider.mkProvider(config.getBrowserIds(), eventBus),
             config: ConfigController.create(eventBus),
             ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),

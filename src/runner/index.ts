@@ -2,7 +2,7 @@ import EventEmitter from "node:events";
 import _ from "lodash";
 
 import * as eventsUtils from "../events/utils.js";
-import * as temp from "../temp.js";
+import temp from "../temp.js";
 import * as pool from "../browser-pool/index.js";
 import { BrowserRunner } from "./browser-runner.js";
 import {
@@ -18,7 +18,7 @@ import * as RuntimeConfig from "../config/runtime-config.js";
 import WorkersRegistry from "../utils/workers-registry.js";
 import PromiseGroup from "./promise-group.js";
 import { TestCollection } from "../test-collection.js";
-import * as logger from "../utils/logger.js";
+import logger from "../utils/logger.js";
 import { Config } from "../config/index.js";
 
 import type { runTest } from "../worker/index.js";

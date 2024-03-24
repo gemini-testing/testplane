@@ -144,7 +144,7 @@ export type ConfigInput = {
     prepareEnvironment?: () => void | null;
 };
 
-declare module "." {
+declare module "./index.js" {
     export interface Config extends CommonConfig {
         browsers: Record<string, BrowserConfig>;
         plugins: Record<string, Record<string, unknown>>;
@@ -153,7 +153,7 @@ declare module "." {
     }
 }
 
-declare module "./browser-config" {
+declare module "./browser-config.js" {
     export interface BrowserConfig extends CommonConfig {
         id: string;
     }

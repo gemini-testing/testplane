@@ -53,9 +53,10 @@ export class Hermione extends BaseHermione {
     async init(): Promise<void> {
         await this._init();
 
-        if (!global.expect) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (!(global as any).expect) {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const { setOptions } = require("expect-webdriverio");
+            const { setOptions } = await import("expect-webdriverio");
             setOptions(this._config.system.expectOpts);
         }
     }

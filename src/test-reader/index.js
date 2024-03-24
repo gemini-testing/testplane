@@ -5,6 +5,7 @@ import SetsBuilder from "./sets-builder/index.js";
 import { TestParser } from "./test-parser.js";
 import { MasterEvents } from "../events/index.js";
 import * as env from "../utils/env.js";
+import pkg from "../../package.json" assert { type: "json" };
 
 export default class TestReader extends EventEmitter {
     #config;
@@ -23,7 +24,7 @@ export default class TestReader extends EventEmitter {
         const { paths, browsers, ignore, sets, grep } = options;
 
         const { fileExtensions } = this.#config.system;
-        const setCollection = await SetsBuilder.create(this.#config.sets, { defaultDir: require("../../package").name })
+        const setCollection = await SetsBuilder.create(this.#config.sets, { defaultDir: pkg.name })
             .useFiles(paths)
             .useSets((sets || []).concat(env.parseCommaSeparatedValue("HERMIONE_SETS")))
             .useBrowsers(browsers)

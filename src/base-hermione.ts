@@ -35,6 +35,8 @@ export abstract class BaseHermione extends AsyncEmitter {
 
         tryToRegisterTsNode();
 
+        console.log('INSIDE BASE HERM, config:', config);
+
         this._config = Config.create(config);
         this._setLogLevel();
         this._loadPlugins();

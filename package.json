@@ -18,7 +18,7 @@
   },
   "scripts": {
     "build": "tsc && npm run copy-static",
-    "copy-static": "copyfiles 'src/browser/client-scripts/*' build",
+    "copy-static": "copyfiles 'src/browser/client-scripts/*' build/esm",
     "check-types": "tsc --project tsconfig.spec.json",
     "clean": "rimraf build/ *.tsbuildinfo",
     "lint": "eslint --cache . && prettier --check .",
@@ -48,7 +48,7 @@
     "test"
   ],
   "bin": {
-    "hermione": "./bin/hermione"
+    "hermione": "./bin/hermione.js"
   },
   "license": "MIT",
   "dependencies": {

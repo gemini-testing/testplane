@@ -7,6 +7,7 @@ import logger from "../../utils/logger.js";
 import type { Browser } from "../types.js";
 
 const REPL_LINE_EVENT = "line";
+// const chalk = chalkPkg.default ? chalkPkg.default : chalkPkg;
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
@@ -50,11 +51,11 @@ export default (browser: Browser): void => {
         }
 
         if (onReplMode) {
-            logger.warn(chalk.yellow("Hermione is already in REPL mode"));
+            logger.warn(chalk.default.yellow("Hermione is already in REPL mode"));
             return;
         }
 
-        logger.log(chalk.yellow("You have entered to REPL mode via terminal (test execution timeout is disabled)."));
+        logger.log(chalk.default.yellow("You have entered to REPL mode via terminal (test execution timeout is disabled)."));
 
         const currCwd = process.cwd();
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
