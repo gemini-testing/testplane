@@ -6,13 +6,13 @@ import "./browser/types";
 // Declares global expect function
 import "expect-webdriverio";
 
-import { GlobalHelper } from "./types";
-export { Hermione as default } from "./hermione";
+import { GlobalHelper } from "./types/index.js";
+export { Hermione as default } from "./hermione.js";
 
-export type { WdioBrowser, TestResult, Test, Suite, TestError, AssertViewOpts } from "./types";
-export type { Config } from "./config";
-export type { ConfigInput } from "./config/types";
-export type { TestCollection } from "./test-collection";
+export type { WdioBrowser, TestResult, Test, Suite, TestError, AssertViewOpts } from "./types/index.js";
+export type { Config } from "./config/index.js";
+export type { ConfigInput } from "./config/types.js";
+export type { TestCollection } from "./test-collection.js";
 
 declare global {
     const hermione: GlobalHelper;

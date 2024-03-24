@@ -1,6 +1,6 @@
 import _ from "lodash";
 import pluginsLoader from "plugins-loader";
-import { Config } from "./config";
+import { Config } from "./config/index.js";
 import {
     AsyncEmitter,
     InterceptedEvent,
@@ -9,13 +9,13 @@ import {
     Events,
     InterceptHandler,
     Interceptor,
-} from "./events";
-import Errors from "./errors";
-import { tryToRegisterTsNode } from "./utils/typescript";
-import * as packageJson from "../package.json";
-import { ConfigInput } from "./config/types";
+} from "./events/index.js";
+import Errors from "./errors.js";
+import { tryToRegisterTsNode } from "./utils/typescript.js";
+import pkg from "../package.json" assert { type: "json" };
+import type { ConfigInput } from "./config/types.js";
 
-const PREFIX = packageJson.name + "-";
+const PREFIX = pkg.name + "-";
 
 export abstract class BaseHermione extends AsyncEmitter {
     protected _interceptors: Interceptor[] = [];

@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = class BrowserAgent {
+export default class BrowserAgent {
     static create(opts) {
         return new this(opts);
     }
@@ -26,4 +24,4 @@ module.exports = class BrowserAgent {
     freeBrowser(browser) {
         this._pool.freeBrowser(browser);
     }
-};
+}

@@ -1,8 +1,8 @@
 import _ from "lodash";
-import { MasterEvents } from "./events";
-import { Hermione } from "./hermione";
+import { MasterEvents } from "./events/index.js";
+import { Hermione } from "./hermione.js";
 
-import type { Test } from "./types";
+import type { Test } from "./types/index.js";
 
 export interface StatsResult {
     total: number;

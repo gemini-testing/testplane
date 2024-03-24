@@ -1,15 +1,13 @@
 /* global document */
-"use strict";
+import _ from "lodash";
+import HookRunner from "./hook-runner.js";
+import ExecutionThread from "./execution-thread.js";
+import OneTimeScreenshooter from "./one-time-screenshooter.js";
+import { AssertViewError } from "../../../browser/commands/assert-view/errors/assert-view-error.js";
+import history from "../../../browser/history/index.js";
+import { SAVE_HISTORY_MODE } from "../../../constants/config.js";
 
-const _ = require("lodash");
-const HookRunner = require("./hook-runner");
-const ExecutionThread = require("./execution-thread");
-const OneTimeScreenshooter = require("./one-time-screenshooter");
-const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
-const history = require("../../../browser/history");
-const { SAVE_HISTORY_MODE } = require("../../../constants/config");
-
-module.exports = class TestRunner {
+export default class TestRunner {
     static create(...args) {
         return new this(...args);
     }
@@ -138,7 +136,7 @@ module.exports = class TestRunner {
             .move({ x: 0, y: 0 })
             .perform();
     }
-};
+}
 
 function isSessionBroken(error, { system: { patternsOnReject } }) {
     return error && patternsOnReject.some(p => new RegExp(p).test(error.message));

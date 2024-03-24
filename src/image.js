@@ -1,10 +1,8 @@
-"use strict";
+import Promise from "bluebird";
+import looksSame from "looks-same";
+import sharp from "sharp";
 
-const Promise = require("bluebird");
-const looksSame = require("looks-same");
-const sharp = require("sharp");
-
-module.exports = class Image {
+export default class Image {
     static create(buffer) {
         return new this(buffer);
     }
@@ -175,4 +173,4 @@ module.exports = class Image {
 
         return looksSame.createDiff(diffOptions);
     }
-};
+}

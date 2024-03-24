@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import type { Suite, RootSuite, Test } from "./types";
+import type { Suite, RootSuite, Test } from "./types/index.js";
 
 type TestDisabled = Test & { disabled: true };
 type TestsCallback<T> = (test: Test, browserId: string) => T;

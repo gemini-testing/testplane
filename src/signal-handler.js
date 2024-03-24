@@ -1,12 +1,11 @@
-"use strict";
+import { AsyncEmitter } from "./events/async-emitter/index.js";
+import { log } from "./utils/logger.js";
 
-const { AsyncEmitter } = require("./events/async-emitter");
-const { log } = require("./utils/logger");
 const signalHandler = new AsyncEmitter();
 
 signalHandler.setMaxListeners(0);
 
-module.exports = signalHandler;
+export default signalHandler;
 
 process.on("SIGHUP", notifyAndExit(1));
 process.on("SIGINT", notifyAndExit(2));

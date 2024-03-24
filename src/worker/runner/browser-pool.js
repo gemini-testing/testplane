@@ -1,11 +1,9 @@
-"use strict";
+import Browser from "../../browser/existing-browser.js";
+import Calibrator from "../../browser/calibrator.js";
+import { WorkerEvents } from "../../events/index.js";
+import ipc from "../../utils/ipc.js";
 
-const Browser = require("../../browser/existing-browser");
-const Calibrator = require("../../browser/calibrator");
-const { WorkerEvents } = require("../../events");
-const ipc = require("../../utils/ipc");
-
-module.exports = class BrowserPool {
+export default class BrowserPool {
     static create(config, emitter) {
         return new BrowserPool(config, emitter);
     }
@@ -47,4 +45,4 @@ module.exports = class BrowserPool {
 
         browser.quit();
     }
-};
+}

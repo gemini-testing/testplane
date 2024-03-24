@@ -1,8 +1,6 @@
-"use strict";
-
-const temp = require("temp");
-const path = require("path");
-const _ = require("lodash");
+import path from "node:path";
+import temp from "temp";
+import _ from "lodash";
 
 temp.track();
 
@@ -30,7 +28,8 @@ class Temp {
 }
 
 let tempInstance;
-module.exports = {
+
+export default {
     init: dir => {
         if (!tempInstance) {
             tempInstance = new Temp(dir);

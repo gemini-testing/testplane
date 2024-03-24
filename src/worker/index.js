@@ -1,10 +1,8 @@
-"use strict";
-
-const HermioneFacade = require("./hermione-facade");
+import HermioneFacade from "./hermione-facade.js";
 
 const hermioneFacade = HermioneFacade.create();
 hermioneFacade.init();
 
-exports.runTest = (fullTitle, options) => {
+export const runTest = (fullTitle, options) => {
     return hermioneFacade.runTest(fullTitle, options);
 };

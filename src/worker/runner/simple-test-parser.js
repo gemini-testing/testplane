@@ -1,11 +1,9 @@
-"use strict";
+import { EventEmitter } from "node:events";
+import { passthroughEvent } from "../../events/utils.js";
+import { TestParser } from "../../test-reader/test-parser.js";
+import { WorkerEvents } from "../../events/index.js";
 
-const { EventEmitter } = require("events");
-const { passthroughEvent } = require("../../events/utils");
-const { TestParser } = require("../../test-reader/test-parser");
-const { WorkerEvents } = require("../../events");
-
-module.exports = class SimpleTestParser extends EventEmitter {
+export default class SimpleTestParser extends EventEmitter {
     static create(...args) {
         return new this(...args);
     }
@@ -25,4 +23,4 @@ module.exports = class SimpleTestParser extends EventEmitter {
 
         return parser.parse([file], { browserId, config: this._config.forBrowser(browserId) });
     }
-};
+}

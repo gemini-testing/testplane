@@ -1,8 +1,8 @@
-import { passthroughEvent } from "../events/utils";
-import { WorkerEvents } from "../events";
-import Runner from "./runner";
-import { BaseHermione } from "../base-hermione";
-import { ImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
+import { passthroughEvent } from "../events/utils.js";
+import { WorkerEvents } from "../events/index.js";
+import Runner from "./runner/index.js";
+import { BaseHermione } from "../base-hermione.js";
+import { ImageInfo, WdioBrowser, WorkerEventHandler } from "../types/index.js";
 
 export interface WorkerRunTestOpts {
     browserId: string;

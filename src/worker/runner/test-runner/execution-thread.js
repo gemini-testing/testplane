@@ -1,10 +1,8 @@
-"use strict";
+import Promise from "bluebird";
+import * as RuntimeConfig from "../../../config/runtime-config.js";
+import logger from "../../../utils/logger.js";
 
-const Promise = require("bluebird");
-const RuntimeConfig = require("../../../config/runtime-config");
-const logger = require("../../../utils/logger");
-
-module.exports = class ExecutionThread {
+export default class ExecutionThread {
     static create(...args) {
         return new this(...args);
     }
@@ -74,4 +72,4 @@ module.exports = class ExecutionThread {
     _setExecutionContext(context) {
         Object.getPrototypeOf(this._ctx.browser).executionContext = context;
     }
-};
+}

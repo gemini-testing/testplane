@@ -1,12 +1,10 @@
-"use strict";
+import Promise from "bluebird";
 
-const Promise = require("bluebird");
+import Image from "../../../image.js";
+import ScreenShooter from "../../../browser/screen-shooter/index.js";
+import logger from "../../../utils/logger.js";
 
-const Image = require("../../../image");
-const ScreenShooter = require("../../../browser/screen-shooter");
-const logger = require("../../../utils/logger");
-
-module.exports = class OneTimeScreenshooter {
+export default class OneTimeScreenshooter {
     static create(...args) {
         return new this(...args);
     }
@@ -114,4 +112,4 @@ module.exports = class OneTimeScreenshooter {
     getScreenshot() {
         return this._screenshot;
     }
-};
+}

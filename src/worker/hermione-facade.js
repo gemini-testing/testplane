@@ -1,14 +1,15 @@
-"use strict";
+import Promise from "bluebird";
+import createDebug from "debug";
 
-const { Hermione } = require("./hermione");
-const RuntimeConfig = require("../config/runtime-config");
-const Promise = require("bluebird");
-const debug = require("debug")(`hermione:worker:${process.pid}`);
-const ipc = require("../utils/ipc");
-const { MASTER_INIT, MASTER_SYNC_CONFIG, WORKER_INIT, WORKER_SYNC_CONFIG } = require("../constants/process-messages");
-const { requireModule } = require("../utils/module");
+import { Hermione } from "./hermione.js";
+import * as RuntimeConfig from "../config/runtime-config.js";
+import ipc from "../utils/ipc.js";
+import { MASTER_INIT, MASTER_SYNC_CONFIG, WORKER_INIT, WORKER_SYNC_CONFIG } from "../constants/process-messages.js";
+import { requireModule } from "../utils/module.js";
 
-module.exports = class HermioneFacade {
+const debug = createDebug(`hermione:worker:${process.pid}`);
+
+export default class HermioneFacade {
     static create() {
         return new HermioneFacade();
     }
@@ -86,4 +87,4 @@ module.exports = class HermioneFacade {
             ipc.emit(WORKER_SYNC_CONFIG);
         });
     }
-};
+}

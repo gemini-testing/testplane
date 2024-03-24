@@ -1,8 +1,6 @@
-"use strict";
+import Promise from "bluebird";
 
-const Promise = require("bluebird");
-
-module.exports = class HookRunner {
+export default class HookRunner {
     static create(...args) {
         return new this(...args);
     }
@@ -72,7 +70,7 @@ module.exports = class HookRunner {
             throw error;
         }
     }
-};
+}
 
 function hasHooks(suite, hookType) {
     return suite && (suite[`${hookType}Hooks`].length || hasHooks(suite.parent, hookType));

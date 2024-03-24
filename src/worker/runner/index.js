@@ -1,14 +1,12 @@
-"use strict";
+import { AsyncEmitter } from "../../events/async-emitter/index.js";
+import { passthroughEvent } from "../../events/utils.js";
+import { WorkerEvents } from "../../events/index.js";
+import BrowserPool from "./browser-pool.js";
+import BrowserAgent from "./browser-agent.js";
+import TestRunner from "./test-runner/index.js";
+import CachingTestParser from "./caching-test-parser.js";
 
-const { AsyncEmitter } = require("../../events/async-emitter");
-const { passthroughEvent } = require("../../events/utils");
-const { WorkerEvents } = require("../../events");
-const BrowserPool = require("./browser-pool");
-const BrowserAgent = require("./browser-agent");
-const TestRunner = require("./test-runner");
-const CachingTestParser = require("./caching-test-parser");
-
-module.exports = class Runner extends AsyncEmitter {
+export default class Runner extends AsyncEmitter {
     static create(config) {
         return new Runner(config);
     }
@@ -35,4 +33,4 @@ module.exports = class Runner extends AsyncEmitter {
 
         return runner.run({ sessionId, sessionCaps, sessionOpts, state });
     }
-};
+}

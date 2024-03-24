@@ -1,12 +1,10 @@
-"use strict";
+import { EventEmitter } from "node:events";
+import { passthroughEvent } from "../../events/utils.js";
+import SequenceTestParser from "./sequence-test-parser.js";
+import { TestCollection } from "../../test-collection.js";
+import { WorkerEvents } from "../../events/index.js";
 
-const { EventEmitter } = require("events");
-const { passthroughEvent } = require("../../events/utils");
-const SequenceTestParser = require("./sequence-test-parser");
-const { TestCollection } = require("../../test-collection");
-const { WorkerEvents } = require("../../events");
-
-module.exports = class CachingTestParser extends EventEmitter {
+export default class CachingTestParser extends EventEmitter {
     static create(...args) {
         return new this(...args);
     }
@@ -45,4 +43,4 @@ module.exports = class CachingTestParser extends EventEmitter {
         this._cache[browserId] = this._cache[browserId] || {};
         this._cache[browserId][file] = testsPromise;
     }
-};
+}

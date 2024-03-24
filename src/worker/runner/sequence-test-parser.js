@@ -1,12 +1,11 @@
-"use strict";
+import { EventEmitter } from "node:events";
+import fastq from "fastq";
 
-const { EventEmitter } = require("events");
-const { passthroughEvent } = require("../../events/utils");
-const SimpleTestParser = require("./simple-test-parser");
-const { WorkerEvents } = require("../../events");
-const fastq = require("fastq");
+import { passthroughEvent } from "../../events/utils.js";
+import SimpleTestParser from "./simple-test-parser.js";
+import { WorkerEvents } from "../../events/index.js";
 
-module.exports = class SequenceTestParser extends EventEmitter {
+export default class SequenceTestParser extends EventEmitter {
     static create(...args) {
         return new this(...args);
     }
@@ -23,4 +22,4 @@ module.exports = class SequenceTestParser extends EventEmitter {
     async parse({ file, browserId }) {
         return this._queue.push(() => this._parser.parse({ file, browserId }));
     }
-};
+}

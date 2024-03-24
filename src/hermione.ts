@@ -1,19 +1,19 @@
 import { CommanderStatic } from "@gemini-testing/commander";
 import * as _ from "lodash";
-import { Stats as RunnerStats } from "./stats";
-import { BaseHermione } from "./base-hermione";
-import { MainRunner } from "./runner";
-import RuntimeConfig from "./config/runtime-config";
-import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
-import eventsUtils from "./events/utils";
-import signalHandler from "./signal-handler";
-import TestReader from "./test-reader";
-import { TestCollection } from "./test-collection";
-import { validateUnknownBrowsers } from "./validators";
-import { initReporters } from "./reporters";
-import logger from "./utils/logger";
-import { ConfigInput } from "./config/types";
-import { MasterEventHandler, Test } from "./types";
+import { Stats as RunnerStats } from "./stats.js";
+import { BaseHermione } from "./base-hermione.js";
+import { MainRunner } from "./runner/index.js";
+import * as RuntimeConfig from "./config/runtime-config.js";
+import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events/index.js";
+import * as eventsUtils from "./events/utils.js";
+import signalHandler from "./signal-handler.js";
+import TestReader from "./test-reader/index.js";
+import { TestCollection } from "./test-collection.js";
+import { validateUnknownBrowsers } from "./validators.js";
+import { initReporters } from "./reporters/index.js";
+import logger from "./utils/logger.js";
+import { ConfigInput } from "./config/types.js";
+import { MasterEventHandler, Test } from "./types/index.js";
 
 interface RunOpts {
     browsers: string[];
