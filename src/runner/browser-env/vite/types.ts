@@ -4,11 +4,13 @@ import type { BrowserMessage } from "./browser-modules/types";
 
 export interface BrowserTestRunEnvOptions {
     viteConfig?: string | InlineConfig | ((env: ConfigEnv) => InlineConfig | Promise<InlineConfig>);
+    preset?: "react"
 }
 
 export interface VitePluginOptions extends BrowserTestRunEnvOptions {
     modulePaths: {
         mocha: string;
+        webdriverio: string;
     };
 }
 

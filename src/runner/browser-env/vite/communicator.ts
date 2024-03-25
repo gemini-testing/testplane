@@ -24,11 +24,26 @@ export class BrowserWorkerCommunicator {
     }
 
     handleMessages(): void {
-        this.#viteWs.on("connection", ws => {
+        this.#viteWs.on("connection", (ws, req) => {
+            console.log('req.headers:', req.headers);
+
+            // console.log('NEW CONNECTION:', ws.url);
+
             ws.on("message", rawMsg => {
                 const msg = JSON.parse(rawMsg.toString()) as BrowserPayload | WorkerPayload;
 
+                console.log('msg:', msg);
+
                 if (isBrowserMessage(msg)) {
+                    console.log('ws.url:', ws.url);
+
+                    console.log('BEFORE ws._hermione:', (ws as WebSocket & {_hermione: Record<string, string>})._hermione);
+                    // console.log('WEBSOCKET FROM BROWSER:', ws);
+                    (ws as WebSocket & {_hermione: Record<string, string>})._hermione = {
+                        runUuid: msg.data.runUuid
+                    };
+                    console.log('AFTER ws._hermione:', (ws as WebSocket & {_hermione: Record<string, string>})._hermione);
+
                     this.#handleBrowserMessages(msg, ws);
                     return;
                 }

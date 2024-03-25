@@ -12,6 +12,7 @@ declare global {
             errors: BrowserError[];
         };
         hermione: typeof Proxy;
+        browser: WebdriverIO.Browser;
     }
 }
 

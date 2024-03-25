@@ -33,6 +33,27 @@ const proxyHermione = (): void => {
     window.hermione = new Proxy(window.hermione || {}, proxyHandler);
 };
 
+// const proxyBrowser = (): void => {
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//     const proxyHandler: ProxyHandler<any> = {
+//         get(target, prop, receiver) {
+//             console.log('get target:', target);
+//             console.log('get prop:', prop);
+//             console.log('get receiver:', receiver);
+
+//             return prop in target ? target[prop] : new Proxy(() => {}, this);
+//         },
+//         apply(target, thisArg, args) {
+//             console.log('apply target:', target);
+//             console.log('apply thisArg:', thisArg);
+//             console.log('apply args:', args);
+//             return new Proxy(() => {}, this);
+//         },
+//     };
+
+//     window.browser = new Proxy(window.browser || {}, proxyHandler);
+// };
+
 const subscribeOnBrowserErrors = (): void => {
     addEventListener("error", e =>
         window.__hermione__.errors.push(
@@ -73,3 +94,15 @@ window.__hermione__ = {
 proxyHermione();
 subscribeOnBrowserErrors();
 mockBlockingDialogs();
+
+
+window.process = window.process || {
+    platform: 'browser',
+    env: {},
+    stdout: {},
+    stderr: {},
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    cwd: () => {
+        return "";
+    }
+}

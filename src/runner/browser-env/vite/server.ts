@@ -31,15 +31,29 @@ export class ViteServer {
         this.#viteConfig = {
             server: { host: "localhost" },
             configFile: false,
-            logLevel: "silent",
+            // logLevel: "silent",
             build: {
                 sourcemap: "inline",
+                commonjsOptions: {
+                    include: [/node_modules/],
+                }
             },
             optimizeDeps: {
-                esbuildOptions: {
-                    logLevel: "silent",
-                },
-            },
+                include: [
+                    // 'ws',
+                    'expect', 'minimatch', 'css-shorthand-properties', 'lodash.merge', 'lodash.zip', 'ws',
+                    'lodash.clonedeep', 'lodash.pickby', 'lodash.flattendeep', 'aria-query', 'grapheme-splitter',
+                    'css-value', 'rgb2hex', 'p-iteration', 'deepmerge-ts', 'jest-util', 'jest-matcher-utils', 'split2',
+                    // ------
+                    // '@wdio/protocols',
+                    // 'proxy-agent', 'url', 'debug', 'unbzip2-stream', 'extract-zip', 'util', '@puppeteer/browsers', 'archiver'
+                ],
+            }
+            // optimizeDeps: {
+            //     esbuildOptions: {
+            //         logLevel: "silent",
+            //     },
+            // },
         };
 
         this.#options = _.isArray(this.#hermioneConfig.system.testRunEnv)
@@ -48,6 +62,42 @@ export class ViteServer {
     }
 
     async start(): Promise<void> {
+        if (this.#options?.preset) {
+            const pkg = '@vitejs/plugin-react';
+
+            // try {
+            //     return await import(pkg)
+            // } catch (err: any) {
+            //     throw new Error(
+            //         `Couldn't load preset "${preset}" given important dependency ("${pkg}") is not installed.\n` +
+            //         `Please run:\n\n\tnpm install ${pkg}\n\tor\n\tyarn add --dev ${pkg}`
+            //     )
+            // }
+            const plugin = (await import(pkg)).default;
+            console.log('plugin:', plugin);
+
+            if (plugin) {
+                this.#viteConfig.plugins = [plugin()];
+
+                // this.#viteConfig.plugins = [plugin({
+                //     babel: {
+                //         assumptions: {
+                //             setPublicClassFields: true
+                //         },
+                //         parserOpts: {
+                //             plugins: ['decorators-legacy', 'classProperties']
+                //         }
+                //     }
+                // })];
+            }
+
+            // const [pkg, importProp, opts] = PRESET_DEPENDENCIES[this.#options.preset] || []
+            // const plugin = (await userfriendlyImport(this.#options.preset, pkg))[importProp || 'default']
+            // if (plugin) {
+            //     this.#viteConfig.plugins!.push(plugin(opts))
+            // }
+        }
+
         await this.#applyUserViteConfig();
         await this.#addRequiredVitePlugins();
 
@@ -91,9 +141,18 @@ export class ViteServer {
             moduleName: "mocha",
             parent: path.join("node_modules", "hermione", "node_modules"),
         });
+        const webdriverioPath = await getNodeModulePath({
+            moduleName: "webdriverio",
+            parent: path.join("node_modules", "hermione", "node_modules"),
+        });
+        console.log('webdriverioPath:', webdriverioPath);
+
         const modulePaths = {
             mocha: path.join(url.fileURLToPath(path.dirname(mochaPath)), "mocha.js"),
+            webdriverio: path.join(url.fileURLToPath(webdriverioPath)),
         };
+
+        console.log('modulePaths:', modulePaths);
 
         this.#viteConfig.plugins = [
             ...(this.#viteConfig.plugins || []),

@@ -144,7 +144,7 @@ module.exports = class ExistingBrowser extends Browser {
         }, params);
     }
 
-    _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
+    async _attachSession({ sessionId, sessionCaps, sessionOpts = {} }) {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps,
             requestedCapabilities: sessionOpts.capabilities,

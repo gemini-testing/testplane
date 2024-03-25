@@ -78,7 +78,7 @@ export interface SystemConfig {
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
-    desiredCapabilities: WebDriver.DesiredCapabilities | null;
+    desiredCapabilities: WebdriverIO.Capabilities | null;
     gridUrl: string;
     baseUrl: string;
     sessionsPerBrowser: number;
