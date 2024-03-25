@@ -22,7 +22,7 @@ declare global {
     namespace WebdriverIO {
         type OverwriteCommandFn<IsElement extends boolean = false> = (
             this: IsElement extends true ? WebdriverIO.Element : WebdriverIO.Browser,
-            origCommand: (...args: any[]) => Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+            origCommand: (...args: any[]) => any, // eslint-disable-line @typescript-eslint/no-explicit-any
             ...args: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
         ) => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
