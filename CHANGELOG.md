@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.6.0](https://github.com/gemini-testing/hermione/compare/v8.5.2...v8.6.0) (2024-03-26)
+
+
+### Features
+
+* export Key from webdriverio ([57e345e](https://github.com/gemini-testing/hermione/commit/57e345e006ab8318bd733ec0ea6c99a17baade4e))
+
 ### [8.5.2](https://github.com/gemini-testing/hermione/compare/v8.5.1...v8.5.2) (2024-03-26)
 
 
