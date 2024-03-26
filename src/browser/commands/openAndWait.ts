@@ -26,6 +26,7 @@ const is: Record<string, (match: Matches) => boolean> = {
 
 const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Browser) =>
     function openAndWait(
+        this: WebdriverIO.Browser,
         uri: string,
         {
             selector = [],

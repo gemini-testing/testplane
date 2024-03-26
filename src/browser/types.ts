@@ -1,3 +1,4 @@
+import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
 import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
@@ -17,29 +18,44 @@ export interface Browser {
     applyState: (state: Record<string, unknown>) => void;
 }
 
+type FunctionProperties<T> = Exclude<
+    {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+    }[keyof T],
+    undefined
+>;
+
+type EventEmitterMethod = FunctionProperties<EventEmitter>;
+
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace WebdriverIO {
-        type OverwriteCommandFn<IsElement extends boolean = false> = (
-            this: IsElement extends true ? WebdriverIO.Element : WebdriverIO.Browser,
-            origCommand: (...args: any[]) => Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...args: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
-        ) => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+        type BrowserCommand = Exclude<FunctionProperties<WebdriverIO.Browser>, EventEmitterMethod>;
+        type ElementCommand = Exclude<FunctionProperties<WebdriverIO.Element>, EventEmitterMethod>;
 
         interface Browser {
-            getMeta(): Promise<BrowserMeta>;
-            getMeta(key: string): Promise<unknown>;
+            getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
+            getMeta(this: WebdriverIO.Browser, key: string): Promise<unknown>;
 
-            setMeta(key: string, value: unknown): Promise<void>;
+            setMeta(this: WebdriverIO.Browser, key: string, value: unknown): Promise<void>;
 
-            extendOptions(opts: { [name: string]: unknown }): Promise<void>;
+            extendOptions(this: WebdriverIO.Browser, opts: { [name: string]: unknown }): Promise<void>;
 
-            getConfig(): Promise<BrowserConfig>;
+            getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
-            overwriteCommand<IsElement extends boolean = false>(
-                name: string,
-                func: OverwriteCommandFn<IsElement>,
-                attachToElement?: IsElement,
+            overwriteCommand<CommandName extends BrowserCommand>(
+                name: CommandName,
+                func: WebdriverIO.Browser[CommandName],
+                attachToElement?: false,
+                proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+                instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
+            ): void;
+
+            overwriteCommand<CommandName extends ElementCommand>(
+                name: CommandName,
+                func: WebdriverIO.Element[CommandName],
+                attachToElement: true,
                 proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
                 instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
             ): void;
@@ -96,7 +112,7 @@ declare global {
              * @param stepCb step callback
              * @returns {Promise<T>} value, returned by `stepCb`
              */
-            runStep<T = unknown>(stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
+            runStep<T = unknown>(this: WebdriverIO.Browser, stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
 
             // TODO: describe executionContext more precisely
             executionContext: (RunnerTest | RunnerHook) & {
@@ -111,9 +127,9 @@ declare global {
 
             openAndWait: OpenAndWaitCommand;
 
-            switchToRepl: (ctx?: Record<string, unknown>) => Promise<void>;
+            switchToRepl: (this: WebdriverIO.Browser, ctx?: Record<string, unknown>) => Promise<void>;
 
-            clearSession: () => Promise<void>;
+            clearSession: (this: WebdriverIO.Browser) => Promise<void>;
         }
 
         interface Element {
