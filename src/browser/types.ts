@@ -27,14 +27,14 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace WebdriverIO {
         interface Browser {
-            getMeta(): Promise<BrowserMeta>;
-            getMeta(key: string): Promise<unknown>;
+            getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
+            getMeta(this: WebdriverIO.Browser, key: string): Promise<unknown>;
 
-            setMeta(key: string, value: unknown): Promise<void>;
+            setMeta(this: WebdriverIO.Browser, key: string, value: unknown): Promise<void>;
 
-            extendOptions(opts: { [name: string]: unknown }): Promise<void>;
+            extendOptions(this: WebdriverIO.Browser, opts: { [name: string]: unknown }): Promise<void>;
 
-            getConfig(): Promise<BrowserConfig>;
+            getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
             overwriteCommand<CommandName extends FunctionProperties<WebdriverIO.Browser>>(
                 name: CommandName,
@@ -104,7 +104,7 @@ declare global {
              * @param stepCb step callback
              * @returns {Promise<T>} value, returned by `stepCb`
              */
-            runStep<T = unknown>(stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
+            runStep<T = unknown>(this: WebdriverIO.Browser, stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
 
             // TODO: describe executionContext more precisely
             executionContext: (RunnerTest | RunnerHook) & {
@@ -119,9 +119,9 @@ declare global {
 
             openAndWait: OpenAndWaitCommand;
 
-            switchToRepl: (ctx?: Record<string, unknown>) => Promise<void>;
+            switchToRepl: (this: WebdriverIO.Browser, ctx?: Record<string, unknown>) => Promise<void>;
 
-            clearSession: () => Promise<void>;
+            clearSession: (this: WebdriverIO.Browser) => Promise<void>;
         }
 
         interface Element {

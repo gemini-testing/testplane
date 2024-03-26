@@ -81,5 +81,14 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     ignoreDiffPixelCount?: `${number}%` | number;
 }
 
-export type AssertViewCommand = (state: string, selectors: string | string[], opts?: AssertViewOpts) => Promise<void>;
-export type AssertViewElementCommand = (state: string, opts?: AssertViewOpts) => Promise<void>;
+export type AssertViewCommand = (
+    this: WebdriverIO.Browser,
+    state: string,
+    selectors: string | string[],
+    opts?: AssertViewOpts,
+) => Promise<void>;
+export type AssertViewElementCommand = (
+    this: WebdriverIO.Element,
+    state: string,
+    opts?: AssertViewOpts,
+) => Promise<void>;

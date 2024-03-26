@@ -6,7 +6,7 @@ type MoveToOptions = {
 };
 
 // As of now, we can't export type of the command function directly. See: https://github.com/webdriverio/webdriverio/issues/12527
-export type MoveCursorToCommand = (options: MoveToOptions) => Promise<void>;
+export type MoveCursorToCommand = (this: WebdriverIO.Element, options: MoveToOptions) => Promise<void>;
 
 const makeMoveCursorToCommand = (session: WebdriverIO.Browser) =>
     async function (this: WebdriverIO.Element, { xOffset = 0, yOffset = 0 }: MoveToOptions = {}): Promise<void> {
