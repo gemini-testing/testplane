@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.5.2](https://github.com/gemini-testing/hermione/compare/v8.5.1...v8.5.2) (2024-03-26)
+
+
+### Bug Fixes
+
+* type-safe overwriteCommand ([#885](https://github.com/gemini-testing/hermione/issues/885)) ([b10d17b](https://github.com/gemini-testing/hermione/commit/b10d17ba1ac0ca68354e990b4e2049d28b6da8e4))
+
 ### [8.5.1](https://github.com/gemini-testing/hermione/compare/v8.5.0...v8.5.1) (2024-03-20)
 
 
