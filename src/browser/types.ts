@@ -17,15 +17,15 @@ export interface Browser {
     applyState: (state: Record<string, unknown>) => void;
 }
 
+type FunctionProperties<T> = keyof T &
+    {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+    }[keyof T];
+
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace WebdriverIO {
-        type OverwriteCommandFn<IsElement extends boolean = false> = (
-            this: IsElement extends true ? WebdriverIO.Element : WebdriverIO.Browser,
-            origCommand: (...args: any[]) => Promise<any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-            ...args: any[] // eslint-disable-line @typescript-eslint/no-explicit-any
-        ) => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-
         interface Browser {
             getMeta(): Promise<BrowserMeta>;
             getMeta(key: string): Promise<unknown>;
@@ -36,10 +36,18 @@ declare global {
 
             getConfig(): Promise<BrowserConfig>;
 
-            overwriteCommand<IsElement extends boolean = false>(
-                name: string,
-                func: OverwriteCommandFn<IsElement>,
-                attachToElement?: IsElement,
+            overwriteCommand<CommandName extends FunctionProperties<WebdriverIO.Browser>>(
+                name: CommandName,
+                func: WebdriverIO.Browser[CommandName],
+                attachToElement?: false,
+                proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
+                instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
+            ): void;
+
+            overwriteCommand<CommandName extends FunctionProperties<WebdriverIO.Element>>(
+                name: CommandName,
+                func: WebdriverIO.Element[CommandName],
+                attachToElement: true,
                 proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
                 instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
             ): void;
