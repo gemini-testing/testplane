@@ -1,3 +1,4 @@
+import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
 import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
@@ -17,15 +18,22 @@ export interface Browser {
     applyState: (state: Record<string, unknown>) => void;
 }
 
-type FunctionProperties<T> = keyof T &
+type FunctionProperties<T> = Exclude<
     {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
-    }[keyof T];
+    }[keyof T],
+    undefined
+>;
+
+type EventEmitterMethod = FunctionProperties<EventEmitter>;
 
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace WebdriverIO {
+        type BrowserCommand = Exclude<FunctionProperties<WebdriverIO.Browser>, EventEmitterMethod>;
+        type ElementCommand = Exclude<FunctionProperties<WebdriverIO.Element>, EventEmitterMethod>;
+
         interface Browser {
             getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
             getMeta(this: WebdriverIO.Browser, key: string): Promise<unknown>;
@@ -36,7 +44,7 @@ declare global {
 
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
-            overwriteCommand<CommandName extends FunctionProperties<WebdriverIO.Browser>>(
+            overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,
                 func: WebdriverIO.Browser[CommandName],
                 attachToElement?: false,
@@ -44,7 +52,7 @@ declare global {
                 instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
             ): void;
 
-            overwriteCommand<CommandName extends FunctionProperties<WebdriverIO.Element>>(
+            overwriteCommand<CommandName extends ElementCommand>(
                 name: CommandName,
                 func: WebdriverIO.Element[CommandName],
                 attachToElement: true,
