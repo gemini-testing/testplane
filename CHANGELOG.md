@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.7.0](https://github.com/gemini-testing/hermione/compare/v8.6.0...v8.7.0) (2024-03-27)
+
+
+### Features
+
+* add ability to extend hermione.ctx typings ([540893c](https://github.com/gemini-testing/hermione/commit/540893cd3cdadcdd25cfc4d2a0b6a114a77cc164))
+
 ## [8.6.0](https://github.com/gemini-testing/hermione/compare/v8.5.2...v8.6.0) (2024-03-26)
 
 
