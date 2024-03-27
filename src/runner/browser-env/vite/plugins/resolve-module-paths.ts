@@ -43,7 +43,7 @@ const resolvedVirtualModuleId = '\0' + virtualModuleId;
 const MODULES_TO_MOCK = [
     'import-meta-resolve', 'puppeteer-core', 'archiver', 'glob', 'devtools', 'decamelize', 'got',
     'geckodriver', 'safaridriver', 'edgedriver', '@puppeteer/browsers', 'locate-app', 'wait-port',
-    'lodash.isequal', '@wdio/repl'
+    'lodash.isequal', '@wdio/repl',
 ];
 
 const POLYFILLS = [
@@ -59,6 +59,7 @@ export const plugin = (options: VitePluginOptions): Plugin[] => {
     const globalsModulePath = path.resolve(browserModulesPath, "globals.js");
 
     const mockModulePath = path.resolve(browserModulesPath, 'mock.js');
+    const expectModulePath = path.resolve(browserModulesPath, 'expect.js');
 
     const automationProtocolPath = `/@fs${url.pathToFileURL(path.resolve(browserModulesPath, 'driver.js')).pathname}`;
 
@@ -90,6 +91,10 @@ export const plugin = (options: VitePluginOptions): Plugin[] => {
 
                 if (id === "webdriverio") {
                     return options.modulePaths.webdriverio;
+                }
+
+                if (id === "expect-webdriverio") {
+                    return expectModulePath;
                 }
 
                 if (MODULES_TO_MOCK.includes(id)) {

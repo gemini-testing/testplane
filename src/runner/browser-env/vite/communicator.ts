@@ -1,9 +1,13 @@
+import _ from "lodash";
 import logger from "../../../utils/logger";
 import { isBrowserMessage, isWorkerMessage } from "./utils";
-import { WorkerEventNames } from "../../../worker/browser-env/types";
-import { BrowserEventNames, type BrowserPayload } from "./types";
+import { WORKER_ENV_BY_RUN_UUID, HERMIONE_BROWSER_EVENT_SUFFIX } from "./constants";
+import { HERMIONE_WORKER_EVENT_SUFFIX } from "../../../worker/browser-env/constants";
+
 import type { WebSocketServer, WebSocket } from "vite";
-import type { WorkerPayload, WorkerRunRunnablePayload } from "../../../worker/browser-env/types";
+import { WorkerEventNames, type WorkerPayload } from "../../../worker/browser-env/types";
+import { BrowserEventNames, type BrowserPayload } from "./types";
+import type { WorkerInitMessage } from "./browser-modules/types";
 
 export class BrowserWorkerCommunicator {
     #viteWs: WebSocketServer;
@@ -24,11 +28,7 @@ export class BrowserWorkerCommunicator {
     }
 
     handleMessages(): void {
-        this.#viteWs.on("connection", (ws, req) => {
-            console.log('req.headers:', req.headers);
-
-            // console.log('NEW CONNECTION:', ws.url);
-
+        this.#viteWs.on("connection", (ws) => {
             ws.on("message", rawMsg => {
                 const msg = JSON.parse(rawMsg.toString()) as BrowserPayload | WorkerPayload;
 
@@ -62,7 +62,7 @@ export class BrowserWorkerCommunicator {
             return;
         }
 
-        if (msg.event === BrowserEventNames.runnableResult) {
+        if (msg.event?.startsWith(HERMIONE_BROWSER_EVENT_SUFFIX)) {
             this.#sendMsgToWorker(msg);
             return;
         }
@@ -70,11 +70,13 @@ export class BrowserWorkerCommunicator {
 
     #handleWorkerMessages(msg: WorkerPayload, ws: WebSocket): void {
         if (msg.event === WorkerEventNames.init) {
+            WORKER_ENV_BY_RUN_UUID.set(msg.data.runUuid, msg.data as WorkerInitMessage);
             this.#registerWorkerWsConnection(msg.data.pid, ws);
+
             return;
         }
 
-        if (msg.event === WorkerEventNames.runRunnable) {
+        if (msg.event?.startsWith(HERMIONE_WORKER_EVENT_SUFFIX)) {
             this.#sendMsgToBrowser(msg);
             return;
         }
@@ -108,7 +110,7 @@ export class BrowserWorkerCommunicator {
         wsConnection.send(JSON.stringify(msg));
     }
 
-    #sendMsgToBrowser(msg: WorkerRunRunnablePayload): void {
+    #sendMsgToBrowser(msg: WorkerPayload): void {
         const wsConnection = this.#browserWsByRunUuid.get(msg.data.runUuid);
 
         if (!wsConnection) {

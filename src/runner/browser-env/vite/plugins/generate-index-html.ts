@@ -1,7 +1,8 @@
 import url from "node:url";
 import createDebug from "debug";
-import { MODULE_NAMES } from "../constants";
+import { MODULE_NAMES, WORKER_ENV_BY_RUN_UUID } from "../constants";
 import logger from "../../../../utils/logger";
+import type { WorkerInitMessage } from "../browser-modules/types"
 
 import type { Plugin } from "vite";
 
@@ -21,8 +22,21 @@ export const plugin = (): Plugin[] => {
                             return next();
                         }
 
+                        const urlParsed = url.parse(req.originalUrl);
+                        const urlParamString = new URLSearchParams(urlParsed.query || "");
+
                         try {
-                            const template = generateTemplate(req.originalUrl);
+                            const runUuid = urlParamString.get("runUuid");
+                            if (!runUuid) {
+                                throw new Error(`query parameter "runUuid" is not specified in url: ${req.originalUrl}`);
+                            }
+
+                            const env = WORKER_ENV_BY_RUN_UUID.get(runUuid);
+                            if (!env) {
+                                throw new Error(`worker environment is not found by runUuid=${runUuid}`)
+                            }
+
+                            const template = generateTemplate(env);
                             res.end(await server.transformIndexHtml(`${req.originalUrl}`, template));
                         } catch (err) {
                             const template = generateErrorTemplate(err as Error);
@@ -38,21 +52,17 @@ export const plugin = (): Plugin[] => {
     ];
 };
 
-function generateTemplate(reqUrl: string): string {
-    const urlParsed = url.parse(reqUrl);
-    const urlParamString = new URLSearchParams(urlParsed.query || "");
-
-    const pid = urlParamString.get("pid");
-    const file = urlParamString.get("file");
-    const runUuid = urlParamString.get("runUuid");
-    const cmdUuid = urlParamString.get("cmdUuid");
-
+function generateTemplate(env: WorkerInitMessage): string {
     return `
 <!DOCTYPE html>
 <html>
     <head>
         <title>Hermione Browser Test</title>
-        <script type="module" src="${MODULE_NAMES.globals}" pid="${pid}" file="${file}" runUuid="${runUuid}" cmdUuid="${cmdUuid}"></script>
+        <script>var exports = {};</script>
+        <script type="module">
+            window.__hermione__ = ${JSON.stringify(env)};
+        </script>
+        <script type="module" src="${MODULE_NAMES.globals}"></script>
         <script type="module" src="${MODULE_NAMES.mocha}"></script>
         <script type="module" src="${MODULE_NAMES.browserRunner}"></script>
     </head>

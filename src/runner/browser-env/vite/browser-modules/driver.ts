@@ -2,6 +2,7 @@
 import { webdriverMonad, sessionEnvironmentDetector } from '@wdio/utils';
 // import { webdriverMonad } from '@wdio/utils';
 import { getEnvironmentVars } from 'webdriver';
+import { BrowserEventNames, WorkerEventNames, type WorkerCommandResultMessage } from "./types.js";
 
 // console.log('webdriverMonad:', webdriverMonad);
 // console.log('sessionEnvironmentDetector:', sessionEnvironmentDetector);
@@ -12,7 +13,7 @@ import { getEnvironmentVars } from 'webdriver';
 // import { getCID, sanitizeConsoleArgs } from './utils.js'
 // import { WDIO_EVENT_NAME } from '../constants.js'
 
-// const COMMAND_TIMEOUT = 30 * 1000 // 30s
+const COMMAND_TIMEOUT = 30 * 1000; // 30s
 // const CONSOLE_METHODS = ['log', 'info', 'warn', 'error', 'debug'] as const
 // interface CommandMessagePromise {
 //     resolve: (value: unknown) => void
@@ -53,7 +54,19 @@ const protocolCommandList = Object.values(commands).map(
 console.log('protocolCommandList:', protocolCommandList);
 console.log('commands:', commands);
 
+interface CommandMessagePromise {
+    resolve: (value: unknown) => void
+    reject: (err: Error) => void
+    commandTimeout?: NodeJS.Timeout
+}
+
 export default class ProxyDriver {
+    static #communicator = window.__hermione__.communicator;
+    static #cmdResultMessages = new Map<string, CommandMessagePromise>();
+
+    constructor(...args: unknown[]) {
+        console.log('DRIVER args:', args);
+    }
     // static #commandMessages = new Map<number, CommandMessagePromise>()
 
     // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -68,6 +81,12 @@ export default class ProxyDriver {
         console.log('modifier:', modifier);
         console.log('userPrototype:', userPrototype);
         console.log('commandWrapper:', commandWrapper);
+
+        this.#communicator.subscribeOnMessage<WorkerEventNames.commandResult>(
+            WorkerEventNames.commandResult,
+            this.#handleCommandResultMessage.bind(this)
+        );
+
 
         // const cid = getCID()
         // if (!cid) {
@@ -87,11 +106,12 @@ export default class ProxyDriver {
         //     type: MESSAGE_TYPES.initiateBrowserStateRequest,
         //     value: { cid }
         // })
+        const { capabilities, requestedCapabilities } = window.__hermione__;
 
-        const environment = sessionEnvironmentDetector({ capabilities: params.capabilities, requestedCapabilities: {} });
+        const environment = sessionEnvironmentDetector({ capabilities, requestedCapabilities: requestedCapabilities as WebdriverIO.Capabilities });
         const environmentPrototype: Record<string, PropertyDescriptor> = getEnvironmentVars(environment);
         // // have debug command
-        const commandsProcessedInNodeWorld = [...protocolCommandList, 'debug', 'saveScreenshot', 'savePDF']
+        const commandsProcessedInNodeWorld = [...protocolCommandList, 'debug', 'saveScreenshot', 'savePDF', ...window.__hermione__.customCommands];
         const protocolCommands = commandsProcessedInNodeWorld.reduce((prev, commandName) => {
             prev[commandName] = {
                 value: this.#getMockedCommand(commandName)
@@ -133,9 +153,8 @@ export default class ProxyDriver {
 
     static #getMockedCommand(commandName: string) {
         // const isDebugCommand = commandName === 'debug'
-        return async (...args: unknown[]): Promise<void> => {
+        return async (...args: unknown[]): Promise<unknown> => {
             console.log(`call command: ${commandName} with args: ${args}`);
-
 
             // if (!import.meta.hot) {
             //     throw new Error('Could not connect to testrunner')
@@ -155,28 +174,83 @@ export default class ProxyDriver {
             //     mochaFramework.setAttribute('style', 'display: none')
             // }
 
+            const cmdUuid = crypto.randomUUID();
+
+            this.#communicator.sendMessage(BrowserEventNames.runCommand, {
+                cmdUuid,
+                command: {
+                    name: commandName,
+                    args
+                }
+            });
+
+            // try {
+                // TODO: should use httpTimeout and urlHttpTimeout
+            // const {result, error} = await communicator.waitMessage<WorkerEventNames.commandResult>({cmdUuid});
+            // console.log('browser get result:', result);
+            // console.log('browser get error:', error);
+
+            // if (!error) {
+            //     return result;
+            // } else {
+            //     throw error;
+            // }
+
+            // } catch (error) {
+            // }
+
+
             // import.meta.hot.send(WDIO_EVENT_NAME, this.#commandRequest({
             //     commandName,
             //     cid,
             //     id,
             //     args
             // }))
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve();
-                }, 1000);
 
-                // let commandTimeout
+            return new Promise((resolve, reject) => {
+                // setTimeout(() => {
+                //     resolve();
+                // }, 1000);
+
+                // TODO: should not specify timeout for `debug` or `switchToRepl` command ???
+
+                // let commandTimeout;
                 // if (!isDebugCommand) {
-                //     commandTimeout = setTimeout(
-                //         () => reject(new Error(`Command "${commandName}" timed out`)),
-                //         COMMAND_TIMEOUT
-                //     )
+                const commandTimeout = setTimeout(
+                    () => reject(new Error(`Command "${commandName}" timed out`)),
+                    COMMAND_TIMEOUT
+                )
                 // }
 
-                // this.#commandMessages.set(id, { resolve, reject, commandTimeout, commandName })
+                this.#cmdResultMessages.set(cmdUuid, { resolve, reject, commandTimeout })
             })
         }
+    }
+
+    static async #handleCommandResultMessage(msg: WorkerCommandResultMessage) {
+        console.log("browser got cmd result response:", msg);
+
+        if (!msg.cmdUuid) {
+            return console.error(`Got message from worker without cmdUuid: ${JSON.stringify(msg)}`);
+        }
+
+        const cmdMessage = this.#cmdResultMessages.get(msg.cmdUuid);
+        if (!cmdMessage) {
+            return console.error(`Command with cmdUuid "${msg.cmdUuid}" does not found`);
+        }
+
+        const { result, error } = msg;
+
+        if (error) {
+            return cmdMessage.reject(error);
+        }
+
+        if (cmdMessage.commandTimeout) {
+            clearTimeout(cmdMessage.commandTimeout);
+        }
+
+        cmdMessage.resolve(result);
+        this.#cmdResultMessages.delete(msg.cmdUuid);
     }
 
     // static #handleServerMessage (payload: Workers.SocketMessage) {

@@ -4,6 +4,7 @@ import { createServer } from "vite";
 import _ from "lodash";
 import getPort from "get-port";
 import chalk from "chalk";
+// import commonjs from 'vite-plugin-commonjs';
 
 import logger from "../../../utils/logger";
 import { plugin as generateIndexHtml } from "./plugins/generate-index-html";
@@ -45,10 +46,34 @@ export class ViteServer {
                     'lodash.clonedeep', 'lodash.pickby', 'lodash.flattendeep', 'aria-query', 'grapheme-splitter',
                     'css-value', 'rgb2hex', 'p-iteration', 'deepmerge-ts', 'jest-util', 'jest-matcher-utils', 'split2',
                     // ------
+                    // 'expect-webdriverio'
                     // '@wdio/protocols',
                     // 'proxy-agent', 'url', 'debug', 'unbzip2-stream', 'extract-zip', 'util', '@puppeteer/browsers', 'archiver'
                 ],
-            }
+                esbuildOptions: {
+                    // logLevel: 'silent',
+                    // Node.js global to browser globalThis
+                    define: {
+                        global: 'globalThis',
+                    },
+                    // Enable esbuild polyfill plugins
+                    // plugins: [
+                    //     esbuildCommonjs(['@testing-library/vue']),
+                    //     codeFrameFix()
+                    // ],
+                },
+            },
+            plugins: [
+                // commonjs()
+                // commonjs({filter: (id) => {
+                //     console.log('ID:', id);
+
+                //     const res = id.includes('expect-webdriverio');
+                //     console.log('commonjs:', res);
+
+                //     return res;
+                // }})
+            ]
             // optimizeDeps: {
             //     esbuildOptions: {
             //         logLevel: "silent",
@@ -77,7 +102,8 @@ export class ViteServer {
             console.log('plugin:', plugin);
 
             if (plugin) {
-                this.#viteConfig.plugins = [plugin()];
+                // this.#viteConfig.plugins = [plugin()];
+                this.#viteConfig.plugins!.push(plugin());
 
                 // this.#viteConfig.plugins = [plugin({
                 //     babel: {
@@ -141,15 +167,14 @@ export class ViteServer {
             moduleName: "mocha",
             parent: path.join("node_modules", "hermione", "node_modules"),
         });
-        const webdriverioPath = await getNodeModulePath({
+        const wdioPath = await getNodeModulePath({
             moduleName: "webdriverio",
             parent: path.join("node_modules", "hermione", "node_modules"),
         });
-        console.log('webdriverioPath:', webdriverioPath);
 
         const modulePaths = {
             mocha: path.join(url.fileURLToPath(path.dirname(mochaPath)), "mocha.js"),
-            webdriverio: path.join(url.fileURLToPath(webdriverioPath)),
+            webdriverio: path.join(url.fileURLToPath(wdioPath)), // TODO: make it shorter
         };
 
         console.log('modulePaths:', modulePaths);

@@ -1,4 +1,5 @@
 import type { ConfigEnv } from "vite";
+import type { WorkerInitMessage } from "./browser-modules/types"
 
 export const MODULE_PREFIX = "@hermione";
 export const MODULE_NAMES = {
@@ -13,3 +14,6 @@ export const VITE_DEFAULT_CONFIG_ENV: ConfigEnv = {
 };
 
 export const HERMIONE_BROWSER_EVENT_SUFFIX = "hermione:browser";
+
+// TODO: use type from worker
+export const WORKER_ENV_BY_RUN_UUID = new Map<string, WorkerInitMessage>;

@@ -1,23 +1,24 @@
 import { BrowserError } from "./errors/index.js";
+import { ViteBrowserCommunicator } from "./communicator.js";
 
-type ParsedUrlParams = Record<"file" | "pid" | "runUuid" | "cmdUuid", string>;
+// type ParsedUrlParams = Record<"file" | "pid" | "runUuid" | "cmdUuid", string>;
 
-const parseUrlParams = (): ParsedUrlParams => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const parsedParams = ["file", "pid", "runUuid", "cmdUuid"].reduce<ParsedUrlParams>(
-        (acc, key) => ({
-            ...acc,
-            [key]: urlParams.get(key) || "",
-        }),
-        { file: "", pid: "", runUuid: "", cmdUuid: "" },
-    );
+// const parseUrlParams = (): ParsedUrlParams => {
+//     const urlParams = new URLSearchParams(window.location.search);
+//     const parsedParams = ["file", "pid", "runUuid", "cmdUuid"].reduce<ParsedUrlParams>(
+//         (acc, key) => ({
+//             ...acc,
+//             [key]: urlParams.get(key) || "",
+//         }),
+//         { file: "", pid: "", runUuid: "", cmdUuid: "" },
+//     );
 
-    if (!parsedParams.file) {
-        console.error(`Query parameter "file" must be specified in url: ${window.location.href}`);
-    }
+//     if (!parsedParams.file) {
+//         console.error(`Query parameter "file" must be specified in url: ${window.location.href}`);
+//     }
 
-    return parsedParams;
-};
+//     return parsedParams;
+// };
 
 const proxyHermione = (): void => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,12 +85,15 @@ const mockBlockingDialogs = (): void => {
     window.prompt = mockDialog({ name: "prompt", value: null });
 };
 
-const urlParams = parseUrlParams();
-window.__hermione__ = {
-    ...urlParams,
-    pid: Number(urlParams.pid),
-    errors: [],
-};
+// const urlParams = parseUrlParams();
+window.__hermione__.errors = [];
+window.__hermione__.communicator = ViteBrowserCommunicator.create();
+
+// window.__hermione__ = {
+    // ...urlParams,
+    // pid: Number(urlParams.pid),
+    // errors: [],
+// };
 
 proxyHermione();
 subscribeOnBrowserErrors();

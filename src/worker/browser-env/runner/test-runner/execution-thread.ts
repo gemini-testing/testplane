@@ -4,6 +4,7 @@ import NodejsEnvExecutionThread from "../../../runner/test-runner/execution-thre
 import RuntimeConfig from "../../../../config/runtime-config";
 
 import { WorkerEventNames } from "../../types";
+import type { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
 
 import type { ViteWorkerCommunicator } from "../../communicator";
 import type { BrowserEnvRuntimeConfig } from "../../types";
@@ -36,7 +37,7 @@ export const wrapExecutionThread = (runUuid: string): typeof NodejsEnvExecutionT
                     },
                 });
 
-                const runRunnableResult = await this.#communicator.waitMessage({ cmdUuid, timeout: runnable.timeout });
+                const runRunnableResult = await this.#communicator.waitMessage<BrowserEventNames.runnableResult>({ cmdUuid, timeout: runnable.timeout });
 
                 if (!_.isEmpty(runRunnableResult.data.errors)) {
                     throw runRunnableResult.data.errors[0];

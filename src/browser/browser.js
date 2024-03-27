@@ -37,11 +37,14 @@ module.exports = class Browser {
             ...opts.state,
             isBroken: false,
         };
+        this._customCommands = new Set();
     }
 
     async attach(sessionId, sessionCaps, sessionOpts) {
         this._session = await this._attachSession(sessionId, sessionCaps, sessionOpts);
 
+        // TODO: where attach is used ?
+        this._collectCustomCommands();
         this._addSteps();
         this._addHistory();
         this._addCommands();
@@ -69,6 +72,14 @@ module.exports = class Browser {
 
     _addSteps() {
         addRunStepCommand(this);
+    }
+
+    _collectCustomCommands() {
+        this._session.overwriteCommand("addCommand", (origCommand, name, wrapper, elementScope) => {
+            this._customCommands.add(name);
+
+            return origCommand(name, wrapper, elementScope);
+        });
     }
 
     _addHistory() {
@@ -133,5 +144,9 @@ module.exports = class Browser {
 
     get callstackHistory() {
         return this._callstackHistory;
+    }
+
+    get customCommands() {
+        return Array.from(this._customCommands);
     }
 };

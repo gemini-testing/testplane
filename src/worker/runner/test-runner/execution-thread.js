@@ -22,6 +22,10 @@ module.exports = class ExecutionThread {
     }
 
     async run(runnable) {
+        console.log('RUN runnable:', runnable);
+        // console.log('JSON runnable:', runnable.toJSON());
+        // console.log('STRINGIFY runnable:', JSON.stringify(runnable));
+
         this._setExecutionContext(
             Object.assign(runnable, {
                 hermioneCtx: this._hermioneCtx,

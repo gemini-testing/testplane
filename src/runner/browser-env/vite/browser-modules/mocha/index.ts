@@ -1,10 +1,9 @@
 import { TestParser } from "./parser.js";
-import { ViteBrowserCommunicator } from "../communicator.js";
 import { findErrorsOnPageLoad, findErrorsOnRunRunnable, BrowserError } from "../errors/index.js";
-import { BrowserEventNames, WorkerEventNames, type WorkerMessage } from "../types.js";
+import { BrowserEventNames, WorkerEventNames } from "../types.js";
 
 export class MochaWrapper {
-    #communicator: ViteBrowserCommunicator = ViteBrowserCommunicator.create();
+    #communicator = window.__hermione__.communicator;
     #runnables: Map<string, Mocha.Runnable> = new Map();
     #parser: TestParser;
 
@@ -48,7 +47,9 @@ export class MochaWrapper {
     }
 
     #subscribeOnWorkerMessages(): void {
-        this.#communicator.subscribeOnMessage(WorkerEventNames.runRunnable, async (msg: WorkerMessage) => {
+        this.#communicator.subscribeOnMessage<WorkerEventNames.runRunnable>(WorkerEventNames.runRunnable, async (msg) => {
+            console.log('msg:', msg);
+
             const runnableToRun = this.#runnables.get(msg.fullTitle);
 
             if (!runnableToRun) {
@@ -67,9 +68,12 @@ export class MochaWrapper {
             }
 
             let error: Error | undefined = undefined;
+            const ctx = {browser: window.browser};
 
             try {
-                await (runnableToRun.fn as Mocha.AsyncFunc)?.call({} as unknown as Mocha.Context);
+                // await (runnableToRun.fn as Mocha.AsyncFunc)?.call(ctx as unknown as Mocha.Context, ctx);
+                // TODO: refactor it !!!
+                await (runnableToRun.fn as unknown as (this: {browser: WebdriverIO.Browser}, ctx: {browser: WebdriverIO.Browser}) => Promise<any>)?.call(ctx, ctx);
             } catch (err) {
                 error = err as Error;
             }

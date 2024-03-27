@@ -1,6 +1,6 @@
 import { HERMIONE_BROWSER_EVENT_SUFFIX } from "./constants";
 import type { InlineConfig, ConfigEnv } from "vite";
-import type { BrowserMessage } from "./browser-modules/types";
+import type { BrowserMessageEvents } from "./browser-modules/types";
 
 export interface BrowserTestRunEnvOptions {
     viteConfig?: string | InlineConfig | ((env: ConfigEnv) => InlineConfig | Promise<InlineConfig>);
@@ -18,16 +18,14 @@ export interface VitePluginOptions extends BrowserTestRunEnvOptions {
 export enum BrowserEventNames {
     init = `${HERMIONE_BROWSER_EVENT_SUFFIX}:init`,
     runnableResult = `${HERMIONE_BROWSER_EVENT_SUFFIX}:runnableResult`,
+    runCommand = `${HERMIONE_BROWSER_EVENT_SUFFIX}:runCommand`,
 }
 
-export interface BrowserInitPayload {
-    event: BrowserEventNames.init;
-    data: BrowserMessage;
+export type BrowserPayloadByEvent<T extends BrowserEventNames> = {
+    event: T,
+    type: "custom",
+    data: BrowserMessageEvents[T];
 }
+export type BrowserPayload = BrowserPayloadByEvent<BrowserEventNames>;
 
-export interface BrowserRunRunnablePayload {
-    event: BrowserEventNames.runnableResult;
-    data: BrowserMessage;
-}
-
-export type BrowserPayload = BrowserInitPayload | BrowserRunRunnablePayload;
+export { BrowserMessageEvents, BrowserInitMessage, BrowserRunnableResultMessage, BrowserRunCommandMessage, BrowserMessageByEvent, BrowserMessage } from "./browser-modules/types";

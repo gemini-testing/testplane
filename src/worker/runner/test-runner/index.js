@@ -78,7 +78,7 @@ module.exports = class TestRunner extends Runner {
             error = error || e;
         }
 
-        await browser.publicAPI.pause(120000);
+        await browser.publicAPI.pause(30000);
 
         const assertViewResults = hermioneCtx.assertViewResults;
         if (!error && assertViewResults && assertViewResults.hasFails()) {

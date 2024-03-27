@@ -1,13 +1,14 @@
 import WebSocket from "ws";
 import URI from "urijs";
-import { WorkerEventNames } from "./types";
+import stringifySafe from "./serialize";
+// import { WorkerEventNames } from "./types";
 import logger from "../../utils/logger";
 
 import type { SetOptional } from "type-fest";
 import type { Config } from "../../config";
 import type { WorkerPayload } from "./types";
 
-import type { BrowserPayload } from "../../runner/browser-env/vite/types";
+import type { BrowserEventNames, BrowserPayload, BrowserPayloadByEvent } from "../../runner/browser-env/vite/types";
 
 interface WaitMessageOpts {
     cmdUuid: string;
@@ -19,10 +20,13 @@ const WS_CONNECTION_TIMEOUT = 5000;
 const WAIT_MESSAGE_TIMEOUT = 5000;
 const WAIT_MESSAGE_INTERVAL = 100;
 
+type MessageListener = (msg: BrowserPayload) => Promise<void>;
+
 export class ViteWorkerCommunicator {
     readonly #config: Config;
     #workerWs: WebSocket;
-    #recievedMsgs: Map<string, BrowserPayload>;
+    #recievedMsgs: Map<string, BrowserPayload> = new Map();
+    #msgListenersByRunUuid: Map<string, MessageListener[]> = new Map();
 
     static create<T extends ViteWorkerCommunicator>(this: new (config: Config) => T, config: Config): T {
         return new this(config);
@@ -30,7 +34,6 @@ export class ViteWorkerCommunicator {
 
     constructor(config: Config) {
         this.#config = config;
-        this.#recievedMsgs = new Map();
 
         const viteWsUrl = new URI(this.#config.baseUrl).protocol("ws").toString();
         this.#workerWs = new WebSocket(viteWsUrl, "vite-hmr");
@@ -54,7 +57,7 @@ export class ViteWorkerCommunicator {
         this.#workerWs.on("open", () => {
             clearTimeout(timerId);
 
-            this.sendMessage({ event: WorkerEventNames.init, data: { pid: process.pid } });
+            // this.sendMessage({ event: WorkerEventNames.init, data: { pid: process.pid } });
         });
 
         this.#workerWs.on("message", buff => {
@@ -67,21 +70,41 @@ export class ViteWorkerCommunicator {
                 return;
             }
 
-            if (msg?.data?.cmdUuid) {
-                this.#recievedMsgs.set(msg.data.cmdUuid, msg);
+            if (!msg?.data?.cmdUuid) {
+                return;
+            }
+
+            this.#recievedMsgs.set(msg.data.cmdUuid, msg);
+            const listeners = this.#msgListenersByRunUuid.get(msg.data.runUuid) || [];
+
+            for (const listener of listeners) {
+                listener(msg);
             }
         });
     }
 
-    sendMessage(payload: SetOptional<WorkerPayload, "type">): void {
-        this.#workerWs.send(JSON.stringify({ type: "custom", ...payload }));
+    addListenerByRunUuid(runUuid: string, listener: MessageListener) {
+        if (!this.#msgListenersByRunUuid.has(runUuid)) {
+            this.#msgListenersByRunUuid.set(runUuid, [listener]);
+        } else {
+            this.#msgListenersByRunUuid.get(runUuid)!.push(listener);
+        }
     }
 
-    async waitMessage({
+    removeListenersByRunUuid(runUuid: string) {
+        this.#msgListenersByRunUuid.delete(runUuid);
+    }
+
+    sendMessage(payload: SetOptional<WorkerPayload, "type">): void {
+        // this.#workerWs.send(JSON.stringify({ type: "custom", ...payload }));
+        this.#workerWs.send(stringifySafe({ type: "custom", ...payload }));
+    }
+
+    async waitMessage<T extends BrowserEventNames>({
         cmdUuid,
         timeout = WAIT_MESSAGE_TIMEOUT,
         interval = WAIT_MESSAGE_INTERVAL,
-    }: WaitMessageOpts): Promise<BrowserPayload> {
+    }: WaitMessageOpts): Promise<BrowserPayloadByEvent<T>> {
         return new Promise((resolve, reject) => {
             const timerId =
                 timeout > 0
@@ -91,7 +114,7 @@ export class ViteWorkerCommunicator {
                     : 0;
 
             const intervalId = setInterval(() => {
-                const msg = this.#recievedMsgs.get(cmdUuid);
+                const msg = this.#recievedMsgs.get(cmdUuid) as BrowserPayloadByEvent<T>;
 
                 if (!msg) {
                     return;

@@ -5,7 +5,7 @@ const url = require("url");
 const Promise = require("bluebird");
 const _ = require("lodash");
 const webdriverio = require("webdriverio");
-const { sessionEnvironmentDetector } = require("@wdio/utils");
+const { sessionEnvironmentDetector } = require("@wdio/utils-cjs");
 const Browser = require("./browser");
 const commandsList = require("./commands");
 const Camera = require("./camera");
@@ -35,6 +35,8 @@ module.exports = class ExistingBrowser extends Browser {
     async init({ sessionId, sessionCaps, sessionOpts } = {}, calibrator) {
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
 
+        // TODO: collect by if (only in browser env). Should do it in master???
+        this._collectCustomCommands();
         this._addSteps();
         this._addHistory();
 
@@ -149,6 +151,8 @@ module.exports = class ExistingBrowser extends Browser {
             capabilities: sessionCaps,
             requestedCapabilities: sessionOpts.capabilities,
         });
+        console.log('OPTS:', {capabilities: sessionCaps, requestedCapabilities: sessionOpts.capabilities});
+        console.log('detectedSessionEnvFlags:', detectedSessionEnvFlags);
 
         const opts = {
             sessionId,
