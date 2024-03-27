@@ -44,6 +44,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [AssertView](#assertview)
   - [RunStep](#runstep)
   - [OpenAndWait](#openandwait)
+- [Typescript usage](#typescript-usage)
+  - [hermione.ctx typings](#hermionectx-typings)
 - [.hermione.conf.js](#hermioneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
@@ -825,6 +827,48 @@ Parameters:
    - shouldThrowError (optional) `(match) => Boolean` - Predicate, which should return `true` on [Match](https://webdriver.io/docs/api/mock#match), if network error is considered critical for page load. By default, throws an error on image, stylesheet and font load error.
    - ignoreNetworkErrorsPatterns (optional) `Array<String | RegExp>` - Array of url patterns to ignore network requests errors. Has a priority over `shouldThrowError`
    - timeout (optional) `Number` - Page load timeout. [pageLoadTimeout](#pageloadtimeout) by default. Throws an error, if selectors are still not exist after timeout, or predicate is still resolving false.
+
+## Typescript usage
+
+To write hermione tests on typescript, you would need to install `ts-node`:
+
+```bash
+npm i -D ts-node
+```
+
+And include hermione types in your `tsconfig.json` file:
+
+```js
+// tsconfig.json
+{
+    // other tsconfig options
+    "compilerOptions": {
+        // other compiler options
+        "types": [
+            // other types
+            "hermione",
+        ]
+    }
+}
+```
+
+Now you will be able to write hermione tests using typescript.
+
+### hermione.ctx typings
+
+If you want to extend hermione.ctx typings, you could use module augmentation:
+
+```ts
+import type { HermioneCtx } from "hermione";
+
+declare module "hermione" {
+    interface HermioneCtx {
+        someVariable: string;
+    }
+}
+```
+
+Now `hermione.ctx` will have `someVariable` typings
 
 ## .hermione.conf.js
 `hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
