@@ -133,8 +133,10 @@ export interface TestResultWithRetries extends TestResult {
     retriesLeft: number;
 }
 
+export interface HermioneCtx extends Record<string, unknown> {}
+
 export interface GlobalHelper {
-    ctx: Record<string, unknown>;
+    ctx: HermioneCtx;
     skip: SkipController;
     only: OnlyController;
     browser: (browserName: string) => BrowserVersionController;
