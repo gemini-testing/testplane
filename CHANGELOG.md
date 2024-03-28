@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.7.1](https://github.com/gemini-testing/hermione/compare/v8.7.0...v8.7.1) (2024-03-28)
+
+
+### Bug Fixes
+
+* return origCommand type to overwriteCommand ([f2039a0](https://github.com/gemini-testing/hermione/commit/f2039a02b743622ab709b7a43977990c1992add5))
+
 ## [8.7.0](https://github.com/gemini-testing/hermione/compare/v8.6.0...v8.7.0) (2024-03-27)
 
 
