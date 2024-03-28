@@ -33,6 +33,12 @@ declare global {
     namespace WebdriverIO {
         type BrowserCommand = Exclude<FunctionProperties<WebdriverIO.Browser>, EventEmitterMethod>;
         type ElementCommand = Exclude<FunctionProperties<WebdriverIO.Element>, EventEmitterMethod>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        type OverwriteCommandFn<ThisArg, Fn extends (...args: any) => any> = (
+            this: ThisArg,
+            origCommand: OmitThisParameter<Fn>,
+            ...args: Parameters<Fn>
+        ) => ReturnType<Fn>;
 
         interface Browser {
             getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
@@ -46,7 +52,7 @@ declare global {
 
             overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,
-                func: WebdriverIO.Browser[CommandName],
+                func: OverwriteCommandFn<WebdriverIO.Browser, WebdriverIO.Browser[CommandName]>,
                 attachToElement?: false,
                 proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
                 instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
@@ -54,7 +60,7 @@ declare global {
 
             overwriteCommand<CommandName extends ElementCommand>(
                 name: CommandName,
-                func: WebdriverIO.Element[CommandName],
+                func: OverwriteCommandFn<WebdriverIO.Element, WebdriverIO.Element[CommandName]>,
                 attachToElement: true,
                 proto?: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
                 instances?: Record<string, WebdriverIO.Browser | WebdriverIO.MultiRemoteBrowser>,
