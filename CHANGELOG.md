@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.7.2](https://github.com/gemini-testing/hermione/compare/v8.7.1...v8.7.2) (2024-03-29)
+
+
+### Bug Fixes
+
+* export HermioneCtx type ([363ed89](https://github.com/gemini-testing/hermione/commit/363ed89944411c516bef42dd3f75a1863e5dc0da))
+
 ### [8.7.1](https://github.com/gemini-testing/hermione/compare/v8.7.0...v8.7.1) (2024-03-28)
 
 
