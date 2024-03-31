@@ -39,8 +39,8 @@ process.on("unhandledRejection", (reason, p) => {
     }
 });
 
-exports.run = () => {
-    const program = new Command();
+exports.run = (opts = {}) => {
+    const program = new Command(opts.cliName || "testplane");
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
 
@@ -48,7 +48,7 @@ exports.run = () => {
     hermione = Hermione.create(configPath);
 
     program
-        .on("--help", () => logger.log(info.configOverriding))
+        .on("--help", () => logger.log(info.configOverriding(opts)))
         .option("-b, --browser <browser>", "run tests only in specified browser", collect)
         .option("-s, --set <set>", "run tests only in the specified set", collect)
         .option("-r, --require <module>", "require module", collect)

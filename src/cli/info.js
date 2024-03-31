@@ -1,20 +1,24 @@
 "use strict";
 
-exports.configOverriding = `  Overriding config
+exports.configOverriding = (opts = {}) => {
+    const cliName = opts.cliName || "testplane";
+
+    return `  Overriding config
     To override any config option use full option path converted to --kebab-case
 
     Examples:
-      hermione --system-debug true
-      hermione --base-url http://example.com
-      hermione --browsers-firefox-sessions-per-browser 10
+      ${cliName} --system-debug true
+      ${cliName} --base-url http://example.com
+      ${cliName} --browsers-firefox-sessions-per-browser 10
 
     You can also use environment variables converted to snake_case with
-    hermione_ prefix
+    ${cliName}_ prefix
 
     Examples:
-      hermione_system_debug=true hermione
-      hermione_base_url=http://example.com hermione
-      hermione_browsers_firefox_sessions_per_browser=10 hermione
+      ${cliName}_system_debug=true ${cliName}
+      ${cliName}_base_url=http://example.com ${cliName}
+      ${cliName}_browsers_firefox_sessions_per_browser=10 ${cliName}
 
     If both cli option and environment variable are used, cli option takes precedence
 `;
+};
