@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.5](https://github.com/gemini-testing/hermione/compare/v7.5.4...v7.5.5) (2024-04-01)
+
+
+### Bug Fixes
+
+* do not ignore assertView errors in broken session rejection ([5221bef](https://github.com/gemini-testing/hermione/commit/5221befbb2695c0a232c7a5e5f0ecfee59a2020a))
+
 ### [7.5.4](https://github.com/gemini-testing/hermione/compare/v7.5.2...v7.5.4) (2024-02-12)
 
 
