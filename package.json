@@ -39,7 +39,8 @@
     "test"
   ],
   "bin": {
-    "hermione": "./bin/hermione"
+    "hermione": "./bin/hermione",
+    "testplane": "./bin/testplane"
   },
   "license": "MIT",
   "dependencies": {
