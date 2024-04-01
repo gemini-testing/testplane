@@ -38,11 +38,27 @@ describe("cli", () => {
 
     afterEach(() => sandbox.restore());
 
-    it('should show information about config overriding on "--help"', async () => {
-        await run_("--help");
+    describe("config overriding", () => {
+        it('should show information about config overriding on "--help"', async () => {
+            await run_("--help");
 
-        assert.calledOnce(logger.log);
-        assert.calledWith(logger.log, info.configOverriding);
+            assert.calledOnce(logger.log);
+            assert.calledWith(logger.log, info.configOverriding());
+        });
+
+        it("should show information about testplane by default", async () => {
+            const defaultResult = info.configOverriding();
+
+            assert.isTrue(defaultResult.includes("testplane"));
+            assert.isFalse(defaultResult.includes("hermione"));
+        });
+
+        it("should show information about hermione", async () => {
+            const result = info.configOverriding({ cliName: "hermione" });
+
+            assert.isTrue(result.includes("hermione"));
+            assert.isFalse(result.includes("testplane"));
+        });
     });
 
     it("should create Hermione instance", async () => {
