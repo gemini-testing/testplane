@@ -27,20 +27,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/gemini-testing/hermione.git"
+    "url": "git://github.com/gemini-testing/testplane.git"
   },
   "engines": {
     "node": ">= 18.0.0"
   },
   "keywords": [
+    "testplane",
     "hermione",
     "webdriverio",
     "mocha",
     "test"
   ],
   "bin": {
-    "hermione": "./bin/hermione",
-    "testplane": "./bin/testplane"
+    "testplane": "./bin/testplane",
+    "hermione": "./bin/hermione"
   },
   "license": "MIT",
   "dependencies": {

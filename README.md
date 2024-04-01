@@ -1,11 +1,11 @@
-# Hermione
+# Testplane (ex-Hermione)
 
-Hermione is a utility for integration testing of web pages using [WebdriverIO](https://webdriver.io/docs/api) and [Mocha](https://mochajs.org).
+Testplane is a utility for integration testing of web pages using [WebdriverIO](https://webdriver.io/docs/api) and [Mocha](https://mochajs.org).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Why you should choose hermione](#why-you-should-choose-hermione)
+- [Why you should choose Testplane](#why-you-should-choose-testplane)
   - [Easy to use](#easy-to-use)
   - [Runs tests in parallel](#runs-tests-in-parallel)
   - [Runs tests in subprocesses](#runs-tests-in-subprocesses)
@@ -22,8 +22,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 - [Prerequisites](#prerequisites)
   - [Selenium-standalone](#selenium-standalone)
 - [Quick start](#quick-start)
-  - [Using create-hermione-app (a quick way)](#using-create-hermione-app-a-quick-way)
-  - [Configuring .hermione.conf.js by yourself (a slow way)](#configuring-hermioneconfjs-by-yourself-a-slow-way)
+  - [Using npm init Testplane (a quick way)](#using-npm-init-testplane-a-quick-way)
+  - [Configuring .testplane.conf.js by yourself (a slow way)](#configuring-testplaneconfjs-by-yourself-a-slow-way)
     - [Chrome Devtools Protocol](#chrome-devtools-protocol)
     - [Webdriver protocol](#webdriver-protocol)
 - [Commands API](#commands-api)
@@ -45,8 +45,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
   - [RunStep](#runstep)
   - [OpenAndWait](#openandwait)
 - [Typescript usage](#typescript-usage)
-  - [hermione.ctx typings](#hermionectx-typings)
-- [.hermione.conf.js](#hermioneconfjs)
+  - [testplane.ctx typings](#testplanectx-typings)
+- [.testplane.conf.js](#testplaneconfjs)
   - [sets](#sets)
   - [browsers](#browsers)
     - [desiredCapabilities](#desiredcapabilities)
@@ -124,8 +124,8 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
       - [How to set up using VSCode](#how-to-set-up-using-vscode)
       - [How to set up using Webstorm](#how-to-set-up-using-webstorm)
   - [Environment variables](#environment-variables)
-    - [HERMIONE_SKIP_BROWSERS](#hermione_skip_browsers)
-    - [HERMIONE_SETS](#hermione_sets)
+    - [TESTPLANE_SKIP_BROWSERS](#testplane_skip_browsers)
+    - [TESTPLANE_SETS](#testplane_sets)
 - [Programmatic API](#programmatic-api)
   - [config](#config)
   - [events](#events)
@@ -151,45 +151,45 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
-## Why you should choose hermione
-`Hermione` provides several features that `WebdriverIO` doesn't, and makes the testing process easier.
+## Why you should choose Testplane
+Testplane provides several features that `WebdriverIO` doesn't, and makes the testing process easier.
 
 ### Easy to use
-If you are familiar with [WebdriverIO](http://webdriver.io/) and [Mocha](https://mochajs.org), you can start writing and running tests in 5 minutes! You need to install `hermione` via npm and add a tiny config to your project. For details, see the [Quick start](#quick-start) section.
+If you are familiar with [WebdriverIO](http://webdriver.io/) and [Mocha](https://mochajs.org), you can start writing and running tests in 5 minutes! You need to install Testplane via npm and add a tiny config to your project. For details, see the [Quick start](#quick-start) section.
 
 ### Runs tests in parallel
-When tests are run one by one, it takes a lot of time. `Hermione` can run tests in parallel sessions in different browsers out of the box.
+When tests are run one by one, it takes a lot of time. Testplane can run tests in parallel sessions in different browsers out of the box.
 
 ### Runs tests in subprocesses
-Running of too many tests in parallel can lead to the overloading of the main process CPU usage which causes degradation in test passing time, so Hermione runs all tests in subprocesses in order to solve this problem.
+Running of too many tests in parallel can lead to the overloading of the main process CPU usage which causes degradation in test passing time, so Testplane runs all tests in subprocesses in order to solve this problem.
 
 ### Extensible
 `WebdriverIO` provides built-in commands for browser and page manipulation. Often projects need to store some common code and reuse it throughout all tests, so the developer needs to create some helpers and include them in the tests.
 
-With `hermione` this is very simple and straightforward. You can add any number of custom commands in the hermione config and use them as `browser.myCustomCommand` in tests.
+With Testplane this is very simple and straightforward. You can add any number of custom commands in the Testplane config and use them as `browser.myCustomCommand` in tests.
 
-Moreover, `hermione` provides plugins that work like hooks. They allow the developer to prepare the testing environment and react properly to test execution events.
+Moreover, Testplane provides plugins that work like hooks. They allow the developer to prepare the testing environment and react properly to test execution events.
 
 ### Built-in assert library
-when writing integration tests, we need to check for various conditions, such as that a button element has certain attributes. So hermione provides global `expect` variable that gives you access to a number of `matchers` that let you validate different things on the browser, an element or mock object. More about using `expect` and its API you can find [here](https://webdriver.io/docs/api/expect-webdriverio/).
+when writing integration tests, we need to check for various conditions, such as that a button element has certain attributes. So Testplane provides global `expect` variable that gives you access to a number of `matchers` that let you validate different things on the browser, an element or mock object. More about using `expect` and its API you can find [here](https://webdriver.io/docs/api/expect-webdriverio/).
 
 ### Retries failed tests
 Integration tests use a dynamic environment with a lot of dependencies, where any of them could be unstable from time to time. As a result, integration tests turn red randomly, which makes them imprecise. This spoils the entire testing process.
 
-To prevent incidental fails, `hermione` retries a failed test before marking it as failed. This makes it possible to get rid of a majority of incidental fails. The number of retries can be specified for all browsers or for a specific browser.
+To prevent incidental fails, Testplane retries a failed test before marking it as failed. This makes it possible to get rid of a majority of incidental fails. The number of retries can be specified for all browsers or for a specific browser.
 
-:warning: `Hermione` reruns tests in a new browser session to exclude situations when the browser environment is the cause of the failure.
+:warning: Testplane reruns tests in a new browser session to exclude situations when the browser environment is the cause of the failure.
 
 ### Executes separate tests
-Sometimes you only need to run specific tests, not all the tests in a set. `Hermione` makes this possible. You can specify the path to the test file
+Sometimes you only need to run specific tests, not all the tests in a set. Testplane makes this possible. You can specify the path to the test file
 ```
-hermione tests/func/mytest.js
+testplane tests/func/mytest.js
 ```
 
 or filter describes by using the `--grep` option
 
 ```
-hermione --grep login
+testplane --grep login
 ```
 
 or simply use the `mocha` `only()` API in the test
@@ -200,11 +200,11 @@ describe.only('user login', function() {...});
 
 ### Skips tests in specific browsers
 Sometimes you need to skip a test just in a specific browser, not in all browsers. For example, you don't need to run
-some test in ~~ugly~~ IE browsers. In `hermione` you can do this with [hermione helper](#skip). For example,
+some test in ~~ugly~~ IE browsers. In Testplane you can do this with [Testplane helper](#skip). For example,
 you can skip some tests in a specific browser
 ```js
 describe('feature', function() {
-    hermione.skip.in('ie8', 'it cannot work in this browser');
+    testplane.skip.in('ie8', 'it cannot work in this browser');
     it('nowaday functionality', function() {...});
 });
 ```
@@ -213,7 +213,7 @@ or run tests in just one browser
 ```js
 describe('feature', function() {
     // will be skipped in all browsers except Chrome
-    hermione.skip.notIn('chrome', 'it should work only in Chrome');
+    testplane.skip.notIn('chrome', 'it should work only in Chrome');
     it('specific functionality', function() {...});
 });
 ```
@@ -222,31 +222,31 @@ In these cases you will see messages in reports with the reason for skipping.
 
 To skip a suite or test silently (without any messages in reports), you can pass the third argument with the silent flag:
 ```js
-hermione.skip.in('ie8', 'skipReason', {silent: true});
+testplane.skip.in('ie8', 'skipReason', {silent: true});
 // or
-hermione.skip.notIn('chrome', 'skipReason', {silent: true});
+testplane.skip.notIn('chrome', 'skipReason', {silent: true});
 ```
 
-Or you can use another hermione helper, [only](#only), which is silent by default:
+Or you can use another Testplane helper, [only](#only), which is silent by default:
 ```js
-hermione.only.in('chrome');
+testplane.only.in('chrome');
 // or
-hermione.only.notIn('ie8');
+testplane.only.notIn('ie8');
 ```
 
-`hermione.only.in` will run tests only in the specified browsers and skip the rest silently.
+`testplane.only.in` will run tests only in the specified browsers and skip the rest silently.
 
-`hermione.only.notIn` will run tests in all browsers except the specified ones.
+`testplane.only.notIn` will run tests in all browsers except the specified ones.
 
 ### Override browser configuration for test
-`Hermione` allows you to override a browser configuration for each test or a whole suite.
-Each method of `hermione.browser(<browserName>)` provide chaining.
+Testplane allows you to override a browser configuration for each test or a whole suite.
+Each method of `testplane.browser(<browserName>)` provide chaining.
 
 #### `version(<browserVersion>)`
 
 ```js
 // change the browser version for all chindren
-hermione.browser('chrome').version('70.3');
+testplane.browser('chrome').version('70.3');
 describe('suite', function() {
     // ...
 });
@@ -254,23 +254,23 @@ describe('suite', function() {
 
 ```js
 // change the browser version for a specific test
-hermione.browser('chrome').version('70.3');
+testplane.browser('chrome').version('70.3');
 it('test', function() {...});
 ```
 
 ```js
-hermione.browser('chrome').version('70.3');
+testplane.browser('chrome').version('70.3');
 describe('suite', function() {
     it('test 1', function() {...});
 
     // this call will override the version only for test below
-    hermione.browser('chrome').version('70.1');
+    testplane.browser('chrome').version('70.1');
     it('test 2', function() {...});
 });
 ```
 
 ### Offers flexible test configuration
-`Hermione` lets you configure running some set of tests in specific browsers. For example,
+Testplane lets you configure running some set of tests in specific browsers. For example,
 ```js
 sets: {
     desktop: {
@@ -287,15 +287,15 @@ See [sets](#sets) for more details.
 
 
 ### Automatically initializes and closes grid sessions
-All work with the grid client is encapsulated in hermione. Forget about `client.init` and `client.end` in your tests ;)
+All work with the grid client is encapsulated in Testplane. Forget about `client.init` and `client.end` in your tests ;)
 
 ### Fairly waits for screen rotate
-Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but `Hermione` solves this problem.
+Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but Testplane solves this problem.
 
 ## Prerequisites
-All you need are browsers that `Hermione` could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome) plugin).
+All you need are browsers that Testplane could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [@testplane/headless-chrome](https://github.com/gemini-testing/testplane-headless-chrome) plugin).
 
-Next, you have two ways to configure `Hermione` to work with browsers:
+Next, you have two ways to configure Testplane to work with browsers:
 
 * Using the devtools protocol (available only for `Chromium`-based browsers). This method does not need to be pre-configured. Just go to the [quick start](#quick-start).
 * Using the webdriver protocol. In this case you need to set up [Selenium](http://www.seleniumhq.org/) grid. The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). For more information about setting up, see [selenium-standalone](#selenium-standalone).
@@ -326,18 +326,18 @@ First of all, make sure that all [prerequisites](#prerequisites) are satisfied.
 
 Now you have two ways to configure project.
 
-### Using create-hermione-app (a quick way)
+### Using npm init Testplane (a quick way)
 
-You just need to run the cli command from [create-hermione-app](https://github.com/gemini-testing/create-hermione-app) tool and answer a few questions:
+You just need to run the cli command from [create-testplane](https://github.com/gemini-testing/create-testplane) tool and answer a few questions:
 ```
-npm init hermione-app YOUR_PROJECT_PATH
+npm init testplane YOUR_PROJECT_PATH
 ```
 
 To skip all questions just add the option `-y` at the end.
 
-### Configuring .hermione.conf.js by yourself (a slow way)
+### Configuring .testplane.conf.js by yourself (a slow way)
 
-Create hermione config file with name `.hermione.conf.js` in the project root. There are two configuration options depending on the method selected in the `prerequisites` section.
+Create Testplane config file with name `.testplane.conf.js` in the project root. There are two configuration options depending on the method selected in the `prerequisites` section.
 
 #### Chrome Devtools Protocol
 
@@ -345,7 +345,7 @@ Create hermione config file with name `.hermione.conf.js` in the project root. T
 module.exports = {
     sets: {
         desktop: {
-            files: 'tests/desktop/**/*.hermione.js'
+            files: 'tests/desktop/**/*.testplane.js'
         }
     },
 
@@ -368,7 +368,7 @@ module.exports = {
 
     sets: {
         desktop: {
-            files: 'tests/desktop/*.hermione.js'
+            files: 'tests/desktop/*.testplane.js'
         }
     },
 
@@ -383,25 +383,25 @@ module.exports = {
 };
 ```
 
-Write your first test in `tests/desktop/github.hermione.js` file.
+Write your first test in `tests/desktop/github.testplane.js` file.
 ```javascript
 describe('github', function() {
     it('should check repository name', async ({ browser }) => {
-        await browser.url('https://github.com/gemini-testing/hermione');
+        await browser.url('https://github.com/gemini-testing/testplane');
 
-        await expect(browser.$('#readme h1')).toHaveText('Hermione');
+        await expect(browser.$('#readme h1')).toHaveText('Testplane (ex-Hermione)');
     });
 });
 ```
 
 Finally, run tests (be sure that you have already run `selenium-standalone start` command in next tab).
 ```
-node_modules/.bin/hermione
+node_modules/.bin/testplane
 ```
 
 ## Commands API
 
-Since Hermione is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Hermione also has her own commands.
+Since Testplane is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Testplane also has her own commands.
 
 ### Browser commands
 
@@ -411,7 +411,7 @@ Browser command that clears session state (deletes cookies, clears local and ses
 
 ```js
 it('test', async ({ browser }) => {
-    await browser.url('https://github.com/gemini-testing/hermione');
+    await browser.url('https://github.com/gemini-testing/testplane');
 
     (await browser.getCookies()).length; // 5
     await browser.execute(() => localStorage.length); // 2
@@ -429,7 +429,7 @@ it('test', async ({ browser }) => {
 
 #### moveCursorTo
 
-> This command is temporary and will be removed in the next major (hermione@9). Differs from the standard [moveTo](https://webdriver.io/docs/api/element/moveTo/) in that it moves the cursor relative to the top-left corner of the element (like it was in hermione@7).
+> This command is temporary and will be removed in the next major (`testplane@1`). Differs from the standard [moveTo](https://webdriver.io/docs/api/element/moveTo/) in that it moves the cursor relative to the top-left corner of the element (like it was in `hermione@7`).
 
 Move the mouse by an offset of the specified element. If offset is not specified then mouse will be moved to the top-left corder of the element.
 
@@ -447,7 +447,7 @@ Available parameters:
 ## Tests API
 
 ### Arguments
-Hermione calls test and hook callback with one argument. This argument is an object with the next properties:
+Testplane calls test and hook callback with one argument. This argument is an object with the next properties:
 - **browser** - browser client
 - **currentTest** - current executing test
 
@@ -500,11 +500,11 @@ it('some test', async function() {
 
 ### Hooks
 
-`before` and `after` hooks **are forbidden** in `hermione`, you should use `beforeEach` and `afterEach` hooks instead. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
+`before` and `after` hooks **are forbidden** in Testplane, you should use `beforeEach` and `afterEach` hooks instead. This feature was implemented in order to ensure better stability while running tests and make them independent of each other.
 
 ### Skip
 This feature allows you to ignore the specified suite or test in any browser, with an additional comment.
-You can do this by using the global `hermione.skip` helper. It supports the following methods:
+You can do this by using the global `testplane.skip` helper. It supports the following methods:
 
  - `.in` – Adds matchers for browsers with the additional comment.
  - `.notIn` – `.in` method with the reverted value.
@@ -520,7 +520,7 @@ Each of these methods takes the following arguments:
 For example,
 ```js
 describe('feature', function() {
-    hermione.skip.in('chrome', "It shouldn't work this way in Chrome");
+    testplane.skip.in('chrome', "It shouldn't work this way in Chrome");
     it('should work this way', function() {
         return runTestThisWay();
     });
@@ -529,7 +529,7 @@ describe('feature', function() {
         return runTestThatWay();
     });
 
-    hermione.skip.in(['chrome', 'firefox', /ie\d*/], 'Unstable test, see ticket TEST-487');
+    testplane.skip.in(['chrome', 'firefox', /ie\d*/], 'Unstable test, see ticket TEST-487');
     it('should have done some tricky things', function() {
         return runTrickyTest();
     });
@@ -538,7 +538,7 @@ describe('feature', function() {
 
 In this case, the behaviour `it should work this way` will be skipped only in `chrome` browser, but will be run in other browsers. `It should work that way` will not be ignored. So only the nearest test will be skipped. If you need to skip all tests within a suite, you can apply the `skip` helper to a `describe` so all tests within this suite will be skipped with the same comment.
 ```js
-hermione.skip.in('chrome', 'skip comment');
+testplane.skip.in('chrome', 'skip comment');
 describe('some feature', function() {
     it(...);
     it(...);
@@ -548,7 +548,7 @@ describe('some feature', function() {
 You can also use the `.notIn` method to invert matching. For example,
 ```js
 // ...
-hermione.skip.notIn('chrome', 'some comment');
+testplane.skip.notIn('chrome', 'some comment');
 it('should work this way', function() {
     return doSomething();
 });
@@ -560,7 +560,7 @@ In this case, the test will be skipped in all browsers except `chrome`.
 All of these methods are chainable, so you can skip a test in several browsers with different comments. For example,
 ```js
 // ...
-hermione.skip
+testplane.skip
     .in('chrome', 'some comment')
     .notIn('ie9', 'another comment');
 it('test1', function() {
@@ -569,14 +569,14 @@ it('test1', function() {
 // ...
 ```
 
-If you need to skip a test in all browsers without a comment, you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `hermione.skip.in(/.*/);`. The result will be the same.
+If you need to skip a test in all browsers without a comment, you can use [mocha `.skip` method](http://mochajs.org/#inclusive-tests) instead of `testplane.skip.in(/.*/);`. The result will be the same.
 
 ### Only
 This feature allows you to ignore the specified suite or test in any browser silently (without any messages in reports).
-You can do this by using the global `hermione.only` helper. It supports two methods:
+You can do this by using the global `testplane.only` helper. It supports two methods:
 
-- `.in` — The `hermione.skip.notIn` method with the silent flag,
-- `.notIn` — The `hermione.skip.in` with the silent flag.
+- `.in` — The `testplane.skip.notIn` method with the silent flag,
+- `.notIn` — The `testplane.skip.in` with the silent flag.
 
 These methods take the following arguments:
 
@@ -585,7 +585,7 @@ These methods take the following arguments:
 For example:
 ```js
 // ...
-hermione.only.in('chrome');
+testplane.only.in('chrome');
 
 it('should work this way', function() {
     return doSomething();
@@ -594,7 +594,7 @@ it('should work this way', function() {
 The test will be skipped all browsers **silently** except in `chrome`.
 
 ```js
-hermione.only.notIn('ie9');
+testplane.only.notIn('ie9');
 it('should work another way', function() {
     return doSomething();
 });
@@ -602,20 +602,20 @@ it('should work another way', function() {
 The test will be processed in all browsers and **silently** skipped in `ie9`.
 
 ### Config overriding
-You can override some config settings for specific test, suite or hook via `hermione.config.*` notation.
+You can override some config settings for specific test, suite or hook via `testplane.config.*` notation.
 
 #### testTimeout
 Overrides [testTimeout](#testtimeout-1) config setting. Can be set for tests and suites.
 
 ```js
-hermione.config.testTimeout(100500);
+testplane.config.testTimeout(100500);
 it('some test', function() {
     return doSomething();
 });
 ```
 
 ### WebdriverIO extensions
-`Hermione` adds some useful methods and properties to the `webdriverio` session after its initialization.
+Testplane adds some useful methods and properties to the `webdriverio` session after its initialization.
 
 #### Sharable meta info
 Implemented via two commands:
@@ -625,7 +625,7 @@ Implemented via two commands:
 
 These methods allow you to store some information between webdriver calls and it can then be used in custom commands, for instance. This meta information will be shown in the [html-reporter](https://github.com/gemini-testing/html-reporter).
 
-**Note**: hermione saves the last URL opened in the browser in meta info.
+**Note**: Testplane saves the last URL opened in the browser in meta info.
 
 Example:
 ```js
@@ -712,7 +712,7 @@ Parameters:
    - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
    - antialiasingTolerance (optional) `Number` – overrides config [browsers](#browsers).[antialiasingTolerance](#antialiasingTolerance) value
    - ignoreDiffPixelCount (optional) `Number | string` - the maximum amount of different pixels to still consider screenshots "the same". For example, when set to 5, it means that if there are 5 or fewer different pixels between two screenshots, they will still be considered the same. Alternatively, you can also define the maximum difference as a percentage (for example, 3%) of the image size. This option is useful when you encounter a few pixels difference that cannot be eliminated using the tolerance and antialiasingTolerance settings. The default value is 0.
-   - allowViewportOverflow (optional) `Boolean` – by default Hermione throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. And in this case if browser option [compositeImage](#compositeimage) set to `false`, then only visible part of the element will be captured. But if [compositeImage](#compositeimage) set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.
+   - allowViewportOverflow (optional) `Boolean` – by default Testplane throws an error if element is outside the viewport bounds. This option disables check that element is outside of the viewport left, top, right or bottom bounds. And in this case if browser option [compositeImage](#compositeimage) set to `false`, then only visible part of the element will be captured. But if [compositeImage](#compositeimage) set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.
    - captureElementFromTop (optional) `Boolean` - ability to set capture element from the top area or from current position. In the first case viewport will be scrolled to the top of the element. Default value is `true`
    - compositeImage (optional) `Boolean` - overrides config [browsers](#browsers).[compositeImage](#compositeImage) value
    - screenshotDelay (optional) `Number` - overrides config [browsers](#browsers).[screenshotDelay](#screenshotDelay) value
@@ -742,7 +742,7 @@ it('some test', async ({ browser }) => {
 });
 ```
 
-For tests which have been just written using `assertView` command you need to update reference images, so for the first time `hermione` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
+For tests which have been just written using `assertView` command you need to update reference images, so for the first time `testplane` should be run with option `--update-refs` or via command `gui` which is provided by plugin [html-reporter](https://github.com/gemini-testing/html-reporter) (we highly recommend to use `gui` command instead of option `--update-refs`).
 
 ### RunStep
 
@@ -769,7 +769,7 @@ it('some test', async ({browser}) => {
 
 Will produce the following history, if test fails on 'Can't call click on element with selector "not-exist" because element wasn't found':
 
-- hermione: init browser
+- testplane: init browser
 - some step name
 - other step name
   - some nested step
@@ -830,13 +830,13 @@ Parameters:
 
 ## Typescript usage
 
-To write hermione tests on typescript, you would need to install `ts-node`:
+To write Testplane tests on typescript, you would need to install `ts-node`:
 
 ```bash
 npm i -D ts-node
 ```
 
-And include hermione types in your `tsconfig.json` file:
+And include Testplane types in your `tsconfig.json` file:
 
 ```js
 // tsconfig.json
@@ -846,32 +846,32 @@ And include hermione types in your `tsconfig.json` file:
         // other compiler options
         "types": [
             // other types
-            "hermione",
+            "testplane",
         ]
     }
 }
 ```
 
-Now you will be able to write hermione tests using typescript.
+Now you will be able to write Testplane tests using typescript.
 
-### hermione.ctx typings
+### testplane.ctx typings
 
-If you want to extend hermione.ctx typings, you could use module augmentation:
+If you want to extend testplane.ctx typings, you could use module augmentation:
 
 ```ts
-import type { HermioneCtx } from "hermione";
+import type { TestplaneCtx } from "testplane";
 
-declare module "hermione" {
+declare module "testplane" {
     interface HermioneCtx {
         someVariable: string;
     }
 }
 ```
 
-Now `hermione.ctx` will have `someVariable` typings
+Now `testplane.ctx` will have `someVariable` typings
 
-## .hermione.conf.js
-`hermione` is tuned using a configuration file. By default, it uses `.hermione.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
+## .testplane.conf.js
+Testplane is tuned using a configuration file. By default, it uses `.testplane.conf.js`, but you can use the `--config` option to specify a path to the configuration file.
 
 There is only one required field – `browsers`.
 ```javascript
@@ -897,8 +897,8 @@ sets: {
     },
     desktop: {
         files: [
-            'tests/desktop/*.hermione.js',
-            'tests/common/*.hermione.js'
+            'tests/desktop/*.testplane.js',
+            'tests/common/*.testplane.js'
         ],
         ignoreFiles: ['tests/desktop/fixtures/**'], // exclude directories from reading while test finding
         browsers: ['browser'] // run tests which match the specified masks in the browser with the `browser` id
@@ -915,13 +915,13 @@ masks for this property.
 
 You can specify sets to run using the CLI option `--set`.
 
-If sets are not specified in the config and paths were not passed from CLI, all files from the `hermione`
+If sets are not specified in the config and paths were not passed from CLI, all files from the `testplane`
 directory are launched in all browsers specified in the config.
 
 Running tests using sets:
 
  ```
- hermione --set desktop
+ testplane --set desktop
  ```
 
 ### browsers
@@ -976,8 +976,8 @@ Option name               | Description
 `buildDiffOpts`           | Options for building diff image.
 `assertViewOpts`          | Options for `assertView` command, used by default.
 `openAndWaitOpts`         | Options for `openAndWaitOpts` command, used by default
-`screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`.
-`strictTestsOrder`        | `hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
+`screenshotsDir`          | Directory to save reference images for command `assertView`. Default dir is `testplane/screens` which is relative to `process.cwd()`.
+`strictTestsOrder`        | Testplane will guarantee tests order in [readTests](#readtests) results. `false` by default.
 `compositeImage`          | Allows testing of regions which bottom bounds are outside of a viewport height. In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height. `true` by default.
 `screenshotMode`          | Image capture mode.
 `saveHistoryMode`         | Allows to save history of executed commands. `all` by default.
@@ -1081,8 +1081,8 @@ Options for setting up taking a screenshot of a test fail. Can be an object with
 #### takeScreenshotOnFailsMode
 Mode for taking a screenshot on test fail. There are two available options:
 
-* `fullpage` – Hermione will take a screenshot of the entire page from top. Default value.
-* `viewport` – Hermione will take a screenshot of the current viewport.
+* `fullpage` – Testplane will take a screenshot of the entire page from top. Default value.
+* `viewport` – Testplane will take a screenshot of the current viewport.
 
 #### takeScreenshotOnFailsTimeout
 Timeout for taking screenshot on test fail. Default value is `5000`.
@@ -1164,7 +1164,7 @@ buildDiffOpts: {
 ```
 
 #### assertViewOpts
-Default options used when calling [assertView](https://github.com/gemini-testing/hermione/#assertview), can be overridden by `assertView` options. Default values are:
+Default options used when calling [assertView](https://github.com/gemini-testing/testplane/#assertview), can be overridden by `assertView` options. Default values are:
 ```javascript
     ignoreElements: [],
     captureElementFromTop: true,
@@ -1174,7 +1174,7 @@ Default options used when calling [assertView](https://github.com/gemini-testing
 ```
 
 #### openAndWaitOpts
-Default options used when calling [openAndWait](https://github.com/gemini-testing/hermione/#openandwait), can be overriden by `openAndWait` options. Default values are:
+Default options used when calling [openAndWait](https://github.com/gemini-testing/testplane/#openandwait), can be overriden by `openAndWait` options. Default values are:
 ```javascript
     waitNetworkIdle: true,
     waitNetworkIdleTimeout: 500,
@@ -1184,7 +1184,7 @@ Default options used when calling [openAndWait](https://github.com/gemini-testin
 
 #### screenshotsDir
 
-Directory to save reference images for command `assertView`. Default dir is `hermione/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called:
+Directory to save reference images for command `assertView`. Default dir is `testplane/screens` which is relative to `process.cwd()`. The value of this option can also be a function which accepts one argument - an instance of a test within which comand `assertView` is called:
 
 ```javascript
     screenshotsDir: (test) => `tests/screenshots/${test.parent.title}`
@@ -1192,7 +1192,7 @@ Directory to save reference images for command `assertView`. Default dir is `her
 
 #### strictTestsOrder
 
-`hermione` will guarantee tests order in [readTests](#readtests) results. `false` by default.
+Testplane will guarantee tests order in [readTests](#readtests) results. `false` by default.
 
 #### compositeImage
 
@@ -1203,7 +1203,7 @@ Allows testing of regions which bottom bounds are outside of a viewport height (
 Image capture mode. There are 3 allowed values for this option:
 
   * `auto` (default). Mode will be obtained automatically;
-  * `fullpage`. Hermione will deal with screenshot of full page;
+  * `fullpage`. Testplane will deal with screenshot of full page;
   * `viewport`. Only viewport area will be used.
 
 By default, `screenshotMode` on android browsers is set to `viewport` to work around [the chromium bug](https://bugs.chromium.org/p/chromedriver/issues/detail?id=2853).
@@ -1219,13 +1219,13 @@ Available options:
 
 Some plugins can rely on this history, for instance:
  - [html-reporter](https://github.com/gemini-testing/html-reporter)
- - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
+ - [@testplane/profiler](https://github.com/gemini-testing/testplane-profiler)
 
 The history is available from such events: `TEST_END`, `TEST_PASS`, `TEST_FAIL` through payload:
 ```js
 // example of plugin code
-module.exports = (hermione) => {
-    hermione.on(hermione.events.TEST_PASS, async (test) => {
+module.exports = (testplane) => {
+    testplane.on(testplane.events.TEST_PASS, async (test) => {
         console.log(test.history);
     });
 };
@@ -1310,7 +1310,7 @@ expectOpts: {
 ```
 
 #### ctx
-A context which will be available in tests via method `hermione.ctx`:
+A context which will be available in tests via method `testplane.ctx`:
 ```javascript
 ctx: {
     foo: 'bar'
@@ -1319,7 +1319,7 @@ ctx: {
 
 ```javascript
 it('awesome test', function() {
-    console.log(hermione.ctx); // {foo: 'bar'}
+    console.log(testplane.ctx); // {foo: 'bar'}
 });
 ```
 
@@ -1335,34 +1335,34 @@ patternsOnReject: [
 ```
 
 #### workers
-Hermione runs all tests in subprocesses in order to decrease the main process CPU usage. This options defines the numbers of subprocesses to start for running tests. Default value is `1`.
+Testplane runs all tests in subprocesses in order to decrease the main process CPU usage. This options defines the numbers of subprocesses to start for running tests. Default value is `1`.
 
 #### testsPerWorker
 The maximum number of tests to be run in one worker before it will be restarted.
 
 #### parallelLimit
-By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers `hermione` will try to run in parallel. Default value is `Infinity`.
+By default, Testplane will run all browsers simultaneously. Sometimes (i.e. when using cloud services, such as SauceLabs) you have to limit the amount of browsers that can be run at the same time. This option effectively limits how many browsers Testplane will try to run in parallel. Default value is `Infinity`.
 
 #### fileExtensions
-Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
+Ability to set file extensions, which Testplane will search on the file system. Default value is `[.js]`.
 
 ### plugins
-`Hermione` plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands).
+Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
 
 A plugin is a module that exports a single function. The function has two arguments:
 
-* The hermione instance
+* The `testplane` instance
 * Plugin options from the configuration file
 
-Plugins will be loaded before `hermione` runs tests.
+Plugins will be loaded before Testplane runs tests.
 
-It's strongly recommended to name `hermione` plugins with the `hermione-` prefix. This makes searching for user plugins [very simple](https://github.com/search?l=JavaScript&q=hermione-&type=Repositories&utf8=%E2%9C%93).
+It's strongly recommended to name Testplane plugins with the `testplane-` prefix. This makes searching for user plugins [very simple](https://github.com/search?l=JavaScript&q=testplane-&type=Repositories&utf8=%E2%9C%93).
 
-If a plugin name starts with `hermione-`, then the prefix can be ommited in the configuration file. If two modules with names `hermione-some-module` and `some-module` are specified, the module with the prefix will have higher priority.
+If a plugin name starts with `testplane-`, then the prefix can be ommited in the configuration file. If two modules with names `testplane-some-module` and `some-module` are specified, the module with the prefix will have higher priority.
 
 For example:
 ```js
-// .hermione.conf.js
+// .testplane.conf.js
 // ...
 plugins: {
     'my-cool-plugin': {
@@ -1371,19 +1371,19 @@ plugins: {
 }
 // ...
 
-// hermione-my-cool-plugin/index.js
-module.exports = function(hermione, opts) {
-    hermione.on(hermione.events.RUNNER_START, function(runner) {
-        return setUp(hermione.config, opts.param); // config can be mutated
+// testplane-my-cool-plugin/index.js
+module.exports = function(testplane, opts) {
+    testplane.on(testplane.events.RUNNER_START, function(runner) {
+        return setUp(testplane.config, opts.param); // config can be mutated
     });
 
-    hermione.on(hermione.events.RUNNER_END, function() {
+    testplane.on(testplane.events.RUNNER_END, function() {
         return tearDown();
     });
 }
 ```
 
-**Properties of the `hermione` object**
+**Properties of the `testplane` object**
 
 Property name             | Description
 ------------------------- | -------------
@@ -1395,8 +1395,8 @@ Property name             | Description
 Event                     | Description
 ------------------------- | -------------
 `INIT`                    | Will be triggered before any job start (`run` or `readTests`). If handler returns a promise then job will start only after the promise will be resolved. Emitted only once no matter how many times job will be performed.
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
-`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `hermione` (helper which will be available in test file) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `testplane` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `testplane` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read via `readTests` or `run` methods with `TestCollection` object.
 `RUNNER_START`            | Will be triggered after worker farm initialization and before test execution. If a handler returns a promise, tests will be executed only after the promise is resolved. The handler accepts an instance of a runner as the first argument. You can use this instance to emit and subscribe to any other available events.
 `RUNNER_END`              | Will be triggered after test execution and before worker farm ends. If a handler returns a promise, worker farm will be ended only after the promise is resolved. The handler accepts an object with tests execution statistics.
@@ -1422,8 +1422,8 @@ Event                     | Description
 
 Event                     | Description
 ------------------------- | -------------
-`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `hermione` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
-`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `hermione` (helper which will be available in test file) fields.
+`BEFORE_FILE_READ`        | Will be triggered on test files parsing before reading the file. The handler accepts data object with `file`, `testplane` (helper which will be available in test file) and `testParser` (`TestParserAPI` object) fields.
+`AFTER_FILE_READ`         | Will be triggered on test files parsing right after reading the file. The handler accepts data object with `file` and `testplane` (helper which will be available in test file) fields.
 `AFTER_TESTS_READ`        | Will be triggered right after tests read each time some file is being reading during test run.
 `NEW_BROWSER`             | Will be triggered after new browser instance created. The handler accepts an instance of webdriverIO as the first argument and an object with a browser identifier and version as the second.
 `UPDATE_REFERENCE`        | Will be triggered after updating reference image.
@@ -1433,20 +1433,20 @@ Event                     | Description
 Events which are triggered in the main process and subprocesses can not share information between each other, for example:
 
 ```js
-module.exports = (hermione) => {
+module.exports = (testplane) => {
     let flag = false;
 
-    hermione.on(hermione.events.RUNNER_START, () => {
+    testplane.on(testplane.events.RUNNER_START, () => {
         flag = true;
     });
 
-    hermione.on(hermione.events.NEW_BROWSER, () => {
+    testplane.on(testplane.events.NEW_BROWSER, () => {
         // outputs `false`, because `NEW_BROWSER` event was triggered in a subprocess,
         // but `RUNNER_START` was not
         console.log(flag);
     });
 
-    hermione.on(hermione.events.RUNNER_END, () => {
+    testplane.on(testplane.events.RUNNER_END, () => {
         // outputs `true`
         console.log(flag);
     });
@@ -1456,12 +1456,12 @@ module.exports = (hermione) => {
 But you can solve such problem this way:
 
 ```js
-module.exports = (hermione, opts) => {
-    hermione.on(hermione.events.RUNNER_START, () => {
+module.exports = (testplane, opts) => {
+    testplane.on(testplane.events.RUNNER_START, () => {
       opts.flag = true;
     });
 
-    hermione.on(hermione.events.NEW_BROWSER, () => {
+    testplane.on(testplane.events.NEW_BROWSER, () => {
         // outputs `true`, because properties in a config (variable `opts` is a part of a config)
         // which have raw data types are passed to subprocesses after `RUNNER_START` event
         console.log(opts.flag);
@@ -1472,18 +1472,18 @@ module.exports = (hermione, opts) => {
 Besides, you have the ability to intercept events in plugins and translate them to other events:
 
 ```js
-module.exports = (hermione) => {
-    hermione.intercept(hermione.events.TEST_FAIL, ({event, data: test}) => {
+module.exports = (testplane) => {
+    testplane.intercept(testplane.events.TEST_FAIL, ({event, data: test}) => {
         test.skip({reason: 'intercepted failure'});
 
-        return {event: hermione.events.TEST_PENDING, test};
+        return {event: testplane.events.TEST_PENDING, test};
     });
 
-    hermione.on(hermione.events.TEST_FAIL, (test) => {
+    testplane.on(testplane.events.TEST_FAIL, (test) => {
         // this event handler will never be called
     });
 
-    hermione.on(hermione.evenst.TEST_PENDING, (test) => {
+    testplane.on(testplane.evenst.TEST_PENDING, (test) => {
         // this event handler will always be called instead of 'TEST_FAIL' one
     });
 };
@@ -1492,15 +1492,15 @@ module.exports = (hermione) => {
 If for some reason interceptor should not translate passed event to another one you can return the same object or some falsey value:
 
 ```js
-module.exports = (hermione) => {
-    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+module.exports = (testplane) => {
+    testplane.intercept(testplane.events.TEST_FAIL, ({event, data}) => {
         return {event, data};
         // return;
         // return null;
         // return false;
     });
 
-    hermione.on(hermione.events.TEST_FAIL, (test) => {
+    testplane.on(testplane.events.TEST_FAIL, (test) => {
         // this event handler will be called as usual because interceptor does not change event
     });
 };
@@ -1509,12 +1509,12 @@ module.exports = (hermione) => {
 If for some reason interceptor should ignore passed event and do not translate it to any other listeners you can return an empty object:
 
 ```js
-module.exports = (hermione) => {
-    hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+module.exports = (testplane) => {
+    testplane.intercept(testplane.events.TEST_FAIL, ({event, data}) => {
         return {};
     });
 
-    hermione.on(hermione.events.TEST_FAIL, (test) => {
+    testplane.on(testplane.events.TEST_FAIL, (test) => {
         // this event handler will NEVER be called because interceptor ignores it
     });
 };
@@ -1523,16 +1523,16 @@ module.exports = (hermione) => {
 The above feature can be used to delay triggering of some events, for example:
 
 ```js
-module.exports = (hermione) => {
+module.exports = (testplane) => {
   const intercepted = [];
 
-  hermione.intercept(hermione.events.TEST_FAIL, ({event, data}) => {
+  testplane.intercept(testplane.events.TEST_FAIL, ({event, data}) => {
         intercepted.push({event, data});
         return {};
     });
 
-    hermione.on(hermione.events.END, () => {
-        intercepted.forEach(({event, data}) => hermione.emit(event, data));
+    testplane.on(testplane.events.END, () => {
+        intercepted.forEach(({event, data}) => testplane.emit(event, data));
     });
 };
 ```
@@ -1551,15 +1551,15 @@ Event                     |
 
 #### Parallel execution plugin code
 
-Runner has a method `registerWorkers` which register plugin's code for parallel execution in Hermione's worker farm. The method accepts parameters `workerFilepath` (string, absolute path), `exportedMethods` (array of string) and return object which contains async functions with names from `exportedMethods`. File with path `workerFilepath` should export object which contains async functions with names from `exportedMethods`.
+Runner has a method `registerWorkers` which register plugin's code for parallel execution in Testplane's worker farm. The method accepts parameters `workerFilepath` (string, absolute path), `exportedMethods` (array of string) and return object which contains async functions with names from `exportedMethods`. File with path `workerFilepath` should export object which contains async functions with names from `exportedMethods`.
 
 *Example*
 ```js
 // plugin code
 let workers;
 
-module.exports = (hermione) => {
-    hermione.on(hermione.events.RUNNER_START, async (runner) => {
+module.exports = (testplane) => {
+    testplane.on(testplane.events.RUNNER_START, async (runner) => {
         const workerFilepath = require.resolve('./worker');
         const exportedMethods = ['foo'];
         workers = runner.registerWorkers(workerFilepath, exportedMethods);
@@ -1568,7 +1568,7 @@ module.exports = (hermione) => {
         console.log(await workers.foo('RUNNER_START'));
     });
 
-    hermione.on(hermione.events.RUNNER_END, async () => {
+    testplane.on(testplane.events.RUNNER_END, async () => {
         // outputs `FOO_RUNNER_END`
         console.log(await workers.foo('RUNNER_END'));
     });
@@ -1587,9 +1587,9 @@ module.exports = {
 There are several plugins that may be useful:
 
 * [html-reporter](https://github.com/gemini-testing/html-reporter)
-* [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands)
-* [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome)
-* ...and many others that you can find in [gemini-testing](https://github.com/search?q=topic%3Ahermione-plugin+org%3Agemini-testing&type=Repositories).
+* [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands)
+* [@testplane/headless-chrome](https://github.com/gemini-testing/testplane-headless-chrome)
+* ...and many others that you can find in [gemini-testing](https://github.com/search?q=topic%3Atestplane-plugin+org%3Agemini-testing&type=Repositories).
 
 ### prepareBrowser
 Prepare the browser session before tests are run. For example, add custom user commands.
@@ -1607,13 +1607,13 @@ Configuration data can be changed depending on extra conditions in the `prepareE
 ## CLI
 
 ```
-hermione --help
+testplane --help
 ```
 
 shows the following
 
 ```
-  Usage: hermione [options] [paths...]
+  Usage: testplane [options] [paths...]
 
   Options:
 
@@ -1621,7 +1621,7 @@ shows the following
     -c, --config <path>          path to configuration file
     -b, --browser <browser>      run tests only in specified browser
     -s, --set <set>              run tests only in the specified set
-    -r, --require <module>       require a module before running hermione
+    -r, --require <module>       require a module before running `testplane`
     --reporter <reporter>        test reporters
     --grep <grep>                run only tests matching the pattern
     --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
@@ -1635,7 +1635,7 @@ shows the following
 
 For example,
 ```
-hermione --config ./config.js --reporter flat --browser firefox --grep name
+testplane --config ./config.js --reporter flat --browser firefox --grep name
 ```
 
 **Note.** All CLI options override config values.
@@ -1645,12 +1645,12 @@ hermione --config ./config.js --reporter flat --browser firefox --grep name
 You can choose `flat`, `plain` or `jsonl` reporter by option `--reporter`. Default is `flat`.
 Information about test results is displayed to the command line by default. But there is an ability to redirect the output to a file, for example:
 ```
-hermione --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}'
+testplane --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}'
 ```
 
 In that example specified file path and all directories will be created automatically. Moreover you can use few reporters:
 ```
-hermione --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}' --reporter flat
+testplane --reporter '{"type": "jsonl", "path": "./some-path/result.jsonl"}' --reporter flat
 ```
 
 Information about each report type:
@@ -1660,7 +1660,7 @@ Information about each report type:
 
 ### Require modules
 
-Using `-r` or `--require` option you can load external modules, which exists in your local machine, before running hermione. This is useful for:
+Using `-r` or `--require` option you can load external modules, which exists in your local machine, before running `testplane`. This is useful for:
 
 - compilers such as TypeScript via [ts-node](https://www.npmjs.com/package/ts-node) (using `--require ts-node/register`) or Babel via [@babel/register](https://www.npmjs.com/package/@babel/register) (using `--require @babel/register`);
 - loaders such as ECMAScript modules via [esm](https://www.npmjs.com/package/esm).
@@ -1682,20 +1682,20 @@ All options can also be overridden via command-line flags or environment variabl
 To override a config setting with a CLI option, convert the full option path to `--kebab-case`. For example, if you want to run tests against a different base URL, call:
 
 ```
-hermione path/to/mytest.js --base-url http://example.com
+testplane path/to/mytest.js --base-url http://example.com
 ```
 
 To change the number of sessions for Firefox (assuming you have a browser with the `firefox` id in the config):
 
 ```
-hermione path/to/mytest.js --browsers-firefox-sessions-per-browser 7
+testplane path/to/mytest.js --browsers-firefox-sessions-per-browser 7
 ```
 
-To override a setting with an environment variable, convert its full path to `snake_case` and add the `hermione_` prefix. The above examples can be rewritten to use environment variables instead of CLI options:
+To override a setting with an environment variable, convert its full path to `snake_case` and add the `testplane_` prefix. The above examples can be rewritten to use environment variables instead of CLI options:
 
 ```
-hermione_base_url=http://example.com hermione path/to/mytest.js
-hermione_browsers_firefox_sessions_per_browser=7 hermione path/to/mytest.js
+testplane_base_url=http://example.com testplane path/to/mytest.js
+testplane_browsers_firefox_sessions_per_browser=7 testplane path/to/mytest.js
 ```
 
 ### Debug mode
@@ -1704,7 +1704,7 @@ In order to understand what is going on in the test step by step, there is a deb
 
 Example:
 ```
-hermione path/to/mytest.js --inspect
+testplane path/to/mytest.js --inspect
 ```
 
 **Note**: In the debugging mode, only one worker is started and all tests are performed only in it.
@@ -1712,7 +1712,7 @@ Use this mode with option `sessionsPerBrowser=1` in order to debug tests one at 
 
 ### REPL mode
 
-Hermione provides a [REPL](https://en.wikipedia.org/wiki/Read–eval–print_loop) implementation that helps you not only to learn the framework API, but also to debug and inspect your tests. In this mode, there is no timeout for the duration of the test (it means that there will be enough time to debug the test). It can be used by specifying the CLI options:
+Testplane provides a [REPL](https://en.wikipedia.org/wiki/Read–eval–print_loop) implementation that helps you not only to learn the framework API, but also to debug and inspect your tests. In this mode, there is no timeout for the duration of the test (it means that there will be enough time to debug the test). It can be used by specifying the CLI options:
 
 - `--repl` - in this mode, only one test in one browser should be run, otherwise an error is thrown. REPL interface does not start automatically, so you need to call [switchToRepl](#switchtorepl) command in the test code. Disabled by default;
 - `--repl-before-test` - the same as `--repl` option except that REPL interface opens automatically before run test. Disabled by default;
@@ -1735,10 +1735,10 @@ it('foo', async ({browser}) => {
 And run it using the command:
 
 ```bash
-npx hermione --repl --grep "foo" -b "chrome"
+npx testplane --repl --grep "foo" -b "chrome"
 ```
 
-In this case, we are running only one test in one browser (or you can use `hermione.only.in('chrome')` before `it` + `it.only`).
+In this case, we are running only one test in one browser (or you can use `testplane.only.in('chrome')` before `it` + `it.only`).
 When executing the test, the text `before open repl` will be displayed in the console first, then test execution stops, REPL interface is opened and waits your commands. So we can write some command in the terminal:
 
 ```js
@@ -1791,7 +1791,7 @@ Another command features:
 For quick test development without restarting the test or the browser, you can run the test in the terminal of IDE with enabled REPL mode:
 
 ```bash
-npx hermione --repl-before-test --grep "foo" -b "chrome"
+npx testplane --repl-before-test --grep "foo" -b "chrome"
 ```
 
 After that, you need to configure the hotkey in IDE to run the selected one or more lines of code in the terminal. As a result, each new written line can be sent to the terminal using a hotkey and due to this, you can write a test much faster.
@@ -1803,7 +1803,7 @@ Also, during the test development process, it may be necessary to execute comman
 ##### How to set up using VSCode
 
 1. Open `Code` -> `Settings...` -> `Keyboard Shortcuts` and print `run selected text` to search input. After that, you can specify the desired key combination
-2. Run hermione in repl mode (examples were above)
+2. Run `testplane` in repl mode (examples were above)
 3. Select one or mode lines of code and press created hotkey
 
 ##### How to set up using Webstorm
@@ -1812,30 +1812,30 @@ Ability to run selected text in terminal will be available after this [issue](ht
 
 ### Environment variables
 
-#### HERMIONE_SKIP_BROWSERS
+#### TESTPLANE_SKIP_BROWSERS
 Skip the browsers specified in the config by passing the browser IDs. Multiple browser IDs should be separated by commas
 (spaces after commas are allowed).
 
 For example,
 ```
-HERMIONE_SKIP_BROWSERS=ie10,ie11 hermione
+TESTPLANE_SKIP_BROWSERS=ie10,ie11 testplane
 ```
 
-#### HERMIONE_SETS
+#### TESTPLANE_SETS
 Specify sets to run using the environment variable as an alternative to using the CLI option `--set`.
 
 For example,
 ```
-HERMIONE_SETS=desktop,touch hermione
+TESTPLANE_SETS=desktop,touch testplane
 ```
 
 ## Programmatic API
 
-With the API, you can use Hermione programmatically in your scripts or build tools. To do this, you must require `hermione` module and create instance:
+With the API, you can use Testplane programmatically in your scripts or build tools. To do this, you must require `testplane` module and create instance:
 
 ```js
-const Hermione = require('hermione');
-const hermione = new Hermione(config);
+const Testplane = require('testplane');
+const testplane = new Testplane(config);
 ```
 
 * **config** (required) `Object|String` – Configuration object or path to the configuration file that will be read relative to `process.cwd`.
@@ -1844,10 +1844,10 @@ Next, you will have access to the following parameters and methods:
 
 Name           | Description
 -------------- | -------------
-`config`       | Returns parsed hermione config.
-`events`       | Returns hermione events on which you can subscribe to.
-`errors`       | Errors which hermione may return.
-`intercept`    | Method to intercept Hermione's events.
+`config`       | Returns parsed Testplane config.
+`events`       | Returns Testplane events on which you can subscribe to.
+`errors`       | Errors which Testplane may return.
+`intercept`    | Method to intercept Testplane's events.
 `run`          | Starts running tests. By default run all tests from the config. Can also run only the specified tests.
 `addTestToRun` | Adds test to the current run.
 `readTests`    | Starts reading tests. By default read all tests from the config. Can also read only the specified tests.
@@ -1857,27 +1857,27 @@ Name           | Description
 
 ### config
 
-Returns parsed hermione config. Useful when you need to read some field from the config.
+Returns parsed Testplane config. Useful when you need to read some field from the config.
 
 ```js
-// create hermione instance
-console.log('plugins:', hermione.config.plugins);
+// create testplane instance
+console.log('plugins:', testplane.config.plugins);
 ```
 
 ### events
 
-Returns hermione events on which you can subscribe to. Useful when you need to subscribe to a specific event.
+Returns Testplane events on which you can subscribe to. Useful when you need to subscribe to a specific event.
 
 ```js
-// create hermione instance
-hermione.on(hermione.events.INIT, async () => {
+// create testplane instance
+testplane.on(testplane.events.INIT, async () => {
     console.info('INIT event is being processed...');
 });
 ```
 
 ### errors
 
-Hermione may return errors of the following type:
+Testplane may return errors of the following type:
 
 - [CoreError](#coreerror)
 - [CancelledError](#cancellederror)
@@ -1906,7 +1906,7 @@ Browser request was cancelled
 
 #### ClientBridgeError
 
-A `ClientBridgeError` is returned when JavaScript injection on the client (browser) side fails. Hermione injects the code using the [execute](https://webdriver.io/docs/api/browser/execute/) WebDriverIO command. The error contains the following message:
+A `ClientBridgeError` is returned when JavaScript injection on the client (browser) side fails. Testplane injects the code using the [execute](https://webdriver.io/docs/api/browser/execute/) WebDriverIO command. The error contains the following message:
 
 ```
 Unable to inject client script
@@ -1925,7 +1925,7 @@ Element position: <cropArea.left>, <cropArea.top>; size: <cropArea.width>, <crop
 Viewport size: <viewport.width>, <viewport.height>.
 ```
 
-In this case, the message prompts the Hermione user what settings need to be set in the Hermione config in order to be able to take a screenshot for the specified area.
+In this case, the message prompts the Testplane user what settings need to be set in the Testplane config in order to be able to take a screenshot for the specified area.
 
 #### OffsetViewportError
 
@@ -1943,7 +1943,7 @@ But if viewport overflow is expected behavior then you can use
 option "allowViewportOverflow" in "assertView" command.
 ```
 
-In this case, the message prompts the Hermione user what settings need to be set in the Hermione config in order to be able to take a screenshot for the specified area.
+In this case, the message prompts the Testplane user what settings need to be set in the Testplane config in order to be able to take a screenshot for the specified area.
 
 #### AssertViewError
 
@@ -1982,7 +1982,7 @@ Read more about [diffBounds](https://github.com/gemini-testing/looks-same/blob/m
 
 #### NoRefImageError
 
-The `NoRefImageError` error is returned from the [assertView](#assertview) command if, when taking and comparing a screenshot, Hermione does not find a reference screenshot on the file system. The error contains the following message:
+The `NoRefImageError` error is returned from the [assertView](#assertview) command if, when taking and comparing a screenshot, Testplane does not find a reference screenshot on the file system. The error contains the following message:
 
 ```
 can not find reference image at <refImg.path> for "<stateName>" state
@@ -1996,12 +1996,12 @@ In addition, the `NoRefImageError` error contains the following data:
 
 ### intercept
 
-Method to intercept Hermione's events. The first argument of the method is the event that needs to be intercepted, and the second is the event handler. Example:
+Method to intercept Testplane's events. The first argument of the method is the event that needs to be intercepted, and the second is the event handler. Example:
 
 ```js
-// create hermione instance
-hermione.intercept(hermione.events.TEST_FAIL, ({ event, data }) => {
-    return {event: hermione.events.TEST_PASS, test}; // make the test successful
+// create testplane instance
+testplane.intercept(testplane.events.TEST_FAIL, ({ event, data }) => {
+    return {event: testplane.events.TEST_PASS, test}; // make the test successful
 });
 ```
 
@@ -2012,8 +2012,8 @@ Read more about event interception in the section [about plugins](#plugins).
 Starts running tests. By default run all tests from the config. Can also run only the specified tests. Returns `true` if the test run succeeded, and `false` if it failed. Example:
 
 ```js
-// create hermione instance
-const success = await hermione.run(testPaths, options);
+// create testplane instance
+const success = await testplane.run(testPaths, options);
 ```
 
 Available parameters:
@@ -2030,8 +2030,8 @@ Available parameters:
 Adds test to the current run. Returns `false` if the current run has already ended or has been cancelled. Otherwise returns `true`. Example:
 
 ```js
-// create hermione instance
-const success = hermione.addTestToRun(test, browserId);
+// create testplane instance
+const success = testplane.addTestToRun(test, browserId);
 ```
 
 * **test** (required) `Test` – Test to run.
@@ -2042,8 +2042,8 @@ const success = hermione.addTestToRun(test, browserId);
 Starts reading tests. By default read all tests from the config. Can also read only the specified tests. Returns promise which resolves to the instance of [TestCollection](#test-collection) initialized by parsed tests. Example:
 
 ```js
-// create hermione instance
-await hermione.readTests(testPaths, options);
+// create testplane instance
+await testplane.readTests(testPaths, options);
 ```
 
 * **testPaths** (required) `String[]` – Paths to tests relative to `process.cwd`.
@@ -2056,11 +2056,11 @@ await hermione.readTests(testPaths, options);
 
 ### isFailed
 
-Returns `true` or `false` depending on whether there has been an error or a test fail while running tests. Can be useful in plugins to determine Hermione's current status. Example:
+Returns `true` or `false` depending on whether there has been an error or a test fail while running tests. Can be useful in plugins to determine Testplane's current status. Example:
 
 ```js
-// create hermione instance
-const failed = hermione.isFailed();
+// create testplane instance
+const failed = testplane.isFailed();
 ```
 
 ### isWorker
@@ -2069,8 +2069,8 @@ Returns `true` or `false` depending on whether you call the method in one of the
 
 ```js
 // implementation of some plugin
-module.exports = (hermione) => {
-    if (hermione.isWorker()) {
+module.exports = (testplane) => {
+    if (testplane.isWorker()) {
         // do some stuff only in workers
     } else {
         // do some stuff only in the master process
@@ -2083,13 +2083,13 @@ module.exports = (hermione) => {
 Abnormal termination of the test run in case of a terminal error. If process fails to gracefully shutdown in `timeout` milliseconds, it would be forcibly terminated (unless `timeout` is explicitly set to `0`).
 
 ```js
-// create hermione instance
-hermione.halt(error, [timeout=60000ms]);
+// create testplane instance
+testplane.halt(error, [timeout=60000ms]);
 ```
 
 ### Test Collection
 
-TestCollection object is returned by `hermione.readTests` method.
+TestCollection object is returned by `testplane.readTests` method.
 
 TestCollection API:
 
@@ -2121,7 +2121,7 @@ TestCollection API:
 
 #### setController(name, methods)
 
-Adds controller to `hermione` object in test files.
+Adds controller to `testplane` object in test files.
 
 * `name` - controller name
 * `methods` - an object with names as keys and callbacks as values describing controller methods. Each callback will be called on corresponding test or suite.
@@ -2129,7 +2129,7 @@ Adds controller to `hermione` object in test files.
 Example:
 ```js
 // in plugin
-hermione.on(hermione.events.BEFORE_FILE_READ, ({file, testParser}) => {
+testplane.on(testplane.events.BEFORE_FILE_READ, ({file, testParser}) => {
     testParser.setController('logger', {
         log: function(prefix) {
             console.log(`${prefix}: Just parsed ${this.fullTitle()} from file ${file}`);
@@ -2139,7 +2139,7 @@ hermione.on(hermione.events.BEFORE_FILE_READ, ({file, testParser}) => {
 
 // in test file
 describe('foo', () => {
-    hermione.logger.log('some-prefix');
+    testplane.logger.log('some-prefix');
     it('bar', function() {
         // ...
     });

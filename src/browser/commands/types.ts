@@ -3,7 +3,7 @@ import { AssertViewOptsConfig } from "../../config/types";
 export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     /**
      * Maximum allowed difference between colors.
-     * Overrides config {@link https://github.com/gemini-testing/hermione#browsers browsers}.{@link https://github.com/gemini-testing/hermione#tolerance tolerance} value.
+     * Overrides config {@link https://github.com/gemini-testing/testplane#browsers browsers}.{@link https://github.com/gemini-testing/testplane#tolerance tolerance} value.
      *
      * @remarks
      * Indicates maximum allowed CIEDE2000 difference between colors. Used only in non-strict mode.
@@ -15,7 +15,7 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     tolerance?: number;
     /**
      * Minimum difference in brightness (zero by default) between the darkest/lightest pixel (which is adjacent to the antialiasing pixel) and theirs adjacent pixels.
-     * Overrides config {@link https://github.com/gemini-testing/hermione#browsers browsers}.{@link https://github.com/gemini-testing/hermione#antialiasingTolerance antialiasingTolerance} value.
+     * Overrides config {@link https://github.com/gemini-testing/testplane#browsers browsers}.{@link https://github.com/gemini-testing/testplane#antialiasingTolerance antialiasingTolerance} value.
      *
      * @remarks
      * Read more about this option in {@link https://github.com/gemini-testing/looks-same#comparing-images-with-ignoring-antialiasing looks-same}
@@ -25,7 +25,7 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     antialiasingTolerance?: number;
     /**
      * Allows testing of regions which bottom bounds are outside of a viewport height.
-     * Overrides config {@link https://github.com/gemini-testing/hermione#browsers browsers}.{@link https://github.com/gemini-testing/hermione#compositeImage compositeImage} value.
+     * Overrides config {@link https://github.com/gemini-testing/testplane#browsers browsers}.{@link https://github.com/gemini-testing/testplane#compositeImage compositeImage} value.
      *
      * @remarks
      * In the resulting screenshot the area which fits the viewport bounds will be joined with the area which is outside of the viewport height.
@@ -35,7 +35,7 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     compositeImage?: boolean;
     /**
      * Allows to specify a delay (in milliseconds) before making any screenshot.
-     * Overrides config {@link https://github.com/gemini-testing/hermione#browsers browsers}.{@link https://github.com/gemini-testing/hermione#screenshotDelay screenshotDelay} value.
+     * Overrides config {@link https://github.com/gemini-testing/testplane#browsers browsers}.{@link https://github.com/gemini-testing/testplane#screenshotDelay screenshotDelay} value.
      *
      * @remarks
      * This is useful when the page has elements which are animated or if you do not want to screen a scrollbar.
