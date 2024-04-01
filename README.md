@@ -293,7 +293,7 @@ All work with the grid client is encapsulated in hermione. Forget about `client.
 Request `/session/:sessionId/orientation` is not a part of the official Webdriver specification, so commands `orientation` and `setOrientation` which are provided by client `webdriverio` from the box do not guarantee screen rotate before the next command will start to execute, but `Hermione` solves this problem.
 
 ## Prerequisites
-All you need are browsers that `Hermione` could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome) plugin).
+All you need are browsers that `Hermione` could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [hermione-headless-chrome](https://github.com/gemini-testing/testplane-headless-chrome) plugin).
 
 Next, you have two ways to configure `Hermione` to work with browsers:
 
@@ -387,7 +387,7 @@ Write your first test in `tests/desktop/github.hermione.js` file.
 ```javascript
 describe('github', function() {
     it('should check repository name', async ({ browser }) => {
-        await browser.url('https://github.com/gemini-testing/hermione');
+        await browser.url('https://github.com/gemini-testing/testplane');
 
         await expect(browser.$('#readme h1')).toHaveText('Hermione');
     });
@@ -411,7 +411,7 @@ Browser command that clears session state (deletes cookies, clears local and ses
 
 ```js
 it('test', async ({ browser }) => {
-    await browser.url('https://github.com/gemini-testing/hermione');
+    await browser.url('https://github.com/gemini-testing/testplane');
 
     (await browser.getCookies()).length; // 5
     await browser.execute(() => localStorage.length); // 2
@@ -1164,7 +1164,7 @@ buildDiffOpts: {
 ```
 
 #### assertViewOpts
-Default options used when calling [assertView](https://github.com/gemini-testing/hermione/#assertview), can be overridden by `assertView` options. Default values are:
+Default options used when calling [assertView](https://github.com/gemini-testing/testplane/#assertview), can be overridden by `assertView` options. Default values are:
 ```javascript
     ignoreElements: [],
     captureElementFromTop: true,
@@ -1174,7 +1174,7 @@ Default options used when calling [assertView](https://github.com/gemini-testing
 ```
 
 #### openAndWaitOpts
-Default options used when calling [openAndWait](https://github.com/gemini-testing/hermione/#openandwait), can be overriden by `openAndWait` options. Default values are:
+Default options used when calling [openAndWait](https://github.com/gemini-testing/testplane/#openandwait), can be overriden by `openAndWait` options. Default values are:
 ```javascript
     waitNetworkIdle: true,
     waitNetworkIdleTimeout: 500,
@@ -1219,7 +1219,7 @@ Available options:
 
 Some plugins can rely on this history, for instance:
  - [html-reporter](https://github.com/gemini-testing/html-reporter)
- - [hermione-profiler](https://github.com/gemini-testing/hermione-profiler)
+ - [hermione-profiler](https://github.com/gemini-testing/testplane-profiler)
 
 The history is available from such events: `TEST_END`, `TEST_PASS`, `TEST_FAIL` through payload:
 ```js
@@ -1347,7 +1347,7 @@ By default, `hermione` will run all browsers simultaneously. Sometimes (i.e. whe
 Ability to set file extensions, which hermione will search on the file system. Default value is `[.js]`.
 
 ### plugins
-`Hermione` plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands).
+`Hermione` plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [hermione-safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
 
 A plugin is a module that exports a single function. The function has two arguments:
 
@@ -1587,8 +1587,8 @@ module.exports = {
 There are several plugins that may be useful:
 
 * [html-reporter](https://github.com/gemini-testing/html-reporter)
-* [hermione-safari-commands](https://github.com/gemini-testing/hermione-safari-commands)
-* [hermione-headless-chrome](https://github.com/gemini-testing/hermione-headless-chrome)
+* [hermione-safari-commands](https://github.com/gemini-testing/testplane-safari-commands)
+* [hermione-headless-chrome](https://github.com/gemini-testing/testplane-headless-chrome)
 * ...and many others that you can find in [gemini-testing](https://github.com/search?q=topic%3Ahermione-plugin+org%3Agemini-testing&type=Repositories).
 
 ### prepareBrowser
