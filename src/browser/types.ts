@@ -70,7 +70,7 @@ declare global {
              * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#assertview documentation}.
+             * For more details, see {@link https://github.com/gemini-testing/testplane#assertview documentation}.
              *
              * @example
              * ```ts
@@ -102,7 +102,7 @@ declare global {
              * Command that allows to add human-readable description for commands in history
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#runstep documentation}
+             * For more details, see {@link https://github.com/gemini-testing/testplane#runstep documentation}
              *
              * @example
              * ```ts
@@ -143,7 +143,7 @@ declare global {
              * Takes a screenshot of the element and compares the received screenshot with the reference.
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#assertview documentation}.
+             * For more details, see {@link https://github.com/gemini-testing/testplane#assertview documentation}.
              *
              * @example
              * ```ts
