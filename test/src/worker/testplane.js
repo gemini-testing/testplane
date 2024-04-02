@@ -11,20 +11,20 @@ const { WorkerEvents: WorkerRunnerEvents } = require("src/events");
 const Runner = require("src/worker/runner");
 const { makeConfigStub, makeSuite } = require("../../utils");
 
-describe("worker/hermione", () => {
+describe("worker/testplane", () => {
     const sandbox = sinon.createSandbox();
 
     let ExpectWebdriverio;
-    let Hermione;
+    let Testplane;
 
     beforeEach(() => {
         ExpectWebdriverio = {
             setOptions: sandbox.stub(),
         };
 
-        Hermione = proxyquire("src/worker/hermione", {
+        Testplane = proxyquire("src/worker/testplane", {
             "expect-webdriverio": ExpectWebdriverio,
-        }).Hermione;
+        }).Testplane;
 
         sandbox.stub(Config, "create").returns(makeConfigStub());
 
@@ -40,7 +40,7 @@ describe("worker/hermione", () => {
 
     describe("constructor", () => {
         it("should create a config from the passed path", () => {
-            Hermione.create("some-config-path.js");
+            Testplane.create("some-config-path.js");
 
             assert.calledOnceWith(Config.create, "some-config-path.js");
         });
@@ -48,13 +48,13 @@ describe("worker/hermione", () => {
         it("should create a runner instance", () => {
             Config.create.returns({ some: "config" });
 
-            Hermione.create();
+            Testplane.create();
 
             assert.calledOnceWith(Runner.create, { some: "config" });
         });
 
         it("should passthrough all runner events", () => {
-            const hermione = Hermione.create();
+            const testplane = Testplane.create();
 
             _.forEach(
                 {
@@ -66,7 +66,7 @@ describe("worker/hermione", () => {
                 },
                 (data, event) => {
                     const spy = sinon.spy();
-                    hermione.on(event, spy);
+                    testplane.on(event, spy);
 
                     Runner.create.returnValues[0].emit(event, data);
 
@@ -77,27 +77,28 @@ describe("worker/hermione", () => {
 
         describe("loading of plugins", () => {
             it("should load plugins", () => {
-                Hermione.create();
+                Testplane.create();
 
                 assert.calledOnce(pluginsLoader.load);
             });
 
-            it("should load plugins for hermione instance", () => {
-                Hermione.create();
+            it("should load plugins for testplane instance", () => {
+                Testplane.create();
 
-                assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Hermione));
+                assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Testplane));
             });
 
             it("should load plugins from config", () => {
                 Config.create.returns(makeConfigStub({ plugins: { "some-plugin": true } }));
 
-                Hermione.create();
+                Testplane.create();
 
                 assert.calledWith(pluginsLoader.load, sinon.match.any, { "some-plugin": true });
             });
 
-            it("should load plugins with appropriate prefix", () => {
-                Hermione.create();
+            // testplane does not support its own plugin prefixes.
+            it("should load plugins with deprecated hermione prefix", () => {
+                Testplane.create();
 
                 assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, "hermione-");
             });
@@ -105,22 +106,22 @@ describe("worker/hermione", () => {
     });
 
     describe("should provide access to", () => {
-        it("hermione events", () => {
+        it("testplane events", () => {
             const expectedEvents = _.extend({}, RunnerEvents, WorkerRunnerEvents);
 
-            assert.deepEqual(Hermione.create(makeConfigStub()).events, expectedEvents);
+            assert.deepEqual(Testplane.create(makeConfigStub()).events, expectedEvents);
         });
 
-        it("hermione configuration", () => {
+        it("testplane configuration", () => {
             const config = { foo: "bar" };
 
             Config.create.returns(config);
 
-            assert.deepEqual(Hermione.create().config, config);
+            assert.deepEqual(Testplane.create().config, config);
         });
 
-        it("hermione errors", () => {
-            assert.deepEqual(Hermione.create().errors, Errors);
+        it("testplane errors", () => {
+            assert.deepEqual(Testplane.create().errors, Errors);
         });
     });
 
@@ -130,24 +131,24 @@ describe("worker/hermione", () => {
         });
 
         it('should emit "INIT"', () => {
-            const hermione = Hermione.create();
+            const testplane = Testplane.create();
 
             const onInit = sinon.spy();
-            hermione.on(WorkerRunnerEvents.INIT, onInit);
+            testplane.on(WorkerRunnerEvents.INIT, onInit);
 
-            return hermione.init().then(() => assert.calledOnce(onInit));
+            return testplane.init().then(() => assert.calledOnce(onInit));
         });
 
         it('should reject on "INIT" handler fail', () => {
-            const hermione = Hermione.create().on(WorkerRunnerEvents.INIT, () => Promise.reject("o.O"));
+            const testplane = Testplane.create().on(WorkerRunnerEvents.INIT, () => Promise.reject("o.O"));
 
-            return assert.isRejected(hermione.init(), /o.O/);
+            return assert.isRejected(testplane.init(), /o.O/);
         });
 
         it("should not init expect-webdriverio if global.expect already set", async () => {
             global.expect = {};
 
-            await Hermione.create().init();
+            await Testplane.create().init();
 
             assert.notCalled(ExpectWebdriverio.setOptions);
         });
@@ -159,7 +160,7 @@ describe("worker/hermione", () => {
                 },
             });
 
-            await Hermione.create().init();
+            await Testplane.create().init();
 
             assert.calledOnceWith(ExpectWebdriverio.setOptions, { foo: "bar" });
         });
@@ -169,17 +170,17 @@ describe("worker/hermione", () => {
         it("should run test", () => {
             Runner.prototype.runTest.withArgs("fullTitle", { some: "options" }).resolves("foo bar");
 
-            const hermione = Hermione.create();
+            const testplane = Testplane.create();
 
-            return hermione.runTest("fullTitle", { some: "options" }).then(result => assert.equal(result, "foo bar"));
+            return testplane.runTest("fullTitle", { some: "options" }).then(result => assert.equal(result, "foo bar"));
         });
     });
 
     describe("isWorker", () => {
         it('should return "true"', () => {
-            const hermione = Hermione.create();
+            const testplane = Testplane.create();
 
-            assert.isTrue(hermione.isWorker());
+            assert.isTrue(testplane.isWorker());
         });
     });
 });

@@ -106,7 +106,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
             }
 
             const errMsg = code === null ? `signal: ${signal}` : `exit code: ${code}`;
-            logger.error(`hermione:worker:${child.pid} terminated unexpectedly with ${errMsg}`);
+            logger.error(`testplane:worker:${child.pid} terminated unexpectedly with ${errMsg}`);
         });
 
         child.on("message", (data = {}) => {

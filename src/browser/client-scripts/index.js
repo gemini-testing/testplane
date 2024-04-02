@@ -149,7 +149,7 @@ function prepareScreenshotUnsafe(areas, opts) {
 }
 
 function disableFrameAnimationsUnsafe() {
-    var everyElementSelector = "*:not(#hermione-q.hermione-w.hermione-e.hermione-r.hermione-t.hermione-y)";
+    var everyElementSelector = "*:not(#testplane-q.testplane-w.testplane-e.testplane-r.testplane-t.testplane-y)";
     var everythingSelector = ["", "::before", "::after"]
         .map(function (pseudo) {
             return everyElementSelector + pseudo;

@@ -9,7 +9,7 @@ module.exports = class PerBrowserLimitedPool extends Pool {
     constructor(underlyingPool, config) {
         super();
 
-        this.log = debug("hermione:pool:per-browser-limited");
+        this.log = debug("testplane:pool:per-browser-limited");
 
         const ids = config.getBrowserIds();
         this._browserPools = _.zipObject(

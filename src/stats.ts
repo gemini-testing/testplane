@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { MasterEvents } from "./events";
-import { Hermione } from "./hermione";
+import { Testplane } from "./testplane";
 
 import type { Test } from "./types";
 
@@ -24,11 +24,11 @@ type StatEvent = {
 export class Stats {
     private events: StatEvent[] = [];
 
-    static create<T extends Stats>(this: new (runner?: Hermione) => T, runner?: Hermione): T {
+    static create<T extends Stats>(this: new (runner?: Testplane) => T, runner?: Testplane): T {
         return new this(runner);
     }
 
-    constructor(runner?: Hermione) {
+    constructor(runner?: Testplane) {
         const pushEvent_ =
             (group: GroupName) =>
             ({ id, browserId }: Test): void => {

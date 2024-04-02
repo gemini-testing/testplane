@@ -12,16 +12,13 @@ import {
 } from "./events";
 import Errors from "./errors";
 import { tryToRegisterTsNode } from "./utils/typescript";
-import * as packageJson from "../package.json";
 import { ConfigInput } from "./config/types";
 
-const PREFIX = packageJson.name + "-";
-
-export abstract class BaseHermione extends AsyncEmitter {
+export abstract class BaseTestplane extends AsyncEmitter {
     protected _interceptors: Interceptor[] = [];
     protected _config: Config;
 
-    static create<T extends BaseHermione>(
+    static create<T extends BaseTestplane>(
         this: new (config?: string | ConfigInput) => T,
         config?: string | ConfigInput,
     ): T {
@@ -72,6 +69,6 @@ export abstract class BaseHermione extends AsyncEmitter {
     }
 
     protected _loadPlugins(): void {
-        pluginsLoader.load(this, this.config.plugins, PREFIX);
+        pluginsLoader.load(this, this.config.plugins, "hermione-");
     }
 }

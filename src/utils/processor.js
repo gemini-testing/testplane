@@ -8,12 +8,12 @@ const { shouldIgnoreUnhandledRejection } = require("./errors");
 
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {
-        logger.warn(`Unhandled Rejection "${reason}" in hermione:worker:${process.pid} was ignored`);
+        logger.warn(`Unhandled Rejection "${reason}" in testplane:worker:${process.pid} was ignored`);
         return;
     }
 
     const error = [
-        `Unhandled Rejection in hermione:worker:${process.pid}:`,
+        `Unhandled Rejection in testplane:worker:${process.pid}:`,
         `Promise: ${JSON.stringify(p)}`,
         `Reason: ${_.get(reason, "stack", reason)}`,
     ].join("\n");
@@ -40,6 +40,7 @@ function sendError(err, cb) {
             "code",
             "screenshot",
             // TODO: use fields from worker test-runner after rewrite on TS
+            "testplaneCtx",
             "hermioneCtx",
             "meta",
             "history",

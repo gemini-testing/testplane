@@ -1,29 +1,29 @@
 "use strict";
 
-const { Hermione } = require("./hermione");
+const { Testplane } = require("./testplane");
 const RuntimeConfig = require("../config/runtime-config");
 const Promise = require("bluebird");
-const debug = require("debug")(`hermione:worker:${process.pid}`);
+const debug = require("debug")(`testplane:worker:${process.pid}`);
 const ipc = require("../utils/ipc");
 const { MASTER_INIT, MASTER_SYNC_CONFIG, WORKER_INIT, WORKER_SYNC_CONFIG } = require("../constants/process-messages");
 const { requireModule } = require("../utils/module");
 
-module.exports = class HermioneFacade {
+module.exports = class TestplaneFacade {
     static create() {
-        return new HermioneFacade();
+        return new this();
     }
 
     constructor() {
         this.promise = Promise.resolve();
-        this._hermione = null;
+        this._testplane = null;
     }
 
     init() {
         this.init = () => this.promise;
 
         this.promise = this._init()
-            .then(hermione => (this._hermione = hermione))
-            .then(() => this._hermione.init());
+            .then(testplane => (this._testplane = testplane))
+            .then(() => this._testplane.init());
 
         return this.promise;
     }
@@ -37,7 +37,7 @@ module.exports = class HermioneFacade {
     }
 
     runTest(...args) {
-        return this.syncConfig().then(() => this._hermione.runTest(...args));
+        return this.syncConfig().then(() => this._testplane.runTest(...args));
     }
 
     _init() {
@@ -55,11 +55,11 @@ module.exports = class HermioneFacade {
                     }
 
                     RuntimeConfig.getInstance().extend(runtimeConfig);
-                    const hermione = Hermione.create(configPath);
+                    const testplane = Testplane.create(configPath);
 
                     promise.then(() => {
                         debug("worker initialized");
-                        resolve(hermione);
+                        resolve(testplane);
                     });
                 } catch (e) {
                     debug("worker initialization failed");
@@ -77,7 +77,7 @@ module.exports = class HermioneFacade {
 
             ipc.on(MASTER_SYNC_CONFIG, ({ config } = {}) => {
                 delete config.system.mochaOpts.grep; // grep affects only master
-                this._hermione.config.mergeWith(config);
+                this._testplane.config.mergeWith(config);
 
                 debug("config synced");
                 resolve();

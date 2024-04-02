@@ -22,7 +22,7 @@ module.exports = class LimitedUseSet {
         this._formatItem = opts.formatItem || _.identity;
         this._objects = [];
 
-        this.log = debug("hermione:pool:limited-use-set");
+        this.log = debug("testplane:pool:limited-use-set");
     }
 
     push(value) {
