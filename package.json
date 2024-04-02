@@ -60,7 +60,7 @@
     "expect-webdriverio": "3.5.3",
     "fastq": "1.13.0",
     "fs-extra": "5.0.0",
-    "gemini-configparser": "1.3.0",
+    "gemini-configparser": "1.4.1",
     "glob-extra": "5.0.2",
     "lodash": "4.17.21",
     "looks-same": "9.0.0",
