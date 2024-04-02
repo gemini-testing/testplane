@@ -81,6 +81,18 @@ describe("config options", () => {
                     assert.deepEqual(result.system[optionName], { some: "opts" });
                 });
 
+                it("should prefer existing environment option with testplane_ prefix", () => {
+                    const result = parse_({
+                        options: { system: { [optionName]: {} } },
+                        env: {
+                            [`hermione_system_${_.snakeCase(optionName)}`]: '{"foo": "bar"}',
+                            [`testplane_system_${_.snakeCase(optionName)}`]: '{"baz": "qux"}',
+                        },
+                    });
+
+                    assert.deepEqual(result.system[optionName], { baz: "qux" });
+                });
+
                 it("should parse option from cli", () => {
                     const result = parse_({
                         options: { system: { [optionName]: {} } },

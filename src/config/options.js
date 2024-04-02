@@ -8,7 +8,7 @@ const optionsBuilder = require("./options-builder");
 
 const options = optionsBuilder(_.propertyOf(defaults));
 
-const ENV_PREFIX = `${require("../../package").name}_`;
+const ENV_PREFIXES = ["testplane_", "hermione_"];
 
 const rootSection = section(
     _.extend(browserOptions.getTopLevel(), {
@@ -104,4 +104,4 @@ const rootSection = section(
     }),
 );
 
-module.exports = root(rootSection, { envPrefix: ENV_PREFIX });
+module.exports = root(rootSection, { envPrefix: ENV_PREFIXES });
