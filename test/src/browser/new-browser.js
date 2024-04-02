@@ -45,7 +45,7 @@ describe("NewBrowser", () => {
             });
         });
 
-        it("should use devtools protocol if hermione runs in devtools mode", async () => {
+        it("should use devtools protocol if testplane runs in devtools mode", async () => {
             RuntimeConfig.getInstance.returns({ devtools: true });
 
             await mkBrowser_().init();
@@ -311,7 +311,7 @@ describe("NewBrowser", () => {
                 sandbox.stub(history, "runGroup");
                 await browser.init();
 
-                assert.calledOnceWith(history.runGroup, sinon.match.any, "hermione: init browser", sinon.match.func);
+                assert.calledOnceWith(history.runGroup, sinon.match.any, "testplane: init browser", sinon.match.func);
             });
         });
 

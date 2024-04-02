@@ -28,13 +28,16 @@ class TestParser extends EventEmitter {
             system: { ctx, mochaOpts },
         } = config;
 
-        global.hermione = {
+        const toolGlobals = {
             browser: browserVersionController.mkProvider(config.getBrowserIds(), eventBus),
             config: ConfigController.create(eventBus),
             ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),
             skip: SkipController.create(eventBus),
         };
+
+        global.testplane = toolGlobals;
+        global.hermione = toolGlobals;
 
         this.#buildInstructions
             .push(Instructions.extendWithBrowserId)
@@ -43,7 +46,7 @@ class TestParser extends EventEmitter {
             .push(Instructions.buildGlobalSkipInstruction(config));
 
         this.#applyInstructionsEvents(eventBus);
-        this.#passthroughFileEvents(eventBus, global.hermione);
+        this.#passthroughFileEvents(eventBus, toolGlobals);
 
         this.#clearRequireCache(files);
 
@@ -63,18 +66,18 @@ class TestParser extends EventEmitter {
             );
     }
 
-    #passthroughFileEvents(eventBus, hermione) {
+    #passthroughFileEvents(eventBus, testplane) {
         const passthroughEvent_ = (event, customOpts = {}) => {
             eventBus.on(event, data =>
                 this.emit(event, {
                     ...data,
-                    hermione,
+                    testplane,
                     ...customOpts,
                 }),
             );
         };
 
-        passthroughEvent_(MasterEvents.BEFORE_FILE_READ, { testParser: TestParserAPI.create(hermione, eventBus) });
+        passthroughEvent_(MasterEvents.BEFORE_FILE_READ, { testParser: TestParserAPI.create(testplane, eventBus) });
         passthroughEvent_(MasterEvents.AFTER_FILE_READ);
     }
 

@@ -9,8 +9,8 @@ module.exports = class ExecutionThread {
         return new this(...args);
     }
 
-    constructor({ test, browser, hermioneCtx, screenshooter }) {
-        this._hermioneCtx = hermioneCtx;
+    constructor({ test, browser, testplaneCtx, screenshooter }) {
+        this._testplaneCtx = testplaneCtx;
         this._screenshooter = screenshooter;
         this._ctx = {
             browser: browser.publicAPI,
@@ -24,7 +24,8 @@ module.exports = class ExecutionThread {
     async run(runnable) {
         this._setExecutionContext(
             Object.assign(runnable, {
-                hermioneCtx: this._hermioneCtx,
+                testplaneCtx: this._testplaneCtx,
+                hermioneCtx: this._testplaneCtx,
                 ctx: this._ctx,
             }),
         );
@@ -65,7 +66,7 @@ module.exports = class ExecutionThread {
                 return this._screenshooter.extendWithScreenshot(e);
             })
             .finally(async () => {
-                if (this._hermioneCtx.assertViewResults && this._hermioneCtx.assertViewResults.hasFails()) {
+                if (this._testplaneCtx.assertViewResults && this._testplaneCtx.assertViewResults.hasFails()) {
                     await this._screenshooter.captureScreenshotOnAssertViewFail();
                 }
             });

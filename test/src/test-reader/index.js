@@ -54,8 +54,6 @@ describe("test-reader", () => {
 
     describe("read", async () => {
         it("should create set-builder with sets from config and default directory", async () => {
-            const defaultDir = require("../../../package").name;
-
             await readTests_({
                 config: makeConfigStub({
                     sets: {
@@ -65,7 +63,7 @@ describe("test-reader", () => {
             });
 
             assert.calledOnce(SetsBuilder.create);
-            assert.calledWithMatch(SetsBuilder.create, { all: {} }, { defaultDir });
+            assert.calledWithMatch(SetsBuilder.create, { all: {} }, { defaultPaths: ["testplane", "hermione"] });
         });
 
         it("should use passed paths", async () => {

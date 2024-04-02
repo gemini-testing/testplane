@@ -2,16 +2,16 @@
 
 const proxyquire = require("proxyquire");
 const { AsyncEmitter } = require("src/events/async-emitter");
-const { Hermione } = require("src/worker/hermione");
+const { Testplane } = require("src/worker/testplane");
 const { makeConfigStub } = require("../../utils");
 const ipc = require("src/utils/ipc");
-const HermioneFacade = require("src/worker/hermione-facade");
+const TestplaneFacade = require("src/worker/testplane-facade");
 const { MASTER_INIT, MASTER_SYNC_CONFIG } = require("src/constants/process-messages");
 
-describe("worker/hermione-facade", () => {
+describe("worker/testplane-facade", () => {
     const sandbox = sinon.createSandbox();
-    let hermione;
-    let hermioneFacade;
+    let testplane;
+    let testplaneFacade;
 
     beforeEach(() => {
         const config = makeConfigStub();
@@ -20,35 +20,35 @@ describe("worker/hermione-facade", () => {
         ipc.on.withArgs(MASTER_INIT).yieldsAsync({ runtimeConfig: {} });
         ipc.on.withArgs(MASTER_SYNC_CONFIG).yieldsAsync({ config });
 
-        sandbox.spy(HermioneFacade.prototype, "syncConfig");
+        sandbox.spy(TestplaneFacade.prototype, "syncConfig");
 
-        hermione = Object.assign(new AsyncEmitter(), {
-            init: sandbox.spy().named("hermioneInit"),
+        testplane = Object.assign(new AsyncEmitter(), {
+            init: sandbox.spy().named("testplaneInit"),
             config,
         });
-        sandbox.stub(Hermione, "create").returns(hermione);
+        sandbox.stub(Testplane, "create").returns(testplane);
 
-        hermioneFacade = HermioneFacade.create();
+        testplaneFacade = TestplaneFacade.create();
     });
 
     afterEach(() => sandbox.restore());
 
     describe("init", () => {
-        it("should init hermione", async () => {
-            await hermioneFacade.init();
+        it("should init testplane", async () => {
+            await testplaneFacade.init();
 
-            assert.calledOnce(hermione.init);
+            assert.calledOnce(testplane.init);
         });
 
         it("should not sync config", async () => {
-            await hermioneFacade.init();
+            await testplaneFacade.init();
 
-            assert.notCalled(HermioneFacade.prototype.syncConfig);
+            assert.notCalled(TestplaneFacade.prototype.syncConfig);
         });
 
         it("should require passed modules", async () => {
             const requireModule = sinon.stub();
-            const HermioneFacadeModule = proxyquire("src/worker/hermione-facade", {
+            const TestplaneFacadeModule = proxyquire("src/worker/testplane-facade", {
                 "../utils/module": { requireModule },
             });
 
@@ -56,7 +56,7 @@ describe("worker/hermione-facade", () => {
                 runtimeConfig: { requireModules: ["foo"] },
             });
 
-            await HermioneFacadeModule.create().init();
+            await TestplaneFacadeModule.create().init();
 
             assert.calledOnceWith(requireModule, "foo");
         });
@@ -64,19 +64,19 @@ describe("worker/hermione-facade", () => {
 
     describe("runTest", () => {
         beforeEach(() => {
-            hermione.runTest = sandbox.spy().named("hermioneRunTest");
+            testplane.runTest = sandbox.spy().named("testplaneRunTest");
         });
 
-        it("should init hermione before running test", async () => {
-            await hermioneFacade.runTest();
+        it("should init testplane before running test", async () => {
+            await testplaneFacade.runTest();
 
-            assert.callOrder(hermione.init, hermione.runTest);
+            assert.callOrder(testplane.init, testplane.runTest);
         });
 
         it("should sync config before running test", async () => {
-            await hermioneFacade.runTest();
+            await testplaneFacade.runTest();
 
-            assert.callOrder(HermioneFacade.prototype.syncConfig, hermione.runTest);
+            assert.callOrder(TestplaneFacade.prototype.syncConfig, testplane.runTest);
         });
     });
 });

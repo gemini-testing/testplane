@@ -50,7 +50,7 @@ export default async (browser: Browser): Promise<void> => {
         }
 
         if (onReplMode) {
-            logger.warn(chalk.yellow("Hermione is already in REPL mode"));
+            logger.warn(chalk.yellow("Testplane is already in REPL mode"));
             return;
         }
 

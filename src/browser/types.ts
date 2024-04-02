@@ -1,7 +1,7 @@
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
-import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
+import type { RunnerTest, RunnerHook, ExecutionThreadToolCtx } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 
@@ -122,9 +122,11 @@ declare global {
 
             // TODO: describe executionContext more precisely
             executionContext: (RunnerTest | RunnerHook) & {
-                hermioneCtx: {
-                    assertViewResults: Array<AssertViewResult>;
-                };
+                testplaneCtx: ExecutionThreadToolCtx;
+                /**
+                 * @deprecated Use `testplaneCtx` instead
+                 */
+                hermioneCtx: ExecutionThreadToolCtx;
                 ctx: {
                     browser: WebdriverIO.Browser;
                     currentTest: RunnerTest;

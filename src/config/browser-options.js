@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const fs = require("fs-extra");
 const option = require("gemini-configparser").option;
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
@@ -181,7 +182,23 @@ function buildBrowserOptions(defaultFactory, extra) {
 
         prepareBrowser: options.optionalFunction("prepareBrowser"),
 
-        screenshotsDir: options.stringOrFunction("screenshotsDir"),
+        screenshotsDir: option({
+            defaultValue: defaultFactory("screenshotsDir"),
+            validate: value => {
+                if (!_.isString(value) && !_.isFunction(value)) {
+                    throw new Error('"screenshotsDir" must be a string or function');
+                }
+            },
+            map: (value, _, __, { isSetByUser }) => {
+                const deprecatedScreensPath = "hermione/screens";
+
+                if (!isSetByUser && fs.existsSync(deprecatedScreensPath) && !fs.existsSync(value)) {
+                    return deprecatedScreensPath;
+                }
+
+                return value;
+            },
+        }),
 
         calibrate: options.boolean("calibrate"),
 

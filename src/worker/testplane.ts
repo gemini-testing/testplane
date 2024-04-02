@@ -1,7 +1,7 @@
 import { passthroughEvent } from "../events/utils";
 import { WorkerEvents } from "../events";
 import Runner from "./runner";
-import { BaseHermione } from "../base-hermione";
+import { BaseTestplane } from "../base-testplane";
 import { ImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 
 export interface WorkerRunTestOpts {
@@ -19,21 +19,25 @@ export interface AssertViewResultsSuccess {
     refImg: ImageInfo;
 }
 
-export interface WorkerRunTestHermioneCtx {
+export interface WorkerRunTestTestplaneCtx {
     assertViewResults: Array<AssertViewResultsSuccess>;
 }
 
 export interface WorkerRunTestResult {
     meta: Record<string, unknown>;
-    hermioneCtx: WorkerRunTestHermioneCtx;
+    testplaneCtx: WorkerRunTestTestplaneCtx;
+    /**
+     * @deprecated Use `testplaneCtx` instead
+     */
+    hermioneCtx: WorkerRunTestTestplaneCtx;
 }
 
-export interface Hermione {
+export interface Testplane {
     on: WorkerEventHandler<this>;
     once: WorkerEventHandler<this>;
 }
 
-export class Hermione extends BaseHermione {
+export class Testplane extends BaseTestplane {
     protected runner: Runner;
 
     constructor(configPath: string) {

@@ -32,7 +32,6 @@ module.exports = defaultFactory => {
         optionalString,
         positiveInteger,
         positiveIntegerOrInfinity,
-        stringOrFunction,
         hexString,
         enumeration,
     };
@@ -138,17 +137,6 @@ module.exports = defaultFactory => {
             parseCli: Number,
             defaultValue: defaultFactory(name),
             validate: value => assertPositiveIntegerOrInfinity(value, name),
-        });
-    }
-
-    function stringOrFunction(name) {
-        return option({
-            defaultValue: defaultFactory(name),
-            validate: value => {
-                if (!_.isString(value) && !_.isFunction(value)) {
-                    throw new Error(`"${name}" must be a string or function`);
-                }
-            },
         });
     }
 
