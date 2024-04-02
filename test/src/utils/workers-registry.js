@@ -264,7 +264,7 @@ describe("WorkersRegistry", () => {
 
                 assert.calledOnceWith(
                     logger.error,
-                    `hermione:worker:${child.pid} terminated unexpectedly with exit code: 1`,
+                    `testplane:worker:${child.pid} terminated unexpectedly with exit code: 1`,
                 );
             });
 
@@ -277,7 +277,7 @@ describe("WorkersRegistry", () => {
 
                 assert.calledOnceWith(
                     logger.error,
-                    `hermione:worker:${child.pid} terminated unexpectedly with signal: SIGINT`,
+                    `testplane:worker:${child.pid} terminated unexpectedly with signal: SIGINT`,
                 );
             });
         });

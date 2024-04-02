@@ -181,10 +181,10 @@ describe("test-reader/mocha-reader", () => {
             [
                 ["EVENT_FILE_PRE_REQUIRE", "BEFORE_FILE_READ"],
                 ["EVENT_FILE_POST_REQUIRE", "AFTER_FILE_READ"],
-            ].forEach(([mochaEvent, hermioneEvent]) => {
-                it(`should emit ${hermioneEvent} on mocha ${mochaEvent}`, async () => {
-                    const onEvent = sinon.stub().named(`on${hermioneEvent}`);
-                    const eventBus = new EventEmitter().on(RunnerEvents[hermioneEvent], onEvent);
+            ].forEach(([mochaEvent, testplaneEvent]) => {
+                it(`should emit ${testplaneEvent} on mocha ${mochaEvent}`, async () => {
+                    const onEvent = sinon.stub().named(`on${testplaneEvent}`);
+                    const eventBus = new EventEmitter().on(RunnerEvents[testplaneEvent], onEvent);
 
                     Mocha.prototype.loadFilesAsync.callsFake(() => {
                         MochaEventBus.create.lastCall.returnValue.emit(

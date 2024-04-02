@@ -20,7 +20,7 @@ describe("runner/test-runner/regular-test-runner", () => {
         return _.defaults(opts, {
             browserState: {},
             meta: {},
-            hermioneCtx: {},
+            testplaneCtx: {},
             history: [],
         });
     };
@@ -224,7 +224,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 workers.runTest.resolves(
                     stubTestResult_({
                         meta: { foo: "bar" },
-                        hermioneCtx: { baz: "qux" },
+                        testplaneCtx: { baz: "qux" },
                         history: [{ item: "some" }],
                     }),
                 );
@@ -235,7 +235,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     onPass,
                     sinon.match({
                         meta: { foo: "bar" },
-                        hermioneCtx: { baz: "qux" },
+                        testplaneCtx: { baz: "qux" },
                         history: [{ item: "some" }],
                     }),
                 );
@@ -284,7 +284,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 const workers = mkWorkers_();
                 workers.runTest.resolves(
                     stubTestResult_({
-                        hermioneCtx: {
+                        testplaneCtx: {
                             assertViewResults: ["foo", "bar"],
                         },
                     }),
@@ -296,7 +296,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 await run_({ runner, workers });
 
                 const data = onPass.firstCall.args[0];
-                assert.strictEqual(data.hermioneCtx.assertViewResults, assertViewResults);
+                assert.strictEqual(data.testplaneCtx.assertViewResults, assertViewResults);
             });
         });
 
@@ -374,7 +374,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 const workers = mkWorkers_();
                 workers.runTest.rejects({
                     meta: { foo: "bar" },
-                    hermioneCtx: { baz: "qux" },
+                    testplaneCtx: { baz: "qux" },
                     history: [{ item: "some" }],
                 });
 
@@ -384,7 +384,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                     onFail,
                     sinon.match({
                         meta: { foo: "bar" },
-                        hermioneCtx: { baz: "qux" },
+                        testplaneCtx: { baz: "qux" },
                         history: [{ item: "some" }],
                     }),
                 );
@@ -414,7 +414,7 @@ describe("runner/test-runner/regular-test-runner", () => {
 
                 const workers = mkWorkers_();
                 workers.runTest.rejects({
-                    hermioneCtx: {
+                    testplaneCtx: {
                         assertViewResults: ["foo", "bar"],
                     },
                 });
@@ -425,7 +425,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 await run_({ runner, workers });
 
                 const data = onFail.firstCall.args[0];
-                assert.strictEqual(data.hermioneCtx.assertViewResults, assertViewResults);
+                assert.strictEqual(data.testplaneCtx.assertViewResults, assertViewResults);
             });
         });
 

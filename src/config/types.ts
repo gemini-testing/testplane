@@ -33,7 +33,7 @@ export interface AssertViewOptsConfig {
      * Disables check that element is outside of the viewport left, top, right or bottom bounds.
      *
      * @remarks
-     * By default Hermione throws an error if element is outside the viewport bounds.
+     * By default Testplane throws an error if element is outside the viewport bounds.
      * This option disables check that element is outside of the viewport left, top, right or bottom bounds.
      * And in this case if browser option {@link https://github.com/gemini-testing/testplane#compositeimage compositeImage} set to `false`, then only visible part of the element will be captured.
      * But if {@link https://github.com/gemini-testing/testplane#compositeimage compositeImage} set to `true` (default), then in the resulting screenshot will appear the whole element with not visible parts outside of the bottom bounds of viewport.

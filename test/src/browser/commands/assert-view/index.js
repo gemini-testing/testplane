@@ -66,7 +66,7 @@ describe("assertView command", () => {
     };
 
     const initBrowser_ = ({ browser = stubBrowser_(), session = mkSessionStub_() } = {}) => {
-        session.executionContext = { hermioneCtx: {}, ctx: {} };
+        session.executionContext = { testplaneCtx: {}, ctx: {} };
         sandbox.stub(webdriverio, "attach").resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });
@@ -456,7 +456,7 @@ describe("assertView command", () => {
                 await fn(browser, "bar");
 
                 const [firstError, secondError] =
-                    browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+                    browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get();
                 assert.instanceOf(firstError, NoRefImageError);
                 assert.instanceOf(secondError, NoRefImageError);
                 assert.notEqual(firstError, secondError);
@@ -637,7 +637,7 @@ describe("assertView command", () => {
                             await fn(browser, "bar");
 
                             const [firstError, secondError] =
-                                browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get();
+                                browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get();
                             assert.instanceOf(firstError, ImageDiffError);
                             assert.instanceOf(secondError, ImageDiffError);
                             assert.notEqual(firstError, secondError);
@@ -650,7 +650,7 @@ describe("assertView command", () => {
                                 temp.path.returns("/current/path");
 
                                 await fn(browser);
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                                const e = browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get()[0];
 
                                 assert.match(e.diffOpts, { current: "/current/path", reference: "/reference/path" });
                             });
@@ -663,7 +663,7 @@ describe("assertView command", () => {
                                 const browser = await initBrowser_({ browser: stubBrowser_(config) });
 
                                 await fn(browser);
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                                const e = browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get()[0];
 
                                 assert.match(e.diffOpts, { tolerance: 100, diffColor: "#111111" });
                             });
@@ -677,7 +677,7 @@ describe("assertView command", () => {
 
                                 await fn(browser);
 
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                                const e = browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get()[0];
 
                                 assert.deepEqual(e.diffBounds, { left: 0, top: 0, right: 10, bottom: 10 });
                             });
@@ -690,7 +690,7 @@ describe("assertView command", () => {
                                 const browser = await initBrowser_();
 
                                 await fn(browser);
-                                const e = browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get()[0];
+                                const e = browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get()[0];
 
                                 assert.deepEqual(e.diffClusters, [{ left: 0, top: 0, right: 10, bottom: 10 }]);
                             });
@@ -893,7 +893,7 @@ describe("assertView command", () => {
                 await fn(browser, "plain");
                 await fn(browser, "complex");
 
-                assert.deepEqual(browser.publicAPI.executionContext.hermioneCtx.assertViewResults.get(), [
+                assert.deepEqual(browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get(), [
                     { stateName: "plain", refImg: { path: "/ref/path/plain", size: { width: 100, height: 200 } } },
                     { stateName: "complex", refImg: { path: "/ref/path/complex", size: { width: 300, height: 400 } } },
                 ]);

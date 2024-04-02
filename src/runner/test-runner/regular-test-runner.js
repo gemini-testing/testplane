@@ -69,12 +69,13 @@ module.exports = class RegularTestRunner extends Runner {
         });
     }
 
-    _applyTestResults({ meta, hermioneCtx = {}, history = [] }) {
-        hermioneCtx.assertViewResults = AssertViewResults.fromRawObject(hermioneCtx.assertViewResults || []);
-        this._test.assertViewResults = hermioneCtx.assertViewResults.get();
+    _applyTestResults({ meta, testplaneCtx = {}, history = [] }) {
+        testplaneCtx.assertViewResults = AssertViewResults.fromRawObject(testplaneCtx.assertViewResults || []);
+        this._test.assertViewResults = testplaneCtx.assertViewResults.get();
 
         this._test.meta = _.extend(this._test.meta, meta);
-        this._test.hermioneCtx = hermioneCtx;
+        this._test.testplaneCtx = testplaneCtx;
+        this._test.hermioneCtx = testplaneCtx;
         this._test.history = history;
 
         this._test.duration = Date.now() - this._test.startTime;

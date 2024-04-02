@@ -7,7 +7,7 @@ import "./browser/types";
 import "expect-webdriverio";
 
 import { GlobalHelper } from "./types";
-export { Hermione as default } from "./hermione";
+export { Testplane as default } from "./testplane";
 export { Key } from "webdriverio";
 
 export type {
@@ -19,11 +19,16 @@ export type {
     AssertViewOpts,
     HermioneCtx,
     GlobalHelper,
+    TestplaneCtx,
 } from "./types";
 export type { Config } from "./config";
 export type { ConfigInput } from "./config/types";
 export type { TestCollection } from "./test-collection";
 
 declare global {
+    const testplane: GlobalHelper;
+    /**
+     * @deprecated Use `testplane` instead
+     */
     const hermione: GlobalHelper;
 }

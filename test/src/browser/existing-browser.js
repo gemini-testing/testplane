@@ -289,7 +289,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(browser, {});
 
-                assert.calledOnceWith(history.runGroup, sinon.match.any, "hermione: init browser", sinon.match.func);
+                assert.calledOnceWith(history.runGroup, sinon.match.any, "testplane: init browser", sinon.match.func);
             });
         });
 

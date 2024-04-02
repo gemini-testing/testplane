@@ -1,10 +1,10 @@
 "use strict";
 
-const HermioneFacade = require("./hermione-facade");
+const TestplaneFacade = require("./testplane-facade");
 
-const hermioneFacade = HermioneFacade.create();
-hermioneFacade.init();
+const testplaneFacade = TestplaneFacade.create();
+testplaneFacade.init();
 
 exports.runTest = (fullTitle, options) => {
-    return hermioneFacade.runTest(fullTitle, options);
+    return testplaneFacade.runTest(fullTitle, options);
 };

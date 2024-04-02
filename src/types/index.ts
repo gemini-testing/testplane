@@ -10,7 +10,7 @@ import { OnlyController } from "../test-reader/controllers/only-controller";
 import { SkipController } from "../test-reader/controllers/skip-controller";
 import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
 import { WorkerProcess } from "../utils/worker-process";
-import { BaseHermione } from "../base-hermione";
+import { BaseTestplane } from "../base-testplane";
 import { CoordBounds, LooksSameOptions } from "looks-same";
 
 export { Suite as RunnerSuite, Test as RunnerTest, Hook as RunnerHook } from "mocha";
@@ -115,14 +115,20 @@ export interface CommandHistory {
     c: CommandHistory[];
 }
 
+export interface ExecutionThreadToolCtx {
+    assertViewResults: Array<AssertViewResult>;
+}
+
 export interface TestResult extends Test {
     assertViewResults: Array<AssertViewResult>;
     description?: string;
     duration: number;
     err?: TestError;
-    hermioneCtx: {
-        assertViewResults: Array<AssertViewResult>;
-    };
+    testplaneCtx: ExecutionThreadToolCtx;
+    /**
+     * @deprecated Use `testplaneCtx` instead
+     */
+    hermioneCtx: ExecutionThreadToolCtx;
     history: CommandHistory;
     meta: { [name: string]: unknown };
     sessionId: string;
@@ -133,10 +139,15 @@ export interface TestResultWithRetries extends TestResult {
     retriesLeft: number;
 }
 
+/**
+ * @deprecated Use `TestplaneCtx` instead
+ */
 export interface HermioneCtx extends Record<string, unknown> {}
 
+export interface TestplaneCtx extends HermioneCtx {}
+
 export interface GlobalHelper {
-    ctx: HermioneCtx;
+    ctx: TestplaneCtx;
     skip: SkipController;
     only: OnlyController;
     browser: (browserName: string) => BrowserVersionController;
@@ -144,6 +155,10 @@ export interface GlobalHelper {
 }
 
 export interface AfterFileReadData {
+    testplane: GlobalHelper;
+    /**
+     * @deprecated Use `testplane` instead
+     */
     hermione: GlobalHelper;
     browser: string;
     file: string;
@@ -158,7 +173,7 @@ export type SyncSessionEventCallback = (
     browserInfo: { browserId: string; browserVersion: string },
 ) => void;
 
-export type MasterEventHandler<T extends BaseHermione> = {
+export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
     (event: Events["RUNNER_START"], callback: (runner: MainRunner) => Promise<void> | void): T;
     (event: Events["RUNNER_END"], callback: (result: StatsResult) => Promise<void> | void): T;
@@ -190,7 +205,7 @@ export type MasterEventHandler<T extends BaseHermione> = {
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
 
-export type WorkerEventHandler<T extends BaseHermione> = {
+export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
     (event: Events["BEFORE_FILE_READ"], callback: (data: BeforeFileReadData) => void): T;
     (event: Events["AFTER_FILE_READ"], callback: (data: AfterFileReadData) => void): T;

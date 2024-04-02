@@ -219,11 +219,13 @@ describe("test-reader/build-instructions", () => {
         describe("buildGlobalSkipInstruction", () => {
             beforeEach(() => {
                 sandbox.stub(validators, "validateUnknownBrowsers");
-                sandbox.stub(env, "parseCommaSeparatedValue").returns([]);
+                sandbox.stub(env, "parseCommaSeparatedValue").returns({ value: [] });
             });
 
             it("should validate skip browsers against known browsers", () => {
-                env.parseCommaSeparatedValue.withArgs("HERMIONE_SKIP_BROWSERS").returns(["baz"]);
+                env.parseCommaSeparatedValue
+                    .withArgs(["TESTPLANE_SKIP_BROWSERS", "HERMIONE_SKIP_BROWSERS"])
+                    .returns({ value: ["baz"], key: "TESTPLANE_SKIP_BROWSERS" });
 
                 Instructions.buildGlobalSkipInstruction(makeConfigStub({ browsers: ["foo", "bar"] }));
 
@@ -231,7 +233,9 @@ describe("test-reader/build-instructions", () => {
             });
 
             it("should set noop instruction if skip list is not specified", () => {
-                env.parseCommaSeparatedValue.withArgs("HERMIONE_SKIP_BROWSERS").returns([]);
+                env.parseCommaSeparatedValue
+                    .withArgs(["TESTPLANE_SKIP_BROWSERS", "HERMIONE_SKIP_BROWSERS"])
+                    .returns({ value: [], key: "TESTPLANE_SKIP_BROWSERS" });
                 const instruction = Instructions.buildGlobalSkipInstruction(
                     makeConfigStub({ browsers: ["foo", "bar"] }),
                 );
@@ -242,7 +246,9 @@ describe("test-reader/build-instructions", () => {
             });
 
             it("should set noop instruction if browser is not in the skip list", () => {
-                env.parseCommaSeparatedValue.withArgs("HERMIONE_SKIP_BROWSERS").returns(["foo"]);
+                env.parseCommaSeparatedValue
+                    .withArgs(["TESTPLANE_SKIP_BROWSERS", "HERMIONE_SKIP_BROWSERS"])
+                    .returns({ value: ["foo"], key: "TESTPLANE_SKIP_BROWSERS" });
                 const instruction = Instructions.buildGlobalSkipInstruction(
                     makeConfigStub({ browsers: ["foo", "bar"] }),
                 );
@@ -253,7 +259,9 @@ describe("test-reader/build-instructions", () => {
             });
 
             it("should set skip instruction if browser is in the skip list", () => {
-                env.parseCommaSeparatedValue.withArgs("HERMIONE_SKIP_BROWSERS").returns(["foo"]);
+                env.parseCommaSeparatedValue
+                    .withArgs(["TESTPLANE_SKIP_BROWSERS", "HERMIONE_SKIP_BROWSERS"])
+                    .returns({ value: ["foo"], key: "TESTPLANE_SKIP_BROWSERS" });
                 const instruction = Instructions.buildGlobalSkipInstruction(
                     makeConfigStub({ browsers: ["foo", "bar"] }),
                 );
@@ -263,7 +271,7 @@ describe("test-reader/build-instructions", () => {
 
                 decorator(testObject);
 
-                assert.calledOnceWith(testObject.skip, { reason: sinon.match("HERMIONE_SKIP_BROWSERS") });
+                assert.calledOnceWith(testObject.skip, { reason: sinon.match("TESTPLANE_SKIP_BROWSERS") });
             });
         });
     });

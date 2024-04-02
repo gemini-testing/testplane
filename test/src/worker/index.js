@@ -1,44 +1,44 @@
 "use strict";
 
 const clearRequire = require("clear-require");
-const HermioneFacade = require("src/worker/hermione-facade");
+const TestplaneFacade = require("src/worker/testplane-facade");
 const Promise = require("bluebird");
 
 describe("worker", () => {
     const sandbox = sinon.createSandbox();
 
     beforeEach(() => {
-        sandbox.stub(HermioneFacade.prototype);
+        sandbox.stub(TestplaneFacade.prototype);
 
         clearRequire(require.resolve("src/worker"));
     });
 
     afterEach(() => sandbox.restore());
 
-    it("should init hermione facade on require", () => {
+    it("should init testplane facade on require", () => {
         require("src/worker");
 
-        assert.calledOnce(HermioneFacade.prototype.init);
+        assert.calledOnce(TestplaneFacade.prototype.init);
     });
 
     describe("runTest", () => {
         let runTest;
 
         beforeEach(() => {
-            HermioneFacade.prototype.runTest.resolves();
+            TestplaneFacade.prototype.runTest.resolves();
 
             const worker = require("src/worker");
             runTest = worker.runTest;
         });
 
-        it("should delegate runTest call to hermione facade", () => {
-            HermioneFacade.prototype.runTest.withArgs("fullTitle", { some: "opts" }).resolves({ foo: "bar" });
+        it("should delegate runTest call to testplane facade", () => {
+            TestplaneFacade.prototype.runTest.withArgs("fullTitle", { some: "opts" }).resolves({ foo: "bar" });
 
             return runTest("fullTitle", { some: "opts" }).then(res => assert.deepEqual(res, { foo: "bar" }));
         });
 
-        it("should reject on hermione facade runTest fail", () => {
-            HermioneFacade.prototype.runTest.callsFake(() => Promise.reject(new Error("foo")));
+        it("should reject on testplane facade runTest fail", () => {
+            TestplaneFacade.prototype.runTest.callsFake(() => Promise.reject(new Error("foo")));
 
             return assert.isRejected(runTest("fullTitle", { some: "opts" }), /foo/);
         });

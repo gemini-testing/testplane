@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const fs = require("fs-extra");
 
 const { Config } = require("src/config");
 const defaults = require("src/config/defaults");
@@ -527,6 +528,66 @@ describe("config browser-options", () => {
 
             assert.equal(config.browsers.b1.screenshotsDir, "/some/dir");
             assert.equal(config.browsers.b2.screenshotsDir, "/screens");
+        });
+
+        it("should fallback default value to hermione/screens, if it exists and default dir not exists", () => {
+            const readConfig = {};
+            Config.read.returns(readConfig);
+            sandbox
+                .stub(fs, "existsSync")
+                .withArgs("hermione/screens")
+                .returns(true)
+                .withArgs("testplane/screens")
+                .returns(false);
+
+            const config = createConfig();
+
+            assert.equal(config.screenshotsDir, "hermione/screens");
+        });
+
+        it("should use default testplane/screens if both hermione/screens and testplane/screens exists", () => {
+            const readConfig = {};
+            Config.read.returns(readConfig);
+            sandbox
+                .stub(fs, "existsSync")
+                .withArgs("hermione/screens")
+                .returns(true)
+                .withArgs("testplane/screens")
+                .returns(true);
+
+            const config = createConfig();
+
+            assert.equal(config.screenshotsDir, "testplane/screens");
+        });
+
+        it("should not fallback default value to hermione/screens, if not exists", () => {
+            const readConfig = {};
+            Config.read.returns(readConfig);
+            sandbox
+                .stub(fs, "existsSync")
+                .withArgs("hermione/screens")
+                .returns(false)
+                .withArgs("testplane/screens")
+                .returns(false);
+
+            const config = createConfig();
+
+            assert.equal(config.screenshotsDir, "testplane/screens");
+        });
+
+        it("should not fallback value to hermione/screens, if defined", () => {
+            const readConfig = { screenshotsDir: "some/dir" };
+            Config.read.returns(readConfig);
+            sandbox
+                .stub(fs, "existsSync")
+                .withArgs("hermione/screens")
+                .returns(true)
+                .withArgs("testplane/screens")
+                .returns(false);
+
+            const config = createConfig();
+
+            assert.equal(config.screenshotsDir, "some/dir");
         });
     });
 
