@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.8.0](https://github.com/gemini-testing/hermione/compare/v8.7.2...v8.8.0) (2024-04-03)
+
+
+### Features
+
+* add ability to extend "hermione" global variable ([f4c0cec](https://github.com/gemini-testing/hermione/commit/f4c0cec57c107e17fae39918542df9c039216f5e))
+
 ### [8.7.2](https://github.com/gemini-testing/hermione/compare/v8.7.1...v8.7.2) (2024-03-29)
 
 
