@@ -19,8 +19,18 @@ class TestObject {
         return this.#title;
     }
 
+    titlePath() {
+        if (this.parent) {
+            const parentTitlePath = this.parent.titlePath();
+
+            return this.title ? parentTitlePath.concat(this.title) : parentTitlePath;
+        }
+
+        return this.title ? [this.title] : [];
+    }
+
     fullTitle() {
-        return `${(this.parent && this.parent.fullTitle()) || ""} ${this.title || ""}`.trim();
+        return this.titlePath().join(" ");
     }
 }
 
