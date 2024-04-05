@@ -38,6 +38,15 @@ describe("test-reader/test-object/test-object", () => {
         });
     });
 
+    describe("titlePath", () => {
+        it("should return all parent titles", () => {
+            const obj = new TestObject({ title: " bar " });
+            obj.parent = new TestObject({ title: " foo " });
+
+            assert.deepEqual(obj.titlePath(), [" foo ", " bar "]);
+        });
+    });
+
     describe("fullTitle", () => {
         it("should return title if no parent", () => {
             const obj = new TestObject({ title: "foo bar" });
@@ -53,8 +62,7 @@ describe("test-reader/test-object/test-object", () => {
 
         it("should return include parent full title", () => {
             const obj = new TestObject({ title: "baz qux" });
-            obj.parent = new TestObject({});
-            sinon.stub(obj.parent, "fullTitle").returns("foo bar");
+            obj.parent = new TestObject({ title: "foo bar" });
 
             assert.equal(obj.fullTitle(), "foo bar baz qux");
         });
@@ -62,17 +70,23 @@ describe("test-reader/test-object/test-object", () => {
         it("should have no spaces at the beginning if parent has no title", () => {
             const obj = new TestObject({ title: "foo bar" });
             obj.parent = new TestObject({});
-            sinon.stub(obj.parent, "fullTitle").returns("");
 
             assert.equal(obj.fullTitle(), "foo bar");
         });
 
         it("should have no spaces at the end if object has no title", () => {
             const obj = new TestObject({});
-            obj.parent = new TestObject({});
-            sinon.stub(obj.parent, "fullTitle").returns("foo bar");
+            obj.parent = new TestObject({ title: "foo bar" });
 
             assert.equal(obj.fullTitle(), "foo bar");
+        });
+
+        it("should not remove any spaces", () => {
+            const obj = new TestObject({ title: "baz " });
+            obj.parent = new TestObject({ title: "bar " });
+            obj.parent.parent = new TestObject({ title: " foo " });
+
+            assert.equal(obj.fullTitle(), " foo  bar  baz ");
         });
     });
 });
