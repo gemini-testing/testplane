@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.8.1](https://github.com/gemini-testing/hermione/compare/v8.8.0...v8.8.1) (2024-04-05)
+
+
+### Bug Fixes
+
+* do not remove spaces in runnable title ([df139ea](https://github.com/gemini-testing/hermione/commit/df139eac20ce00d4960b46c0b6ea57e7da06baf8))
+
 ## [8.8.0](https://github.com/gemini-testing/hermione/compare/v8.7.2...v8.8.0) (2024-04-03)
 
 
