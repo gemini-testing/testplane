@@ -153,10 +153,10 @@ describe("test-reader/sets-builder/test-set", () => {
         });
 
         it("should use passed files if set files contain masks and files", () => {
-            const set = TestSet.create({ files: ["some/path/*.hermione.js", "some/path/test1.hermione.js"] });
-            set.useFiles(["some/path/test2.hermione.js"]);
+            const set = TestSet.create({ files: ["some/path/*.testplane.js", "some/path/test1.testplane.js"] });
+            set.useFiles(["some/path/test2.testplane.js"]);
 
-            assert.deepEqual(set.getFiles(), ["some/path/test2.hermione.js"]);
+            assert.deepEqual(set.getFiles(), ["some/path/test2.testplane.js"]);
         });
 
         it("should use matched files with masks specified in the set", () => {

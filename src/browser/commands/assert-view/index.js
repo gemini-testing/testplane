@@ -52,15 +52,15 @@ module.exports.default = browser => {
             disableAnimation,
         });
 
-        const { hermioneCtx } = session.executionContext;
-        hermioneCtx.assertViewResults = hermioneCtx.assertViewResults || AssertViewResults.create();
+        const { testplaneCtx } = session.executionContext;
+        testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
 
-        if (hermioneCtx.assertViewResults.hasState(state)) {
+        if (testplaneCtx.assertViewResults.hasState(state)) {
             return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
         }
 
         const handleCaptureProcessorError = e =>
-            e instanceof BaseStateError ? hermioneCtx.assertViewResults.add(e) : Promise.reject(e);
+            e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
         const page = await browser.prepareScreenshot([].concat(selectors), {
             ignoreSelectors: [].concat(opts.ignoreElements),
@@ -149,7 +149,7 @@ module.exports.default = browser => {
             return handleImageDiff(currImg, refImg, state, imageDiffOpts).catch(e => handleCaptureProcessorError(e));
         }
 
-        hermioneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
+        testplaneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
     session.addCommand("assertView", async function (state, selectors, opts = {}) {

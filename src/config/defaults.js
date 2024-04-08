@@ -9,7 +9,7 @@ module.exports = {
     desiredCapabilities: null,
     automationProtocol: WEBDRIVER_PROTOCOL,
     sessionEnvFlags: {},
-    screenshotsDir: "hermione/screens",
+    screenshotsDir: "testplane/screens",
     diffColor: "#ff00ff",
     tolerance: 2.3,
     antialiasingTolerance: 4,
@@ -95,4 +95,4 @@ module.exports = {
     isolation: null,
 };
 
-module.exports.configPaths = [".hermione.conf.ts", ".hermione.conf.js"];
+module.exports.configPaths = [".testplane.conf.ts", ".testplane.conf.js", ".hermione.conf.ts", ".hermione.conf.js"];

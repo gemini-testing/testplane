@@ -175,37 +175,37 @@ describe("worker/runner/test-runner", () => {
             assert.calledOnceWith(ExecutionThread.create, sinon.match({ browser }));
         });
 
-        it("should create execution thread with empty hermioneCtx by default", async () => {
+        it("should create execution thread with empty testplaneCtx by default", async () => {
             await run_({});
 
-            assert.calledOnceWith(ExecutionThread.create, sinon.match({ hermioneCtx: {} }));
+            assert.calledOnceWith(ExecutionThread.create, sinon.match({ testplaneCtx: {} }));
         });
 
-        it("should create execution thread with test hermioneCtx", async () => {
+        it("should create execution thread with test testplaneCtx", async () => {
             const test = mkTest_();
-            test.hermioneCtx = { foo: "bar" };
+            test.testplaneCtx = { foo: "bar" };
 
             await run_({ test });
 
-            assert.calledOnceWith(ExecutionThread.create, sinon.match({ hermioneCtx: { foo: "bar" } }));
+            assert.calledOnceWith(ExecutionThread.create, sinon.match({ testplaneCtx: { foo: "bar" } }));
         });
 
-        it("test hermioneCtx should be protected from modification during run", async () => {
-            ExecutionThread.create.callsFake(({ test, hermioneCtx }) => {
+        it("test testplaneCtx should be protected from modification during run", async () => {
+            ExecutionThread.create.callsFake(({ test, testplaneCtx }) => {
                 ExecutionThread.prototype.run.callsFake(() => {
-                    hermioneCtx.baz = "qux";
-                    test.hermioneCtx.baaz = "quux";
+                    testplaneCtx.baz = "qux";
+                    test.testplaneCtx.baaz = "quux";
                 });
 
                 return Object.create(ExecutionThread.prototype);
             });
 
             const test = mkTest_();
-            test.hermioneCtx = { foo: "bar" };
+            test.testplaneCtx = { foo: "bar" };
 
             await run_({ test });
 
-            assert.deepEqual(test.hermioneCtx, { foo: "bar" });
+            assert.deepEqual(test.testplaneCtx, { foo: "bar" });
         });
 
         it("test parent should be shared between runs", async () => {
@@ -390,15 +390,15 @@ describe("worker/runner/test-runner", () => {
                 return assert.isRejected(run_(), /foo bar/);
             });
 
-            it("should extend error with hermioneCtx", async () => {
+            it("should extend error with testplaneCtx", async () => {
                 BrowserAgent.prototype.getBrowser.rejects(new Error());
 
                 const test = mkTest_();
-                test.hermioneCtx = { foo: "bar" };
+                test.testplaneCtx = { foo: "bar" };
 
                 const error = await run_({ test }).catch(e => e);
 
-                assert.deepEqual(error.hermioneCtx, test.hermioneCtx);
+                assert.deepEqual(error.testplaneCtx, test.testplaneCtx);
             });
         });
 
@@ -636,9 +636,9 @@ describe("worker/runner/test-runner", () => {
 
                     const assertViewResults = AssertViewResults.create([new Error("image error")]);
 
-                    ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                    ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                         ExecutionThread.prototype.run.callsFake(() => {
-                            hermioneCtx.assertViewResults = assertViewResults;
+                            testplaneCtx.assertViewResults = assertViewResults;
                         });
 
                         return Object.create(ExecutionThread.prototype);
@@ -652,29 +652,29 @@ describe("worker/runner/test-runner", () => {
         });
 
         describe("on success", () => {
-            it("should resolve with hermioneCtx object passed to execution thread", async () => {
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
-                    ExecutionThread.prototype.run.callsFake(() => (hermioneCtx.foo = "bar"));
+            it("should resolve with testplaneCtx object passed to execution thread", async () => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
+                    ExecutionThread.prototype.run.callsFake(() => (testplaneCtx.foo = "bar"));
                     return Object.create(ExecutionThread.prototype);
                 });
 
                 const result = await run_();
 
-                assert.match(result.hermioneCtx, { foo: "bar" });
+                assert.match(result.testplaneCtx, { foo: "bar" });
             });
 
-            it("should extend hermioneCtx with empty assert view results", async () => {
+            it("should extend testplaneCtx with empty assert view results", async () => {
                 const result = await run_();
 
-                assert.match(result.hermioneCtx, { assertViewResults: [] });
+                assert.match(result.testplaneCtx, { assertViewResults: [] });
             });
 
             it("should convert assert view results to raw object", async () => {
                 const assertViewResults = AssertViewResults.create([{ foo: "bar" }]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                     });
 
                     return Object.create(ExecutionThread.prototype);
@@ -682,15 +682,15 @@ describe("worker/runner/test-runner", () => {
 
                 const result = await run_();
 
-                assert.match(result.hermioneCtx, { assertViewResults: [{ foo: "bar" }] });
+                assert.match(result.testplaneCtx, { assertViewResults: [{ foo: "bar" }] });
             });
 
             it("should fail if assert view results have fails", async () => {
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                     });
 
                     return Object.create(ExecutionThread.prototype);
@@ -704,9 +704,9 @@ describe("worker/runner/test-runner", () => {
 
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                     });
 
                     return Object.create(ExecutionThread.prototype);
@@ -722,9 +722,9 @@ describe("worker/runner/test-runner", () => {
 
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                     });
 
                     return Object.create(ExecutionThread.prototype);
@@ -801,10 +801,10 @@ describe("worker/runner/test-runner", () => {
         });
 
         describe("on fail", () => {
-            it("should extend error with hermioneCtx object passed to execution thread", async () => {
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+            it("should extend error with testplaneCtx object passed to execution thread", async () => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.foo = "bar";
+                        testplaneCtx.foo = "bar";
                         return Promise.reject(new Error());
                     });
                     return Object.create(ExecutionThread.prototype);
@@ -812,23 +812,23 @@ describe("worker/runner/test-runner", () => {
 
                 const error = await run_().catch(e => e);
 
-                assert.match(error.hermioneCtx, { foo: "bar" });
+                assert.match(error.testplaneCtx, { foo: "bar" });
             });
 
-            it("should extend hermioneCtx with empty assert view results", async () => {
+            it("should extend testplaneCtx with empty assert view results", async () => {
                 ExecutionThread.prototype.run.rejects(new Error());
 
                 const error = await run_().catch(e => e);
 
-                assert.match(error.hermioneCtx, { assertViewResults: [] });
+                assert.match(error.testplaneCtx, { assertViewResults: [] });
             });
 
             it("should convert assert view results to raw object", async () => {
                 const assertViewResults = AssertViewResults.create([{ foo: "bar" }]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                         return Promise.reject(new Error());
                     });
 
@@ -837,15 +837,15 @@ describe("worker/runner/test-runner", () => {
 
                 const error = await run_().catch(e => e);
 
-                assert.match(error.hermioneCtx, { assertViewResults: [{ foo: "bar" }] });
+                assert.match(error.testplaneCtx, { assertViewResults: [{ foo: "bar" }] });
             });
 
             it("should not throw AssertViewError if runtime error exist", async () => {
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
-                ExecutionThread.create.callsFake(({ hermioneCtx }) => {
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
-                        hermioneCtx.assertViewResults = assertViewResults;
+                        testplaneCtx.assertViewResults = assertViewResults;
                         return Promise.reject(new Error("runtime error"));
                     });
 

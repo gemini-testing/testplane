@@ -23,9 +23,10 @@ module.exports = class TestReader extends EventEmitter {
         const { paths, browsers, ignore, sets, grep } = options;
 
         const { fileExtensions } = this.#config.system;
-        const setCollection = await SetsBuilder.create(this.#config.sets, { defaultDir: require("../../package").name })
+        const envSets = env.parseCommaSeparatedValue(["TESTPLANE_SETS", "HERMIONE_SETS"]).value;
+        const setCollection = await SetsBuilder.create(this.#config.sets, { defaultPaths: ["testplane", "hermione"] })
             .useFiles(paths)
-            .useSets((sets || []).concat(env.parseCommaSeparatedValue("HERMIONE_SETS")))
+            .useSets((sets || []).concat(envSets))
             .useBrowsers(browsers)
             .build(process.cwd(), { ignore }, fileExtensions);
 
@@ -56,7 +57,7 @@ function validateTests(testsByBro, options) {
             throw new Error(
                 `In repl mode only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
                     `${testsToRun.length === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
-                    `Try to specify cli-options: "--grep" and "--browser" or use "hermione.only.in" in the test file.`,
+                    `Try to specify cli-options: "--grep" and "--browser" or use "testplane.only.in" in the test file.`,
             );
         }
     }

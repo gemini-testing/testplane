@@ -77,7 +77,7 @@ describe("test-reader/sets-builder", () => {
                 });
         });
 
-        it("should use default directory", () => {
+        it("should use default paths", () => {
             sandbox.stub(TestSet.prototype, "expandFiles");
             globExtra.expandPaths.withArgs(["project/path"]).resolves(["project/path"]);
 
@@ -85,7 +85,7 @@ describe("test-reader/sets-builder", () => {
 
             SetCollection.create.withArgs({ default: setStub }).returns(setCollection);
 
-            return createSetBuilder({ default: { files: [] } }, { defaultDir: "project/path" })
+            return createSetBuilder({ default: { files: [] } }, { defaultPaths: ["project/path"] })
                 .build()
                 .then(result => {
                     assert.calledWith(globExtra.expandPaths, ["project/path"]);
@@ -251,7 +251,7 @@ describe("test-reader/sets-builder", () => {
 
             SetCollection.create.withArgs({ default: setStub }).returns(setCollection);
 
-            return createSetBuilder({ default: { files: [] } }, { defaultDir: "project/path" })
+            return createSetBuilder({ default: { files: [] } }, { defaultPaths: ["project/path"] })
                 .useFiles([])
                 .build()
                 .then(result => {

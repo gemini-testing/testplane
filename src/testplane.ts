@@ -1,7 +1,7 @@
 import { CommanderStatic } from "@gemini-testing/commander";
-import * as _ from "lodash";
+import _ from "lodash";
 import { Stats as RunnerStats } from "./stats";
-import { BaseHermione } from "./base-hermione";
+import { BaseTestplane } from "./base-testplane";
 import { MainRunner } from "./runner";
 import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
@@ -39,13 +39,13 @@ interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "re
     ignore: string | string[];
 }
 
-export interface Hermione {
+export interface Testplane {
     on: MasterEventHandler<this>;
     once: MasterEventHandler<this>;
     prependListener: MasterEventHandler<this>;
 }
 
-export class Hermione extends BaseHermione {
+export class Testplane extends BaseTestplane {
     protected failed: boolean;
     protected runner: MainRunner | null;
 

@@ -862,7 +862,7 @@ If you want to extend testplane.ctx typings, you could use module augmentation:
 import type { TestplaneCtx } from "testplane";
 
 declare module "testplane" {
-    interface HermioneCtx {
+    interface TestplaneCtx {
         someVariable: string;
     }
 }

@@ -18,7 +18,7 @@ module.exports = class SetsBuilder {
 
     constructor(sets, opts) {
         this.#sets = _.mapValues(sets, set => TestSet.create(set));
-        this.#filesToUse = this.#hasFiles() ? [] : [opts.defaultDir];
+        this.#filesToUse = this.#hasFiles() ? [] : opts.defaultPaths;
     }
 
     useSets(setsToUse) {

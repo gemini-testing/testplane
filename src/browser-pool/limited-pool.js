@@ -21,7 +21,7 @@ module.exports = class LimitedPool extends Pool {
     constructor(underlyingPool, opts) {
         super();
 
-        this.log = debug("hermione:pool:limited");
+        this.log = debug("testplane:pool:limited");
 
         this.underlyingPool = underlyingPool;
         this._limit = opts.limit;

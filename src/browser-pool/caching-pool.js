@@ -15,7 +15,7 @@ module.exports = class CachingPool extends Pool {
     constructor(underlyingPool, config) {
         super();
 
-        this.log = debug("hermione:pool:caching");
+        this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
         this._config = config;

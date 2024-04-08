@@ -33,7 +33,7 @@ export const tryToRegisterTsNode = (): void => {
             });
         } catch (err) {
             const params = `swc: "${swcRaw}", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
-            console.error(`hermione: an error occured while trying to register ts-node (${params}):`, err);
+            console.error(`testplane: an error occured while trying to register ts-node (${params}):`, err);
         }
     } catch {} // eslint-disable-line no-empty
 };
