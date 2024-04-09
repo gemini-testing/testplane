@@ -75,7 +75,7 @@ testplane.on(testplane.events.INIT, async () => {
 });
 ```
 
-For more details, refer to the [Testplane Events](https://github.com/gemini-testing/hermione/blob/master/docs/events.md) page.
+For more details, refer to the [Testplane Events](events.md) page.
 
 ### errors
 

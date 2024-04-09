@@ -595,7 +595,7 @@ Property name             | Description
 `config`                  | Config that is used in the test runner. Can be mutated.
 `events`                  | Events list for subscription.
 
-For details on `events` field, refer to the [Testplane Events](https://github.com/gemini-testing/hermione/blob/master/docs/events.md) page.
+For details on `events` field, refer to the [Testplane Events](events.md) page.
 
 #### Parallel execution plugin code
 

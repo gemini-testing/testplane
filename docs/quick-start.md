@@ -1,7 +1,7 @@
 <!-- DOCTOC SKIP -->
 ## Quick start
 
-First of all, make sure you are working via `devtools` protocol or have browsers installed as described in [Dealing with Browsers](https://github.com/gemini-testing/hermione/blob/master/docs/dealing-with-browsers.md).
+First of all, make sure you are working via `devtools` protocol or have browsers installed as described in [Dealing with Browsers](dealing-with-browsers.md).
 
 Now you have two ways to configure project.
 
