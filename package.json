@@ -17,7 +17,7 @@
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
     "test-unit": "_mocha test/",
     "test": "npm run test-unit && npm run check-types && npm run lint",
-    "toc": "doctoc README.md",
+    "toc": "doctoc docs --title '### Contents'",
     "precommit": "npm run lint",
     "prepack": "npm run clean && npm run build",
     "preversion": "npm run lint && npm test",
