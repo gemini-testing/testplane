@@ -16,7 +16,7 @@ module.exports = class TestRunner {
 
     constructor(test, config, browserAgent) {
         this._test = test.clone();
-        this._test.hermioneCtx = _.cloneDeep(test.hermioneCtx);
+        this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx);
 
         this._config = config;
         this._browserAgent = browserAgent;
@@ -24,18 +24,24 @@ module.exports = class TestRunner {
 
     async run({ sessionId, sessionCaps, sessionOpts, state }) {
         const test = this._test;
-        const hermioneCtx = test.hermioneCtx || {};
+        const testplaneCtx = test.testplaneCtx || {};
 
         let browser;
 
         try {
             browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts, state });
         } catch (e) {
-            throw Object.assign(e, { hermioneCtx });
+            throw Object.assign(e, { testplaneCtx, hermioneCtx: testplaneCtx });
         }
 
         const screenshooter = OneTimeScreenshooter.create(this._config, browser);
-        const executionThread = ExecutionThread.create({ test, browser, hermioneCtx, screenshooter });
+        const executionThread = ExecutionThread.create({
+            test,
+            browser,
+            testplaneCtx,
+            hermioneCtx: testplaneCtx,
+            screenshooter,
+        });
         const hookRunner = HookRunner.create(test, executionThread);
         const { callstackHistory } = browser;
 
@@ -77,7 +83,7 @@ module.exports = class TestRunner {
             error = error || e;
         }
 
-        const assertViewResults = hermioneCtx.assertViewResults;
+        const assertViewResults = testplaneCtx.assertViewResults;
         if (!error && assertViewResults && assertViewResults.hasFails()) {
             error = new AssertViewError();
 
@@ -93,11 +99,12 @@ module.exports = class TestRunner {
             browser.markAsBroken();
         }
 
-        hermioneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
+        testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
         const { meta } = browser;
         const commandsHistory = callstackHistory ? callstackHistory.release() : [];
         const results = {
-            hermioneCtx,
+            testplaneCtx,
+            hermioneCtx: testplaneCtx,
             meta,
         };
 

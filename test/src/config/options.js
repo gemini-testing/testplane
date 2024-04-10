@@ -75,10 +75,22 @@ describe("config options", () => {
                     const result = parse_({
                         options: { system: { [optionName]: {} } },
                         // prettier-ignore
-                        env: {[`hermione_system_${_.snakeCase(optionName)}`]: '{"some": "opts"}'},
+                        env: {[`testplane_system_${_.snakeCase(optionName)}`]: '{"some": "opts"}'},
                     });
 
                     assert.deepEqual(result.system[optionName], { some: "opts" });
+                });
+
+                it("should prefer existing environment option with testplane_ prefix", () => {
+                    const result = parse_({
+                        options: { system: { [optionName]: {} } },
+                        env: {
+                            [`hermione_system_${_.snakeCase(optionName)}`]: '{"foo": "bar"}',
+                            [`testplane_system_${_.snakeCase(optionName)}`]: '{"baz": "qux"}',
+                        },
+                    });
+
+                    assert.deepEqual(result.system[optionName], { baz: "qux" });
                 });
 
                 it("should parse option from cli", () => {
@@ -137,7 +149,7 @@ describe("config options", () => {
                 const result = parse_({
                     options: { system: { patternsOnReject: [] } },
                     // prettier-ignore
-                    env: {'hermione_system_patterns_on_reject': '["some-pattern"]'},
+                    env: {'testplane_system_patterns_on_reject': '["some-pattern"]'},
                 });
 
                 assert.deepEqual(result.system.patternsOnReject, ["some-pattern"]);
@@ -270,7 +282,7 @@ describe("config options", () => {
                 const result = parse_({
                     options: { system: { mochaOpts: {} } },
                     // prettier-ignore
-                    env: {'hermione_system_parallel_limit': 10},
+                    env: {'testplane_system_parallel_limit': 10},
                 });
 
                 assert.equal(result.system.parallelLimit, 10);
@@ -380,7 +392,7 @@ describe("config options", () => {
             const result = parse_({
                 options: { plugins: { foo: {} } },
                 // prettier-ignore
-                env: {'hermione_plugins_foo': 'true'},
+                env: {'testplane_plugins_foo': 'true'},
             });
 
             assert.strictEqual(result.plugins.foo, true);
@@ -390,7 +402,7 @@ describe("config options", () => {
             const result = parse_({
                 options: { plugins: { foo: {} } },
                 // prettier-ignore
-                env: {'hermione_plugins_foo': '{"opt": 1}'},
+                env: {'testplane_plugins_foo': '{"opt": 1}'},
             });
 
             assert.deepEqual(result.plugins.foo, { opt: 1 });
@@ -402,7 +414,7 @@ describe("config options", () => {
                     parse_({
                         options: { plugins: { foo: {} } },
                         // prettier-ignore
-                        env: {'hermione_plugins_foo': '{key: 1}'},
+                        env: {'testplane_plugins_foo': '{key: 1}'},
                     }),
                 "a value must be a primitive type",
             );

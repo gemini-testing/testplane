@@ -38,7 +38,7 @@ module.exports = class ExistingBrowser extends Browser {
         this._addSteps();
         this._addHistory();
 
-        await history.runGroup(this._callstackHistory, "hermione: init browser", async () => {
+        await history.runGroup(this._callstackHistory, "testplane: init browser", async () => {
             this._addCommands();
 
             await this._performIsolation({ sessionCaps, sessionOpts });

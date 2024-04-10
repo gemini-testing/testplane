@@ -41,10 +41,10 @@ describe("worker/runner/test-runner/execution-thread", () => {
     const mkExecutionThread_ = (opts = {}) => {
         const test = opts.test || mkTest_();
         const browser = opts.browser || mkBrowser_();
-        const hermioneCtx = opts.hermioneCtx || {};
+        const testplaneCtx = opts.testplaneCtx || {};
         const screenshooter = opts.screenshooter || Object.create(OneTimeScreenshooter.prototype);
 
-        return ExecutionThread.create({ test, browser, hermioneCtx, screenshooter });
+        return ExecutionThread.create({ test, browser, testplaneCtx, screenshooter });
     };
 
     beforeEach(() => {
@@ -192,26 +192,26 @@ describe("worker/runner/test-runner/execution-thread", () => {
             assert.propertyVal(executionContext, "ctx", _this);
         });
 
-        it("should share hermioneCtx in browser execution context between all runnables", async () => {
-            const hermioneCtx = {};
-            const executionThread = mkExecutionThread_({ hermioneCtx });
+        it("should share testplaneCtx in browser execution context between all runnables", async () => {
+            const testplaneCtx = {};
+            const executionThread = mkExecutionThread_({ testplaneCtx });
 
             await executionThread.run(
                 mkRunnable_({
                     fn: function () {
-                        this.browser.executionContext.hermioneCtx.foo = "bar";
+                        this.browser.executionContext.testplaneCtx.foo = "bar";
                     },
                 }),
             );
             await executionThread.run(
                 mkRunnable_({
                     fn: function () {
-                        this.browser.executionContext.hermioneCtx.baz = "qux";
+                        this.browser.executionContext.testplaneCtx.baz = "qux";
                     },
                 }),
             );
 
-            assert.deepEqual(hermioneCtx, { foo: "bar", baz: "qux" });
+            assert.deepEqual(testplaneCtx, { foo: "bar", baz: "qux" });
         });
 
         it("should fail with timeout error on timeout", async () => {
@@ -274,9 +274,9 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     fn: () => Promise.resolve(),
                 });
                 const assertViewResults = AssertViewResults.create([new Error()]);
-                const hermioneCtx = { assertViewResults };
+                const testplaneCtx = { assertViewResults };
 
-                await mkExecutionThread_({ hermioneCtx }).run(runnable);
+                await mkExecutionThread_({ testplaneCtx }).run(runnable);
 
                 assert.calledOnce(OneTimeScreenshooter.prototype.captureScreenshotOnAssertViewFail);
             });

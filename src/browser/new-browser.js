@@ -49,7 +49,7 @@ module.exports = class NewBrowser extends Browser {
         this._addSteps();
         this._addHistory();
 
-        await history.runGroup(this._callstackHistory, "hermione: init browser", async () => {
+        await history.runGroup(this._callstackHistory, "testplane: init browser", async () => {
             this._addCommands();
             this.restoreHttpTimeout();
             await this._setPageLoadTimeout();
@@ -109,7 +109,7 @@ module.exports = class NewBrowser extends Browser {
             capabilities,
             automationProtocol: devtools ? DEVTOOLS_PROTOCOL : config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
-            connectionRetryCount: 0, // hermione has its own advanced retries
+            connectionRetryCount: 0, // testplane has its own advanced retries
             baseUrl: config.baseUrl,
             waitforTimeout: config.waitTimeout,
             waitforInterval: config.waitInterval,

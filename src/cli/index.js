@@ -6,13 +6,13 @@ const escapeRe = require("escape-string-regexp");
 
 const defaults = require("../config/defaults");
 const info = require("./info");
-const { Hermione } = require("../hermione");
+const { Testplane } = require("../testplane");
 const pkg = require("../../package.json");
 const logger = require("../utils/logger");
 const { requireModule } = require("../utils/module");
 const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
 
-let hermione;
+let testplane;
 
 process.on("uncaughtException", err => {
     logger.error(err.stack);
@@ -21,34 +21,34 @@ process.on("uncaughtException", err => {
 
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {
-        logger.warn(`Unhandled Rejection "${reason}" in hermione:master:${process.pid} was ignored`);
+        logger.warn(`Unhandled Rejection "${reason}" in testplane:master:${process.pid} was ignored`);
         return;
     }
 
     const error = [
-        `Unhandled Rejection in hermione:master:${process.pid}:`,
+        `Unhandled Rejection in testplane:master:${process.pid}:`,
         `Promise: ${JSON.stringify(p)}`,
         `Reason: ${_.get(reason, "stack", reason)}`,
     ].join("\n");
 
-    if (hermione) {
-        hermione.halt(error);
+    if (testplane) {
+        testplane.halt(error);
     } else {
         logger.error(error);
         process.exit(1);
     }
 });
 
-exports.run = () => {
-    const program = new Command();
+exports.run = (opts = {}) => {
+    const program = new Command(opts.cliName || "testplane");
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
 
     const configPath = preparseOption(program, "config");
-    hermione = Hermione.create(configPath);
+    testplane = Testplane.create(configPath);
 
     program
-        .on("--help", () => logger.log(info.configOverriding))
+        .on("--help", () => logger.log(info.configOverriding(opts)))
         .option("-b, --browser <browser>", "run tests only in specified browser", collect)
         .option("-s, --set <set>", "run tests only in the specified set", collect)
         .option("-r, --require <module>", "require module", collect)
@@ -89,7 +89,7 @@ exports.run = () => {
 
                 await handleRequires(requireModules);
 
-                const isTestsSuccess = await hermione.run(paths, {
+                const isTestsSuccess = await testplane.run(paths, {
                     reporters: reporters || defaults.reporters,
                     browsers,
                     sets,
@@ -112,7 +112,7 @@ exports.run = () => {
             }
         });
 
-    hermione.extendCli(program);
+    testplane.extendCli(program);
 
     program.parse(process.argv);
 };

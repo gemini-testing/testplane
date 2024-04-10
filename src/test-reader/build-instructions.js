@@ -64,7 +64,11 @@ function extendWithTimeout({ treeBuilder, config }) {
 }
 
 function buildGlobalSkipInstruction(config) {
-    const skipBrowsers = env.parseCommaSeparatedValue("HERMIONE_SKIP_BROWSERS");
+    const { value: skipBrowsers, key: envKey } = env.parseCommaSeparatedValue([
+        "TESTPLANE_SKIP_BROWSERS",
+        "HERMIONE_SKIP_BROWSERS",
+    ]);
+
     validators.validateUnknownBrowsers(skipBrowsers, config.getBrowserIds());
 
     return ({ treeBuilder, browserId }) => {
@@ -73,7 +77,7 @@ function buildGlobalSkipInstruction(config) {
         }
 
         treeBuilder.addTrap(testObject => {
-            testObject.skip({ reason: "The test was skipped by environment variable HERMIONE_SKIP_BROWSERS" });
+            testObject.skip({ reason: `The test was skipped by environment variable ${envKey}` });
         });
     };
 }

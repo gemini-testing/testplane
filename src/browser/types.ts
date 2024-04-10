@@ -1,7 +1,7 @@
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
-import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
+import type { RunnerTest, RunnerHook, ExecutionThreadToolCtx } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 
@@ -70,7 +70,7 @@ declare global {
              * Takes a screenshot of the passed selector and compares the received screenshot with the reference.
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#assertview documentation}.
+             * For more details, see {@link https://github.com/gemini-testing/testplane#assertview documentation}.
              *
              * @example
              * ```ts
@@ -102,7 +102,7 @@ declare global {
              * Command that allows to add human-readable description for commands in history
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#runstep documentation}
+             * For more details, see {@link https://github.com/gemini-testing/testplane#runstep documentation}
              *
              * @example
              * ```ts
@@ -122,9 +122,11 @@ declare global {
 
             // TODO: describe executionContext more precisely
             executionContext: (RunnerTest | RunnerHook) & {
-                hermioneCtx: {
-                    assertViewResults: Array<AssertViewResult>;
-                };
+                testplaneCtx: ExecutionThreadToolCtx;
+                /**
+                 * @deprecated Use `testplaneCtx` instead
+                 */
+                hermioneCtx: ExecutionThreadToolCtx;
                 ctx: {
                     browser: WebdriverIO.Browser;
                     currentTest: RunnerTest;
@@ -143,7 +145,7 @@ declare global {
              * Takes a screenshot of the element and compares the received screenshot with the reference.
              *
              * @remarks
-             * For more details, see {@link https://github.com/gemini-testing/hermione#assertview documentation}.
+             * For more details, see {@link https://github.com/gemini-testing/testplane#assertview documentation}.
              *
              * @example
              * ```ts

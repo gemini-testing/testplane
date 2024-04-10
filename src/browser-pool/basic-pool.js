@@ -17,7 +17,7 @@ module.exports = class BasicPool extends Pool {
 
         this._config = config;
         this._emitter = emitter;
-        this.log = debug("hermione:pool:basic");
+        this.log = debug("testplane:pool:basic");
 
         this._activeSessions = {};
     }

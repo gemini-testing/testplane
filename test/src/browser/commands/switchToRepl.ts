@@ -93,7 +93,7 @@ describe('"switchToRepl" command', () => {
 
         it("should change cwd to test directory before run repl server", async () => {
             const session = mkSessionStub_();
-            session.executionContext.ctx.currentTest.file = "/root/project/dir/file.hermione.js";
+            session.executionContext.ctx.currentTest.file = "/root/project/dir/file.testplane.js";
 
             await initBrowser_({ session });
             await switchToRepl_({ session });
@@ -103,7 +103,7 @@ describe('"switchToRepl" command', () => {
 
         it("should change cwd to its original value on close repl server", async () => {
             const session = mkSessionStub_();
-            session.executionContext.ctx.currentTest.file = "/root/project/dir/file.hermione.js";
+            session.executionContext.ctx.currentTest.file = "/root/project/dir/file.testplane.js";
             const currCwd = process.cwd();
             const onExit = sandbox.spy();
 
@@ -165,7 +165,7 @@ describe('"switchToRepl" command', () => {
             await Promise.all([promise1, promise2]);
 
             assert.calledOnce(repl.start as SinonStub);
-            assert.calledOnceWith(logger.warn, chalk.yellow("Hermione is already in REPL mode"));
+            assert.calledOnceWith(logger.warn, chalk.yellow("Testplane is already in REPL mode"));
         });
 
         ["const", "let"].forEach(decl => {

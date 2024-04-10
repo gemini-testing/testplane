@@ -43,7 +43,7 @@ describe("test-reader/test-parser", () => {
     afterEach(() => {
         sandbox.restore();
 
-        delete global.hermione;
+        delete global.testplane;
     });
 
     describe("loadFiles", () => {
@@ -55,14 +55,14 @@ describe("test-reader/test-parser", () => {
         };
 
         describe("globals", () => {
-            it("should create global hermione object", async () => {
+            it("should create global testplane object", async () => {
                 await loadFiles_();
 
-                assert.property(global, "hermione");
+                assert.property(global, "testplane");
             });
 
-            describe("hermione.ctx", () => {
-                it("should set hermione.ctx", async () => {
+            describe("testplane.ctx", () => {
+                it("should set testplane.ctx", async () => {
                     const config = makeConfigStub({
                         system: {
                             ctx: { foo: "bar" },
@@ -71,10 +71,10 @@ describe("test-reader/test-parser", () => {
 
                     await loadFiles_({ config });
 
-                    assert.deepEqual(global.hermione.ctx, { foo: "bar" });
+                    assert.deepEqual(global.testplane.ctx, { foo: "bar" });
                 });
 
-                it("should set hermione.ctx before loading files", async () => {
+                it("should set testplane.ctx before loading files", async () => {
                     const config = makeConfigStub({
                         system: {
                             ctx: { foo: "bar" },
@@ -82,7 +82,7 @@ describe("test-reader/test-parser", () => {
                     });
 
                     let ctx;
-                    readFiles.callsFake(() => (ctx = global.hermione.ctx));
+                    readFiles.callsFake(() => (ctx = global.testplane.ctx));
 
                     await loadFiles_({ config });
 
@@ -91,7 +91,7 @@ describe("test-reader/test-parser", () => {
             });
             ``;
 
-            describe("hermione.browser", () => {
+            describe("testplane.browser", () => {
                 beforeEach(() => {
                     // sandbox.stub(browserVersionController, "mkProvider").get(() => {});
                 });
@@ -102,7 +102,7 @@ describe("test-reader/test-parser", () => {
 
                     await loadFiles_();
 
-                    assert.equal(global.hermione.browser, provider);
+                    assert.equal(global.testplane.browser, provider);
                 });
 
                 it("should set controller provider before loading files", async () => {
@@ -139,13 +139,13 @@ describe("test-reader/test-parser", () => {
                         sandbox.spy(controllerClass, "create");
                     });
 
-                    it(`should set hermione.${controllerName}`, async () => {
+                    it(`should set testplane.${controllerName}`, async () => {
                         await loadFiles_();
 
-                        assert.instanceOf(global.hermione[controllerName], controllerClass);
+                        assert.instanceOf(global.testplane[controllerName], controllerClass);
                     });
 
-                    it(`should set hermione.${controllerName} before loading files`, async () => {
+                    it(`should set testplane.${controllerName} before loading files`, async () => {
                         await loadFiles_();
 
                         assert.callOrder(controllerClass.create, readFiles);
@@ -159,18 +159,18 @@ describe("test-reader/test-parser", () => {
                 });
             });
 
-            describe("hermione.config", () => {
+            describe("testplane.config", () => {
                 beforeEach(() => {
                     sandbox.stub(ConfigController, "create").returns(Object.create(ConfigController.prototype));
                 });
 
-                it("should set hermione.config", async () => {
+                it("should set testplane.config", async () => {
                     await loadFiles_();
 
-                    assert.instanceOf(global.hermione.config, ConfigController);
+                    assert.instanceOf(global.testplane.config, ConfigController);
                 });
 
-                it("should set hermione.config before loading files", async () => {
+                it("should set testplane.config before loading files", async () => {
                     await loadFiles_();
 
                     assert.callOrder(ConfigController.create, readFiles);
@@ -253,7 +253,7 @@ describe("test-reader/test-parser", () => {
                         assert.calledOnceWith(onEvent, sinon.match(eventData));
                     });
 
-                    it(`should extend ${eventName} event data with hermione object`, async () => {
+                    it(`should extend ${eventName} event data with testplane object`, async () => {
                         const { onEvent, loadFiles } = init_();
 
                         await loadFiles();
@@ -261,7 +261,7 @@ describe("test-reader/test-parser", () => {
                         assert.calledOnceWith(
                             onEvent,
                             sinon.match({
-                                hermione: global.hermione,
+                                testplane: global.testplane,
                             }),
                         );
                     });
@@ -272,7 +272,7 @@ describe("test-reader/test-parser", () => {
 
                             assert.calledOnceWith(
                                 TestParserAPI.create,
-                                global.hermione,
+                                global.testplane,
                                 sinon.match.instanceOf(EventEmitter),
                             );
                         });
