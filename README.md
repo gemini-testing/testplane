@@ -86,9 +86,11 @@ The documentation is divided into several sections:
 - [Testplane Events](docs/events.md)
 - [Testplane Programmatic API](docs/programmatic-api.md)
 
-## Rename from "hermione"
+## Rename from "Hermione"
 
-This project was formerly known as "hermione", but eventually some copyright and trademark issues surfaced, leading to the decision to rebrand. After some discussion, we settled on "Testplane" as the official new title. We've tailored Testplane `v1` to be a drop-in replacement for Hermione `v8`.
+This project was formerly known as "Hermione", but eventually some copyright and trademark issues surfaced, leading to the decision to rebrand. After some discussion, we settled on "Testplane" as the official new title. We've tailored Testplane `v1` to be a drop-in replacement for Hermione `v8`.
+
+Learn more about about migration from Hermione to Testplane in [the Docs](docs/migration-from-hermione.md).
 
 ## Contributing
 
