@@ -1,1 +1,1 @@
-export const WORKER_EVENT_SUFFIX = "worker";
+export const WORKER_EVENT_PREFIX = "worker";

@@ -36,6 +36,19 @@ export class ViteServer {
                 sourcemap: "inline",
             },
             optimizeDeps: {
+                // listed deps are CJS packages and need to be compiled to ESM by Vite
+                include: [
+                    // webdriverio deps
+                    "aria-query",
+                    "css-shorthand-properties",
+                    "css-value",
+                    "grapheme-splitter",
+                    "lodash.clonedeep",
+                    "lodash.zip",
+                    "minimatch",
+                    "rgb2hex",
+                    "ws",
+                ],
                 esbuildOptions: {
                     logLevel: "silent",
                 },

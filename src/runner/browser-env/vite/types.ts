@@ -1,4 +1,4 @@
-import { BROWSER_EVENT_SUFFIX } from "./constants";
+import { BROWSER_EVENT_PREFIX } from "./constants";
 import type { InlineConfig, ConfigEnv } from "vite";
 import type { BrowserViteEvents, WorkerViteEvents, ViteBrowserEvents } from "./browser-modules/types";
 
@@ -13,5 +13,6 @@ export interface ViteClientEvents extends BrowserViteEvents, ViteBrowserEvents {
 
 // TODO: use from "./browser-modules/types" after migrate to esm
 export enum BrowserEventNames {
-    initialize = `${BROWSER_EVENT_SUFFIX}:initialize`,
+    initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
+    runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
 }

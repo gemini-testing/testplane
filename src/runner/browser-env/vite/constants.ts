@@ -13,7 +13,7 @@ export const VITE_DEFAULT_CONFIG_ENV: ConfigEnv = {
     mode: process.env.NODE_ENV === "production" ? "production" : "development",
 };
 
-export const BROWSER_EVENT_SUFFIX = "browser";
+export const BROWSER_EVENT_PREFIX = "browser";
 
 export const SOCKET_MAX_TIMEOUT = 2147483647;
 export const SOCKET_TIMED_OUT_ERROR = "operation has timed out";
