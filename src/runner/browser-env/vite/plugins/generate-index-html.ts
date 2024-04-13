@@ -1,14 +1,34 @@
 import path from "node:path";
 import url from "node:url";
+import { builtinModules } from "node:module";
 import createDebug from "debug";
+import { polyfillPath } from "modern-node-polyfills";
 import { MODULE_NAMES, WORKER_ENV_BY_RUN_UUID } from "../constants";
 import { getNodeModulePath, getImportMetaUrl } from "../utils";
 import logger from "../../../../utils/logger";
 
 import type { WorkerInitializePayload } from "../browser-modules/types";
-import type { Plugin } from "vite";
+import type { Plugin, Rollup } from "vite";
 
 const debug = createDebug("vite:plugin:generateIndexHtml");
+
+// modules that used only in NodeJS environment and don't need to be compiled
+const MODULES_TO_MOCK = ["import-meta-resolve", "puppeteer-core", "archiver", "@wdio/repl"];
+const POLYFILLS = [...builtinModules, ...builtinModules.map(m => `node:${m}`)];
+
+const virtualDriverModuleId = "virtual:@testplane/driver";
+const virtualMockModuleId = "virtual:@testplane/mock";
+
+const virtualModules = {
+    driver: {
+        id: virtualDriverModuleId,
+        resolvedId: `\0${virtualDriverModuleId}`,
+    },
+    mock: {
+        id: virtualMockModuleId,
+        resolvedId: `\0${virtualMockModuleId}`,
+    },
+};
 
 export const plugin = async (): Promise<Plugin[]> => {
     const mochaPackagePath = await getNodeModulePath({
@@ -21,6 +41,9 @@ export const plugin = async (): Promise<Plugin[]> => {
     const browserModulesPath = path.resolve(dirname, "..", "browser-modules");
     const browserRunnerModulePath = path.resolve(browserModulesPath, "index.js");
     const globalsModulePath = path.resolve(browserModulesPath, "globals.js");
+    const driverModulePath = path.resolve(browserModulesPath, "driver.js");
+
+    const automationProtocolPath = `/@fs${driverModulePath}`;
 
     return [
         {
@@ -40,6 +63,7 @@ export const plugin = async (): Promise<Plugin[]> => {
 
                         try {
                             const runUuid = urlParamString.get("runUuid");
+
                             if (!runUuid) {
                                 throw new Error(
                                     `Query parameter "runUuid" must be specified in url: ${req.originalUrl}`,
@@ -69,7 +93,12 @@ export const plugin = async (): Promise<Plugin[]> => {
                     });
                 };
             },
-            resolveId: (id): string | void => {
+
+            resolveId: async (id: string): Promise<string | void> => {
+                if (id === virtualModules.driver.id) {
+                    return virtualModules.driver.resolvedId;
+                }
+
                 if (id.endsWith(MODULE_NAMES.browserRunner)) {
                     return browserRunnerModulePath;
                 }
@@ -80,6 +109,24 @@ export const plugin = async (): Promise<Plugin[]> => {
 
                 if (id.endsWith(MODULE_NAMES.mocha)) {
                     return mochaModulePath;
+                }
+
+                if (POLYFILLS.includes(id)) {
+                    return polyfillPath(id.replace("/promises", ""));
+                }
+
+                if (MODULES_TO_MOCK.includes(id)) {
+                    return virtualModules.mock.resolvedId;
+                }
+            },
+
+            load: (id: string): Rollup.LoadResult | void => {
+                if (id === virtualModules.driver.resolvedId) {
+                    return `export const automationProtocolPath = ${JSON.stringify(automationProtocolPath)};`;
+                }
+
+                if (id === virtualModules.mock.resolvedId) {
+                    return ["export default () => {};", "export const resolve = () => ''"].join("\n");
                 }
             },
         },
