@@ -1,6 +1,6 @@
 import { TestParser } from "./parser.js";
 import { getErrorsOnPageLoad, getErrorsOnRunRunnable, BrowserError } from "../errors/index.js";
-import { BrowserEventNames, WorkerEventNames, type BrowserViteSocket } from "../types.js";
+import { BrowserEventNames, WorkerEventNames, type BrowserViteSocket, type RunnableFn } from "../types.js";
 
 export class MochaWrapper {
     private _runnables = new Map<string, Mocha.Runnable>();
@@ -62,7 +62,8 @@ export class MochaWrapper {
             let error: Error | undefined = undefined;
 
             try {
-                await (runnableToRun.fn as Mocha.AsyncFunc)?.call({} as unknown as Mocha.Context);
+                const ctx = { browser: window.__testplane__.browser };
+                await (runnableToRun.fn as unknown as RunnableFn).call(ctx, ctx);
             } catch (err) {
                 error = err as Error;
             }

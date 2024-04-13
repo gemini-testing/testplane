@@ -2,8 +2,8 @@ import http from "node:http";
 import _ from "lodash";
 import { Server as SocketServer, type Socket, type Server } from "socket.io";
 
-import { WORKER_ENV_BY_RUN_UUID, SOCKET_MAX_TIMEOUT, BROWSER_EVENT_SUFFIX } from "./constants";
-import { WORKER_EVENT_SUFFIX } from "../../../worker/browser-env/runner/test-runner/constants";
+import { WORKER_ENV_BY_RUN_UUID, SOCKET_MAX_TIMEOUT, BROWSER_EVENT_PREFIX } from "./constants";
+import { WORKER_EVENT_PREFIX } from "../../../worker/browser-env/runner/test-runner/constants";
 import { BrowserEventNames } from "./types";
 import { WorkerEventNames } from "../../../worker/browser-env/runner/test-runner/types";
 import { prepareError } from "./utils";
@@ -16,7 +16,7 @@ interface ViteClientEvents extends BrowserViteEvents, ViteBrowserEvents {}
 
 interface SocketHandshakeAuth {
     runUuid: string;
-    type: typeof BROWSER_EVENT_SUFFIX | typeof WORKER_EVENT_SUFFIX;
+    type: typeof BROWSER_EVENT_PREFIX | typeof WORKER_EVENT_PREFIX;
 }
 
 export const createSocketServer = (viteHttpServer: ViteDevServer["httpServer"]): void => {
@@ -29,7 +29,7 @@ export const createSocketServer = (viteHttpServer: ViteDevServer["httpServer"]):
             return next(new Error('"runUuid" must be specified in each socket request'));
         }
 
-        if (type === WORKER_EVENT_SUFFIX) {
+        if (type === WORKER_EVENT_PREFIX) {
             return next();
         }
 
@@ -47,11 +47,11 @@ export const createSocketServer = (viteHttpServer: ViteDevServer["httpServer"]):
     });
 
     io.on("connection", socket => {
-        if (socket.handshake.auth.type === WORKER_EVENT_SUFFIX) {
+        if (socket.handshake.auth.type === WORKER_EVENT_PREFIX) {
             handleWorkerEvents(socket, io);
         }
 
-        if (socket.handshake.auth.type === BROWSER_EVENT_SUFFIX) {
+        if (socket.handshake.auth.type === BROWSER_EVENT_PREFIX) {
             handleBrowserEvents(socket, io);
         }
     });
@@ -102,5 +102,21 @@ function handleBrowserEvents(
         socket.join(runUuid);
 
         io.to(runUuid).except(socket.id).emit(BrowserEventNames.initialize, payload);
+    });
+
+    socket.on(BrowserEventNames.runBrowserCommand, async (payload, cb) => {
+        const { runUuid } = socket.handshake.auth;
+
+        try {
+            const [response] = await io
+                .to(runUuid)
+                .except(socket.id)
+                .timeout(SOCKET_MAX_TIMEOUT)
+                .emitWithAck(BrowserEventNames.runBrowserCommand, payload);
+
+            cb(response);
+        } catch (err) {
+            cb([err as Error]);
+        }
     });
 }

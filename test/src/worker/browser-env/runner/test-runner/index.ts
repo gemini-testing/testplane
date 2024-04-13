@@ -8,7 +8,8 @@ import proxyquire from "proxyquire";
 
 import NodejsEnvRunner from "../../../../../../src/worker/runner/test-runner";
 import { TestRunner as BrowserEnvRunner } from "../../../../../../src/worker/browser-env/runner/test-runner";
-import { WORKER_EVENT_SUFFIX } from "../../../../../../src/worker/browser-env/runner/test-runner/constants";
+import { wrapExecutionThread } from "../../../../../../src/worker/browser-env/runner/test-runner/execution-thread";
+import { WORKER_EVENT_PREFIX } from "../../../../../../src/worker/browser-env/runner/test-runner/constants";
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
 import BrowserAgent from "../../../../../../src/worker/runner/browser-agent";
@@ -46,6 +47,7 @@ describe("worker/browser-env/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let BrowserEnvRunnerStub: typeof BrowserEnvRunner;
     let socketClientStub: SinonStub;
+    let wrapExecutionThreadStub: SinonStub;
 
     const mkTest_ = (opts?: Partial<TestOpts>): TestType => {
         const test = Test.create({
@@ -106,7 +108,7 @@ describe("worker/browser-env/runner/test-runner", () => {
         return promise;
     };
 
-    const mkBrowser_ = (): Browser => ({
+    const mkBrowser_ = (opts: Partial<Browser> = {}): Browser => ({
         publicAPI: {
             url: sandbox.stub().resolves(),
         } as unknown as Browser["publicAPI"],
@@ -115,12 +117,14 @@ describe("worker/browser-env/runner/test-runner", () => {
             isBroken: false,
         },
         applyState: sandbox.stub(),
+        customCommands: [],
         callstackHistory: {
             enter: sandbox.stub(),
             leave: sandbox.stub(),
             markError: sandbox.stub(),
             release: sandbox.stub(),
         } as unknown as Browser["callstackHistory"],
+        ...opts,
     });
 
     const mkSocket_ = (): WorkerViteSocket => {
@@ -146,11 +150,13 @@ describe("worker/browser-env/runner/test-runner", () => {
         sandbox.stub(logger, "warn");
 
         socketClientStub = sandbox.stub().returns(mkSocket_());
+        wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
 
         ({ TestRunner: BrowserEnvRunnerStub } = proxyquire(
             "../../../../../../src/worker/browser-env/runner/test-runner",
             {
                 "socket.io-client": { io: socketClientStub },
+                "./execution-thread": { wrapExecutionThread: wrapExecutionThreadStub },
             },
         ));
     });
@@ -189,7 +195,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                 assert.calledOnceWith(
                     socketClientStub,
                     sinon.match.any,
-                    sinon.match({ auth: { type: WORKER_EVENT_SUFFIX } }),
+                    sinon.match({ auth: { type: WORKER_EVENT_PREFIX } }),
                 );
             });
 
@@ -231,34 +237,194 @@ describe("worker/browser-env/runner/test-runner", () => {
             sandbox.spy(history, "runGroup");
         });
 
-        it(`should emit "${WorkerEventNames.initialize}" event before run test`, async () => {
+        it("should call execution thread wrapper with socket", async () => {
             sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
-
-            const file = "/some/file";
             const socket = mkSocket_();
             socketClientStub.returns(socket);
-            const runner = mkRunner_({ file });
 
-            await runWithEmitBrowserInit(socket, { runner });
+            await run_();
 
-            assert.callOrder(
-                (socket.emit as SinonStub).withArgs(WorkerEventNames.initialize, { file }),
-                NodejsEnvRunner.prototype.run as SinonStub,
-            );
+            assert.calledOnceWith(wrapExecutionThreadStub, socket);
         });
 
-        it(`should emit "${WorkerEventNames.finalize}" event after run test`, async () => {
+        it("should run base runner with execution thread wrapper", async () => {
             sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
 
-            const socket = mkSocket_();
-            socketClientStub.returns(socket);
+            let ExecutionThreadCls: unknown;
+            wrapExecutionThreadStub.callsFake(socket => {
+                ExecutionThreadCls = wrapExecutionThread(socket);
+                return ExecutionThreadCls;
+            });
 
-            await runWithEmitBrowserInit(socket);
+            const runOpts = {
+                sessionId: "sessionId",
+                sessionCaps: {},
+                sessionOpts: {},
+                state: {},
+            } as RunOpts;
 
-            assert.callOrder(
-                NodejsEnvRunner.prototype.run as SinonStub,
-                (socket.emit as SinonStub).withArgs(WorkerEventNames.finalize),
-            );
+            await run_(runOpts);
+
+            assert.calledOnceWith(NodejsEnvRunner.prototype.run as SinonStub, { ...runOpts, ExecutionThreadCls });
+        });
+
+        describe(`"${WorkerEventNames.initialize}" event`, () => {
+            it("should emit with correct args", async () => {
+                const socket = mkSocket_();
+                socketClientStub.returns(socket);
+
+                const config = mkRunnerConfig_();
+                const file = "/some/file";
+                const runner = mkRunner_({ file, config });
+
+                const runOpts = {
+                    sessionId: "sessionId",
+                    sessionCaps: {},
+                    sessionOpts: {
+                        capabilities: {},
+                    },
+                    state: {},
+                } as RunOpts;
+
+                const customCommands = ["assertView"];
+                (BrowserAgent.prototype.getBrowser as SinonStub).resolves(mkBrowser_({ customCommands }));
+
+                await runWithEmitBrowserInit(socket, {
+                    runner,
+                    ...runOpts,
+                });
+
+                assert.calledWith(socket.emit as SinonStub, WorkerEventNames.initialize, {
+                    file,
+                    sessionId: runOpts.sessionId,
+                    capabilities: runOpts.sessionCaps,
+                    requestedCapabilities: runOpts.sessionOpts.capabilities,
+                    customCommands,
+                    config,
+                });
+            });
+
+            it(`should emit before open url`, async () => {
+                const socket = mkSocket_();
+                socketClientStub.returns(socket);
+
+                const file = "/some/file";
+                const runner = mkRunner_({ file });
+
+                const browser = mkBrowser_();
+                (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                await runWithEmitBrowserInit(socket, { runner });
+
+                assert.callOrder(
+                    (socket.emit as SinonStub).withArgs(WorkerEventNames.initialize, sinon.match.any),
+                    browser.publicAPI.url as SinonStub,
+                );
+            });
+        });
+
+        describe(`"${WorkerEventNames.finalize}" event`, () => {
+            it(`should emit after completing the test`, async () => {
+                sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
+
+                const socket = mkSocket_();
+                socketClientStub.returns(socket);
+
+                await runWithEmitBrowserInit(socket);
+
+                assert.callOrder(
+                    NodejsEnvRunner.prototype.run as SinonStub,
+                    (socket.emit as SinonStub).withArgs(WorkerEventNames.finalize),
+                );
+            });
+        });
+
+        describe(`"${BrowserEventNames.runBrowserCommand}" event`, () => {
+            describe("should return error as first callback argument if", () => {
+                it("command does not exists in browser instance", done => {
+                    const browser = mkBrowser_();
+                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    const expectedErrMsg = '"browser.foo" does not exists in browser instance';
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(BrowserEventNames.runBrowserCommand, { name: "foo", args: [] }, response => {
+                            try {
+                                assert.match(response, [
+                                    { stack: sinon.match(expectedErrMsg), message: expectedErrMsg },
+                                ]);
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        });
+                    });
+                });
+
+                (
+                    [
+                        { name: "command return error", cmdStubReturnMethod: "resolves" },
+                        { name: "command throw exception", cmdStubReturnMethod: "rejects" },
+                    ] as { name: string; cmdStubReturnMethod: "resolves" | "rejects" }[]
+                ).forEach(({ name, cmdStubReturnMethod }) => {
+                    it(name, done => {
+                        const error = new Error("o.O");
+                        const browser = mkBrowser_();
+                        browser.publicAPI.execute = sandbox
+                            .stub()
+                            [cmdStubReturnMethod as "resolves" | "rejects"](error);
+                        (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                        const socket = mkSocket_() as BrowserViteSocket;
+                        socketClientStub.returns(socket);
+
+                        runWithEmitBrowserInit(socket).then(() => {
+                            socket.emit(
+                                BrowserEventNames.runBrowserCommand,
+                                { name: "execute", args: [] },
+                                response => {
+                                    try {
+                                        assert.match(response, [{ message: "o.O", stack: sinon.match("o.O") }]);
+                                        done();
+                                    } catch (err) {
+                                        done(err);
+                                    }
+                                },
+                            );
+                        });
+                    });
+                });
+            });
+
+            describe("should return result as second callback argument if", () => {
+                it("command executed successfully with string", done => {
+                    const result = "some_result";
+                    const browser = mkBrowser_();
+                    browser.publicAPI.execute = sandbox.stub().resolves(result);
+                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runBrowserCommand,
+                            { name: "execute", args: [1, 2, 3] },
+                            response => {
+                                try {
+                                    assert.calledOnceWith(browser.publicAPI.execute, 1, 2, 3);
+                                    assert.deepEqual(response, [null, result]);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+            });
         });
 
         it('should log "openVite" in history', async () => {

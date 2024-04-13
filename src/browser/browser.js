@@ -37,14 +37,7 @@ module.exports = class Browser {
             ...opts.state,
             isBroken: false,
         };
-    }
-
-    async attach(sessionId, sessionCaps, sessionOpts) {
-        this._session = await this._attachSession(sessionId, sessionCaps, sessionOpts);
-
-        this._addSteps();
-        this._addHistory();
-        this._addCommands();
+        this._customCommands = new Set();
     }
 
     setHttpTimeout(timeout) {
@@ -107,6 +100,16 @@ module.exports = class Browser {
         }, {});
     }
 
+    _startCollectingCustomCommands() {
+        this._session.overwriteCommand("addCommand", (origCommand, name, ...rest) => {
+            if (!this._session[name]) {
+                this._customCommands.add(name);
+            }
+
+            return origCommand(name, ...rest);
+        });
+    }
+
     get fullId() {
         return this.version ? `${this.id}.${this.version}` : this.id;
     }
@@ -133,5 +136,9 @@ module.exports = class Browser {
 
     get callstackHistory() {
         return this._callstackHistory;
+    }
+
+    get customCommands() {
+        return Array.from(this._customCommands);
     }
 };

@@ -7,19 +7,27 @@ import { io } from "socket.io-client";
 import NodejsEnvTestRunner from "../../../runner/test-runner";
 import { wrapExecutionThread } from "./execution-thread";
 import { WorkerEventNames } from "./types";
-import { WORKER_EVENT_SUFFIX } from "./constants";
+import { WORKER_EVENT_PREFIX } from "./constants";
 import logger from "../../../../utils/logger";
 
 import { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
 import type { WorkerTestRunnerRunOpts, WorkerTestRunnerCtorOpts } from "../../../runner/test-runner/types";
+import type { BrowserConfig } from "../../../../config/browser-config";
 import type { WorkerRunTestResult } from "../../../testplane";
 import type { BrowserHistory } from "../../../../types";
 import type { Browser } from "../../../../browser/types";
 import type { WorkerViteSocket } from "./types";
 
+import type { BrowserViteEvents } from "../../../../runner/browser-env/vite/types";
+
+const prepareData = <T>(data: T): T => {
+    return JSON.parse(JSON.stringify(data, Object.getOwnPropertyNames(data)));
+};
+
 export class TestRunner extends NodejsEnvTestRunner {
     private _socket: WorkerViteSocket;
     private _runUuid: string = crypto.randomUUID();
+    private _runOpts!: WorkerTestRunnerRunOpts;
 
     constructor(opts: WorkerTestRunnerCtorOpts) {
         super(opts);
@@ -28,7 +36,7 @@ export class TestRunner extends NodejsEnvTestRunner {
             transports: ["websocket"],
             auth: {
                 runUuid: this._runUuid,
-                type: WORKER_EVENT_SUFFIX,
+                type: WORKER_EVENT_PREFIX,
             },
         }) as WorkerViteSocket;
 
@@ -43,7 +51,8 @@ export class TestRunner extends NodejsEnvTestRunner {
     }
 
     async run(opts: WorkerTestRunnerRunOpts): Promise<WorkerRunTestResult> {
-        this._socket.emit(WorkerEventNames.initialize, { file: this._file });
+        this._runOpts = opts;
+
         const results = await super.run({ ...opts, ExecutionThreadCls: wrapExecutionThread(this._socket) });
         this._socket.emit(WorkerEventNames.finalize);
 
@@ -53,12 +62,53 @@ export class TestRunner extends NodejsEnvTestRunner {
     _getPreparePageActions(browser: Browser, history: BrowserHistory): (() => Promise<void>)[] {
         return [
             async (): Promise<void> => {
+                this._socket.on(BrowserEventNames.runBrowserCommand, this._handleRunBrowserCommand(browser));
+
+                this._socket.emit(WorkerEventNames.initialize, {
+                    file: this._file,
+                    sessionId: this._runOpts.sessionId,
+                    capabilities: this._runOpts.sessionCaps,
+                    requestedCapabilities: this._runOpts.sessionOpts.capabilities,
+                    customCommands: browser.customCommands,
+                    config: this._config as BrowserConfig,
+                });
+
                 await history.runGroup(browser.callstackHistory, "openVite", async () => {
                     await this._openViteUrl(browser);
                 });
             },
             ...super._getPreparePageActions(browser, history),
         ];
+    }
+
+    private _handleRunBrowserCommand(browser: Browser): BrowserViteEvents[BrowserEventNames.runBrowserCommand] {
+        const { publicAPI: session } = browser;
+
+        return async (payload, cb): Promise<void> => {
+            const { name, args } = payload;
+            const cmdName = name as keyof typeof session;
+
+            if (typeof session[cmdName] !== "function") {
+                cb([prepareData<Error>(new Error(`"browser.${name}" does not exists in browser instance`))]);
+                return;
+            }
+
+            try {
+                const result = await (session[cmdName] as (...args: unknown[]) => Promise<unknown>)(...args);
+
+                if (_.isError(result)) {
+                    return cb([prepareData<Error>(result)]);
+                }
+
+                if (_.isArray(result)) {
+                    return cb([null, result.map(prepareData)]);
+                }
+
+                cb([null, _.isObject(result) ? prepareData(result) : result]);
+            } catch (err) {
+                cb([prepareData<Error>(err as Error)]);
+            }
+        };
     }
 
     private async _openViteUrl(browser: Browser): Promise<void> {
