@@ -10,5 +10,11 @@ export const VITE_SELECTORS = {
     overlayTip: ".tip",
 };
 
-export const BROWSER_EVENT_SUFFIX = "browser";
-export const WORKER_EVENT_SUFFIX = "worker";
+export const BROWSER_EVENT_PREFIX = "browser";
+export const WORKER_EVENT_PREFIX = "worker";
+
+// TODO: use from nodejs code after migrate to esm
+export const SOCKET_MAX_TIMEOUT = 2147483647;
+export const SOCKET_TIMED_OUT_ERROR = "operation has timed out";
+
+export const MAX_ARGS_LENGTH = 50;

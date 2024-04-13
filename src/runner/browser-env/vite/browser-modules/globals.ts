@@ -1,19 +1,23 @@
 import { io } from "socket.io-client";
 import { BrowserError } from "./errors/index.js";
-import { BROWSER_EVENT_SUFFIX } from "./constants.js";
+import { BROWSER_EVENT_PREFIX } from "./constants.js";
 import type { BrowserViteSocket } from "./types.js";
 
 const connectToSocket = (): BrowserViteSocket => {
     const socket = io({
         auth: {
             runUuid: window.__testplane__.runUuid,
-            type: BROWSER_EVENT_SUFFIX,
+            type: BROWSER_EVENT_PREFIX,
         },
         transports: ["websocket"],
     }) as BrowserViteSocket;
 
     socket.on("connect_error", err => {
-        document.body.insertAdjacentHTML("afterbegin", `<p>${err.message}</p>`);
+        const { runUuid, sessionId, file } = window.__testplane__;
+
+        console.error(
+            `Couldn't connect to the server with "runUuid=${runUuid}", "sessionId=${sessionId} and "file=${file}" due to an error: ${err}`,
+        );
     });
 
     return socket;
@@ -64,9 +68,20 @@ const mockBlockingDialogs = (): void => {
     window.prompt = mockDialog({ name: "prompt", value: null });
 };
 
+const mockBuiltInNodeJsModules = (): void => {
+    window.process = window.process || {
+        platform: "browser",
+        env: {},
+        stdout: {},
+        stderr: {},
+        cwd: () => "",
+    };
+};
+
 window.__testplane__.errors = [];
 window.__testplane__.socket = connectToSocket();
 
 proxyTool();
 subscribeOnBrowserErrors();
 mockBlockingDialogs();
+mockBuiltInNodeJsModules();

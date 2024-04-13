@@ -5,7 +5,7 @@ const url = require("url");
 const Promise = require("bluebird");
 const _ = require("lodash");
 const webdriverio = require("webdriverio");
-const { sessionEnvironmentDetector } = require("@wdio/utils");
+const { sessionEnvironmentDetector } = require("@wdio/utils-cjs");
 const Browser = require("./browser");
 const commandsList = require("./commands");
 const Camera = require("./camera");
@@ -15,6 +15,7 @@ const logger = require("../utils/logger");
 const { WEBDRIVER_PROTOCOL } = require("../constants/config");
 const { MIN_CHROME_VERSION_SUPPORT_ISOLATION } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
+const { isRunInNodeJsEnv } = require("../utils/config");
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -34,6 +35,10 @@ module.exports = class ExistingBrowser extends Browser {
 
     async init({ sessionId, sessionCaps, sessionOpts } = {}, calibrator) {
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
+
+        if (!isRunInNodeJsEnv(this._config)) {
+            this._startCollectingCustomCommands();
+        }
 
         this._addSteps();
         this._addHistory();

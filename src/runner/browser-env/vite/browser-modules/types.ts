@@ -1,24 +1,49 @@
-import { BROWSER_EVENT_SUFFIX, WORKER_EVENT_SUFFIX } from "./constants.js";
+import { BROWSER_EVENT_PREFIX, WORKER_EVENT_PREFIX } from "./constants.js";
 import { BrowserError, type ViteError } from "./errors/index.js";
 import type { Socket } from "socket.io-client";
 
+export type RunnableFn = (
+    this: { browser: WebdriverIO.Browser },
+    ctx: { browser: WebdriverIO.Browser },
+) => Promise<unknown>;
+
 export enum BrowserEventNames {
-    initialize = `${BROWSER_EVENT_SUFFIX}:initialize`,
+    initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
+    runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
+}
+
+export interface BrowserRunBrowserCommandPayload {
+    name: string;
+    args: unknown[];
 }
 
 export interface BrowserViteEvents {
     [BrowserEventNames.initialize]: (payload: ViteError[]) => void;
+    [BrowserEventNames.runBrowserCommand]: (
+        payload: BrowserRunBrowserCommandPayload,
+        cb: (args: [err: null | Error, result?: unknown]) => void,
+    ) => void;
 }
 
 // TODO: use from nodejs code when migrate to esm
 export enum WorkerEventNames {
-    initialize = `${WORKER_EVENT_SUFFIX}:initialize`,
-    finalize = `${WORKER_EVENT_SUFFIX}:finalize`,
-    runRunnable = `${WORKER_EVENT_SUFFIX}:runRunnable`,
+    initialize = `${WORKER_EVENT_PREFIX}:initialize`,
+    finalize = `${WORKER_EVENT_PREFIX}:finalize`,
+    runRunnable = `${WORKER_EVENT_PREFIX}:runRunnable`,
 }
 
 export interface WorkerInitializePayload {
     file: string;
+    sessionId: WebdriverIO.Browser["sessionId"];
+    capabilities: WebdriverIO.Browser["capabilities"];
+    requestedCapabilities: WebdriverIO.Browser["options"]["capabilities"];
+    customCommands: string[];
+    // TODO: use BrowserConfig type after migrate to esm
+    config: {
+        automationProtocol: "webdriver" | "devtools";
+        urlHttpTimeout: number | null;
+        httpTimeout: number;
+    };
 }
 
 export interface WorkerRunRunnablePayload {
@@ -41,12 +66,13 @@ declare global {
     interface Window {
         Mocha: Mocha;
         __testplane__: {
-            file: string;
             runUuid: string;
             errors: BrowserError[];
             socket: BrowserViteSocket;
-        };
+            browser: WebdriverIO.Browser;
+        } & WorkerInitializePayload;
         testplane: typeof Proxy;
         hermione: typeof Proxy;
+        browser: WebdriverIO.Browser;
     }
 }

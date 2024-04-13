@@ -12,7 +12,13 @@ const Camera = require("src/browser/camera");
 const clientBridge = require("src/browser/client-bridge");
 const logger = require("src/utils/logger");
 const history = require("src/browser/history");
-const { SAVE_HISTORY_MODE, WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } = require("src/constants/config");
+const {
+    SAVE_HISTORY_MODE,
+    WEBDRIVER_PROTOCOL,
+    DEVTOOLS_PROTOCOL,
+    NODEJS_TEST_RUN_ENV,
+    BROWSER_TEST_RUN_ENV,
+} = require("src/constants/config");
 const { MIN_CHROME_VERSION_SUPPORT_ISOLATION, X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const {
     mkExistingBrowser_: mkBrowser_,
@@ -143,6 +149,35 @@ describe("ExistingBrowser", () => {
             await initBrowser_(mkBrowser_(), { sessionOpts });
 
             assert.calledWithMatch(webdriverio.attach, { ...sessionOpts, options: sessionOpts });
+        });
+
+        describe("collect custom command", () => {
+            it("should return an empty empty list in nodejs environment", async () => {
+                const browser = mkBrowser_({
+                    system: {
+                        testRunEnv: NODEJS_TEST_RUN_ENV,
+                    },
+                });
+
+                await initBrowser_(browser);
+                session.addCommand("foo", () => {});
+
+                assert.deepEqual(browser.customCommands, []);
+            });
+
+            it("should return all custom commands in browser environment", async () => {
+                const browser = mkBrowser_({
+                    system: {
+                        testRunEnv: BROWSER_TEST_RUN_ENV,
+                    },
+                });
+
+                await initBrowser_(browser);
+                session.addCommand("foo", () => {});
+
+                assert.isNotEmpty(browser.customCommands);
+                assert.include(browser.customCommands, "foo");
+            });
         });
 
         describe("transformRequest option", () => {
