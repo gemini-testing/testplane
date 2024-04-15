@@ -33,3 +33,9 @@ declare namespace globalThis {
     // eslint-disable-next-line no-var
     var expect: ExpectWebdriverIO.Expect;
 }
+
+// remove after updating expect-webdriverio@4 (should migrate to esm first)
+declare module "expect-webdriverio/lib/matchers" {
+    const matchers: ExpectWebdriverIO.Matchers<Promise<{ pass: boolean; message(): string }>, unknown>;
+    export default matchers;
+}
