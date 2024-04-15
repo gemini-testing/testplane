@@ -119,4 +119,20 @@ function handleBrowserEvents(
             cb([err as Error]);
         }
     });
+
+    socket.on(BrowserEventNames.runExpectMatcher, async (payload, cb) => {
+        const { runUuid } = socket.handshake.auth;
+
+        try {
+            const [response] = await io
+                .to(runUuid)
+                .except(socket.id)
+                .timeout(SOCKET_MAX_TIMEOUT)
+                .emitWithAck(BrowserEventNames.runExpectMatcher, payload);
+
+            cb(response);
+        } catch (err) {
+            cb([{ pass: false, message: (err as Error).message }]);
+        }
+    });
 }

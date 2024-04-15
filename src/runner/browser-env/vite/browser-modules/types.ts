@@ -1,6 +1,8 @@
 import { BROWSER_EVENT_PREFIX, WORKER_EVENT_PREFIX } from "./constants.js";
 import { BrowserError, type ViteError } from "./errors/index.js";
 import type { Socket } from "socket.io-client";
+import type { Expect, MatcherState } from "expect";
+import type { ChainablePromiseElement, ElementArray } from "webdriverio";
 
 export type RunnableFn = (
     this: { browser: WebdriverIO.Browser },
@@ -10,6 +12,7 @@ export type RunnableFn = (
 export enum BrowserEventNames {
     initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
+    runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
 }
 
 export interface BrowserRunBrowserCommandPayload {
@@ -17,11 +20,23 @@ export interface BrowserRunBrowserCommandPayload {
     args: unknown[];
 }
 
+export interface BrowserRunExpectMatcherPayload {
+    name: string;
+    scope: MatcherState;
+    args: unknown[];
+    element?: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>;
+    context?: WebdriverIO.Browser | WebdriverIO.Element | ElementArray | ChainablePromiseElement<WebdriverIO.Element>;
+}
+
 export interface BrowserViteEvents {
     [BrowserEventNames.initialize]: (payload: ViteError[]) => void;
     [BrowserEventNames.runBrowserCommand]: (
         payload: BrowserRunBrowserCommandPayload,
         cb: (args: [err: null | Error, result?: unknown]) => void,
+    ) => void;
+    [BrowserEventNames.runExpectMatcher]: (
+        payload: BrowserRunExpectMatcherPayload,
+        cb: (args: [{ pass: boolean; message: string }]) => void,
     ) => void;
 }
 
@@ -44,6 +59,7 @@ export interface WorkerInitializePayload {
         urlHttpTimeout: number | null;
         httpTimeout: number;
     };
+    expectMatchers: string[];
 }
 
 export interface WorkerRunRunnablePayload {
@@ -62,6 +78,18 @@ export interface WorkerViteEvents {
 export type ViteBrowserEvents = Pick<WorkerViteEvents, WorkerEventNames.runRunnable>;
 export type BrowserViteSocket = Socket<ViteBrowserEvents, BrowserViteEvents>;
 
+export type SyncExpectationResult = {
+    pass: boolean;
+    message(): string;
+};
+
+export type AsyncExpectationResult = Promise<SyncExpectationResult>;
+
+export type MockMatcherFn = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this: MatcherState, context: BrowserRunExpectMatcherPayload["context"], ...args: any[]): AsyncExpectationResult;
+};
+
 declare global {
     interface Window {
         Mocha: Mocha;
@@ -74,5 +102,6 @@ declare global {
         testplane: typeof Proxy;
         hermione: typeof Proxy;
         browser: WebdriverIO.Browser;
+        expect: Expect;
     }
 }
