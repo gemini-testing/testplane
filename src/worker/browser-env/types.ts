@@ -14,6 +14,7 @@ export enum WorkerEventNames {
     init = `${HERMIONE_WORKER_EVENT_SUFFIX}:init`,
     runRunnable = `${HERMIONE_WORKER_EVENT_SUFFIX}:runRunnable`,
     commandResult = `${HERMIONE_WORKER_EVENT_SUFFIX}:commandResult`,
+    expectMatcherResult = `${HERMIONE_WORKER_EVENT_SUFFIX}:expectMatcherResult`,
 }
 
 export type WorkerPayloadByEvent<T extends WorkerEventNames> = {
@@ -24,3 +25,7 @@ export type WorkerPayloadByEvent<T extends WorkerEventNames> = {
 export type WorkerPayload = WorkerPayloadByEvent<WorkerEventNames>;
 
 export { WorkerMessageEvents, WorkerInitMessage, WorkerRunRunnableMessage, WorkerCommandResultMessage, WorkerMessageByEvent, WorkerMessage } from "./../../runner/browser-env/vite/browser-modules/types";
+
+// declare module "expect-webdriverio/lib/matchers" {
+//     export var matchers: string[];
+// }

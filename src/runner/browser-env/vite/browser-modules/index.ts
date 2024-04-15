@@ -1,9 +1,10 @@
 import { remote } from 'webdriverio';
 import { automationProtocolPath } from "virtual:hermione";
 import { MochaWrapper } from "./mocha/index.js";
-import 'expect-webdriverio';
+import { expect } from './expect.js';
 
-console.log('expect:', expect);
+// TODO: add it correctly
+(window as any).expect = expect;
 
 const browser = await remote({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

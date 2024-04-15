@@ -108,7 +108,8 @@ export default class ProxyDriver {
         // })
         const { capabilities, requestedCapabilities } = window.__hermione__;
 
-        const environment = sessionEnvironmentDetector({ capabilities, requestedCapabilities: requestedCapabilities as WebdriverIO.Capabilities });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const environment = sessionEnvironmentDetector({ capabilities: capabilities as any, requestedCapabilities: requestedCapabilities as any });
         const environmentPrototype: Record<string, PropertyDescriptor> = getEnvironmentVars(environment);
         // // have debug command
         const commandsProcessedInNodeWorld = [...protocolCommandList, 'debug', 'saveScreenshot', 'savePDF', ...window.__hermione__.customCommands];
@@ -148,7 +149,7 @@ export default class ProxyDriver {
         prototype.on = { writable: true, value: (): void => {} }
 
         const monad = webdriverMonad(params, modifier, prototype)
-        return monad("window.__wdioEnv__.sessionId", commandWrapper);
+        return monad(window.__hermione__.sessionId, commandWrapper);
     }
 
     static #getMockedCommand(commandName: string) {
@@ -249,8 +250,8 @@ export default class ProxyDriver {
             clearTimeout(cmdMessage.commandTimeout);
         }
 
-        cmdMessage.resolve(result);
         this.#cmdResultMessages.delete(msg.cmdUuid);
+        cmdMessage.resolve(result);
     }
 
     // static #handleServerMessage (payload: Workers.SocketMessage) {

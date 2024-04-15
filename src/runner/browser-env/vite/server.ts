@@ -42,7 +42,8 @@ export class ViteServer {
             optimizeDeps: {
                 include: [
                     // 'ws',
-                    'expect', 'minimatch', 'css-shorthand-properties', 'lodash.merge', 'lodash.zip', 'ws',
+                    'expect',
+                    'minimatch', 'css-shorthand-properties', 'lodash.merge', 'lodash.zip', 'ws',
                     'lodash.clonedeep', 'lodash.pickby', 'lodash.flattendeep', 'aria-query', 'grapheme-splitter',
                     'css-value', 'rgb2hex', 'p-iteration', 'deepmerge-ts', 'jest-util', 'jest-matcher-utils', 'split2',
                     // ------
@@ -50,26 +51,26 @@ export class ViteServer {
                     // '@wdio/protocols',
                     // 'proxy-agent', 'url', 'debug', 'unbzip2-stream', 'extract-zip', 'util', '@puppeteer/browsers', 'archiver'
                 ],
-                esbuildOptions: {
-                    // logLevel: 'silent',
-                    // Node.js global to browser globalThis
-                    define: {
-                        global: 'globalThis',
-                    },
-                    // Enable esbuild polyfill plugins
-                    // plugins: [
-                    //     esbuildCommonjs(['@testing-library/vue']),
-                    //     codeFrameFix()
-                    // ],
-                },
+                // esbuildOptions: {
+                //     // logLevel: 'silent',
+                //     // Node.js global to browser globalThis
+                //     define: {
+                //         global: 'globalThis',
+                //     },
+                //     // Enable esbuild polyfill plugins
+                //     // plugins: [
+                //     //     esbuildCommonjs(['@testing-library/vue']),
+                //     //     codeFrameFix()
+                //     // ],
+                // },
             },
             plugins: [
                 // commonjs()
                 // commonjs({filter: (id) => {
-                //     console.log('ID:', id);
+                //     // console.log('ID:', id);
 
-                //     const res = id.includes('expect-webdriverio');
-                //     console.log('commonjs:', res);
+                //     const res = id.includes('expect');
+                //     // console.log('commonjs:', res);
 
                 //     return res;
                 // }})

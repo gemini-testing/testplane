@@ -19,6 +19,7 @@ export enum BrowserEventNames {
     init = `${HERMIONE_BROWSER_EVENT_SUFFIX}:init`,
     runnableResult = `${HERMIONE_BROWSER_EVENT_SUFFIX}:runnableResult`,
     runCommand = `${HERMIONE_BROWSER_EVENT_SUFFIX}:runCommand`,
+    runExpectMatcher = `${HERMIONE_BROWSER_EVENT_SUFFIX}:runExpectMatcher`,
 }
 
 export type BrowserPayloadByEvent<T extends BrowserEventNames> = {

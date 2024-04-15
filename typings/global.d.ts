@@ -33,3 +33,12 @@ declare namespace globalThis {
     // eslint-disable-next-line no-var
     var expect: ExpectWebdriverIO.Expect;
 }
+
+declare module 'expect-webdriverio/lib/matchers' {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const matchers: Record<string, (actual: any, ...expected: any[]) => Promise<{
+        pass: boolean;
+        message(): string
+    }>>;
+    export default matchers;
+};

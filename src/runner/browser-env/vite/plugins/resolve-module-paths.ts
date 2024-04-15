@@ -44,11 +44,14 @@ const MODULES_TO_MOCK = [
     'import-meta-resolve', 'puppeteer-core', 'archiver', 'glob', 'devtools', 'decamelize', 'got',
     'geckodriver', 'safaridriver', 'edgedriver', '@puppeteer/browsers', 'locate-app', 'wait-port',
     'lodash.isequal', '@wdio/repl',
+    // ----
+    // 'graceful-fs',
+    // 'jest-message-util',
 ];
 
 const POLYFILLS = [
     ...builtinModules,
-    ...builtinModules.map((m) => `node:${m}`)
+    ...builtinModules.map((m) => `node:${m}`),
 ];
 
 export const plugin = (options: VitePluginOptions): Plugin[] => {
@@ -59,7 +62,7 @@ export const plugin = (options: VitePluginOptions): Plugin[] => {
     const globalsModulePath = path.resolve(browserModulesPath, "globals.js");
 
     const mockModulePath = path.resolve(browserModulesPath, 'mock.js');
-    const expectModulePath = path.resolve(browserModulesPath, 'expect.js');
+    // const expectModulePath = path.resolve(browserModulesPath, 'expect.js');
 
     const automationProtocolPath = `/@fs${url.pathToFileURL(path.resolve(browserModulesPath, 'driver.js')).pathname}`;
 
@@ -93,9 +96,9 @@ export const plugin = (options: VitePluginOptions): Plugin[] => {
                     return options.modulePaths.webdriverio;
                 }
 
-                if (id === "expect-webdriverio") {
-                    return expectModulePath;
-                }
+                // if (id === "expect-webdriverio") {
+                //     return expectModulePath;
+                // }
 
                 if (MODULES_TO_MOCK.includes(id)) {
                     return mockModulePath
@@ -171,6 +174,25 @@ export const plugin = (options: VitePluginOptions): Plugin[] => {
                 };
 
                 return;
+            },
+
+            transform(code, id) {
+                if (id.includes('.vite/deps/expect.js')) {
+                    return {
+                        code: code.replace(
+                            'var fs = _interopRequireWildcard(require_graceful_fs());',
+                            'var fs = {};'
+                        )
+                        // .replace(
+                        //     'var expect_default = require_build11();',
+                        //     'var expect_default = require_build11();\nwindow.expect = expect_default.default;'
+                        // ).replace(
+                        //     'process.stdout.isTTY',
+                        //     'false'
+                        // )
+                    }
+                }
+                return { code }
             },
         },
     ];
