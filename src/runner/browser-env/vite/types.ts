@@ -15,4 +15,5 @@ export interface ViteClientEvents extends BrowserViteEvents, ViteBrowserEvents {
 export enum BrowserEventNames {
     initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
+    runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
 }

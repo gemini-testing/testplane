@@ -17,6 +17,7 @@ import history from "../../../../../../src/browser/history";
 import logger from "../../../../../../src/utils/logger";
 import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";
 
+import ExpectWebdriverIO from "expect-webdriverio";
 import { BrowserEventNames } from "../../../../../../src/runner/browser-env/vite/types";
 import { BrowserViteSocket } from "../../../../../../src/runner/browser-env/vite/browser-modules/types";
 import {
@@ -24,6 +25,8 @@ import {
     type WorkerViteSocket,
 } from "../../../../../../src/worker/browser-env/runner/test-runner/types";
 import type { Socket } from "socket.io-client";
+import type { MatcherState } from "expect";
+import type { ChainablePromiseElement } from "webdriverio";
 import type {
     WorkerTestRunnerRunOpts,
     WorkerTestRunnerCtorOpts,
@@ -138,6 +141,19 @@ describe("worker/browser-env/runner/test-runner", () => {
         return socket;
     };
 
+    const initBrowserEnvRunner_ = (
+        opts: { expectMatchers: Record<string, VoidFunction> } = { expectMatchers: {} },
+    ): typeof BrowserEnvRunner => {
+        socketClientStub = sandbox.stub().returns(mkSocket_());
+        wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
+
+        return proxyquire.noCallThru()("../../../../../../src/worker/browser-env/runner/test-runner", {
+            "socket.io-client": { io: socketClientStub },
+            "./execution-thread": { wrapExecutionThread: wrapExecutionThreadStub },
+            "expect-webdriverio/lib/matchers": opts.expectMatchers,
+        }).TestRunner;
+    };
+
     beforeEach(() => {
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(mkBrowser_());
         sandbox.stub(BrowserAgent.prototype, "freeBrowser");
@@ -152,13 +168,7 @@ describe("worker/browser-env/runner/test-runner", () => {
         socketClientStub = sandbox.stub().returns(mkSocket_());
         wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
 
-        ({ TestRunner: BrowserEnvRunnerStub } = proxyquire(
-            "../../../../../../src/worker/browser-env/runner/test-runner",
-            {
-                "socket.io-client": { io: socketClientStub },
-                "./execution-thread": { wrapExecutionThread: wrapExecutionThreadStub },
-            },
-        ));
+        BrowserEnvRunnerStub = initBrowserEnvRunner_();
     });
 
     afterEach(() => sandbox.restore());
@@ -270,6 +280,9 @@ describe("worker/browser-env/runner/test-runner", () => {
 
         describe(`"${WorkerEventNames.initialize}" event`, () => {
             it("should emit with correct args", async () => {
+                const expectMatchers = { foo: sinon.stub(), bar: sinon.stub() };
+                BrowserEnvRunnerStub = initBrowserEnvRunner_({ expectMatchers });
+
                 const socket = mkSocket_();
                 socketClientStub.returns(socket);
 
@@ -301,6 +314,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                     requestedCapabilities: runOpts.sessionOpts.capabilities,
                     customCommands,
                     config,
+                    expectMatchers: ["foo", "bar"],
                 });
             });
 
@@ -423,6 +437,252 @@ describe("worker/browser-env/runner/test-runner", () => {
                             },
                         );
                     });
+                });
+            });
+        });
+
+        describe(`"${BrowserEventNames.runExpectMatcher}" event`, () => {
+            let browser: Browser;
+
+            beforeEach(() => {
+                global.expect = sandbox.stub() as unknown as ExpectWebdriverIO.Expect;
+
+                browser = mkBrowser_();
+                (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+            });
+
+            afterEach(() => {
+                delete (global as Partial<{ expect: ExpectWebdriverIO.Expect }>).expect;
+            });
+
+            describe("should return error if", () => {
+                it("expect module is not found", done => {
+                    global.expect = undefined as unknown as ExpectWebdriverIO.Expect;
+
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "foo", args: [], scope: {} as MatcherState },
+                            response => {
+                                try {
+                                    assert.deepEqual(response, [
+                                        { pass: false, message: "Couldn't find expect module" },
+                                    ]);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it("expect matcher is not found", done => {
+                    const expectMatchers = {};
+                    BrowserEnvRunnerStub = initBrowserEnvRunner_({ expectMatchers });
+
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "foo", args: [], scope: {} as MatcherState },
+                            response => {
+                                try {
+                                    assert.deepEqual(response, [
+                                        { pass: false, message: `Couldn't find expect matcher with name "foo"` },
+                                    ]);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it("expect matcher is failed with exception", done => {
+                    const error = new Error("o.O");
+                    const expectMatchers = { foo: sinon.stub().throws(error) };
+                    BrowserEnvRunnerStub = initBrowserEnvRunner_({ expectMatchers });
+
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "foo", args: [], scope: {} as MatcherState },
+                            response => {
+                                try {
+                                    assert.deepEqual(response, [
+                                        { pass: false, message: `Failed to execute expect command "foo": ${error}` },
+                                    ]);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+            });
+
+            describe("should call expect matcher with", () => {
+                let expectMatchers: Record<string, SinonStub>;
+                let socket: BrowserViteSocket;
+
+                beforeEach(() => {
+                    expectMatchers = { matcher: sinon.stub().resolves({ pass: true, message: () => "success" }) };
+                    BrowserEnvRunnerStub = initBrowserEnvRunner_({ expectMatchers });
+
+                    socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+                });
+
+                it("passed scope as this", done => {
+                    const scope = {} as MatcherState;
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(BrowserEventNames.runExpectMatcher, { name: "matcher", args: [], scope }, () => {
+                            try {
+                                assert.equal(expectMatchers.matcher.firstCall.thisValue, scope);
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        });
+                    });
+                });
+
+                it("context as an browser if element not passed", done => {
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "matcher", args: [], scope: {} as MatcherState },
+                            () => {
+                                try {
+                                    assert.calledOnceWith(expectMatchers.matcher, browser.publicAPI);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it("context as an elements array", done => {
+                    const elements = ["elem1", "elem2"] as unknown as ChainablePromiseElement<WebdriverIO.Element>;
+                    const elementsRes = ["elem1_res", "elem2_res"];
+                    const browser = mkBrowser_();
+                    browser.publicAPI.$$ = sandbox.stub().withArgs(elements).resolves(elementsRes);
+                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "matcher", args: [], scope: {} as MatcherState, element: elements },
+                            () => {
+                                try {
+                                    assert.calledOnceWith(expectMatchers.matcher, elementsRes);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it('context as an element found by "elementId"', done => {
+                    const element = { elementId: "123", selector: "body" } as unknown as WebdriverIO.Element;
+                    const elementsRes = {};
+                    const browser = mkBrowser_();
+                    browser.publicAPI.$ = sandbox.stub().withArgs(element).resolves(elementsRes);
+                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "matcher", args: [], scope: {} as MatcherState, element },
+                            () => {
+                                try {
+                                    assert.calledOnceWith(expectMatchers.matcher, { ...elementsRes, selector: "body" });
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it('context as an element found by "selector"', done => {
+                    const element = { selector: "body" } as unknown as WebdriverIO.Element;
+                    const elementsRes = {};
+                    const browser = mkBrowser_();
+                    browser.publicAPI.$ = sandbox.stub().withArgs("body").resolves(elementsRes);
+                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "matcher", args: [], scope: {} as MatcherState, element },
+                            () => {
+                                try {
+                                    assert.calledOnceWith(expectMatchers.matcher, elementsRes);
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+
+                it("passed args", done => {
+                    runWithEmitBrowserInit(socket).then(() => {
+                        socket.emit(
+                            BrowserEventNames.runExpectMatcher,
+                            { name: "matcher", args: ["foo", "bar"], scope: {} as MatcherState },
+                            () => {
+                                try {
+                                    assert.calledOnceWith(expectMatchers.matcher, browser.publicAPI, "foo", "bar");
+                                    done();
+                                } catch (err) {
+                                    done(err);
+                                }
+                            },
+                        );
+                    });
+                });
+            });
+
+            it("should return successfully completed result", done => {
+                const expectMatchers = { matcher: sinon.stub().resolves({ pass: true, message: () => "success" }) };
+                BrowserEnvRunnerStub = initBrowserEnvRunner_({ expectMatchers });
+
+                const socket = mkSocket_() as BrowserViteSocket;
+                socketClientStub.returns(socket);
+
+                runWithEmitBrowserInit(socket).then(() => {
+                    socket.emit(
+                        BrowserEventNames.runExpectMatcher,
+                        { name: "matcher", args: [], scope: {} as MatcherState },
+                        response => {
+                            try {
+                                assert.deepEqual(response, [{ pass: true, message: "success" }]);
+                                done();
+                            } catch (err) {
+                                done(err);
+                            }
+                        },
+                    );
                 });
             });
         });

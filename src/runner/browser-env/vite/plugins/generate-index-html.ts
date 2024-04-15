@@ -129,6 +129,16 @@ export const plugin = async (): Promise<Plugin[]> => {
                     return ["export default () => {};", "export const resolve = () => ''"].join("\n");
                 }
             },
+
+            transform(code, id): Rollup.TransformResult {
+                if (id.includes(".vite/deps/expect.js")) {
+                    return {
+                        code: code.replace("var fs = _interopRequireWildcard(require_graceful_fs());", "var fs = {};"),
+                    };
+                }
+
+                return { code };
+            },
         },
     ];
 };
