@@ -69,6 +69,10 @@ export class TestRunner extends NodejsEnvTestRunner {
             async (): Promise<void> => {
                 const { default: expectMatchers } = await import("expect-webdriverio/lib/matchers");
 
+                this._socket.on(BrowserEventNames.callConsoleMethod, payload => {
+                    console[payload.method](...(payload.args || []));
+                });
+
                 this._socket.on(BrowserEventNames.runBrowserCommand, this._handleRunBrowserCommand(browser));
                 this._socket.on(
                     BrowserEventNames.runExpectMatcher,

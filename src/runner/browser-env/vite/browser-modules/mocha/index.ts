@@ -1,4 +1,5 @@
 import { TestParser } from "./parser.js";
+import { wrapConsoleMethods } from "../utils/index.js";
 import { getErrorsOnPageLoad, getErrorsOnRunRunnable, BrowserError } from "../errors/index.js";
 import { BrowserEventNames, WorkerEventNames, type BrowserViteSocket, type RunnableFn } from "../types.js";
 
@@ -33,6 +34,8 @@ export class MochaWrapper {
         }
 
         this._socket.emit(BrowserEventNames.initialize, getErrorsOnPageLoad(error));
+
+        wrapConsoleMethods();
     }
 
     private _validate(): never | void {

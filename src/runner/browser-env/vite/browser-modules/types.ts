@@ -1,4 +1,4 @@
-import { BROWSER_EVENT_PREFIX, WORKER_EVENT_PREFIX } from "./constants.js";
+import { BROWSER_EVENT_PREFIX, WORKER_EVENT_PREFIX, CONSOLE_METHODS } from "./constants.js";
 import { BrowserError, type ViteError } from "./errors/index.js";
 import type { Socket } from "socket.io-client";
 import type { Expect, MatcherState } from "expect";
@@ -13,6 +13,7 @@ export enum BrowserEventNames {
     initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
     runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
+    callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
 }
 
 export interface BrowserRunBrowserCommandPayload {
@@ -28,6 +29,11 @@ export interface BrowserRunExpectMatcherPayload {
     context?: WebdriverIO.Browser | WebdriverIO.Element | ElementArray | ChainablePromiseElement<WebdriverIO.Element>;
 }
 
+export interface BrowserCallConsoleMethodPayload {
+    method: (typeof CONSOLE_METHODS)[number];
+    args: unknown[];
+}
+
 export interface BrowserViteEvents {
     [BrowserEventNames.initialize]: (payload: ViteError[]) => void;
     [BrowserEventNames.runBrowserCommand]: (
@@ -38,6 +44,7 @@ export interface BrowserViteEvents {
         payload: BrowserRunExpectMatcherPayload,
         cb: (args: [{ pass: boolean; message: string }]) => void,
     ) => void;
+    [BrowserEventNames.callConsoleMethod]: (payload: BrowserCallConsoleMethodPayload) => void;
 }
 
 // TODO: use from nodejs code when migrate to esm
