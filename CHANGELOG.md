@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.2](https://github.com/gemini-testing/testplane/compare/v0.1.1...v0.1.2) (2024-04-16)
+
+
+### Features
+
+* ability to read tests in ".jsx" and ".tsx" files ([2884a7e](https://github.com/gemini-testing/testplane/commit/2884a7ef44f19575421cbd5d50c0533cd93d75e6))
+* ability to run unit tests in browser ([0e9f9ac](https://github.com/gemini-testing/testplane/commit/0e9f9accae4a0998a03dfa74377b748976620440))
+* add ability to show user log in component tests ([772cf09](https://github.com/gemini-testing/testplane/commit/772cf09b3609e3d9c3883dfe69cc4ae7649d5616))
+* add ability to use browser in component tests ([022e051](https://github.com/gemini-testing/testplane/commit/022e0516f7a9a21a87fb51f773bcf10a37990f6d))
+* add ability to use expect in component tests ([f3f97a7](https://github.com/gemini-testing/testplane/commit/f3f97a741622863062b5497a95595f933229c522))
+
+
+### Bug Fixes
+
+* correctly mock "debug", "saveScreenshot" and "savePDF" ([202af7d](https://github.com/gemini-testing/testplane/commit/202af7d82f2d9741aa5b0478bc14c793974eb059))
+
 ### [0.1.1](https://github.com/gemini-testing/testplane/compare/v0.1.0...v0.1.1) (2024-04-14)
 
 ### [8.8.1](https://github.com/gemini-testing/hermione/compare/v8.8.0...v8.8.1) (2024-04-05)
