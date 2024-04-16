@@ -278,6 +278,20 @@ describe("worker/browser-env/runner/test-runner", () => {
             assert.calledOnceWith(NodejsEnvRunner.prototype.run as SinonStub, { ...runOpts, ExecutionThreadCls });
         });
 
+        describe(`"${BrowserEventNames.callConsoleMethod}" event`, () => {
+            it("should call console method with passed args", async () => {
+                sandbox.stub(console, "log");
+
+                const socket = mkSocket_() as BrowserViteSocket;
+                socketClientStub.returns(socket);
+
+                await runWithEmitBrowserInit(socket);
+                socket.emit(BrowserEventNames.callConsoleMethod, { method: "log", args: ["foo", "bar"] });
+
+                assert.calledOnceWith(console.log, "foo", "bar");
+            });
+        });
+
         describe(`"${WorkerEventNames.initialize}" event`, () => {
             it("should emit with correct args", async () => {
                 const expectMatchers = { foo: sinon.stub(), bar: sinon.stub() };
