@@ -104,6 +104,12 @@ function handleBrowserEvents(
         io.to(runUuid).except(socket.id).emit(BrowserEventNames.initialize, payload);
     });
 
+    socket.on(BrowserEventNames.callConsoleMethod, payload => {
+        const { runUuid } = socket.handshake.auth;
+
+        io.to(runUuid).except(socket.id).emit(BrowserEventNames.callConsoleMethod, payload);
+    });
+
     socket.on(BrowserEventNames.runBrowserCommand, async (payload, cb) => {
         const { runUuid } = socket.handshake.auth;
 
