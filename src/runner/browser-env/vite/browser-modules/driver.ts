@@ -17,6 +17,8 @@ import { BrowserEventNames } from "./types.js";
 type ProtocolCommandFn = (...args: unknown[]) => Promise<unknown>;
 type PropertiesObject = Record<string, PropertyDescriptor>;
 
+const SERVER_HANDLED_COMMANDS = ["debug", "saveScreenshot", "savePDF"];
+
 export default class ProxyDriver {
     static newSession(
         params: Record<string, unknown>,
@@ -65,10 +67,13 @@ function getAllProtocolCommands(): string[] {
 }
 
 function getMockedProtocolCommands(): PropertiesObject {
-    return [...getAllProtocolCommands(), ...window.__testplane__.customCommands].reduce((acc, commandName) => {
-        acc[commandName] = { value: mockCommand(commandName) };
-        return acc;
-    }, {} as PropertiesObject);
+    return [...getAllProtocolCommands(), ...SERVER_HANDLED_COMMANDS, ...window.__testplane__.customCommands].reduce(
+        (acc, commandName) => {
+            acc[commandName] = { value: mockCommand(commandName) };
+            return acc;
+        },
+        {} as PropertiesObject,
+    );
 }
 
 function mockCommand(commandName: string): ProtocolCommandFn {
