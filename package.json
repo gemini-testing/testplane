@@ -95,6 +95,7 @@
     "@babel/core": "7.24.1",
     "@babel/plugin-transform-modules-commonjs": "7.24.1",
     "@babel/plugin-transform-react-jsx": "7.23.4",
+    "@babel/plugin-transform-typescript": "7.24.4",
     "@babel/preset-react": "7.24.1",
     "@babel/preset-typescript": "7.24.1",
     "@commitlint/cli": "^19.0.3",
