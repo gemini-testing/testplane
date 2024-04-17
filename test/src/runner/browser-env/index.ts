@@ -2,6 +2,7 @@ import sinon, { SinonStub } from "sinon";
 import { MainRunner as BrowserEnvRunner } from "../../../../src/runner/browser-env";
 import { MainRunner as NodejsEnvRunner } from "../../../../src/runner";
 import { ViteServer } from "../../../../src/runner/browser-env/vite/server";
+import RuntimeConfig from "../../../../src/config/runtime-config";
 import { TestCollection } from "../../../../src/test-collection";
 import { Stats as RunnerStats } from "../../../../src/stats";
 
@@ -28,6 +29,8 @@ describe("BrowserEnvRunner", () => {
         sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
         sandbox.stub(NodejsEnvRunner.prototype, "cancel");
 
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
+
         sandbox.stub(ViteServer, "create").returns(Object.create(ViteServer.prototype));
         sandbox.stub(ViteServer.prototype, "start").resolves();
         sandbox.stub(ViteServer.prototype, "close").resolves();
@@ -51,6 +54,17 @@ describe("BrowserEnvRunner", () => {
             await run_();
 
             assert.calledOnceWith(ViteServer.prototype.start);
+        });
+
+        it("should save vite base url to runtime config", async () => {
+            const viteBaseUrl = "http://localhost:4000";
+            sandbox.stub(ViteServer.prototype, "baseUrl").get(() => viteBaseUrl);
+
+            await run_();
+
+            assert.calledWith((RuntimeConfig.getInstance as SinonStub).lastCall.returnValue.extend, {
+                viteBaseUrl,
+            });
         });
 
         it("should throw error if vite server failed", async () => {

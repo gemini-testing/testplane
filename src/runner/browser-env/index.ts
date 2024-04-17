@@ -2,6 +2,7 @@ import { ViteServer } from "./vite/server";
 import { MainRunner as NodejsEnvRunner } from "..";
 import { TestCollection } from "../../test-collection";
 import { Config } from "../../config";
+import RuntimeConfig from "../../config/runtime-config";
 import { Interceptor } from "../../events";
 import type { Stats as RunnerStats } from "../../stats";
 
@@ -17,6 +18,7 @@ export class MainRunner extends NodejsEnvRunner {
     async run(testCollection: TestCollection, stats: RunnerStats): Promise<void> {
         try {
             await this._viteServer.start();
+            RuntimeConfig.getInstance().extend({ viteBaseUrl: this._viteServer.baseUrl });
         } catch (err) {
             throw new Error(`Vite server failed to start: ${(err as Error).message}`);
         }

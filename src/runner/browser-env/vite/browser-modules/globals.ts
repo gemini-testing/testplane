@@ -9,7 +9,6 @@ const connectToSocket = (): BrowserViteSocket => {
             runUuid: window.__testplane__.runUuid,
             type: BROWSER_EVENT_PREFIX,
         },
-        transports: ["websocket"],
     }) as BrowserViteSocket;
 
     socket.on("connect_error", err => {

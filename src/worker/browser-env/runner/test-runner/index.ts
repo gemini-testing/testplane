@@ -9,6 +9,7 @@ import { wrapExecutionThread } from "./execution-thread";
 import { WorkerEventNames } from "./types";
 import { WORKER_EVENT_PREFIX, SUPPORTED_ASYMMETRIC_MATCHER } from "./constants";
 import logger from "../../../../utils/logger";
+import RuntimeConfig from "../../../../config/runtime-config";
 
 import { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
 import type { Selector } from "webdriverio";
@@ -37,7 +38,7 @@ export class TestRunner extends NodejsEnvTestRunner {
     constructor(opts: WorkerTestRunnerCtorOpts) {
         super(opts);
 
-        this._socket = io(this._config.baseUrl, {
+        this._socket = io(RuntimeConfig.getInstance().viteBaseUrl, {
             transports: ["websocket"],
             auth: {
                 runUuid: this._runUuid,
