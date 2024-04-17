@@ -775,4 +775,122 @@ describe("config options", () => {
             assert.deepEqual(config.sets, { "": { files: [], browsers: ["b1", "b2"], ignoreFiles: [] } });
         });
     });
+
+    describe("devServer.readinessProbe", () => {
+        const assertReadinessProbeThrows = (readinessProbe, errorMessage) => {
+            return assert.throws(() => {
+                parse_({
+                    options: {
+                        devServer: {
+                            readinessProbe,
+                        },
+                    },
+                });
+            }, errorMessage);
+        };
+
+        it("could be a function", () => {
+            const config = parse_({
+                options: {
+                    devServer: {
+                        readinessProbe: () => {},
+                    },
+                },
+            });
+
+            assert.isFunction(config.devServer.readinessProbe);
+        });
+
+        it("could be empty", () => {
+            const config = parse_({
+                options: {
+                    devServer: {
+                        readinessProbe: {},
+                    },
+                },
+            });
+
+            assert.deepEqual(config.devServer.readinessProbe, defaults.devServer.readinessProbe);
+        });
+
+        it("could have string url", () => {
+            const config = parse_({
+                options: {
+                    devServer: {
+                        readinessProbe: {
+                            url: "foo",
+                        },
+                    },
+                },
+            });
+
+            assert.deepEqual(config.devServer.readinessProbe.url, "foo");
+        });
+
+        it("could have custom isReady function", () => {
+            const config = parse_({
+                options: {
+                    devServer: {
+                        readinessProbe: {
+                            isReady: () => {},
+                        },
+                    },
+                },
+            });
+
+            assert.isFunction(config.devServer.readinessProbe.isReady);
+        });
+
+        it("could have overwritted timeouts", () => {
+            const config = parse_({
+                options: {
+                    devServer: {
+                        readinessProbe: {
+                            timeouts: {
+                                probeRequestTimeout: 100500,
+                            },
+                        },
+                    },
+                },
+            });
+
+            assert.equal(config.devServer.readinessProbe.timeouts.probeRequestTimeout, 100500);
+            assert.equal(
+                config.devServer.readinessProbe.timeouts.waitServerTimeout,
+                defaults.devServer.readinessProbe.timeouts.waitServerTimeout,
+            );
+            assert.equal(
+                config.devServer.readinessProbe.timeouts.probeRequestInterval,
+                defaults.devServer.readinessProbe.timeouts.probeRequestInterval,
+            );
+        });
+
+        it("should be a function or object", () => {
+            assertReadinessProbeThrows("foo", '"devServer.readinessProbe" must be a function, object or null');
+        });
+
+        it("url property should be a string", () => {
+            assertReadinessProbeThrows({ url: {} }, '"devServer.readinessProbe.url" must be a string or null');
+        });
+
+        it("isReady property should be a function", () => {
+            assertReadinessProbeThrows(
+                { isReady: {} },
+                '"devServer.readinessProbe.isReady" must be a function or null',
+            );
+        });
+
+        it("timeouts property should be an object", () => {
+            assertReadinessProbeThrows({ timeouts: () => {} }, '"devServer.readinessProbe.timeouts" must be an object');
+        });
+
+        ["waitServerTimeout", "probeRequestTimeout", "probeRequestInterval"].forEach(timeoutName => {
+            it(`timeouts.${timeoutName} should be a number`, () => {
+                assertReadinessProbeThrows(
+                    { timeouts: { [timeoutName]: "foo" } },
+                    `"devServer.readinessProbe.timeouts.${timeoutName}" must be a number`,
+                );
+            });
+        });
+    });
 });

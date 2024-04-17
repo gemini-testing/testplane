@@ -94,6 +94,22 @@ module.exports = {
     headless: null,
     isolation: null,
     testRunEnv: NODEJS_TEST_RUN_ENV,
+    devServer: {
+        command: null,
+        cwd: null,
+        env: {},
+        args: [],
+        logs: true,
+        readinessProbe: {
+            url: null,
+            isReady: null,
+            timeouts: {
+                waitServerTimeout: 60000, // 60s
+                probeRequestTimeout: 10000, // 10s
+                probeRequestInterval: 1000, // 1s
+            },
+        },
+    },
 };
 
 module.exports.configPaths = [".testplane.conf.ts", ".testplane.conf.js", ".hermione.conf.ts", ".hermione.conf.js"];

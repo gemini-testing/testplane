@@ -651,3 +651,41 @@ The `browser` argument is a `WebdriverIO` session.
 
 ### prepareEnvironment
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
+
+### devServer
+Launch dev server on testplane initialize (INIT event).
+
+For example, this setup:
+```js
+// .testplane.conf.js
+const SERVER_PORT = 3000;
+...
+export default {
+    ...
+    devServer: {
+        command: "npm run server:dev",
+        env: {PORT: SERVER_PORT},
+        readinessProbe: {
+            url: `http://localhost:${SERVER_PORT}/health`
+            timeouts: { // optional
+                waitServerTimeout: 60_000 // default value
+            }
+        }
+    }
+}
+```
+Will spawn child process "npm run server:dev", pass extra environment variable "PORT" with value "3000" and wait, until "http://localhost:3000/health" is ready to receive network requests and responds with 200-299 status code. If server is still not ready after 60 seconds, Testplane will fail.
+
+Full list of parameters:
+ - command (optional) `String` – command to launch dev server. If null or not defined, dev server is disabled
+ - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env` 
+ - args (optional)  `String[]` – arguments to pass to child process
+ - cwd (optional) `String` – current working directory of the child process. If not defined, testplane will try to find nearest "package.json", starting from the directory with testplane config
+ - logs (optional) `Boolean` – if enabled, shows dev server logs in the console with prefix "\[dev server\]". Enabled by default
+ - readinessProbe (optional) `(devServer: ChildProcess) => Promise<void> | Object` - if function, ready check is completed when function is resolved. Receives child process object. Object by default
+   - url (optional) `String` – url to request ready check status. If not defined, ready check is disabled
+   - isReady (optional) `(fetchResponse => bool | Promise<bool>)` – predicate to check if server is ready based on `readinessProbe.url` fetch response. Returns `true` if statusCode is 2xx by default
+   - timeouts (optional) `Object` – server waiting timeouts
+     - waitServerTimeout (optional) `Number` - timeout to wait for server to be ready (ms). 60_000 by default
+     - probeRequestTimeout (optional) `Number` - one request timeout (ms), after which request will be aborted. 10_000 by default
+     - probeRequestInterval (optional) `Number` - interval between ready probe requests (ms). 1_000 by default
