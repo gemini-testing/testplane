@@ -113,6 +113,7 @@ Hermione is a utility for integration testing of web pages using [WebdriverIO](h
     - [List of useful plugins](#list-of-useful-plugins)
   - [prepareBrowser](#preparebrowser)
   - [prepareEnvironment](#prepareenvironment)
+  - [devServer](#devserver)
 - [CLI](#cli)
   - [Reporters](#reporters)
   - [Require modules](#require-modules)
@@ -1603,6 +1604,40 @@ The `browser` argument is a `WebdriverIO` session.
 
 ### prepareEnvironment
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
+
+### devServer
+Launch dev server on hermione init.
+
+For example, this setup:
+```js
+// .hermione.conf.js
+const SERVER_PORT = 3000;
+...
+module.exports = {
+    devServer: {
+        command: "npm run server:dev",
+        env: {PORT: SERVER_PORT},
+        readinessProbe: {
+            url: `http://localhost:${SERVER_PORT}/health`
+        }
+    }
+}
+```
+Will spawn child process "npm run server:dev", pass extra environment variable "PORT" with value "3000" and wait, until "http://localhost:3000/health" responds with 200-299 status code.
+
+Full list of parameters:
+ - command (optional) `String` – command to launch dev server. If null or not defined, dev server is disabled
+ - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env` 
+ - args (optional)  `String[]` – arguments to pass to child process
+ - cwd (optional) `String` – current working directory of the child process. If not defined, hermione will try to find nearest "package.json", starting from the directory with hermione config
+ - logs (optional) `Boolean` – if enabled, shows dev server logs in the console with prefix "\[dev server\]". Enabled by default
+ - readinessProbe (optional) `Function | Object` - if function, ready check is completed when function is resolved. Receives child process object. Object by default
+   - url (optional) `String` – url to request ready check status. If not defined, ready check is disabled
+   - isReady (optional) `(fetchResponse => bool | Promise<bool>)` – predicate to check if server is ready based on `readinessProbe.url` fetch response. Returns `true` if statusCode is 2xx by default
+   - timeouts (optional) `Object` – server waiting timeouts
+     - waitServerTimeout (optional) `Number` - timeout to wait for server to be ready (ms). 60_000 by default
+     - probeRequestTimeout (optional) `Number` - one request timeout (ms), after which request will be aborted. 10_000 by default
+     - probeRequestInterval (optional) `Number` - interval between ready probe requests (ms). 1_000 by default
 
 ## CLI
 

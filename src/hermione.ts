@@ -12,6 +12,7 @@ import { TestCollection } from "./test-collection";
 import { validateUnknownBrowsers } from "./validators";
 import { initReporters } from "./reporters";
 import logger from "./utils/logger";
+import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test } from "./types";
 
@@ -58,6 +59,16 @@ export class Hermione extends BaseHermione {
 
     extendCli(parser: CommanderStatic): void {
         this.emit(MasterEvents.CLI, parser);
+    }
+
+    protected async _init(): Promise<void> {
+        await initDevServer({
+            hermione: this,
+            devServerConfig: this._config.devServer,
+            configPath: this._config.configPath,
+        });
+
+        return super._init();
     }
 
     async run(
