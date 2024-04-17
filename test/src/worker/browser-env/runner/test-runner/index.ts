@@ -16,6 +16,7 @@ import BrowserAgent from "../../../../../../src/worker/runner/browser-agent";
 import history from "../../../../../../src/browser/history";
 import logger from "../../../../../../src/utils/logger";
 import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";
+import RuntimeConfig from "../../../../../../src/config/runtime-config";
 
 import ExpectWebdriverIO from "expect-webdriverio";
 import { BrowserEventNames } from "../../../../../../src/runner/browser-env/vite/types";
@@ -165,6 +166,8 @@ describe("worker/browser-env/runner/test-runner", () => {
         sandbox.stub(process, "pid").value(11111);
         sandbox.stub(logger, "warn");
 
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ viteBaseUrl: "http://default" });
+
         socketClientStub = sandbox.stub().returns(mkSocket_());
         wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
 
@@ -175,13 +178,13 @@ describe("worker/browser-env/runner/test-runner", () => {
 
     describe("constructor", () => {
         describe("socket", () => {
-            it("should connect to the baseUrl", () => {
-                const baseUrl = "http://localhost:3333";
-                const config = makeBrowserConfigStub({ baseUrl }) as BrowserConfig;
+            it("should connect to the vite baseUrl from runtime config", () => {
+                const viteBaseUrl = "http://localhost:3333";
+                (RuntimeConfig.getInstance as SinonStub).returns({ viteBaseUrl });
 
-                mkRunner_({ config });
+                mkRunner_();
 
-                assert.calledOnceWith(socketClientStub, baseUrl);
+                assert.calledOnceWith(socketClientStub, viteBaseUrl);
             });
 
             it("should use websocket protocol when connecting", () => {
