@@ -35,6 +35,7 @@ export const setupTransformHook = (): VoidFunction => {
                     },
                 }),
             ],
+            require("@babel/plugin-transform-typescript"),
         ],
     };
 
