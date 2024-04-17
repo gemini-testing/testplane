@@ -116,11 +116,11 @@ const rootSection = section(
                     }
 
                     if (!_.isPlainObject(value)) {
-                        throw new Error("devServer.readinessProbe must be a function, object or null");
+                        throw new Error('"devServer.readinessProbe" must be a function, object or null');
                     }
 
                     if (!_.isUndefined(value.url) && typeof value.url !== "string" && value.url !== null) {
-                        throw new Error("devServer.readinessProbe.url must be a string or null");
+                        throw new Error('"devServer.readinessProbe.url" must be a string or null');
                     }
 
                     if (
@@ -128,17 +128,17 @@ const rootSection = section(
                         typeof value.isReady !== "function" &&
                         value.isReady !== null
                     ) {
-                        throw new Error("devServer.readinessProbe.isReady must be a function or null");
+                        throw new Error('"devServer.readinessProbe.isReady" must be a function or null');
                     }
 
                     if (!_.isUndefined(value.timeouts) && !_.isPlainObject(value.timeouts)) {
-                        throw new Error("devServer.readinessProbe.timeouts must be an object");
+                        throw new Error('"devServer.readinessProbe.timeouts" must be an object');
                     }
 
                     if (value.timeouts) {
                         ["waitServerTimeout", "probeRequestTimeout", "probeRequestInterval"].forEach(name => {
                             if (!_.isUndefined(value.timeouts[name]) && typeof value.timeouts[name] !== "number") {
-                                throw new Error(`devServer.readinessProbe.timeouts.${name} must be a number`);
+                                throw new Error(`"devServer.readinessProbe.timeouts.${name}" must be a number`);
                             }
                         });
                     }

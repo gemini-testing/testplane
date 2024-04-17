@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { spawn } from "child_process";
+import debug from "debug";
 import { Config } from "../config";
 import { findCwd, pipeLogsWithPrefix, waitDevServerReady } from "./utils";
 import logger = require("../utils/logger");
@@ -16,12 +17,14 @@ export const initDevServer: InitDevServer = async ({ hermione, devServerConfig, 
 
     logger.log("Starting dev server with command", `"${devServerConfig.command}"`);
 
+    const debugLog = debug("hermione:dev-server");
+
     if (!_.isEmpty(devServerConfig.args)) {
-        logger.log("Dev server args:", JSON.stringify(devServerConfig.args));
+        debugLog("Dev server args:", JSON.stringify(devServerConfig.args));
     }
 
     if (!_.isEmpty(devServerConfig.env)) {
-        logger.log("Dev server env:", JSON.stringify(devServerConfig.env, null, 4));
+        debugLog("Dev server env:", JSON.stringify(devServerConfig.env, null, 4));
     }
 
     const devServer = spawn(devServerConfig.command, devServerConfig.args, {

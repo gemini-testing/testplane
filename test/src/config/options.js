@@ -751,26 +751,29 @@ describe("config options", () => {
         });
 
         it("should be a function or object", () => {
-            assertReadinessProbeThrows("foo", "devServer.readinessProbe must be a function, object or null");
+            assertReadinessProbeThrows("foo", '"devServer.readinessProbe" must be a function, object or null');
         });
 
         it("url property should be a string", () => {
-            assertReadinessProbeThrows({ url: {} }, "devServer.readinessProbe.url must be a string or null");
+            assertReadinessProbeThrows({ url: {} }, '"devServer.readinessProbe.url" must be a string or null');
         });
 
         it("isReady property should be a function", () => {
-            assertReadinessProbeThrows({ isReady: {} }, "devServer.readinessProbe.isReady must be a function or null");
+            assertReadinessProbeThrows(
+                { isReady: {} },
+                '"devServer.readinessProbe.isReady" must be a function or null',
+            );
         });
 
         it("timeouts property should be an object", () => {
-            assertReadinessProbeThrows({ timeouts: () => {} }, "devServer.readinessProbe.timeouts must be an object");
+            assertReadinessProbeThrows({ timeouts: () => {} }, '"devServer.readinessProbe.timeouts" must be an object');
         });
 
         ["waitServerTimeout", "probeRequestTimeout", "probeRequestInterval"].forEach(timeoutName => {
             it(`timeouts.${timeoutName} should be a number`, () => {
                 assertReadinessProbeThrows(
                     { timeouts: { [timeoutName]: "foo" } },
-                    `devServer.readinessProbe.timeouts.${timeoutName} must be a number`,
+                    `"devServer.readinessProbe.timeouts.${timeoutName}" must be a number`,
                 );
             });
         });

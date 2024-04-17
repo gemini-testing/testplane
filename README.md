@@ -1606,7 +1606,7 @@ The `browser` argument is a `WebdriverIO` session.
 Configuration data can be changed depending on extra conditions in the `prepareEnvironment` function.
 
 ### devServer
-Launch dev server on hermione init.
+Launch dev server on hermione initialize (INIT event).
 
 For example, this setup:
 ```js

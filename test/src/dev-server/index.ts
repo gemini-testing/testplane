@@ -22,6 +22,7 @@ describe("dev-server", () => {
     let pipeLogsWithPrefixStub: SinonStub;
     let waitDevServerReadyStub: SinonStub;
     let loggerStub: { log: SinonStub };
+    let debugLog: SinonStub;
     let hermioneStub: Hermione & { halt: SinonStub };
     let findCwdStub: SinonStub;
 
@@ -51,10 +52,12 @@ describe("dev-server", () => {
         findCwdStub = sandbox.stub();
 
         loggerStub = { log: sandbox.stub() };
+        debugLog = sandbox.stub();
 
         devServer = proxyquire("src/dev-server", {
             child_process: { spawn: spawnStub }, // eslint-disable-line camelcase
             "../utils/logger": loggerStub,
+            debug: sandbox.stub().withArgs("hermione:dev-server").returns(debugLog),
             "./utils": {
                 pipeLogsWithPrefix: pipeLogsWithPrefixStub,
                 waitDevServerReady: waitDevServerReadyStub,
@@ -154,7 +157,7 @@ describe("dev-server", () => {
                 args: ["-bar", "baz"],
             });
 
-            assert.calledWith(loggerStub.log, "Dev server args:", JSON.stringify(["-bar", "baz"]));
+            assert.calledWith(debugLog, "Dev server args:", JSON.stringify(["-bar", "baz"]));
         });
 
         it("should log dev server env, if specified", async () => {
@@ -163,7 +166,7 @@ describe("dev-server", () => {
                 env: { bar: "baz" },
             });
 
-            assert.calledWith(loggerStub.log, "Dev server env:", JSON.stringify({ bar: "baz" }, null, 4));
+            assert.calledWith(debugLog, "Dev server env:", JSON.stringify({ bar: "baz" }, null, 4));
         });
     });
 });
