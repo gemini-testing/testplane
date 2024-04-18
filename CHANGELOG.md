@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.9.0](https://github.com/gemini-testing/hermione/compare/hermione/v8.8.1...hermione/8.9.0) (2024-04-18)
+
+
+### Features
+
+* add ability to use dev server ([d6b9ec8](https://github.com/gemini-testing/hermione/commit/d6b9ec89c1841fdc83a566a5fc23929e353e7b09))
+
 ### [8.8.1](https://github.com/gemini-testing/hermione/compare/v8.8.0...v8.8.1) (2024-04-05)
 
 
