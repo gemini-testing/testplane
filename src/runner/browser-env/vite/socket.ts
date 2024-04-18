@@ -141,4 +141,17 @@ function handleBrowserEvents(
             cb([{ pass: false, message: (err as Error).message }]);
         }
     });
+
+    socket.on(BrowserEventNames.recoveryRunRunnable, async (payload, cb) => {
+        try {
+            const [errors] = await io
+                .to(socket.id)
+                .timeout(SOCKET_MAX_TIMEOUT)
+                .emitWithAck(BrowserEventNames.recoveryRunRunnable, payload);
+
+            cb([(_.isEmpty(errors) ? null : errors![0]) as Error]);
+        } catch (err) {
+            cb([prepareError(err as Error)]);
+        }
+    });
 }

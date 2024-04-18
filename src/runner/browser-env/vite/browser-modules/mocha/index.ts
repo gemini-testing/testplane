@@ -1,7 +1,15 @@
 import { TestParser } from "./parser.js";
 import { wrapConsoleMethods } from "../utils/index.js";
+import { saveRunnableTitle } from "./runnable-storage.js";
 import { getErrorsOnPageLoad, getErrorsOnRunRunnable, BrowserError } from "../errors/index.js";
-import { BrowserEventNames, WorkerEventNames, type BrowserViteSocket, type RunnableFn } from "../types.js";
+import {
+    BrowserEventNames,
+    WorkerEventNames,
+    type BrowserViteSocket,
+    type RunnableFn,
+    type WorkerRunRunnablePayload,
+    type WorkerRunRunnableCb,
+} from "../types.js";
 
 export class MochaWrapper {
     private _runnables = new Map<string, Mocha.Runnable>();
@@ -22,7 +30,7 @@ export class MochaWrapper {
     async init(): Promise<void> {
         mocha.setup("bdd");
 
-        this._subscribeOnWorkerMessages();
+        this._subscribeOnMessages();
         let error: Error | undefined = undefined;
 
         try {
@@ -49,29 +57,35 @@ export class MochaWrapper {
         }
     }
 
-    private _subscribeOnWorkerMessages(): void {
-        this._socket.on(WorkerEventNames.runRunnable, async (payload, cb): Promise<void> => {
-            const runnableToRun = this._runnables.get(payload.fullTitle);
-
-            if (!runnableToRun) {
-                const error = BrowserError.create({
-                    message: `Can't find a runnable with the title "${payload.fullTitle}" to run`,
-                });
-
-                cb(getErrorsOnRunRunnable(error));
-                throw error;
-            }
-
-            let error: Error | undefined = undefined;
-
-            try {
-                const ctx = { browser: window.__testplane__.browser };
-                await (runnableToRun.fn as unknown as RunnableFn).call(ctx, ctx);
-            } catch (err) {
-                error = err as Error;
-            }
-
-            return cb(getErrorsOnRunRunnable(error));
+    private _subscribeOnMessages(): void {
+        this._socket.on(WorkerEventNames.runRunnable, (payload, cb) => {
+            saveRunnableTitle(payload.fullTitle);
+            this._handleRunRunnable(payload, cb);
         });
+        this._socket.on(BrowserEventNames.recoveryRunRunnable, (...args) => this._handleRunRunnable(...args));
+    }
+
+    private async _handleRunRunnable(payload: WorkerRunRunnablePayload, cb: WorkerRunRunnableCb): Promise<void> {
+        const runnableToRun = this._runnables.get(payload.fullTitle);
+
+        if (!runnableToRun) {
+            const error = BrowserError.create({
+                message: `Can't find a runnable with the title "${payload.fullTitle}" to run`,
+            });
+
+            cb(getErrorsOnRunRunnable(error));
+            throw error;
+        }
+
+        let error: Error | undefined = undefined;
+
+        try {
+            const ctx = { browser: window.__testplane__.browser };
+            await (runnableToRun.fn as unknown as RunnableFn).call(ctx, ctx);
+        } catch (err) {
+            error = err as Error;
+        }
+
+        return cb(getErrorsOnRunRunnable(error));
     }
 }

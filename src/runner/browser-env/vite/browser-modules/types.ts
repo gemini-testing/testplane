@@ -9,10 +9,45 @@ export type RunnableFn = (
     ctx: { browser: WebdriverIO.Browser },
 ) => Promise<unknown>;
 
+// TODO: use from nodejs code when migrate to esm
+export enum WorkerEventNames {
+    initialize = `${WORKER_EVENT_PREFIX}:initialize`,
+    finalize = `${WORKER_EVENT_PREFIX}:finalize`,
+    runRunnable = `${WORKER_EVENT_PREFIX}:runRunnable`,
+}
+
+export interface WorkerInitializePayload {
+    file: string;
+    sessionId: WebdriverIO.Browser["sessionId"];
+    capabilities: WebdriverIO.Browser["capabilities"];
+    requestedCapabilities: WebdriverIO.Browser["options"]["capabilities"];
+    customCommands: string[];
+    // TODO: use BrowserConfig type after migrate to esm
+    config: {
+        automationProtocol: "webdriver" | "devtools";
+        urlHttpTimeout: number | null;
+        httpTimeout: number;
+    };
+    expectMatchers: string[];
+}
+
+export interface WorkerRunRunnablePayload {
+    fullTitle: string;
+}
+
+export type WorkerRunRunnableCb = (...args: [null | ViteError[]]) => void;
+
+export interface WorkerViteEvents {
+    [WorkerEventNames.initialize]: (payload: WorkerInitializePayload) => void;
+    [WorkerEventNames.finalize]: () => void;
+    [WorkerEventNames.runRunnable]: (payload: WorkerRunRunnablePayload, cb: WorkerRunRunnableCb) => void;
+}
+
 export enum BrowserEventNames {
     initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
     runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
+    recoveryRunRunnable = `${BROWSER_EVENT_PREFIX}:recoveryRunRunnable`,
     callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
 }
 
@@ -44,45 +79,12 @@ export interface BrowserViteEvents {
         payload: BrowserRunExpectMatcherPayload,
         cb: (args: [{ pass: boolean; message: string }]) => void,
     ) => void;
+    [BrowserEventNames.recoveryRunRunnable]: (payload: WorkerRunRunnablePayload, cb: WorkerRunRunnableCb) => void;
     [BrowserEventNames.callConsoleMethod]: (payload: BrowserCallConsoleMethodPayload) => void;
 }
 
-// TODO: use from nodejs code when migrate to esm
-export enum WorkerEventNames {
-    initialize = `${WORKER_EVENT_PREFIX}:initialize`,
-    finalize = `${WORKER_EVENT_PREFIX}:finalize`,
-    runRunnable = `${WORKER_EVENT_PREFIX}:runRunnable`,
-}
-
-export interface WorkerInitializePayload {
-    file: string;
-    sessionId: WebdriverIO.Browser["sessionId"];
-    capabilities: WebdriverIO.Browser["capabilities"];
-    requestedCapabilities: WebdriverIO.Browser["options"]["capabilities"];
-    customCommands: string[];
-    // TODO: use BrowserConfig type after migrate to esm
-    config: {
-        automationProtocol: "webdriver" | "devtools";
-        urlHttpTimeout: number | null;
-        httpTimeout: number;
-    };
-    expectMatchers: string[];
-}
-
-export interface WorkerRunRunnablePayload {
-    fullTitle: string;
-}
-
-export interface WorkerViteEvents {
-    [WorkerEventNames.initialize]: (payload: WorkerInitializePayload) => void;
-    [WorkerEventNames.finalize]: () => void;
-    [WorkerEventNames.runRunnable]: (
-        payload: WorkerRunRunnablePayload,
-        cb: (...args: [null | ViteError[]]) => void,
-    ) => void;
-}
-
-export type ViteBrowserEvents = Pick<WorkerViteEvents, WorkerEventNames.runRunnable>;
+export type ViteBrowserEvents = Pick<WorkerViteEvents, WorkerEventNames.runRunnable> &
+    Pick<BrowserViteEvents, BrowserEventNames.recoveryRunRunnable>;
 export type BrowserViteSocket = Socket<ViteBrowserEvents, BrowserViteEvents>;
 
 export type SyncExpectationResult = {
