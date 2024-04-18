@@ -93,6 +93,22 @@ module.exports = {
     region: null,
     headless: null,
     isolation: null,
+    devServer: {
+        command: null,
+        cwd: null,
+        env: {},
+        args: [],
+        logs: true,
+        readinessProbe: {
+            url: null,
+            isReady: null,
+            timeouts: {
+                waitServerTimeout: 60000, // 60s
+                probeRequestTimeout: 10000, // 10s
+                probeRequestInterval: 1000, // 1s
+            },
+        },
+    },
 };
 
 module.exports.configPaths = [".hermione.conf.ts", ".hermione.conf.js"];
