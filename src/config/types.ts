@@ -2,6 +2,7 @@ import type { SetRequired } from "type-fest";
 import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
 import type { Test } from "../types";
+import type { ChildProcessWithoutNullStreams } from "child_process";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -75,6 +76,22 @@ export interface SystemConfig {
     testRunEnv: "nodejs" | "browser" | ["browser", BrowserTestRunEnvOptions];
 }
 
+type ReadinessProbeIsReadyFn = (response: Awaited<ReturnType<typeof globalThis.fetch>>) => boolean | Promise<boolean>;
+
+type ReadinessProbeFn = (childProcess: ChildProcessWithoutNullStreams) => Promise<void>;
+
+type ReadinessProbeObj = {
+    url: string | null;
+    isReady: ReadinessProbeIsReadyFn | null;
+    timeouts: {
+        waitServerTimeout: number;
+        probeRequestTimeout: number;
+        probeRequestInterval: number;
+    };
+};
+
+type ReadinessProbe = ReadinessProbeFn | ReadinessProbeObj;
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
@@ -129,6 +146,15 @@ export interface CommonConfig {
         waitNetworkIdleTimeout: number;
         failOnNetworkError: boolean;
         ignoreNetworkErrorsPatterns: Array<RegExp | string>;
+    };
+
+    devServer: {
+        command: string | null;
+        cwd: string | null;
+        env: Record<string, string>;
+        args: Array<string>;
+        logs: boolean;
+        readinessProbe: ReadinessProbe;
     };
 }
 
