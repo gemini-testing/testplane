@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
-import URI from "urijs";
 import P from "bluebird";
 import _ from "lodash";
 import { io } from "socket.io-client";
+import urljoin from "url-join";
 
 import NodejsEnvTestRunner from "../../../runner/test-runner";
 import { wrapExecutionThread } from "./execution-thread";
@@ -176,7 +176,7 @@ export class TestRunner extends NodejsEnvTestRunner {
         });
 
         const timeout = this._config.urlHttpTimeout || this._config.httpTimeout;
-        const uri = new URI(this._config.baseUrl).query({ runUuid: this._runUuid }).toString();
+        const uri = urljoin(this._config.baseUrl, this._runUuid);
 
         await Promise.all([
             browserInitialize.timeout(timeout, `Browser didn't connect to the Vite server in ${timeout}ms`),

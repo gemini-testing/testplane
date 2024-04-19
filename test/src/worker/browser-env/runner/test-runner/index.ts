@@ -715,7 +715,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             assert.calledWith(history.runGroup as SinonStub, browser.callstackHistory, "openVite", sinon.match.func);
         });
 
-        it('should open vite server url with "runUuid" query', async () => {
+        it('should open vite server url with "runUuid" as pathname', async () => {
             const runUuid = "12345";
             (crypto.randomUUID as SinonStub).returns(runUuid);
 
@@ -735,7 +735,7 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await runWithEmitBrowserInit(socket, { runner });
 
-            assert.calledOnceWith(browser.publicAPI.url, `http://localhost:4444/?runUuid=${runUuid}`);
+            assert.calledOnceWith(browser.publicAPI.url, `http://localhost:4444/${runUuid}`);
         });
 
         it("should throw error if browser initialization was failed", async () => {
