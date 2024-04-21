@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.1.3](https://github.com/gemini-testing/testplane/compare/v0.1.2...v0.1.3) (2024-04-21)
+
+
+### Features
+
+* add ability to use dev server ([daf1bb6](https://github.com/gemini-testing/testplane/commit/daf1bb6443c327d10514c7e67c75501b8beedfc4))
+
+
+### Bug Fixes
+
+* correctly connect to vite server from clients (worker, browser) ([d77ee9d](https://github.com/gemini-testing/testplane/commit/d77ee9dbcf02ccb4c8be211afcb18dc7e4ce4ea2))
+* correctly read tsx files with types ([ac77d36](https://github.com/gemini-testing/testplane/commit/ac77d36cd44eca491b39d727a39d8159c73ac34a))
+
 ### [0.1.2](https://github.com/gemini-testing/testplane/compare/v0.1.1...v0.1.2) (2024-04-16)
 
 
