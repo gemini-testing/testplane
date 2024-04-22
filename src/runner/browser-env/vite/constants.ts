@@ -12,6 +12,7 @@ export const VITE_DEFAULT_CONFIG_ENV: ConfigEnv = {
     command: "serve",
     mode: process.env.NODE_ENV === "production" ? "production" : "development",
 };
+export const VITE_RUN_UUID_ROUTE = "run-uuids";
 
 export const BROWSER_EVENT_PREFIX = "browser";
 
