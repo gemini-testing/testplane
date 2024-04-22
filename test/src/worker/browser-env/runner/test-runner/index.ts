@@ -10,6 +10,7 @@ import NodejsEnvRunner from "../../../../../../src/worker/runner/test-runner";
 import { TestRunner as BrowserEnvRunner } from "../../../../../../src/worker/browser-env/runner/test-runner";
 import { wrapExecutionThread } from "../../../../../../src/worker/browser-env/runner/test-runner/execution-thread";
 import { WORKER_EVENT_PREFIX } from "../../../../../../src/worker/browser-env/runner/test-runner/constants";
+import { VITE_RUN_UUID_ROUTE } from "../../../../../../src/runner/browser-env/vite/constants";
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
 import BrowserAgent from "../../../../../../src/worker/runner/browser-agent";
@@ -715,7 +716,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             assert.calledWith(history.runGroup as SinonStub, browser.callstackHistory, "openVite", sinon.match.func);
         });
 
-        it('should open vite server url with "runUuid" query', async () => {
+        it(`should open vite server url with "/${VITE_RUN_UUID_ROUTE}/:uuid" format`, async () => {
             const runUuid = "12345";
             (crypto.randomUUID as SinonStub).returns(runUuid);
 
@@ -735,7 +736,7 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await runWithEmitBrowserInit(socket, { runner });
 
-            assert.calledOnceWith(browser.publicAPI.url, `http://localhost:4444/?runUuid=${runUuid}`);
+            assert.calledOnceWith(browser.publicAPI.url, `http://localhost:4444/${VITE_RUN_UUID_ROUTE}/${runUuid}`);
         });
 
         it("should throw error if browser initialization was failed", async () => {
