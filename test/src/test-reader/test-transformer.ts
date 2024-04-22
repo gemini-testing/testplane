@@ -23,36 +23,39 @@ describe("test-transformer", () => {
             TRANSFORM_EXTENSIONS.forEach(extName => {
                 it(`component with extension: "${extName}"`, () => {
                     let transformedCode;
+                    const fileName = `some${extName}`;
                     (pirates.addHook as SinonStub).callsFake(cb => {
-                        transformedCode = cb(`import "some${extName}"`);
+                        transformedCode = cb(`import "${fileName}"`, fileName);
                     });
 
                     setupTransformHook();
 
-                    assert.exists(transformedCode, `require("some${extName}")`);
+                    assert.match(transformedCode, `require("${fileName}")`);
                 });
             });
 
             it("modules without extension", () => {
                 let transformedCode;
+                const moduleName = "some-module";
                 (pirates.addHook as SinonStub).callsFake(cb => {
-                    transformedCode = cb('import "some-module"');
+                    transformedCode = cb(`import "${moduleName}"`, moduleName);
                 });
 
                 setupTransformHook();
 
-                assert.exists(transformedCode, 'require("some-module")');
+                assert.match(transformedCode, 'require("some-module")');
             });
 
             it(".json", () => {
                 let transformedCode;
+                const fileName = "some.json";
                 (pirates.addHook as SinonStub).callsFake(cb => {
-                    transformedCode = cb('import "some.json"');
+                    transformedCode = cb(`import "${fileName}"`, fileName);
                 });
 
                 setupTransformHook();
 
-                assert.exists(transformedCode, 'require("some.json")');
+                assert.match(transformedCode, `require("${fileName}")`);
             });
         });
 
@@ -60,8 +63,9 @@ describe("test-transformer", () => {
             [".css", ".less", ".scss", ".jpg", ".png", ".woff"].forEach(extName => {
                 it(`asset with extension: "${extName}"`, () => {
                     let transformedCode;
+                    const fileName = `some${extName}`;
                     (pirates.addHook as SinonStub).callsFake(cb => {
-                        transformedCode = cb(`import "some${extName}"`);
+                        transformedCode = cb(`import "${fileName}"`, fileName);
                     });
 
                     setupTransformHook();
