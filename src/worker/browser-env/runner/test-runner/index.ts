@@ -176,7 +176,7 @@ export class TestRunner extends NodejsEnvTestRunner {
         });
 
         const timeout = this._config.urlHttpTimeout || this._config.httpTimeout;
-        const uri = urljoin(this._config.baseUrl, this._runUuid);
+        const uri = urljoin(this._config.baseUrl, "run-uuids", this._runUuid);
 
         await Promise.all([
             browserInitialize.timeout(timeout, `Browser didn't connect to the Vite server in ${timeout}ms`),

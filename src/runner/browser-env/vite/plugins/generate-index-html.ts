@@ -59,13 +59,19 @@ export const plugin = async (): Promise<Plugin[]> => {
                             return next();
                         }
 
-                        const urlParsed = url.parse(req.originalUrl);
-                        const runUuid = _.compact(urlParsed.pathname?.split("/"))[0];
+                        console.log('req.originalUrl:', req.originalUrl);
+
+                        const parsedUrl = url.parse(req.originalUrl);
+                        const [routeName, runUuid] = _.compact(parsedUrl.pathname?.split("/"));
 
                         try {
-                            if (!runUuid) {
-                                throw new Error(`Pathname must be specified in url: ${req.originalUrl}`);
+                            if (routeName !== "run-uuids" || !runUuid) {
+                                throw new Error(`Pathname must be in "/run-uuids/:uuid" format, but got: ${req.originalUrl}`);
                             }
+
+                            // if (!runUuid) {
+                            //     throw new Error(`Pathname must be specified in url: ${req.originalUrl}`);
+                            // }
 
                             const env = WORKER_ENV_BY_RUN_UUID.get(runUuid);
                             if (!env) {

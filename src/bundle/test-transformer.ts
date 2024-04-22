@@ -12,14 +12,29 @@ export const setupTransformHook = (): VoidFunction => {
         babelrc: false,
         configFile: false,
         compact: false,
-        plugins: [
+        presets: [
             [
-                require("@babel/plugin-transform-react-jsx"),
+                "@babel/preset-react",
                 {
                     throwIfNamespace: false,
                     runtime: "automatic",
-                },
-            ],
+                }
+            ]
+        ],
+        plugins: [
+            // [
+            //     require("@babel/plugin-transform-typescript"),
+            //     {
+            //         ignoreExtensions: true,
+            //     },
+            // ],
+            // [
+            //     require("@babel/plugin-transform-react-jsx"),
+            //     {
+            //         throwIfNamespace: false,
+            //         runtime: "automatic",
+            //     },
+            // ],
             require("@babel/plugin-transform-modules-commonjs"),
             [
                 (): PluginObj => ({
@@ -35,7 +50,7 @@ export const setupTransformHook = (): VoidFunction => {
                     },
                 }),
             ],
-            require("@babel/plugin-transform-typescript"),
+            // require("@babel/plugin-transform-typescript"),
         ],
     };
 
