@@ -1,6 +1,6 @@
 ## Browser Commands Reference
 
-Since Testplane is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Testplane also has her own commands.
+Since Testplane is based on [WebdriverIO v8](https://webdriver.io/docs/api/), all the commands provided by WebdriverIO are available in it. But Testplane also has its own commands.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
