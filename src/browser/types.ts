@@ -18,7 +18,7 @@ export interface Browser {
     state: Record<string, unknown>;
     applyState: (state: Record<string, unknown>) => void;
     callstackHistory: Callstack;
-    customCommands: string[];
+    customCommands: { name: string; elementScope: boolean }[];
 }
 
 type FunctionProperties<T> = Exclude<

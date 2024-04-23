@@ -104,16 +104,23 @@ export class TestRunner extends NodejsEnvTestRunner {
         const { publicAPI: session } = browser;
 
         return async (payload, cb): Promise<void> => {
-            const { name, args } = payload;
-            const cmdName = name as keyof typeof session;
+            const { name, args, element } = payload;
 
-            if (typeof session[cmdName] !== "function") {
-                cb([prepareData<Error>(new Error(`"browser.${name}" does not exists in browser instance`))]);
+            const wdioInstance = await getWdioInstance(session, element);
+            const wdioInstanceName = element ? "element" : "browser";
+            const cmdName = name as keyof typeof wdioInstance;
+
+            if (typeof wdioInstance[cmdName] !== "function") {
+                cb([
+                    prepareData<Error>(
+                        new Error(`"${wdioInstanceName}.${name}" does not exists in ${wdioInstanceName} instance`),
+                    ),
+                ]);
                 return;
             }
 
             try {
-                const result = await (session[cmdName] as (...args: unknown[]) => Promise<unknown>)(...args);
+                const result = await (wdioInstance[cmdName] as (...args: unknown[]) => Promise<unknown>)(...args);
 
                 if (_.isError(result)) {
                     return cb([prepareData<Error>(result)]);
@@ -208,4 +215,21 @@ function transformExpectArg(arg: any): unknown {
     }
 
     return arg;
+}
+
+async function getWdioInstance(
+    session: WebdriverIO.Browser,
+    element?: WebdriverIO.Element,
+): Promise<WebdriverIO.Browser | WebdriverIO.Element> {
+    const wdioInstance = element ? await session.$(element) : session;
+
+    if (isWdioElement(wdioInstance) && !wdioInstance.selector) {
+        wdioInstance.selector = element?.selector as Selector;
+    }
+
+    return wdioInstance;
+}
+
+function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
+    return Boolean((ctx as WebdriverIO.Element).elementId);
 }

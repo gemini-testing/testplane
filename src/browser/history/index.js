@@ -88,7 +88,7 @@ const overwriteBrowserCommands = (session, callstack) =>
     overwriteCommands({
         session,
         callstack,
-        commands: cmds.getBrowserCommands(),
+        commands: cmds.getBrowserCommands().filter(cmd => !shouldNotWrapCommand(cmd)),
         elementScope: false,
     });
 

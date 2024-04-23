@@ -173,10 +173,12 @@ describe("ExistingBrowser", () => {
                 });
 
                 await initBrowser_(browser);
-                session.addCommand("foo", () => {});
+                session.addCommand("foo", () => {}, false);
+                session.addCommand("foo", () => {}, true);
 
                 assert.isNotEmpty(browser.customCommands);
-                assert.include(browser.customCommands, "foo");
+                assert.deepInclude(browser.customCommands, { name: "foo", elementScope: false });
+                assert.deepInclude(browser.customCommands, { name: "foo", elementScope: true });
             });
         });
 

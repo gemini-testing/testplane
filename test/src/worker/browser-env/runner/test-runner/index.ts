@@ -132,6 +132,14 @@ describe("worker/browser-env/runner/test-runner", () => {
         ...opts,
     });
 
+    const mkElement_ = (opts: Partial<WebdriverIO.Element> = {}): WebdriverIO.Element => {
+        return {
+            elementId: "default-id",
+            selector: "default-selector",
+            ...opts,
+        } as unknown as WebdriverIO.Element;
+    };
+
     const mkSocket_ = (): WorkerViteSocket => {
         const socket = new EventEmitter() as unknown as WorkerViteSocket;
         socket.emitWithAck = sandbox.stub().resolves([null]);
@@ -317,7 +325,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                     state: {},
                 } as RunOpts;
 
-                const customCommands = ["assertView"];
+                const customCommands = [{ name: "assertView", elementScope: false }];
                 (BrowserAgent.prototype.getBrowser as SinonStub).resolves(mkBrowser_({ customCommands }));
 
                 await runWithEmitBrowserInit(socket, {
@@ -372,41 +380,87 @@ describe("worker/browser-env/runner/test-runner", () => {
         });
 
         describe(`"${BrowserEventNames.runBrowserCommand}" event`, () => {
-            describe("should return error as first callback argument if", () => {
-                it("command does not exists in browser instance", done => {
-                    const browser = mkBrowser_();
-                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
-                    const socket = mkSocket_() as BrowserViteSocket;
-                    socketClientStub.returns(socket);
+            describe("call command on element instance", () => {
+                describe("should return error as first callback argument if", () => {
+                    it("command does not exists", done => {
+                        const element = mkElement_();
+                        const browser = mkBrowser_();
+                        browser.publicAPI.$ = sandbox.stub().resolves(element);
 
-                    const expectedErrMsg = '"browser.foo" does not exists in browser instance';
+                        (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+                        const socket = mkSocket_() as BrowserViteSocket;
+                        socketClientStub.returns(socket);
 
-                    runWithEmitBrowserInit(socket).then(() => {
-                        socket.emit(BrowserEventNames.runBrowserCommand, { name: "foo", args: [] }, response => {
-                            try {
-                                assert.match(response, [
-                                    { stack: sinon.match(expectedErrMsg), message: expectedErrMsg },
-                                ]);
-                                done();
-                            } catch (err) {
-                                done(err);
-                            }
+                        const expectedErrMsg = '"element.foo" does not exists in element instance';
+
+                        runWithEmitBrowserInit(socket).then(() => {
+                            socket.emit(
+                                BrowserEventNames.runBrowserCommand,
+                                { name: "foo", args: [], element },
+                                response => {
+                                    try {
+                                        assert.match(response, [
+                                            { stack: sinon.match(expectedErrMsg), message: expectedErrMsg },
+                                        ]);
+                                        done();
+                                    } catch (err) {
+                                        done(err);
+                                    }
+                                },
+                            );
+                        });
+                    });
+
+                    (
+                        [
+                            { name: "command return error", cmdStubReturnMethod: "resolves" },
+                            { name: "command throw exception", cmdStubReturnMethod: "rejects" },
+                        ] as { name: string; cmdStubReturnMethod: "resolves" | "rejects" }[]
+                    ).forEach(({ name, cmdStubReturnMethod }) => {
+                        it(name, done => {
+                            const error = new Error("o.O");
+
+                            const element = mkElement_();
+                            element.getCSSProperty = sandbox
+                                .stub()
+                                [cmdStubReturnMethod as "resolves" | "rejects"](error);
+
+                            const browser = mkBrowser_();
+                            browser.publicAPI.$ = sandbox.stub().resolves(element);
+
+                            (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                            const socket = mkSocket_() as BrowserViteSocket;
+                            socketClientStub.returns(socket);
+
+                            runWithEmitBrowserInit(socket).then(() => {
+                                socket.emit(
+                                    BrowserEventNames.runBrowserCommand,
+                                    { name: "getCSSProperty", args: [], element },
+                                    response => {
+                                        try {
+                                            assert.match(response, [{ message: "o.O", stack: sinon.match("o.O") }]);
+                                            done();
+                                        } catch (err) {
+                                            done(err);
+                                        }
+                                    },
+                                );
+                            });
                         });
                     });
                 });
 
-                (
-                    [
-                        { name: "command return error", cmdStubReturnMethod: "resolves" },
-                        { name: "command throw exception", cmdStubReturnMethod: "rejects" },
-                    ] as { name: string; cmdStubReturnMethod: "resolves" | "rejects" }[]
-                ).forEach(({ name, cmdStubReturnMethod }) => {
-                    it(name, done => {
-                        const error = new Error("o.O");
+                describe("should return result as second callback argument if", () => {
+                    it("command executed successfully with string", done => {
+                        const result = "some_result";
+
+                        const element = mkElement_();
+                        element.getCSSProperty = sandbox.stub().resolves(result);
+
                         const browser = mkBrowser_();
-                        browser.publicAPI.execute = sandbox
-                            .stub()
-                            [cmdStubReturnMethod as "resolves" | "rejects"](error);
+                        browser.publicAPI.$ = sandbox.stub().resolves(element);
+
                         (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
 
                         const socket = mkSocket_() as BrowserViteSocket;
@@ -415,10 +469,11 @@ describe("worker/browser-env/runner/test-runner", () => {
                         runWithEmitBrowserInit(socket).then(() => {
                             socket.emit(
                                 BrowserEventNames.runBrowserCommand,
-                                { name: "execute", args: [] },
+                                { name: "getCSSProperty", args: ["foo", "bar"], element },
                                 response => {
                                     try {
-                                        assert.match(response, [{ message: "o.O", stack: sinon.match("o.O") }]);
+                                        assert.calledOnceWith(element.getCSSProperty, "foo", "bar");
+                                        assert.deepEqual(response, [null, result]);
                                         done();
                                     } catch (err) {
                                         done(err);
@@ -430,30 +485,90 @@ describe("worker/browser-env/runner/test-runner", () => {
                 });
             });
 
-            describe("should return result as second callback argument if", () => {
-                it("command executed successfully with string", done => {
-                    const result = "some_result";
-                    const browser = mkBrowser_();
-                    browser.publicAPI.execute = sandbox.stub().resolves(result);
-                    (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+            describe("call command on browser instance", () => {
+                describe("should return error as first callback argument if", () => {
+                    it("command does not exists", done => {
+                        const browser = mkBrowser_();
+                        (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+                        const socket = mkSocket_() as BrowserViteSocket;
+                        socketClientStub.returns(socket);
 
-                    const socket = mkSocket_() as BrowserViteSocket;
-                    socketClientStub.returns(socket);
+                        const expectedErrMsg = '"browser.foo" does not exists in browser instance';
 
-                    runWithEmitBrowserInit(socket).then(() => {
-                        socket.emit(
-                            BrowserEventNames.runBrowserCommand,
-                            { name: "execute", args: [1, 2, 3] },
-                            response => {
+                        runWithEmitBrowserInit(socket).then(() => {
+                            socket.emit(BrowserEventNames.runBrowserCommand, { name: "foo", args: [] }, response => {
                                 try {
-                                    assert.calledOnceWith(browser.publicAPI.execute, 1, 2, 3);
-                                    assert.deepEqual(response, [null, result]);
+                                    assert.match(response, [
+                                        { stack: sinon.match(expectedErrMsg), message: expectedErrMsg },
+                                    ]);
                                     done();
                                 } catch (err) {
                                     done(err);
                                 }
-                            },
-                        );
+                            });
+                        });
+                    });
+
+                    (
+                        [
+                            { name: "command return error", cmdStubReturnMethod: "resolves" },
+                            { name: "command throw exception", cmdStubReturnMethod: "rejects" },
+                        ] as { name: string; cmdStubReturnMethod: "resolves" | "rejects" }[]
+                    ).forEach(({ name, cmdStubReturnMethod }) => {
+                        it(name, done => {
+                            const error = new Error("o.O");
+                            const browser = mkBrowser_();
+                            browser.publicAPI.execute = sandbox
+                                .stub()
+                                [cmdStubReturnMethod as "resolves" | "rejects"](error);
+                            (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                            const socket = mkSocket_() as BrowserViteSocket;
+                            socketClientStub.returns(socket);
+
+                            runWithEmitBrowserInit(socket).then(() => {
+                                socket.emit(
+                                    BrowserEventNames.runBrowserCommand,
+                                    { name: "execute", args: [] },
+                                    response => {
+                                        try {
+                                            assert.match(response, [{ message: "o.O", stack: sinon.match("o.O") }]);
+                                            done();
+                                        } catch (err) {
+                                            done(err);
+                                        }
+                                    },
+                                );
+                            });
+                        });
+                    });
+                });
+
+                describe("should return result as second callback argument if", () => {
+                    it("command executed successfully with string", done => {
+                        const result = "some_result";
+                        const browser = mkBrowser_();
+                        browser.publicAPI.execute = sandbox.stub().resolves(result);
+                        (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                        const socket = mkSocket_() as BrowserViteSocket;
+                        socketClientStub.returns(socket);
+
+                        runWithEmitBrowserInit(socket).then(() => {
+                            socket.emit(
+                                BrowserEventNames.runBrowserCommand,
+                                { name: "execute", args: [1, 2, 3] },
+                                response => {
+                                    try {
+                                        assert.calledOnceWith(browser.publicAPI.execute, 1, 2, 3);
+                                        assert.deepEqual(response, [null, result]);
+                                        done();
+                                    } catch (err) {
+                                        done(err);
+                                    }
+                                },
+                            );
+                        });
                     });
                 });
             });
