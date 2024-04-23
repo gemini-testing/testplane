@@ -6,6 +6,7 @@ const { SAVE_HISTORY_MODE } = require("../constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("../constants/browser");
 const history = require("./history");
 const stacktrace = require("./stacktrace");
+const { getBrowserCommands, getElementCommands } = require("./history/commands");
 const addRunStepCommand = require("./commands/runStep").default;
 
 const CUSTOM_SESSION_OPTS = [
@@ -106,12 +107,17 @@ module.exports = class Browser {
     }
 
     _startCollectingCustomCommands() {
-        this._session.overwriteCommand("addCommand", (origCommand, name, ...rest) => {
-            if (!this._session[name]) {
-                this._customCommands.add(name);
+        const browserCommands = getBrowserCommands();
+        const elementCommands = getElementCommands();
+
+        this._session.overwriteCommand("addCommand", (origCommand, name, wrapper, elementScope, ...rest) => {
+            const isKnownCommand = elementScope ? elementCommands.includes(name) : browserCommands.includes(name);
+
+            if (!isKnownCommand) {
+                this._customCommands.add({ name, elementScope: Boolean(elementScope) });
             }
 
-            return origCommand(name, ...rest);
+            return origCommand(name, wrapper, elementScope, ...rest);
         });
     }
 
@@ -144,6 +150,7 @@ module.exports = class Browser {
     }
 
     get customCommands() {
-        return Array.from(this._customCommands);
+        const allCustomCommands = Array.from(this._customCommands);
+        return _.uniqWith(allCustomCommands, _.isEqual);
     }
 };

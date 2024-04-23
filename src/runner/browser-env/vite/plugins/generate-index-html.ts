@@ -14,20 +14,15 @@ import type { Plugin, Rollup } from "vite";
 const debug = createDebug("vite:plugin:generateIndexHtml");
 
 // modules that used only in NodeJS environment and don't need to be compiled
-const MODULES_TO_MOCK = ["import-meta-resolve", "puppeteer-core", "archiver", "@wdio/repl"];
+const DEFAULT_MODULES_TO_MOCK = ["puppeteer-core", "archiver", "@wdio/repl"];
 const POLYFILLS = [...builtinModules, ...builtinModules.map(m => `node:${m}`)];
 
 const virtualDriverModuleId = "virtual:@testplane/driver";
-const virtualMockModuleId = "virtual:@testplane/mock";
 
 const virtualModules = {
     driver: {
         id: virtualDriverModuleId,
         resolvedId: `\0${virtualDriverModuleId}`,
-    },
-    mock: {
-        id: virtualMockModuleId,
-        resolvedId: `\0${virtualMockModuleId}`,
     },
 };
 
@@ -45,6 +40,15 @@ export const plugin = async (): Promise<Plugin[]> => {
     const driverModulePath = path.resolve(browserModulesPath, "driver.js");
 
     const automationProtocolPath = `/@fs${driverModulePath}`;
+
+    const mockDefaultModulePath = path.resolve(browserModulesPath, "mock/default-module.js");
+    const mockImportMetaResolvePath = path.resolve(browserModulesPath, "mock/import-meta-resolve.js");
+    const mockWdioLoggerPath = path.resolve(browserModulesPath, "mock/@wdio-logger.js");
+
+    const modulesToMock = DEFAULT_MODULES_TO_MOCK.reduce((acc, val) => _.set(acc, val, mockDefaultModulePath), {
+        "@wdio/logger": mockWdioLoggerPath,
+        "import-meta-resolve": mockImportMetaResolvePath,
+    }) as Record<string, string>;
 
     return [
         {
@@ -114,18 +118,14 @@ export const plugin = async (): Promise<Plugin[]> => {
                     return polyfillPath(id.replace("/promises", ""));
                 }
 
-                if (MODULES_TO_MOCK.includes(id)) {
-                    return virtualModules.mock.resolvedId;
+                if (Object.keys(modulesToMock).includes(id)) {
+                    return modulesToMock[id];
                 }
             },
 
             load: (id: string): Rollup.LoadResult | void => {
                 if (id === virtualModules.driver.resolvedId) {
                     return `export const automationProtocolPath = ${JSON.stringify(automationProtocolPath)};`;
-                }
-
-                if (id === virtualModules.mock.resolvedId) {
-                    return ["export default () => {};", "export const resolve = () => ''"].join("\n");
                 }
             },
 

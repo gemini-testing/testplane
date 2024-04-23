@@ -19,6 +19,7 @@ export enum BrowserEventNames {
 export interface BrowserRunBrowserCommandPayload {
     name: string;
     args: unknown[];
+    element?: WebdriverIO.Element;
 }
 
 export interface BrowserRunExpectMatcherPayload {
@@ -59,7 +60,7 @@ export interface WorkerInitializePayload {
     sessionId: WebdriverIO.Browser["sessionId"];
     capabilities: WebdriverIO.Browser["capabilities"];
     requestedCapabilities: WebdriverIO.Browser["options"]["capabilities"];
-    customCommands: string[];
+    customCommands: { name: string; elementScope: boolean }[];
     // TODO: use BrowserConfig type after migrate to esm
     config: {
         automationProtocol: "webdriver" | "devtools";

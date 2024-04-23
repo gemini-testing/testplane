@@ -27,7 +27,13 @@ export default class ProxyDriver {
         commandWrapper: VoidFunction | undefined,
     ): unknown {
         const monad = webdriverMonad(params, modifier, getWdioPrototype(userPrototype));
-        return monad(window.__testplane__.sessionId, commandWrapper);
+        const browser = monad(window.__testplane__.sessionId, commandWrapper);
+
+        window.__testplane__.customCommands.forEach(({ name, elementScope }) => {
+            browser.addCommand(name, mockCommand(name), elementScope);
+        });
+
+        return browser;
     }
 }
 
@@ -67,25 +73,23 @@ function getAllProtocolCommands(): string[] {
 }
 
 function getMockedProtocolCommands(): PropertiesObject {
-    return [...getAllProtocolCommands(), ...SERVER_HANDLED_COMMANDS, ...window.__testplane__.customCommands].reduce(
-        (acc, commandName) => {
-            acc[commandName] = { value: mockCommand(commandName) };
-            return acc;
-        },
-        {} as PropertiesObject,
-    );
+    return [...getAllProtocolCommands(), ...SERVER_HANDLED_COMMANDS].reduce((acc, commandName) => {
+        acc[commandName] = { value: mockCommand(commandName) };
+        return acc;
+    }, {} as PropertiesObject);
 }
 
 function mockCommand(commandName: string): ProtocolCommandFn {
-    return async (...args: unknown[]): Promise<unknown> => {
+    return async function (this: WebdriverIO.Browser | WebdriverIO.Element, ...args: unknown[]): Promise<unknown> {
         const { socket } = window.__testplane__;
         const timeout = getCommandTimeout(commandName);
+        const element = isWdioElement(this) ? this : undefined;
 
         try {
             // TODO: remove type casting after https://github.com/socketio/socket.io/issues/4925
             const [error, result] = (await socket
                 .timeout(timeout)
-                .emitWithAck(BrowserEventNames.runBrowserCommand, { name: commandName, args })) as [
+                .emitWithAck(BrowserEventNames.runBrowserCommand, { name: commandName, args, element })) as [
                 err: null | Error,
                 result?: unknown,
             ];
@@ -166,4 +170,8 @@ function truncate(value: string, maxLen: number): string {
     }
 
     return `${value.slice(0, maxLen - 3)}...`;
+}
+
+function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
+    return Boolean((ctx as WebdriverIO.Element).elementId);
 }
