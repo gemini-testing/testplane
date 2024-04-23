@@ -1,7 +1,7 @@
 import type { Browser } from "../types";
 
 // TODO: remove after fix https://github.com/webdriverio/webdriverio/issues/9620
-export default async (browser: Browser): Promise<void> => {
+export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     session.overwriteCommand(

@@ -53,7 +53,7 @@ exports.runWithHooks = ({ fn, before, after, error }) => {
 
             return value
                 .catch(err => {
-                    error();
+                    error(err);
 
                     throw err;
                 })
@@ -63,7 +63,7 @@ exports.runWithHooks = ({ fn, before, after, error }) => {
         return value;
     } catch (err) {
         if (!isReturnedValuePromise) {
-            error();
+            error(err);
 
             throw err;
         }

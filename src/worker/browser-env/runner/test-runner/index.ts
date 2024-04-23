@@ -61,6 +61,7 @@ export class TestRunner extends NodejsEnvTestRunner {
         this._runOpts = opts;
 
         const results = await super.run({ ...opts, ExecutionThreadCls: wrapExecutionThread(this._socket) });
+
         this._socket.emit(WorkerEventNames.finalize);
 
         return results;
