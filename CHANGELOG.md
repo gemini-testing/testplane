@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.10.0](https://github.com/gemini-testing/testplane/compare/v0.1.3...v8.10.0) (2024-04-23)
+
+
+### Bug Fixes
+
+* **ct:** generate url in format "/run-uuids/:uuid" ([dd61276](https://github.com/gemini-testing/testplane/commit/dd612765119baa97b777fad577d1b5d105e6ffff))
+* **ct:** read tsx files with types ([c8fcd87](https://github.com/gemini-testing/testplane/commit/c8fcd87f45f9b4aa6b17bc51331d981f2f1e0d91))
+
 ### [0.1.3](https://github.com/gemini-testing/testplane/compare/v0.1.2...v0.1.3) (2024-04-21)
 
 
