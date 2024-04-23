@@ -38,7 +38,7 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
     npm init testplane@latest new-testplane-project
     ```
 
-   You may add `-- -y` option to quickly set up a project using defaults.
+   You may add `-- --verbose` argument to launch a tool in *extra-questions* mode, to pick custom package manager or install extra plugins.
 
 2. Open the newly generated file `testplane-tests/example.testplane.ts`. We’ll modify the test to ensure the description includes expected text:
 
