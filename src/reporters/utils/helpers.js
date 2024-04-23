@@ -2,6 +2,7 @@
 
 const path = require("path");
 const chalk = require("chalk");
+const stripAnsi = require("strip-ansi");
 const _ = require("lodash");
 
 const getSkipReason = test => test && (getSkipReason(test.parent) || test.skipReason);
@@ -42,7 +43,11 @@ exports.getTestInfo = test => {
     };
 
     if (test.err) {
-        testInfo.error = getTestError(test);
+        testInfo.error = chalk.supportsColor ? getTestError(test) : stripAnsi(getTestError(test));
+    }
+
+    if (test.err && test.err.snippet) {
+        testInfo.errorSnippet = chalk.supportsColor ? test.err.snippet : stripAnsi(test.err.snippet);
     }
 
     if (test.pending) {

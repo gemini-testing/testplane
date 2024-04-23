@@ -7,7 +7,7 @@ export type RawStackFrames = string;
 
 type ErrorWithStack = SetRequired<Error, "stack">;
 
-const getErrorTitle = (e: Error): string => {
+export const getErrorTitle = (e: Error): string => {
     let errorName = e.name;
 
     if (!errorName && e.stack) {
@@ -35,10 +35,17 @@ const getErrorRawStackFrames = (e: ErrorWithStack): RawStackFrames => {
         return e.stack.slice(errorTitleStackIndex + errorTitle.length);
     }
 
+    const errorString = e.toString ? e.toString() + "\n" : "";
+    const errorStringIndex = e.stack.indexOf(errorString);
+
+    if (errorString && errorStringIndex !== -1) {
+        return e.stack.slice(errorStringIndex + errorString.length);
+    }
+
     const errorMessageStackIndex = e.stack.indexOf(e.message);
     const errorMessageEndsStackIndex = e.stack.indexOf("\n", errorMessageStackIndex + e.message.length);
 
-    return e.stack.slice(errorMessageEndsStackIndex);
+    return e.stack.slice(errorMessageEndsStackIndex + 1);
 };
 
 export function captureRawStackFrames(filterFunc?: (...args: unknown[]) => unknown): RawStackFrames {
