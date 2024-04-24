@@ -29,6 +29,8 @@ export const tryToRegisterTsNode = (): void => {
                 swc: JSON.parse(swcRaw),
                 compilerOptions: {
                     allowJs: true,
+                    module: "nodenext",
+                    moduleResolution: "nodenext",
                 },
             });
         } catch (err) {
