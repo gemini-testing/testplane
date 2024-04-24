@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.1](https://github.com/gemini-testing/hermione/compare/hermione/8.9.0...hermione/8.9.1) (2024-04-24)
+
+
+### Bug Fixes
+
+* use nodenext moduleResolution with ts-node ([#917](https://github.com/gemini-testing/hermione/issues/917)) ([d8ef347](https://github.com/gemini-testing/hermione/commit/d8ef347ac6744d1c3d4e8f5becd03fc425392de5))
+
 ## [8.9.0](https://github.com/gemini-testing/hermione/compare/hermione/v8.8.1...hermione/8.9.0) (2024-04-18)
 
 
