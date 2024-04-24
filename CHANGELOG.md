@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.10.1](https://github.com/gemini-testing/testplane/compare/v8.10.0...v8.10.1) (2024-04-24)
+
+
+### Bug Fixes
+
+* use nodenext moduleResolution with ts-node ([#918](https://github.com/gemini-testing/testplane/issues/918)) ([34a8ea8](https://github.com/gemini-testing/testplane/commit/34a8ea8c4da89db666d87092335a48fcde5519cf))
+
 ## [8.10.0](https://github.com/gemini-testing/testplane/compare/v0.1.3...v8.10.0) (2024-04-23)
 
 
