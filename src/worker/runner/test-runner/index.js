@@ -9,6 +9,7 @@ const OneTimeScreenshooter = require("./one-time-screenshooter");
 const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
+const { filterExtraWdioFrames } = require("../../../browser/stacktrace/utils");
 
 module.exports = class TestRunner extends Runner {
     static create(...args) {
@@ -119,6 +120,8 @@ module.exports = class TestRunner extends Runner {
         this._browserAgent.freeBrowser(browser);
 
         if (error) {
+            filterExtraWdioFrames(error);
+
             throw Object.assign(error, results);
         }
 

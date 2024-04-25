@@ -46,6 +46,7 @@ module.exports = class NewBrowser extends Browser {
     async init() {
         this._session = await this._createSession();
 
+        this._extendStacktrace();
         this._addSteps();
         this._addHistory();
 

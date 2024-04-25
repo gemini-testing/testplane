@@ -40,6 +40,7 @@ module.exports = class ExistingBrowser extends Browser {
             this._startCollectingCustomCommands();
         }
 
+        this._extendStacktrace();
         this._addSteps();
         this._addHistory();
 

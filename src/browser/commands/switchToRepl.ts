@@ -8,7 +8,7 @@ import type { Browser } from "../types";
 
 const REPL_LINE_EVENT = "line";
 
-export default async (browser: Browser): Promise<void> => {
+export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     const applyContext = (replServer: repl.REPLServer, ctx: Record<string, unknown> = {}): void => {
