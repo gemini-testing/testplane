@@ -2,7 +2,7 @@
 
 <!-- DOCTOC SKIP -->
 
-Testplane@1 is backward compatible with Hermione@8.
+Testplane@8.x is backward compatible with Hermione@8.
 
 To migrate from Hermione to Testplane you need to:
 - Replace hermione deps with tesplane in package.json (`npm uninstall hermione && npm install -D testplane`);
@@ -12,7 +12,7 @@ To migrate from Hermione to Testplane you need to:
   - `require("hermione")` -> `require("testplane")`
   - `declare module "hermione"` -> `declare module "testplane"`
 
-Other than that, everything should be fine. Hermione plugins are fully compatible with Testplane@1.
+Other than that, everything should be fine. Hermione plugins are fully compatible with Testplane@8.x.
 
 Optional changes list. These are not required, but recommended:
 - Use `testplane` binary instead of `hermione` binary;

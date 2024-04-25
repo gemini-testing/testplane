@@ -88,7 +88,7 @@ The documentation is divided into several sections:
 
 ## Rename from "Hermione"
 
-This project was formerly known as "Hermione", but eventually some copyright and trademark issues surfaced, leading to the decision to rebrand. After some discussion, we settled on "Testplane" as the official new title. We've tailored Testplane `v1` to be a drop-in replacement for Hermione `v8`.
+This project was formerly known as "Hermione", but eventually some copyright and trademark issues surfaced, leading to the decision to rebrand. After some discussion, we settled on "Testplane" as the official new title. Considering this change as merely a rebranding, we've proceeded with the existing version count instead of starting anew. Thus, Testplane `v8.x` is a drop-in replacement for Hermione `v8.x`.
 
 Learn more about migration from Hermione to Testplane in [the Docs](docs/migration-from-hermione.md).
 

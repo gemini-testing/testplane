@@ -39,7 +39,7 @@ it('test', async ({ browser }) => {
 
 #### moveCursorTo
 
-> This command is temporary and will be removed in the next major (`testplane@1`). Differs from the standard [moveTo](https://webdriver.io/docs/api/element/moveTo/) in that it moves the cursor relative to the top-left corner of the element (like it was in `hermione@7`).
+> This command is temporary and will be removed in the next major (`testplane@9.x`). Differs from the standard [moveTo](https://webdriver.io/docs/api/element/moveTo/) in that it moves the cursor relative to the top-left corner of the element (like it was in `hermione@7`).
 
 Move the mouse by an offset of the specified element. If offset is not specified then mouse will be moved to the top-left corder of the element.
 
