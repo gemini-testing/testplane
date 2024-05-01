@@ -10,6 +10,7 @@ const { AssertViewError } = require("../../../browser/commands/assert-view/error
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 const { filterExtraWdioFrames } = require("../../../browser/stacktrace/utils");
+const { extendWithCodeSnippet } = require("../../../error-snippets");
 
 module.exports = class TestRunner extends Runner {
     static create(...args) {
@@ -121,6 +122,8 @@ module.exports = class TestRunner extends Runner {
 
         if (error) {
             filterExtraWdioFrames(error);
+
+            await extendWithCodeSnippet(error);
 
             throw Object.assign(error, results);
         }

@@ -37,6 +37,9 @@ module.exports = class FlatReporter extends BaseReporter {
                 const icon = testCase.isFailed ? icons.FAIL : icons.RETRY;
 
                 this.informer.log(`   ${testCase.browserId}`);
+                if (testCase.errorSnippet) {
+                    testCase.errorSnippet.split("\n").forEach(line => this.informer.log(line));
+                }
                 this.informer.log(`     ${icon} ${testCase.error}`);
             });
         });
