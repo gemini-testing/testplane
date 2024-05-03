@@ -59,18 +59,26 @@ describe("test-transformer", () => {
             });
         });
 
-        describe("should not transform", () => {
-            [".css", ".less", ".scss", ".jpg", ".png", ".woff"].forEach(extName => {
-                it(`asset with extension: "${extName}"`, () => {
-                    let transformedCode;
-                    const fileName = `some${extName}`;
-                    (pirates.addHook as SinonStub).callsFake(cb => {
-                        transformedCode = cb(`import "${fileName}"`, fileName);
+        [true, false].forEach(removeNonJsImports => {
+            describe(`should ${removeNonJsImports ? "" : "not "}remove non-js imports`, () => {
+                [".css", ".less", ".scss", ".jpg", ".png", ".woff"].forEach(extName => {
+                    it(`asset with extension: "${extName}"`, () => {
+                        let transformedCode;
+                        const fileName = `some${extName}`;
+                        (pirates.addHook as SinonStub).callsFake(cb => {
+                            transformedCode = cb(`import "${fileName}"`, fileName);
+                        });
+
+                        setupTransformHook({ removeNonJsImports });
+
+                        const expectedCode = ['"use strict";'];
+
+                        if (!removeNonJsImports) {
+                            expectedCode.push("", `require("some${extName}");`);
+                        }
+
+                        assert.equal(transformedCode, expectedCode.join("\n"));
                     });
-
-                    setupTransformHook();
-
-                    assert.equal(transformedCode, '"use strict";');
                 });
             });
         });

@@ -1,5 +1,6 @@
 "use strict";
 
+const _ = require("lodash");
 const { EventEmitter } = require("events");
 const { passthroughEvent } = require("../../events/utils");
 const { TestParser } = require("../../test-reader/test-parser");
@@ -17,7 +18,11 @@ module.exports = class SimpleTestParser extends EventEmitter {
     }
 
     async parse({ file, browserId }) {
-        const parser = new TestParser();
+        const testRunEnv = _.isArray(this._config.system.testRunEnv)
+            ? this._config.system.testRunEnv[0]
+            : this._config.system.testRunEnv;
+
+        const parser = new TestParser({ testRunEnv });
 
         passthroughEvent(parser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
 
