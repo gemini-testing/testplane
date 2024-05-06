@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.1](https://github.com/gemini-testing/testplane/compare/v8.11.0...v8.11.1) (2024-05-06)
+
+
+### Bug Fixes
+
+* dont remove imports in nodejs env ([f132eeb](https://github.com/gemini-testing/testplane/commit/f132eebc12d0dcd71e5897503fd5d1a1ad526c50))
+
 ## [8.11.0](https://github.com/gemini-testing/testplane/compare/v8.10.1...v8.11.0) (2024-05-01)
 
 
