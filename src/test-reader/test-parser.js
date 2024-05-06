@@ -15,11 +15,17 @@ const clearRequire = require("clear-require");
 const path = require("path");
 
 class TestParser extends EventEmitter {
+    #opts;
     #buildInstructions;
 
-    constructor() {
+    /**
+     * @param {object} opts
+     * @param {"nodejs" | "browser" | undefined} opts.testRunEnv - environment to parse tests for
+     */
+    constructor(opts = {}) {
         super();
 
+        this.#opts = opts;
         this.#buildInstructions = new InstructionsList();
     }
 
@@ -51,7 +57,7 @@ class TestParser extends EventEmitter {
 
         this.#clearRequireCache(files);
 
-        const revertTransformHook = setupTransformHook();
+        const revertTransformHook = setupTransformHook({ removeNonJsImports: this.#opts.testRunEnv === "browser" });
 
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;

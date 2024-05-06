@@ -374,6 +374,21 @@ describe("test-reader/test-parser", () => {
             });
 
             describe("transform hook", () => {
+                describe("removeNonJsImports", () => {
+                    [
+                        { removeNonJsImports: true, testRunEnv: "browser" },
+                        { removeNonJsImports: false, testRunEnv: "nodejs" },
+                    ].forEach(({ removeNonJsImports, testRunEnv }) => {
+                        it(`should be "${removeNonJsImports}" if testRunEnv is "${testRunEnv}"`, async () => {
+                            const parser = new TestParser({ testRunEnv });
+
+                            await loadFiles_({ parser, files: ["foo/bar", "baz/qux"] });
+
+                            assert.calledOnceWith(setupTransformHook, { removeNonJsImports });
+                        });
+                    });
+                });
+
                 it("should setup hook before read files", async () => {
                     await loadFiles_({ files: ["foo/bar", "baz/qux"] });
 
