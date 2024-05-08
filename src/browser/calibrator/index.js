@@ -5,14 +5,14 @@ const path = require("path");
 const Promise = require("bluebird");
 const _ = require("lodash");
 const looksSame = require("looks-same");
-const { CoreError } = require("./core-error");
+const { CoreError } = require("../core-error");
 
-const clientScriptCalibrate = fs.readFileSync(path.join(__dirname, "client-scripts", "calibrate.js"), "utf8");
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" };
 
 module.exports = class Calibrator {
     constructor() {
         this._cache = {};
+        this._script = fs.readFileSync(path.join(__dirname, "calibrate-client-script.js"), "utf8");
     }
 
     /**
@@ -25,7 +25,7 @@ module.exports = class Calibrator {
         }
 
         return Promise.resolve(browser.open("about:blank"))
-            .then(() => browser.evalScript(clientScriptCalibrate))
+            .then(() => browser.evalScript(this._script))
             .then(features => [features, browser.captureViewportImage()])
             .spread(async (features, image) => {
                 const { innerWidth, pixelRatio } = features;
