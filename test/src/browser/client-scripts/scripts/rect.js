@@ -1,6 +1,6 @@
 "use strict";
 
-const Rect = require("src/browser/client-scripts/rect").Rect;
+const Rect = require("src/browser/client-scripts/scripts/rect").Rect;
 
 describe("Rect", () => {
     const rect = new Rect({
