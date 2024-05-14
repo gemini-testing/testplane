@@ -64,15 +64,15 @@ export interface ImageInfo {
     size: ImageSize;
 }
 
-export interface AssertViewResultSuccess {
-    refImg: ImageInfo;
-    stateName: string;
-}
-
 export interface DiffOptions extends LooksSameOptions {
     current: string;
     reference: string;
     diffColor: string;
+}
+
+export interface AssertViewResultSuccess {
+    refImg: ImageInfo;
+    stateName: string;
 }
 
 export interface AssertViewResultDiff {
@@ -118,7 +118,13 @@ export interface CommandHistory {
 }
 
 export interface ExecutionThreadToolCtx {
-    assertViewResults: Array<AssertViewResult>;
+    assertViewResults: {
+        add: (result: AssertViewResult) => void;
+        hasFails: () => boolean;
+        hasState: (stateName: string) => boolean;
+        toRawObject: () => Array<AssertViewResult>;
+        get: () => Array<AssertViewResult>;
+    };
 }
 
 export interface TestResult extends Test {
