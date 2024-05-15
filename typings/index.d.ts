@@ -285,14 +285,22 @@ declare namespace Hermione {
         };
     }
 
+    export interface ExecutionThreadToolCtx {
+        assertViewResults: {
+            add: (result: AssertViewResultsSuccess) => void;
+            hasFails: () => boolean;
+            hasState: (stateName: string) => boolean;
+            toRawObject: () => Array<AssertViewResultsSuccess>;
+            get: () => Array<AssertViewResultsSuccess>;
+        };
+    }
+
     export interface TestResult extends Test {
         startTime: number;
         duration: number;
         assertViewResults: Array<AssertViewResultsSuccess>;
         meta: { [name: string]: unknown };
-        hermioneCtx: {
-            assertViewResults: Array<AssertViewResultsSuccess>;
-        };
+        hermioneCtx: ExecutionThreadToolCtx;
         history: History;
         err?: TestError;
     }
