@@ -257,7 +257,7 @@ declare namespace Hermione {
      */
     export interface History {
         n: string;
-        a: any[];
+        a: unknown[];
         ts: number;
         te: number;
         d: number;
@@ -309,7 +309,7 @@ declare namespace Hermione {
         (expectation: string, callback?: TestDefinitionCallback): Test;
     }
 
-    type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, ctx: TestDefinitionCallbackCtx) => any;
+    type TestDefinitionCallback = (this: TestDefinitionCallbackCtx, ctx: TestDefinitionCallbackCtx) => unknown;
 
     export interface TestDefinitionCallbackCtx {
         browser: WebdriverIO.Browser;
@@ -352,7 +352,7 @@ declare namespace Hermione {
         workerFilepath: string,
         exportedMethods: ReadonlyArray<T>,
     ) => {
-        [K in (typeof exportedMethods)[number]]: (...args: Array<unknown>) => Promise<any> | any;
+        [K in (typeof exportedMethods)[number]]: (...args: Array<unknown>) => Promise<unknown> | unknown;
     };
 
     export interface Stats {
@@ -379,7 +379,7 @@ declare namespace Hermione {
     }
 
     export interface GlobalHelper {
-        ctx: { [name: string]: any };
+        ctx: { [name: string]: unknown };
         skip: SkipBuilder;
         only: OnlyBuilder;
         browser: (browserName: string) => BrowserConfigurator;

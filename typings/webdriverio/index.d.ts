@@ -62,7 +62,7 @@ declare namespace WebdriverIO {
          * @param stepCb step callback
          * @returns {Promise<any>} value, returned by `stepCb`
          */
-        runStep(stepName: string, stepCb: () => Promise<any> | any): Promise<any>;
+        runStep(stepName: string, stepCb: () => Promise<unknown> | unknown): Promise<unknown>;
     }
 
     interface Element {
