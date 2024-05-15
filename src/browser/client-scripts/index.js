@@ -79,7 +79,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             top: util.getScrollTop(scrollElem),
             width: viewportWidth,
             height: viewportHeight
-        }),
+        }).round(),
         pixelRatio = configurePixelRatio(opts.usePixelRatio),
         rect,
         selectors = [];
