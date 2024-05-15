@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.2](https://github.com/gemini-testing/testplane/compare/v8.11.1...v8.11.2) (2024-05-15)
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([7708cf8](https://github.com/gemini-testing/testplane/commit/7708cf8edd5c3bacc3e27146149302afd86c7746))
+* correctly specify "testplaneCtx.assertViewResults" type ([e10c718](https://github.com/gemini-testing/testplane/commit/e10c7184bbd326ca550224c7246ba3d6b3acf333))
+
 ### [8.11.1](https://github.com/gemini-testing/testplane/compare/v8.11.0...v8.11.1) (2024-05-06)
 
 
