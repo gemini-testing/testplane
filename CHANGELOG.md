@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.2](https://github.com/gemini-testing/hermione/compare/hermione/8.9.1...hermione/8.9.2) (2024-05-15)
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([ef522f3](https://github.com/gemini-testing/hermione/commit/ef522f30974e235d582a95d1ce958af6f911c87e))
+* correctly specify "testplaneCtx.assertViewResults" type ([41bb00e](https://github.com/gemini-testing/hermione/commit/41bb00eb4a65de792e8ffcc98faba6cb4c97873d))
+
 ### [8.9.1](https://github.com/gemini-testing/hermione/compare/hermione/8.9.0...hermione/8.9.1) (2024-04-24)
 
 
