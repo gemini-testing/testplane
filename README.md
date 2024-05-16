@@ -1,5 +1,7 @@
 # Hermione
 
+> ⚠️ This project has been renamed to [testplane](https://www.npmjs.com/package/testplane), which is backward compatible and you can migrate to it very quickly. More info [here](https://github.com/gemini-testing/testplane/tree/master?tab=readme-ov-file#rename-from-hermione).
+
 Hermione is a utility for integration testing of web pages using [WebdriverIO](https://webdriver.io/docs/api) and [Mocha](https://mochajs.org).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
@@ -1627,7 +1629,7 @@ Will spawn child process "npm run server:dev", pass extra environment variable "
 
 Full list of parameters:
  - command (optional) `String` – command to launch dev server. If null or not defined, dev server is disabled
- - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env` 
+ - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env`
  - args (optional)  `String[]` – arguments to pass to child process
  - cwd (optional) `String` – current working directory of the child process. If not defined, hermione will try to find nearest "package.json", starting from the directory with hermione config
  - logs (optional) `Boolean` – if enabled, shows dev server logs in the console with prefix "\[dev server\]". Enabled by default
