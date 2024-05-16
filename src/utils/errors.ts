@@ -1,3 +1,5 @@
+const puppeteerErrMsgs = [/Cannot extract value when objectId is given/, /Execution context was destroyed/];
+
 export const shouldIgnoreUnhandledRejection = (err: Error | undefined): boolean => {
     if (!err) {
         return false;
@@ -7,7 +9,7 @@ export const shouldIgnoreUnhandledRejection = (err: Error | undefined): boolean 
         return true;
     }
 
-    if (/Cannot extract value when objectId is given/.test(err.message) && err.stack?.includes("/puppeteer-core/")) {
+    if (puppeteerErrMsgs.some(msg => msg.test(err.message)) && err.stack?.includes("/puppeteer-core/")) {
         return true;
     }
 
