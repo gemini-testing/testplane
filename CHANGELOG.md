@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.4](https://github.com/gemini-testing/testplane/compare/v8.11.3...v8.11.4) (2024-05-16)
+
+
+### Bug Fixes
+
+* ignore "execution context was destroyed" error from puppeteer ([d3ee42f](https://github.com/gemini-testing/testplane/commit/d3ee42fe12d1b97a037d44209d6601490892c5ac))
+
 ### [8.11.3](https://github.com/gemini-testing/testplane/compare/v8.11.2...v8.11.3) (2024-05-16)
 
 
