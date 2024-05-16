@@ -1,6 +1,6 @@
 {
   "name": "hermione",
-  "version": "7.5.6",
+  "version": "7.5.7",
   "description": "Tests framework based on mocha and wdio",
   "main": "build/hermione.js",
   "files": [

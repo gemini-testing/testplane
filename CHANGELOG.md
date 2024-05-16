@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.7](https://github.com/gemini-testing/hermione/compare/hermione/v7.5.6...hermione/7.5.7) (2024-05-16)
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([b350c7e](https://github.com/gemini-testing/hermione/commit/b350c7e01b7cdd890c95384b9f7da1cf58c888f4))
+* correctly screen element after moveTo ([0aff29a](https://github.com/gemini-testing/hermione/commit/0aff29a50c7c26e61e61074d12f8240e828718a2))
+* correctly specify "testplaneCtx.assertViewResults" type ([63ff66e](https://github.com/gemini-testing/hermione/commit/63ff66e45ccb4f2514a741bf6f8742985e42a559))
+* ignore "execution context was destroyed" error from puppeteer ([e779817](https://github.com/gemini-testing/hermione/commit/e77981753eabcd83f75244df623a71c7d2f3e85e))
+
 ### [7.5.6](https://github.com/gemini-testing/hermione/compare/v7.5.5...v7.5.6) (2024-04-05)
 
 
