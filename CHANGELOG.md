@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.3](https://github.com/gemini-testing/testplane/compare/v8.11.2...v8.11.3) (2024-05-16)
+
+
+### Bug Fixes
+
+* correctly screen element after moveTo ([b65169e](https://github.com/gemini-testing/testplane/commit/b65169e3219b54afa382fbe69e5dfbf02916c3cb))
+
 ### [8.11.2](https://github.com/gemini-testing/testplane/compare/v8.11.1...v8.11.2) (2024-05-15)
 
 
