@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.3](https://github.com/gemini-testing/hermione/compare/hermione/8.9.2...hermione/8.9.3) (2024-05-16)
+
+
+### Bug Fixes
+
+* correctly screen element after moveTo ([b728078](https://github.com/gemini-testing/hermione/commit/b728078fa505c92e8c3f27a20a0a099f6064fedc))
+* ignore "execution context was destroyed" error from puppeteer ([d52f2ca](https://github.com/gemini-testing/hermione/commit/d52f2caba28ae5b6eb9a8fff6bf847093476dbf1))
+
 ### [8.9.2](https://github.com/gemini-testing/hermione/compare/hermione/8.9.1...hermione/8.9.2) (2024-05-15)
 
 
