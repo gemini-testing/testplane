@@ -22,7 +22,7 @@ export class TestCollection {
         this.#specs = _.mapValues(specs, _.clone);
     }
 
-    getRootSuite(browserId: string): RootSuite {
+    getRootSuite(browserId: string): RootSuite | null {
         const test = this.#originalSpecs[browserId][0];
         return test && test.parent && this.#getRoot(test.parent);
     }
@@ -37,7 +37,7 @@ export class TestCollection {
     }
 
     #getRoot(suite: Suite): RootSuite {
-        return suite.root ? (suite as RootSuite) : this.#getRoot(suite.parent);
+        return suite.root ? (suite as RootSuite) : this.#getRoot(suite.parent!);
     }
 
     getBrowsers(): string[] {
@@ -99,7 +99,7 @@ export class TestCollection {
         }
     }
 
-    eachTestByVersions(browserId: string, cb: (test: Test, browserId: string, browserVersion: string) => void): void {
+    eachTestByVersions(browserId: string, cb: (test: Test, browserId: string, browserVersion?: string) => void): void {
         const groups = _.groupBy(this.#specs[browserId], "browserVersion");
         const versions = Object.keys(groups);
         const maxLength =
@@ -130,7 +130,7 @@ export class TestCollection {
     }
 
     #mkDisabledTest(test: Test): TestDisabled {
-        return _.extend(test.clone(), { disabled: true });
+        return _.extend(test.clone(), { disabled: true }) as TestDisabled;
     }
 
     disableTest(fullTitle: string, browserId?: string): this {

@@ -18,7 +18,7 @@ describe("test-reader/controllers/only-controller", () => {
     };
 
     const mkTestObject_ = ({ browserId } = {}) => {
-        const testObject = ConfigurableTestObject.create({});
+        const testObject = new ConfigurableTestObject({});
         testObject.browserId = browserId || "default-browser-id";
 
         return testObject;

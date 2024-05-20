@@ -1,4 +1,5 @@
 import { AssertViewOptsConfig } from "../../config/types";
+import { ChainablePromiseElement } from "webdriverio";
 
 export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
     /**
@@ -87,8 +88,9 @@ export type AssertViewCommand = (
     selectors: string | string[],
     opts?: AssertViewOpts,
 ) => Promise<void>;
+
 export type AssertViewElementCommand = (
-    this: WebdriverIO.Element,
+    this: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>,
     state: string,
     opts?: AssertViewOpts,
 ) => Promise<void>;
