@@ -18,7 +18,7 @@ type GroupName = Exclude<keyof StatsResult, "total" | "perBrowser">;
 type StatEvent = {
     group: GroupName;
     id: string;
-    browserId: string;
+    browserId?: string;
 };
 
 export class Stats {

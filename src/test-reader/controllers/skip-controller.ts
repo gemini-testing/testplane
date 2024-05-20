@@ -37,7 +37,7 @@ export class SkipController {
     #addTrap(match: (browserId: string) => boolean, reason: string, { silent }: SkipOpts = {}): void {
         this.#eventBus.emit(ReadEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }: { treeBuilder: TreeBuilder }) => {
             treeBuilder.addTrap(obj => {
-                if (!match(obj.browserId)) {
+                if (obj.browserId && !match(obj.browserId)) {
                     return;
                 }
 

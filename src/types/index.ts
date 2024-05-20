@@ -15,8 +15,6 @@ import { BaseTestplane } from "../base-testplane";
 import Callstack from "../browser/history/callstack";
 import { CoordBounds, LooksSameOptions } from "looks-same";
 
-export { Suite as RunnerSuite, Test as RunnerTest, Hook as RunnerHook } from "mocha";
-
 export type { Browser as WdioBrowser } from "webdriverio";
 
 export type { Test } from "../test-reader/test-object/test";
