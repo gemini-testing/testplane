@@ -1,9 +1,10 @@
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
-import type { AssertViewResult, RunnerTest, RunnerHook } from "../types";
+import type { AssertViewResult } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
+import { Test, Hook } from "../test-reader/test-object";
 
 export interface BrowserMeta {
     pid: number;
@@ -120,14 +121,13 @@ declare global {
              */
             runStep<T = unknown>(this: WebdriverIO.Browser, stepName: string, stepCb: () => Promise<T> | T): Promise<T>;
 
-            // TODO: describe executionContext more precisely
-            executionContext: (RunnerTest | RunnerHook) & {
+            executionContext: (Test | Hook) & {
                 hermioneCtx: {
                     assertViewResults: Array<AssertViewResult>;
                 };
                 ctx: {
                     browser: WebdriverIO.Browser;
-                    currentTest: RunnerTest;
+                    currentTest: Test;
                 };
             };
 

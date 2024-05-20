@@ -1,25 +1,23 @@
-class TestObject {
-    #title;
+import { Suite } from "./suite";
+import type { TestObjectData } from "./types";
 
-    static create(...args) {
-        return new this(...args);
-    }
+export class TestObject {
+    #title: string;
+    public parent: Suite | null = null;
 
-    constructor({ title }) {
-        this.parent = null;
-
+    constructor({ title }: TestObjectData) {
         this.#title = title;
     }
 
-    assign(src) {
+    assign(src: this): this {
         return Object.assign(this, src);
     }
 
-    get title() {
+    get title(): string {
         return this.#title;
     }
 
-    titlePath() {
+    titlePath(): string[] {
         if (this.parent) {
             const parentTitlePath = this.parent.titlePath();
 
@@ -29,11 +27,7 @@ class TestObject {
         return this.title ? [this.title] : [];
     }
 
-    fullTitle() {
+    fullTitle(): string {
         return this.titlePath().join(" ");
     }
 }
-
-module.exports = {
-    TestObject,
-};
