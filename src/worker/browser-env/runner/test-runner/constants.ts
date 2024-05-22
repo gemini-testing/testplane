@@ -9,3 +9,6 @@ export const SUPPORTED_ASYMMETRIC_MATCHER = {
     StringMatching: "stringMatching",
     CloseTo: "closeTo",
 } as const;
+
+export const BRO_INIT_TIMEOUT_ON_RECONNECT = 5000;
+export const BRO_INIT_INTERVAL_ON_RECONNECT = 250;

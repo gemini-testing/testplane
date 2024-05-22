@@ -7,10 +7,16 @@ import urljoin from "url-join";
 import NodejsEnvTestRunner from "../../../runner/test-runner";
 import { wrapExecutionThread } from "./execution-thread";
 import { WorkerEventNames } from "./types";
-import { WORKER_EVENT_PREFIX, SUPPORTED_ASYMMETRIC_MATCHER } from "./constants";
+import {
+    WORKER_EVENT_PREFIX,
+    SUPPORTED_ASYMMETRIC_MATCHER,
+    BRO_INIT_TIMEOUT_ON_RECONNECT,
+    BRO_INIT_INTERVAL_ON_RECONNECT,
+} from "./constants";
 import { VITE_RUN_UUID_ROUTE } from "../../../../runner/browser-env/vite/constants";
 import logger from "../../../../utils/logger";
 import RuntimeConfig from "../../../../config/runtime-config";
+import { AbortOnReconnectError } from "../../../../errors/abort-on-reconnect-error";
 
 import { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
 import type { Selector } from "webdriverio";
@@ -35,6 +41,8 @@ export class TestRunner extends NodejsEnvTestRunner {
     private _socket: WorkerViteSocket;
     private _runUuid: string = crypto.randomUUID();
     private _runOpts!: WorkerTestRunnerRunOpts;
+    private _isReconnected: boolean = false;
+    private _broInitResOnReconnect: Error[] | null = null;
 
     constructor(opts: WorkerTestRunnerCtorOpts) {
         super(opts);
@@ -59,15 +67,118 @@ export class TestRunner extends NodejsEnvTestRunner {
 
     async run(opts: WorkerTestRunnerRunOpts): Promise<WorkerRunTestResult> {
         this._runOpts = opts;
+        let error: Error | undefined | null;
 
-        const results = await super.run({ ...opts, ExecutionThreadCls: wrapExecutionThread(this._socket) });
+        try {
+            await super.prepareToRun(this._runOpts);
 
+            error = await this._runWithAbort<Error | undefined>(throwIfAborted => {
+                const ExecutionThreadCls = wrapExecutionThread(this._socket, throwIfAborted);
+
+                return super.runRunnables(ExecutionThreadCls) as Promise<Error | undefined>;
+            });
+        } catch (err) {
+            error = err as Error;
+        }
+
+        while (error instanceof AbortOnReconnectError) {
+            error = null;
+
+            try {
+                await this._waitBroInitOnReconnect();
+
+                error = await this._runWithAbort<Error | undefined>(throwIfAborted => {
+                    const ExecutionThreadCls = wrapExecutionThread(this._socket, throwIfAborted);
+
+                    return super.runRunnables(ExecutionThreadCls) as Promise<Error | undefined>;
+                });
+            } catch (err) {
+                error = err as Error;
+            }
+        }
+
+        const results = await super.finishRun(error);
         this._socket.emit(WorkerEventNames.finalize);
+
+        if (error) {
+            throw error;
+        }
 
         return results;
     }
 
+    private _runWithAbort<T>(cb: (throwIfAborted: () => void) => Promise<T>): Promise<T> {
+        const controller = new AbortController();
+        const { signal } = controller;
+
+        let isAborted = signal.aborted;
+
+        signal.addEventListener("abort", () => {
+            isAborted = true;
+        });
+
+        const throwIfAborted = (): void => {
+            if (isAborted) {
+                throw new AbortOnReconnectError();
+            }
+        };
+
+        this._socket.once(BrowserEventNames.reconnect, () => {
+            this._broInitResOnReconnect = null;
+
+            this._socket.once(BrowserEventNames.initialize, errors => {
+                this._broInitResOnReconnect = errors;
+            });
+
+            if (this._browser.state.onReplMode) {
+                RuntimeConfig.getInstance().replServer.close();
+            }
+
+            this._isReconnected = true;
+            controller.abort();
+        });
+
+        return cb(throwIfAborted);
+    }
+
+    private _waitBroInitOnReconnect(): Promise<void> {
+        let intervalId: NodeJS.Timeout | null = null;
+
+        return new P((resolve, reject) => {
+            intervalId = setInterval(() => {
+                if (_.isNull(this._broInitResOnReconnect)) {
+                    return;
+                }
+
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+
+                if (_.isEmpty(this._broInitResOnReconnect)) {
+                    resolve();
+                } else {
+                    reject(this._broInitResOnReconnect[0]);
+                }
+            }, BRO_INIT_INTERVAL_ON_RECONNECT).unref();
+        })
+            .timeout(
+                BRO_INIT_TIMEOUT_ON_RECONNECT,
+                `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
+            )
+            .catch(err => {
+                if (intervalId) {
+                    clearInterval(intervalId);
+                }
+
+                throw err;
+            });
+    }
+
     _getPreparePageActions(browser: Browser, history: BrowserHistory): (() => Promise<void>)[] {
+        if (this._isReconnected) {
+            return super._getPreparePageActions(browser, history);
+        }
+
         return [
             async (): Promise<void> => {
                 const { default: expectMatchers } = await import("expect-webdriverio/lib/matchers");

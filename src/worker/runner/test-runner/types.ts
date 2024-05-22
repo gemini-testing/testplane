@@ -1,5 +1,3 @@
-import ExecutionThread from "./execution-thread";
-
 import type { WorkerRunTestOpts, WorkerRunTestTestplaneCtx } from "../../testplane";
 import type { Test } from "../../../test-reader/test-object/test";
 import type { BrowserConfig } from "../../../config/browser-config";
@@ -8,9 +6,7 @@ import type { Browser } from "../../../browser/types";
 import type OneTimeScreenshooter from "./one-time-screenshooter";
 
 export interface WorkerTestRunnerRunOpts
-    extends Pick<WorkerRunTestOpts, "sessionId" | "sessionCaps" | "sessionOpts" | "state"> {
-    ExecutionThreadCls: typeof ExecutionThread;
-}
+    extends Pick<WorkerRunTestOpts, "sessionId" | "sessionCaps" | "sessionOpts" | "state"> {}
 
 export interface WorkerTestRunnerCtorOpts {
     test: Test;

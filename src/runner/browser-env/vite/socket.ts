@@ -17,13 +17,14 @@ interface ViteClientEvents extends BrowserViteEvents, ViteBrowserEvents {}
 interface SocketHandshakeAuth {
     runUuid: string;
     type: typeof BROWSER_EVENT_PREFIX | typeof WORKER_EVENT_PREFIX;
+    reconnect?: boolean;
 }
 
 export const createSocketServer = (viteHttpServer: ViteDevServer["httpServer"]): void => {
     const io = new SocketServer<ClientViteEvents, ViteClientEvents>(viteHttpServer as http.Server);
 
     io.use((socket, next) => {
-        const { runUuid, type } = socket.handshake.auth as SocketHandshakeAuth;
+        const { runUuid, type, reconnect } = socket.handshake.auth as SocketHandshakeAuth;
 
         if (!runUuid) {
             return next(new Error('"runUuid" must be specified in each socket request'));
@@ -41,6 +42,10 @@ export const createSocketServer = (viteHttpServer: ViteDevServer["httpServer"]):
                     `Browser with "runUuid=${runUuid}" is already connected to Vite server. To debug, you need to use a browser launched by Testplane`,
                 ),
             );
+        }
+
+        if (type === BROWSER_EVENT_PREFIX && reconnect) {
+            io.to(runUuid).except(socket.id).emit(BrowserEventNames.reconnect);
         }
 
         return next();

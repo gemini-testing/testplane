@@ -6,6 +6,8 @@ import { OffsetViewportError } from "./browser/screen-shooter/viewport/coord-val
 import { AssertViewError } from "./browser/commands/assert-view/errors/assert-view-error";
 import { ImageDiffError } from "./browser/commands/assert-view/errors/image-diff-error";
 import { NoRefImageError } from "./browser/commands/assert-view/errors/no-ref-image-error";
+import { TestplaneInternalError } from "./errors/testplane-internal-error";
+import { AbortOnReconnectError } from "./errors/abort-on-reconnect-error";
 import { Constructor } from "type-fest";
 
 const Errors = {
@@ -17,6 +19,8 @@ const Errors = {
     AssertViewError,
     ImageDiffError,
     NoRefImageError,
+    TestplaneInternalError,
+    AbortOnReconnectError,
 } as const satisfies Record<string, Constructor<Error>>;
 
 export default Errors;

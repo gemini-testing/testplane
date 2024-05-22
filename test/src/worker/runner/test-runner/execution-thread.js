@@ -9,6 +9,7 @@ const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-scr
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const logger = require("src/utils/logger");
+const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
 
 describe("worker/runner/test-runner/execution-thread", () => {
     const sandbox = sinon.createSandbox();
@@ -240,6 +241,19 @@ describe("worker/runner/test-runner/execution-thread", () => {
         });
 
         describe("takeScreenshotOnFails", () => {
+            it("should not extend error with screenshot if test failed with abort on reconnect error", async () => {
+                const originalError = new AbortOnReconnectError();
+                const runnable = mkRunnable_({
+                    fn: () => Promise.reject(originalError),
+                });
+
+                await mkExecutionThread_()
+                    .run(runnable)
+                    .catch(e => e);
+
+                assert.notCalled(OneTimeScreenshooter.prototype.extendWithScreenshot);
+            });
+
             it("should extend error with screenshot", async () => {
                 const originalError = new Error();
                 const runnable = mkRunnable_({

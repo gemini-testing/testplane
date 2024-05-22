@@ -17,4 +17,5 @@ export enum BrowserEventNames {
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
     runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
     callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
+    reconnect = `${BROWSER_EVENT_PREFIX}:reconnect`,
 }
