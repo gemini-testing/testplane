@@ -3,11 +3,14 @@ import { BrowserError } from "./errors/index.js";
 import { BROWSER_EVENT_PREFIX } from "./constants.js";
 import type { BrowserViteSocket } from "./types.js";
 
+const RECONNECT_KEY = "__testplane__.reconnect";
+
 const connectToSocket = (): BrowserViteSocket => {
     const socket = io({
         auth: {
             runUuid: window.__testplane__.runUuid,
             type: BROWSER_EVENT_PREFIX,
+            reconnect: Boolean(sessionStorage.getItem(RECONNECT_KEY)),
         },
     }) as BrowserViteSocket;
 
@@ -79,6 +82,7 @@ const mockBuiltInNodeJsModules = (): void => {
 
 window.__testplane__.errors = [];
 window.__testplane__.socket = connectToSocket();
+sessionStorage.setItem(RECONNECT_KEY, true.toString());
 
 proxyTool();
 subscribeOnBrowserErrors();

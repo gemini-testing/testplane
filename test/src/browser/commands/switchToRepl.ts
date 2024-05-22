@@ -43,7 +43,7 @@ describe('"switchToRepl" command', () => {
     beforeEach(() => {
         sandbox.stub(webdriverio, "attach");
         sandbox.stub(clientBridge, "build").resolves();
-        sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { enabled: false } });
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { enabled: false }, extend: sinon.stub() });
         sandbox.stub(logger, "warn");
         sandbox.stub(logger, "log");
         sandbox.stub(process, "chdir");
@@ -60,7 +60,6 @@ describe('"switchToRepl" command', () => {
     });
 
     it("should throw error if command is not called in repl mode", async () => {
-        (RuntimeConfig.getInstance as SinonStub).returns({ replMode: { enabled: false } });
         const session = mkSessionStub_();
 
         await initBrowser_({ session });
@@ -74,7 +73,7 @@ describe('"switchToRepl" command', () => {
 
     describe("in REPL mode", async () => {
         beforeEach(() => {
-            (RuntimeConfig.getInstance as SinonStub).returns({ replMode: { enabled: true } });
+            (RuntimeConfig.getInstance as SinonStub).returns({ replMode: { enabled: true }, extend: sinon.stub() });
         });
 
         it("should inform that user entered to repl server before run it", async () => {
@@ -117,6 +116,19 @@ describe('"switchToRepl" command', () => {
             await promise;
 
             assert.callOrder(onExit, (process.chdir as SinonStub).withArgs(currCwd));
+        });
+
+        it("should extend runtime config by instance of repl server", async () => {
+            const runtimeCfg = { replMode: { enabled: true }, extend: sinon.stub() };
+            (RuntimeConfig.getInstance as SinonStub).returns(runtimeCfg);
+
+            const replServer = mkReplServer_();
+            const session = mkSessionStub_();
+
+            await initBrowser_({ session });
+            await switchToRepl_({ session, replServer });
+
+            assert.calledOnceWith(runtimeCfg.extend, { replServer });
         });
 
         it("should add browser instance to repl context by default", async () => {

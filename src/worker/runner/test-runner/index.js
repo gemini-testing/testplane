@@ -11,6 +11,7 @@ const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 const { filterExtraWdioFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
+const { TestplaneInternalError } = require("../../../errors");
 
 module.exports = class TestRunner extends Runner {
     static create(...args) {
@@ -21,40 +22,109 @@ module.exports = class TestRunner extends Runner {
         super();
 
         this._test = test.clone();
-        this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx);
+        this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
 
         this._file = file;
         this._config = config;
         this._browserAgent = browserAgent;
     }
 
-    async run({ sessionId, sessionCaps, sessionOpts, state, ExecutionThreadCls = ExecutionThread }) {
-        const test = this._test;
-        const testplaneCtx = test.testplaneCtx || {};
+    async run({ sessionId, sessionCaps, sessionOpts, state }) {
+        await this.prepareToRun({ sessionId, sessionCaps, sessionOpts, state });
 
-        let browser;
+        const error = await this.runRunnables(ExecutionThread);
+
+        return this.finishRun(error);
+    }
+
+    // TODO: make it protected
+    async prepareToRun({ sessionId, sessionCaps, sessionOpts, state }) {
+        const testplaneCtx = this._test.testplaneCtx;
 
         try {
-            browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts, state });
+            this._browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts, state });
         } catch (e) {
             throw Object.assign(e, { testplaneCtx, hermioneCtx: testplaneCtx });
         }
+    }
 
-        const screenshooter = OneTimeScreenshooter.create(this._config, browser);
-        const executionThread = ExecutionThreadCls.create({
-            test,
-            browser,
+    // TODO: make it protected
+    async finishRun(error) {
+        const testplaneCtx = this._test.testplaneCtx;
+        const { callstackHistory } = this._browser;
+
+        const assertViewResults = testplaneCtx.assertViewResults;
+        if (!error && assertViewResults && assertViewResults.hasFails()) {
+            error = new AssertViewError();
+
+            if (!this._screenshooter) {
+                throw new TestplaneInternalError(
+                    "OneTimeScreenshooter instance must be initialized before finish test run",
+                );
+            }
+
+            if (this._screenshooter.getScreenshot()) {
+                error.screenshot = this._screenshooter.getScreenshot();
+            }
+        }
+
+        // we need to check session twice:
+        // 1. before afterEach hook to prevent working with broken sessions
+        // 2. after collecting all assertView errors (including afterEach section)
+        if (!this._browser.state.isBroken && isSessionBroken(error, this._config)) {
+            this._browser.markAsBroken();
+        }
+
+        testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
+
+        const { meta } = this._browser;
+        const commandsHistory = callstackHistory ? callstackHistory.release() : [];
+        const results = {
             testplaneCtx,
             hermioneCtx: testplaneCtx,
-            screenshooter,
+            meta,
+        };
+
+        switch (this._browser.config.saveHistoryMode) {
+            case SAVE_HISTORY_MODE.ALL:
+            case error && SAVE_HISTORY_MODE.ONLY_FAILED:
+                results.history = commandsHistory;
+                break;
+        }
+
+        this._browserAgent.freeBrowser(this._browser);
+
+        if (error) {
+            filterExtraWdioFrames(error);
+
+            await extendWithCodeSnippet(error);
+
+            throw Object.assign(error, results);
+        }
+
+        return results;
+    }
+
+    // TODO: make it protected
+    async runRunnables(ExecutionThreadCls) {
+        const test = this._test;
+        const testplaneCtx = test.testplaneCtx || {};
+
+        this._screenshooter = OneTimeScreenshooter.create(this._config, this._browser);
+        const executionThread = ExecutionThreadCls.create({
+            test,
+            browser: this._browser,
+            testplaneCtx,
+            hermioneCtx: testplaneCtx,
+            screenshooter: this._screenshooter,
         });
         const hookRunner = HookRunner.create(test, executionThread);
-        const { callstackHistory } = browser;
+        const { callstackHistory } = this._browser;
 
         let error;
 
         try {
-            const preparePageActions = this._getPreparePageActions(browser, history);
+            const preparePageActions = this._getPreparePageActions(this._browser, history);
             const shouldRunBeforeEach = preparePageActions.length || hookRunner.hasBeforeEachHooks();
 
             if (shouldRunBeforeEach) {
@@ -73,7 +143,7 @@ module.exports = class TestRunner extends Runner {
         }
 
         if (isSessionBroken(error, this._config)) {
-            browser.markAsBroken();
+            this._browser.markAsBroken();
         }
 
         try {
@@ -86,49 +156,7 @@ module.exports = class TestRunner extends Runner {
             error = error || e;
         }
 
-        const assertViewResults = testplaneCtx.assertViewResults;
-        if (!error && assertViewResults && assertViewResults.hasFails()) {
-            error = new AssertViewError();
-
-            if (screenshooter.getScreenshot()) {
-                error.screenshot = screenshooter.getScreenshot();
-            }
-        }
-
-        // we need to check session twice:
-        // 1. before afterEach hook to prevent work with broken sessions
-        // 2. after collecting all assertView errors (including afterEach section)
-        if (!browser.state.isBroken && isSessionBroken(error, this._config)) {
-            browser.markAsBroken();
-        }
-
-        testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
-        const { meta } = browser;
-        const commandsHistory = callstackHistory ? callstackHistory.release() : [];
-        const results = {
-            testplaneCtx,
-            hermioneCtx: testplaneCtx,
-            meta,
-        };
-
-        switch (browser.config.saveHistoryMode) {
-            case SAVE_HISTORY_MODE.ALL:
-            case error && SAVE_HISTORY_MODE.ONLY_FAILED:
-                results.history = commandsHistory;
-                break;
-        }
-
-        this._browserAgent.freeBrowser(browser);
-
-        if (error) {
-            filterExtraWdioFrames(error);
-
-            await extendWithCodeSnippet(error);
-
-            throw Object.assign(error, results);
-        }
-
-        return results;
+        return error;
     }
 
     _getPreparePageActions(browser, history) {

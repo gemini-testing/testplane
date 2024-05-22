@@ -3,6 +3,7 @@
 const Promise = require("bluebird");
 const RuntimeConfig = require("../../../config/runtime-config");
 const logger = require("../../../utils/logger");
+const { AbortOnReconnectError } = require("../../../errors/abort-on-reconnect-error");
 
 module.exports = class ExecutionThread {
     static create(...args) {
@@ -56,8 +57,16 @@ module.exports = class ExecutionThread {
             fnPromise = fnPromise.timeout(runnable.timeout, msg);
         }
 
+        let error = null;
+
         return fnPromise
             .tapCatch(async e => {
+                error = e;
+
+                if (error instanceof AbortOnReconnectError) {
+                    return;
+                }
+
                 if (replMode?.onFail) {
                     logger.log("Caught error:", e);
                     await this._ctx.browser.switchToRepl();
@@ -66,6 +75,10 @@ module.exports = class ExecutionThread {
                 return this._screenshooter.extendWithScreenshot(e);
             })
             .finally(async () => {
+                if (error instanceof AbortOnReconnectError) {
+                    return;
+                }
+
                 if (this._testplaneCtx.assertViewResults && this._testplaneCtx.assertViewResults.hasFails()) {
                     await this._screenshooter.captureScreenshotOnAssertViewFail();
                 }

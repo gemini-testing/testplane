@@ -3,13 +3,17 @@ import crypto from "node:crypto";
 import { EventEmitter } from "node:stream";
 import _ from "lodash";
 import P from "bluebird";
-import sinon, { SinonStub } from "sinon";
+import sinon, { SinonStub, SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";
 
 import NodejsEnvRunner from "../../../../../../src/worker/runner/test-runner";
 import { TestRunner as BrowserEnvRunner } from "../../../../../../src/worker/browser-env/runner/test-runner";
 import { wrapExecutionThread } from "../../../../../../src/worker/browser-env/runner/test-runner/execution-thread";
-import { WORKER_EVENT_PREFIX } from "../../../../../../src/worker/browser-env/runner/test-runner/constants";
+import {
+    WORKER_EVENT_PREFIX,
+    BRO_INIT_TIMEOUT_ON_RECONNECT,
+    BRO_INIT_INTERVAL_ON_RECONNECT,
+} from "../../../../../../src/worker/browser-env/runner/test-runner/constants";
 import { VITE_RUN_UUID_ROUTE } from "../../../../../../src/runner/browser-env/vite/constants";
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
@@ -37,6 +41,7 @@ import type { Browser } from "../../../../../../src/browser/types";
 import type { Test as TestType } from "../../../../../../src/test-reader/test-object/test";
 import type { BrowserConfig } from "../../../../../../src/config/browser-config";
 import type { WorkerRunTestResult } from "../../../../../../src/worker/testplane";
+import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-reconnect-error";
 
 interface TestOpts {
     title: string;
@@ -96,7 +101,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             sessionCaps: {},
             sessionOpts: {} as WorkerTestRunnerRunOpts["sessionOpts"],
             state: {},
-            ..._.omit(opts, "runner"),
+            ..._.omit(opts, "runner", "executionContext"),
         };
 
         return runner.run(opts as WorkerTestRunnerRunOpts);
@@ -155,7 +160,9 @@ describe("worker/browser-env/runner/test-runner", () => {
         opts: { expectMatchers: Record<string, VoidFunction> } = { expectMatchers: {} },
     ): typeof BrowserEnvRunner => {
         socketClientStub = sandbox.stub().returns(mkSocket_());
-        wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
+        wrapExecutionThreadStub = sandbox
+            .stub()
+            .callsFake((socket, throwIfAborted) => wrapExecutionThread(socket, throwIfAborted));
 
         return proxyquire.noCallThru()("../../../../../../src/worker/browser-env/runner/test-runner", {
             "socket.io-client": { io: socketClientStub },
@@ -178,7 +185,9 @@ describe("worker/browser-env/runner/test-runner", () => {
         sandbox.stub(RuntimeConfig, "getInstance").returns({ viteBaseUrl: "http://default" });
 
         socketClientStub = sandbox.stub().returns(mkSocket_());
-        wrapExecutionThreadStub = sandbox.stub().callsFake(socket => wrapExecutionThread(socket));
+        wrapExecutionThreadStub = sandbox
+            .stub()
+            .callsFake((socket, throwIfAborted) => wrapExecutionThread(socket, throwIfAborted));
 
         BrowserEnvRunnerStub = initBrowserEnvRunner_();
     });
@@ -259,24 +268,19 @@ describe("worker/browser-env/runner/test-runner", () => {
             sandbox.spy(history, "runGroup");
         });
 
-        it("should call execution thread wrapper with socket", async () => {
-            sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
+        it("should call execution thread wrapper with socket and abort function", async () => {
             const socket = mkSocket_();
             socketClientStub.returns(socket);
 
-            await run_();
+            await runWithEmitBrowserInit(socket);
 
-            assert.calledOnceWith(wrapExecutionThreadStub, socket);
+            assert.calledOnceWith(wrapExecutionThreadStub, socket, sinon.match.func);
         });
 
-        it("should run base runner with execution thread wrapper", async () => {
-            sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
-
-            let ExecutionThreadCls: unknown;
-            wrapExecutionThreadStub.callsFake(socket => {
-                ExecutionThreadCls = wrapExecutionThread(socket);
-                return ExecutionThreadCls;
-            });
+        it("should call prepare stage to run runnables with correct args", async () => {
+            sandbox.stub(NodejsEnvRunner.prototype, "prepareToRun").resolves();
+            sandbox.stub(NodejsEnvRunner.prototype, "runRunnables").resolves();
+            sandbox.stub(NodejsEnvRunner.prototype, "finishRun").resolves();
 
             const runOpts = {
                 sessionId: "sessionId",
@@ -287,7 +291,21 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await run_(runOpts);
 
-            assert.calledOnceWith(NodejsEnvRunner.prototype.run as SinonStub, { ...runOpts, ExecutionThreadCls });
+            assert.calledOnceWith(NodejsEnvRunner.prototype.prepareToRun as SinonStub, runOpts);
+        });
+
+        it("should run runnables with execution thread wrapper", async () => {
+            sandbox.stub(NodejsEnvRunner.prototype, "runRunnables").resolves();
+
+            let ExecutionThreadCls: unknown;
+            wrapExecutionThreadStub.callsFake((socket, throwIfAborted) => {
+                ExecutionThreadCls = wrapExecutionThread(socket, throwIfAborted);
+                return ExecutionThreadCls;
+            });
+
+            await run_({});
+
+            assert.calledOnceWith(NodejsEnvRunner.prototype.runRunnables as SinonStub, ExecutionThreadCls);
         });
 
         describe(`"${BrowserEventNames.callConsoleMethod}" event`, () => {
@@ -365,7 +383,7 @@ describe("worker/browser-env/runner/test-runner", () => {
 
         describe(`"${WorkerEventNames.finalize}" event`, () => {
             it(`should emit after completing the test`, async () => {
-                sandbox.stub(NodejsEnvRunner.prototype, "run").resolves();
+                sandbox.stub(NodejsEnvRunner.prototype, "finishRun").resolves();
 
                 const socket = mkSocket_();
                 socketClientStub.returns(socket);
@@ -373,9 +391,108 @@ describe("worker/browser-env/runner/test-runner", () => {
                 await runWithEmitBrowserInit(socket);
 
                 assert.callOrder(
-                    NodejsEnvRunner.prototype.run as SinonStub,
+                    NodejsEnvRunner.prototype.finishRun as SinonStub,
                     (socket.emit as SinonStub).withArgs(WorkerEventNames.finalize),
                 );
+            });
+        });
+
+        describe(`"${BrowserEventNames.reconnect}" event`, () => {
+            let clock: SinonFakeTimers;
+
+            beforeEach(() => {
+                clock = sinon.useFakeTimers({ toFake: ["setInterval", "setTimeout", "clearInterval"] });
+            });
+
+            afterEach(() => clock.restore());
+
+            describe("should throw error if", () => {
+                it("browser not inited after reconnect", async () => {
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    const promise = run_();
+                    await clock.tickAsync(1);
+                    socket.emit(BrowserEventNames.initialize, []);
+
+                    await clock.tickAsync(1);
+                    socket.emit(BrowserEventNames.reconnect);
+
+                    await clock.runToLastAsync();
+                    await clock.tickAsync(BRO_INIT_TIMEOUT_ON_RECONNECT);
+
+                    await assert.isRejected(
+                        promise,
+                        `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
+                    );
+                });
+
+                it("browser initialization was failed after reconnect", async () => {
+                    const socket = mkSocket_() as BrowserViteSocket;
+                    socketClientStub.returns(socket);
+
+                    const error = new Error("o.O");
+
+                    const promise = run_();
+                    await clock.tickAsync(1);
+                    socket.emit(BrowserEventNames.initialize, []);
+
+                    await clock.tickAsync(1);
+                    socket.emit(BrowserEventNames.reconnect);
+                    socket.emit(BrowserEventNames.initialize, [error]);
+
+                    await clock.runToLastAsync();
+                    await clock.tickAsync(BRO_INIT_INTERVAL_ON_RECONNECT);
+
+                    await assert.isRejected(promise, error);
+                });
+
+                [
+                    { name: "return", sinonMethod: "resolves" as const },
+                    { name: "throw", sinonMethod: "rejects" as const },
+                ].forEach(({ name, sinonMethod }) => {
+                    it(`test ${name} error after reconnect`, async () => {
+                        const error = new Error("o.O");
+
+                        sandbox
+                            .stub(NodejsEnvRunner.prototype, "runRunnables")
+                            .onFirstCall()
+                            .resolves(new AbortOnReconnectError())
+                            .onSecondCall()
+                            [sinonMethod](error);
+
+                        const socket = mkSocket_() as BrowserViteSocket;
+                        socketClientStub.returns(socket);
+
+                        const promise = run_();
+
+                        await clock.tickAsync(1);
+                        socket.emit(BrowserEventNames.reconnect);
+                        socket.emit(BrowserEventNames.initialize, []);
+
+                        await clock.runToLastAsync();
+
+                        await assert.isRejected(promise, error);
+                    });
+                });
+            });
+
+            it("should successfully restart test after reconnect", async () => {
+                const socket = mkSocket_() as BrowserViteSocket;
+                socketClientStub.returns(socket);
+
+                const promise = run_();
+                await clock.tickAsync(1);
+                socket.emit(BrowserEventNames.initialize, []);
+
+                await clock.tickAsync(1);
+                socket.emit(BrowserEventNames.reconnect);
+                socket.emit(BrowserEventNames.initialize, []);
+
+                await clock.runToLastAsync();
+                await clock.tickAsync(BRO_INIT_INTERVAL_ON_RECONNECT);
+
+                await assert.isFulfilled(promise);
             });
         });
 

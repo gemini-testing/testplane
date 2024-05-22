@@ -14,6 +14,7 @@ export enum BrowserEventNames {
     runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
     runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
     callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
+    reconnect = `${BROWSER_EVENT_PREFIX}:reconnect`,
 }
 
 export interface BrowserRunBrowserCommandPayload {
@@ -46,6 +47,7 @@ export interface BrowserViteEvents {
         cb: (args: [{ pass: boolean; message: string }]) => void,
     ) => void;
     [BrowserEventNames.callConsoleMethod]: (payload: BrowserCallConsoleMethodPayload) => void;
+    [BrowserEventNames.reconnect]: () => void;
 }
 
 // TODO: use from nodejs code when migrate to esm
@@ -74,13 +76,12 @@ export interface WorkerRunRunnablePayload {
     fullTitle: string;
 }
 
+export type WorkerRunRunnableCb = (...args: [null | ViteError[]]) => void;
+
 export interface WorkerViteEvents {
     [WorkerEventNames.initialize]: (payload: WorkerInitializePayload) => void;
     [WorkerEventNames.finalize]: () => void;
-    [WorkerEventNames.runRunnable]: (
-        payload: WorkerRunRunnablePayload,
-        cb: (...args: [null | ViteError[]]) => void,
-    ) => void;
+    [WorkerEventNames.runRunnable]: (payload: WorkerRunRunnablePayload, cb: WorkerRunRunnableCb) => void;
 }
 
 export type ViteBrowserEvents = Pick<WorkerViteEvents, WorkerEventNames.runRunnable>;

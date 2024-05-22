@@ -49,6 +49,11 @@ const getErrors = (errors: ViteError | ViteError[] = []): ViteError[] => {
 };
 
 export const getErrorsOnPageLoad = (initError?: Error): ErrorOnPageLoad[] => {
+    // ignore error because in this case vite runtime error has more details
+    if (initError && initError.message.includes("Failed to fetch dynamically imported module")) {
+        initError = undefined;
+    }
+
     const errors = new Array<ViteError>().concat(initError || [], getLoadPageErrors());
 
     return getErrors(errors);

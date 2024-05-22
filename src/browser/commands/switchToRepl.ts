@@ -40,10 +40,10 @@ export default (browser: Browser): void => {
     };
 
     session.addCommand("switchToRepl", async function (ctx: Record<string, unknown> = {}) {
-        const { replMode } = RuntimeConfig.getInstance();
+        const runtimeCfg = RuntimeConfig.getInstance();
         const { onReplMode } = browser.state;
 
-        if (!replMode?.enabled) {
+        if (!runtimeCfg.replMode?.enabled) {
             throw new Error(
                 'Command "switchToRepl" available only in REPL mode, which can be started using cli option: "--repl", "--repl-before-test" or "--repl-on-fail"',
             );
@@ -62,6 +62,8 @@ export default (browser: Browser): void => {
 
         const replServer = repl.start({ prompt: "> " });
         browser.applyState({ onReplMode: true });
+
+        runtimeCfg.extend({ replServer });
 
         applyContext(replServer, ctx);
         handleLines(replServer);
