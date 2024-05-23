@@ -1,5 +1,5 @@
 import sinon, { type SinonStub } from "sinon";
-import { SourceMapConsumer, type BasicSourceMapConsumer } from "source-map";
+import { SourceMapConsumer, type BasicSourceMapConsumer, type NullableMappedPosition } from "source-map";
 import { extractSourceMaps, resolveLocationWithSourceMap } from "./../../../src/error-snippets/source-maps";
 import type { SufficientStackFrame, ResolvedFrame } from "../../../src/error-snippets/types";
 
@@ -67,7 +67,7 @@ describe("error-snippets/source-maps", () => {
                     sourcesContent: ["content"],
                 }),
             )) as BasicSourceMapConsumer;
-            sandbox.stub(sourceMaps, "originalPositionFor").returns({ source: "file1" });
+            sandbox.stub(sourceMaps, "originalPositionFor").returns({ source: "file1" } as NullableMappedPosition);
             const stackFrame = { lineNumber: 5, columnNumber: 10 } as SufficientStackFrame;
 
             const fn = (): ResolvedFrame => resolveLocationWithSourceMap(stackFrame, sourceMaps);
@@ -86,7 +86,9 @@ describe("error-snippets/source-maps", () => {
                 }),
             )) as BasicSourceMapConsumer;
             sourceMaps.file = "file:///file1";
-            sandbox.stub(sourceMaps, "originalPositionFor").returns({ source: "file1", line: 100, column: 500 });
+            sandbox
+                .stub(sourceMaps, "originalPositionFor")
+                .returns({ source: "file1", line: 100, column: 500 } as NullableMappedPosition);
             const stackFrame = { lineNumber: 1, columnNumber: 1 } as SufficientStackFrame;
 
             const result = resolveLocationWithSourceMap(stackFrame, sourceMaps);
