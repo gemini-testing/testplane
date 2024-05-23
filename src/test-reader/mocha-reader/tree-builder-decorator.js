@@ -1,5 +1,6 @@
 const { Suite, Test, Hook } = require("../test-object");
 const crypto = require("../../utils/crypto");
+const { computeFile } = require("./utils");
 
 class TreeBuilderDecorator {
     #treeBuilder;
@@ -17,7 +18,9 @@ class TreeBuilderDecorator {
     }
 
     addSuite(mochaSuite) {
-        const { id: mochaId, file } = mochaSuite;
+        const { id: mochaId } = mochaSuite;
+        const file = computeFile(mochaSuite) ?? "unknown-file";
+
         const positionInFile = this.#suiteCounter.get(file) || 0;
         const id = mochaSuite.root ? mochaId : crypto.getShortMD5(file) + positionInFile;
         const suite = this.#mkTestObject(Suite, mochaSuite, { id });
