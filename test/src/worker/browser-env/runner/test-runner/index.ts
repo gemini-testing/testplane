@@ -62,7 +62,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             id: "12345",
             fn: sinon.stub(),
         }) as TestType;
-        test.parent = Suite.create();
+        test.parent = Suite.create({ id: "67890", title: "", file: test.file });
 
         return test;
     };
@@ -171,7 +171,7 @@ describe("worker/browser-env/runner/test-runner", () => {
         sandbox.stub(OneTimeScreenshooter, "create").returns(Object.create(OneTimeScreenshooter.prototype));
         sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").resolves();
 
-        sandbox.stub(crypto, "randomUUID").returns("00000");
+        sandbox.stub(crypto, "randomUUID").returns("0-0-0-0-0");
         sandbox.stub(process, "pid").value(11111);
         sandbox.stub(logger, "warn");
 

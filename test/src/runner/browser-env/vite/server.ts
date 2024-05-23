@@ -21,16 +21,17 @@ describe("runner/browser-env/vite", () => {
     let generateIndexHtmlPlugin: () => Vite.Plugin[];
     let resolveModulePathsPlugin: () => Vite.Plugin[];
 
-    const mkViteServer_ = (opts: Partial<Vite.ViteDevServer> = {}): Partial<Vite.ViteDevServer> => ({
-        listen: sandbox.stub(),
-        close: sandbox.stub(),
-        resolvedUrls: {
-            local: ["http://localhost:12345"],
-            network: [],
-        },
-        httpServer: {} as Vite.ViteDevServer["httpServer"],
-        ...opts,
-    });
+    const mkViteServer_ = (opts: Partial<Vite.ViteDevServer> = {}): Vite.ViteDevServer =>
+        ({
+            listen: sandbox.stub(),
+            close: sandbox.stub(),
+            resolvedUrls: {
+                local: ["http://localhost:12345"],
+                network: [],
+            },
+            httpServer: {} as Vite.ViteDevServer["httpServer"],
+            ...opts,
+        } as Vite.ViteDevServer);
 
     const mkConfig_ = (opts?: Partial<Config>): Config => makeConfigStub(opts) as Config;
     const mkConfigWithVite_ = (viteConfig: BrowserTestRunEnvOptions["viteConfig"]): Config => {
