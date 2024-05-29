@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.5](https://github.com/gemini-testing/hermione/compare/hermione/8.9.4...hermione/8.9.5) (2024-05-29)
+
+
+### Bug Fixes
+
+* types for describe, it ([42fcd1c](https://github.com/gemini-testing/hermione/commit/42fcd1c8eb323d40b65133ceedcff213320e34a6))
+
 ### [8.9.4](https://github.com/gemini-testing/hermione/compare/hermione/8.9.3...hermione/8.9.4) (2024-05-29)
 
 
