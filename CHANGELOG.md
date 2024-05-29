@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.4](https://github.com/gemini-testing/hermione/compare/hermione/8.9.3...hermione/8.9.4) (2024-05-29)
+
+
+### Bug Fixes
+
+* "assertView", "moveCursorTo", "executionContext" and "currentTest" types ([eecbe23](https://github.com/gemini-testing/hermione/commit/eecbe2335f976e39ca9ef607c1bd4e96293ae2c8))
+
 ### [8.9.3](https://github.com/gemini-testing/hermione/compare/hermione/8.9.2...hermione/8.9.3) (2024-05-16)
 
 
