@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.5](https://github.com/gemini-testing/testplane/compare/v8.11.4...v8.11.5) (2024-05-29)
+
+
+### Bug Fixes
+
+* "assertView", "moveCursorTo", "executionContext" and "currentTest" types ([bd4e898](https://github.com/gemini-testing/testplane/commit/bd4e8980fcffbad59af6df48726418586b1bae4a))
+* **ct:** correctly support custom element commands ([5817e92](https://github.com/gemini-testing/testplane/commit/5817e92916be7e97940cec1940bc19296be28687))
+
 ### [8.11.4](https://github.com/gemini-testing/testplane/compare/v8.11.3...v8.11.4) (2024-05-16)
 
 
