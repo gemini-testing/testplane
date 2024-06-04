@@ -1,3 +1,4 @@
+/* global process, __dirname */
 const path = require("path");
 const browserify = require("browserify");
 const uglifyify = require("uglifyify");
@@ -12,7 +13,7 @@ const fs = require("fs-extra");
 const bundleScript = async opts => {
     const lib = opts.needsCompatLib ? "./lib.compat.js" : "./lib.native.js";
     const script = browserify({
-        entries: "./scripts/index.js",
+        entries: "./index.js",
         basedir: __dirname
     });
 
@@ -56,7 +57,7 @@ async function main() {
     await Promise.all(
         [
             { needsCompatLib: true, fileName: "bundle.compat.js" },
-            { needsCompatLib: false, fileName: "bundle.js" }
+            { needsCompatLib: false, fileName: "bundle.native.js" }
         ].map(async ({ needsCompatLib, fileName }) => {
             const buffer = await bundleScript({ needsCompatLib });
             const filePath = path.join(targetDir, fileName);

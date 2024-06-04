@@ -36,7 +36,7 @@ describe("client-scripts/build", () => {
             verbose: false,
         });
         assert.calledWith(ensureDirStub, targetDir);
-        assert.calledWith(writeFileStub, path.join(targetDir, "bundle.js"), sinon.match(Buffer));
+        assert.calledWith(writeFileStub, path.join(targetDir, "bundle.native.js"), sinon.match(Buffer));
     };
 
     const assertForCompatLibrary_ = (): void => {
