@@ -27,7 +27,7 @@ describe("clientBridge", () => {
 
                 const fileName = path.basename(readFileStub.firstCall.args[0]);
 
-                assert.equal(fileName, "bundle.js");
+                assert.equal(fileName, "bundle.native.js");
                 assert.deepEqual(result, { clientBridge: "native" } as unknown as ClientBridge);
             });
 
