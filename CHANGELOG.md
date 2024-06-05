@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.11.7](https://github.com/gemini-testing/testplane/compare/v8.11.6...v8.11.7) (2024-06-05)
+
+
+### Bug Fixes
+
+* build client scripts bundle on build time ([b3ae6a3](https://github.com/gemini-testing/testplane/commit/b3ae6a3b8593f65f941c683cd7d716e518d3790e))
+
 ### [8.11.6](https://github.com/gemini-testing/testplane/compare/v8.11.5...v8.11.6) (2024-05-29)
 
 
