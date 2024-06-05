@@ -1,11 +1,11 @@
 import { BROWSER_EVENT_PREFIX } from "./constants";
-import type { InlineConfig, ConfigEnv } from "vite";
+import type { UserConfig, ConfigEnv } from "vite";
 import type { BrowserViteEvents, WorkerViteEvents, ViteBrowserEvents } from "./browser-modules/types";
 
 export type { BrowserViteEvents, WorkerViteEvents } from "./browser-modules/types";
 
 export interface BrowserTestRunEnvOptions {
-    viteConfig?: string | InlineConfig | ((env: ConfigEnv) => InlineConfig | Promise<InlineConfig>);
+    viteConfig?: string | UserConfig | ((env: ConfigEnv) => UserConfig | Promise<UserConfig>);
 }
 
 export interface ClientViteEvents extends BrowserViteEvents, WorkerViteEvents {}
