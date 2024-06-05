@@ -8,7 +8,8 @@
     "typings"
   ],
   "scripts": {
-    "build": "tsc --build && npm run build-bundles",
+    "build": "tsc --build && npm run copy-static && npm run build-bundles",
+    "copy-static": "copyfiles 'src/browser/client-scripts/*' build",
     "build-node-bundle": "esbuild ./src/bundle/index.ts --outdir=./build/src/bundle --bundle --format=cjs --platform=node --target=ES2021",
     "build-browser-bundle": "node ./src/browser/client-scripts/build.js",
     "build-bundles": "concurrently -c 'auto' 'npm:build-browser-bundle' 'npm:build-node-bundle --minify'",
@@ -25,7 +26,7 @@
     "preversion": "npm run lint && npm test",
     "commitmsg": "commitlint -e",
     "release": "standard-version",
-    "watch": "npm run build-browser-bundle && concurrently -c 'auto' 'npm:watch:src' 'npm:watch:bundle'",
+    "watch": "npm run copy-static && npm run build-browser-bundle && concurrently -c 'auto' 'npm:watch:src' 'npm:watch:bundle'",
     "watch:src": "tsc --build --watch",
     "watch:bundle": "npm run build-node-bundle -- --watch"
   },

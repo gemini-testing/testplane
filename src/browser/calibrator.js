@@ -5,14 +5,14 @@ const path = require("path");
 const Promise = require("bluebird");
 const _ = require("lodash");
 const looksSame = require("looks-same");
-const { CoreError } = require("../core-error");
+const { CoreError } = require("./core-error");
 
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" };
 
 module.exports = class Calibrator {
     constructor() {
         this._cache = {};
-        this._script = fs.readFileSync(path.join(__dirname, "calibrate-client-script.js"), "utf8");
+        this._script = fs.readFileSync(path.join(__dirname, "client-scripts", "calibrate.js"), "utf8");
     }
 
     /**
