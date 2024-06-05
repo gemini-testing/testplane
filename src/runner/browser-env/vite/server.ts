@@ -13,7 +13,7 @@ import { plugin as generateIndexHtml } from "./plugins/generate-index-html";
 import { Config } from "../../../config";
 import { VITE_DEFAULT_CONFIG_ENV } from "./constants";
 
-import type { ViteDevServer, InlineConfig } from "vite";
+import type { ViteDevServer, UserConfig, InlineConfig } from "vite";
 import type { BrowserTestRunEnvOptions } from "./types";
 
 export class ViteServer {
@@ -87,10 +87,10 @@ export class ViteServer {
         }
 
         const config = this._options.viteConfig;
-        let preparedConfig: InlineConfig;
+        let preparedConfig: UserConfig;
 
         if (_.isString(config)) {
-            preparedConfig = (await import(path.resolve(process.cwd(), config))).default as InlineConfig;
+            preparedConfig = (await import(path.resolve(process.cwd(), config))).default as UserConfig;
         } else if (_.isFunction(config)) {
             preparedConfig = await config(VITE_DEFAULT_CONFIG_ENV);
         } else {
