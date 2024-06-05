@@ -1,0 +1,6 @@
+{
+    "compilerOptions": {
+        "types": ["testplane"],
+        "jsx": "react-jsx"
+    }
+}

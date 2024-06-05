@@ -14,3 +14,4 @@ artifacts
 npm-debug.log
 .editorconfig
 .eslintcache
+hermione-report
