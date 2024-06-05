@@ -1,5 +1,3 @@
-/* global window, document, navigator */
-
 (function (window) {
     "use strict";
 
@@ -60,7 +58,7 @@
         var features = {
             needsCompatLib: needsCompatLib(),
             pixelRatio: window.devicePixelRatio,
-            innerWidth: getInnerWidth(),
+            innerWidth: getInnerWidth()
         };
 
         return features;
