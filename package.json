@@ -8,9 +8,11 @@
     "typings"
   ],
   "scripts": {
-    "build": "tsc --build && npm run copy-static && npm run build-bundle -- --minify",
-    "build-bundle": "esbuild ./src/bundle/index.ts --outdir=./build/src/bundle --bundle --format=cjs --platform=node --target=ES2021",
+    "build": "tsc --build && npm run copy-static && npm run build-bundles",
     "copy-static": "copyfiles 'src/browser/client-scripts/*' build",
+    "build-node-bundle": "esbuild ./src/bundle/index.ts --outdir=./build/src/bundle --bundle --format=cjs --platform=node --target=ES2021",
+    "build-browser-bundle": "node ./src/browser/client-scripts/build.js",
+    "build-bundles": "concurrently -c 'auto' 'npm:build-browser-bundle' 'npm:build-node-bundle --minify'",
     "check-types": "tsc --project tsconfig.spec.json",
     "clean": "rimraf build/ *.tsbuildinfo",
     "lint": "eslint --cache . && prettier --check .",
@@ -24,9 +26,9 @@
     "preversion": "npm run lint && npm test",
     "commitmsg": "commitlint -e",
     "release": "standard-version",
-    "watch": "npm run copy-static && concurrently -c 'auto' 'npm:watch:src' 'npm:watch:bundle'",
+    "watch": "npm run copy-static && npm run build-browser-bundle && concurrently -c 'auto' 'npm:watch:src' 'npm:watch:bundle'",
     "watch:src": "tsc --build --watch",
-    "watch:bundle": "npm run build-bundle -- --watch"
+    "watch:bundle": "npm run build-node-bundle -- --watch"
   },
   "repository": {
     "type": "git",
@@ -56,9 +58,7 @@
     "@wdio/types": "8.21.0",
     "@wdio/utils": "8.35.0",
     "@wdio/utils-cjs": "npm:@wdio/utils@7.26.0",
-    "aliasify": "1.9.0",
     "bluebird": "3.5.1",
-    "browserify": "13.3.0",
     "chalk": "2.4.2",
     "clear-require": "1.0.1",
     "debug": "2.6.9",
@@ -86,7 +86,6 @@
     "strftime": "0.10.2",
     "strip-ansi": "6.0.1",
     "temp": "0.8.3",
-    "uglifyify": "3.0.4",
     "urijs": "1.19.11",
     "url-join": "4.0.1",
     "vite": "5.1.6",
@@ -107,6 +106,7 @@
     "@types/babel__code-frame": "7.0.6",
     "@types/babel__core": "7.20.5",
     "@types/bluebird": "3.5.38",
+    "@types/browserify": "12.0.40",
     "@types/chai": "4.3.4",
     "@types/chai-as-promised": "7.1.5",
     "@types/debug": "4.1.12",
@@ -121,7 +121,9 @@
     "@types/url-join": "4.0.3",
     "@typescript-eslint/eslint-plugin": "6.12.0",
     "@typescript-eslint/parser": "6.12.0",
+    "aliasify": "1.9.0",
     "app-module-path": "2.2.0",
+    "browserify": "13.3.0",
     "chai": "4.2.0",
     "chai-as-promised": "7.1.1",
     "concurrently": "8.2.2",
@@ -145,7 +147,8 @@
     "standard-version": "9.5.0",
     "ts-node": "10.9.1",
     "type-fest": "3.11.1",
-    "typescript": "5.3.2"
+    "typescript": "5.3.2",
+    "uglifyify": "3.0.4"
   },
   "peerDependencies": {
     "ts-node": ">=10.5.0"

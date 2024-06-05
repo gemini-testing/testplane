@@ -1,46 +1,25 @@
 "use strict";
 
 const path = require("path");
-const Promise = require("bluebird");
-const browserify = require("browserify");
+const fs = require("fs");
 const ClientBridge = require("./client-bridge");
+
+const bundlesCache = {};
 
 exports.ClientBridge = ClientBridge;
 
-exports.build = (browser, opts = {}) => {
-    const script = browserify({
-        entries: "./index",
-        basedir: path.join(__dirname, "..", "client-scripts"),
-    });
+exports.build = async (browser, opts = {}) => {
+    const needsCompatLib = opts.calibration && opts.calibration.needsCompatLib;
 
-    script.transform(
-        {
-            sourcemap: false,
-            global: true,
-            compress: { screw_ie8: false }, // eslint-disable-line camelcase
-            mangle: { screw_ie8: false }, // eslint-disable-line camelcase
-            output: { screw_ie8: false }, // eslint-disable-line camelcase
-        },
-        "uglifyify",
-    );
+    const scriptFileName = needsCompatLib ? "bundle.compat.js" : "bundle.native.js";
 
-    const lib = opts.calibration && opts.calibration.needsCompatLib ? "./lib.compat.js" : "./lib.native.js";
-    const ignoreAreas = opts.supportDeprecated ? "./ignore-areas.deprecated.js" : "./ignore-areas.js";
+    if (bundlesCache[scriptFileName]) {
+        return ClientBridge.create(browser, bundlesCache[scriptFileName]);
+    }
 
-    script.transform(
-        {
-            aliases: {
-                "./lib": { relative: lib },
-                "./ignore-areas": { relative: ignoreAreas },
-            },
-            verbose: false,
-        },
-        "aliasify",
-    );
+    const scriptFilePath = path.join(__dirname, "..", "client-scripts", scriptFileName);
+    const bundle = await fs.promises.readFile(scriptFilePath, { encoding: "utf8" });
+    bundlesCache[scriptFileName] = bundle;
 
-    return Promise.fromCallback(cb => script.bundle(cb)).then(buf => {
-        const scripts = buf.toString();
-
-        return ClientBridge.create(browser, scripts);
-    });
+    return ClientBridge.create(browser, bundle);
 };
