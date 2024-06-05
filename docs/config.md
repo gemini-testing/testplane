@@ -66,6 +66,7 @@
   - [testsPerWorker](#testsperworker)
   - [parallelLimit](#parallellimit)
   - [fileExtensions](#fileextensions)
+  - [testRunEnv](#testrunenv)
 - [plugins](#plugins)
   - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [List of useful plugins](#list-of-useful-plugins)
@@ -553,6 +554,38 @@ By default, Testplane will run all browsers simultaneously. Sometimes (i.e. when
 #### fileExtensions
 Ability to set file extensions, which Testplane will search on the file system. Default value is `[".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"]`.
 
+#### testRunEnv
+Ability to specify in which environment the tests should be run. There are two available environments:
+
+* `nodejs` – Testplane will run tests in nodejs process. Default value.
+* `browser` – Testplane will run tests inside of the browser.
+
+The `browser` environment has additional options:
+
+* `viteConfig` - ability to specify own [Vite configuration](https://vitejs.dev/config/). You can pass relative path to the config file as `string`, object with [UserConfig](https://github.com/vitejs/vite/blob/v5.1.6/packages/vite/src/node/config.ts#L127-L282) type or function with `(env: ConfigEnv) => UserConfig | Promise<UserConfig>` type.
+
+```typescript
+// .testplane.conf.ts
+import viteConfig from './vite.config.ts';
+
+export const {
+    // ...
+    system: {
+        // ...
+        // as relative path to the config file
+        testRunEnv: ['browser', { viteConfig: './vite.config.ts' }],
+        // or use object with UserConfig type
+        testRunEnv: ['browser', { viteConfig }],
+        // or use function
+        testRunEnv: ['browser', {
+            viteConfig: (configEnv) => ({
+                // ...
+            })
+        }],
+    }
+}
+```
+
 ### plugins
 Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
 
@@ -680,7 +713,7 @@ Will spawn child process "npm run server:dev", pass extra environment variable "
 
 Full list of parameters:
  - command (optional) `String` – command to launch dev server. If null or not defined, dev server is disabled
- - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env` 
+ - env (optional) `Record<string, string>` – extra environment variables to pass to child process, in addition to your `process.env`
  - args (optional)  `String[]` – arguments to pass to child process
  - cwd (optional) `String` – current working directory of the child process. If not defined, testplane will try to find nearest "package.json", starting from the directory with testplane config
  - logs (optional) `Boolean` – if enabled, shows dev server logs in the console with prefix "\[dev server\]". Enabled by default

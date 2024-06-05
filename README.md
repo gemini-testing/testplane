@@ -29,6 +29,8 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 
 ⚡ **Infinite Extensibility:** Testplane offers a versatile plugin system with dozens of open-source plugins on GitHub, along with custom reporters, commands, and execution logic.
 
+📦 **Various Test Environments:** With Testplane you can run tests not only in Node.js environment but also in the browser. It means you can run e2e/integration tests in Node.js and [component](docs/component-testing.md)/unit tests in browser.
+
 ## Getting started
 
 > Note: if you prefer manual installation, you can run `npm i -D testplane`. Check out [the Docs](docs/quick-start.md) for details.
@@ -86,6 +88,7 @@ The documentation is divided into several sections:
 - [Testplane CLI](docs/cli.md)
 - [Testplane Events](docs/events.md)
 - [Testplane Programmatic API](docs/programmatic-api.md)
+- [Testplane Component Testing (experimental)](docs/component-testing.md)
 
 ## Rename from "Hermione"
 
