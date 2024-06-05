@@ -1,6 +1,8 @@
 import { CONSOLE_METHODS } from "../constants.js";
 import { BrowserEventNames } from "../types.js";
 
+const isDOMElement = (data: unknown): data is Element => data instanceof Element;
+
 export const wrapConsoleMethods = (): void => {
     const { socket } = window.__testplane__;
 
@@ -8,7 +10,9 @@ export const wrapConsoleMethods = (): void => {
         const origCommand = console[method].bind(console);
 
         console[method] = (...args: unknown[]): void => {
-            socket.emit(BrowserEventNames.callConsoleMethod, { method, args });
+            const preparedArgs = args.map(arg => (isDOMElement(arg) ? arg.outerHTML : arg));
+
+            socket.emit(BrowserEventNames.callConsoleMethod, { method, args: preparedArgs });
 
             origCommand(...args);
         };
