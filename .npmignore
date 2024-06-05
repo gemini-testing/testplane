@@ -2,3 +2,4 @@
 .npmignore
 .sublime-project*
 test/
+examples/
