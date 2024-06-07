@@ -460,6 +460,8 @@ To override generated `X-Request-ID` to your own value you need specify it in `t
 ```javascript
 transformRequest: (req) => {
     req.headers["X-Request-ID"] = "my_x_req_id";
+
+    return req;
 }
 ```
 
