@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.12.0](https://github.com/gemini-testing/testplane/compare/v8.11.7...v8.12.0) (2024-06-09)
+
+
+### Features
+
+* **ct:** support hot module replacement ([71628ce](https://github.com/gemini-testing/testplane/commit/71628ce39d7e96978c9fcbf9059f05113bf1c352))
+
+
+### Bug Fixes
+
+* **ct:** do not fail on log html elements ([016dc45](https://github.com/gemini-testing/testplane/commit/016dc45ec6cb083c0c8db75192636c1795563c51))
+* **ct:** use correct type for config from vite ([b152038](https://github.com/gemini-testing/testplane/commit/b15203876b8a0ca8cc323a7c242955008cb94c87))
+
 ### [8.11.7](https://github.com/gemini-testing/testplane/compare/v8.11.6...v8.11.7) (2024-06-05)
 
 
