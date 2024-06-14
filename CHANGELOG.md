@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.9.6](https://github.com/gemini-testing/hermione/compare/hermione/8.9.5...hermione/8.9.6) (2024-06-14)
+
+
+### Bug Fixes
+
+* resolve file field correctly for exports mocha interface ([#948](https://github.com/gemini-testing/hermione/issues/948)) ([c0eab23](https://github.com/gemini-testing/hermione/commit/c0eab233f591493a2e8de5dab75cc40e8a733491))
+
 ### [8.9.5](https://github.com/gemini-testing/hermione/compare/hermione/8.9.4...hermione/8.9.5) (2024-05-29)
 
 
