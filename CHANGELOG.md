@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.12.1](https://github.com/gemini-testing/testplane/compare/v8.12.0...v8.12.1) (2024-06-14)
+
+
+### Bug Fixes
+
+* resolve file field correctly for exports mocha interface ([#949](https://github.com/gemini-testing/testplane/issues/949)) ([99a7ed1](https://github.com/gemini-testing/testplane/commit/99a7ed10460eba412896a5af0ed9d39e52a7231a))
+
 ## [8.12.0](https://github.com/gemini-testing/testplane/compare/v8.11.7...v8.12.0) (2024-06-09)
 
 
