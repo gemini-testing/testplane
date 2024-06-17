@@ -11,6 +11,8 @@ To migrate from Hermione to Testplane you need to:
   - `import ... from "hermione"` -> `import ... from "testplane"`
   - `require("hermione")` -> `require("testplane")`
   - `declare module "hermione"` -> `declare module "testplane"`
+- Replace "hermione" with "testplane" in event handlers:
+  - `.on(BEFORE_FILE_READ, ({hermione}) => {})` -> `.on(BEFORE_FILE_READ, ({testplane}) => {})`
 
 Other than that, everything should be fine. Hermione plugins are fully compatible with Testplane@8.x.
 
