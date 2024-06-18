@@ -83,6 +83,7 @@ class TestParser extends EventEmitter {
                 this.emit(event, {
                     ...data,
                     testplane,
+                    hermione: testplane,
                     ...customOpts,
                 }),
             );

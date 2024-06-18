@@ -21,6 +21,7 @@ Optional changes list. These are not required, but recommended:
 - Use `testplane_` environment variables instead of `hermione_` environment variables;
 - Use `TESTPLANE_` environment variables (for sets and skip browsers) instead of `HERMIONE_` environment variables;
 - Use explicit `hermione-` prefix for plugins, if necessary;
+- Use `testplane` field instead of `hermione` on event handlers;
 - Use [`TestplaneCtx`](./typescript.md#testplanectx-typings) instead of `HermioneCtx` type;
 - Use `executionContext.testplaneCtx` as browser property instead of `executionContext.hermioneCtx`;
 - If you use default [screenshotsDir](./config.md#screenshotsdir) value, rename "hermione/screens" directory to "testplane/screens" or specify the value "hermione/screens" explicitly;
