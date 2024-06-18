@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.12.2](https://github.com/gemini-testing/testplane/compare/v8.12.1...v8.12.2) (2024-06-18)
+
+
+### Bug Fixes
+
+* pass extra field on file events to fix breaking change ([10c0a7f](https://github.com/gemini-testing/testplane/commit/10c0a7ffb7a6c8081a300d5900b3cf6ec1ee4f13))
+
 ### [8.12.1](https://github.com/gemini-testing/testplane/compare/v8.12.0...v8.12.1) (2024-06-14)
 
 
