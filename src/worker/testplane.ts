@@ -2,7 +2,7 @@ import { passthroughEvent } from "../events/utils";
 import { WorkerEvents } from "../events";
 import Runner from "./runner";
 import { BaseTestplane } from "../base-testplane";
-import { ImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
+import { RefImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 
 export interface WorkerRunTestOpts {
     browserId: string;
@@ -16,7 +16,7 @@ export interface WorkerRunTestOpts {
 
 export interface AssertViewResultsSuccess {
     stateName: string;
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
 }
 
 export interface WorkerRunTestTestplaneCtx {

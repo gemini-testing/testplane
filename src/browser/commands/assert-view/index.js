@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("fs-extra");
+const path = require("path");
 const _ = require("lodash");
 const Promise = require("bluebird");
 const { pngValidator: validatePng } = require("png-validator");
@@ -86,7 +87,9 @@ module.exports.default = browser => {
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
         const test = session.executionContext.ctx.currentTest;
-        const refImg = { path: config.getScreenshotPath(test, state), size: null };
+        const refImgAbsolutePath = config.getScreenshotPath(test, state);
+        const refImgRelativePath = refImgAbsolutePath && path.relative(process.cwd(), refImgAbsolutePath);
+        const refImg = { path: refImgAbsolutePath, relativePath: refImgRelativePath, size: null };
         const { emitter } = browser;
 
         if (!fs.existsSync(refImg.path)) {
