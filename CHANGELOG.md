@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.13.0](https://github.com/gemini-testing/testplane/compare/v8.12.2...v8.13.0) (2024-06-19)
+
+
+### Features
+
+* add relativePath to refImg ([0bb23cf](https://github.com/gemini-testing/testplane/commit/0bb23cf7b05b16bc3cdcdd176be888c2fb161b04))
+
 ### [8.12.2](https://github.com/gemini-testing/testplane/compare/v8.12.1...v8.12.2) (2024-06-18)
 
 
