@@ -62,6 +62,10 @@ export interface ImageInfo {
     size: ImageSize;
 }
 
+export interface RefImageInfo extends ImageInfo {
+    relativePath: string;
+}
+
 export interface DiffOptions extends LooksSameOptions {
     current: string;
     reference: string;
@@ -69,7 +73,7 @@ export interface DiffOptions extends LooksSameOptions {
 }
 
 export interface AssertViewResultSuccess {
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
     stateName: string;
 }
 
@@ -80,7 +84,7 @@ export interface AssertViewResultDiff {
     diffOpts: DiffOptions;
     message: string;
     name: "ImageDiffError";
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
     stack: string;
     stateName: string;
     differentPixels: number;
@@ -91,7 +95,7 @@ export interface AssertViewResultNoRefImage {
     currImg: ImageInfo;
     message: string;
     name: "NoRefImageError";
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
     stack: string;
     stateName: string;
 }
@@ -211,7 +215,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["WARNING"], callback: () => void): T;
     (event: Events["ERROR"], callback: (err: Error) => void): T;
 
-    (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: ImageInfo }) => void): T;
+    (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
 
@@ -221,6 +225,6 @@ export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["AFTER_FILE_READ"], callback: (data: AfterFileReadData) => void): T;
     (event: Events["AFTER_TESTS_READ"], callback: (collection: TestCollection) => void): T;
 
-    (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: ImageInfo }) => void): T;
+    (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };

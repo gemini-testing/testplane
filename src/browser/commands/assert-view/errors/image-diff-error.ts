@@ -1,4 +1,4 @@
-import { ImageInfo } from "../../../../types";
+import { ImageInfo, RefImageInfo } from "../../../../types";
 
 import Image from "../../../../image";
 import { BaseStateError } from "./base-state-error";
@@ -17,7 +17,7 @@ type DiffAreas = Pick<LooksSameResult, "diffClusters" | "diffBounds">;
 type ImageDiffErrorConstructor<T> = new (params: {
     stateName: string;
     currImg: ImageInfo;
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
     diffOpts: DiffOptions;
     diffAreas: DiffAreas;
     diffBuffer: Buffer;
@@ -28,7 +28,7 @@ type ImageDiffErrorConstructor<T> = new (params: {
 interface ImageDiffErrorData {
     stateName: string;
     currImg: ImageInfo;
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
     diffOpts: DiffOptions;
     diffBounds: LooksSameResult["diffBounds"];
     diffClusters: LooksSameResult["diffClusters"];
@@ -60,7 +60,7 @@ export class ImageDiffError extends BaseStateError {
         }: {
             stateName: string;
             currImg: ImageInfo;
-            refImg: ImageInfo;
+            refImg: RefImageInfo;
             diffOpts: DiffOptions;
             diffAreas?: DiffAreas;
             diffBuffer: Buffer;
@@ -88,7 +88,7 @@ export class ImageDiffError extends BaseStateError {
     }: {
         stateName: string;
         currImg: ImageInfo;
-        refImg: ImageInfo;
+        refImg: RefImageInfo;
         diffOpts: DiffOptions;
         diffAreas?: DiffAreas;
         diffBuffer: Buffer;

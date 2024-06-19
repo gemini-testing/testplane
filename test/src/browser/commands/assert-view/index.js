@@ -93,6 +93,8 @@ describe("assertView command", () => {
 
         sandbox.stub(updateRefs, "handleNoRefImage").resolves();
         sandbox.stub(updateRefs, "handleImageDiff").resolves();
+
+        sandbox.stub(process, "cwd").returns("/ref/cwd");
     });
 
     afterEach(() => sandbox.restore());
@@ -442,7 +444,7 @@ describe("assertView command", () => {
                     NoRefImageError.create,
                     "state",
                     { path: "/curr/path", size: { width: 100, height: 200 } },
-                    { path: "/ref/path", size: null },
+                    { path: "/ref/path", relativePath: "../path", size: null },
                 );
             });
 
@@ -894,8 +896,22 @@ describe("assertView command", () => {
                 await fn(browser, "complex");
 
                 assert.deepEqual(browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get(), [
-                    { stateName: "plain", refImg: { path: "/ref/path/plain", size: { width: 100, height: 200 } } },
-                    { stateName: "complex", refImg: { path: "/ref/path/complex", size: { width: 300, height: 400 } } },
+                    {
+                        stateName: "plain",
+                        refImg: {
+                            path: "/ref/path/plain",
+                            relativePath: "../path/plain",
+                            size: { width: 100, height: 200 },
+                        },
+                    },
+                    {
+                        stateName: "complex",
+                        refImg: {
+                            path: "/ref/path/complex",
+                            relativePath: "../path/complex",
+                            size: { width: 300, height: 400 },
+                        },
+                    },
                 ]);
             });
         });

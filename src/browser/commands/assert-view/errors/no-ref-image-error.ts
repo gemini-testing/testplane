@@ -1,12 +1,12 @@
 import { BaseStateError } from "./base-state-error";
-import { ImageInfo } from "../../../../types";
+import { ImageInfo, RefImageInfo } from "../../../../types";
 
-type NoRefImageErrorConstructor<T> = new (stateName: string, currImg: ImageInfo, refImg: ImageInfo) => T;
+type NoRefImageErrorConstructor<T> = new (stateName: string, currImg: ImageInfo, refImg: RefImageInfo) => T;
 
 interface NoRefImageErrorData {
     stateName: string;
     currImg: ImageInfo;
-    refImg: ImageInfo;
+    refImg: RefImageInfo;
 }
 
 export class NoRefImageError extends BaseStateError {
@@ -14,7 +14,7 @@ export class NoRefImageError extends BaseStateError {
         this: NoRefImageErrorConstructor<T>,
         stateName: string,
         currImg: ImageInfo,
-        refImg: ImageInfo,
+        refImg: RefImageInfo,
     ): T {
         return new this(stateName, currImg, refImg);
     }
@@ -23,7 +23,7 @@ export class NoRefImageError extends BaseStateError {
         return new this(data.stateName, data.currImg, data.refImg);
     }
 
-    constructor(stateName: string, currImg: ImageInfo, refImg: ImageInfo) {
+    constructor(stateName: string, currImg: ImageInfo, refImg: RefImageInfo) {
         super(stateName, currImg, refImg);
 
         this.message = `can not find reference image at ${this.refImg.path} for "${stateName}" state`;
