@@ -95,6 +95,9 @@ module.exports = class Browser {
                             this.state.testXReqId
                         }${X_REQUEST_ID_DELIMITER}${crypto.randomUUID()}`;
                     }
+                    if (!req.headers["traceparent"] && this.state.traceparent) {
+                        req.headers["traceparent"] = this.state.traceparent;
+                    }
 
                     return req;
                 };

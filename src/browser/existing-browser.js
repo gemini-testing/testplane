@@ -175,6 +175,7 @@ module.exports = class ExistingBrowser extends Browser {
             pid: process.pid,
             browserVersion: this.version,
             testXReqId: this.state.testXReqId,
+            traceparent: this.state.traceparent,
             ...this._config.meta,
         };
     }
