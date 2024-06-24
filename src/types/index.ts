@@ -19,6 +19,7 @@ export type { Browser as WdioBrowser } from "webdriverio";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
+export type { TestFunctionCtx } from "../test-reader/test-object/types";
 
 export type { AssertViewOpts } from "../browser/commands/types";
 

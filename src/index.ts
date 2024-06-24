@@ -20,6 +20,7 @@ export type {
     HermioneCtx,
     GlobalHelper,
     TestplaneCtx,
+    TestFunctionCtx,
 } from "./types";
 export type { Config } from "./config";
 export type { ConfigInput } from "./config/types";
