@@ -52,7 +52,7 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 
             const description = await browser.$("p");
 
-            expect(description).toHaveTextContaining("for use in illustrative examples in documents");
+            await expect(description).toHaveTextContaining("for use in illustrative examples in documents");
         });
     });
     ```
@@ -66,7 +66,7 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 4. Try running the test and watch it pass. Now, let's replace description text check with a visual assertion. Use the `assertView` command to carry out visual checks:
 
     ```diff
-    - expect(description).toHaveTextContaining("for use in illustrative examples in documents");
+    - await expect(description).toHaveTextContaining("for use in illustrative examples in documents");
     + await description.assertView("description"); // "description" is just a name of the assertion
       ```
 
