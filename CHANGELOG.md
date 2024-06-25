@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.14.0](https://github.com/gemini-testing/testplane/compare/v8.13.0...v8.14.0) (2024-06-25)
+
+
+### Features
+
+* export TestFunctionCtx type ([d3df1fc](https://github.com/gemini-testing/testplane/commit/d3df1fc5a0db3c8491307901b62b3ebf72fe4e6c))
+
 ## [8.13.0](https://github.com/gemini-testing/testplane/compare/v8.12.2...v8.13.0) (2024-06-19)
 
 
