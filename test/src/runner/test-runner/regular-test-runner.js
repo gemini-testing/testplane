@@ -305,13 +305,14 @@ describe("runner/test-runner/regular-test-runner", () => {
                 const test = new Test({});
                 const onFail = sinon.stub().named("onFail");
                 const runner = mkRunner_({ test }).on(Events.TEST_FAIL, onFail);
+                const err = new Error();
 
                 const workers = mkWorkers_();
-                workers.runTest.rejects(new Error());
+                workers.runTest.rejects(err);
 
                 await run_({ runner, workers });
 
-                assert.calledOnceWith(onFail, sinon.match(test));
+                assert.calledOnceWith(onFail, sinon.match(Object.assign(test, { err })));
             });
 
             it("should be emitted with error", async () => {

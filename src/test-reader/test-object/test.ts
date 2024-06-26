@@ -8,6 +8,7 @@ type TestOpts = TestObjectData &
 
 export class Test extends ConfigurableTestObject {
     public fn: TestFunction<TestFunctionCtx>;
+    public err?: Error;
 
     static create<T extends Test>(this: new (opts: TestOpts) => T, opts: TestOpts): T {
         return new this(opts);
