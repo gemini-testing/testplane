@@ -2,6 +2,9 @@ import fs from "fs-extra";
 import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 
+import { AssertViewError } from "../../../src/browser/commands/assert-view/errors/assert-view-error";
+import { BaseStateError } from "../../../src/browser/commands/assert-view/errors/base-state-error";
+
 describe("error-snippets", () => {
     const cloneError = (err: Error): Error => {
         const newError = err;
@@ -40,6 +43,21 @@ describe("error-snippets", () => {
         });
 
         afterEach(() => sandbox.restore());
+
+        [AssertViewError, BaseStateError].forEach(ErrorClass => {
+            it(`should not add error snippet for ${ErrorClass.name}`, async () => {
+                const error = new ErrorClass(
+                    "foo",
+                    { path: "/some/path", size: { width: 800, height: 600 } },
+                    { path: "/some/path", relativePath: "../path", size: { width: 800, height: 600 } },
+                );
+                const originalStack = error.stack;
+
+                await extendWithCodeSnippet(error);
+
+                assert.equal(error.stack, originalStack);
+            });
+        });
 
         it("should not modify error, if it is falsy", async () => {
             await assert.eventually.isUndefined(extendWithCodeSnippet());

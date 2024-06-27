@@ -4,6 +4,8 @@ import fs from "fs-extra";
 import { codeFrameColumns } from "@babel/code-frame";
 import { getErrorTitle } from "../browser/stacktrace/utils";
 import { SNIPPET_LINES_ABOVE, SNIPPET_LINES_BELOW, SOURCE_MAP_URL_COMMENT } from "./constants";
+import { AssertViewError } from "../browser/commands/assert-view/errors/assert-view-error";
+import { BaseStateError } from "../browser/commands/assert-view/errors/base-state-error";
 
 interface FormatFileNameHeaderOpts {
     line: number;
@@ -16,6 +18,16 @@ interface FormatErrorSnippetOpts {
     source: string;
     location: { line: number; column: number };
 }
+
+export const shouldNotAddCodeSnippet = (err: Error): boolean => {
+    if (!err) {
+        return true;
+    }
+
+    const isScreenshotError = [AssertViewError, BaseStateError].some(errorClass => err instanceof errorClass);
+
+    return isScreenshotError;
+};
 
 export const softFileURLToPath = (fileName: string): string => {
     if (!fileName.startsWith("file://")) {
