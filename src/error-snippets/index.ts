@@ -1,6 +1,6 @@
 import { findRelevantStackFrame, resolveLocationWithStackFrame } from "./frames";
 import { extractSourceMaps, resolveLocationWithSourceMap } from "./source-maps";
-import { getSourceCodeFile, formatErrorSnippet } from "./utils";
+import { getSourceCodeFile, formatErrorSnippet, shouldNotAddCodeSnippet } from "./utils";
 import logger from "../utils/logger";
 import type { ResolvedFrame, SufficientStackFrame, WithSnippetError } from "./types";
 
@@ -14,11 +14,11 @@ const stackFrameLocationResolver = async (stackFrame: SufficientStackFrame): Pro
 };
 
 export const extendWithCodeSnippet = async (err: WithSnippetError): Promise<WithSnippetError> => {
-    if (!err) {
-        return err;
-    }
-
     try {
+        if (shouldNotAddCodeSnippet(err)) {
+            return err;
+        }
+
         const relevantStackFrame = findRelevantStackFrame(err);
 
         if (!relevantStackFrame) {
