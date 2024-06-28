@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.14.1](https://github.com/gemini-testing/testplane/compare/v8.14.0...v8.14.1) (2024-06-28)
+
+
+### Bug Fixes
+
+* declare err property on Test type ([ddb9988](https://github.com/gemini-testing/testplane/commit/ddb998899461204bea4045294a643524f6ad79af))
+* don't add error snippets on screenshot error ([a5d7842](https://github.com/gemini-testing/testplane/commit/a5d7842ff61f692537d6a52abde554f6d196f1e2))
+
 ## [8.14.0](https://github.com/gemini-testing/testplane/compare/v8.13.0...v8.14.0) (2024-06-25)
 
 
