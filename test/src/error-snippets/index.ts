@@ -53,9 +53,9 @@ describe("error-snippets", () => {
                 );
                 const originalStack = error.stack;
 
-                await extendWithCodeSnippet(error);
+                const result = await extendWithCodeSnippet(error);
 
-                assert.equal(error.stack, originalStack);
+                assert.isUndefined(result.snippet, originalStack);
             });
         });
 
