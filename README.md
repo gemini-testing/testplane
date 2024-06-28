@@ -89,6 +89,7 @@ The documentation is divided into several sections:
 - [Testplane Events](docs/events.md)
 - [Testplane Programmatic API](docs/programmatic-api.md)
 - [Testplane Component Testing (experimental)](docs/component-testing.md)
+- [Testplane Debugging](docs/debugging.md)
 
 ## Rename from "Hermione"
 

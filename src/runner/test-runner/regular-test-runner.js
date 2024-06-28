@@ -81,14 +81,29 @@ module.exports = class RegularTestRunner extends Runner {
         this._test.duration = Date.now() - this._test.startTime;
     }
 
+    _getTraceparent() {
+        const version = "00";
+        const traceId = crypto.randomBytes(16).toString("hex");
+        const parentId = "00" + crypto.randomBytes(7).toString("hex");
+        const traceFlag = "01";
+
+        return `${version}-${traceId}-${parentId}-${traceFlag}`;
+    }
+
     async _getBrowser() {
         try {
-            const state = { testXReqId: crypto.randomUUID() };
+            const state = {
+                testXReqId: crypto.randomUUID(),
+                traceparent: this._getTraceparent(),
+            };
 
             this._browser = await this._browserAgent.getBrowser({ state });
 
             // TODO: move logic to caching pool (in order to use correct state for cached browsers)
-            if (this._browser.state.testXReqId !== state.testXReqId) {
+            if (
+                this._browser.state.testXReqId !== state.testXReqId ||
+                this._browser.state.traceparent !== state.traceparent
+            ) {
                 this._browser.applyState(state);
             }
 

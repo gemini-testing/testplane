@@ -45,6 +45,8 @@ describe("runner/test-runner/regular-test-runner", () => {
         return runner.run(workers);
     };
 
+    const applyStateSpy = sandbox.spy();
+
     const stubBrowser_ = (opts = {}) => {
         return _.defaults(opts, {
             id: "default-id",
@@ -53,6 +55,7 @@ describe("runner/test-runner/regular-test-runner", () => {
             state: { isBroken: false },
             sessionId: "default-session-id",
             applyState: sinon.stub().callsFake(function (state) {
+                applyStateSpy(state);
                 this.state = state;
             }),
             publicAPI: {
@@ -72,6 +75,9 @@ describe("runner/test-runner/regular-test-runner", () => {
 
         sandbox.stub(logger, "warn");
         sandbox.stub(crypto, "randomUUID").returns("");
+        sandbox.stub(crypto, "randomBytes").callsFake(size => {
+            return Buffer.from("11".repeat(size), "hex");
+        });
     });
 
     afterEach(() => sandbox.restore());
@@ -89,7 +95,10 @@ describe("runner/test-runner/regular-test-runner", () => {
 
     describe("run", () => {
         it("should get browser before running test", async () => {
-            const state = { testXReqId: "12345" };
+            const state = {
+                testXReqId: "12345",
+                traceparent: "00-11111111111111111111111111111111-0011111111111111-01",
+            };
             crypto.randomUUID.returns(state.testXReqId);
             BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(
                 stubBrowser_({
@@ -122,17 +131,35 @@ describe("runner/test-runner/regular-test-runner", () => {
         });
 
         it("should modify state if 'testXReqId' is not actual", async () => {
-            const state = { testXReqId: "12345" };
+            const state = {
+                testXReqId: "12345",
+            };
             crypto.randomUUID.returns(state.testXReqId);
             const browser = stubBrowser_({
-                state: { testXReqId: "67890" },
+                state: { testXReqId: "67890", traceparent: "00-11111111111111111111111111111111-0011111111111111-01" },
             });
             BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(browser);
             const workers = mkWorkers_();
 
             await run_({ workers });
 
-            assert.calledWith(browser.applyState.firstCall, state);
+            assert.calledWith(applyStateSpy, sinon.match(state));
+        });
+
+        it("should modify state if 'traceparent' is not actual", async () => {
+            const state = {
+                traceparent: "00-11111111111111111111111111111111-0011111111111111-01",
+            };
+            crypto.randomUUID.returns(state.testXReqId);
+            const browser = stubBrowser_({
+                state: { traceparent: "00-22222222222222222222222222222222-0022222222222222-01" },
+            });
+            BrowserAgent.prototype.getBrowser.withArgs({ state }).resolves(browser);
+            const workers = mkWorkers_();
+
+            await run_({ workers });
+
+            assert.calledWith(applyStateSpy, sinon.match(state));
         });
 
         it("should run test in workers", async () => {
