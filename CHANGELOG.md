@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.15.0](https://github.com/gemini-testing/testplane/compare/v8.14.1...v8.15.0) (2024-07-03)
+
+
+### Features
+
+* add traceparent header to all requests ([#955](https://github.com/gemini-testing/testplane/issues/955)) ([ef5a64e](https://github.com/gemini-testing/testplane/commit/ef5a64ef743ff071b3a55de4c46d7b1049c8bbaa))
+
 ### [8.14.1](https://github.com/gemini-testing/testplane/compare/v8.14.0...v8.14.1) (2024-06-28)
 
 
