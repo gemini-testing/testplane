@@ -1,37 +1,37 @@
 name: NPM publish
 on:
-  workflow_dispatch:
-    inputs:
-      versionType:
-        type: choice
-        description: Version Type
-        required: true
-        options:
-        - patch
-        - minor
-        - major
+    workflow_dispatch:
+        inputs:
+            versionType:
+                type: choice
+                description: Version Type
+                required: true
+                options:
+                    - patch
+                    - minor
+                    - major
 permissions:
-  contents: write
+    contents: write
 jobs:
-  publish:
-    name: Publishing to NPM
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GH_ACCESS_TOKEN }}
-      - name: Setup Node JS
-        uses: actions/setup-node@v2
-        with:
-          node-version: 18
-          registry-url: https://registry.npmjs.org
-      - run: npm ci
-      - run: git config --global user.email "y-infra@yandex.ru"
-      - run: git config --global user.name "y-infra"
-      - run: npm run release -- --release-as ${{ github.event.inputs.versionType }}
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - run: git push --follow-tags
+    publish:
+        name: Publishing to NPM
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GH_ACCESS_TOKEN }}
+            - name: Setup Node JS
+              uses: actions/setup-node@v2
+              with:
+                  node-version: 18
+                  registry-url: https://registry.npmjs.org
+            - run: npm ci
+            - run: git config --global user.email "y-infra@yandex.ru"
+            - run: git config --global user.name "y-infra"
+            - run: npm run release -- --release-as ${{ github.event.inputs.versionType }}
+            - run: npm publish
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+            - run: git push --follow-tags
