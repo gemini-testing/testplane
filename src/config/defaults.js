@@ -110,6 +110,7 @@ module.exports = {
             },
         },
     },
+    passive: false,
 };
 
 module.exports.configPaths = [".testplane.conf.ts", ".testplane.conf.js", ".hermione.conf.ts", ".hermione.conf.js"];

@@ -63,6 +63,18 @@ function extendWithTimeout({ treeBuilder, config }) {
     });
 }
 
+function disableInPassiveBrowser({ treeBuilder, config }) {
+    const { passive } = config;
+
+    if (!passive) {
+        return;
+    }
+
+    treeBuilder.addTrap(testObject => {
+        testObject.disable();
+    });
+}
+
 function buildGlobalSkipInstruction(config) {
     const { value: skipBrowsers, key: envKey } = env.parseCommaSeparatedValue([
         "TESTPLANE_SKIP_BROWSERS",
@@ -88,6 +100,7 @@ module.exports = {
         extendWithBrowserId,
         extendWithBrowserVersion,
         extendWithTimeout,
+        disableInPassiveBrowser,
         buildGlobalSkipInstruction,
     },
 };
