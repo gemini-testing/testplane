@@ -33,6 +33,11 @@ export class ConfigurableTestObject extends TestObject {
         this.silentSkip = true;
     }
 
+    enable(): void {
+        this.disabled = false;
+        this.silentSkip = false;
+    }
+
     get id(): ConfigurableTestObjectData["id"] {
         return this.#data.id;
     }
