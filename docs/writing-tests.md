@@ -174,6 +174,27 @@ it('should work another way', function() {
 ```
 The test will be processed in all browsers and **silently** skipped in `ie9`.
 
+### Also
+This feature allows you to run the specified suite or test in [passive browser](./config.md#passive).
+You can do this by using the global `testplane.also` helper. It supports the following methods:
+
+- `.in` – Adds matchers for browsers.
+
+These methods take the following arguments:
+
+- browser {String|RegExp|Array<String|RegExp>} — A matcher for browser(s) to enable test.
+
+For example:
+```js
+// ...
+testplane.also.in('yabro');
+
+it('should run in passive browser', function() {
+    return doSomething();
+});
+```
+The test will be run in passive browser "yabro" and in all other not passive browsers.
+
 ### Config overriding
 You can override some config settings for specific test, suite or hook via `testplane.config.*` notation.
 

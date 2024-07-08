@@ -56,6 +56,7 @@
   - [region](#region)
   - [headless](#headless)
   - [isolation](#isolation)
+  - [passive](#passive)
 - [system](#system)
   - [debug](#debug)
   - [mochaOpts](#mochaopts)
@@ -197,6 +198,7 @@ Option name               | Description
 `region`                  | Ability to choose different datacenters for run in cloud service. Default value is `null`.
 `headless`                | Ability to run headless browser in cloud service. Default value is `null`.
 `isolation`               | Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). Default value is `false`, but `true` for chrome@93 and higher.
+`passive`                 | Ability to make browser passive. Tests are not run in passive browsers by default. Default value is `false`.
 
 #### desiredCapabilities
 **Required.** Used WebDriver [DesiredCapabilities](https://github.com/SeleniumHQ/selenium/wiki/DesiredCapabilities). For example,
@@ -490,6 +492,11 @@ Ability to run headless browser in cloud service. Default value is `null`. Can b
 
 ####  isolation
 Ability to execute tests in isolated clean-state environment ([incognito browser context](https://chromedevtools.github.io/devtools-protocol/tot/Target/#method-createBrowserContext)). It means that `testsPerSession` can be set to `Infinity` in order to speed up tests execution and save browser resources. Currently works only in chrome@93 and higher. Default value is `null`, but `true` for chrome@93 and higher.
+
+#### passive
+Ability to make browser passive. Tests are not run in passive browsers by default. Using [testplane.also.in](./writing-tests.md#also) makes it possible to run test or suite before which it is specified.
+
+:warning: When using this option, you need to get rid of the [hermione-passive-browsers](https://github.com/gemini-testing/testplane-passive-browsers) plugin, since they work together incorrectly.
 
 ### system
 
