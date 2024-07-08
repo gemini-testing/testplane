@@ -216,6 +216,39 @@ describe("test-reader/build-instructions", () => {
             });
         });
 
+        describe("disableInPassiveBrowser", () => {
+            describe("should not add decorator to tree builder if", () => {
+                it("'passive' option is not specified in config", () => {
+                    execTrapInstruction_(Instructions.extendWithTimeout, { config: {} });
+
+                    assert.notCalled(TreeBuilder.prototype.addTrap);
+                });
+
+                it("'passive' option set to 'false' in config", () => {
+                    execTrapInstruction_(Instructions.extendWithTimeout, {
+                        config: {
+                            passive: false,
+                        },
+                    });
+
+                    assert.notCalled(TreeBuilder.prototype.addTrap);
+                });
+            });
+
+            it("should disable passed test object if 'passive' option is set to 'true' in config", () => {
+                const decorator = execTrapInstruction_(Instructions.disableInPassiveBrowser, {
+                    config: {
+                        passive: true,
+                    },
+                });
+                const testObject = { disable: sandbox.stub() };
+
+                decorator(testObject);
+
+                assert.calledOnce(testObject.disable);
+            });
+        });
+
         describe("buildGlobalSkipInstruction", () => {
             beforeEach(() => {
                 sandbox.stub(validators, "validateUnknownBrowsers");

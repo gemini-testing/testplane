@@ -1221,9 +1221,15 @@ describe("config browser-options", () => {
         });
     }
 
-    ["calibrate", "compositeImage", "resetCursor", "strictTestsOrder", "waitOrientationChange", "isolation"].forEach(
-        option => describe(option, () => testBooleanOption(option)),
-    );
+    [
+        "calibrate",
+        "compositeImage",
+        "resetCursor",
+        "strictTestsOrder",
+        "waitOrientationChange",
+        "isolation",
+        "passive",
+    ].forEach(option => describe(option, () => testBooleanOption(option)));
 
     describe("isolation", () => {
         it("should set to 'true' if browser support isolation", () => {

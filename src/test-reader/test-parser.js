@@ -50,6 +50,7 @@ class TestParser extends EventEmitter {
             .push(Instructions.extendWithBrowserId)
             .push(Instructions.extendWithBrowserVersion)
             .push(Instructions.extendWithTimeout)
+            .push(Instructions.disableInPassiveBrowser)
             .push(Instructions.buildGlobalSkipInstruction(config));
 
         this.#applyInstructionsEvents(eventBus);

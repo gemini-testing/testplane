@@ -362,5 +362,7 @@ function buildBrowserOptions(defaultFactory, extra) {
                 return caps ? isSupportIsolation(caps.browserName, caps.browserVersion) : value;
             },
         }),
+
+        passive: options.boolean("passive"),
     });
 }
