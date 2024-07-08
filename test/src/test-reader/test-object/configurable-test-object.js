@@ -153,7 +153,7 @@ describe("test-reader/test-object/configurable-test-object", () => {
         ["disabled", false, true, false],
         ["silentSkip", false, true, false],
         ["timeout", 0, 100500, 500100],
-        ["browserId", undefined, "foo", "bar"],
+        ["browserId", "", "foo", "bar"],
         ["browserVersion", undefined, "100500", "500100"],
     ].forEach(([property, defaultValue, testValue, valueToOverwrite]) => {
         describe(property, () => {

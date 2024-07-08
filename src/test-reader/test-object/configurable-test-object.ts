@@ -86,7 +86,7 @@ export class ConfigurableTestObject extends TestObject {
     }
 
     get browserId(): ConfigurableTestObjectData["browserId"] {
-        return this.#getInheritedProperty<ConfigurableTestObjectData["browserId"]>("browserId", undefined);
+        return this.#getInheritedProperty<ConfigurableTestObjectData["browserId"]>("browserId", "");
     }
 
     set browserVersion(version: string) {

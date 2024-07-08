@@ -34,6 +34,6 @@ export class Hook extends TestObject {
     }
 
     get browserId(): ConfigurableTestObjectData["browserId"] {
-        return this.parent ? this.parent.browserId : undefined;
+        return this.parent ? this.parent.browserId : "";
     }
 }
