@@ -14,7 +14,7 @@ export type ConfigurableTestObjectData = {
     disabled: boolean;
     skipReason: string;
     silentSkip: boolean;
-    browserId?: string;
+    browserId: string;
     browserVersion?: string;
 };
 
