@@ -9,6 +9,7 @@ import { StatsResult } from "../stats";
 import { ConfigController } from "../test-reader/controllers/config-controller";
 import { OnlyController } from "../test-reader/controllers/only-controller";
 import { SkipController } from "../test-reader/controllers/skip-controller";
+import { AlsoController } from "../test-reader/controllers/also-controller";
 import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
 import { WorkerProcess } from "../utils/worker-process";
 import { BaseTestplane } from "../base-testplane";
@@ -161,6 +162,7 @@ export interface GlobalHelper {
     ctx: TestplaneCtx;
     skip: SkipController;
     only: OnlyController;
+    also: AlsoController;
     browser: (browserName: string) => BrowserVersionController;
     config: ConfigController;
 }

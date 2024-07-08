@@ -4,6 +4,7 @@ const { TreeBuilder } = require("src/test-reader/tree-builder");
 const { InstructionsList, Instructions } = require("src/test-reader/build-instructions");
 const { SkipController } = require("src/test-reader/controllers/skip-controller");
 const { OnlyController } = require("src/test-reader/controllers/only-controller");
+const { AlsoController } = require("src/test-reader/controllers/also-controller");
 const { ConfigController } = require("src/test-reader/controllers/config-controller");
 const { TestParserAPI } = require("src/test-reader/test-parser-api");
 const { Test, Suite } = require("src/test-reader/test-object");
@@ -136,6 +137,7 @@ describe("test-reader/test-parser", () => {
             Object.entries({
                 skip: SkipController,
                 only: OnlyController,
+                also: AlsoController,
             }).forEach(([controllerName, controllerClass]) => {
                 describe(`hermions.${controllerName}`, () => {
                     beforeEach(() => {

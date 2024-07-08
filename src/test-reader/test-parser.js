@@ -2,6 +2,7 @@ const { EventEmitter } = require("events");
 const { InstructionsList, Instructions } = require("./build-instructions");
 const { SkipController } = require("./controllers/skip-controller");
 const { OnlyController } = require("./controllers/only-controller");
+const { AlsoController } = require("./controllers/also-controller");
 const { ConfigController } = require("./controllers/config-controller");
 const browserVersionController = require("./controllers/browser-version-controller");
 const { TreeBuilder } = require("./tree-builder");
@@ -41,6 +42,7 @@ class TestParser extends EventEmitter {
             ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),
             skip: SkipController.create(eventBus),
+            also: AlsoController.create(eventBus),
         };
 
         global.testplane = toolGlobals;
