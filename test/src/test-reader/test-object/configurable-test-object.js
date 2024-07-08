@@ -147,6 +147,24 @@ describe("test-reader/test-object/configurable-test-object", () => {
         });
     });
 
+    describe("enable", () => {
+        it("should unset disabled property", () => {
+            const obj = mkObj_();
+
+            obj.enable();
+
+            assert.isFalse(obj.disabled);
+        });
+
+        it("should unset silentSkip property", () => {
+            const obj = mkObj_();
+
+            obj.enable();
+
+            assert.isFalse(obj.silentSkip);
+        });
+    });
+
     [
         ["pending", false, true, false],
         ["skipReason", "", "foo bar", "baz qux"],
