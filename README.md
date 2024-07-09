@@ -80,7 +80,7 @@ Congratulations on writing your first Testplane test, which navigates to a page 
 
 You can find the Docs [on our website](https://testplane.io/).
 
-Feel free to visit these pages for a brief overview of some of the Testplane features:
+Feel free to visit these pages for a brief overview of some of Testplane features:
 
 - [Testplane Features Overview](docs/features.md)
 - [Quick Start](docs/quick-start.md)
