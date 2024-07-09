@@ -1,7 +1,9 @@
 <p align="center">
-  <picture>
-    <img alt="Testplane" src="docs/images/testplane.svg" width="220" style="max-width: 100%;">
-  </picture>
+  <a href="https://testplane.io/">
+    <picture>
+      <img alt="Testplane" src="docs/images/testplane.svg" width="220" style="max-width: 100%;">
+    </picture>
+  </a>
 </p>
 
 <p align="center">
@@ -33,7 +35,7 @@ Testplane (ex-Hermione) is a battle-hardened framework for testing web apps at a
 
 ## Getting started
 
-> Note: if you prefer manual installation, you can run `npm i -D testplane`. Check out [the Docs](docs/quick-start.md) for details.
+> Note: if you prefer manual installation, you can run `npm i -D testplane`. Check out [the Docs](https://testplane.io/docs/v8/) for details.
 
 1. Use the CLI wizard to set up testplane and generate basic configuration:
 
@@ -76,7 +78,9 @@ Congratulations on writing your first Testplane test, which navigates to a page 
 
 ## Docs
 
-The documentation is divided into several sections:
+You can find the Docs [on our website](https://testplane.io/).
+
+Feel free to visit these pages for a brief overview of some of Testplane features:
 
 - [Testplane Features Overview](docs/features.md)
 - [Quick Start](docs/quick-start.md)
@@ -91,11 +95,13 @@ The documentation is divided into several sections:
 - [Testplane Component Testing (experimental)](docs/component-testing.md)
 - [Testplane Debugging](docs/debugging.md)
 
+We post the most actual info, guides and changelogs on the website. You can improve it by sending pull requests to [this repository](https://github.com/gemini-testing/testplane-docs/).
+
 ## Rename from "Hermione"
 
 This project was formerly known as "Hermione", but eventually some copyright and trademark issues surfaced, leading to the decision to rebrand. After some discussion, we settled on "Testplane" as the official new title. Considering this change as merely a rebranding, we've proceeded with the existing version count instead of starting anew. Thus, Testplane `v8.x` is a drop-in replacement for Hermione `v8.x`.
 
-Learn more about migration from Hermione to Testplane in [the Docs](docs/migration-from-hermione.md).
+Learn more about migration from Hermione to Testplane in [the Docs](https://testplane.io/docs/v8/migrations/how-to-upgrade-hermione-to-testplane/).
 
 ## Contributing
 
