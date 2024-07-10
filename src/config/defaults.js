@@ -113,4 +113,13 @@ module.exports = {
     passive: false,
 };
 
-module.exports.configPaths = [".testplane.conf.ts", ".testplane.conf.js", ".hermione.conf.ts", ".hermione.conf.js"];
+module.exports.configPaths = [
+    ".testplane.conf.ts",
+    ".testplane.conf.js",
+    "testplane.config.ts",
+    "testplane.config.js",
+    "testplane.config.cts",
+    "testplane.config.cjs",
+    ".hermione.conf.ts",
+    ".hermione.conf.js",
+];
