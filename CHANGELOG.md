@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.16.0](https://github.com/gemini-testing/testplane/compare/v8.15.0...v8.16.0) (2024-07-10)
+
+
+### Features
+
+* add "also" controller to enable tests in passive browser ([90455c8](https://github.com/gemini-testing/testplane/commit/90455c8c51da5e39d234205907d587e2458cf184))
+* add "enable" method for runnables ([0726875](https://github.com/gemini-testing/testplane/commit/0726875c580ce6f4a89098dc1ee83579d277ed49))
+* implement ability to specify browser as passive ([5902ec8](https://github.com/gemini-testing/testplane/commit/5902ec895834a7bb73dfe8a0f2b70fe1c80f4321))
+
+
+### Bug Fixes
+
+* specify "browserId" as string for runnables ([5a928d1](https://github.com/gemini-testing/testplane/commit/5a928d18c02df3e32b879cdb1bcd3e288c8d85f9))
+
 ## [8.15.0](https://github.com/gemini-testing/testplane/compare/v8.14.1...v8.15.0) (2024-07-03)
 
 
