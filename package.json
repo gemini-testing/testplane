@@ -34,6 +34,7 @@
     "type": "git",
     "url": "git://github.com/gemini-testing/testplane.git"
   },
+  "homepage": "https://testplane.io/",
   "engines": {
     "node": ">= 18.0.0"
   },
