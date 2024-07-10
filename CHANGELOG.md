@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.17.0](https://github.com/gemini-testing/testplane/compare/v8.16.0...v8.17.0) (2024-07-10)
+
+
+### Features
+
+* look for configs in format testplane.config.{ts,js,cts,cjs} ([1f08b88](https://github.com/gemini-testing/testplane/commit/1f08b889ef2605cbb0c2f5ff5257c4e5c392d7d8))
+
 ## [8.16.0](https://github.com/gemini-testing/testplane/compare/v8.15.0...v8.16.0) (2024-07-10)
 
 
