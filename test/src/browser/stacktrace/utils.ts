@@ -1,13 +1,13 @@
 import {
     ShallowStackFrames,
-    applyStackFrames,
+    applyStackTraceIfBetter,
     captureRawStackFrames,
     filterExtraWdioFrames,
 } from "../../../../src/browser/stacktrace/utils";
 
 type AnyFunc = (...args: any[]) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-describe("utils/stacktrace", () => {
+describe("stacktrace/utils", () => {
     describe("captureRawStackFrames", () => {
         it("should only return frames", () => {
             const frames = captureRawStackFrames();
@@ -29,32 +29,30 @@ describe("utils/stacktrace", () => {
         });
     });
 
-    describe("applyStackFrames", () => {
+    describe("applyStackTraceIfBetter", () => {
         it("should work with multiline error messages", () => {
             const error = new Error("my\nmulti-line\nerror\nmessage");
-            const frames = "foo\nbar";
+            error.stack = "Error: " + error.message + "\n";
 
-            applyStackFrames(error, frames);
+            const frames = [
+                "at Context.<anonymous> (test/src/browser/stacktrace/utils.ts:43:20)",
+                "at processImmediate (node:internal/timers:471:21)",
+            ].join("\n");
 
-            const expectedStack = ["Error: my\nmulti-line\nerror\nmessage", "foo", "bar"].join("\n");
+            applyStackTraceIfBetter(error, frames);
 
-            assert.equal(error.stack, expectedStack);
-        });
-
-        it("should work with error-like objects", () => {
-            const error = { message: "foo" } as Error;
-            const frames = "bar";
-
-            applyStackFrames(error, frames);
-
-            const expectedStack = ["Error: foo", "bar"].join("\n");
+            const expectedStack = [
+                "Error: my\nmulti-line\nerror\nmessage",
+                "at Context.<anonymous> (test/src/browser/stacktrace/utils.ts:43:20)",
+                "at processImmediate (node:internal/timers:471:21)",
+            ].join("\n");
 
             assert.equal(error.stack, expectedStack);
         });
 
         it("should not throw on bad input", () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            assert.doesNotThrow(() => applyStackFrames("foo" as any, 1 as any));
+            assert.doesNotThrow(() => applyStackTraceIfBetter("foo" as any, 1 as any));
         });
     });
 
@@ -73,7 +71,7 @@ describe("utils/stacktrace", () => {
                 "at async Socket.<anonymous> (http://localhost:4001/node_modules/testplane/build/src/runner/browser-env/vite/browser-modules/mocha/index.js?v=80fca7b2:54:17)",
             ].join("\n");
 
-            applyStackFrames(error, errorStack);
+            error.stack = `${error.name}: ${error.message}\n${errorStack}`;
             filterExtraWdioFrames(error);
 
             const expectedStack = [
@@ -106,14 +104,14 @@ describe("utils/stacktrace", () => {
             });
         });
 
-        describe("isNested", () => {
+        describe("areInternal", () => {
             it("should return 'false' on different frames", () => {
                 const key = stackFrames.getKey();
                 const parentFrames = "f\no\no";
 
                 stackFrames.enter(key, parentFrames);
 
-                assert.isFalse(stackFrames.isNested("b\na\nr"));
+                assert.isFalse(stackFrames.areInternal("b\na\nr"));
 
                 stackFrames.leave(key);
             });
@@ -124,18 +122,37 @@ describe("utils/stacktrace", () => {
 
                 stackFrames.enter(key, parentFrames);
 
-                assert.isFalse(stackFrames.isNested("f\no\no"));
+                assert.isFalse(stackFrames.areInternal("f\no\no"));
 
                 stackFrames.leave(key);
             });
 
-            it("should return 'true' on nested frames", () => {
+            it("should return 'true' on nested frames if those are internal frames", () => {
                 const key = stackFrames.getKey();
-                const parentFrames = "b\na\nr";
+                const parentFrames = `b\na\nr`;
+                const childFrames = [
+                    "at async Element.wrapCommandFn (file:///project_folder/node_modules/webdriverio/node_modules/@wdio/utils/build/shim.js:81:29)",
+                    "at processTicksAndRejections (node:internal/process/task_queues:95:5)",
+                    "b",
+                    "a",
+                    "r",
+                ].join("\n");
 
                 stackFrames.enter(key, parentFrames);
 
-                assert.isTrue(stackFrames.isNested("f\no\no\nb\na\nr"));
+                assert.isTrue(stackFrames.areInternal(childFrames));
+
+                stackFrames.leave(key);
+            });
+
+            it("should return 'false' on nested frames if those are not internal frames", () => {
+                const key = stackFrames.getKey();
+                const parentFrames = `b\na\nr`;
+                const childFrames = ["f", "o", "o", "b", "a", "r"].join("\n");
+
+                stackFrames.enter(key, parentFrames);
+
+                assert.isFalse(stackFrames.areInternal(childFrames));
 
                 stackFrames.leave(key);
             });
