@@ -22,7 +22,7 @@ const { makeConfigStub } = require("../utils");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler;
+    let Testplane, initReporters, signalHandler, fsRead, fsWrite, fsAccess, fsMkdir, disableAll, enableTest;
 
     const mkTestplane_ = config => {
         Config.create.returns(config || makeConfigStub());
@@ -52,10 +52,22 @@ describe("testplane", () => {
 
         initReporters = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
+        fsRead = sandbox.stub().resolves("[]");
+        fsWrite = sandbox.stub().resolves();
+        fsAccess = sandbox.stub().resolves();
+        fsMkdir = sandbox.stub().resolves();
+        disableAll = sandbox.stub();
+        enableTest = sandbox.stub();
 
-        Testplane = proxyquire("src/testplane", {
+        Testplane = proxyquire.noPreserveCache().noCallThru()("src/testplane", {
             "./reporters": { initReporters },
             "./signal-handler": signalHandler,
+            "fs/promises": {
+                readFile: fsRead,
+                writeFile: fsWrite,
+                access: fsAccess,
+                mkdir: fsMkdir,
+            },
         }).Testplane;
     });
 
@@ -384,9 +396,65 @@ describe("testplane", () => {
             });
 
             it('should return "false" if there are failed tests', () => {
-                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL));
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                };
+                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL, results));
 
                 return runTestplane().then(success => assert.isFalse(success));
+            });
+
+            it("should save failed tests", async () => {
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                };
+                mkNodejsEnvRunner_(runner => {
+                    runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
+                });
+
+                await runTestplane();
+
+                assert.calledWith(
+                    fsWrite,
+                    "some-path",
+                    JSON.stringify([
+                        {
+                            fullTitle: results.fullTitle(),
+                            browserId: results.browserId,
+                        },
+                    ]),
+                );
+            });
+
+            it("should run only failed with --run-failed", async () => {
+                const failed = [
+                    {
+                        fullTitle: "Title",
+                        browserId: "chrome",
+                    },
+                ];
+                const testCollection = {
+                    disableAll,
+                    enableTest,
+                };
+
+                fsRead.resolves(JSON.stringify(failed));
+                mkNodejsEnvRunner_(runner => {
+                    runner.emit(RunnerEvents.INIT);
+                    runner.emit(RunnerEvents.AFTER_TESTS_READ, testCollection);
+                });
+
+                sandbox.stub(Testplane.prototype, "_readTests");
+                Testplane.prototype._readTests.returns([]);
+
+                await runTestplane([], {
+                    runFailed: true,
+                });
+
+                assert.called(disableAll);
+                assert.calledWith(enableTest, "Title", "chrome");
             });
 
             it("should halt if there were some errors", () => {
@@ -467,6 +535,7 @@ describe("testplane", () => {
             it("all runner events with passed event data", () => {
                 const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
+                sandbox.stub(testplane, "_addFailedTest");
                 const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
 
                 return testplane.run().then(() => {
@@ -760,6 +829,8 @@ describe("testplane", () => {
 
         it('should return "true" after some test fail', () => {
             const testplane = mkTestplane_();
+
+            sandbox.stub(testplane, "_addFailedTest");
 
             mkNodejsEnvRunner_(runner => {
                 runner.emit(RunnerEvents.TEST_FAIL);

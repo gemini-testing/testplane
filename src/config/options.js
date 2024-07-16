@@ -107,6 +107,8 @@ const rootSection = section(
 
         plugins: options.anyObject(),
 
+        failedTestsPath: options.string("failedTestsPath"),
+
         sets: map(
             section({
                 files: option({

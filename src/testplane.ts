@@ -16,13 +16,16 @@ import logger from "./utils/logger";
 import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
-import { MasterEventHandler, Test } from "./types";
+import { MasterEventHandler, Test, TestResult } from "./types";
+import * as fs from "fs/promises";
+import path from "path";
 
 interface RunOpts {
     browsers: string[];
     sets: string[];
     grep: RegExp;
     updateRefs: boolean;
+    runFailed: boolean;
     requireModules: string[];
     inspectMode: {
         inspect: boolean;
@@ -48,14 +51,21 @@ export interface Testplane {
     prependListener: MasterEventHandler<this>;
 }
 
+export type FailedListItem = {
+    browserId?: string;
+    fullTitle: string;
+};
+
 export class Testplane extends BaseTestplane {
     protected failed: boolean;
+    protected failedList: FailedListItem[];
     protected runner: NodejsEnvRunner | BrowserEnvRunner | null;
 
     constructor(config?: string | ConfigInput) {
         super(config);
 
         this.failed = false;
+        this.failedList = [];
         this.runner = null;
     }
 
@@ -80,6 +90,7 @@ export class Testplane extends BaseTestplane {
             sets,
             grep,
             updateRefs,
+            runFailed,
             requireModules,
             inspectMode,
             replMode,
@@ -101,7 +112,29 @@ export class Testplane extends BaseTestplane {
         );
         this.runner = runner;
 
-        this.on(MasterEvents.TEST_FAIL, () => this._fail()).on(MasterEvents.ERROR, (err: Error) => this.halt(err));
+        this.on(MasterEvents.TEST_FAIL, () => this._fail());
+        this.on(MasterEvents.TEST_FAIL, res => this._addFailedTest(res));
+        this.on(MasterEvents.ERROR, (err: Error) => this.halt(err));
+
+        if (runFailed) {
+            let previousRunFailedTests: FailedListItem[];
+            this.on(MasterEvents.INIT, async () => {
+                previousRunFailedTests = await this._readFailed();
+            });
+
+            this.on(MasterEvents.AFTER_TESTS_READ, testCollection => {
+                if (previousRunFailedTests.length) {
+                    testCollection.disableAll();
+                    previousRunFailedTests.forEach(({ fullTitle, browserId }) => {
+                        testCollection.enableTest(fullTitle, browserId);
+                    });
+                }
+            });
+        }
+
+        this.on(MasterEvents.RUNNER_END, async () => {
+            await this._saveFailed();
+        });
 
         await initReporters(reporters, this);
 
@@ -117,6 +150,25 @@ export class Testplane extends BaseTestplane {
         );
 
         return !this.isFailed();
+    }
+
+    protected async _readFailed(): Promise<FailedListItem[]> {
+        try {
+            const data = await fs.readFile(this._config.failedTestsPath, "utf8");
+            return JSON.parse(data);
+        } catch {
+            return [];
+        }
+    }
+
+    protected async _saveFailed(): Promise<void> {
+        const dirname = path.dirname(this._config.failedTestsPath);
+        try {
+            await fs.access(dirname);
+        } catch {
+            await fs.mkdir(dirname, { recursive: true });
+        }
+        await fs.writeFile(this._config.failedTestsPath, JSON.stringify(this.failedList));
     }
 
     protected async _readTests(
@@ -167,6 +219,14 @@ export class Testplane extends BaseTestplane {
 
     protected _fail(): void {
         this.failed = true;
+    }
+
+    protected _addFailedTest(result: TestResult): void {
+        this.failedList.push({
+            fullTitle: result.fullTitle(),
+            browserId: result.browserId,
+        });
+        this._saveFailed();
     }
 
     isWorker(): boolean {

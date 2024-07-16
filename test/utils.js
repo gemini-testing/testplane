@@ -30,6 +30,7 @@ function makeConfigStub(opts = {}) {
             testRunEnv: NODEJS_TEST_RUN_ENV,
         },
         sets: {},
+        failedTestsPath: "some-path",
     });
 
     const config = {
@@ -38,6 +39,7 @@ function makeConfigStub(opts = {}) {
         system: opts.system,
         sets: opts.sets,
         configPath: opts.configPath,
+        failedTestsPath: opts.failedTestsPath,
     };
 
     opts.browsers.forEach(browserId => {

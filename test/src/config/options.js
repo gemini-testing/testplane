@@ -463,6 +463,33 @@ describe("config options", () => {
         });
     });
 
+    describe("failedTestsPath", () => {
+        it("should throw error if failedTestsPath is not a string", () => {
+            const readConfig = { failedTestsPath: () => {} };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"failedTestsPath" must be a string');
+        });
+
+        it("should set default failedTestsPath option if it does not set in config file", () => {
+            const config = createConfig();
+
+            assert.equal(config.failedTestsPath, defaults.failedTestsPath);
+        });
+
+        it("should override failedTestsPath option", () => {
+            const newString = "newString";
+            const readConfig = { failedTestsPath: newString };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.equal(config.failedTestsPath, newString);
+        });
+    });
+
     describe("prepareEnvironment", () => {
         it("should throw error if prepareEnvironment is not a null or function", () => {
             const readConfig = { prepareEnvironment: "String" };

@@ -94,6 +94,7 @@ module.exports = {
     headless: null,
     isolation: null,
     testRunEnv: NODEJS_TEST_RUN_ENV,
+    failedTestsPath: ".testplane/failed-tests.json",
     devServer: {
         command: null,
         cwd: null,

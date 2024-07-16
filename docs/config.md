@@ -68,6 +68,7 @@
   - [parallelLimit](#parallellimit)
   - [fileExtensions](#fileextensions)
   - [testRunEnv](#testrunenv)
+- [failedTestsPath](#failedtestspath)
 - [plugins](#plugins)
   - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [List of useful plugins](#list-of-useful-plugins)
@@ -592,6 +593,9 @@ export const {
     }
 }
 ```
+
+### failedTestsPath
+Testplane will save a list of all failed tests to `failedTestsPath`
 
 ### plugins
 Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
