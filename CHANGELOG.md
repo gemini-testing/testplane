@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.17.1](https://github.com/gemini-testing/testplane/compare/v8.17.0...v8.17.1) (2024-07-16)
+
+
+### Bug Fixes
+
+* move escape-string-regexp to deps ([#974](https://github.com/gemini-testing/testplane/issues/974)) ([abb14a0](https://github.com/gemini-testing/testplane/commit/abb14a08b724f88c0c292ef323ed82680157ff9d))
+
 ## [8.17.0](https://github.com/gemini-testing/testplane/compare/v8.16.0...v8.17.0) (2024-07-10)
 
 
