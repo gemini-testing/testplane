@@ -1,7 +1,8 @@
 import { SourceMapConsumer, type BasicSourceMapConsumer } from "source-map";
 import url from "url";
 import { SOURCE_MAP_URL_COMMENT } from "./constants";
-import { softFileURLToPath, getSourceCodeFile } from "./utils";
+import { getSourceCodeFile } from "./utils";
+import { softFileURLToPath } from "../utils/fs";
 import type { SufficientStackFrame, ResolvedFrame } from "./types";
 
 export const extractSourceMaps = async (

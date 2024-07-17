@@ -1,4 +1,4 @@
-import { ShallowStackFrames, applyStackFrames, captureRawStackFrames } from "./utils";
+import { ShallowStackFrames, applyStackTraceIfBetter, captureRawStackFrames } from "./utils";
 import { getBrowserCommands, getElementCommands } from "../history/commands";
 import { runWithHooks } from "../history/utils";
 
@@ -15,7 +15,7 @@ export const runWithStacktraceHooks = ({
 }): ReturnType<typeof fn> => {
     const frames = captureRawStackFrames(stackFilterFunc || runWithStacktraceHooks);
 
-    if (stackFrames.isNested(frames)) {
+    if (stackFrames.areInternal(frames)) {
         return fn();
     }
 
@@ -25,7 +25,7 @@ export const runWithStacktraceHooks = ({
         before: () => stackFrames.enter(key, frames),
         fn,
         after: () => stackFrames.leave(key),
-        error: (err: Error) => applyStackFrames(err, frames),
+        error: (err: Error) => applyStackTraceIfBetter(err, frames),
     });
 };
 

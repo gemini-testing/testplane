@@ -2,12 +2,8 @@ import path from "path";
 import sinon from "sinon";
 import url from "url";
 import fs from "fs-extra";
-import {
-    softFileURLToPath,
-    formatFileNameHeader,
-    getSourceCodeFile,
-    formatErrorSnippet,
-} from "../../../src/error-snippets/utils";
+import { formatFileNameHeader, getSourceCodeFile, formatErrorSnippet } from "../../../src/error-snippets/utils";
+import { softFileURLToPath } from "../../../src/utils/fs";
 import type { codeFrameColumns } from "@babel/code-frame";
 
 const codeFrame = require("@babel/code-frame"); // eslint-disable-line @typescript-eslint/no-var-requires
