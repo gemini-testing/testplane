@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.17.2](https://github.com/gemini-testing/testplane/compare/v8.17.1...v8.17.2) (2024-07-17)
+
+
+### Bug Fixes
+
+* support error snippets nested browser commands ([3c9ce6b](https://github.com/gemini-testing/testplane/commit/3c9ce6becccf1f8940dbd9c92204b15c4efa184a))
+
 ### [8.17.1](https://github.com/gemini-testing/testplane/compare/v8.17.0...v8.17.1) (2024-07-16)
 
 
