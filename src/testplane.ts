@@ -1,5 +1,7 @@
 import { CommanderStatic } from "@gemini-testing/commander";
 import _ from "lodash";
+import * as fs from "fs-extra";
+import path from "path";
 import { Stats as RunnerStats } from "./stats";
 import { BaseTestplane } from "./base-testplane";
 import { MainRunner as NodejsEnvRunner } from "./runner";
@@ -17,8 +19,6 @@ import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
-import * as fs from "fs/promises";
-import path from "path";
 
 interface RunOpts {
     browsers: string[];
@@ -154,21 +154,19 @@ export class Testplane extends BaseTestplane {
 
     protected async _readFailed(): Promise<FailedListItem[]> {
         try {
-            const data = await fs.readFile(this._config.failedTestsPath, "utf8");
-            return JSON.parse(data);
+            const data = await fs.readJSON(this._config.failedTestsPath);
+            return data;
         } catch {
+            //No error because it may be convinient to always use --run-failed, even on the first run
+            logger.warn(`WARNING: Could not read ${this._config.failedTestsPath}`);
             return [];
         }
     }
 
     protected async _saveFailed(): Promise<void> {
         const dirname = path.dirname(this._config.failedTestsPath);
-        try {
-            await fs.access(dirname);
-        } catch {
-            await fs.mkdir(dirname, { recursive: true });
-        }
-        await fs.writeFile(this._config.failedTestsPath, JSON.stringify(this.failedList));
+        await fs.ensureDir(dirname);
+        await fs.writeJSON(this._config.failedTestsPath, this.failedList, { spaces: 4 });
     }
 
     protected async _readTests(
