@@ -22,7 +22,7 @@ const { makeConfigStub } = require("../utils");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler, fsReadJSON, fsWriteJSON, fsEnsureDir, disableAll, enableTest;
+    let Testplane, initReporters, signalHandler, fsReadJSON, fsOutputJSON, disableAll, enableTest;
 
     const mkTestplane_ = config => {
         Config.create.returns(config || makeConfigStub());
@@ -53,8 +53,7 @@ describe("testplane", () => {
         initReporters = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
         fsReadJSON = sandbox.stub().resolves([]);
-        fsWriteJSON = sandbox.stub().resolves();
-        fsEnsureDir = sandbox.stub().resolves();
+        fsOutputJSON = sandbox.stub().resolves();
         disableAll = sandbox.stub();
         enableTest = sandbox.stub();
 
@@ -63,8 +62,7 @@ describe("testplane", () => {
             "./signal-handler": signalHandler,
             "fs-extra": {
                 readJSON: fsReadJSON,
-                writeJSON: fsWriteJSON,
-                ensureDir: fsEnsureDir,
+                outputJSON: fsOutputJSON,
             },
         }).Testplane;
     });
@@ -414,7 +412,7 @@ describe("testplane", () => {
 
                 await runTestplane();
 
-                assert.calledWith(fsWriteJSON, "some-path", [
+                assert.calledWith(fsOutputJSON, "some-path", [
                     {
                         fullTitle: results.fullTitle(),
                         browserId: results.browserId,
