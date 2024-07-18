@@ -58,7 +58,6 @@ exports.run = (opts = {}) => {
             "--update-refs",
             'update screenshot references or gather them if they do not exist ("assertView" command)',
         )
-        .option("--run-failed", "only run tests that failed during the last run")
         .option("--inspect [inspect]", "nodejs inspector on [=[host:]port]")
         .option("--inspect-brk [inspect-brk]", "nodejs inspector with break at the start")
         .option(
@@ -79,7 +78,6 @@ exports.run = (opts = {}) => {
                     set: sets,
                     grep,
                     updateRefs,
-                    runFailed,
                     require: requireModules,
                     inspect,
                     inspectBrk,
@@ -97,7 +95,6 @@ exports.run = (opts = {}) => {
                     sets,
                     grep,
                     updateRefs,
-                    runFailed,
                     requireModules,
                     inspectMode: (inspect || inspectBrk) && { inspect, inspectBrk },
                     replMode: {

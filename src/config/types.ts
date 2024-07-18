@@ -136,7 +136,11 @@ export interface CommonConfig {
     resetCursor: boolean;
     headers: Record<string, string> | null;
 
-    failedTestsPath: string;
+    lastFailed: {
+        only: boolean;
+        input: string;
+        output: string;
+    };
 
     system: SystemConfig;
     headless: "old" | "new" | boolean | null;

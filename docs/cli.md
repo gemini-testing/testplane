@@ -41,7 +41,6 @@ shows the following
     --reporter <reporter>        test reporters
     --grep <grep>                run only tests matching the pattern
     --update-refs                update screenshot references or gather them if they do not exist ("assertView" command)
-    --run-failed                 only run tests that failed on the last run (tests from "failedTestsPath")
     --inspect [inspect]          nodejs inspector on [=[host:]port]
     --inspect-brk [inspect-brk]  nodejs inspector with break at the start
     --repl [type]                run one test, call `browser.switchToRepl` in test code to open repl interface (default: false)
@@ -224,9 +223,6 @@ Also, during the test development process, it may be necessary to execute comman
 ##### How to set up using Webstorm
 
 Ability to run selected text in terminal will be available after this [issue](https://youtrack.jetbrains.com/issue/WEB-49916/Debug-JS-file-selection) will be resolved.
-
-### Running only failed tests
-Sometimes you may want to just re-run failed tests instead of running all. To do so, you can use the CLI option `--run-failed`. Testplane saves a list of all failed tests to `failedTestsPath` (default: `.testplane/failed-tests.json`). When you add `--run-failed` option, testplane reads all tests from `failedTestsPath` and disables all others, before running the tests.
 
 ### Environment variables
 

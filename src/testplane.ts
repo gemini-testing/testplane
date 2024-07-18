@@ -24,7 +24,6 @@ interface RunOpts {
     sets: string[];
     grep: RegExp;
     updateRefs: boolean;
-    runFailed: boolean;
     requireModules: string[];
     inspectMode: {
         inspect: boolean;
@@ -39,9 +38,15 @@ interface RunOpts {
     devtools: boolean;
 }
 
+export type FailedListItem = {
+    browserId?: string;
+    fullTitle: string;
+};
+
 interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
     silent: boolean;
     ignore: string | string[];
+    failed: FailedListItem[];
 }
 
 export interface Testplane {
@@ -49,11 +54,6 @@ export interface Testplane {
     once: MasterEventHandler<this>;
     prependListener: MasterEventHandler<this>;
 }
-
-export type FailedListItem = {
-    browserId?: string;
-    fullTitle: string;
-};
 
 export class Testplane extends BaseTestplane {
     protected failed: boolean;
@@ -89,7 +89,6 @@ export class Testplane extends BaseTestplane {
             sets,
             grep,
             updateRefs,
-            runFailed,
             requireModules,
             inspectMode,
             replMode,
@@ -115,22 +114,6 @@ export class Testplane extends BaseTestplane {
         this.on(MasterEvents.TEST_FAIL, res => this._addFailedTest(res));
         this.on(MasterEvents.ERROR, (err: Error) => this.halt(err));
 
-        if (runFailed) {
-            let previousRunFailedTests: FailedListItem[];
-            this.on(MasterEvents.INIT, async () => {
-                previousRunFailedTests = await this._readFailed();
-            });
-
-            this.on(MasterEvents.AFTER_TESTS_READ, testCollection => {
-                if (previousRunFailedTests.length) {
-                    testCollection.disableAll();
-                    previousRunFailedTests.forEach(({ fullTitle, browserId }) => {
-                        testCollection.enableTest(fullTitle, browserId);
-                    });
-                }
-            });
-        }
-
         this.on(MasterEvents.RUNNER_END, async () => {
             await this._saveFailed();
         });
@@ -153,18 +136,19 @@ export class Testplane extends BaseTestplane {
 
     protected async _readFailed(): Promise<FailedListItem[]> {
         try {
-            return await fs.readJSON(this._config.failedTestsPath);
+            logger.log("!!!");
+            return await fs.readJSON(this._config.lastFailed.input);
         } catch {
-            // No error because it may be convinient to always use --run-failed, even on the first run
+            // No error because it may be convinient to always use --last-failed-only, even on the first run
             logger.warn(
-                `Could not read failed tests data at ${this._config.failedTestsPath}. Running all tests instead`,
+                `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
             );
             return [];
         }
     }
 
     protected async _saveFailed(): Promise<void> {
-        await fs.outputJSON(this._config.failedTestsPath, this.failedList, { spaces: 4 });
+        await fs.outputJSON(this._config.lastFailed.output, this.failedList, { spaces: 4 });
     }
 
     protected async _readTests(

@@ -68,7 +68,7 @@
   - [parallelLimit](#parallellimit)
   - [fileExtensions](#fileextensions)
   - [testRunEnv](#testrunenv)
-- [failedTestsPath](#failedtestspath)
+- [lastFailed](#lastfailed)
 - [plugins](#plugins)
   - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [List of useful plugins](#list-of-useful-plugins)
@@ -594,8 +594,16 @@ export const {
 }
 ```
 
-### failedTestsPath
-Testplane will save a list of all failed tests to `failedTestsPath`
+### lastFailed
+Allows you to run only tests that failed on the last run.
+
+```js
+lastFailed: {
+    only: true, // true means run only failed, false - run all (default: false)
+    input: '.testplane/failed.json', // File to read failed tests list from (default: '.testplane/failed.json')
+    output: '.testplane/failed.json', // File to write failed tests list to (default: '.testplane/failed.json')
+}
+```
 
 ### plugins
 Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).

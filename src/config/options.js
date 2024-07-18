@@ -107,7 +107,11 @@ const rootSection = section(
 
         plugins: options.anyObject(),
 
-        failedTestsPath: options.string("failedTestsPath"),
+        lastFailed: section({
+            only: options.boolean("lastFailed.only"),
+            input: options.string("lastFailed.input"),
+            output: options.string("lastFailed.output"),
+        }),
 
         sets: map(
             section({

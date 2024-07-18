@@ -21,6 +21,7 @@ describe("test-reader/test-parser", () => {
     const sandbox = sinon.createSandbox();
 
     let TestParser;
+    let fsReadJSON;
     let clearRequire;
     let readFiles;
     let setupTransformHook;
@@ -32,12 +33,16 @@ describe("test-reader/test-parser", () => {
         clearRequire = sandbox.stub().named("clear-require");
         readFiles = sandbox.stub().named("readFiles").resolves();
         setupTransformHook = sandbox.stub().named("setupTransformHook").returns(sinon.stub());
+        fsReadJSON = sandbox.stub().resolves([]);
 
         TestParser = proxyquire("src/test-reader/test-parser", {
             "clear-require": clearRequire,
             "./mocha-reader": { readFiles },
             "./controllers/browser-version-controller": browserVersionController,
             "./test-transformer": { setupTransformHook },
+            "fs-extra": {
+                readJSON: fsReadJSON,
+            },
         }).TestParser;
 
         sandbox.stub(InstructionsList.prototype, "push").returnsThis();

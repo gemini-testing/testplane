@@ -463,30 +463,68 @@ describe("config options", () => {
         });
     });
 
-    describe("failedTestsPath", () => {
-        it("should throw error if failedTestsPath is not a string", () => {
-            const readConfig = { failedTestsPath: () => {} };
+    describe("lastFailed", () => {
+        describe("only", () => {
+            it("should throw error if only is not a boolean", () => {
+                const readConfig = {
+                    lastFailed: {
+                        only: "String",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.only" must be a boolean');
+            });
+        });
+
+        describe("input", () => {
+            it("should throw error if input is not a string", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: false,
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" must be a string');
+            });
+        });
+
+        describe("output", () => {
+            it("should throw error if output is not a string", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: false,
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.output" must be a string');
+            });
+        });
+
+        it("should set default lastFailed option if it does not set in config file", () => {
+            const config = createConfig();
+
+            assert.deepEqual(config.lastFailed, defaults.lastFailed);
+        });
+
+        it("should override lastFailed option", () => {
+            const newValue = {
+                input: "some-path",
+                output: "some-path",
+                only: true,
+            };
+            const readConfig = { lastFailed: newValue };
 
             Config.read.returns(readConfig);
 
-            assert.throws(() => createConfig(), Error, '"failedTestsPath" must be a string');
-        });
-
-        it("should set default failedTestsPath option if it does not set in config file", () => {
             const config = createConfig();
 
-            assert.equal(config.failedTestsPath, defaults.failedTestsPath);
-        });
-
-        it("should override failedTestsPath option", () => {
-            const newString = "newString";
-            const readConfig = { failedTestsPath: newString };
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.failedTestsPath, newString);
+            assert.deepEqual(config.lastFailed, newValue);
         });
     });
 

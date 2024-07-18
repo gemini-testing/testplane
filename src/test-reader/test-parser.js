@@ -14,9 +14,12 @@ const { MasterEvents } = require("../events");
 const _ = require("lodash");
 const clearRequire = require("clear-require");
 const path = require("path");
+const fs = require("fs-extra");
+const logger = require("../utils/logger");
 
 class TestParser extends EventEmitter {
     #opts;
+    #failedTests;
     #buildInstructions;
 
     /**
@@ -27,6 +30,7 @@ class TestParser extends EventEmitter {
         super();
 
         this.#opts = opts;
+        this.#failedTests = [];
         this.#buildInstructions = new InstructionsList();
     }
 
@@ -65,6 +69,14 @@ class TestParser extends EventEmitter {
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
+
+        try {
+            this.#failedTests = await fs.readJSON(config.lastFailed.input);
+        } catch {
+            logger.warn(
+                `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
+            );
+        }
 
         revertTransformHook();
     }
@@ -111,6 +123,18 @@ class TestParser extends EventEmitter {
 
         if (grep) {
             treeBuilder.addTestFilter(test => grep.test(test.fullTitle()));
+        }
+
+        if (config.lastFailed && config.lastFailed.only) {
+            const failedStringified = this.#failedTests.map(data => JSON.stringify(data));
+            treeBuilder.addTestFilter(test =>
+                failedStringified.includes(
+                    JSON.stringify({
+                        fullTitle: test.fullTitle(),
+                        browserId: test.browserId,
+                    }),
+                ),
+            );
         }
 
         const rootSuite = treeBuilder.applyFilters().getRootSuite();

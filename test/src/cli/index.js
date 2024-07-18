@@ -170,12 +170,6 @@ describe("cli", () => {
         assert.calledWithMatch(Testplane.prototype.run, any, { updateRefs: true });
     });
 
-    it("should use run failed mode from cli", async () => {
-        await run_("--run-failed");
-
-        assert.calledWithMatch(Testplane.prototype.run, any, { runFailed: true });
-    });
-
     it("should use require modules from cli", async () => {
         const stubTestplaneCli = proxyquire("src/cli", {
             "../utils/module": { requireModule: sandbox.stub() },

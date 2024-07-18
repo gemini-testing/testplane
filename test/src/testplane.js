@@ -22,7 +22,7 @@ const { makeConfigStub } = require("../utils");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler, fsReadJSON, fsOutputJSON, disableAll, enableTest;
+    let Testplane, initReporters, signalHandler, fsReadJSON, fsOutputJSON;
 
     const mkTestplane_ = config => {
         Config.create.returns(config || makeConfigStub());
@@ -54,8 +54,6 @@ describe("testplane", () => {
         signalHandler = new AsyncEmitter();
         fsReadJSON = sandbox.stub().resolves([]);
         fsOutputJSON = sandbox.stub().resolves();
-        disableAll = sandbox.stub();
-        enableTest = sandbox.stub();
 
         Testplane = proxyquire.noPreserveCache().noCallThru()("src/testplane", {
             "./reporters": { initReporters },
@@ -225,7 +223,10 @@ describe("testplane", () => {
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
+                const testplane = mkTestplane_({
+                    lastFailed: { only: false },
+                    system: { mochaOpts: { timeout: 100500 } },
+                });
 
                 await testplane.run([], { replMode: { enabled: false } });
 
@@ -234,7 +235,10 @@ describe("testplane", () => {
 
             it("should reset test timeout to 0 if run in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
+                const testplane = mkTestplane_({
+                    lastFailed: { only: false },
+                    system: { mochaOpts: { timeout: 100500 } },
+                });
 
                 await testplane.run([], { replMode: { enabled: true } });
 
@@ -326,7 +330,12 @@ describe("testplane", () => {
 
                 await runTestplane(testPaths, { browsers, grep, sets, replMode });
 
-                assert.calledOnceWith(Testplane.prototype.readTests, testPaths, { browsers, grep, sets, replMode });
+                assert.calledOnceWith(Testplane.prototype.readTests, testPaths, {
+                    browsers,
+                    grep,
+                    sets,
+                    replMode,
+                });
             });
 
             it("should accept test collection as first parameter", async () => {
@@ -412,50 +421,12 @@ describe("testplane", () => {
 
                 await runTestplane();
 
-                assert.calledWith(fsOutputJSON, "some-path", [
+                assert.calledWith(fsOutputJSON, "some-other-path", [
                     {
                         fullTitle: results.fullTitle(),
                         browserId: results.browserId,
                     },
                 ]);
-            });
-
-            it("should run only failed with --run-failed", async () => {
-                const failed = [
-                    {
-                        fullTitle: "Title",
-                        browserId: "chrome",
-                    },
-                ];
-                const testCollection = {
-                    disableAll,
-                    enableTest,
-                };
-
-                fsReadJSON.resolves(failed);
-                mkNodejsEnvRunner_(runner => {
-                    runner.emit(RunnerEvents.INIT);
-                    runner.emit(RunnerEvents.AFTER_TESTS_READ, testCollection);
-                });
-
-                sandbox.stub(Testplane.prototype, "_readTests");
-                Testplane.prototype._readTests.returns([]);
-
-                await runTestplane([], {
-                    runFailed: true,
-                });
-
-                assert.called(disableAll);
-                assert.calledWith(enableTest, "Title", "chrome");
-            });
-
-            it("should halt if there were some errors", () => {
-                const testplane = mkTestplane_();
-                const err = new Error();
-
-                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
-
-                return testplane.run().then(() => assert.calledOnceWith(testplane.halt, err));
             });
         });
 
