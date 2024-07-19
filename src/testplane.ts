@@ -134,19 +134,6 @@ export class Testplane extends BaseTestplane {
         return !this.isFailed();
     }
 
-    protected async _readFailed(): Promise<FailedListItem[]> {
-        try {
-            logger.log("!!!");
-            return await fs.readJSON(this._config.lastFailed.input);
-        } catch {
-            // No error because it may be convinient to always use --last-failed-only, even on the first run
-            logger.warn(
-                `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
-            );
-            return [];
-        }
-    }
-
     protected async _saveFailed(): Promise<void> {
         await fs.outputJSON(this._config.lastFailed.output, this.failedList, { spaces: 4 });
     }
