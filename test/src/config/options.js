@@ -514,8 +514,8 @@ describe("config options", () => {
 
         it("should override lastFailed option", () => {
             const newValue = {
-                input: "some-path",
-                output: "some-path",
+                input: "some-path.json",
+                output: "some-path.json",
                 only: true,
             };
             const readConfig = { lastFailed: newValue };

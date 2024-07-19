@@ -136,15 +136,15 @@ export interface CommonConfig {
     resetCursor: boolean;
     headers: Record<string, string> | null;
 
+    system: SystemConfig;
+    headless: "old" | "new" | boolean | null;
+    isolation: boolean;
+
     lastFailed: {
         only: boolean;
         input: string;
         output: string;
     };
-
-    system: SystemConfig;
-    headless: "old" | "new" | boolean | null;
-    isolation: boolean;
 
     openAndWaitOpts: {
         timeout?: number;

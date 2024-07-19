@@ -110,8 +110,10 @@ export class Testplane extends BaseTestplane {
         );
         this.runner = runner;
 
-        this.on(MasterEvents.TEST_FAIL, () => this._fail());
-        this.on(MasterEvents.TEST_FAIL, res => this._addFailedTest(res));
+        this.on(MasterEvents.TEST_FAIL, res => {
+            this._fail();
+            this._addFailedTest(res);
+        });
         this.on(MasterEvents.ERROR, (err: Error) => this.halt(err));
 
         this.on(MasterEvents.RUNNER_END, async () => {
@@ -135,7 +137,7 @@ export class Testplane extends BaseTestplane {
     }
 
     protected async _saveFailed(): Promise<void> {
-        await fs.outputJSON(this._config.lastFailed.output, this.failedList, { spaces: 4 });
+        await fs.outputJSON(this._config.lastFailed.output, this.failedList); // No spaces because users usually don't need to read it
     }
 
     protected async _readTests(
@@ -193,7 +195,6 @@ export class Testplane extends BaseTestplane {
             fullTitle: result.fullTitle(),
             browserId: result.browserId,
         });
-        this._saveFailed();
     }
 
     isWorker(): boolean {

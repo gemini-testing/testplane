@@ -68,12 +68,12 @@
   - [parallelLimit](#parallellimit)
   - [fileExtensions](#fileextensions)
   - [testRunEnv](#testrunenv)
-- [lastFailed](#lastfailed)
 - [plugins](#plugins)
   - [Parallel execution plugin code](#parallel-execution-plugin-code)
   - [List of useful plugins](#list-of-useful-plugins)
 - [prepareBrowser](#preparebrowser)
 - [prepareEnvironment](#prepareenvironment)
+- [lastFailed](#lastfailed)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -594,17 +594,6 @@ export const {
 }
 ```
 
-### lastFailed
-Allows you to run only tests that failed on the last run.
-
-```js
-lastFailed: {
-    only: true, // true means run only failed, false - run all (default: false)
-    input: '.testplane/failed.json', // File to read failed tests list from (default: '.testplane/failed.json')
-    output: '.testplane/failed.json', // File to write failed tests list to (default: '.testplane/failed.json')
-}
-```
-
 ### plugins
 Testplane plugins are commonly used to extend built-in functionality. For example, [html-reporter](https://github.com/gemini-testing/html-reporter) and [@testplane/safari-commands](https://github.com/gemini-testing/testplane-safari-commands).
 
@@ -743,3 +732,14 @@ Full list of parameters:
      - waitServerTimeout (optional) `Number` - timeout to wait for server to be ready (ms). 60_000 by default
      - probeRequestTimeout (optional) `Number` - one request timeout (ms), after which request will be aborted. 10_000 by default
      - probeRequestInterval (optional) `Number` - interval between ready probe requests (ms). 1_000 by default
+
+### lastFailed
+Allows you to run only tests that failed on the last run. Disabled by default - it means run all tests, but the file with the failed tests is always written.
+
+```js
+lastFailed: {
+    only: true, // true means run only failed, false - run all (default: false)
+    input: '.testplane/failed.json', // File to read failed tests list from (default: '.testplane/failed.json')
+    output: '.testplane/failed.json', // File to write failed tests list to (default: '.testplane/failed.json')
+}
+```

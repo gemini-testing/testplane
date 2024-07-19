@@ -70,12 +70,14 @@ class TestParser extends EventEmitter {
         const esmDecorator = f => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
 
-        try {
-            this.#failedTests = await fs.readJSON(config.lastFailed.input);
-        } catch {
-            logger.warn(
-                `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
-            );
+        if (config.lastFailed.only) {
+            try {
+                this.#failedTests = await fs.readJSON(config.lastFailed.input);
+            } catch {
+                logger.warn(
+                    `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
+                );
+            }
         }
 
         revertTransformHook();

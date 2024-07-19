@@ -14,6 +14,7 @@ const proxyquire = require("proxyquire").noCallThru();
 const path = require("path");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
+const fs = require("fs-extra");
 
 const { NEW_BUILD_INSTRUCTION } = TestReaderEvents;
 
@@ -21,7 +22,6 @@ describe("test-reader/test-parser", () => {
     const sandbox = sinon.createSandbox();
 
     let TestParser;
-    let fsReadJSON;
     let clearRequire;
     let readFiles;
     let setupTransformHook;
@@ -33,18 +33,15 @@ describe("test-reader/test-parser", () => {
         clearRequire = sandbox.stub().named("clear-require");
         readFiles = sandbox.stub().named("readFiles").resolves();
         setupTransformHook = sandbox.stub().named("setupTransformHook").returns(sinon.stub());
-        fsReadJSON = sandbox.stub().resolves([]);
 
         TestParser = proxyquire("src/test-reader/test-parser", {
             "clear-require": clearRequire,
             "./mocha-reader": { readFiles },
             "./controllers/browser-version-controller": browserVersionController,
             "./test-transformer": { setupTransformHook },
-            "fs-extra": {
-                readJSON: fsReadJSON,
-            },
         }).TestParser;
 
+        sandbox.stub(fs, "readJSON").resolves([]);
         sandbox.stub(InstructionsList.prototype, "push").returnsThis();
         sandbox.stub(InstructionsList.prototype, "exec").returns(new Suite());
     });

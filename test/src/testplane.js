@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const fs = require("fs-extra");
 const { EventEmitter } = require("events");
 const pluginsLoader = require("plugins-loader");
 const Promise = require("bluebird");
@@ -22,7 +23,7 @@ const { makeConfigStub } = require("../utils");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler, fsReadJSON, fsOutputJSON;
+    let Testplane, initReporters, signalHandler;
 
     const mkTestplane_ = config => {
         Config.create.returns(config || makeConfigStub());
@@ -49,19 +50,15 @@ describe("testplane", () => {
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
         sandbox.stub(TestReader.prototype, "read").resolves();
         sandbox.stub(RunnerStats, "create");
+        sandbox.stub(fs, "readJSON").resolves([]);
+        sandbox.stub(fs, "outputJSON").resolves();
 
         initReporters = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
-        fsReadJSON = sandbox.stub().resolves([]);
-        fsOutputJSON = sandbox.stub().resolves();
 
-        Testplane = proxyquire.noPreserveCache().noCallThru()("src/testplane", {
+        Testplane = proxyquire("src/testplane", {
             "./reporters": { initReporters },
             "./signal-handler": signalHandler,
-            "fs-extra": {
-                readJSON: fsReadJSON,
-                outputJSON: fsOutputJSON,
-            },
         }).Testplane;
     });
 
@@ -421,7 +418,7 @@ describe("testplane", () => {
 
                 await runTestplane();
 
-                assert.calledWith(fsOutputJSON, "some-other-path", [
+                assert.calledWith(fs.outputJSON, "some-other-path", [
                     {
                         fullTitle: results.fullTitle(),
                         browserId: results.browserId,
@@ -498,7 +495,10 @@ describe("testplane", () => {
             it("all runner events with passed event data", () => {
                 const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
-                sandbox.stub(testplane, "_addFailedTest");
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                };
                 const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
 
                 return testplane.run().then(() => {
@@ -506,9 +506,9 @@ describe("testplane", () => {
                         const spy = sinon.spy().named(`${name} handler`);
                         testplane.on(event, spy);
 
-                        runner.emit(event, "some-data");
+                        runner.emit(event, results);
 
-                        assert.calledWith(spy, "some-data");
+                        assert.calledWith(spy, results);
                     });
                 });
             });
@@ -793,10 +793,13 @@ describe("testplane", () => {
         it('should return "true" after some test fail', () => {
             const testplane = mkTestplane_();
 
-            sandbox.stub(testplane, "_addFailedTest");
+            const results = {
+                fullTitle: () => "Title",
+                browserId: "chrome",
+            };
 
             mkNodejsEnvRunner_(runner => {
-                runner.emit(RunnerEvents.TEST_FAIL);
+                runner.emit(RunnerEvents.TEST_FAIL, results);
 
                 assert.isTrue(testplane.isFailed());
             });
