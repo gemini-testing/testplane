@@ -102,15 +102,26 @@ describe("Flat reporter", () => {
             TEST_FAIL: "failed",
         };
 
-        it("should correctly do the rendering", async () => {
-            test = mkTestStub_({ sessionId: "test_session" });
+        it("should render session id", async () => {
+            test = mkTestStub_({ sessionId: "500100" });
 
             await createFlatReporter();
             emit(RunnerEvents.TEST_PASS, test);
 
             const result = getDeserializedResult(informer.log.firstCall.args[0]);
 
-            assert.equal(result, "suite test [chrome:test_session] - 100500ms");
+            assert.equal(result, "suite test [chrome:500100] - 100500ms");
+        });
+
+        it("should render pid", async () => {
+            test = mkTestStub_({ meta: { pid: "12345" } });
+
+            await createFlatReporter();
+            emit(RunnerEvents.TEST_PASS, test);
+
+            const result = getDeserializedResult(informer.log.firstCall.args[0]);
+
+            assert.equal(result, "suite test [chrome, pid:12345] - 100500ms");
         });
 
         describe("skipped tests report", () => {

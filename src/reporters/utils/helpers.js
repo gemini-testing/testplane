@@ -23,10 +23,11 @@ exports.formatTestInfo = test => {
     const suiteName = test.fullTitle().replace(test.title, "");
     const sessionId = test.sessionId ? `:${test.sessionId}` : "";
     const reason = test.pending && ` reason: ${chalk.red(getSkipReason(test) || "no comment")}`;
+    const pid = test.meta?.pid ? `, pid:${test.meta.pid}` : "";
 
     return (
         ` ${suiteName}${chalk.underline(test.title)} [${chalk.yellow(test.browserId)}` +
-        `${sessionId}] - ${chalk.cyan(test.duration || 0)}ms${reason || ""}`
+        `${sessionId}${pid}] - ${chalk.cyan(test.duration || 0)}ms${reason || ""}`
     );
 };
 
