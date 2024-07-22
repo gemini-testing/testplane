@@ -16,6 +16,7 @@ const clearRequire = require("clear-require");
 const path = require("path");
 const fs = require("fs-extra");
 const logger = require("../utils/logger");
+const { getShortMD5 } = require("../utils/crypto");
 
 class TestParser extends EventEmitter {
     #opts;
@@ -30,7 +31,7 @@ class TestParser extends EventEmitter {
         super();
 
         this.#opts = opts;
-        this.#failedTests = [];
+        this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
     }
 
@@ -72,7 +73,11 @@ class TestParser extends EventEmitter {
 
         if (config.lastFailed.only) {
             try {
-                this.#failedTests = await fs.readJSON(config.lastFailed.input);
+                this.#failedTests = new Set();
+
+                for (const test of await fs.readJSON(config.lastFailed.input)) {
+                    this.#failedTests.add(getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`));
+                }
             } catch {
                 logger.warn(
                     `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
@@ -128,15 +133,9 @@ class TestParser extends EventEmitter {
         }
 
         if (config.lastFailed && config.lastFailed.only) {
-            const failedStringified = this.#failedTests.map(data => JSON.stringify(data));
-            treeBuilder.addTestFilter(test =>
-                failedStringified.includes(
-                    JSON.stringify({
-                        fullTitle: test.fullTitle(),
-                        browserId: test.browserId,
-                    }),
-                ),
-            );
+            treeBuilder.addTestFilter(test => {
+                return this.#failedTests.has(getShortMD5(`${test.fullTitle()}${test.browserId}${test.browserVersion}`));
+            });
         }
 
         const rootSuite = treeBuilder.applyFilters().getRootSuite();

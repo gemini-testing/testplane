@@ -411,6 +411,7 @@ describe("testplane", () => {
                 const results = {
                     fullTitle: () => "Title",
                     browserId: "chrome",
+                    browserVersion: "1",
                 };
                 mkNodejsEnvRunner_(runner => {
                     runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
@@ -422,6 +423,7 @@ describe("testplane", () => {
                     {
                         fullTitle: results.fullTitle(),
                         browserId: results.browserId,
+                        browserVersion: "1",
                     },
                 ]);
             });

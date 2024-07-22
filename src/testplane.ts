@@ -39,6 +39,7 @@ interface RunOpts {
 }
 
 export type FailedListItem = {
+    browserVersion?: string;
     browserId?: string;
     fullTitle: string;
 };
@@ -116,9 +117,7 @@ export class Testplane extends BaseTestplane {
         });
         this.on(MasterEvents.ERROR, (err: Error) => this.halt(err));
 
-        this.on(MasterEvents.RUNNER_END, async () => {
-            await this._saveFailed();
-        });
+        this.on(MasterEvents.RUNNER_END, async () => await this._saveFailed());
 
         await initReporters(reporters, this);
 
@@ -194,6 +193,7 @@ export class Testplane extends BaseTestplane {
         this.failedList.push({
             fullTitle: result.fullTitle(),
             browserId: result.browserId,
+            browserVersion: result.browserVersion,
         });
     }
 
