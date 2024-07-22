@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.18.0](https://github.com/gemini-testing/testplane/compare/v8.17.2...v8.18.0) (2024-07-22)
+
+
+### Features
+
+* add "pid" to log info with test result ([c8ecd60](https://github.com/gemini-testing/testplane/commit/c8ecd601713088e9cd09ae7435d942603d0240f0))
+
 ### [8.17.2](https://github.com/gemini-testing/testplane/compare/v8.17.1...v8.17.2) (2024-07-17)
 
 
