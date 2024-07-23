@@ -739,7 +739,7 @@ Allows you to run only tests that failed on the last run. Disabled by default - 
 ```js
 lastFailed: {
     only: true, // true means run only failed, false - run all (default: false)
-    input: '.testplane/failed.json', // File to read failed tests list from (default: '.testplane/failed.json')
+    input: ['.testplane/failed.json', '.testplane/failed2.json'], // File/files to read failed tests list from (default: '.testplane/failed.json')
     output: '.testplane/failed.json', // File to write failed tests list to (default: '.testplane/failed.json')
 }
 ```

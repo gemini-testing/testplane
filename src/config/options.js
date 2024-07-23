@@ -112,11 +112,14 @@ const rootSection = section(
             input: option({
                 defaultValue: defaults.lastFailed.input,
                 validate: value => {
-                    if (!_.isString(value)) {
-                        throw new Error('"lastFailed.input" must be a string');
+                    if (!_.isString(value) && !_.isArray(value)) {
+                        throw new Error('"lastFailed.input" must be a string or an array');
                     }
-                    if (!value.endsWith(".json")) {
+                    if (_.isString(value) && !value.endsWith(".json")) {
                         throw new Error('"lastFailed.input" must have .json extension');
+                    }
+                    if (_.isArray(value) && value.filter(v => v.endsWith(".json"))) {
+                        throw new Error('"lastFailed.input" entities must have .json extension');
                     }
                 },
             }),

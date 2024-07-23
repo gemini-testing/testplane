@@ -74,13 +74,17 @@ class TestParser extends EventEmitter {
         if (config.lastFailed.only) {
             try {
                 this.#failedTests = new Set();
-
-                for (const test of await fs.readJSON(config.lastFailed.input)) {
-                    this.#failedTests.add(getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`));
+                const inputPaths = _.isArray(config.lastFailed.input)
+                    ? config.lastFailed.input
+                    : [config.lastFailed.input];
+                for (const inputPath of inputPaths) {
+                    for (const test of await fs.readJSON(inputPath)) {
+                        this.#failedTests.add(getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`));
+                    }
                 }
             } catch {
                 logger.warn(
-                    `Could not read failed tests data at ${this._config.lastFailed.input}. Running all tests instead`,
+                    `Could not read failed tests data at ${config.lastFailed.input}. Running all tests instead`,
                 );
             }
         }
@@ -132,7 +136,7 @@ class TestParser extends EventEmitter {
             treeBuilder.addTestFilter(test => grep.test(test.fullTitle()));
         }
 
-        if (config.lastFailed && config.lastFailed.only) {
+        if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
             treeBuilder.addTestFilter(test => {
                 return this.#failedTests.has(getShortMD5(`${test.fullTitle()}${test.browserId}${test.browserVersion}`));
             });

@@ -142,7 +142,7 @@ export interface CommonConfig {
 
     lastFailed: {
         only: boolean;
-        input: string;
+        input: string | Array<string>;
         output: string;
     };
 
