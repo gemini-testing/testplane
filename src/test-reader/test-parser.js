@@ -76,7 +76,7 @@ class TestParser extends EventEmitter {
                 this.#failedTests = new Set();
                 const inputPaths = _.isArray(config.lastFailed.input)
                     ? config.lastFailed.input
-                    : [config.lastFailed.input];
+                    : config.lastFailed.input.split(",").map(v => v.trim());
                 for (const inputPath of inputPaths) {
                     for (const test of await fs.readJSON(inputPath)) {
                         this.#failedTests.add(getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`));
