@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.18.1](https://github.com/gemini-testing/testplane/compare/v8.18.0...v8.18.1) (2024-07-24)
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([#977](https://github.com/gemini-testing/testplane/issues/977)) ([3624e01](https://github.com/gemini-testing/testplane/commit/3624e01f5856a074edadcd897e8be54c0b16f934))
+
 ## [8.18.0](https://github.com/gemini-testing/testplane/compare/v8.17.2...v8.18.0) (2024-07-22)
 
 
