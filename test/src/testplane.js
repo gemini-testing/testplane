@@ -401,10 +401,20 @@ describe("testplane", () => {
                 const results = {
                     fullTitle: () => "Title",
                     browserId: "chrome",
+                    browserVersion: "1",
                 };
                 mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL, results));
 
                 return runTestplane().then(success => assert.isFalse(success));
+            });
+
+            it("should halt if there were some errors", () => {
+                const testplane = mkTestplane_();
+                const err = new Error();
+
+                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
+
+                return testplane.run().then(() => assert.calledOnceWith(testplane.halt, err));
             });
 
             it("should save failed tests", async () => {
@@ -500,6 +510,7 @@ describe("testplane", () => {
                 const results = {
                     fullTitle: () => "Title",
                     browserId: "chrome",
+                    browserVersion: "1",
                 };
                 const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
 
@@ -798,6 +809,7 @@ describe("testplane", () => {
             const results = {
                 fullTitle: () => "Title",
                 browserId: "chrome",
+                browserVersion: "1",
             };
 
             mkNodejsEnvRunner_(runner => {

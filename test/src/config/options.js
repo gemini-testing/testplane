@@ -488,7 +488,55 @@ describe("config options", () => {
 
                 Config.read.returns(readConfig);
 
-                assert.throws(() => createConfig(), Error, '"lastFailed.input" must be a string');
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" must be a string or an array');
+            });
+
+            it("should throw error if input is a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: "string",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" must have .json extension');
+            });
+
+            it("should not throw error if input is a string with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: "string.json",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
+            });
+
+            it("should throw error if input is an array that contains a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: ["string.json", "string"],
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" elements must have .json extension');
+            });
+
+            it("should not throw error if input is an array that contains only strings with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: ["string.json"],
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
             });
         });
 
@@ -503,6 +551,30 @@ describe("config options", () => {
                 Config.read.returns(readConfig);
 
                 assert.throws(() => createConfig(), Error, '"lastFailed.output" must be a string');
+            });
+
+            it("should throw error if output is a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: "string",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.output" must have .json extension');
+            });
+
+            it("should not throw error if output is a string with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: "string.json",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
             });
         });
 

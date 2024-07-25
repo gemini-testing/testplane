@@ -35,6 +35,8 @@ class TestParser extends EventEmitter {
         this.#buildInstructions = new InstructionsList();
     }
 
+    getFailedTestId = test => getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
+
     async loadFiles(files, config) {
         const eventBus = new EventEmitter();
         const {
@@ -79,7 +81,7 @@ class TestParser extends EventEmitter {
                     : config.lastFailed.input.split(",").map(v => v.trim());
                 for (const inputPath of inputPaths) {
                     for (const test of await fs.readJSON(inputPath)) {
-                        this.#failedTests.add(getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`));
+                        this.#failedTests.add(this.getFailedTestId(test));
                     }
                 }
             } catch {
@@ -137,8 +139,8 @@ class TestParser extends EventEmitter {
         }
 
         if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
-            treeBuilder.addTestFilter(test => {
-                return this.#failedTests.has(getShortMD5(`${test.fullTitle()}${test.browserId}${test.browserVersion}`));
+            treeBuilder.addTestFilter(({ fullTitle, ...rest }) => {
+                return this.#failedTests.has(this.getFailedTestId({ fullTitle: fullTitle(), ...rest }));
             });
         }
 
