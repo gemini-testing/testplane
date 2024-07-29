@@ -140,6 +140,12 @@ export interface CommonConfig {
     headless: "old" | "new" | boolean | null;
     isolation: boolean;
 
+    lastFailed: {
+        only: boolean;
+        input: string | Array<string>;
+        output: string;
+    };
+
     openAndWaitOpts: {
         timeout?: number;
         waitNetworkIdle: boolean;

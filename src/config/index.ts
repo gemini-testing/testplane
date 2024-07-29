@@ -72,6 +72,7 @@ export class Config {
             const browserOptions = _.extend({}, browser, {
                 id: id,
                 system: this.system,
+                lastFailed: this.lastFailed,
             });
 
             return new BrowserConfig(browserOptions);

@@ -94,6 +94,11 @@ module.exports = {
     headless: null,
     isolation: null,
     testRunEnv: NODEJS_TEST_RUN_ENV,
+    lastFailed: {
+        only: false,
+        output: ".testplane/failed.json",
+        input: ".testplane/failed.json",
+    },
     devServer: {
         command: null,
         cwd: null,
