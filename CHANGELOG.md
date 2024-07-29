@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.19.0](https://github.com/gemini-testing/testplane/compare/v8.18.1...v8.19.0) (2024-07-29)
+
+
+### Features
+
+* add config option to rerun failed tests ([#973](https://github.com/gemini-testing/testplane/issues/973)) ([36aa516](https://github.com/gemini-testing/testplane/commit/36aa51657c0807f1d3474084b336b02270bba9d7))
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([#978](https://github.com/gemini-testing/testplane/issues/978)) ([cd2763d](https://github.com/gemini-testing/testplane/commit/cd2763d0894b2c395bf0332e72dddc2e59dae5ef))
+
 ### [8.18.1](https://github.com/gemini-testing/testplane/compare/v8.18.0...v8.18.1) (2024-07-24)
 
 
