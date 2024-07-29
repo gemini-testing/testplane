@@ -18,6 +18,8 @@ const fs = require("fs-extra");
 const logger = require("../utils/logger");
 const { getShortMD5 } = require("../utils/crypto");
 
+const getFailedTestId = test => getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
+
 class TestParser extends EventEmitter {
     #opts;
     #failedTests;
@@ -34,8 +36,6 @@ class TestParser extends EventEmitter {
         this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
     }
-
-    getFailedTestId = test => getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
 
     async loadFiles(files, config) {
         const eventBus = new EventEmitter();
@@ -81,7 +81,7 @@ class TestParser extends EventEmitter {
                     : config.lastFailed.input.split(",").map(v => v.trim());
                 for (const inputPath of inputPaths) {
                     for (const test of await fs.readJSON(inputPath)) {
-                        this.#failedTests.add(this.getFailedTestId(test));
+                        this.#failedTests.add(getFailedTestId(test));
                     }
                 }
             } catch {
@@ -140,7 +140,7 @@ class TestParser extends EventEmitter {
 
         if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
             treeBuilder.addTestFilter(({ fullTitle, ...rest }) => {
-                return this.#failedTests.has(this.getFailedTestId({ fullTitle: fullTitle(), ...rest }));
+                return this.#failedTests.has(getFailedTestId({ fullTitle: fullTitle(), ...rest }));
             });
         }
 

@@ -567,11 +567,24 @@ describe("test-reader/test-parser", () => {
             });
 
             it("should call addTestFilter if config.lastFailed.only is set", async () => {
-                fs.readJSON.resolves([
+                const tests = [
                     {
-                        fullTitle: "title",
+                        fullTitle: () => "title",
                         browserId: "chrome",
                         browserVersion: "1",
+                    },
+                    {
+                        fullTitle: () => "title2",
+                        browserId: "chrome",
+                        browserVersion: "1",
+                    },
+                ];
+
+                fs.readJSON.resolves([
+                    {
+                        fullTitle: tests[0].fullTitle(),
+                        browserId: tests[0].browserId,
+                        browserVersion: tests[0].browserVersion,
                     },
                 ]);
 
@@ -584,7 +597,8 @@ describe("test-reader/test-parser", () => {
 
                 await parse_({ config }, config);
 
-                assert.calledOnce(TreeBuilder.prototype.addTestFilter);
+                assert.equal(TreeBuilder.prototype.addTestFilter.lastCall.args[0](tests[0]), true);
+                assert.equal(TreeBuilder.prototype.addTestFilter.lastCall.args[0](tests[1]), false);
             });
         });
 
