@@ -597,8 +597,10 @@ describe("test-reader/test-parser", () => {
 
                 await parse_({ config }, config);
 
-                assert.equal(TreeBuilder.prototype.addTestFilter.lastCall.args[0](tests[0]), true);
-                assert.equal(TreeBuilder.prototype.addTestFilter.lastCall.args[0](tests[1]), false);
+                const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+
+                assert.equal(filter(tests[0]), true);
+                assert.equal(filter(tests[1]), false);
             });
         });
 
