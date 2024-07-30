@@ -568,16 +568,16 @@ describe("test-reader/test-parser", () => {
 
             it("should call addTestFilter if config.lastFailed.only is set", async () => {
                 const tests = [
-                    {
-                        fullTitle: () => "title",
+                    new Test({
+                        title: "title",
                         browserId: "chrome",
                         browserVersion: "1",
-                    },
-                    {
-                        fullTitle: () => "title2",
+                    }),
+                    new Test({
+                        title: "title2",
                         browserId: "chrome",
                         browserVersion: "1",
-                    },
+                    }),
                 ];
 
                 fs.readJSON.resolves([

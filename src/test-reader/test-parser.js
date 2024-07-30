@@ -139,8 +139,14 @@ class TestParser extends EventEmitter {
         }
 
         if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
-            treeBuilder.addTestFilter(({ fullTitle, ...rest }) => {
-                return this.#failedTests.has(getFailedTestId({ fullTitle: fullTitle(), ...rest }));
+            treeBuilder.addTestFilter(test => {
+                return this.#failedTests.has(
+                    getFailedTestId({
+                        fullTitle: test.fullTitle(),
+                        browserId: test.browserId,
+                        browserVersion: test.browserVersion,
+                    }),
+                );
             });
         }
 
