@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.1](https://github.com/gemini-testing/testplane/compare/v8.19.0...v8.19.1) (2024-07-30)
+
+
+### Bug Fixes
+
+* fix failed tests rerun ([#980](https://github.com/gemini-testing/testplane/issues/980)) ([b89c5b1](https://github.com/gemini-testing/testplane/commit/b89c5b18e9ee64a5af7679e35592c3048f57fa06))
+
 ## [8.19.0](https://github.com/gemini-testing/testplane/compare/v8.18.1...v8.19.0) (2024-07-29)
 
 
