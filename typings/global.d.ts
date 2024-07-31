@@ -10,6 +10,6 @@ declare namespace globalThis {
 
 // remove after updating expect-webdriverio@4 (should migrate to esm first)
 declare module "expect-webdriverio/lib/matchers" {
-    const matchers: ExpectWebdriverIO.Matchers<Promise<{ pass: boolean; message(): string }>, unknown>;
+    const matchers: ExpectWebdriverIO.Matchers<Promise<void>, unknown>;
     export default matchers;
 }
