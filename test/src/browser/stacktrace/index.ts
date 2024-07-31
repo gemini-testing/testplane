@@ -27,7 +27,7 @@ describe("stacktrace", () => {
         runWithStacktraceHooks = proxyquire("../../../../src/browser/stacktrace", {
             "./utils": {
                 captureRawStackFrames: captureRawStackFramesSpy,
-                applyStackFrames: applyStackFramesStub,
+                applyStackTraceIfBetter: applyStackFramesStub,
             },
         }).runWithStacktraceHooks;
 
@@ -36,7 +36,7 @@ describe("stacktrace", () => {
         sandbox.spy(stackFrames, "enter");
         sandbox.spy(stackFrames, "leave");
         sandbox.spy(stackFrames, "getKey");
-        sandbox.spy(stackFrames, "isNested");
+        sandbox.spy(stackFrames, "areInternal");
     });
 
     afterEach(() => sandbox.restore());
@@ -73,22 +73,12 @@ describe("stacktrace", () => {
             assert.calledOnce(stackFrames.enter);
         });
 
-        it("should enter stack trace once with nested calls", () => {
-            const fn = sandbox.stub().callsFake(() => {
-                const nestedFirst = sandbox.stub().callsFake(() => {
-                    const nestedSecond = sandbox.stub().callsFake(() => {
-                        return runWithStacktraceHooks_(sandbox.stub());
-                    });
+        it("should enter stack trace once if frames are irrelevant", () => {
+            stackFrames.areInternal = sandbox.stub().returns(true);
 
-                    return runWithStacktraceHooks_(nestedSecond);
-                });
+            runWithStacktraceHooks_(() => {});
 
-                return runWithStacktraceHooks_(nestedFirst);
-            });
-
-            runWithStacktraceHooks_(fn);
-
-            assert.calledOnce(stackFrames.enter);
+            assert.notCalled(stackFrames.enter);
         });
 
         it("should leave stack trace after function resolved", async () => {

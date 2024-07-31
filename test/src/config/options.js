@@ -463,6 +463,143 @@ describe("config options", () => {
         });
     });
 
+    describe("lastFailed", () => {
+        describe("only", () => {
+            it("should throw error if only is not a boolean", () => {
+                const readConfig = {
+                    lastFailed: {
+                        only: "String",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.only" must be a boolean');
+            });
+        });
+
+        describe("input", () => {
+            it("should throw error if input is not a string", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: false,
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" must be a string or an array');
+            });
+
+            it("should throw error if input is a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: "string",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" must have .json extension');
+            });
+
+            it("should not throw error if input is a string with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: "string.json",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
+            });
+
+            it("should throw error if input is an array that contains a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: ["string.json", "string"],
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.input" elements must have .json extension');
+            });
+
+            it("should not throw error if input is an array that contains only strings with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        input: ["string.json"],
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
+            });
+        });
+
+        describe("output", () => {
+            it("should throw error if output is not a string", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: false,
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.output" must be a string');
+            });
+
+            it("should throw error if output is a string without .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: "string",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.throws(() => createConfig(), Error, '"lastFailed.output" must have .json extension');
+            });
+
+            it("should not throw error if output is a string with .json at the end", () => {
+                const readConfig = {
+                    lastFailed: {
+                        output: "string.json",
+                    },
+                };
+
+                Config.read.returns(readConfig);
+
+                assert.doesNotThrow(() => createConfig());
+            });
+        });
+
+        it("should set default lastFailed option if it does not set in config file", () => {
+            const config = createConfig();
+
+            assert.deepEqual(config.lastFailed, defaults.lastFailed);
+        });
+
+        it("should override lastFailed option", () => {
+            const newValue = {
+                input: "some-path.json",
+                output: "some-path.json",
+                only: true,
+            };
+            const readConfig = { lastFailed: newValue };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.lastFailed, newValue);
+        });
+    });
+
     describe("prepareEnvironment", () => {
         it("should throw error if prepareEnvironment is not a null or function", () => {
             const readConfig = { prepareEnvironment: "String" };

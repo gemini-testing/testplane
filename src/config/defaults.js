@@ -94,6 +94,11 @@ module.exports = {
     headless: null,
     isolation: null,
     testRunEnv: NODEJS_TEST_RUN_ENV,
+    lastFailed: {
+        only: false,
+        output: ".testplane/failed.json",
+        input: ".testplane/failed.json",
+    },
     devServer: {
         command: null,
         cwd: null,
@@ -113,4 +118,13 @@ module.exports = {
     passive: false,
 };
 
-module.exports.configPaths = [".testplane.conf.ts", ".testplane.conf.js", ".hermione.conf.ts", ".hermione.conf.js"];
+module.exports.configPaths = [
+    ".testplane.conf.ts",
+    ".testplane.conf.js",
+    "testplane.config.ts",
+    "testplane.config.js",
+    "testplane.config.cts",
+    "testplane.config.cjs",
+    ".hermione.conf.ts",
+    ".hermione.conf.js",
+];

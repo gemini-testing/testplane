@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.1](https://github.com/gemini-testing/testplane/compare/v8.19.0...v8.19.1) (2024-07-30)
+
+
+### Bug Fixes
+
+* fix failed tests rerun ([#980](https://github.com/gemini-testing/testplane/issues/980)) ([b89c5b1](https://github.com/gemini-testing/testplane/commit/b89c5b18e9ee64a5af7679e35592c3048f57fa06))
+
+## [8.19.0](https://github.com/gemini-testing/testplane/compare/v8.18.1...v8.19.0) (2024-07-29)
+
+
+### Features
+
+* add config option to rerun failed tests ([#973](https://github.com/gemini-testing/testplane/issues/973)) ([36aa516](https://github.com/gemini-testing/testplane/commit/36aa51657c0807f1d3474084b336b02270bba9d7))
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([#978](https://github.com/gemini-testing/testplane/issues/978)) ([cd2763d](https://github.com/gemini-testing/testplane/commit/cd2763d0894b2c395bf0332e72dddc2e59dae5ef))
+
+### [8.18.1](https://github.com/gemini-testing/testplane/compare/v8.18.0...v8.18.1) (2024-07-24)
+
+
+### Bug Fixes
+
+* correctly require plugins with yarn+pnp ([#977](https://github.com/gemini-testing/testplane/issues/977)) ([3624e01](https://github.com/gemini-testing/testplane/commit/3624e01f5856a074edadcd897e8be54c0b16f934))
+
+## [8.18.0](https://github.com/gemini-testing/testplane/compare/v8.17.2...v8.18.0) (2024-07-22)
+
+
+### Features
+
+* add "pid" to log info with test result ([c8ecd60](https://github.com/gemini-testing/testplane/commit/c8ecd601713088e9cd09ae7435d942603d0240f0))
+
+### [8.17.2](https://github.com/gemini-testing/testplane/compare/v8.17.1...v8.17.2) (2024-07-17)
+
+
+### Bug Fixes
+
+* support error snippets nested browser commands ([3c9ce6b](https://github.com/gemini-testing/testplane/commit/3c9ce6becccf1f8940dbd9c92204b15c4efa184a))
+
+### [8.17.1](https://github.com/gemini-testing/testplane/compare/v8.17.0...v8.17.1) (2024-07-16)
+
+
+### Bug Fixes
+
+* move escape-string-regexp to deps ([#974](https://github.com/gemini-testing/testplane/issues/974)) ([abb14a0](https://github.com/gemini-testing/testplane/commit/abb14a08b724f88c0c292ef323ed82680157ff9d))
+
+## [8.17.0](https://github.com/gemini-testing/testplane/compare/v8.16.0...v8.17.0) (2024-07-10)
+
+
+### Features
+
+* look for configs in format testplane.config.{ts,js,cts,cjs} ([1f08b88](https://github.com/gemini-testing/testplane/commit/1f08b889ef2605cbb0c2f5ff5257c4e5c392d7d8))
+
 ## [8.16.0](https://github.com/gemini-testing/testplane/compare/v8.15.0...v8.16.0) (2024-07-10)
 
 

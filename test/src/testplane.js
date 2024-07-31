@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const fs = require("fs-extra");
 const { EventEmitter } = require("events");
 const pluginsLoader = require("plugins-loader");
 const Promise = require("bluebird");
@@ -49,6 +50,8 @@ describe("testplane", () => {
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
         sandbox.stub(TestReader.prototype, "read").resolves();
         sandbox.stub(RunnerStats, "create");
+        sandbox.stub(fs, "readJSON").resolves([]);
+        sandbox.stub(fs, "outputJSON").resolves();
 
         initReporters = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
@@ -217,7 +220,10 @@ describe("testplane", () => {
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
+                const testplane = mkTestplane_({
+                    lastFailed: { only: false },
+                    system: { mochaOpts: { timeout: 100500 } },
+                });
 
                 await testplane.run([], { replMode: { enabled: false } });
 
@@ -226,7 +232,10 @@ describe("testplane", () => {
 
             it("should reset test timeout to 0 if run in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({ system: { mochaOpts: { timeout: 100500 } } });
+                const testplane = mkTestplane_({
+                    lastFailed: { only: false },
+                    system: { mochaOpts: { timeout: 100500 } },
+                });
 
                 await testplane.run([], { replMode: { enabled: true } });
 
@@ -318,7 +327,12 @@ describe("testplane", () => {
 
                 await runTestplane(testPaths, { browsers, grep, sets, replMode });
 
-                assert.calledOnceWith(Testplane.prototype.readTests, testPaths, { browsers, grep, sets, replMode });
+                assert.calledOnceWith(Testplane.prototype.readTests, testPaths, {
+                    browsers,
+                    grep,
+                    sets,
+                    replMode,
+                });
             });
 
             it("should accept test collection as first parameter", async () => {
@@ -384,7 +398,12 @@ describe("testplane", () => {
             });
 
             it('should return "false" if there are failed tests', () => {
-                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL));
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                    browserVersion: "1",
+                };
+                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL, results));
 
                 return runTestplane().then(success => assert.isFalse(success));
             });
@@ -396,6 +415,27 @@ describe("testplane", () => {
                 mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
 
                 return testplane.run().then(() => assert.calledOnceWith(testplane.halt, err));
+            });
+
+            it("should save failed tests", async () => {
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                    browserVersion: "1",
+                };
+                mkNodejsEnvRunner_(runner => {
+                    runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
+                });
+
+                await runTestplane();
+
+                assert.calledWith(fs.outputJSON, "some-other-path", [
+                    {
+                        fullTitle: results.fullTitle(),
+                        browserId: results.browserId,
+                        browserVersion: "1",
+                    },
+                ]);
             });
         });
 
@@ -467,6 +507,11 @@ describe("testplane", () => {
             it("all runner events with passed event data", () => {
                 const runner = mkNodejsEnvRunner_();
                 const testplane = mkTestplane_();
+                const results = {
+                    fullTitle: () => "Title",
+                    browserId: "chrome",
+                    browserVersion: "1",
+                };
                 const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
 
                 return testplane.run().then(() => {
@@ -474,9 +519,9 @@ describe("testplane", () => {
                         const spy = sinon.spy().named(`${name} handler`);
                         testplane.on(event, spy);
 
-                        runner.emit(event, "some-data");
+                        runner.emit(event, results);
 
-                        assert.calledWith(spy, "some-data");
+                        assert.calledWith(spy, results);
                     });
                 });
             });
@@ -761,8 +806,14 @@ describe("testplane", () => {
         it('should return "true" after some test fail', () => {
             const testplane = mkTestplane_();
 
+            const results = {
+                fullTitle: () => "Title",
+                browserId: "chrome",
+                browserVersion: "1",
+            };
+
             mkNodejsEnvRunner_(runner => {
-                runner.emit(RunnerEvents.TEST_FAIL);
+                runner.emit(RunnerEvents.TEST_FAIL, results);
 
                 assert.isTrue(testplane.isFailed());
             });

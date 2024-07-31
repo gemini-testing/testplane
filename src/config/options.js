@@ -107,6 +107,35 @@ const rootSection = section(
 
         plugins: options.anyObject(),
 
+        lastFailed: section({
+            only: options.boolean("lastFailed.only"),
+            input: option({
+                defaultValue: defaults.lastFailed.input,
+                validate: value => {
+                    if (!_.isString(value) && !_.isArray(value)) {
+                        throw new Error('"lastFailed.input" must be a string or an array');
+                    }
+                    if (!_.isArray(value) && !value.endsWith(".json")) {
+                        throw new Error('"lastFailed.input" must have .json extension');
+                    }
+                    if (_.isArray(value) && value.filter(v => !v.endsWith(".json")).length) {
+                        throw new Error('"lastFailed.input" elements must have .json extension');
+                    }
+                },
+            }),
+            output: option({
+                defaultValue: defaults.lastFailed.output,
+                validate: value => {
+                    if (!_.isString(value)) {
+                        throw new Error('"lastFailed.output" must be a string');
+                    }
+                    if (!value.endsWith(".json")) {
+                        throw new Error('"lastFailed.output" must have .json extension');
+                    }
+                },
+            }),
+        }),
+
         sets: map(
             section({
                 files: option({

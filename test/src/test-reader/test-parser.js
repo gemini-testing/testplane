@@ -14,6 +14,7 @@ const proxyquire = require("proxyquire").noCallThru();
 const path = require("path");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
+const fs = require("fs-extra");
 
 const { NEW_BUILD_INSTRUCTION } = TestReaderEvents;
 
@@ -40,6 +41,7 @@ describe("test-reader/test-parser", () => {
             "./test-transformer": { setupTransformHook },
         }).TestParser;
 
+        sandbox.stub(fs, "readJSON").resolves([]);
         sandbox.stub(InstructionsList.prototype, "push").returnsThis();
         sandbox.stub(InstructionsList.prototype, "exec").returns(new Suite());
     });
@@ -320,6 +322,68 @@ describe("test-reader/test-parser", () => {
             });
         });
 
+        describe("failed tests", () => {
+            it("should read if config.lastFailed.only is set", async () => {
+                const config = makeConfigStub({
+                    lastFailed: {
+                        only: true,
+                        input: "file.json",
+                    },
+                });
+
+                await loadFiles_({ config });
+
+                assert.calledWith(fs.readJSON, "file.json");
+            });
+
+            it("should read from one file if config.lastFailed.input is a string", async () => {
+                const config = makeConfigStub({
+                    lastFailed: {
+                        only: true,
+                        input: "failed.json",
+                    },
+                });
+
+                await loadFiles_({ config });
+
+                assert.calledWith(fs.readJSON, "failed.json");
+            });
+
+            it("should read from multiple files if config.lastFailed.input is a string with commas", async () => {
+                const config = makeConfigStub({
+                    lastFailed: {
+                        only: true,
+                        input: "failed.json, failed2.json",
+                    },
+                });
+
+                await loadFiles_({ config });
+
+                assert.calledWith(fs.readJSON, "failed.json");
+                assert.calledWith(fs.readJSON, "failed2.json");
+            });
+
+            it("should read from multiple files if config.lastFailed.input is an array", async () => {
+                const config = makeConfigStub({
+                    lastFailed: {
+                        only: true,
+                        input: ["failed.json", "failed2.json"],
+                    },
+                });
+
+                await loadFiles_({ config });
+
+                assert.calledWith(fs.readJSON, "failed.json");
+                assert.calledWith(fs.readJSON, "failed2.json");
+            });
+
+            it("should not read if config.lastFailed.only is not set", async () => {
+                await loadFiles_();
+
+                assert.notCalled(fs.readJSON);
+            });
+        });
+
         describe("read files", () => {
             it("should read passed files", async () => {
                 const files = ["foo/bar", "baz/qux"];
@@ -475,13 +539,14 @@ describe("test-reader/test-parser", () => {
     });
 
     describe("parse", () => {
-        const parse_ = async ({ files, browserId, config, grep } = {}) => {
+        const parse_ = async ({ files, browserId, config, grep } = {}, loadFilesConfig) => {
+            loadFilesConfig = loadFilesConfig || makeConfigStub();
             config = _.defaults(config, {
                 desiredCapabilities: {},
             });
 
             const parser = new TestParser();
-            await parser.loadFiles([], makeConfigStub());
+            await parser.loadFiles([], loadFilesConfig);
 
             return parser.parse(files || [], { browserId, config, grep });
         };
@@ -492,6 +557,51 @@ describe("test-reader/test-parser", () => {
             sandbox.stub(TreeBuilder.prototype, "getRootSuite").returns(new Suite({}));
 
             sandbox.stub(Suite.prototype, "getTests").returns([]);
+        });
+
+        describe("addTestFilter", () => {
+            it("should not call if config.lastFailed.only is not set", async () => {
+                await parse_();
+
+                assert.notCalled(TreeBuilder.prototype.addTestFilter);
+            });
+
+            it("should call addTestFilter if config.lastFailed.only is set", async () => {
+                const tests = [
+                    new Test({
+                        title: "title",
+                        browserId: "chrome",
+                        browserVersion: "1",
+                    }),
+                    new Test({
+                        title: "title2",
+                        browserId: "chrome",
+                        browserVersion: "1",
+                    }),
+                ];
+
+                fs.readJSON.resolves([
+                    {
+                        fullTitle: tests[0].fullTitle(),
+                        browserId: tests[0].browserId,
+                        browserVersion: tests[0].browserVersion,
+                    },
+                ]);
+
+                const config = makeConfigStub({
+                    lastFailed: {
+                        only: true,
+                        input: "failed.json",
+                    },
+                });
+
+                await parse_({ config }, config);
+
+                const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+
+                assert.equal(filter(tests[0]), true);
+                assert.equal(filter(tests[1]), false);
+            });
         });
 
         it("should execute build instructions", async () => {

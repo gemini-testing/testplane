@@ -14,9 +14,15 @@ const { MasterEvents } = require("../events");
 const _ = require("lodash");
 const clearRequire = require("clear-require");
 const path = require("path");
+const fs = require("fs-extra");
+const logger = require("../utils/logger");
+const { getShortMD5 } = require("../utils/crypto");
+
+const getFailedTestId = test => getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
 
 class TestParser extends EventEmitter {
     #opts;
+    #failedTests;
     #buildInstructions;
 
     /**
@@ -27,6 +33,7 @@ class TestParser extends EventEmitter {
         super();
 
         this.#opts = opts;
+        this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
     }
 
@@ -65,6 +72,24 @@ class TestParser extends EventEmitter {
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
+
+        if (config.lastFailed.only) {
+            try {
+                this.#failedTests = new Set();
+                const inputPaths = _.isArray(config.lastFailed.input)
+                    ? config.lastFailed.input
+                    : config.lastFailed.input.split(",").map(v => v.trim());
+                for (const inputPath of inputPaths) {
+                    for (const test of await fs.readJSON(inputPath)) {
+                        this.#failedTests.add(getFailedTestId(test));
+                    }
+                }
+            } catch {
+                logger.warn(
+                    `Could not read failed tests data at ${config.lastFailed.input}. Running all tests instead`,
+                );
+            }
+        }
 
         revertTransformHook();
     }
@@ -111,6 +136,18 @@ class TestParser extends EventEmitter {
 
         if (grep) {
             treeBuilder.addTestFilter(test => grep.test(test.fullTitle()));
+        }
+
+        if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
+            treeBuilder.addTestFilter(test => {
+                return this.#failedTests.has(
+                    getFailedTestId({
+                        fullTitle: test.fullTitle(),
+                        browserId: test.browserId,
+                        browserVersion: test.browserVersion,
+                    }),
+                );
+            });
         }
 
         const rootSuite = treeBuilder.applyFilters().getRootSuite();
