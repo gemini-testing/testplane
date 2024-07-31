@@ -187,10 +187,27 @@ module.exports = class ExistingBrowser extends Browser {
     _addCommands() {
         this._addMetaAccessCommands(this._session);
         this._decorateUrlMethod(this._session);
+        this._overrideGetElementsList(this._session);
 
         commandsList.forEach(command => require(`./commands/${command}`).default(this));
 
         super._addCommands();
+    }
+
+    _overrideGetElementsList(session) {
+        session.overwriteCommand(
+            "$$",
+            async (origCommand, selector) => {
+                const arr = [];
+                const res = await origCommand(selector);
+                for await (const el of res) arr.push(el);
+                arr.parent = res.parent;
+                arr.foundWith = res.foundWith;
+                arr.selector = res.selector;
+                return arr;
+            },
+            true,
+        );
     }
 
     _addMetaAccessCommands(session) {
