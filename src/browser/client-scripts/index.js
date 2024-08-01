@@ -169,6 +169,7 @@ function disableFrameAnimationsUnsafe() {
                 "    animation-timing-function: step-start !important;",
                 "    transition-timing-function: step-start !important;",
                 "    scroll-behavior: auto !important;",
+                "    transition: none !important;",
                 "}"
             ].join("\n");
 
