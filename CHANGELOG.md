@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.2](https://github.com/gemini-testing/testplane/compare/v8.19.1...v8.19.2) (2024-08-01)
+
+
+### Bug Fixes
+
+* disable already started transitions when disabling animations ([#985](https://github.com/gemini-testing/testplane/issues/985)) ([89754ec](https://github.com/gemini-testing/testplane/commit/89754ec094fd3cadcadf983d54ba48790249d2f0))
+
 ### [8.19.1](https://github.com/gemini-testing/testplane/compare/v8.19.0...v8.19.1) (2024-07-30)
 
 
