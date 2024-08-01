@@ -26,9 +26,6 @@ export const tryToRegisterTsNode = (): void => {
                     skipProject: JSON.parse(skipProjectRaw),
                     transpileOnly: JSON.parse(transpileOnlyRaw),
                     swc: true,
-                    compilerOptions: {
-                        allowJs: true,
-                    },
                 });
                 return;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,7 +46,6 @@ export const tryToRegisterTsNode = (): void => {
                 transpileOnly: JSON.parse(transpileOnlyRaw),
                 swc: false,
                 compilerOptions: {
-                    allowJs: true,
                     module: "nodenext",
                     moduleResolution: "nodenext",
                 },
@@ -63,9 +59,6 @@ export const tryToRegisterTsNode = (): void => {
                 skipProject: JSON.parse(skipProjectRaw),
                 transpileOnly: JSON.parse(transpileOnlyRaw),
                 swc: false,
-                compilerOptions: {
-                    allowJs: true,
-                },
             });
             return;
             // eslint-disable-next-line no-empty
