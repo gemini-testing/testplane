@@ -4,7 +4,8 @@ import { builtinModules } from "node:module";
 import _ from "lodash";
 import createDebug from "debug";
 import { MODULE_NAMES, VITE_RUN_UUID_ROUTE, WORKER_ENV_BY_RUN_UUID } from "../constants";
-import { getNodeModulePath, getImportMetaUrl, polyfillPath } from "../utils";
+import { getNodeModulePath, getImportMetaUrl } from "../utils";
+import { polyfillPath } from "../polyfill";
 import logger from "../../../../utils/logger";
 
 import type { WorkerInitializePayload } from "../browser-modules/types";
