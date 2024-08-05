@@ -33,17 +33,14 @@ describe("utils/typescript", () => {
             assert.notCalled(registerStub);
         });
 
-        it("should pass 'allowJs' option", () => {
+        it("should not call register if TS_ENABLE is false", () => {
+            process.env.TS_ENABLE = "false";
+
             ts.tryToRegisterTsNode();
 
-            assert.calledOnceWith(
-                registerStub,
-                sinon.match({
-                    compilerOptions: {
-                        allowJs: true,
-                    },
-                }),
-            );
+            assert.notCalled(registerStub);
+
+            process.env.TS_ENABLE = "undefined";
         });
 
         it("should respect env vars", () => {
@@ -80,6 +77,13 @@ describe("utils/typescript", () => {
         });
 
         it("should not use swc if not installed", () => {
+            registerStub
+                .withArgs(
+                    sinon.match({
+                        swc: true,
+                    }),
+                )
+                .throws("MODULE_NOT_FOUND");
             ts = proxyquire.noCallThru().load("src/utils/typescript", {
                 "ts-node": {
                     register: registerStub,
@@ -89,12 +93,22 @@ describe("utils/typescript", () => {
 
             ts.tryToRegisterTsNode();
 
-            assert.calledOnceWith(
+            assert.calledWith(
                 registerStub,
                 sinon.match({
                     swc: false,
                 }),
             );
+        });
+
+        it("should not throw if ts-node throws", () => {
+            registerStub.throws();
+            ts = proxyquire.noCallThru().load("src/utils/typescript", {
+                "ts-node": registerStub,
+                "@swc/core": null,
+            });
+
+            assert.doesNotThrow(() => ts.tryToRegisterTsNode());
         });
 
         it("should not throw if nothing is installed", () => {
