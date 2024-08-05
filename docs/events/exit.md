@@ -8,7 +8,7 @@ The `EXIT` event is triggered when the `SIGTERM` signal is received (for example
 
 ```javascript
 testplane.on(testplane.events.EXIT, async () => {
-c   onsole.info('Exit event is being processed…');
+    console.info('Exit event is being processed…');
 });
 ```
 

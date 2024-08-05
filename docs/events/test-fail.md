@@ -1,6 +1,6 @@
 # TEST_FAIL {#test-fail}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
 The `TEST_FAIL` event is triggered if the test fails. The event handler is executed synchronously. The event can also be intercepted and modified in a special handler.
 
@@ -24,7 +24,7 @@ The test instance is passed to the event handler.
 ```javascript
 testplane.intercept(testplane.events.TEST_FAIL, ({ event, data }) => {
     console.info(
-        `Intercepting the TEST_PASS event ` +
+        `Intercepting the TEST_FAIL event ` +
         `for the test "${test.fullTitle()}" in the browser "${test.browserId}"…`
     );
 });

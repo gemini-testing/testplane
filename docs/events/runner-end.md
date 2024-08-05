@@ -16,14 +16,14 @@ testplane.on(testplane.events.RUNNER_END, async (result) => {
 
 An object with test run statistics of the following type is passed to the event handler:
 
-```javascript
+```typescript
 {
-    passed: 0, // number of successfully executed tests
-    failed: 0, // number of failed tests
-    retries: 0, // number of retries (re-runs) of tests
-    skipped: 0, // number of disabled (skipped) tests
-    total: 0 // total number of tests
-};
+    passed: number
+    failed: number
+    retries: number
+    skipped: number
+    total: number
+}
 ```
 
 ## Usage {#usage}

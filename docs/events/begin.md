@@ -8,7 +8,7 @@ The `BEGIN` event is triggered before the test is executed, but after all runner
 
 ```javascript
 testplane.on(testplane.events.BEGIN, () => {
-console.info('Handling the BEGIN event…');
+    console.info('Handling the BEGIN event…');
 });
 ```
 

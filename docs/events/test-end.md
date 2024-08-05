@@ -1,8 +1,8 @@
 # TEST_END {#test-end}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
-The `TEST_END` event is triggered after the test execution is finished. The event handler is executed synchronously. The event can also be intercepted and changed in a special handler.
+The `TEST_END` event is triggered after the test execution is finished (after events `TEST_FAIL`, `RETRY`, etc). The event handler is executed synchronously. The event can also be intercepted and changed in a special handler.
 
 ## Event subscription {#test_end_subscription}
 

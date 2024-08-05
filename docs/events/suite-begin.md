@@ -1,6 +1,6 @@
 # SUITE_BEGIN {#suite-begin}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
 The `SUITE_BEGIN` event is triggered before the _(suite)_ test suite is executed. The event handler is executed synchronously.
 

@@ -16,9 +16,9 @@ testplane.on(testplane.events.AFTER_FILE_READ, ({ file, testplane }) => {
 
 An object of the following format is passed to the event handler:
 
-```javascript
+```typescript
 {
-    file, // String: path to the file with the test
-    testplane // Object: same as global.testplane
+    file: string // path to the file with the test
+    testplane: object // same as global.testplane
 }
 ```

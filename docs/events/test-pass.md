@@ -1,35 +1,35 @@
 # TEST_PASS {#test-pass}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
-Событие `TEST_PASS` триггерится, если тест успешно прошел. Обработчик события выполняется синхронно. Также событие можно перехватить и изменить в специальном обработчике.
+Event `TEST_PASS` is triggered if test succesfully passed. The event handler is executed synchronously. The event can also be intercepted and modified in a special handler.
 
-## Подписка на событие {#test_pass_subscription}
+## Subscription {#subscription}
 
 ```javascript
 testplane.on(testplane.events.TEST_PASS, (test) => {
     console.info(
-        `Выполняется обработка события TEST_PASS ` +
-        `для теста "${test.fullTitle()}" в браузере "${test.browserId}"…`
+        `TEST_PASS event is being processed ` +
+        `for test "${test.fullTitle()}" in browser "${test.browserId}"…`
     );
 });
 ```
 
-### Параметры обработчика {#test_pass_cb_params}
+### Handler parameters {#handler-parameters}
 
-В обработчик события передается инстанс теста.
+The test instance is passed to the event handler.
 
-## Перехват события {#test_pass_interception}
+## Intercepting the event {#interception}
 
 ```javascript
-testplane.intercept(testplane.events.TEST_PASS, ({ event, data: test }) => {
+testplane.intercept(testplane.events.TEST_FAIL, ({ event, data }) => {
     console.info(
-        `Выполняется перехват события TEST_PASS ` +
-        `для теста "${test.fullTitle()}" в браузере "${test.browserId}"…`
+        `Intercepting the TEST_PASS event ` +
+        `for the test "${test.fullTitle()}" in the browser "${test.browserId}"…`
     );
 });
 ```
 
-## Пример использования {#test_pass_usage}
+## Usage {#usage}
 
-Смотрите в качестве примера «[Сбор статистики о прогоне тестов](#usage_collecting_stats)».
+See "[Collecting statistics about test runs](./usage-examples/collecting-stats.md)" for an example.

@@ -16,10 +16,13 @@ testplane.on(testplane.events.UPDATE_REFERENCE, ({ state, refImg }) => {
 
 An object of the following format is passed to the event handler:
 
-```javascript
+```typescript
 {
-    state, // String: the state that this screenshot reflects, for example: plain, map-view, scroll-left, etc.
-    refImg // Object: of type { path, size: { width, height } }, describing the reference screenshot
+    state: string // the state that this screenshot reflects, for example: plain, map-view, scroll-left, etc.
+    refImg: { // describing the reference screenshot
+        path,
+        size: { width, height }
+    } 
 }
 ```
 

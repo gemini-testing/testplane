@@ -22,9 +22,9 @@ An object of the following format is passed to the event handler:
 
 ```javascript
 {
-    file, // String: path to the file with the test
-    testplane, // Object: same as global.testplane
-    testParser // Object: type TestParserAPI
+    file: string // path to the file with the test
+    testplane: object // same as global.testplane
+    testParser: object // type TestParserAPI
 }
 ```
 
@@ -39,11 +39,7 @@ The method adds a controller to the global `testplane` object, available inside 
 * `name` is the name of the helper (or otherwise, the controller);
 * `methods` is a dictionary object whose keys specify the names of the methods of the corresponding helpers, and the values ​​of the keys determine their implementation. Each method will be called on the corresponding test or test suite _(suite)_.
 
-{% note info %}
-
 The controller will be deleted as soon as the parsing of the current file is finished.
-
-{% endnote %}
 
 ## Usage {#usage}
 
@@ -72,6 +68,5 @@ describe('foo', () => {
     });
 });
 ```
-
 
 Another example of using the `BEFORE_FILE_READ` event can be found in the section "[Running tests with helpers](./usage-examples/running-tests-with-helpers.md)".

@@ -1,6 +1,6 @@
 # SUITE_END {#suite-end}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
 The `SUITE_END` event is triggered after the _(suite)_ test suite has finished executing. The event handler is executed synchronously.
 
@@ -8,7 +8,7 @@ The `SUITE_END` event is triggered after the _(suite)_ test suite has finished e
 
 ```javascript
 testplane.on(testplane.events.SUITE_END, (suite) => {
-console.info(`Handling the SUITE_END event for "${suite.fullTitle()}"…`);
+    console.info(`Handling the SUITE_END event for "${suite.fullTitle()}"…`);
 });
 ```
 
@@ -20,6 +20,6 @@ The _suite_ instance is passed to the event handler.
 
 ```javascript
 testplane.intercept(testplane.events.SUITE_END, ({ event, data: suite }) => {
-console.info(`Intercepting SUITE_END event for "${suite.fullTitle()}"…`);
+    console.info(`Intercepting SUITE_END event for "${suite.fullTitle()}"…`);
 });
 ```

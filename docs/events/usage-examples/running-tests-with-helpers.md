@@ -1,6 +1,6 @@
 # Running tests with helpers {#running-tests-with-helpers}
 
-Let's look at the [implementation][testplane-passive-browsers-index] of the [testplane-passive-browsers][testplane-passive-browsers] plugin.
+Let's look at the [implementation][testplane-passive-browsers-index] of the [testplane-passive-browsers][testplane-passive-browsers] plugin. Notice that now the plugin is is deprecated, but we still can use it as an example.
 
 Using the [BEFORE_FILE_READ](../before-file-read.md) and [AFTER_TESTS_READ](../after-tests-read.md) events, the plugin allows you to add a special helper that can be used to run specified tests or test suites _(suites)_ in specified browsers. This logic can be useful if you don't need to run most of your tests in some browsers. But you still want to run some tests in these (passive) browsers to check browser-specific things.
 

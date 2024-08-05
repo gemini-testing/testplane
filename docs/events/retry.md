@@ -1,6 +1,6 @@
 # RETRY {#retry}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
 The `RETRY` event is triggered if the test failed but was re-run, the so-called "retry". The test re-run capabilities are determined by the [retry][browsers-retry] and [shouldRetry][browsers-should-retry] settings in the Testplane config. Testplane plugins can also affect this if they modify the above settings "on the fly". See the [retry-limiter][retry-limiter] and [testplane-retry-progressive][testplane-retry-progressive] plugins for example.
 

@@ -1,6 +1,6 @@
 # TEST_BEGIN {#test-begin}
 
-**sync | master | can be intercepted**
+**sync | master | interceptable**
 
 The `TEST_BEGIN` event is triggered before the test is executed. The event handler is executed synchronously.
 

@@ -8,7 +8,7 @@ The `ERROR` event is triggered only from event interceptors in case of a critica
 
 ```javascript
 testplane.on(testplane.events.ERROR, (error) => {
-console.info('Handling the ERROR event…');
+    console.info('Handling the ERROR event…');
 });
 ```
 

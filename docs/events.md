@@ -9,6 +9,9 @@
 - [Sharing data between master and worker processes](#sharing-data-between-master-and-worker-processes)
 - [Intercepting events](#intercepting-events)
   - [Events that can be intercepted](#events-that-can-be-intercepted)
+- [Passing information between event handlers](#passing-information-between-event-handlers)
+- [Parallel execution of plugin code](#parallel-execution-of-plugin-code)
+  - [Example](#parallel-execution-of-plugin-code-example)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -172,3 +175,101 @@ Event                     |
 `TEST_PASS`               |
 `TEST_FAIL`               |
 `RETRY`                   |
+
+### Passing information between event handlers {#passing-information-between-event-handlers}
+
+Events that are triggered in the master process and in Testplane workers cannot exchange information via global variables.
+
+For example, this approach will not work:
+
+```javascript
+module.exports = (testplane) => {
+    let flag = false;
+
+    testplane.on(testplane.events.RUNNER_START, () => {
+        flag = true;
+    });
+
+    testplane.on(testplane.events.NEW_BROWSER, () => {
+        // false will be displayed because the NEW_BROWSER event
+        // is triggered in the testplane worker, and RUNNER_START in the master process
+        console.info(flag);
+    });
+
+    testplane.on(testplane.events.RUNNER_END, () => {
+        // true will be output
+        console.info(flag);
+    });
+};
+```
+
+But you can solve the issue like this:
+
+```javascript
+module.exports = (testplane, opts) => {
+    testplane.on(testplane.events.RUNNER_START, () => {
+        opts.flag = true;
+    });
+
+    testplane.on(testplane.events.NEW_BROWSER, () => {
+        // true will be output because the properties in the config,
+        // which have a primitive type (and the "opts" variable is part of the config),
+        // are automatically passed to workers during the RUNNER_START event
+        console.info(opts.flag);
+    });
+};
+```
+
+Or like this: see [example](./events/new_worker_process.md#usage) from the description of the [NEW_WORKER_PROCESS](./events/new_worker_process.md) event.
+
+Notice that upon transferring between master and workers objects go through serialization/deserialization (in particular, objects methods will be lost).
+
+Also
+
+### Parallel execution of plugin code {#parallel-execution-of-plugin-code}
+
+The test runner has a method `registerWorkers`, which registers the plugin code for parallel execution in Testplane workers. The method accepts the following parameters:
+
+| **Parameter** | **Type** | **Description** |
+| ------------ | ------- | ------------ |
+| `workerFilepath` | String | Absolute path to the worker. |
+| `exportedMethods` | String[] | List of exported methods. |
+
+Returns an object containing asynchronous functions with names from the exported methods.
+
+The file with the path `workerFilepath` must export an object containing asynchronous functions with names from `exportedMethods`.
+
+#### Example {#parallel-execution-of-plugin-code-example}
+
+Plugin code: `plugin.js`
+
+```javascript
+let workers;
+
+module.exports = (testplane) => {
+    testplane.on(testplane.events.RUNNER_START, async (runner) => {
+        const workerFilepath = require.resolve('./worker');
+        const exportedMethods = ['foo'];
+
+        workers = runner.registerWorkers(workerFilepath, exportedMethods);
+
+        // outputs FOO_RUNNER_START
+        console.info(await workers.foo('RUNNER_START'));
+    });
+
+    testplane.on(testplane.events.RUNNER_END, async () => {
+        // outputs FOO_RUNNER_END
+    console.info(await workers.foo('RUNNER_END'));
+    });
+};
+```
+
+Worker code: `worker.js`
+
+```javascript
+module.exports = {
+    foo: async function(event) {
+        return 'FOO_' + event;
+    }
+};
+```

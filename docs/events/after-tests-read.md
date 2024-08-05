@@ -2,7 +2,7 @@
 
 **sync | master | worker**
 
-The `AFTER_TESTS_READ` event is triggered after the `readTests or `run` methods of the `TestCollection` object are called. The event handler is executed synchronously. The event is also available in Testplane workers.
+The `AFTER_TESTS_READ` event is triggered after the `readTests` or `run` methods of the `TestCollection` object are called. The event handler is executed synchronously. The event is also available in Testplane workers.
 
 By subscribing to this event, you can perform certain manipulations on the test collection in the handler before they are run. For example, you can exclude some tests from runs.
 
@@ -16,7 +16,7 @@ testplane.on(testplane.events.AFTER_TESTS_READ, (testCollection) => {
 
 ### Handler parameters {#handler-parameters}
 
-The event handler is passed a `testCollection` object of type `TestCollection`.
+The event handler is passed a `testCollection` object of type [`TestCollection`](../programmatic-api.md#test-collection).
 
 ## Usage {#usage}
 

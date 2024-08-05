@@ -1,4 +1,4 @@
-# Collecting statistics about running tests {#usage-collecting-stats}
+# Collecting statistics about test runs {#usage-collecting-stats}
 
 Let's consider as an example [implementation][json-reporter-index] of the [json-reporter][json-reporter] plugin.
 
