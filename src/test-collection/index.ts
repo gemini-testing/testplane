@@ -1,8 +1,42 @@
+import path from "node:path";
 import _ from "lodash";
+import { Formatters, AVAILABLE_FORMATTERS } from "./constants";
 
-import type { Suite, RootSuite, Test } from "./types";
+import type { ValueOf } from "../types/helpers";
+import type { Suite, RootSuite, Test } from "../types";
 
-type TestDisabled = Test & { disabled: true };
+export * from "./constants";
+
+export type FormatterTreeSuite = {
+    id: string;
+    title: string;
+    line: number;
+    column: number;
+    suites: FormatterTreeSuite[];
+    // eslint-disable-next-line no-use-before-define
+    tests: FormatterTreeTest[];
+    pending: boolean;
+    skipReason: string;
+};
+
+export type FormatterTreeTest = Omit<FormatterTreeSuite, "suites" | "tests"> & {
+    browserIds: string[];
+};
+
+export type FormatterTreeMainRunnable = (FormatterTreeSuite | FormatterTreeTest) & {
+    file: string;
+};
+
+export type FormatterListTest = {
+    id: string;
+    titlePath: string[];
+    file: string;
+    browserIds: string[];
+    pending: boolean;
+    skipReason: string;
+};
+
+export type TestDisabled = Test & { disabled: true };
 type TestsCallback<T> = (test: Test, browserId: string) => T;
 type SortTestsCallback = (test1: Test, test2: Test) => number;
 
@@ -20,6 +54,10 @@ export class TestCollection {
     constructor(specs: Record<string, Test[]>) {
         this.#originalSpecs = specs;
         this.#specs = _.mapValues(specs, _.clone);
+    }
+
+    get formatters(): typeof Formatters {
+        return Formatters;
     }
 
     getRootSuite(browserId: string): RootSuite | null {
@@ -171,5 +209,23 @@ export class TestCollection {
         }
 
         return this;
+    }
+
+    format(formatterType: ValueOf<typeof Formatters>): (FormatterListTest | FormatterTreeMainRunnable)[] {
+        validateFormatter(formatterType);
+
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { format } = require(path.resolve(__dirname, "./formatters", formatterType)) as
+            | typeof import("./formatters/list")
+            | typeof import("./formatters/tree");
+        return format(this);
+    }
+}
+
+export function validateFormatter(formatterType: ValueOf<typeof Formatters>): void {
+    if (!AVAILABLE_FORMATTERS.includes(formatterType)) {
+        throw new Error(
+            `"formatter" option must be one of: ${AVAILABLE_FORMATTERS.join(", ")}, but got ${formatterType}`,
+        );
     }
 }

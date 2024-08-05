@@ -7,6 +7,7 @@ const { configOverriding } = require("src/cli/info");
 const defaults = require("src/config/defaults");
 const { Testplane } = require("src/testplane");
 const logger = require("src/utils/logger");
+const { collectCliValues, withCommonCliOptions } = require("src/utils/cli");
 
 const any = sinon.match.any;
 
@@ -40,10 +41,12 @@ describe("cli", () => {
 
     describe("config overriding", () => {
         it('should show information about config overriding on "--help"', async () => {
+            sandbox.stub(console, "log");
+
             await run_("--help");
 
-            assert.calledOnce(logger.log);
-            assert.calledWith(logger.log, configOverriding());
+            assert.calledOnce(console.log);
+            assert.calledWith(console.log, configOverriding());
         });
 
         it("should show information about testplane by default", async () => {
@@ -68,14 +71,14 @@ describe("cli", () => {
     });
 
     it('should require modules specified in "require" option', async () => {
-        const requireModule = sandbox.stub();
+        const handleRequires = sandbox.stub();
         const stubTestplaneCli = proxyquire("src/cli", {
-            "../utils/module": { requireModule },
+            "../utils/cli": { handleRequires, withCommonCliOptions },
         });
 
         await run_("--require foo", stubTestplaneCli);
 
-        assert.calledOnceWith(requireModule, "foo");
+        assert.calledOnceWith(handleRequires, ["foo"]);
     });
 
     it("should create Testplane without config by default", async () => {
@@ -172,7 +175,7 @@ describe("cli", () => {
 
     it("should use require modules from cli", async () => {
         const stubTestplaneCli = proxyquire("src/cli", {
-            "../utils/module": { requireModule: sandbox.stub() },
+            "../utils/cli": { handleRequires: sandbox.stub(), collectCliValues, withCommonCliOptions },
         });
         await run_("--require foo", stubTestplaneCli);
 

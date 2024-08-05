@@ -44,10 +44,15 @@ export type FailedListItem = {
     fullTitle: string;
 };
 
+interface RunnableOpts {
+    saveLocations?: boolean;
+}
+
 export interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];
+    runnableOpts?: RunnableOpts;
 }
 
 export interface Testplane {
@@ -152,7 +157,7 @@ export class Testplane extends BaseTestplane {
 
     async readTests(
         testPaths: string[],
-        { browsers, sets, grep, silent, ignore, replMode }: Partial<ReadTestsOpts> = {},
+        { browsers, sets, grep, silent, ignore, replMode, runnableOpts }: Partial<ReadTestsOpts> = {},
     ): Promise<TestCollection> {
         const testReader = TestReader.create(this._config);
 
@@ -165,7 +170,7 @@ export class Testplane extends BaseTestplane {
             ]);
         }
 
-        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep, replMode });
+        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep, replMode, runnableOpts });
         const collection = TestCollection.create(specs);
 
         collection.getBrowsers().forEach(bro => {

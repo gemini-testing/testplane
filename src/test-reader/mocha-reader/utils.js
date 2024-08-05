@@ -59,6 +59,18 @@ const computeFile = mochaSuite => {
     return null;
 };
 
+const getMethodsByInterface = (mochaInterface = "bdd") => {
+    switch (mochaInterface) {
+        case "tdd":
+        case "qunit":
+            return { suiteMethods: ["suite"], testMethods: ["test"] };
+        case "bdd":
+        default:
+            return { suiteMethods: ["describe", "context"], testMethods: ["it", "specify"] };
+    }
+};
+
 module.exports = {
     computeFile,
+    getMethodsByInterface,
 };

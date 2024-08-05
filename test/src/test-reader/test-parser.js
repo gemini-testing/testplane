@@ -53,11 +53,11 @@ describe("test-reader/test-parser", () => {
     });
 
     describe("loadFiles", () => {
-        const loadFiles_ = async ({ parser, files, config } = {}) => {
+        const loadFiles_ = async ({ parser, files, config, runnableOpts } = {}) => {
             parser = parser || new TestParser();
             config = config || makeConfigStub();
 
-            return parser.loadFiles(files || [], config);
+            return parser.loadFiles(files || [], { config, runnableOpts });
         };
 
         describe("globals", () => {
@@ -413,6 +413,14 @@ describe("test-reader/test-parser", () => {
                 assert.calledWithMatch(readFiles, sinon.match.any, { eventBus: sinon.match.instanceOf(EventEmitter) });
             });
 
+            it("should pass runnable options to reader", async () => {
+                const runnableOpts = { saveLocations: true };
+
+                await loadFiles_({ runnableOpts });
+
+                assert.calledWithMatch(readFiles, sinon.match.any, { runnableOpts });
+            });
+
             describe("esm decorator", () => {
                 it("should be passed to mocha reader", async () => {
                     await loadFiles_();
@@ -546,7 +554,7 @@ describe("test-reader/test-parser", () => {
             });
 
             const parser = new TestParser();
-            await parser.loadFiles([], loadFilesConfig);
+            await parser.loadFiles([], { config: loadFilesConfig });
 
             return parser.parse(files || [], { browserId, config, grep });
         };

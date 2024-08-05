@@ -20,14 +20,21 @@ import { getShortMD5 } from "../utils/crypto";
 import { Test } from "./test-object";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
+import type { ReadTestsOpts } from "../testplane";
 
 export type TestParserOpts = {
     testRunEnv?: "nodejs" | "browser";
 };
+
 export type TestParserParseOpts = {
     browserId: string;
     grep?: RegExp;
     config: BrowserConfig;
+};
+
+type LoadFilesOpts = {
+    config: Config;
+    runnableOpts?: ReadTestsOpts["runnableOpts"];
 };
 
 const getFailedTestId = (test: { fullTitle: string; browserId: string; browserVersion?: string }): string =>
@@ -46,7 +53,7 @@ export class TestParser extends EventEmitter {
         this.#buildInstructions = new InstructionsList();
     }
 
-    async loadFiles(files: string[], config: Config): Promise<void> {
+    async loadFiles(files: string[], { config, runnableOpts }: LoadFilesOpts): Promise<void> {
         const eventBus = new EventEmitter();
         const {
             system: { ctx, mochaOpts },
@@ -80,7 +87,7 @@ export class TestParser extends EventEmitter {
 
         const rand = Math.random();
         const esmDecorator = (f: string): string => f + `?rand=${rand}`;
-        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
+        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus, runnableOpts });
 
         if (config.lastFailed.only) {
             try {

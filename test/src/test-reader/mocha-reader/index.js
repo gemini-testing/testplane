@@ -1,5 +1,6 @@
 "use strict";
 
+const _ = require("lodash");
 const { MochaEventBus } = require("src/test-reader/mocha-reader/mocha-event-bus");
 const { TreeBuilderDecorator } = require("src/test-reader/mocha-reader/tree-builder-decorator");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
@@ -14,6 +15,8 @@ describe("test-reader/mocha-reader", () => {
     const sandbox = sinon.createSandbox();
 
     let MochaConstructorStub;
+    let SourceMapSupportStub;
+    let getMethodsByInterfaceStub;
     let readFiles;
 
     const mkMochaSuiteStub_ = () => {
@@ -36,8 +39,19 @@ describe("test-reader/mocha-reader", () => {
         MochaConstructorStub = sinon.stub().returns(mkMochaStub_());
         MochaConstructorStub.Suite = Mocha.Suite;
 
+        SourceMapSupportStub = {
+            wrapCallSite: sinon.stub().returns({
+                getLineNumber: () => 1,
+                getColumnNumber: () => 1,
+            }),
+            install: sinon.stub(),
+        };
+        getMethodsByInterfaceStub = sinon.stub().returns({ suiteMethods: [], testMethods: [] });
+
         readFiles = proxyquire("src/test-reader/mocha-reader", {
             mocha: MochaConstructorStub,
+            "@cspotcode/source-map-support": SourceMapSupportStub,
+            "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
         }).readFiles;
 
         sandbox.stub(MochaEventBus, "create").returns(Object.create(MochaEventBus.prototype));
@@ -203,6 +217,141 @@ describe("test-reader/mocha-reader", () => {
                         }),
                     );
                 });
+            });
+        });
+
+        describe("add locations to runnables", () => {
+            const emitAddRunnable_ = (runnable, event) => {
+                MochaEventBus.create.lastCall.returnValue.emit(MochaEventBus.events[event], runnable);
+            };
+
+            it("should do nothing if 'saveLocations' is not enabled", async () => {
+                const globalCtx = {
+                    describe: () => {},
+                };
+
+                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    MochaEventBus.create.lastCall.returnValue.emit(
+                        MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                        globalCtx,
+                    );
+                });
+
+                await readFiles_({ runnableOpts: { saveLocations: false } });
+                globalCtx.describe();
+
+                assert.notCalled(SourceMapSupportStub.wrapCallSite);
+            });
+
+            it("should not throw if source-map-support is not installed", async () => {
+                readFiles = proxyquire("src/test-reader/mocha-reader", {
+                    "@cspotcode/source-map-support": null,
+                }).readFiles;
+
+                const globalCtx = { describe: _.noop };
+
+                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    MochaEventBus.create.lastCall.returnValue.emit(
+                        MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                        globalCtx,
+                    );
+                });
+
+                await readFiles_({ runnableOpts: { saveLocations: true } });
+
+                assert.doesNotThrow(() => globalCtx.describe());
+            });
+
+            it("should set 'hookRequire' option on install source-map-support", async () => {
+                await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveLocations: true } });
+
+                assert.calledOnceWith(SourceMapSupportStub.install, { hookRequire: true });
+            });
+
+            ["describe", "describe.only", "describe.skip", "xdescribe"].forEach(methodName => {
+                it(`should add location to suite using "${methodName}"`, async () => {
+                    getMethodsByInterfaceStub.withArgs("bdd").returns({ suiteMethods: ["describe"], testMethods: [] });
+                    const suite = {};
+                    const globalCtx = _.set({}, methodName, () => emitAddRunnable_(suite, "EVENT_SUITE_ADD_SUITE"));
+
+                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                        MochaEventBus.create.lastCall.returnValue.emit(
+                            MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                            globalCtx,
+                        );
+                    });
+
+                    SourceMapSupportStub.wrapCallSite.returns({
+                        getLineNumber: () => 100,
+                        getColumnNumber: () => 500,
+                    });
+
+                    await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveLocations: true } });
+                    _.get(globalCtx, methodName)();
+
+                    assert.deepEqual(suite, { location: { line: 100, column: 500 } });
+                });
+            });
+
+            ["it", "it.only", "it.skip", "xit"].forEach(methodName => {
+                it(`should add location to test using "${methodName}"`, async () => {
+                    getMethodsByInterfaceStub.withArgs("bdd").returns({ suiteMethods: [], testMethods: ["it"] });
+                    const test = {};
+                    const globalCtx = _.set({}, methodName, () => emitAddRunnable_(test, "EVENT_SUITE_ADD_TEST"));
+
+                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                        MochaEventBus.create.lastCall.returnValue.emit(
+                            MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                            globalCtx,
+                        );
+                    });
+
+                    SourceMapSupportStub.wrapCallSite.returns({
+                        getLineNumber: () => 500,
+                        getColumnNumber: () => 100,
+                    });
+
+                    await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveLocations: true } });
+                    _.get(globalCtx, methodName)();
+
+                    assert.deepEqual(test, { location: { line: 500, column: 100 } });
+                });
+            });
+
+            it(`should add location to each runnable`, async () => {
+                getMethodsByInterfaceStub.withArgs("bdd").returns({ suiteMethods: ["describe"], testMethods: ["it"] });
+                const suite = {};
+                const test = {};
+                const globalCtx = {
+                    describe: () => emitAddRunnable_(suite, "EVENT_SUITE_ADD_SUITE"),
+                    it: () => emitAddRunnable_(test, "EVENT_SUITE_ADD_TEST"),
+                };
+
+                Mocha.prototype.loadFilesAsync.callsFake(() => {
+                    MochaEventBus.create.lastCall.returnValue.emit(
+                        MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                        globalCtx,
+                    );
+                });
+
+                SourceMapSupportStub.wrapCallSite
+                    .onFirstCall()
+                    .returns({
+                        getLineNumber: () => 111,
+                        getColumnNumber: () => 222,
+                    })
+                    .onSecondCall()
+                    .returns({
+                        getLineNumber: () => 333,
+                        getColumnNumber: () => 444,
+                    });
+
+                await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveLocations: true } });
+                globalCtx.describe();
+                globalCtx.it();
+
+                assert.deepEqual(suite, { location: { line: 111, column: 222 } });
+                assert.deepEqual(test, { location: { line: 333, column: 444 } });
             });
         });
 

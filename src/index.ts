@@ -24,7 +24,14 @@ export type {
 } from "./types";
 export type { Config } from "./config";
 export type { ConfigInput } from "./config/types";
-export type { TestCollection } from "./test-collection";
+export type {
+    TestCollection,
+    FormatterTreeSuite,
+    FormatterTreeTest,
+    FormatterTreeMainRunnable,
+    FormatterListTest,
+} from "./test-collection";
+export type { StatsResult } from "./stats";
 
 import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
 

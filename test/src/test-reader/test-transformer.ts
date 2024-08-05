@@ -77,7 +77,9 @@ describe("test-transformer", () => {
                             expectedCode.push("", `require("some${extName}");`);
                         }
 
-                        assert.equal(transformedCode, expectedCode.join("\n"));
+                        expectedCode.push("//# sourceMappingURL=");
+
+                        assert.match(transformedCode, expectedCode.join("\n"));
                     });
                 });
             });

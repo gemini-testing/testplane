@@ -25,7 +25,7 @@ TBD
 
 ### Events scheme description {#events-scheme-description}
 
-Testplane can be launched either via the [CLI (command line)](../cli.md) or via its API: from a script using the `run` command.
+Testplane can be launched either via the [CLI (command line)](https://testplane.io/docs/v8/command-line) or via its API: from a script using the `run` command.
 
 After launching, Testplane loads all plugins and proceeds to CLI parsing if it was launched via the CLI, or directly to the initialization stage if it was launched via the API.
 

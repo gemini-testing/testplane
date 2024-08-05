@@ -1,12 +1,17 @@
+import path from "node:path";
 import _ from "lodash";
-import { TestCollection } from "src/test-collection";
-import { Test } from "src/test-reader/test-object";
+import proxyquire from "proxyquire";
+import sinon, { SinonStub } from "sinon";
 
-import type { Suite } from "src/test-reader/test-object/suite";
+import { TestCollection, Formatters, AVAILABLE_FORMATTERS } from "../../../src/test-collection";
+import { Test } from "../../../src/test-reader/test-object";
+import type { Suite } from "../../../src/test-reader/test-object/suite";
 
 type TestAndBrowser = { test: Test; browser: string };
 
 describe("test-collection", () => {
+    const sandbox = sinon.createSandbox();
+
     interface TestOpts {
         title: string;
         browserVersion: string;
@@ -22,6 +27,8 @@ describe("test-collection", () => {
 
         return test;
     };
+
+    afterEach(() => sandbox.restore());
 
     describe("getBrowsers", () => {
         it("should return browsers from passed specs", () => {
@@ -496,6 +503,54 @@ describe("test-collection", () => {
             collection.eachRootSuite((root, browser) => (rootSuites[browser] = root));
 
             assert.deepEqual(rootSuites, { bro1: root });
+        });
+    });
+
+    describe("format", () => {
+        it("should throw error if passed formatter is not supported", () => {
+            const collection = TestCollection.create({});
+
+            try {
+                collection.format("foo" as any);
+            } catch (e) {
+                assert.match(
+                    (e as Error).message,
+                    `"formatter" option must be one of: ${AVAILABLE_FORMATTERS.join(", ")}`,
+                );
+            }
+        });
+
+        [Formatters.LIST, Formatters.TREE].forEach(formatterName => {
+            let formatterStub: SinonStub;
+            let TestCollectionStub: typeof TestCollection;
+
+            beforeEach(() => {
+                formatterStub = sandbox.stub().returns([]);
+
+                TestCollectionStub = proxyquire("src/test-collection", {
+                    [path.resolve(process.cwd(), `src/test-collection/formatters/${formatterName}`)]: {
+                        format: formatterStub,
+                    },
+                }).TestCollection;
+            });
+
+            describe(`${formatterName} formatter`, () => {
+                it("should call 'format' method", () => {
+                    const testCollection = TestCollectionStub.create({});
+
+                    testCollection.format(formatterName);
+
+                    assert.calledOnceWith(formatterStub, testCollection);
+                });
+
+                it("should return result", () => {
+                    const testCollection = TestCollectionStub.create({});
+
+                    const result = testCollection.format(formatterName);
+
+                    assert.deepEqual(result, []);
+                });
+            });
         });
     });
 });

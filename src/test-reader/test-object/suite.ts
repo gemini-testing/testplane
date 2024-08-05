@@ -4,7 +4,7 @@ import { Hook } from "./hook";
 import { Test } from "./test";
 import type { TestObjectData, ConfigurableTestObjectData, TestFunction, TestFunctionCtx } from "./types";
 
-type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id"> & TestObjectData;
+type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData;
 
 export class Suite extends ConfigurableTestObject {
     #suites: this[];
@@ -17,8 +17,8 @@ export class Suite extends ConfigurableTestObject {
     }
 
     // used inside test
-    constructor({ title, file, id }: SuiteOpts = {} as SuiteOpts) {
-        super({ title, file, id });
+    constructor({ title, file, id, location }: SuiteOpts = {} as SuiteOpts) {
+        super({ title, file, id, location });
 
         this.#suites = [];
         this.#tests = [];

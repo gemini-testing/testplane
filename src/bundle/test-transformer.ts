@@ -13,6 +13,7 @@ export const setupTransformHook = (opts: { removeNonJsImports?: boolean } = {}):
         configFile: false,
         compact: false,
         presets: [require("@babel/preset-typescript")],
+        sourceMaps: "inline",
         plugins: [
             [
                 require("@babel/plugin-transform-react-jsx"),

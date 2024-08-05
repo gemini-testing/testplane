@@ -43,7 +43,7 @@ describe("worker/runner/simple-test-parser", () => {
 
             await simpleParser.parse({ file: "some/file.js" });
 
-            assert.calledOnceWith(TestParser.prototype.loadFiles, ["some/file.js"], config);
+            assert.calledOnceWith(TestParser.prototype.loadFiles, ["some/file.js"], { config });
         });
 
         it("should load file before parse", async () => {
