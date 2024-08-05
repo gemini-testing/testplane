@@ -2,7 +2,7 @@ import _ from "lodash";
 import { TestObject } from "./test-object";
 import type { ConfigurableTestObjectData, TestObjectData } from "./types";
 
-type ConfigurableTestObjectOpts = Pick<ConfigurableTestObjectData, "file" | "id"> & TestObjectData;
+type ConfigurableTestObjectOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData;
 
 type SkipData = {
     reason: string;
@@ -11,10 +11,10 @@ type SkipData = {
 export class ConfigurableTestObject extends TestObject {
     #data: ConfigurableTestObjectData;
 
-    constructor({ title, file, id }: ConfigurableTestObjectOpts) {
+    constructor({ title, file, id, location }: ConfigurableTestObjectOpts) {
         super({ title });
 
-        this.#data = { id, file } as ConfigurableTestObjectData;
+        this.#data = { id, file, location } as ConfigurableTestObjectData;
     }
 
     assign(src: this): this {
@@ -108,5 +108,9 @@ export class ConfigurableTestObject extends TestObject {
 
     #getInheritedProperty<T>(name: keyof ConfigurableTestObjectData, defaultValue: T): T {
         return name in this.#data ? (this.#data[name] as T) : (_.get(this.parent, name, defaultValue) as T);
+    }
+
+    get location(): ConfigurableTestObjectData["location"] {
+        return this.#data.location;
     }
 }

@@ -1,17 +1,20 @@
 "use strict";
 
+const _ = require("lodash");
+const Mocha = require("mocha");
+
 const { MochaEventBus } = require("./mocha-event-bus");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
 const { TestReaderEvents } = require("../../events");
 const { MasterEvents } = require("../../events");
-const Mocha = require("mocha");
+const { getMethodsByInterface } = require("./utils");
 
-async function readFiles(files, { esmDecorator, config, eventBus }) {
+async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }) {
     const mocha = new Mocha(config);
     mocha.fullTrace();
 
     initBuildContext(eventBus);
-    initEventListeners(mocha.suite, eventBus);
+    initEventListeners({ rootSuite: mocha.suite, outBus: eventBus, config, runnableOpts });
 
     files.forEach(f => mocha.addFile(f));
     await mocha.loadFilesAsync({ esmDecorator });
@@ -25,11 +28,12 @@ function initBuildContext(outBus) {
     });
 }
 
-function initEventListeners(rootSuite, outBus) {
+function initEventListeners({ rootSuite, outBus, config, runnableOpts }) {
     const inBus = MochaEventBus.create(rootSuite);
 
     forbidSuiteHooks(inBus);
     passthroughFileEvents(inBus, outBus);
+    addLocationToRunnables(inBus, config, runnableOpts);
     registerTestObjects(inBus, outBus);
 
     inBus.emit(MochaEventBus.events.EVENT_SUITE_ADD_SUITE, rootSuite);
@@ -93,6 +97,97 @@ function applyOnly(rootSuite, eventBus) {
     eventBus.emit(TestReaderEvents.NEW_BUILD_INSTRUCTION, ({ treeBuilder }) => {
         treeBuilder.addTestFilter(test => titlesToRun.includes(test.fullTitle()));
     });
+}
+
+function addLocationToRunnables(inBus, config, runnableOpts) {
+    if (!runnableOpts || !runnableOpts.saveLocations) {
+        return;
+    }
+
+    const sourceMapSupport = tryToRequireSourceMapSupport();
+    const { suiteMethods, testMethods } = getMethodsByInterface(config.ui);
+
+    inBus.on(MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, ctx => {
+        [
+            {
+                methods: suiteMethods,
+                eventName: MochaEventBus.events.EVENT_SUITE_ADD_SUITE,
+            },
+            {
+                methods: testMethods,
+                eventName: MochaEventBus.events.EVENT_SUITE_ADD_TEST,
+            },
+        ].forEach(({ methods, eventName }) => {
+            methods.forEach(methodName => {
+                ctx[methodName] = withLocation(ctx[methodName], { inBus, eventName, sourceMapSupport });
+
+                if (ctx[methodName]) {
+                    ctx[methodName].only = withLocation(ctx[methodName].only, { inBus, eventName, sourceMapSupport });
+                    ctx[methodName].skip = withLocation(ctx[methodName].skip, { inBus, eventName, sourceMapSupport });
+                }
+
+                if (!config.ui || config.ui === "bdd") {
+                    const pendingMethodName = `x${methodName}`;
+                    ctx[pendingMethodName] = withLocation(ctx[pendingMethodName], {
+                        inBus,
+                        eventName,
+                        sourceMapSupport,
+                    });
+                }
+            });
+        });
+    });
+}
+
+function withLocation(origFn, { inBus, eventName, sourceMapSupport }) {
+    if (!_.isFunction(origFn)) {
+        return origFn;
+    }
+
+    const wrappedFn = (...args) => {
+        const origStackTraceLimit = Error.stackTraceLimit;
+        const origPrepareStackTrace = Error.prepareStackTrace;
+
+        Error.stackTraceLimit = 2;
+        Error.prepareStackTrace = (error, stackFrames) => {
+            const frame = sourceMapSupport ? sourceMapSupport.wrapCallSite(stackFrames[1]) : stackFrames[1];
+
+            return {
+                line: frame.getLineNumber(),
+                column: frame.getColumnNumber(),
+            };
+        };
+
+        const obj = {};
+        Error.captureStackTrace(obj);
+
+        const location = obj.stack;
+        Error.stackTraceLimit = origStackTraceLimit;
+        Error.prepareStackTrace = origPrepareStackTrace;
+
+        inBus.once(eventName, runnable => {
+            if (!runnable.location) {
+                runnable.location = location;
+            }
+        });
+
+        return origFn(...args);
+    };
+
+    for (const key of Object.keys(origFn)) {
+        wrappedFn[key] = origFn[key];
+    }
+
+    return wrappedFn;
+}
+
+function tryToRequireSourceMapSupport() {
+    try {
+        const module = require("@cspotcode/source-map-support");
+        module.install({ hookRequire: true });
+
+        return module;
+    } catch {} // eslint-disable-line no-empty
 }
 
 module.exports = {

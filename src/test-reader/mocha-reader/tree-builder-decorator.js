@@ -62,8 +62,8 @@ class TreeBuilderDecorator {
     }
 
     #mkTestObject(Constructor, mochaObject, customOpts) {
-        const { title, file } = mochaObject;
-        return Constructor.create({ title, file, ...customOpts });
+        const { title, file, location } = mochaObject;
+        return Constructor.create({ title, file, location, ...customOpts });
     }
 
     #applyConfig(testObject, mochaObject) {

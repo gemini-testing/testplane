@@ -67,6 +67,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             file: "/default/file/path",
             id: "12345",
             fn: sinon.stub(),
+            location: undefined,
         }) as TestType;
         test.parent = Suite.create({ id: "67890", title: "", file: test.file });
 

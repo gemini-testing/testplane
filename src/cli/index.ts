@@ -1,14 +1,15 @@
-import util from "util";
+import path from "node:path";
+import util from "node:util";
 import { Command } from "@gemini-testing/commander";
-import escapeRe from "escape-string-regexp";
 
 import defaults from "../config/defaults";
 import { configOverriding } from "./info";
 import { Testplane } from "../testplane";
 import pkg from "../../package.json";
 import logger from "../utils/logger";
-import { requireModule } from "../utils/module";
 import { shouldIgnoreUnhandledRejection } from "../utils/errors";
+import { withCommonCliOptions, collectCliValues, handleRequires } from "../utils/cli";
+import { CliCommands } from "./constants";
 
 export type TestplaneRunOpts = { cliName?: string };
 
@@ -47,13 +48,10 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
     const configPath = preparseOption(program, "config") as string;
     testplane = Testplane.create(configPath);
 
-    program
-        .on("--help", () => logger.log(configOverriding(opts)))
-        .option("-b, --browser <browser>", "run tests only in specified browser", collect)
-        .option("-s, --set <set>", "run tests only in the specified set", collect)
-        .option("-r, --require <module>", "require module", collect)
-        .option("--reporter <reporter>", "test reporters", collect)
-        .option("--grep <grep>", "run only tests matching the pattern", compileGrep)
+    withCommonCliOptions({ cmd: program, actionName: "run" })
+        .on("--help", () => console.log(configOverriding(opts)))
+        .description("Run tests")
+        .option("--reporter <name>", "test reporters", collectCliValues)
         .option(
             "--update-refs",
             'update screenshot references or gather them if they do not exist ("assertView" command)',
@@ -112,14 +110,17 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
             }
         });
 
+    for (const commandName of Object.values(CliCommands)) {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { registerCmd } = require(path.resolve(__dirname, "./commands", commandName));
+
+        registerCmd(program, testplane);
+    }
+
     testplane.extendCli(program);
 
     program.parse(process.argv);
 };
-
-function collect(newValue: string | string[], array: string[] = []): string[] {
-    return array.concat(newValue);
-}
 
 function preparseOption(program: Command, option: string): unknown {
     // do not display any help, do not exit
@@ -129,19 +130,4 @@ function preparseOption(program: Command, option: string): unknown {
 
     configFileParser.parse(process.argv);
     return configFileParser[option];
-}
-
-function compileGrep(grep: string): RegExp {
-    try {
-        return new RegExp(`(${grep})|(${escapeRe(grep)})`);
-    } catch (error) {
-        logger.warn(`Invalid regexp provided to grep, searching by its string representation. ${error}`);
-        return new RegExp(escapeRe(grep));
-    }
-}
-
-async function handleRequires(requires: string[] = []): Promise<void> {
-    for (const modulePath of requires) {
-        await requireModule(modulePath);
-    }
 }

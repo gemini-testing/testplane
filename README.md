@@ -89,7 +89,7 @@ Feel free to visit these pages for a brief overview of some of Testplane feature
 - [Browser Commands Reference](docs/commands.md)
 - [Testplane Config Reference](https://testplane.io/docs/v8/config/main/)
 - [Testplane × Typescript](docs/typescript.md)
-- [Testplane CLI](docs/cli.md)
+- [Testplane CLI](https://testplane.io/docs/v8/command-line/)
 - [Testplane Events](docs/events.md)
 - [Testplane Programmatic API](docs/programmatic-api.md)
 - [Testplane Component Testing (experimental)](docs/component-testing.md)

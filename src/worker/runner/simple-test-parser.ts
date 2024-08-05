@@ -38,7 +38,7 @@ export class SimpleTestParser extends EventEmitter {
 
         passthroughEvent(parser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
 
-        await parser.loadFiles([file], this._config);
+        await parser.loadFiles([file], { config: this._config });
 
         return parser.parse([file], { browserId, config: this._config.forBrowser(browserId) });
     }
