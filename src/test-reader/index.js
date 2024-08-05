@@ -70,7 +70,7 @@ function validateTests(testsByBro, options) {
         return;
     }
 
-    const stringifiedOpts = convertOptions(options);
+    const stringifiedOpts = convertOptions(_.omit(options, "replMode"));
     if (_.isEmpty(stringifiedOpts)) {
         throw new Error(`There are no tests found. Try to specify [${Object.keys(options).join(", ")}] options`);
     } else {
@@ -81,7 +81,7 @@ function validateTests(testsByBro, options) {
 function convertOptions(obj) {
     let result = "";
     for (let key of _.keys(obj)) {
-        if (!_.isEmpty(obj[key])) {
+        if (!_.isEmpty(obj[key]) || obj[key] instanceof RegExp) {
             if (_.isArray(obj[key])) {
                 result += `- ${key}: ${obj[key].join(", ")}\n`;
             } else {
