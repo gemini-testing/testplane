@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.3](https://github.com/gemini-testing/testplane/compare/v8.19.2...v8.19.3) (2024-08-05)
+
+
+### Bug Fixes
+
+* fix error formatting when no tests were found ([#987](https://github.com/gemini-testing/testplane/issues/987)) ([558e4d1](https://github.com/gemini-testing/testplane/commit/558e4d176963eedd35b746bfc3f68750ce743f0d))
+* fix ts-node ([#979](https://github.com/gemini-testing/testplane/issues/979)) ([2e0b023](https://github.com/gemini-testing/testplane/commit/2e0b0233b2f1cc0e21c25a6982cd0f8936174b25))
+
 ### [8.19.2](https://github.com/gemini-testing/testplane/compare/v8.19.1...v8.19.2) (2024-08-01)
 
 
