@@ -8,6 +8,7 @@
 - [Hooks](#hooks)
 - [Skip](#skip)
 - [Only](#only)
+- [Also](#also)
 - [Config overriding](#config-overriding)
   - [testTimeout](#testtimeout)
 - [WebdriverIO extensions](#webdriverio-extensions)

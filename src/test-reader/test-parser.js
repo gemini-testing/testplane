@@ -37,7 +37,7 @@ class TestParser extends EventEmitter {
         this.#buildInstructions = new InstructionsList();
     }
 
-    async loadFiles(files, config) {
+    async loadFiles(files, { config, runnableOpts }) {
         const eventBus = new EventEmitter();
         const {
             system: { ctx, mochaOpts },
@@ -71,7 +71,7 @@ class TestParser extends EventEmitter {
 
         const rand = Math.random();
         const esmDecorator = f => f + `?rand=${rand}`;
-        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
+        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus, runnableOpts });
 
         if (config.lastFailed.only) {
             try {

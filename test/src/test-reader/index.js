@@ -155,10 +155,11 @@ describe("test-reader", () => {
             const config = makeConfigStub();
             const files = ["file1.js", "file2.js"];
             SetCollection.prototype.getAllFiles.returns(files);
+            const runnableOpts = { saveLocations: true };
 
-            await readTests_({ config });
+            await readTests_({ config, opts: { runnableOpts } });
 
-            assert.calledOnceWith(TestParser.prototype.loadFiles, files, config);
+            assert.calledOnceWith(TestParser.prototype.loadFiles, files, { config, runnableOpts });
         });
 
         it("should load files before parsing", async () => {

@@ -20,7 +20,7 @@ module.exports = class TestReader extends EventEmitter {
     }
 
     async read(options = {}) {
-        const { paths, browsers, ignore, sets, grep } = options;
+        const { paths, browsers, ignore, sets, grep, runnableOpts } = options;
 
         const { fileExtensions } = this.#config.system;
         const envSets = env.parseCommaSeparatedValue(["TESTPLANE_SETS", "HERMIONE_SETS"]).value;
@@ -37,7 +37,7 @@ module.exports = class TestReader extends EventEmitter {
         const parser = new TestParser({ testRunEnv });
         passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
 
-        await parser.loadFiles(setCollection.getAllFiles(), this.#config);
+        await parser.loadFiles(setCollection.getAllFiles(), { config: this.#config, runnableOpts });
 
         const filesByBro = setCollection.groupByBrowser();
         const testsByBro = _.mapValues(filesByBro, (files, browserId) =>

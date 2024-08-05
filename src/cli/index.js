@@ -1,16 +1,17 @@
 "use strict";
 
+const path = require("node:path");
 const _ = require("lodash");
 const { Command } = require("@gemini-testing/commander");
-const escapeRe = require("escape-string-regexp");
 
 const defaults = require("../config/defaults");
 const info = require("./info");
 const { Testplane } = require("../testplane");
 const pkg = require("../../package.json");
 const logger = require("../utils/logger");
-const { requireModule } = require("../utils/module");
 const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
+const { CliCommands } = require("./constants");
+const { withCommonCliOptions, collectCliValues, handleRequires } = require("../utils/cli");
 
 let testplane;
 
@@ -47,13 +48,10 @@ exports.run = (opts = {}) => {
     const configPath = preparseOption(program, "config");
     testplane = Testplane.create(configPath);
 
-    program
-        .on("--help", () => logger.log(info.configOverriding(opts)))
-        .option("-b, --browser <browser>", "run tests only in specified browser", collect)
-        .option("-s, --set <set>", "run tests only in the specified set", collect)
-        .option("-r, --require <module>", "require module", collect)
-        .option("--reporter <reporter>", "test reporters", collect)
-        .option("--grep <grep>", "run only tests matching the pattern", compileGrep)
+    withCommonCliOptions({ cmd: program, actionName: "run" })
+        .on("--help", () => console.log(`\n${info.configOverriding(opts)}`))
+        .description("Run tests")
+        .option("--reporter <name>", "test reporters", collectCliValues)
         .option(
             "--update-refs",
             'update screenshot references or gather them if they do not exist ("assertView" command)',
@@ -112,14 +110,16 @@ exports.run = (opts = {}) => {
             }
         });
 
+    for (const commandName of Object.values(CliCommands)) {
+        const { registerCmd } = require(path.resolve(__dirname, "./commands", commandName));
+
+        registerCmd(program, testplane);
+    }
+
     testplane.extendCli(program);
 
     program.parse(process.argv);
 };
-
-function collect(newValue, array = []) {
-    return array.concat(newValue);
-}
 
 function preparseOption(program, option) {
     // do not display any help, do not exit
@@ -129,19 +129,4 @@ function preparseOption(program, option) {
 
     configFileParser.parse(process.argv);
     return configFileParser[option];
-}
-
-function compileGrep(grep) {
-    try {
-        return new RegExp(`(${grep})|(${escapeRe(grep)})`);
-    } catch (error) {
-        logger.warn(`Invalid regexp provided to grep, searching by its string representation. ${error}`);
-        return new RegExp(escapeRe(grep));
-    }
-}
-
-async function handleRequires(requires = []) {
-    for (const modulePath of requires) {
-        await requireModule(modulePath);
-    }
 }

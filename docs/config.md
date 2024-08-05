@@ -73,7 +73,11 @@
   - [List of useful plugins](#list-of-useful-plugins)
 - [prepareBrowser](#preparebrowser)
 - [prepareEnvironment](#prepareenvironment)
+<<<<<<< HEAD
 - [lastFailed](#lastfailed)
+=======
+- [devServer](#devserver)
+>>>>>>> a9b9a9ec (feat: implement new cli command to read tests)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
