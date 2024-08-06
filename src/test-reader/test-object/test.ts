@@ -2,7 +2,7 @@ import { ConfigurableTestObject } from "./configurable-test-object";
 import type { TestObjectData, TestFunction, TestFunctionCtx } from "./types";
 
 type TestOpts = TestObjectData &
-    Pick<ConfigurableTestObject, "file" | "id"> & {
+    Pick<ConfigurableTestObject, "file" | "id" | "location"> & {
         fn: TestFunction<TestFunctionCtx>;
     };
 
@@ -14,8 +14,8 @@ export class Test extends ConfigurableTestObject {
         return new this(opts);
     }
 
-    constructor({ title, file, id, fn }: TestOpts) {
-        super({ title, file, id });
+    constructor({ title, file, id, location, fn }: TestOpts) {
+        super({ title, file, id, location });
 
         this.fn = fn;
     }
@@ -25,6 +25,7 @@ export class Test extends ConfigurableTestObject {
             title: this.title,
             file: this.file,
             id: this.id,
+            location: this.location,
             fn: this.fn,
         }).assign(this);
     }

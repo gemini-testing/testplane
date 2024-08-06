@@ -639,6 +639,9 @@ describe("testplane", () => {
                 sets: ["s1", "s2"],
                 grep: "grep",
                 replMode: { enabled: false },
+                runnableOpts: {
+                    saveLocations: true,
+                },
             });
 
             assert.calledOnceWith(TestReader.prototype.read, {
@@ -648,6 +651,9 @@ describe("testplane", () => {
                 sets: ["s1", "s2"],
                 grep: "grep",
                 replMode: { enabled: false },
+                runnableOpts: {
+                    saveLocations: true,
+                },
             });
         });
 

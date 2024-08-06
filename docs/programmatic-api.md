@@ -255,6 +255,9 @@ await testplane.readTests(testPaths, options);
     * **ignore** (optional) `String|Glob|Array<String|Glob>` - patterns to exclude paths from the test search.
     * **sets** (optional) `String[]`– Sets to run tests in.
     * **grep** (optional) `RegExp` – Pattern that defines which tests to run.
+    * **replMode** (optional) `{enabled: boolean; beforeTest: boolean; onFail: boolean;}` - [Test development mode using REPL](./cli.md#--repl). When reading the tests, it checks that only one test is running in one browser.
+    * **runnableOpts** (optional):
+        * **saveLocations** (optional) `Boolean` - flag to save `location` (`line` and `column`) to suites and tests. Allows to determine where the suite or test is declared in the file.
 
 ### isFailed
 

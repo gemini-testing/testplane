@@ -1,3 +1,17 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+### Contents
+
+- [Testplane Component Testing (experimental)](#testplane-component-testing-experimental)
+  - [Implementation options for component testing](#implementation-options-for-component-testing)
+  - [How to use it?](#how-to-use-it)
+  - [What additional features are supported?](#what-additional-features-are-supported)
+    - [Hot Module Replacement (HMR)](#hot-module-replacement-hmr)
+    - [Using the browser and expect instances directly in the browser DevTools](#using-the-browser-and-expect-instances-directly-in-the-browser-devtools)
+    - [Logs from the browser console in the terminal](#logs-from-the-browser-console-in-the-terminal)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Testplane Component Testing (experimental)
 
 Almost every modern web interfaces

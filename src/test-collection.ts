@@ -2,7 +2,7 @@ import _ from "lodash";
 
 import type { Suite, RootSuite, Test } from "./types";
 
-type TestDisabled = Test & { disabled: true };
+export type TestDisabled = Test & { disabled: true };
 type TestsCallback<T> = (test: Test, browserId: string) => T;
 type SortTestsCallback = (test1: Test, test2: Test) => number;
 

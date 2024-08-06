@@ -6,6 +6,11 @@ export type TestObjectData = {
     title: string;
 };
 
+export type Location = {
+    line: number;
+    column: number;
+};
+
 export type ConfigurableTestObjectData = {
     id: string;
     pending: boolean;
@@ -16,6 +21,7 @@ export type ConfigurableTestObjectData = {
     silentSkip: boolean;
     browserId: string;
     browserVersion?: string;
+    location?: Location;
 };
 
 export interface TestFunctionCtx {
