@@ -85,7 +85,7 @@ export interface AssertViewOpts extends Partial<AssertViewOptsConfig> {
 export type AssertViewCommand = (
     this: WebdriverIO.Browser,
     state: string,
-    selectors: string | string[],
+    selectors?: string | string[],
     opts?: AssertViewOpts,
 ) => Promise<void>;
 

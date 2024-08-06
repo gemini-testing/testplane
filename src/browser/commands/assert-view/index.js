@@ -156,6 +156,14 @@ module.exports.default = browser => {
     };
 
     session.addCommand("assertView", async function (state, selectors, opts = {}) {
+        if (!selectors) {
+            opts = _.defaults(opts, {
+                allowViewportOverflow: true,
+                compositeImage: false,
+                captureElementFromTop: false,
+            });
+            selectors = "body";
+        }
         await Promise.map([].concat(selectors), async selector => {
             await this.$(selector)
                 .then(el => el.waitForExist())
