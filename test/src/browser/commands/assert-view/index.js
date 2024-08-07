@@ -152,7 +152,7 @@ describe("assertView command", () => {
     it("should screenshot the viewport if selector is not provided", async () => {
         const browser = await initBrowser_();
 
-        await browser.publicAPI.assertView("plain", null);
+        await browser.publicAPI.assertView("plain");
 
         assert.calledOnceWith(
             browser.prepareScreenshot,
@@ -167,7 +167,7 @@ describe("assertView command", () => {
     it("should add custom options if selector is not provided", async () => {
         const browser = await initBrowser_();
 
-        await browser.publicAPI.assertView("plain", null, {
+        await browser.publicAPI.assertView("plain", {
             disableAnimation: false,
         });
 

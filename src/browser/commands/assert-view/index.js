@@ -155,7 +155,15 @@ module.exports.default = browser => {
         testplaneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
-    session.addCommand("assertView", async function (state, selectors, opts = {}) {
+    session.addCommand("assertView", async function (state, selectorsOrOpts, opts = {}) {
+        let selectors;
+        if (selectorsOrOpts) {
+            if (typeof selectorsOrOpts === "string" || _.isArray(selectorsOrOpts)) {
+                selectors = selectorsOrOpts;
+            } else if (typeof selectorsOrOpts === "object") {
+                opts = selectorsOrOpts;
+            }
+        }
         if (!selectors) {
             opts = _.defaults(opts, {
                 allowViewportOverflow: true,
