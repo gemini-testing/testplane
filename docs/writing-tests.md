@@ -289,7 +289,7 @@ it('some test', async ({ browser }) => {
     await browser.assertView('plain'); // Screen the viewport
 
     await browser.click('.button');
-    await browser.assertView('clicked', null, {
+    await browser.assertView('clicked', {
         ignoreDiffPixelCount: 5
     }); // Screen the viewport with custom options
 });
@@ -314,7 +314,7 @@ it('some test', async ({ browser }) => {
 Parameters:
 
 - state (required) `String` – state name; should be unique within one test
-- selector (optional) `String|String[]` – DOM-node selector that you need to capture. If not specified, will be set to `body` and the following options will be automatically added to opts: 
+- selector (optional) `String|String[]` – DOM-node selector that you need to capture. If not specified or skipped, will be set to `body` and the following options will be automatically added to opts: 
 ```{
     allowViewportOverflow: true,
     compositeImage: false,
