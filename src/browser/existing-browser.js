@@ -187,6 +187,8 @@ module.exports = class ExistingBrowser extends Browser {
     _addCommands() {
         this._addMetaAccessCommands(this._session);
         this._decorateUrlMethod(this._session);
+        // The reason for doing this is that in webdriverio 8.26.2 there was a breaking change that made ElementsList an async iterator
+        // https://github.com/webdriverio/webdriverio/pull/11874
         this._overrideGetElementsList(this._session);
 
         commandsList.forEach(command => require(`./commands/${command}`).default(this));
