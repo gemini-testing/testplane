@@ -175,7 +175,7 @@ it('should work another way', function() {
 The test will be processed in all browsers and **silently** skipped in `ie9`.
 
 ### Also
-This feature allows you to run the specified suite or test in [passive browser](./config.md#passive).
+This feature allows you to run the specified suite or test in [passive browser](https://testplane.io/docs/v8/config/browsers/#passive).
 You can do this by using the global `testplane.also` helper. It supports the following methods:
 
 - `.in` – Adds matchers for browsers.

@@ -87,7 +87,7 @@ Feel free to visit these pages for a brief overview of some of Testplane feature
 - [Dealing with Browsers](docs/dealing-with-browsers.md)
 - [Writing Tests](docs/writing-tests.md)
 - [Browser Commands Reference](docs/commands.md)
-- [Testplane Config Reference](docs/config.md)
+- [Testplane Config Reference](https://testplane.io/docs/v8/config/main/)
 - [Testplane × Typescript](docs/typescript.md)
 - [Testplane CLI](docs/cli.md)
 - [Testplane Events](docs/events.md)

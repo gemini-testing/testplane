@@ -104,12 +104,12 @@ If a critical error occurs in [one of the event interceptors](./events-intercept
 If Testplane receives a [SIGTERM][sigterm] signal (for example, by pressing `Ctrl + C`), then Testplane will trigger an [EXIT](./exit.md) event and prematurely terminate the tests.
 
 
-[system]: ../config.md#system
-[system-workers]: ../config.md#workers
-[system-tests-per-worker]: ../config.md#testsperworker
+[system]: https://testplane.io/docs/v8/config/system/
+[system-workers]: https://testplane.io/docs/v8/config/system/#workers
+[system-tests-per-worker]: https://testplane.io/docs/v8/config/system/#tests_per_worker
 [new-worker-process]: ./new-worker-process.md
-[browser-tests-per-session]: ../config.md#testspersession
-[browser-sessions-per-browser]: ../config.md#sessionsperbrowser
-[browsers-retry]: ../config.md#retry
-[browsers-should-retry]: ../config.md#shouldretry
+[browser-tests-per-session]: https://testplane.io/docs/v8/config/browsers/#tests_per_session
+[browser-sessions-per-browser]: https://testplane.io/docs/v8/config/browsers/#sessions_per_browser
+[browsers-retry]: https://testplane.io/docs/v8/config/browsers/#retry
+[browsers-should-retry]: https://testplane.io/docs/v8/config/browsers/#should_retry
 [sigterm]: https://en.wikipedia.org/wiki/Signal_(IPC)#SIGTERM

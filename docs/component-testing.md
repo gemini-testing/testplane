@@ -32,7 +32,7 @@ export default defineConfig({
 });
 ```
 
-After that, we will configure the tests to run in the browser. To do this, specify the [testRunEnv](./config.md#testrunenv) option. Example:
+After that, we will configure the tests to run in the browser. To do this, specify the [testRunEnv](https://testplane.io/docs/v8/config/system/#testrunenv) option. Example:
 
 ```typescript
 // .testplane.conf.ts
