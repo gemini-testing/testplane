@@ -139,6 +139,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             width: viewportWidth,
             height: viewportHeight
         })
+            .round()
             .scale(pixelRatio)
             .serialize(),
         documentHeight: Math.ceil(documentHeight * pixelRatio),
