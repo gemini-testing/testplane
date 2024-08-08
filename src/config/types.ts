@@ -1,4 +1,3 @@
-import type { SetRequired } from "type-fest";
 import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
 import type { Test } from "../types";
@@ -171,8 +170,8 @@ export interface SetsConfig {
 }
 
 // Only browsers desiredCapabilities are required in input config
-export type ConfigInput = {
-    browsers: Record<string, SetRequired<Partial<CommonConfig>, "desiredCapabilities">>;
+export type ConfigInput = Partial<CommonConfig> & {
+    browsers: Record<string, Partial<CommonConfig> & { desiredCapabilities: WebdriverIO.Capabilities }>;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
     prepareEnvironment?: () => void | null;
