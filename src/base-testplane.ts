@@ -30,7 +30,7 @@ export abstract class BaseTestplane extends AsyncEmitter {
 
         this._interceptors = [];
 
-        tryToRegisterTsNode();
+        tryToRegisterTsNode(this.isWorker());
 
         this._config = Config.create(config);
         this._setLogLevel();
