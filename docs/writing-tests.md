@@ -281,12 +281,12 @@ it('some test', async ({ browser }) => {
 });
 ```
 
-Without `selector` parameter, assertView will take a screenshot of the current viewport. Example:
+With skipped `selector` parameter, assertView will take a screenshot of the current viewport. Example:
 
 ```js
 it('some test', async ({ browser }) => {
     await browser.url('some/url');
-    // Scroll 1000 px to the bottom
+    // Scroll 1000 px down
     await browser.execute(() => {
         window.scrollTo(0, 1000);
     });
