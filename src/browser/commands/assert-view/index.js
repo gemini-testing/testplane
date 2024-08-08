@@ -155,34 +155,43 @@ module.exports.default = browser => {
         testplaneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
-    session.addCommand("assertView", async function (state, selectorsOrOpts, opts = {}) {
-        let selectors;
-        if (selectorsOrOpts) {
-            if (typeof selectorsOrOpts === "string" || _.isArray(selectorsOrOpts)) {
-                selectors = selectorsOrOpts;
-            } else if (typeof selectorsOrOpts === "object") {
-                opts = selectorsOrOpts;
-            }
-        }
-        if (!selectors) {
-            opts = _.defaults(opts, {
-                allowViewportOverflow: true,
-                compositeImage: false,
-                captureElementFromTop: false,
-            });
-            selectors = "body";
-        }
+    const waitSelectorsForExist = async (browser, selectors) => {
         await Promise.map([].concat(selectors), async selector => {
-            await this.$(selector)
+            await browser
+                .$(selector)
                 .then(el => el.waitForExist())
                 .catch(() => {
                     throw new Error(
-                        `element ("${selector}") still not existing after ${this.options.waitforTimeout} ms`,
+                        `element ("${selector}") still not existing after ${browser.options.waitforTimeout} ms`,
                     );
                 });
         });
+    };
+
+    const assertViewBySelector = async (browser, state, selectors, opts) => {
+        await waitSelectorsForExist(browser, selectors);
 
         return assertView(state, selectors, opts);
+    };
+
+    const assertViewByViewport = async (state, opts) => {
+        opts = _.defaults(opts, {
+            allowViewportOverflow: true,
+            compositeImage: false,
+            captureElementFromTop: false,
+        });
+
+        return assertView(state, "body", opts);
+    };
+
+    const shouldAssertViewport = selectorsOrOpts => {
+        return !(typeof selectorsOrOpts === "string" || _.isArray(selectorsOrOpts));
+    };
+
+    session.addCommand("assertView", async function (state, selectorsOrOpts, opts = {}) {
+        return shouldAssertViewport(selectorsOrOpts)
+            ? assertViewByViewport(state, selectorsOrOpts || opts)
+            : assertViewBySelector(this, state, selectorsOrOpts, opts);
     });
 
     session.addCommand(
