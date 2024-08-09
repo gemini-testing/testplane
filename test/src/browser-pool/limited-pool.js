@@ -1,7 +1,7 @@
 "use strict";
 
 const Promise = require("bluebird");
-const LimitedPool = require("src/browser-pool/limited-pool");
+const LimitedPool = require("src/browser-pool/limited-pool").default;
 const { CancelledError } = require("src/browser-pool/cancelled-error");
 const stubBrowser = require("./util").stubBrowser;
 
@@ -170,6 +170,11 @@ describe("browser-pool/limited-pool", () => {
         it("taking into account number of failed browser requests", () => {
             const browser = stubBrowser();
             const pool = makePool_({ limit: 2 });
+            const reflect = promise => {
+                return promise
+                    .then(value => ({ isFulfilled: true, value }))
+                    .catch(error => ({ isFulfilled: false, error }));
+            };
 
             underlyingPool.getBrowser
                 .withArgs("first")
@@ -177,7 +182,7 @@ describe("browser-pool/limited-pool", () => {
                 .withArgs("second")
                 .returns(Promise.reject());
 
-            return Promise.all([pool.getBrowser("first"), pool.getBrowser("second").reflect()])
+            return Promise.all([pool.getBrowser("first"), reflect(pool.getBrowser("second"))])
                 .then(() => pool.freeBrowser(browser))
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
@@ -213,9 +218,17 @@ describe("browser-pool/limited-pool", () => {
 
         it("should not launch browsers out of limit", () => {
             underlyingPool.getBrowser.returns(Promise.resolve(stubBrowser()));
+            const withTimeout = async (promise, ms, timeoutMessage) => {
+                let timeout;
+                const timeoutPromise = new Promise((_, reject) => {
+                    timeout = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+                });
+
+                return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeout));
+            };
             const pool = makePool_({ limit: 1 });
 
-            const result = pool.getBrowser("first").then(() => pool.getBrowser("second").timeout(100, "timeout"));
+            const result = pool.getBrowser("first").then(() => withTimeout(pool.getBrowser("second"), 100, "timeout"));
 
             return assert.isRejected(result, /timeout$/);
         });

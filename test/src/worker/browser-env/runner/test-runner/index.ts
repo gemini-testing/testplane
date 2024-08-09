@@ -42,6 +42,7 @@ import type { Test as TestType } from "../../../../../../src/test-reader/test-ob
 import type { BrowserConfig } from "../../../../../../src/config/browser-config";
 import type { WorkerRunTestResult } from "../../../../../../src/worker/testplane";
 import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-reconnect-error";
+import ExistingBrowser from "../../../../../../src/browser/existing-browser";
 
 interface TestOpts {
     title: string;
@@ -118,24 +119,25 @@ describe("worker/browser-env/runner/test-runner", () => {
         return promise;
     };
 
-    const mkBrowser_ = (opts: Partial<Browser> = {}): Browser => ({
-        publicAPI: {
-            url: sandbox.stub().resolves(),
-        } as unknown as Browser["publicAPI"],
-        config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
-        state: {
-            isBroken: false,
-        },
-        applyState: sandbox.stub(),
-        customCommands: [],
-        callstackHistory: {
-            enter: sandbox.stub(),
-            leave: sandbox.stub(),
-            markError: sandbox.stub(),
-            release: sandbox.stub(),
-        } as unknown as Browser["callstackHistory"],
-        ...opts,
-    });
+    const mkBrowser_ = (opts: Partial<Browser> = {}): ExistingBrowser =>
+        ({
+            publicAPI: {
+                url: sandbox.stub().resolves(),
+            } as unknown as Browser["publicAPI"],
+            config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
+            state: {
+                isBroken: false,
+            },
+            applyState: sandbox.stub(),
+            customCommands: [],
+            callstackHistory: {
+                enter: sandbox.stub(),
+                leave: sandbox.stub(),
+                markError: sandbox.stub(),
+                release: sandbox.stub(),
+            } as unknown as Browser["callstackHistory"],
+            ...opts,
+        } as ExistingBrowser);
 
     const mkElement_ = (opts: Partial<WebdriverIO.Element> = {}): WebdriverIO.Element => {
         return {

@@ -1,20 +1,17 @@
 "use strict";
 
 const Promise = require("bluebird");
-const Pool = require("./pool");
 const LimitedUseSet = require("./limited-use-set");
 const debug = require("debug");
 const { buildCompositeBrowserId } = require("./utils");
 
-module.exports = class CachingPool extends Pool {
+module.exports = class CachingPool {
     /**
      * @constructor
      * @extends BasicPool
      * @param {BasicPool} underlyingPool
      */
     constructor(underlyingPool, config) {
-        super();
-
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};

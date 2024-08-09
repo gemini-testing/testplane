@@ -1,35 +1,44 @@
-const { EventEmitter } = require("events");
-const { InstructionsList, Instructions } = require("./build-instructions");
-const { SkipController } = require("./controllers/skip-controller");
-const { OnlyController } = require("./controllers/only-controller");
-const { AlsoController } = require("./controllers/also-controller");
-const { ConfigController } = require("./controllers/config-controller");
-const browserVersionController = require("./controllers/browser-version-controller");
-const { TreeBuilder } = require("./tree-builder");
-const { readFiles } = require("./mocha-reader");
-const { TestReaderEvents } = require("../events");
-const { TestParserAPI } = require("./test-parser-api");
-const { setupTransformHook } = require("./test-transformer");
-const { MasterEvents } = require("../events");
-const _ = require("lodash");
-const clearRequire = require("clear-require");
-const path = require("path");
-const fs = require("fs-extra");
-const logger = require("../utils/logger");
-const { getShortMD5 } = require("../utils/crypto");
+import { EventEmitter } from "events";
+import { InstructionsList, Instructions } from "./build-instructions";
+import { SkipController } from "./controllers/skip-controller";
+import { OnlyController } from "./controllers/only-controller";
+import { AlsoController } from "./controllers/also-controller";
+import { ConfigController } from "./controllers/config-controller";
+import { mkProvider } from "./controllers/browser-version-controller";
+import { TreeBuilder } from "./tree-builder";
+import { readFiles } from "./mocha-reader";
+import { TestReaderEvents } from "../events";
+import { Context, TestParserAPI } from "./test-parser-api";
+import { setupTransformHook } from "./test-transformer";
+import { MasterEvents } from "../events";
+import _ from "lodash";
+import clearRequire from "clear-require";
+import path from "path";
+import fs from "fs-extra";
+import logger from "../utils/logger";
+import { getShortMD5 } from "../utils/crypto";
+import { Test } from "./test-object";
+import { Config } from "../config";
+import { BrowserConfig } from "../config/browser-config";
 
-const getFailedTestId = test => getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
+export type TestParserOpts = {
+    testRunEnv?: "nodejs" | "browser";
+};
+export type TestParserParseOpts = {
+    browserId: string;
+    grep?: RegExp;
+    config: BrowserConfig;
+};
 
-class TestParser extends EventEmitter {
-    #opts;
-    #failedTests;
-    #buildInstructions;
+const getFailedTestId = (test: { fullTitle: string; browserId: string; browserVersion?: string }): string =>
+    getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
 
-    /**
-     * @param {object} opts
-     * @param {"nodejs" | "browser" | undefined} opts.testRunEnv - environment to parse tests for
-     */
-    constructor(opts = {}) {
+export class TestParser extends EventEmitter {
+    #opts: TestParserOpts;
+    #failedTests: Set<string>;
+    #buildInstructions: InstructionsList;
+
+    constructor(opts: TestParserOpts = {}) {
         super();
 
         this.#opts = opts;
@@ -37,14 +46,14 @@ class TestParser extends EventEmitter {
         this.#buildInstructions = new InstructionsList();
     }
 
-    async loadFiles(files, config) {
+    async loadFiles(files: string[], config: Config): Promise<void> {
         const eventBus = new EventEmitter();
         const {
             system: { ctx, mochaOpts },
         } = config;
 
         const toolGlobals = {
-            browser: browserVersionController.mkProvider(config.getBrowserIds(), eventBus),
+            browser: mkProvider(config.getBrowserIds(), eventBus),
             config: ConfigController.create(eventBus),
             ctx: _.clone(ctx),
             only: OnlyController.create(eventBus),
@@ -63,14 +72,14 @@ class TestParser extends EventEmitter {
             .push(Instructions.buildGlobalSkipInstruction(config));
 
         this.#applyInstructionsEvents(eventBus);
-        this.#passthroughFileEvents(eventBus, toolGlobals);
+        this.#passthroughFileEvents(eventBus, toolGlobals as unknown as Context);
 
         this.#clearRequireCache(files);
 
         const revertTransformHook = setupTransformHook({ removeNonJsImports: this.#opts.testRunEnv === "browser" });
 
         const rand = Math.random();
-        const esmDecorator = f => f + `?rand=${rand}`;
+        const esmDecorator = (f: string): string => f + `?rand=${rand}`;
         await readFiles(files, { esmDecorator, config: mochaOpts, eventBus });
 
         if (config.lastFailed.only) {
@@ -94,8 +103,8 @@ class TestParser extends EventEmitter {
         revertTransformHook();
     }
 
-    #applyInstructionsEvents(eventBus) {
-        let currentFile;
+    #applyInstructionsEvents(eventBus: EventEmitter): void {
+        let currentFile: string | undefined;
 
         eventBus
             .on(MasterEvents.BEFORE_FILE_READ, ({ file }) => (currentFile = file))
@@ -105,8 +114,8 @@ class TestParser extends EventEmitter {
             );
     }
 
-    #passthroughFileEvents(eventBus, testplane) {
-        const passthroughEvent_ = (event, customOpts = {}) => {
+    #passthroughFileEvents(eventBus: EventEmitter, testplane: Context): void {
+        const passthroughEvent_ = (event: MasterEvents[keyof MasterEvents], customOpts = {}): void => {
             eventBus.on(event, data =>
                 this.emit(event, {
                     ...data,
@@ -121,7 +130,7 @@ class TestParser extends EventEmitter {
         passthroughEvent_(MasterEvents.AFTER_FILE_READ);
     }
 
-    #clearRequireCache(files) {
+    #clearRequireCache(files: string[]): void {
         files.forEach(filename => {
             if (path.extname(filename) !== ".mjs") {
                 clearRequire(path.resolve(filename));
@@ -129,13 +138,13 @@ class TestParser extends EventEmitter {
         });
     }
 
-    parse(files, { browserId, config, grep }) {
+    parse(files: string[], { browserId, config, grep }: TestParserParseOpts): Test[] {
         const treeBuilder = new TreeBuilder();
 
         this.#buildInstructions.exec(files, { treeBuilder, browserId, config });
 
         if (grep) {
-            treeBuilder.addTestFilter(test => grep.test(test.fullTitle()));
+            treeBuilder.addTestFilter((test: Test) => grep.test(test.fullTitle()));
         }
 
         if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
@@ -152,15 +161,15 @@ class TestParser extends EventEmitter {
 
         const rootSuite = treeBuilder.applyFilters().getRootSuite();
 
-        const tests = rootSuite.getTests();
+        const tests = rootSuite!.getTests();
 
         this.#validateUniqTitles(tests);
 
         return tests;
     }
 
-    #validateUniqTitles(tests) {
-        const titles = {};
+    #validateUniqTitles(tests: Test[]): void {
+        const titles: Record<string, string> = {};
 
         tests.forEach(test => {
             const fullTitle = test.fullTitle();
@@ -184,7 +193,3 @@ class TestParser extends EventEmitter {
         });
     }
 }
-
-module.exports = {
-    TestParser,
-};

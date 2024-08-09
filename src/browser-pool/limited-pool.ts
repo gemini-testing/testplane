@@ -1,26 +1,51 @@
 "use strict";
 
-const _ = require("lodash");
-const Promise = require("bluebird");
-const yallist = require("yallist");
-const Pool = require("./pool");
-const { CancelledError } = require("./cancelled-error");
-const debug = require("debug");
-const { buildCompositeBrowserId } = require("./utils");
+import _ from "lodash";
+import yallist from "yallist";
+import Pool from "./pool";
+import { CancelledError } from "./cancelled-error";
+import debug from "debug";
+import { buildCompositeBrowserId } from "./utils";
+import Browser from "../browser/browser";
 
-module.exports = class LimitedPool extends Pool {
-    static create(underlyingPool, opts) {
+export type LimitedPoolOpts = {
+    limit: number;
+    isSpecificBrowserLimiter?: boolean;
+};
+
+export type BrowserOpts = {
+    force?: boolean;
+    version?: string;
+    highPriority?: boolean;
+};
+
+export type QueueItem = {
+    id: string;
+    opts: {
+        force?: boolean;
+        version?: string;
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolve: (value: any) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    reject: (value: any) => void;
+};
+
+class LimitedPool implements Pool {
+    log: debug.Debugger;
+    underlyingPool: Pool;
+    _limit: number;
+    _launched: number;
+    _requests: number;
+    _requestQueue: yallist<QueueItem>;
+    _highPriorityRequestQueue: yallist<QueueItem>;
+    _isSpecificBrowserLimiter: boolean;
+
+    static create(underlyingPool: Pool, opts: LimitedPoolOpts): LimitedPool {
         return new LimitedPool(underlyingPool, opts);
     }
 
-    /**
-     * @extends BasicPool
-     * @param {Number} limit
-     * @param {BasicPool} underlyingPool
-     */
-    constructor(underlyingPool, opts) {
-        super();
-
+    constructor(underlyingPool: Pool, opts: LimitedPoolOpts) {
         this.log = debug("testplane:pool:limited");
 
         this.underlyingPool = underlyingPool;
@@ -34,18 +59,20 @@ module.exports = class LimitedPool extends Pool {
             : true;
     }
 
-    getBrowser(id, opts = {}) {
+    async getBrowser(id: string, opts = {}): Promise<Browser> {
         const optsToPrint = JSON.stringify(opts);
         this.log(`get browser ${id} with opts:${optsToPrint} (launched ${this._launched}, limit ${this._limit})`);
 
         ++this._requests;
-        return this._getBrowser(id, opts).catch(e => {
+        try {
+            return await this._getBrowser(id, opts);
+        } catch (e) {
             --this._requests;
-            return Promise.reject(e);
-        });
+            return await Promise.reject(e);
+        }
     }
 
-    freeBrowser(browser, opts = {}) {
+    freeBrowser(browser: Browser, opts: BrowserOpts = {}): Promise<void> {
         --this._requests;
 
         const nextRequest = this._lookAtNextRequest();
@@ -61,10 +88,10 @@ module.exports = class LimitedPool extends Pool {
         return this.underlyingPool.freeBrowser(browser, optsForFree).finally(() => this._launchNextBrowser());
     }
 
-    cancel() {
+    cancel(): void {
         this.log("cancel");
 
-        const reject_ = entry => entry.reject(new CancelledError());
+        const reject_ = (entry: QueueItem): void => entry.reject(new CancelledError());
         this._highPriorityRequestQueue.forEach(reject_);
         this._requestQueue.forEach(reject_);
 
@@ -74,7 +101,7 @@ module.exports = class LimitedPool extends Pool {
         this.underlyingPool.cancel();
     }
 
-    _getBrowser(id, opts = {}) {
+    _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
         if (this._launched < this._limit) {
             this.log("can launch one more");
             this._launched++;
@@ -90,11 +117,7 @@ module.exports = class LimitedPool extends Pool {
         });
     }
 
-    /**
-     * @param {String} id
-     * @returns {Promise<Browser>}
-     */
-    _newBrowser(id, opts) {
+    _newBrowser(id: string, opts: object): Promise<Browser> {
         this.log(`launching new browser ${id} with opts:${JSON.stringify(opts)}`);
 
         return this.underlyingPool.getBrowser(id, opts).catch(e => {
@@ -103,11 +126,11 @@ module.exports = class LimitedPool extends Pool {
         });
     }
 
-    _lookAtNextRequest() {
+    _lookAtNextRequest(): QueueItem | undefined {
         return this._highPriorityRequestQueue.get(0) || this._requestQueue.get(0);
     }
 
-    _launchNextBrowser() {
+    _launchNextBrowser(): void {
         const queued = this._highPriorityRequestQueue.shift() || this._requestQueue.shift();
 
         if (queued) {
@@ -121,4 +144,6 @@ module.exports = class LimitedPool extends Pool {
             this._launched--;
         }
     }
-};
+}
+
+export default LimitedPool;
