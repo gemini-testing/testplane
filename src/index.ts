@@ -27,9 +27,11 @@ export type { ConfigInput } from "./config/types";
 export type { TestCollection } from "./test-collection";
 
 declare global {
-    const testplane: GlobalHelper;
+    // eslint-disable-next-line no-var
+    var testplane: GlobalHelper;
     /**
      * @deprecated Use `testplane` instead
      */
-    const hermione: GlobalHelper;
+    // eslint-disable-next-line no-var
+    var hermione: GlobalHelper;
 }

@@ -1,7 +1,7 @@
 "use strict";
 
 const BrowserAgent = require("src/runner/browser-agent");
-const BrowserPool = require("src/browser-pool/basic-pool");
+const BrowserPool = require("src/browser-pool/basic-pool").default;
 
 describe("runner/browser-agent", () => {
     const sandbox = sinon.createSandbox();

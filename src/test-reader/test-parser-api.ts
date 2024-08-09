@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { GlobalHelper } from "../types";
 import type { TreeBuilder } from "./tree-builder";
 
-type Context = GlobalHelper & Record<string, Record<string, unknown>>;
+export type Context = GlobalHelper & Record<string, Record<string, unknown>>;
 type Methods = Record<string, (...args: unknown[]) => unknown>;
 
 interface NewBuildEventOpts {
