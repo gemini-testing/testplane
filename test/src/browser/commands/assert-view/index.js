@@ -149,6 +149,39 @@ describe("assertView command", () => {
         assert.calledOnceWith(browser.prepareScreenshot, [".selector1", ".selector2"]);
     });
 
+    it("should screenshot the viewport if selector is not provided", async () => {
+        const browser = await initBrowser_();
+
+        await browser.publicAPI.assertView("plain");
+
+        assert.calledOnceWith(
+            browser.prepareScreenshot,
+            ["body"],
+            sinon.match({
+                allowViewportOverflow: true,
+                captureElementFromTop: false,
+            }),
+        );
+    });
+
+    it("should add custom options if selector is not provided", async () => {
+        const browser = await initBrowser_();
+
+        await browser.publicAPI.assertView("plain", {
+            disableAnimation: false,
+        });
+
+        assert.calledOnceWith(
+            browser.prepareScreenshot,
+            ["body"],
+            sinon.match({
+                allowViewportOverflow: true,
+                captureElementFromTop: false,
+                disableAnimation: false,
+            }),
+        );
+    });
+
     [
         { scope: "browser", fn: assertViewBrowser },
         { scope: "element", fn: assertViewElement },
