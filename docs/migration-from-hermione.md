@@ -24,5 +24,5 @@ Optional changes list. These are not required, but recommended:
 - Use `testplane` field instead of `hermione` on event handlers;
 - Use [`TestplaneCtx`](./typescript.md#testplanectx-typings) instead of `HermioneCtx` type;
 - Use `executionContext.testplaneCtx` as browser property instead of `executionContext.hermioneCtx`;
-- If you use default [screenshotsDir](./config.md#screenshotsdir) value, rename "hermione/screens" directory to "testplane/screens" or specify the value "hermione/screens" explicitly;
-- If you use default [sets.files](./config.md#sets) value, move your tests from "hermione" to "testplane" directory or specify the value "hermione" explicitly;
+- If you use default [screenshotsDir](https://testplane.io/docs/v8/config/browsers/#screenshots_dir) value, rename "hermione/screens" directory to "testplane/screens" or specify the value "hermione/screens" explicitly;
+- If you use default [sets.files](https://testplane.io/docs/v8/config/sets/) value, move your tests from "hermione" to "testplane" directory or specify the value "hermione" explicitly;

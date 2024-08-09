@@ -36,7 +36,7 @@ testplane.intercept(testplane.events.RETRY, ({ event, data: test }) => {
 
 See "[Collecting statistics about running tests](./usage-examples/collecting-stats.md)" for an example.
 
-[browsers-retry]: ../config.md#retry
-[browsers-should-retry]: ../config.md#shouldretry
+[browsers-retry]: https://testplane.io/docs/v8/config/browsers/#retry
+[browsers-should-retry]: https://testplane.io/docs/v8/config/browsers/#should_retry
 [retry-limiter]: https://github.com/gemini-testing/retry-limiter
 [testplane-retry-progressive]: https://github.com/gemini-testing/testplane-retry-progressive
