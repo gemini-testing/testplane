@@ -2,8 +2,8 @@
 
 const Runner = require("src/worker/runner");
 const BrowserPool = require("src/worker/runner/browser-pool");
-const CachingTestParser = require("src/worker/runner/caching-test-parser");
-const BrowserAgent = require("src/worker/runner/browser-agent");
+const CachingTestParser = require("src/worker/runner/caching-test-parser").default;
+const BrowserAgent = require("src/worker/runner/browser-agent").default;
 const { WorkerEvents: RunnerEvents } = require("src/events");
 const NodejsEnvTestRunner = require("src/worker/runner/test-runner");
 const { TestRunner: BrowserEnvTestRunner } = require("src/worker/browser-env/runner/test-runner");

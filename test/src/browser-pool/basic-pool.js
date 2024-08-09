@@ -1,8 +1,8 @@
 "use strict";
 
 const { AsyncEmitter } = require("src/events/async-emitter");
-const BasicPool = require("src/browser-pool/basic-pool");
-const Browser = require("src/browser/new-browser");
+const BasicPool = require("src/browser-pool/basic-pool").default;
+const Browser = require("src/browser/new-browser").default;
 const { CancelledError } = require("src/browser-pool/cancelled-error");
 const { MasterEvents: Events } = require("src/events");
 const { stubBrowser } = require("./util");
