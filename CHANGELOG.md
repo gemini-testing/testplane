@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.4](https://github.com/gemini-testing/testplane/compare/v8.19.3...v8.19.4) (2024-08-09)
+
+
+### Bug Fixes
+
+* fix ConfigInput type ([#991](https://github.com/gemini-testing/testplane/issues/991)) ([8cdcd15](https://github.com/gemini-testing/testplane/commit/8cdcd153f7abca3847e50c24f3ffc5c9bb17ebb0))
+* fix swc warnings ([#993](https://github.com/gemini-testing/testplane/issues/993)) ([d86460a](https://github.com/gemini-testing/testplane/commit/d86460a84eebfed63637b878c6b3e623fb2f3db4))
+
 ### [8.19.3](https://github.com/gemini-testing/testplane/compare/v8.19.2...v8.19.3) (2024-08-05)
 
 
