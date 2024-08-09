@@ -1,7 +1,7 @@
 import _ from "lodash";
 import logger from "./logger";
 
-export const tryToRegisterTsNode = (): void => {
+export const tryToRegisterTsNode = (isSilent: boolean = false): void => {
     if (process.env.TS_ENABLE === "false") {
         return;
     }
@@ -22,6 +22,7 @@ export const tryToRegisterTsNode = (): void => {
 
         if (JSON.parse(swcRaw)) {
             try {
+                require("@swc/core");
                 register({
                     skipProject: JSON.parse(skipProjectRaw),
                     transpileOnly: JSON.parse(transpileOnlyRaw),
@@ -30,12 +31,14 @@ export const tryToRegisterTsNode = (): void => {
                 return;
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } catch (err: any) {
-                if (err.code === "MODULE_NOT_FOUND") {
-                    logger.warn(
-                        `testplane: you may install @swc/core for significantly faster reading of typescript tests.`,
-                    );
-                } else {
-                    logger.warn(`testplane: could not load @swc/core:`, err);
+                if (!isSilent) {
+                    if (err.code === "MODULE_NOT_FOUND") {
+                        logger.warn(
+                            `testplane: you may install @swc/core for significantly faster reading of typescript tests.`,
+                        );
+                    } else {
+                        logger.warn(`testplane: could not load @swc/core:`, err);
+                    }
                 }
             }
         }
@@ -63,11 +66,13 @@ export const tryToRegisterTsNode = (): void => {
             return;
             // eslint-disable-next-line no-empty
         } catch (err) {
-            const params = `swc: "false", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
-            logger.warn(
-                `testplane: an error occured while trying to register ts-node (${params}). TypeScript tests won't be read:`,
-                err,
-            );
+            if (!isSilent) {
+                const params = `swc: "false", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
+                logger.warn(
+                    `testplane: an error occured while trying to register ts-node (${params}). TypeScript tests won't be read:`,
+                    err,
+                );
+            }
         }
     } catch {} // eslint-disable-line no-empty
 };
