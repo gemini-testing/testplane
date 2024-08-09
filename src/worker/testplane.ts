@@ -57,7 +57,7 @@ export class Testplane extends BaseTestplane {
     async init(): Promise<void> {
         await this._init();
 
-        if (!global.expect) {
+        if (typeof expect === "undefined") {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { setOptions } = require("expect-webdriverio");
             setOptions(this._config.system.expectOpts);

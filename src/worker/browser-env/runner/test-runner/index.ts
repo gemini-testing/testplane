@@ -29,8 +29,7 @@ import type { Browser } from "../../../../browser/types";
 import type { WorkerViteSocket } from "./types";
 import type { BrowserViteEvents } from "../../../../runner/browser-env/vite/types";
 import type { AsyncExpectationResult } from "../../../../runner/browser-env/vite/browser-modules/types";
-
-type ExpectWdioMatchers = ExpectWebdriverIO.Matchers<AsyncExpectationResult, unknown>;
+type ExpectWdioMatchers = ExpectWebdriverIO.Matchers<Promise<void>, unknown>;
 type ExpectWdioMatcher = (actual: unknown, ...expected: unknown[]) => AsyncExpectationResult;
 
 const prepareData = <T>(data: T): T => {
@@ -255,11 +254,11 @@ export class TestRunner extends NodejsEnvTestRunner {
         const { publicAPI: session } = browser;
 
         return async (payload, cb): Promise<void> => {
-            if (!global.expect) {
+            if (typeof expect === "undefined") {
                 return cb([{ pass: false, message: "Couldn't find expect module" }]);
             }
 
-            const matcher = expectMatchers[payload.name as keyof ExpectWdioMatchers] as ExpectWdioMatcher;
+            const matcher = expectMatchers[payload.name as keyof ExpectWdioMatchers] as unknown as ExpectWdioMatcher;
 
             if (!matcher) {
                 return cb([{ pass: false, message: `Couldn't find expect matcher with name "${payload.name}"` }]);
@@ -316,7 +315,7 @@ function transformExpectArg(arg: any): unknown {
             arg.$$typeof as keyof typeof SUPPORTED_ASYMMETRIC_MATCHER
         ] as keyof AsymmetricMatchers;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const matcher: any = arg.inverse ? (global.expect.not as any)[matcherKey] : (global.expect as any)[matcherKey];
+        const matcher: any = arg.inverse ? (expect as any)[matcherKey] : (expect as any)[matcherKey];
 
         if (!matcher) {
             throw new Error(`Matcher "${matcherKey}" is not supported by expect-webdriverio`);
