@@ -29,7 +29,7 @@ class BasicPool implements Pool {
         this._cancelled = false;
     }
 
-    async getBrowser(id: string, opts = {}): Promise<Browser> {
+    async getBrowser(id: string, opts = {}): Promise<NewBrowser> {
         const browser = NewBrowser.create(this._config, { ...opts, id }) as NewBrowser;
 
         try {

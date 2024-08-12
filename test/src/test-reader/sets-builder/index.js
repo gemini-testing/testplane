@@ -1,29 +1,47 @@
 "use strict";
 
 const globExtra = require("glob-extra");
-const fs = require("fs");
-const SetBuilder = require("src/test-reader/sets-builder");
-const SetCollection = require("src/test-reader/sets-builder/set-collection");
-const TestSet = require("src/test-reader/sets-builder/test-set");
+const fs = require("fs/promises");
+const proxyquire = require("proxyquire");
 
 describe("test-reader/sets-builder", () => {
+    let globExtraStub, SetBuilder, SetCollection, TestSet, setCollection;
     const sandbox = sinon.createSandbox();
-    const setCollection = sinon.createStubInstance(SetCollection);
 
     const createSetBuilder = (sets, opts) => SetBuilder.create(sets || { all: { files: ["some/path"] } }, opts || {});
 
     beforeEach(() => {
-        sandbox.stub(SetCollection, "create").resolves();
-        sandbox.stub(globExtra, "expandPaths").resolves([]);
+        sandbox.stub(fs, "stat").resolves({ isDirectory: () => false });
+        globExtraStub = {
+            expandPaths: sandbox.stub().resolves([]),
+            isMask: globExtra.isMask,
+        };
+        TestSet = proxyquire("src/test-reader/sets-builder/test-set", {
+            "glob-extra": globExtraStub,
+        }).default;
         sandbox.stub(TestSet.prototype, "resolveFiles");
-        sandbox.stub(fs, "stat").yields(null, { isDirectory: () => false });
+        SetCollection = proxyquire("src/test-reader/sets-builder/set-collection", {
+            "glob-extra": globExtraStub,
+        }).default;
+        SetBuilder = proxyquire("src/test-reader/sets-builder", {
+            "glob-extra": globExtraStub,
+            "./test-set": {
+                default: TestSet,
+            },
+            "./set-collection": {
+                default: SetCollection,
+            },
+        }).default;
+        sandbox.stub(SetCollection, "create").resolves();
+
+        setCollection = sinon.createStubInstance(SetCollection);
     });
 
     afterEach(() => sandbox.restore());
 
     describe("build", () => {
         it("should create set collection for all sets if sets to use are not specified", () => {
-            globExtra.expandPaths
+            globExtraStub.expandPaths
                 .withArgs(["some/files"])
                 .resolves(["some/files/file1.js"])
                 .withArgs(["other/files"])
@@ -79,7 +97,7 @@ describe("test-reader/sets-builder", () => {
 
         it("should use default paths", () => {
             sandbox.stub(TestSet.prototype, "expandFiles");
-            globExtra.expandPaths.withArgs(["project/path"]).resolves(["project/path"]);
+            globExtraStub.expandPaths.withArgs(["project/path"]).resolves(["project/path"]);
 
             const setStub = TestSet.create({ files: ["project/path"] });
 
@@ -88,7 +106,7 @@ describe("test-reader/sets-builder", () => {
             return createSetBuilder({ default: { files: [] } }, { defaultPaths: ["project/path"] })
                 .build()
                 .then(result => {
-                    assert.calledWith(globExtra.expandPaths, ["project/path"]);
+                    assert.calledWith(globExtraStub.expandPaths, ["project/path"]);
                     assert.deepEqual(result, setCollection);
                 });
         });
@@ -139,7 +157,7 @@ describe("test-reader/sets-builder", () => {
         });
 
         it("should create set collection for specified sets", () => {
-            globExtra.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
+            globExtraStub.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
 
             const sets = {
                 set1: { files: ["some/files"] },
@@ -176,7 +194,7 @@ describe("test-reader/sets-builder", () => {
         });
 
         it("should throw an error if sets do not contain paths from opts", () => {
-            globExtra.expandPaths.withArgs(["other/files"]).resolves(["other/files/file.js"]);
+            globExtraStub.expandPaths.withArgs(["other/files"]).resolves(["other/files/file.js"]);
 
             const sets = {
                 all: { files: ["some/files"] },
@@ -202,15 +220,15 @@ describe("test-reader/sets-builder", () => {
         it("should expand passed files with passed glob options", () => {
             const globOpts = sandbox.stub();
             sandbox.stub(TestSet.prototype, "useFiles");
-            globExtra.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
+            globExtraStub.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
 
             return createSetBuilder()
                 .useFiles(["some/files"])
                 .build("", globOpts)
                 .then(() => {
-                    assert.calledOnce(globExtra.expandPaths);
+                    assert.calledOnce(globExtraStub.expandPaths);
                     assert.calledWith(
-                        globExtra.expandPaths,
+                        globExtraStub.expandPaths,
                         ["some/files"],
                         sinon.match({ formats: [".js", ".mjs"] }),
                         globOpts,
@@ -219,7 +237,7 @@ describe("test-reader/sets-builder", () => {
         });
 
         it("should throw an error if no files were found with specified paths", () => {
-            globExtra.expandPaths.withArgs(["some/files"]).resolves([]);
+            globExtraStub.expandPaths.withArgs(["some/files"]).resolves([]);
 
             return assert.isRejected(
                 createSetBuilder().useFiles(["some/files", "another/files"]).build(),
@@ -229,7 +247,7 @@ describe("test-reader/sets-builder", () => {
 
         it("should apply files to all sets if sets are specified", () => {
             sandbox.stub(TestSet.prototype, "useFiles");
-            globExtra.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
+            globExtraStub.expandPaths.withArgs(["some/files"]).resolves(["some/files/file.js"]);
 
             const sets = {
                 all: { files: ["some/files"] },
@@ -245,7 +263,7 @@ describe("test-reader/sets-builder", () => {
         });
 
         it("should use default directory if sets are not specified and paths are not passed", () => {
-            globExtra.expandPaths.withArgs(["project/path"]).resolves(["project/path"]);
+            globExtraStub.expandPaths.withArgs(["project/path"]).resolves(["project/path"]);
 
             const setStub = TestSet.create({ files: ["project/path"] });
 
@@ -255,7 +273,7 @@ describe("test-reader/sets-builder", () => {
                 .useFiles([])
                 .build()
                 .then(result => {
-                    assert.calledWith(globExtra.expandPaths, ["project/path"]);
+                    assert.calledWith(globExtraStub.expandPaths, ["project/path"]);
                     assert.deepEqual(result, setCollection);
                 });
         });

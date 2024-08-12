@@ -1,10 +1,10 @@
 "use strict";
 
-const TestReader = require("src/test-reader");
+const TestReader = require("src/test-reader").default;
 const { TestParser } = require("src/test-reader/test-parser");
 const { MasterEvents: Events } = require("src/events");
-const SetsBuilder = require("src/test-reader/sets-builder");
-const SetCollection = require("src/test-reader/sets-builder/set-collection");
+const SetsBuilder = require("src/test-reader/sets-builder").default;
+const SetCollection = require("src/test-reader/sets-builder/set-collection").default;
 const { makeConfigStub } = require("../../utils");
 const _ = require("lodash");
 

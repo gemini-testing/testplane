@@ -1,11 +1,11 @@
 "use strict";
 
-const format = require("util").format;
-const chalk = require("chalk");
-const _ = require("lodash");
-const logger = require("./utils/logger");
+import { format } from "util";
+import chalk from "chalk";
+import _ from "lodash";
+import logger from "./utils/logger";
 
-exports.validateUnknownBrowsers = (browsers, configBrowsers) => {
+export const validateUnknownBrowsers = (browsers: string[], configBrowsers: string[]): void => {
     const unknownBrowsers = getUnknownBrowsers(browsers, configBrowsers);
 
     if (_.isEmpty(unknownBrowsers)) {
@@ -22,6 +22,6 @@ exports.validateUnknownBrowsers = (browsers, configBrowsers) => {
     );
 };
 
-function getUnknownBrowsers(browsers, configBrowsers) {
+function getUnknownBrowsers(browsers: string[], configBrowsers: string[]): string[] {
     return _(browsers).compact().uniq().difference(configBrowsers).value();
 }

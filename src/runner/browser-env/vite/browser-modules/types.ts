@@ -102,7 +102,6 @@ export type MockMatcherFn = {
 declare global {
     interface Window {
         Mocha: unknown;
-        // Mocha: Mocha;
         __testplane__: {
             runUuid: string;
             errors: BrowserError[];

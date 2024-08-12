@@ -1,24 +1,28 @@
 "use strict";
 
-const Promise = require("bluebird");
-const LimitedUseSet = require("./limited-use-set");
-const debug = require("debug");
-const { buildCompositeBrowserId } = require("./utils");
+import LimitedUseSet from "./limited-use-set";
+import debug from "debug";
+import { buildCompositeBrowserId } from "./utils";
+import BasicPool from "./basic-pool";
+import { Config } from "../config";
+import Pool from "./pool";
+import NewBrowser from "../browser/new-browser";
 
-module.exports = class CachingPool {
-    /**
-     * @constructor
-     * @extends BasicPool
-     * @param {BasicPool} underlyingPool
-     */
-    constructor(underlyingPool, config) {
+export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
+
+class CachingPool implements Pool {
+    underlyingPool: BasicPool;
+    _caches: Record<string, LimitedUseSet<NewBrowser>>;
+    log: debug.Debugger;
+    _config: Config;
+    constructor(underlyingPool: BasicPool, config: Config) {
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
         this._config = config;
     }
 
-    _getCacheFor(id, version) {
+    _getCacheFor(id: string, version?: string): LimitedUseSet<NewBrowser> {
         const compositeId = buildCompositeBrowserId(id, version);
 
         this.log(`request for ${compositeId}`);
@@ -31,7 +35,7 @@ module.exports = class CachingPool {
         return this._caches[compositeId];
     }
 
-    getBrowser(id, opts = {}) {
+    getBrowser(id: string, opts: { version?: string } = {}): Promise<NewBrowser> {
         const { version } = opts;
         const cache = this._getCacheFor(id, version);
         const browser = cache.pop();
@@ -47,19 +51,21 @@ module.exports = class CachingPool {
         return browser
             .reset()
             .catch(e => {
-                const reject = Promise.reject.bind(null, e);
-                return this.underlyingPool.freeBrowser(browser).then(reject, reject);
+                return this.underlyingPool.freeBrowser(browser).then(
+                    () => Promise.reject(e),
+                    () => Promise.reject(e),
+                );
             })
             .then(() => browser);
     }
 
-    _initPool(browserId, version) {
+    _initPool(browserId: string, version?: string): void {
         const compositeId = buildCompositeBrowserId(browserId, version);
         const freeBrowser = this.underlyingPool.freeBrowser.bind(this.underlyingPool);
         const { testsPerSession } = this._config.forBrowser(browserId);
 
-        this._caches[compositeId] = new LimitedUseSet({
-            formatItem: item => item.fullId,
+        this._caches[compositeId] = new LimitedUseSet<NewBrowser>({
+            formatItem: (item): string => item.fullId,
             // browser does not get put in a set on first usages, so if
             // we want to limit it usage to N times, we must set N-1 limit
             // for the set.
@@ -76,8 +82,8 @@ module.exports = class CachingPool {
      * not be cached
      * @returns {Promise<undefined>}
      */
-    freeBrowser(browser, options = {}) {
-        const shouldFreeForNextRequest = () => {
+    freeBrowser(browser: NewBrowser, options: FreeBrowserOpts = {}): Promise<void> {
+        const shouldFreeForNextRequest = (): boolean => {
             const { compositeIdForNextRequest } = options;
 
             if (!compositeIdForNextRequest) {
@@ -85,7 +91,7 @@ module.exports = class CachingPool {
             }
 
             const { hasFreeSlots } = options;
-            const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest];
+            const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest!];
 
             return !hasFreeSlots && !hasCacheForNextRequest;
         };
@@ -102,8 +108,10 @@ module.exports = class CachingPool {
         return cache.push(browser);
     }
 
-    cancel() {
+    cancel(): void {
         this.log("cancel");
         this.underlyingPool.cancel();
     }
-};
+}
+
+export default CachingPool;

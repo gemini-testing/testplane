@@ -183,6 +183,12 @@ export interface SetsConfig {
     browsers?: Array<string>;
 }
 
+export interface SetsConfigParsed {
+    files: Array<string>;
+    ignoreFiles: Array<string>;
+    browsers: Array<string>;
+}
+
 // Only browsers desiredCapabilities are required in input config
 export type ConfigInput = Partial<CommonConfig> & {
     browsers: Record<string, Partial<CommonConfig> & { desiredCapabilities: WebdriverIO.Capabilities }>;
@@ -200,7 +206,7 @@ declare module "." {
     export interface Config extends CommonConfig {
         browsers: Record<string, BrowserConfig>;
         plugins: Record<string, Record<string, unknown>>;
-        sets: Record<string, SetsConfig>;
+        sets: Record<string, SetsConfigParsed>;
         prepareEnvironment?: () => void | null;
     }
 }

@@ -1,5 +1,5 @@
 import _ from "lodash";
-import validators from "../validators";
+import { validateUnknownBrowsers } from "../validators";
 import env from "../utils/env";
 import RuntimeConfig from "../config/runtime-config";
 import { TreeBuilder } from "./tree-builder";
@@ -94,7 +94,7 @@ function buildGlobalSkipInstruction(config: Config): InstructionFn {
         "HERMIONE_SKIP_BROWSERS",
     ]);
 
-    validators.validateUnknownBrowsers(skipBrowsers, config.getBrowserIds());
+    validateUnknownBrowsers(skipBrowsers, config.getBrowserIds());
 
     return ({ treeBuilder, browserId }) => {
         if (!skipBrowsers.includes(browserId)) {
