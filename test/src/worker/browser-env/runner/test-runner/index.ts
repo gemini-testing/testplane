@@ -697,7 +697,8 @@ describe("worker/browser-env/runner/test-runner", () => {
             let browser: Browser;
 
             beforeEach(() => {
-                global.expect = sandbox.stub() as unknown as ExpectWebdriverIO.Expect;
+                (global as Partial<{ expect: ExpectWebdriverIO.Expect }>).expect =
+                    sandbox.stub() as unknown as ExpectWebdriverIO.Expect;
 
                 browser = mkBrowser_();
                 (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
@@ -709,7 +710,8 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             describe("should return error if", () => {
                 it("expect module is not found", done => {
-                    global.expect = undefined as unknown as ExpectWebdriverIO.Expect;
+                    (global as Partial<{ expect: ExpectWebdriverIO.Expect }>).expect =
+                        undefined as unknown as ExpectWebdriverIO.Expect;
 
                     const socket = mkSocket_() as BrowserViteSocket;
                     socketClientStub.returns(socket);
