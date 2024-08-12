@@ -197,6 +197,15 @@ module.exports = class ExistingBrowser extends Browser {
     }
 
     _overrideGetElementsList(session) {
+        session.overwriteCommand("$$", async (origCommand, selector) => {
+            const arr = [];
+            const res = await origCommand(selector);
+            for await (const el of res) arr.push(el);
+            arr.parent = res.parent;
+            arr.foundWith = res.foundWith;
+            arr.selector = res.selector;
+            return arr;
+        });
         session.overwriteCommand(
             "$$",
             async (origCommand, selector) => {
