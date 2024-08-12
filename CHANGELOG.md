@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.5](https://github.com/gemini-testing/testplane/compare/v8.19.4...v8.19.5) (2024-08-12)
+
+
+### Bug Fixes
+
+* revert round of viewport ([95e4a06](https://github.com/gemini-testing/testplane/commit/95e4a069cb5d32d50625c3e003ae7e94d577f064))
+
 ### [8.19.4](https://github.com/gemini-testing/testplane/compare/v8.19.3...v8.19.4) (2024-08-09)
 
 
