@@ -281,6 +281,23 @@ it('some test', async ({ browser }) => {
 });
 ```
 
+With skipped `selector` parameter, assertView will take a screenshot of the current viewport. Example:
+
+```js
+it('some test', async ({ browser }) => {
+    await browser.url('some/url');
+    // Scroll 1000 px down
+    await browser.execute(() => window.scrollTo(0, 1000));
+    // Screen the viewport
+    await browser.assertView('plain'); 
+
+    // Click the button
+    await browser.$('.button').click();
+    // Screen the viewport with custom options
+    await browser.assertView('clicked', { ignoreDiffPixelCount: 5 }); 
+});
+```
+
 Could also be used as element's method:
 
 ```js
@@ -300,7 +317,17 @@ it('some test', async ({ browser }) => {
 Parameters:
 
 - state (required) `String` – state name; should be unique within one test
-- selector (required) `String|String[]` – DOM-node selector that you need to capture
+- selector (optional, can be skipped) `String|String[]` – DOM-node selector that you need to capture. If not specified or skipped, will be set to `body` and the following options will be automatically added to opts: 
+    ```
+    {
+        allowViewportOverflow: true,
+        compositeImage: false,
+        captureElementFromTop: false
+    }
+    ``` 
+
+    So, assertView without `selector` parameter will take a screenshot of the current viewport.
+
 - opts (optional) `Object`:
     - ignoreElements (optional) `String|String[]` – elements, matching specified selectors will be ignored when comparing images
     - tolerance (optional) `Number` – overrides config [browsers](#browsers).[tolerance](#tolerance) value
