@@ -46,7 +46,8 @@ const overwriteAddCommand = (session: WebdriverIO.Browser, stackFrames: ShallowS
 const overwriteOverwriteCommand = (session: WebdriverIO.Browser, stackFrames: ShallowStackFrames): void =>
     session.overwriteCommand(
         "overwriteCommand",
-        function (this, origCommand, name, wrapper: AnyFunc, elementScope): unknown {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        function (this, origCommand: any, name, wrapper: AnyFunc, elementScope): unknown {
             function decoratedWrapper(this: unknown, origFn: unknown, ...args: unknown[]): unknown {
                 return runWithStacktraceHooks({
                     stackFrames,
@@ -54,8 +55,16 @@ const overwriteOverwriteCommand = (session: WebdriverIO.Browser, stackFrames: Sh
                     stackFilterFunc: decoratedWrapper,
                 });
             }
-
-            return origCommand.call(this, name, decoratedWrapper, elementScope);
+            return origCommand.call(
+                this,
+                name,
+                decoratedWrapper as WebdriverIO.OverwriteCommandFn<
+                    WebdriverIO.Browser | WebdriverIO.Element,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    (...args: any) => any
+                >,
+                elementScope,
+            );
         },
     );
 

@@ -55,19 +55,19 @@
     "@gemini-testing/commander": "2.15.3",
     "@jspm/core": "2.0.1",
     "@types/mocha": "10.0.1",
-    "@wdio/globals": "8.21.0",
-    "@wdio/protocols": "8.22.0",
-    "@wdio/types": "8.21.0",
-    "@wdio/utils": "8.35.0",
+    "@wdio/globals": "8.39.0",
+    "@wdio/protocols": "8.38.0",
+    "@wdio/types": "8.39.0",
+    "@wdio/utils": "8.39.0",
     "@wdio/utils-cjs": "npm:@wdio/utils@7.26.0",
     "bluebird": "3.5.1",
     "chalk": "2.4.2",
     "clear-require": "1.0.1",
     "debug": "2.6.9",
-    "devtools": "8.21.0",
+    "devtools": "8.39.0",
     "error-stack-parser": "2.1.4",
     "escape-string-regexp": "1.0.5",
-    "expect-webdriverio": "3.5.3",
+    "expect-webdriverio": "3.6.0",
     "fastq": "1.13.0",
     "fs-extra": "5.0.0",
     "gemini-configparser": "1.4.1",
@@ -93,7 +93,7 @@
     "urijs": "1.19.11",
     "url-join": "4.0.1",
     "vite": "5.1.6",
-    "webdriverio": "8.21.0",
+    "webdriverio": "8.39.0",
     "worker-farm": "1.7.0",
     "yallist": "3.1.1"
   },
@@ -154,8 +154,8 @@
     "uglifyify": "3.0.4"
   },
   "peerDependencies": {
-    "ts-node": ">=10.5.0",
-    "@swc/core": ">=1.3.96"
+    "@swc/core": ">=1.3.96",
+    "ts-node": ">=10.5.0"
   },
   "peerDependenciesMeta": {
     "ts-node": {

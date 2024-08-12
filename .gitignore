@@ -7,6 +7,7 @@ build
 *.swo
 *.swp
 *.iml
+*.tgz
 .fuse*
 .project
 node_modules
