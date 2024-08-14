@@ -1,6 +1,6 @@
 "use strict";
 
-const _ = require("lodash");
+const util = require("util");
 const { Command } = require("@gemini-testing/commander");
 const escapeRe = require("escape-string-regexp");
 
@@ -15,7 +15,7 @@ const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
 let testplane;
 
 process.on("uncaughtException", err => {
-    logger.error(err.stack);
+    logger.error(util.inspect(err));
     process.exit(1);
 });
 
@@ -27,8 +27,8 @@ process.on("unhandledRejection", (reason, p) => {
 
     const error = [
         `Unhandled Rejection in testplane:master:${process.pid}:`,
-        `Promise: ${JSON.stringify(p)}`,
-        `Reason: ${_.get(reason, "stack", reason)}`,
+        `Promise: ${util.inspect(p)}`,
+        `Reason: ${util.inspect(reason)}`,
     ].join("\n");
 
     if (testplane) {
