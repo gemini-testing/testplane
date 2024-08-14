@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.6](https://github.com/gemini-testing/testplane/compare/v8.19.5...v8.19.6) (2024-08-14)
+
+
+### Features
+
+* screenshot viewport with assertView by default ([#988](https://github.com/gemini-testing/testplane/issues/988)) ([9e5959e](https://github.com/gemini-testing/testplane/commit/9e5959e61509b124b74a109935d606027c18a983))
+
+
+### Bug Fixes
+
+* use propper unhandled rejection error serialization ([0ea82a7](https://github.com/gemini-testing/testplane/commit/0ea82a74823dace3828d62879f46312410e9c9e7))
+
 ### [8.19.5](https://github.com/gemini-testing/testplane/compare/v8.19.4...v8.19.5) (2024-08-12)
 
 
