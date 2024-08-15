@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import { TestReaderEvents as ReadEvents } from "../../events";
-import type { Test } from "../../types";
+import type { Test, Suite } from "../../types";
 
 interface TreeBuilder {
     addTrap: (trap: (test: Test) => void) => void;
@@ -28,6 +28,14 @@ export class AlsoController {
             treeBuilder.addTrap(obj => {
                 if (match(obj.browserId)) {
                     obj.enable();
+
+                    let objParent: Suite | null = obj.parent;
+
+                    while (objParent) {
+                        objParent.enable();
+
+                        objParent = objParent.parent;
+                    }
                 }
             });
         });

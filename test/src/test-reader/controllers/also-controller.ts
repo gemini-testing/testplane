@@ -4,6 +4,7 @@ import { AlsoController } from "../../../../src/test-reader/controllers/also-con
 import { TreeBuilder } from "../../../../src/test-reader/tree-builder";
 import { ConfigurableTestObject } from "../../../../src/test-reader/test-object/configurable-test-object";
 import { TestReaderEvents as ReadEvents } from "../../../../src/events";
+import type { Suite } from "../../../../src/types";
 
 describe("test-reader/controllers/also-controller", () => {
     const sandbox = sinon.createSandbox();
@@ -16,21 +17,25 @@ describe("test-reader/controllers/also-controller", () => {
         return AlsoController.create(eventBus);
     };
 
-    const mkTestObject_ = (
-        { browserId }: { browserId: string } = { browserId: "default-browser-id" },
-    ): ConfigurableTestObject => {
+    const mkTestObject_ = ({
+        browserId = "default-browser-id",
+        parent = null,
+    }: { browserId?: string; parent?: Suite | null } = {}): ConfigurableTestObject => {
         const testObject = new ConfigurableTestObject({
             title: "default-title",
             file: "/default-file",
             id: "default-id",
         });
+
         testObject.browserId = browserId;
+        testObject.parent = parent;
+        testObject.enable = sinon.spy(testObject.enable.bind(testObject));
 
         return testObject;
     };
 
-    const applyTraps_ = ({ browserId }: { browserId: string }): void => {
-        const testObject = mkTestObject_({ browserId });
+    const applyTraps_ = ({ browserId, parent }: { browserId: string; parent?: Suite }): void => {
+        const testObject = mkTestObject_({ browserId, parent });
 
         for (let i = 0; i < (TreeBuilder.prototype.addTrap as SinonStub).callCount; ++i) {
             (TreeBuilder.prototype.addTrap as SinonStub).getCall(i).args[0](testObject);
@@ -99,6 +104,15 @@ describe("test-reader/controllers/also-controller", () => {
                         applyTraps_({ browserId: "broya" });
 
                         assert.calledOnce(ConfigurableTestObject.prototype.enable as SinonStub);
+                    });
+
+                    it("should enable parent suites", () => {
+                        const parent = mkTestObject_({ browserId: "broya" }) as Suite;
+                        mkController_().in([mkMatcher("yabro"), mkMatcher("broya")]);
+
+                        applyTraps_({ browserId: "broya", parent });
+
+                        assert.calledOnceWith(parent.enable as SinonStub);
                     });
                 });
             });
