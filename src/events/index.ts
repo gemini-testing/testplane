@@ -1,7 +1,7 @@
-import { ValueOf } from "type-fest";
-
 export * from "./async-emitter";
 export * from "./types";
+
+type ValueOf<T> = T[keyof T];
 
 export const TestReaderEvents = {
     NEW_BUILD_INSTRUCTION: "newBuildInstruction",
