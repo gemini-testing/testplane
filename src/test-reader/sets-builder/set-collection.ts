@@ -1,7 +1,7 @@
 import _ from "lodash";
-import TestSet from "./test-set";
+import { TestSet } from "./test-set";
 
-class SetCollection {
+export class SetCollection {
     #sets: Record<string, TestSet>;
 
     static create(sets: Record<string, TestSet>): SetCollection {
@@ -46,5 +46,3 @@ class SetCollection {
         return _(this.#sets).map(cb).flatten().uniq().value() as T;
     }
 }
-
-export default SetCollection;

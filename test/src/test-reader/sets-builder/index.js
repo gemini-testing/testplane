@@ -5,10 +5,10 @@ const fs = require("fs/promises");
 const proxyquire = require("proxyquire");
 
 describe("test-reader/sets-builder", () => {
-    let globExtraStub, SetBuilder, SetCollection, TestSet, setCollection;
+    let globExtraStub, SetsBuilder, SetCollection, TestSet, setCollection;
     const sandbox = sinon.createSandbox();
 
-    const createSetBuilder = (sets, opts) => SetBuilder.create(sets || { all: { files: ["some/path"] } }, opts || {});
+    const createSetBuilder = (sets, opts) => SetsBuilder.create(sets || { all: { files: ["some/path"] } }, opts || {});
 
     beforeEach(() => {
         sandbox.stub(fs, "stat").resolves({ isDirectory: () => false });
@@ -16,22 +16,22 @@ describe("test-reader/sets-builder", () => {
             expandPaths: sandbox.stub().resolves([]),
             isMask: globExtra.isMask,
         };
-        TestSet = proxyquire("src/test-reader/sets-builder/test-set", {
+        ({ TestSet } = proxyquire("src/test-reader/sets-builder/test-set", {
             "glob-extra": globExtraStub,
-        }).default;
+        }));
         sandbox.stub(TestSet.prototype, "resolveFiles");
-        SetCollection = proxyquire("src/test-reader/sets-builder/set-collection", {
+        ({ SetCollection } = proxyquire("src/test-reader/sets-builder/set-collection", {
             "glob-extra": globExtraStub,
-        }).default;
-        SetBuilder = proxyquire("src/test-reader/sets-builder", {
+        }));
+        ({ SetsBuilder } = proxyquire("src/test-reader/sets-builder", {
             "glob-extra": globExtraStub,
             "./test-set": {
-                default: TestSet,
+                TestSet,
             },
             "./set-collection": {
-                default: SetCollection,
+                SetCollection,
             },
-        }).default;
+        }));
         sandbox.stub(SetCollection, "create").resolves();
 
         setCollection = sinon.createStubInstance(SetCollection);
@@ -153,7 +153,7 @@ describe("test-reader/sets-builder", () => {
 
     describe("useSets", () => {
         it("should be chainable", () => {
-            assert.instanceOf(createSetBuilder().useSets(), SetBuilder);
+            assert.instanceOf(createSetBuilder().useSets(), SetsBuilder);
         });
 
         it("should create set collection for specified sets", () => {
@@ -190,7 +190,7 @@ describe("test-reader/sets-builder", () => {
         beforeEach(() => sandbox.stub(TestSet.prototype, "expandFiles"));
 
         it("should be chainable", () => {
-            assert.instanceOf(createSetBuilder().useFiles(), SetBuilder);
+            assert.instanceOf(createSetBuilder().useFiles(), SetsBuilder);
         });
 
         it("should throw an error if sets do not contain paths from opts", () => {
@@ -283,7 +283,7 @@ describe("test-reader/sets-builder", () => {
         beforeEach(() => sandbox.stub(TestSet.prototype, "useBrowsers"));
 
         it("should be chainable", () => {
-            assert.instanceOf(createSetBuilder().useBrowsers(), SetBuilder);
+            assert.instanceOf(createSetBuilder().useBrowsers(), SetsBuilder);
         });
 
         it("should use passed browsers in sets", () => {

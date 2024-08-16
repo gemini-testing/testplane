@@ -1,5 +1,3 @@
-"use strict";
-
 import { format } from "util";
 import chalk from "chalk";
 import _ from "lodash";

@@ -1,8 +1,6 @@
-"use strict";
-
 import { EventEmitter } from "events";
 import { passthroughEvent } from "../../events/utils";
-import SimpleTestParser from "./simple-test-parser";
+import { SimpleTestParser } from "./simple-test-parser";
 import { WorkerEvents } from "../../events";
 import fastq from "fastq";
 import { Config } from "../../config";
@@ -13,9 +11,10 @@ export type ParseArgs = {
     browserId: string;
 };
 
-class SequenceTestParser extends EventEmitter {
-    _parser: SimpleTestParser;
-    _queue: fastq.queueAsPromised<() => Promise<Test[]>, Test[]>;
+export class SequenceTestParser extends EventEmitter {
+    private _parser: SimpleTestParser;
+    private _queue: fastq.queueAsPromised<() => Promise<Test[]>, Test[]>;
+
     static create<T extends SequenceTestParser>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this: new (...args: any[]) => T,
@@ -37,5 +36,3 @@ class SequenceTestParser extends EventEmitter {
         return this._queue.push(() => this._parser.parse({ file, browserId }));
     }
 }
-
-export default SequenceTestParser;

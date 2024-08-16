@@ -1,9 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
+/* eslint-disable @typescript-eslint/triple-slash-reference*/
 /// <reference path="./api.d.ts" />
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./clear-require.d.ts" />
-// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="./escape-string-regexp.d.ts" />
+/* eslint-enable @typescript-eslint/triple-slash-reference */
 /// <reference types="expect-webdriverio" />
 /// <reference types="webdriverio" />
 

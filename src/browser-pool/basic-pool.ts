@@ -1,20 +1,19 @@
-"use strict";
-
 import _ from "lodash";
-import NewBrowser from "../browser/new-browser";
+import { NewBrowser } from "../browser/new-browser";
 import { CancelledError } from "./cancelled-error";
 import { AsyncEmitter, MasterEvents } from "../events";
-import Pool from "./pool";
+import { Pool } from "./types";
 import debug from "debug";
 import { Config } from "../config";
-import Browser from "../browser/browser";
+import { Browser } from "../browser/browser";
+import { BrowserOpts } from "./limited-pool";
 
-class BasicPool implements Pool {
-    _config: Config;
-    _emitter: AsyncEmitter;
+export class BasicPool implements Pool {
+    private _config: Config;
+    private _emitter: AsyncEmitter;
+    private _activeSessions: Record<string, NewBrowser>;
+    private _cancelled: boolean;
     log: debug.Debugger;
-    _activeSessions: Record<string, NewBrowser>;
-    _cancelled: boolean;
 
     static create(config: Config, emitter: AsyncEmitter): BasicPool {
         return new BasicPool(config, emitter);
@@ -29,8 +28,8 @@ class BasicPool implements Pool {
         this._cancelled = false;
     }
 
-    async getBrowser(id: string, opts = {}): Promise<NewBrowser> {
-        const browser = NewBrowser.create(this._config, { ...opts, id }) as NewBrowser;
+    async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
+        const browser = NewBrowser.create(this._config, { ...opts, id });
 
         try {
             await browser.init();
@@ -70,7 +69,7 @@ class BasicPool implements Pool {
         await browser.quit();
     }
 
-    _emit(event: string, browser: Browser): Promise<unknown[]> {
+    private _emit(event: string, browser: Browser): Promise<unknown[]> {
         return this._emitter.emitAndWait(event, browser.publicAPI, {
             browserId: browser.id,
             sessionId: browser.sessionId,
@@ -85,5 +84,3 @@ class BasicPool implements Pool {
         this._activeSessions = {};
     }
 }
-
-export default BasicPool;

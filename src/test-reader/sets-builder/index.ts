@@ -2,8 +2,8 @@ import path from "path";
 import * as globExtra from "glob-extra";
 import _ from "lodash";
 
-import SetCollection from "./set-collection";
-import TestSet, { TestSetData } from "./test-set";
+import { SetCollection } from "./set-collection";
+import { TestSet, TestSetData } from "./test-set";
 import { SetsConfigParsed } from "../../config/types";
 
 export type SetsBuilderOpts = {
@@ -12,7 +12,7 @@ export type SetsBuilderOpts = {
 
 const FILE_EXTENSIONS = [".js", ".mjs"];
 
-class SetsBuilder {
+export class SetsBuilder {
     #sets: Record<string, TestSet>;
     #filesToUse;
 
@@ -125,5 +125,3 @@ class SetsBuilder {
         return _.some(this.#sets, set => !_.isEmpty(set.getFiles()));
     }
 }
-
-export default SetsBuilder;

@@ -1,10 +1,8 @@
-"use strict";
-
 import { URLSearchParams } from "url";
 import URI from "urijs";
 import { isBoolean, assign, isEmpty } from "lodash";
 import { remote, RemoteOptions } from "webdriverio";
-import Browser, { BrowserOpts } from "./browser";
+import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
 import { runGroup } from "./history";
 import { warn } from "../utils/logger";
@@ -46,7 +44,7 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
     },
 };
 
-class NewBrowser extends Browser {
+export class NewBrowser extends Browser {
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
 
@@ -82,13 +80,13 @@ class NewBrowser extends Browser {
         }
     }
 
-    _createSession(): Promise<WebdriverIO.Browser> {
+    protected _createSession(): Promise<WebdriverIO.Browser> {
         const sessionOpts = this._getSessionOpts();
 
         return remote(sessionOpts);
     }
 
-    async _setPageLoadTimeout(): Promise<void> {
+    protected async _setPageLoadTimeout(): Promise<void> {
         if (!this._config.pageLoadTimeout) {
             return;
         }
@@ -108,7 +106,7 @@ class NewBrowser extends Browser {
         }
     }
 
-    _getSessionOpts(): RemoteOptions {
+    protected _getSessionOpts(): RemoteOptions {
         const config = this._config;
         const gridUri = new URI(config.gridUrl);
         const capabilities = this._extendCapabilities(config);
@@ -133,7 +131,7 @@ class NewBrowser extends Browser {
         return options as RemoteOptions;
     }
 
-    _extendCapabilities(config: BrowserConfig): WebdriverIO.Capabilities {
+    protected _extendCapabilities(config: BrowserConfig): WebdriverIO.Capabilities {
         const capabilitiesExtendedByVersion = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
@@ -144,7 +142,7 @@ class NewBrowser extends Browser {
         return capabilitiesWithAddedHeadless;
     }
 
-    _addHeadlessCapability(
+    protected _addHeadlessCapability(
         headless: BrowserConfig["headless"],
         capabilities: WebdriverIO.Capabilities,
     ): WebdriverIO.Capabilities {
@@ -167,7 +165,7 @@ class NewBrowser extends Browser {
         return capabilities;
     }
 
-    _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {
+    protected _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {
         const { desiredCapabilities, sessionEnvFlags } = this._config;
         const versionKeyName =
             desiredCapabilities!.browserVersion || sessionEnvFlags.isW3C ? "browserVersion" : "version";
@@ -175,7 +173,7 @@ class NewBrowser extends Browser {
         return assign({}, desiredCapabilities, { [versionKeyName]: this.version });
     }
 
-    _getGridHost(url: URI): string {
+    protected _getGridHost(url: URI): string {
         return new URI({
             username: url.username(),
             password: url.password(),
@@ -185,7 +183,7 @@ class NewBrowser extends Browser {
             .slice(2); // URIjs leaves `//` prefix, removing it
     }
 
-    _getQueryParams(query: string): Record<string, string> {
+    protected _getQueryParams(query: string): Record<string, string> {
         if (isEmpty(query)) {
             return {};
         }
@@ -194,5 +192,3 @@ class NewBrowser extends Browser {
         return Object.fromEntries(urlParams);
     }
 }
-
-export default NewBrowser;

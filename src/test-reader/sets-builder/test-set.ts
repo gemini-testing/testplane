@@ -11,7 +11,7 @@ export type TestSetData = {
     browsers?: Array<string>;
 };
 
-class TestSet {
+export class TestSet {
     #set: TestSetData;
 
     static create(set: SetsConfigParsed): TestSet {
@@ -81,5 +81,3 @@ class TestSet {
         this.#set.browsers = _.isEmpty(browsers) ? this.#set.browsers : _.intersection(this.#set.browsers, browsers);
     }
 }
-
-export default TestSet;

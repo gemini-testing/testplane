@@ -13,9 +13,9 @@ describe("test-reader/sets-builder/test-set", () => {
             expandPaths: sinon.stub(),
             isMask: globExtra.isMask,
         };
-        TestSet = proxyquire("src/test-reader/sets-builder/test-set", {
+        ({ TestSet } = proxyquire("src/test-reader/sets-builder/test-set", {
             "glob-extra": globExtraStub,
-        }).default;
+        }));
     });
 
     afterEach(() => sandbox.restore());

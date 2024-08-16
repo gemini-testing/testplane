@@ -14,15 +14,22 @@ import Errors from "./errors";
 import { tryToRegisterTsNode } from "./utils/typescript";
 import { ConfigInput } from "./config/types";
 
+type ConstructorWithOptionalConfig<T> = new (config?: string | ConfigInput) => T;
+type ConstructorWithStringParam<T> = new (config: string) => T;
+
 export abstract class BaseTestplane extends AsyncEmitter {
     protected _interceptors: Interceptor[] = [];
     protected _config: Config;
 
+    static create<T extends BaseTestplane>(this: ConstructorWithOptionalConfig<T>, config?: string | ConfigInput): T;
+
+    static create<T extends BaseTestplane>(this: ConstructorWithStringParam<T>, config: string): T;
+
     static create<T extends BaseTestplane>(
-        this: new (config?: string | ConfigInput) => T,
+        this: ConstructorWithOptionalConfig<T> | ConstructorWithStringParam<T>,
         config?: string | ConfigInput,
     ): T {
-        return new this(config);
+        return new this(config as string);
     }
 
     protected constructor(config?: string | ConfigInput) {

@@ -1,7 +1,7 @@
 "use strict";
 
-const SequenceTestParser = require("src/worker/runner/sequence-test-parser").default;
-const SimpleTestParser = require("src/worker/runner/simple-test-parser").default;
+const { SequenceTestParser } = require("src/worker/runner/sequence-test-parser");
+const { SimpleTestParser } = require("src/worker/runner/simple-test-parser");
 const { WorkerEvents: RunnerEvents } = require("src/events");
 const { makeConfigStub, makeTest } = require("../../../utils");
 const Promise = require("bluebird");

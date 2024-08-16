@@ -1,5 +1,3 @@
-"use strict";
-
 import util from "util";
 import { Command } from "@gemini-testing/commander";
 import escapeRe from "escape-string-regexp";

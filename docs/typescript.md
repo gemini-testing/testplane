@@ -9,7 +9,7 @@ npm i -D ts-node
 
 And include Testplane types in your `tsconfig.json` file:
 
-```js
+```json
 // tsconfig.json
 {
     // other tsconfig options
@@ -19,6 +19,25 @@ And include Testplane types in your `tsconfig.json` file:
             // other types
             "testplane",
         ]
+    }
+}
+```
+
+Recommended config:
+
+```json
+{
+    "compilerOptions": {
+        "types": [
+            "testplane"
+        ],
+        "sourceMap": true,
+        "outDir": "../test-dist",
+        "target": "ESNext",
+        "module": "CommonJS",
+        "strict": true,
+        "lib": ["esnext", "dom"],
+        "esModuleInterop": true
     }
 }
 ```

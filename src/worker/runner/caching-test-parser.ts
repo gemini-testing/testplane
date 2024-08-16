@@ -1,8 +1,6 @@
-"use strict";
-
 import { EventEmitter } from "events";
 import { passthroughEvent } from "../../events/utils";
-import SequenceTestParser from "./sequence-test-parser";
+import { SequenceTestParser } from "./sequence-test-parser";
 import { TestCollection } from "../../test-collection";
 import { WorkerEvents } from "../../events";
 import { Config } from "../../config";
@@ -18,10 +16,10 @@ export type ParseArgs = {
     browserId: string;
 };
 
-class CachingTestParser extends EventEmitter {
-    _config: Config;
-    _cache: Record<string, Record<string, Promise<Test[]>>>;
-    _sequenceTestParser: SequenceTestParser;
+export class CachingTestParser extends EventEmitter {
+    private _cache: Record<string, Record<string, Promise<Test[]>>>;
+    private _sequenceTestParser: SequenceTestParser;
+
     static create<T extends CachingTestParser>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this: new (...args: any[]) => T,
@@ -33,7 +31,6 @@ class CachingTestParser extends EventEmitter {
     constructor(config: Config) {
         super();
 
-        this._config = config;
         this._cache = {};
 
         this._sequenceTestParser = SequenceTestParser.create(config);
@@ -56,14 +53,12 @@ class CachingTestParser extends EventEmitter {
         return tests;
     }
 
-    _getFromCache({ file, browserId }: CacheKey): Promise<Test[]> {
+    private _getFromCache({ file, browserId }: CacheKey): Promise<Test[]> {
         return this._cache[browserId] && this._cache[browserId][file];
     }
 
-    _putToCache(testsPromise: Promise<Test[]>, { file, browserId }: CacheKey): void {
+    private _putToCache(testsPromise: Promise<Test[]>, { file, browserId }: CacheKey): void {
         this._cache[browserId] = this._cache[browserId] || {};
         this._cache[browserId][file] = testsPromise;
     }
 }
-
-export default CachingTestParser;

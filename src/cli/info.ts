@@ -1,5 +1,3 @@
-"use strict";
-
 import { TestplaneRunOpts } from ".";
 
 export const configOverriding = (opts: TestplaneRunOpts = {}): string => {

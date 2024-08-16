@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { EventEmitter } from "events";
 import { passthroughEvent } from "../events/utils";
-import SetsBuilder from "./sets-builder";
+import { SetsBuilder } from "./sets-builder";
 import { TestParser } from "./test-parser";
 import { MasterEvents } from "../events";
 import env from "../utils/env";
@@ -11,7 +11,7 @@ import { ReadTestsOpts } from "../testplane";
 
 export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
 
-class TestReader extends EventEmitter {
+export class TestReader extends EventEmitter {
     #config;
 
     static create<T extends TestReader>(
@@ -100,5 +100,3 @@ function convertOptions(obj: Record<string, unknown>): string {
     }
     return result;
 }
-
-export default TestReader;

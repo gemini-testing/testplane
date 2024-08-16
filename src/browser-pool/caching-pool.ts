@@ -1,20 +1,19 @@
-"use strict";
-
-import LimitedUseSet from "./limited-use-set";
+import { LimitedUseSet } from "./limited-use-set";
 import debug from "debug";
 import { buildCompositeBrowserId } from "./utils";
-import BasicPool from "./basic-pool";
+import { BasicPool } from "./basic-pool";
 import { Config } from "../config";
-import Pool from "./pool";
-import NewBrowser from "../browser/new-browser";
+import { Pool } from "./types";
+import { NewBrowser } from "../browser/new-browser";
 
 export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
 
-class CachingPool implements Pool {
+export class CachingPool implements Pool {
+    private _caches: Record<string, LimitedUseSet<NewBrowser>>;
+    private _config: Config;
     underlyingPool: BasicPool;
-    _caches: Record<string, LimitedUseSet<NewBrowser>>;
     log: debug.Debugger;
-    _config: Config;
+
     constructor(underlyingPool: BasicPool, config: Config) {
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
@@ -22,7 +21,7 @@ class CachingPool implements Pool {
         this._config = config;
     }
 
-    _getCacheFor(id: string, version?: string): LimitedUseSet<NewBrowser> {
+    private _getCacheFor(id: string, version?: string): LimitedUseSet<NewBrowser> {
         const compositeId = buildCompositeBrowserId(id, version);
 
         this.log(`request for ${compositeId}`);
@@ -59,7 +58,7 @@ class CachingPool implements Pool {
             .then(() => browser);
     }
 
-    _initPool(browserId: string, version?: string): void {
+    private _initPool(browserId: string, version?: string): void {
         const compositeId = buildCompositeBrowserId(browserId, version);
         const freeBrowser = this.underlyingPool.freeBrowser.bind(this.underlyingPool);
         const { testsPerSession } = this._config.forBrowser(browserId);
@@ -113,5 +112,3 @@ class CachingPool implements Pool {
         this.underlyingPool.cancel();
     }
 }
-
-export default CachingPool;

@@ -1,3 +1,6 @@
+/**
+ * @category Errors
+ */
 export class TestplaneInternalError extends Error {
     constructor(message: string) {
         super(message);

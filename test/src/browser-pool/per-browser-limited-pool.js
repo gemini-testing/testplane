@@ -1,9 +1,9 @@
 "use strict";
 
 const _ = require("lodash");
-const PerBrowserLimitedPool = require("src/browser-pool/per-browser-limited-pool").default;
-const LimitedPool = require("src/browser-pool/limited-pool").default;
-const BasicPool = require("src/browser-pool/basic-pool").default;
+const { PerBrowserLimitedPool } = require("src/browser-pool/per-browser-limited-pool");
+const { LimitedPool } = require("src/browser-pool/limited-pool");
+const { BasicPool } = require("src/browser-pool/basic-pool");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/per-browser-limited-pool", () => {

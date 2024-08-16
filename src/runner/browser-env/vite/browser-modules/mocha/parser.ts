@@ -1,6 +1,6 @@
 import { ValueOf } from "type-fest";
 import { MochaEvents } from "./events.js";
-import Mocha from "mocha";
+import type {} from "mocha";
 
 type RunnableHandler = (runnable: Mocha.Runnable) => void;
 

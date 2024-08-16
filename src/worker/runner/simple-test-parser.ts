@@ -1,5 +1,3 @@
-"use strict";
-
 import { Config } from "../../config";
 
 import _ from "lodash";
@@ -14,8 +12,9 @@ export type ParseArgs = {
     browserId: string;
 };
 
-class SimpleTestParser extends EventEmitter {
+export class SimpleTestParser extends EventEmitter {
     private _config: Config;
+
     static create<T extends SimpleTestParser>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         this: new (...args: any[]) => T,
@@ -44,5 +43,3 @@ class SimpleTestParser extends EventEmitter {
         return parser.parse([file], { browserId, config: this._config.forBrowser(browserId) });
     }
 }
-
-export default SimpleTestParser;

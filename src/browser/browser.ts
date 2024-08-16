@@ -1,5 +1,3 @@
-"use strict";
-
 import crypto from "crypto";
 import _ from "lodash";
 import { SAVE_HISTORY_MODE } from "../constants/config";
@@ -33,26 +31,31 @@ export type BrowserOpts = {
     version?: string;
     state?: Record<string, unknown>;
     emitter?: AsyncEmitter;
-} & Record<string, unknown>;
+};
 
 export type BrowserState = {
     testXReqId?: string;
     traceparent?: string;
     isBroken?: boolean;
-} & Record<string, unknown>;
+};
 
 export type CustomCommend = { name: string; elementScope: boolean };
 
-class Browser {
+export class Browser {
+    protected _config: BrowserConfig;
+    protected _debug: boolean;
+    protected _session: WebdriverIO.Browser | null;
+    protected _callstackHistory: Callstack | null;
+    protected _state: BrowserState;
+    protected _customCommands: Set<CustomCommend>;
     id: string;
     version?: string;
-    _config: BrowserConfig;
-    _debug: boolean;
-    _session: WebdriverIO.Browser | null;
-    _callstackHistory: Callstack | null;
-    _state: BrowserState;
-    _customCommands: Set<CustomCommend>;
-    static create(config: Config, opts: BrowserOpts): Browser {
+
+    static create<T extends Browser>(
+        this: new (config: Config, opts: BrowserOpts) => T,
+        config: Config,
+        opts: BrowserOpts,
+    ): T {
         return new this(config, opts);
     }
 
@@ -87,31 +90,31 @@ class Browser {
         _.extend(this._state, state);
     }
 
-    _addCommands(): void {
+    protected _addCommands(): void {
         this._addExtendOptionsMethod(this._session!);
     }
 
-    _addSteps(): void {
+    protected _addSteps(): void {
         addRunStepCommand(this);
     }
 
-    _extendStacktrace(): void {
+    protected _extendStacktrace(): void {
         enhanceStacktraces(this._session!);
     }
 
-    _addHistory(): void {
+    protected _addHistory(): void {
         if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
             this._callstackHistory = history.initCommandHistory(this._session);
         }
     }
 
-    _addExtendOptionsMethod(session: WebdriverIO.Browser): void {
+    protected _addExtendOptionsMethod(session: WebdriverIO.Browser): void {
         session.addCommand("extendOptions", opts => {
             _.extend(session.options, opts);
         });
     }
 
-    _getSessionOptsFromConfig(optNames = CUSTOM_SESSION_OPTS): Record<string, unknown> {
+    protected _getSessionOptsFromConfig(optNames = CUSTOM_SESSION_OPTS): Record<string, unknown> {
         return optNames.reduce((options: Record<string, unknown>, optName) => {
             if (optName === "transformRequest") {
                 options[optName] = (req: RequestOptions): RequestOptions => {
@@ -138,7 +141,7 @@ class Browser {
         }, {});
     }
 
-    _startCollectingCustomCommands(): void {
+    protected _startCollectingCustomCommands(): void {
         const browserCommands = getBrowserCommands();
         const elementCommands = getElementCommands();
 
@@ -186,5 +189,3 @@ class Browser {
         return _.uniqWith(allCustomCommands, _.isEqual);
     }
 }
-
-export default Browser;

@@ -9,7 +9,7 @@ import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
 import signalHandler from "./signal-handler";
-import TestReader from "./test-reader";
+import { TestReader } from "./test-reader";
 import { TestCollection } from "./test-collection";
 import { validateUnknownBrowsers } from "./validators";
 import { initReporters } from "./reporters";

@@ -1,5 +1,3 @@
-"use strict";
-
 import ExistingBrowser from "../../browser/existing-browser";
 import { WdioBrowser } from "../../types";
 import BrowserPool from "./browser-pool";
@@ -17,10 +15,11 @@ export type CreateBrowserAgentOpts = {
     pool: BrowserPool;
 };
 
-class BrowserAgent {
+export class BrowserAgent {
     browserId: string;
     browserVersion: string;
-    _pool: BrowserPool;
+    private _pool: BrowserPool;
+
     static create(opts: CreateBrowserAgentOpts): BrowserAgent {
         return new this(opts);
     }
@@ -47,5 +46,3 @@ class BrowserAgent {
         this._pool.freeBrowser(browser);
     }
 }
-
-export default BrowserAgent;

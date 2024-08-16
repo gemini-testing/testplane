@@ -4,10 +4,10 @@ const { AsyncEmitter } = require("../../events/async-emitter");
 const { passthroughEvent } = require("../../events/utils");
 const { WorkerEvents } = require("../../events");
 const BrowserPool = require("./browser-pool");
-const BrowserAgent = require("./browser-agent").default;
+const { BrowserAgent } = require("./browser-agent");
 const NodejsEnvTestRunner = require("./test-runner");
 const { TestRunner: BrowserEnvTestRunner } = require("../browser-env/runner/test-runner");
-const CachingTestParser = require("./caching-test-parser").default;
+const { CachingTestParser } = require("./caching-test-parser");
 const { isRunInNodeJsEnv } = require("../../utils/config");
 
 module.exports = class Runner extends AsyncEmitter {

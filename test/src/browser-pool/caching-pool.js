@@ -1,7 +1,7 @@
 "use strict";
 
 const Promise = require("bluebird");
-const Pool = require("src/browser-pool/caching-pool").default;
+const { CachingPool } = require("src/browser-pool/caching-pool");
 const { buildCompositeBrowserId } = require("src/browser-pool/utils");
 const stubBrowser = require("./util").stubBrowser;
 
@@ -20,7 +20,7 @@ describe("browser-pool/caching-pool", () => {
             },
         };
 
-        return new Pool(underlyingPool, config, {});
+        return new CachingPool(underlyingPool, config, {});
     };
 
     const makePool_ = () => poolWithReuseLimits_({ bro: Infinity });

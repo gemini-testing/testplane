@@ -17,7 +17,7 @@ import {
 import { VITE_RUN_UUID_ROUTE } from "../../../../../../src/runner/browser-env/vite/constants";
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
-import BrowserAgent from "../../../../../../src/worker/runner/browser-agent";
+import { BrowserAgent } from "../../../../../../src/worker/runner/browser-agent";
 import history from "../../../../../../src/browser/history";
 import logger from "../../../../../../src/utils/logger";
 import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";

@@ -1,15 +1,14 @@
-"use strict";
-
 import { zipObject, forEach } from "lodash";
-import Pool from "./pool";
+import { Pool } from "./types";
 import debug from "debug";
 import { Config } from "../config";
-import Browser from "../browser/browser";
-import LimitedPool from "./limited-pool";
+import { Browser } from "../browser/browser";
+import { LimitedPool } from "./limited-pool";
 
-class PerBrowserLimitedPool implements Pool {
+export class PerBrowserLimitedPool implements Pool {
     log: debug.Debugger;
-    _browserPools: Record<string, LimitedPool>;
+    private _browserPools: Record<string, LimitedPool>;
+
     constructor(underlyingPool: Pool, config: Config) {
         this.log = debug("testplane:pool:per-browser-limited");
 
@@ -41,5 +40,3 @@ class PerBrowserLimitedPool implements Pool {
         forEach(this._browserPools, pool => pool.cancel());
     }
 }
-
-export default PerBrowserLimitedPool;

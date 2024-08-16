@@ -1,5 +1,3 @@
-"use strict";
-
 import _ from "lodash";
 import debug from "debug";
 
@@ -15,13 +13,14 @@ export type LimitedUseSetOpts<T> = {
     formatItem: (value: T) => string;
 };
 
-class LimitedUseSet<T extends object = object> {
-    _useCounts: WeakMap<T, number>;
-    _useLimit: number;
-    _finalize: (value: T) => Promise<void>;
-    _formatItem: (value: T) => string;
-    _objects: T[];
+export class LimitedUseSet<T extends object = object> {
+    private _useCounts: WeakMap<T, number>;
+    private _useLimit: number;
+    private _finalize: (value: T) => Promise<void>;
+    private _formatItem: (value: T) => string;
+    private _objects: T[];
     log: debug.Debugger;
+
     constructor(opts: LimitedUseSetOpts<T>) {
         this._useCounts = new WeakMap();
         this._useLimit = opts.useLimit;
@@ -48,7 +47,7 @@ class LimitedUseSet<T extends object = object> {
         return Promise.resolve();
     }
 
-    _isOverLimit(value: T): boolean {
+    private _isOverLimit(value: T): boolean {
         if (this._useLimit === 0) {
             return true;
         }
@@ -73,5 +72,3 @@ class LimitedUseSet<T extends object = object> {
         return result;
     }
 }
-
-export default LimitedUseSet;
