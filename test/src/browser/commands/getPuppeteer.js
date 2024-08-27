@@ -21,23 +21,21 @@ describe('"getPuppeteer" command', () => {
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });
     };
 
-    describe("should not overwrite command if", () => {
-        it('"browserWSEndpoint" is not specified', async () => {
-            const session = mkSessionStub_();
+    it('should not overwrite command if command "getPuppeteer" does not exist in browser', async () => {
+        const session = mkSessionStub_();
+        session.getPuppeteer = undefined;
 
-            await initBrowser_({ session });
+        await initBrowser_();
 
-            assert.neverCalledWith(session.overwriteCommand, "getPuppeteer");
-        });
+        assert.neverCalledWith(session.overwriteCommand, "getPuppeteer");
+    });
 
-        it('command "getPuppeteer" does not exist in browser', async () => {
-            const session = mkSessionStub_();
-            session.getPuppeteer = undefined;
+    it('should only overwrite timeouts wrapper if "browserWSEndpoint" is not specified', async () => {
+        const session = mkSessionStub_();
 
-            await initBrowser_();
+        await initBrowser_({ session });
 
-            assert.neverCalledWith(session.overwriteCommand, "getPuppeteer");
-        });
+        assert.equal(session.overwriteCommand.withArgs("getPuppeteer").callCount, 1);
     });
 
     it("should overwrite command", async () => {
@@ -74,6 +72,8 @@ describe('"getPuppeteer" command', () => {
 
                 origGetPuppeteerFn.callsFake(() => {
                     capsBeforeReset = _.cloneDeep(session.capabilities);
+
+                    return Promise.resolve();
                 });
 
                 const browser = mkBrowser_({ browserWSEndpoint: "ws://new.endpoint/devtools" });

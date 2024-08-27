@@ -2,10 +2,51 @@
 
 const urljoin = require("url-join");
 
+const PUPPETEER_REJECT_TIMEOUT = 5000;
+
 module.exports.default = browser => {
     const { publicAPI: session, config } = browser;
 
-    if (!config.browserWSEndpoint || !session.getPuppeteer) {
+    if (!session.getPuppeteer) {
+        return;
+    }
+
+    session.overwriteCommand("getPuppeteer", async origGetPuppeteer => {
+        return new Promise((resolve, reject) => {
+            let isSettled = false;
+            let rejectTimeout;
+
+            origGetPuppeteer()
+                .then(puppeteer => {
+                    if (!isSettled) {
+                        resolve(puppeteer);
+                    }
+                })
+                .catch(error => {
+                    if (!isSettled) {
+                        reject(error);
+                    }
+                })
+                .finally(() => {
+                    isSettled = true;
+                    clearTimeout(rejectTimeout);
+                });
+
+            rejectTimeout = setTimeout(() => {
+                if (isSettled) {
+                    return;
+                }
+
+                isSettled = true;
+
+                browser.markAsBroken();
+
+                reject(new Error(`Unable to establish a CDP connection in ${PUPPETEER_REJECT_TIMEOUT} ms`));
+            }, PUPPETEER_REJECT_TIMEOUT);
+        });
+    });
+
+    if (!config.browserWSEndpoint) {
         return;
     }
 
@@ -17,7 +58,7 @@ module.exports.default = browser => {
         setCdpEndpoint(session.capabilities, newBrowserWSEndpoint);
 
         try {
-            return origGetPuppeteer();
+            return await origGetPuppeteer();
         } finally {
             setCdpEndpoint(session.capabilities, prevBrowserWSEndpoint);
         }
