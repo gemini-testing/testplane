@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.7](https://github.com/gemini-testing/testplane/compare/v8.19.6...v8.19.7) (2024-08-28)
+
+
+### Bug Fixes
+
+* add getPuppeteer timeout ([a2d8e2e](https://github.com/gemini-testing/testplane/commit/a2d8e2eacb803a7cc6113a472fe0ccccf710cf5c))
+
 ### [8.19.6](https://github.com/gemini-testing/testplane/compare/v8.19.5...v8.19.6) (2024-08-14)
 
 
