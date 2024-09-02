@@ -104,21 +104,32 @@ export interface AssertViewResultNoRefImage {
 
 export type AssertViewResult = AssertViewResultSuccess | AssertViewResultDiff | AssertViewResultNoRefImage;
 
+export enum CommandHistoryKey {
+    Name = "n",
+    Args = "a",
+    Scope = "s",
+    Duration = "d",
+    TimeStart = "ts",
+    TimeEnd = "te",
+    IsOverwritten = "o",
+    IsGroup = "g",
+    IsFailed = "f",
+    Children = "c",
+    Key = "k",
+}
+
 export interface CommandHistory {
-    /** Name: command name */
-    n: string;
-    /** Arguments: array of passed arguments */
-    a: unknown[];
-    /** Time start */
-    ts: number;
-    /** Time end */
-    te: number;
-    /** Duration */
-    d: number;
-    /** Scope: scope of execution (browser or element) */
-    s: "b" | "e";
-    /** Children: array of children commands */
-    c: CommandHistory[];
+    [CommandHistoryKey.Name]: string;
+    [CommandHistoryKey.Args]: string[];
+    [CommandHistoryKey.TimeStart]: number;
+    [CommandHistoryKey.TimeEnd]: number;
+    [CommandHistoryKey.Duration]: number;
+    [CommandHistoryKey.Scope]: "b" | "e";
+    [CommandHistoryKey.Children]: CommandHistory[];
+    [CommandHistoryKey.Key]: symbol;
+    [CommandHistoryKey.IsOverwritten]: boolean;
+    [CommandHistoryKey.IsGroup]: boolean;
+    [CommandHistoryKey.IsFailed]: boolean;
 }
 
 export interface ExecutionThreadToolCtx {
@@ -141,7 +152,7 @@ export interface TestResult extends Test {
      * @deprecated Use `testplaneCtx` instead
      */
     hermioneCtx: ExecutionThreadToolCtx;
-    history: CommandHistory;
+    history: CommandHistory[];
     meta: { [name: string]: unknown };
     sessionId: string;
     startTime: number;
