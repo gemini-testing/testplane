@@ -1,29 +1,35 @@
-"use strict";
+import debug from "debug";
+import _ from "lodash";
 
-const _ = require("lodash");
-const Browser = require("../browser/new-browser");
-const { CancelledError } = require("./cancelled-error");
-const { MasterEvents } = require("../events");
-const Pool = require("./pool");
-const debug = require("debug");
+import { NewBrowser } from "../browser/new-browser";
+import { CancelledError } from "./cancelled-error";
+import { AsyncEmitter, MasterEvents } from "../events";
+import { BrowserOpts, Pool } from "./types";
+import { Config } from "../config";
+import { Browser } from "../browser/browser";
 
-module.exports = class BasicPool extends Pool {
-    static create(config, emitter) {
+export class BasicPool implements Pool {
+    private _config: Config;
+    private _emitter: AsyncEmitter;
+    private _activeSessions: Record<string, NewBrowser>;
+    private _cancelled: boolean;
+    log: debug.Debugger;
+
+    static create(config: Config, emitter: AsyncEmitter): BasicPool {
         return new BasicPool(config, emitter);
     }
 
-    constructor(config, emitter) {
-        super();
-
+    constructor(config: Config, emitter: AsyncEmitter) {
         this._config = config;
         this._emitter = emitter;
         this.log = debug("testplane:pool:basic");
 
         this._activeSessions = {};
+        this._cancelled = false;
     }
 
-    async getBrowser(id, opts = {}) {
-        const browser = Browser.create(this._config, { ...opts, id });
+    async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
+        const browser = NewBrowser.create(this._config, { ...opts, id });
 
         try {
             await browser.init();
@@ -48,32 +54,33 @@ module.exports = class BasicPool extends Pool {
         }
     }
 
-    async freeBrowser(browser) {
+    async freeBrowser(browser: NewBrowser): Promise<void> {
         delete this._activeSessions[browser.sessionId];
 
         this.log(`stop browser ${browser.fullId}`);
 
         try {
             await this._emit(MasterEvents.SESSION_END, browser);
-        } catch (err) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (err: any) {
             console.warn((err && err.stack) || err);
         }
 
         await browser.quit();
     }
 
-    _emit(event, browser) {
+    private _emit(event: string, browser: Browser): Promise<unknown[]> {
         return this._emitter.emitAndWait(event, browser.publicAPI, {
             browserId: browser.id,
             sessionId: browser.sessionId,
         });
     }
 
-    cancel() {
+    cancel(): void {
         this._cancelled = true;
 
         _.forEach(this._activeSessions, browser => browser.quit());
 
         this._activeSessions = {};
     }
-};
+}

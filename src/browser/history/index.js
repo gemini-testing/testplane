@@ -2,25 +2,26 @@
 
 const Callstack = require("./callstack");
 const cmds = require("./commands");
-const { runWithHooks, normalizeCommandArgs, historyDataMap, isGroup } = require("./utils");
+const { runWithHooks, normalizeCommandArgs, isGroup } = require("./utils");
+const { TestStepKey } = require("./../../types");
 
 const shouldNotWrapCommand = commandName =>
     ["addCommand", "overwriteCommand", "extendOptions", "setMeta", "getMeta", "runStep"].includes(commandName);
 
 const mkHistoryNode = ({ name, args, elementScope, key, overwrite, isGroup }) => {
     const map = {
-        [historyDataMap.NAME]: name,
-        [historyDataMap.ARGS]: normalizeCommandArgs(name, args),
-        [historyDataMap.SCOPE]: cmds.createScope(elementScope),
-        [historyDataMap.KEY]: key,
+        [TestStepKey.Name]: name,
+        [TestStepKey.Args]: normalizeCommandArgs(name, args),
+        [TestStepKey.Scope]: cmds.createScope(elementScope),
+        [TestStepKey.Key]: key,
     };
 
     if (overwrite) {
-        map[historyDataMap.IS_OVERWRITTEN] = Number(overwrite);
+        map[TestStepKey.IsOverwritten] = Number(overwrite);
     }
 
     if (isGroup) {
-        map[historyDataMap.IS_GROUP] = true;
+        map[TestStepKey.IsGroup] = true;
     }
 
     return map;

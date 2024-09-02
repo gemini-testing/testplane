@@ -3,7 +3,7 @@
 const { Command } = require("@gemini-testing/commander");
 const proxyquire = require("proxyquire").noCallThru();
 const testplaneCli = require("src/cli");
-const info = require("src/cli/info");
+const { configOverriding } = require("src/cli/info");
 const defaults = require("src/config/defaults");
 const { Testplane } = require("src/testplane");
 const logger = require("src/utils/logger");
@@ -43,18 +43,18 @@ describe("cli", () => {
             await run_("--help");
 
             assert.calledOnce(logger.log);
-            assert.calledWith(logger.log, info.configOverriding());
+            assert.calledWith(logger.log, configOverriding());
         });
 
         it("should show information about testplane by default", async () => {
-            const defaultResult = info.configOverriding();
+            const defaultResult = configOverriding();
 
             assert.isTrue(defaultResult.includes("testplane"));
             assert.isFalse(defaultResult.includes("hermione"));
         });
 
         it("should show information about hermione", async () => {
-            const result = info.configOverriding({ cliName: "hermione" });
+            const result = configOverriding({ cliName: "hermione" });
 
             assert.isTrue(result.includes("hermione"));
             assert.isFalse(result.includes("testplane"));

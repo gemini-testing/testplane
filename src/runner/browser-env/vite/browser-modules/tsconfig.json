@@ -9,6 +9,6 @@
         "target": "es2022",
         "moduleResolution": "NodeNext",
 
-        "types": ["mocha", "vite/client", "webdriverio"]
+        "types": ["vite/client", "webdriverio"]
     }
 }

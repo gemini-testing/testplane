@@ -1,8 +1,8 @@
 "use strict";
 
-const BasicPool = require("src/browser-pool/basic-pool");
-const LimitedPool = require("src/browser-pool/limited-pool");
-const PerBrowserLimitedPool = require("src/browser-pool/per-browser-limited-pool");
+const { BasicPool } = require("src/browser-pool/basic-pool");
+const { LimitedPool } = require("src/browser-pool/limited-pool");
+const { PerBrowserLimitedPool } = require("src/browser-pool/per-browser-limited-pool");
 const pool = require("src/browser-pool");
 const _ = require("lodash");
 const { EventEmitter } = require("events");

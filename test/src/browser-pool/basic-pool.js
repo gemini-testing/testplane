@@ -1,8 +1,8 @@
 "use strict";
 
 const { AsyncEmitter } = require("src/events/async-emitter");
-const BasicPool = require("src/browser-pool/basic-pool");
-const Browser = require("src/browser/new-browser");
+const { BasicPool } = require("src/browser-pool/basic-pool");
+const { NewBrowser } = require("src/browser/new-browser");
 const { CancelledError } = require("src/browser-pool/cancelled-error");
 const { MasterEvents: Events } = require("src/events");
 const { stubBrowser } = require("./util");
@@ -23,7 +23,7 @@ describe("browser-pool/basic-pool", () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(Browser, "create").returns(stubBrowser());
+        sandbox.stub(NewBrowser, "create").returns(stubBrowser());
     });
 
     afterEach(() => sandbox.restore());
@@ -33,18 +33,18 @@ describe("browser-pool/basic-pool", () => {
 
         await mkPool_({ config }).getBrowser("broId");
 
-        assert.calledWith(Browser.create, config, { id: "broId" });
+        assert.calledWith(NewBrowser.create, config, { id: "broId" });
     });
 
     it("should create new browser with specified version when requested", async () => {
         await mkPool_().getBrowser("broId", { version: "1.0" });
 
-        assert.calledWith(Browser.create, sinon.match.any, { id: "broId", version: "1.0" });
+        assert.calledWith(NewBrowser.create, sinon.match.any, { id: "broId", version: "1.0" });
     });
 
     it("should init browser", async () => {
         const browser = stubBrowser();
-        Browser.create.returns(browser);
+        NewBrowser.create.returns(browser);
 
         await mkPool_().getBrowser();
 
@@ -55,7 +55,7 @@ describe("browser-pool/basic-pool", () => {
         const publicAPI = null;
         const browser = stubBrowser("some-id", "some-version", publicAPI);
         browser.init.rejects(new Error("foo"));
-        Browser.create.returns(browser);
+        NewBrowser.create.returns(browser);
 
         const pool = mkPool_();
 
@@ -68,7 +68,7 @@ describe("browser-pool/basic-pool", () => {
         const publicAPI = {};
         const browser = stubBrowser("some-id", "some-version", publicAPI);
         browser.init.resolves();
-        Browser.create.returns(browser);
+        NewBrowser.create.returns(browser);
 
         const emitter = new AsyncEmitter().on(Events.SESSION_START, () => Promise.reject(new Error("foo")));
 
@@ -82,7 +82,7 @@ describe("browser-pool/basic-pool", () => {
     describe("SESSION_START event", () => {
         it("should be emitted after browser init", async () => {
             const browser = stubBrowser();
-            Browser.create.returns(browser);
+            NewBrowser.create.returns(browser);
 
             const onSessionStart = sinon.stub().named("onSessionStart");
             const emitter = new AsyncEmitter().on(Events.SESSION_START, onSessionStart);
@@ -94,7 +94,7 @@ describe("browser-pool/basic-pool", () => {
 
         it("handler should be waited by pool", async () => {
             const browser = stubBrowser();
-            Browser.create.returns(browser);
+            NewBrowser.create.returns(browser);
 
             const afterSessionStart = sinon.stub().named("afterSessionStart");
             const emitter = new AsyncEmitter().on(Events.SESSION_START, () => Promise.delay(1).then(afterSessionStart));
@@ -114,7 +114,7 @@ describe("browser-pool/basic-pool", () => {
 
         it("on handler fail browser should be finalized", async () => {
             const browser = stubBrowser();
-            Browser.create.returns(browser);
+            NewBrowser.create.returns(browser);
 
             const emitter = new AsyncEmitter().on(Events.SESSION_START, () => Promise.reject(new Error()));
 
@@ -205,7 +205,7 @@ describe("browser-pool/basic-pool", () => {
 
         it("should quit browser once if it was launched after cancel", async () => {
             const browser = stubBrowser();
-            Browser.create.returns(browser);
+            NewBrowser.create.returns(browser);
 
             const emitter = new AsyncEmitter();
             const pool = mkPool_({ emitter });

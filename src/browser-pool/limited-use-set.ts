@@ -1,21 +1,27 @@
-"use strict";
-
-const _ = require("lodash");
-const debug = require("debug");
+import _ from "lodash";
+import debug from "debug";
 
 /**
  * Set implementation which allows to get and put an object
  * there only limited amout of times. After limit is reached
  * attempt to put an object there causes the object to be finalized.
- *
- * @constructor
- * @param {Number} useLimit number of times object can be popped from set
- * before finalizing.
- * @param {Function} finalize callback which will be called when value in
- * set needs to be finalized.
  */
-module.exports = class LimitedUseSet {
-    constructor(opts) {
+
+export interface LimitedUseSetOpts<T> {
+    useLimit: number;
+    finalize: (value: T) => Promise<void>;
+    formatItem: (value: T) => string;
+}
+
+export class LimitedUseSet<T extends object = object> {
+    private _useCounts: WeakMap<T, number>;
+    private _useLimit: number;
+    private _finalize: (value: T) => Promise<void>;
+    private _formatItem: (value: T) => string;
+    private _objects: T[];
+    log: debug.Debugger;
+
+    constructor(opts: LimitedUseSetOpts<T>) {
         this._useCounts = new WeakMap();
         this._useLimit = opts.useLimit;
         this._finalize = opts.finalize;
@@ -25,7 +31,7 @@ module.exports = class LimitedUseSet {
         this.log = debug("testplane:pool:limited-use-set");
     }
 
-    push(value) {
+    push(value: T): Promise<void> {
         const formatedItem = this._formatItem(value);
 
         this.log(`push ${formatedItem}`);
@@ -41,20 +47,20 @@ module.exports = class LimitedUseSet {
         return Promise.resolve();
     }
 
-    _isOverLimit(value) {
+    private _isOverLimit(value: T): boolean {
         if (this._useLimit === 0) {
             return true;
         }
 
-        return this._useCounts.has(value) && this._useCounts.get(value) >= this._useLimit;
+        return this._useCounts.has(value) && this._useCounts.get(value)! >= this._useLimit;
     }
 
-    pop() {
+    pop(): T | null {
         if (this._objects.length === 0) {
             return null;
         }
 
-        const result = this._objects.pop();
+        const result = this._objects.pop()!;
         const useCount = this._useCounts.get(result) || 0;
         const formatedItem = this._formatItem(result);
 
@@ -65,4 +71,4 @@ module.exports = class LimitedUseSet {
 
         return result;
     }
-};
+}

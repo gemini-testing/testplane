@@ -1,7 +1,7 @@
 "use strict";
 
 const Callstack = require("src/browser/history/callstack");
-const { historyDataMap } = require("src/browser/history/utils");
+const { TestStepKey } = require("src/types");
 
 describe("commands-history", () => {
     describe("callstack", () => {
@@ -70,8 +70,8 @@ describe("commands-history", () => {
         });
 
         it("should remove child nodes when parent leaves a stack", () => {
-            stack.enter({ [historyDataMap.KEY]: 2 });
-            stack.enter({ [historyDataMap.KEY]: 3 });
+            stack.enter({ [TestStepKey.Key]: 2 });
+            stack.enter({ [TestStepKey.Key]: 3 });
 
             stack.leave(2);
 

@@ -1,8 +1,8 @@
 import _ from "lodash";
-import BasicPool from "./basic-pool";
-import LimitedPool from "./limited-pool";
-import PerBrowserLimitedPool from "./per-browser-limited-pool";
-import CachingPool from "./caching-pool";
+import { BasicPool } from "./basic-pool";
+import { LimitedPool } from "./limited-pool";
+import { PerBrowserLimitedPool } from "./per-browser-limited-pool";
+import { CachingPool } from "./caching-pool";
 import { Config } from "../config";
 import { AsyncEmitter } from "../events";
 

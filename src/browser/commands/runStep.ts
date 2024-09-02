@@ -1,10 +1,9 @@
-"use strict";
+import _ from "lodash";
+import { Browser } from "../browser";
 
-const _ = require("lodash");
-
-module.exports.default = browser => {
+const addRunStepCommand = (browser: Browser): void => {
     const { publicAPI: session } = browser;
-    session.addCommand("runStep", (stepName, stepCb) => {
+    session.addCommand("runStep", (stepName: string, stepCb: () => void) => {
         if (!_.isString(stepName)) {
             throw Error(`First argument must be a string, but got ${typeof stepName}`);
         }
@@ -16,3 +15,5 @@ module.exports.default = browser => {
         return stepCb();
     });
 };
+
+export default addRunStepCommand;

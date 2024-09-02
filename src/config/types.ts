@@ -2,6 +2,7 @@ import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
 import type { Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
+import { RequestOptions } from "https";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -95,6 +96,10 @@ export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
     desiredCapabilities: WebdriverIO.Capabilities | null;
+    sessionEnvFlags: Record<
+        "isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone",
+        boolean
+    >;
     gridUrl: string;
     baseUrl: string;
     sessionsPerBrowser: number;
@@ -108,6 +113,7 @@ export interface CommonConfig {
     sessionQuitTimeout: number | null;
     testTimeout: number | null;
     waitTimeout: number;
+    waitInterval: number;
     saveHistoryMode: "all" | "none" | "onlyFailed";
     takeScreenshotOnFails: {
         testFail: boolean;
@@ -134,6 +140,14 @@ export interface CommonConfig {
     orientation: "landscape" | "portrait" | null;
     resetCursor: boolean;
     headers: Record<string, string> | null;
+
+    transformRequest: (req: RequestOptions) => RequestOptions;
+    transformResponse: (res: Response, req: RequestOptions) => Response;
+
+    strictSSL: boolean | null;
+    user: string | null;
+    key: string | null;
+    region: string | null;
 
     system: SystemConfig;
     headless: "old" | "new" | boolean | null;
@@ -169,6 +183,12 @@ export interface SetsConfig {
     browsers?: Array<string>;
 }
 
+export interface SetsConfigParsed {
+    files: Array<string>;
+    ignoreFiles: Array<string>;
+    browsers: Array<string>;
+}
+
 // Only browsers desiredCapabilities are required in input config
 export type ConfigInput = Partial<CommonConfig> & {
     browsers: Record<string, Partial<CommonConfig> & { desiredCapabilities: WebdriverIO.Capabilities }>;
@@ -186,7 +206,7 @@ declare module "." {
     export interface Config extends CommonConfig {
         browsers: Record<string, BrowserConfig>;
         plugins: Record<string, Record<string, unknown>>;
-        sets: Record<string, SetsConfig>;
+        sets: Record<string, SetsConfigParsed>;
         prepareEnvironment?: () => void | null;
     }
 }

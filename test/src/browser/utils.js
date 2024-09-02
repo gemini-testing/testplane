@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 const EventEmitter = require("events");
-const NewBrowser = require("src/browser/new-browser");
+const { NewBrowser } = require("src/browser/new-browser");
 const ExistingBrowser = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 

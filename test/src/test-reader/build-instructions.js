@@ -1,16 +1,24 @@
 "use strict";
 
 const _ = require("lodash");
-const { InstructionsList, Instructions } = require("src/test-reader/build-instructions");
+const proxyquire = require("proxyquire");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
-const validators = require("src/validators");
 const env = require("src/utils/env");
 const RuntimeConfig = require("src/config/runtime-config");
 const { makeConfigStub } = require("../../utils");
 
 describe("test-reader/build-instructions", () => {
+    let InstructionsList, Instructions, validateUnknownBrowsers;
     const sandbox = sinon.createSandbox();
 
+    beforeEach(() => {
+        validateUnknownBrowsers = sandbox.stub();
+        ({ InstructionsList, Instructions } = proxyquire("src/test-reader/build-instructions", {
+            "../validators": {
+                validateUnknownBrowsers,
+            },
+        }));
+    });
     afterEach(() => {
         sandbox.restore();
     });
@@ -251,7 +259,6 @@ describe("test-reader/build-instructions", () => {
 
         describe("buildGlobalSkipInstruction", () => {
             beforeEach(() => {
-                sandbox.stub(validators, "validateUnknownBrowsers");
                 sandbox.stub(env, "parseCommaSeparatedValue").returns({ value: [] });
             });
 
@@ -262,7 +269,7 @@ describe("test-reader/build-instructions", () => {
 
                 Instructions.buildGlobalSkipInstruction(makeConfigStub({ browsers: ["foo", "bar"] }));
 
-                assert.calledOnceWith(validators.validateUnknownBrowsers, ["baz"], ["foo", "bar"]);
+                assert.calledOnceWith(validateUnknownBrowsers, ["baz"], ["foo", "bar"]);
             });
 
             it("should set noop instruction if skip list is not specified", () => {

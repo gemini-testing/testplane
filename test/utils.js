@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const Browser = require("../src/browser/new-browser");
+const Browser = require("../src/browser/new-browser").default;
 const { NODEJS_TEST_RUN_ENV } = require("../src/constants/config");
 
 function browserWithId(id) {

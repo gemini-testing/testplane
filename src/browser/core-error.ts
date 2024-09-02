@@ -1,3 +1,6 @@
+/**
+ * @category Errors
+ */
 export class CoreError extends Error {
     name = "CoreError";
 

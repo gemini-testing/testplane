@@ -1,25 +1,34 @@
-const _ = require("lodash");
-const { EventEmitter } = require("events");
-const { passthroughEvent } = require("../events/utils");
-const SetsBuilder = require("./sets-builder");
-const { TestParser } = require("./test-parser");
-const { MasterEvents } = require("../events");
-const env = require("../utils/env");
+import _ from "lodash";
+import { EventEmitter } from "events";
+import { passthroughEvent } from "../events/utils";
+import { SetsBuilder } from "./sets-builder";
+import { TestParser } from "./test-parser";
+import { MasterEvents } from "../events";
+import env from "../utils/env";
+import { Config } from "../config";
+import { Test } from "./test-object";
+import { ReadTestsOpts } from "../testplane";
 
-module.exports = class TestReader extends EventEmitter {
+export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
+
+export class TestReader extends EventEmitter {
     #config;
 
-    static create(...args) {
+    static create<T extends TestReader>(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this: new (...args: any[]) => T,
+        ...args: ConstructorParameters<typeof TestReader>
+    ): T {
         return new this(...args);
     }
 
-    constructor(config) {
+    constructor(config: Config) {
         super();
 
         this.#config = config;
     }
 
-    async read(options = {}) {
+    async read(options: TestReaderOpts): Promise<Record<string, Test[]>> {
         const { paths, browsers, ignore, sets, grep } = options;
 
         const { fileExtensions } = this.#config.system;
@@ -27,7 +36,7 @@ module.exports = class TestReader extends EventEmitter {
         const setCollection = await SetsBuilder.create(this.#config.sets, { defaultPaths: ["testplane", "hermione"] })
             .useFiles(paths)
             .useSets((sets || []).concat(envSets))
-            .useBrowsers(browsers)
+            .useBrowsers(browsers!)
             .build(process.cwd(), { ignore }, fileExtensions);
 
         const testRunEnv = _.isArray(this.#config.system.testRunEnv)
@@ -48,9 +57,9 @@ module.exports = class TestReader extends EventEmitter {
 
         return testsByBro;
     }
-};
+}
 
-function validateTests(testsByBro, options) {
+function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOpts): void {
     const tests = _.flatten(Object.values(testsByBro));
 
     if (options.replMode?.enabled) {
@@ -78,12 +87,12 @@ function validateTests(testsByBro, options) {
     }
 }
 
-function convertOptions(obj) {
+function convertOptions(obj: Record<string, unknown>): string {
     let result = "";
-    for (let key of _.keys(obj)) {
+    for (const key of _.keys(obj)) {
         if (!_.isEmpty(obj[key]) || obj[key] instanceof RegExp) {
             if (_.isArray(obj[key])) {
-                result += `- ${key}: ${obj[key].join(", ")}\n`;
+                result += `- ${key}: ${(obj[key] as string[]).join(", ")}\n`;
             } else {
                 result += `- ${key}: ${obj[key]}\n`;
             }

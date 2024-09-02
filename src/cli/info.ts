@@ -1,6 +1,6 @@
-"use strict";
+import { TestplaneRunOpts } from ".";
 
-exports.configOverriding = (opts = {}) => {
+export const configOverriding = (opts: TestplaneRunOpts = {}): string => {
     const cliName = opts.cliName || "testplane";
 
     return `  Overriding config

@@ -1,27 +1,28 @@
-"use strict";
+import debug from "debug";
 
-const Promise = require("bluebird");
-const Pool = require("./pool");
-const LimitedUseSet = require("./limited-use-set");
-const debug = require("debug");
-const { buildCompositeBrowserId } = require("./utils");
+import { LimitedUseSet } from "./limited-use-set";
+import { buildCompositeBrowserId } from "./utils";
+import { BasicPool } from "./basic-pool";
+import { Config } from "../config";
+import { Pool } from "./types";
+import { NewBrowser } from "../browser/new-browser";
 
-module.exports = class CachingPool extends Pool {
-    /**
-     * @constructor
-     * @extends BasicPool
-     * @param {BasicPool} underlyingPool
-     */
-    constructor(underlyingPool, config) {
-        super();
+export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
 
+export class CachingPool implements Pool {
+    private _caches: Record<string, LimitedUseSet<NewBrowser>>;
+    private _config: Config;
+    underlyingPool: BasicPool;
+    log: debug.Debugger;
+
+    constructor(underlyingPool: BasicPool, config: Config) {
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
         this._config = config;
     }
 
-    _getCacheFor(id, version) {
+    private _getCacheFor(id: string, version?: string): LimitedUseSet<NewBrowser> {
         const compositeId = buildCompositeBrowserId(id, version);
 
         this.log(`request for ${compositeId}`);
@@ -34,7 +35,7 @@ module.exports = class CachingPool extends Pool {
         return this._caches[compositeId];
     }
 
-    getBrowser(id, opts = {}) {
+    async getBrowser(id: string, opts: { version?: string } = {}): Promise<NewBrowser> {
         const { version } = opts;
         const cache = this._getCacheFor(id, version);
         const browser = cache.pop();
@@ -50,19 +51,21 @@ module.exports = class CachingPool extends Pool {
         return browser
             .reset()
             .catch(e => {
-                const reject = Promise.reject.bind(null, e);
-                return this.underlyingPool.freeBrowser(browser).then(reject, reject);
+                return this.underlyingPool.freeBrowser(browser).then(
+                    () => Promise.reject(e),
+                    () => Promise.reject(e),
+                );
             })
             .then(() => browser);
     }
 
-    _initPool(browserId, version) {
+    private _initPool(browserId: string, version?: string): void {
         const compositeId = buildCompositeBrowserId(browserId, version);
         const freeBrowser = this.underlyingPool.freeBrowser.bind(this.underlyingPool);
         const { testsPerSession } = this._config.forBrowser(browserId);
 
-        this._caches[compositeId] = new LimitedUseSet({
-            formatItem: item => item.fullId,
+        this._caches[compositeId] = new LimitedUseSet<NewBrowser>({
+            formatItem: (item): string => item.fullId,
             // browser does not get put in a set on first usages, so if
             // we want to limit it usage to N times, we must set N-1 limit
             // for the set.
@@ -79,8 +82,8 @@ module.exports = class CachingPool extends Pool {
      * not be cached
      * @returns {Promise<undefined>}
      */
-    freeBrowser(browser, options = {}) {
-        const shouldFreeForNextRequest = () => {
+    async freeBrowser(browser: NewBrowser, options: FreeBrowserOpts = {}): Promise<void> {
+        const shouldFreeForNextRequest = (): boolean => {
             const { compositeIdForNextRequest } = options;
 
             if (!compositeIdForNextRequest) {
@@ -88,7 +91,7 @@ module.exports = class CachingPool extends Pool {
             }
 
             const { hasFreeSlots } = options;
-            const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest];
+            const hasCacheForNextRequest = this._caches[options.compositeIdForNextRequest!];
 
             return !hasFreeSlots && !hasCacheForNextRequest;
         };
@@ -105,8 +108,8 @@ module.exports = class CachingPool extends Pool {
         return cache.push(browser);
     }
 
-    cancel() {
+    cancel(): void {
         this.log("cancel");
         this.underlyingPool.cancel();
     }
-};
+}

@@ -1,4 +1,4 @@
-import { CommanderStatic } from "@gemini-testing/commander";
+import { Command } from "@gemini-testing/commander";
 import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
@@ -9,7 +9,7 @@ import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
 import signalHandler from "./signal-handler";
-import TestReader from "./test-reader";
+import { TestReader } from "./test-reader";
 import { TestCollection } from "./test-collection";
 import { validateUnknownBrowsers } from "./validators";
 import { initReporters } from "./reporters";
@@ -44,7 +44,7 @@ export type FailedListItem = {
     fullTitle: string;
 };
 
-interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
+export interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];
@@ -69,7 +69,7 @@ export class Testplane extends BaseTestplane {
         this.runner = null;
     }
 
-    extendCli(parser: CommanderStatic): void {
+    extendCli(parser: Command): void {
         this.emit(MasterEvents.CLI, parser);
     }
 
@@ -97,7 +97,7 @@ export class Testplane extends BaseTestplane {
             reporters = [],
         }: Partial<RunOpts> = {},
     ): Promise<boolean> {
-        validateUnknownBrowsers(browsers, _.keys(this._config.browsers));
+        validateUnknownBrowsers(browsers!, _.keys(this._config.browsers));
 
         RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode, devtools });
 

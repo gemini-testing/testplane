@@ -17,7 +17,7 @@ import {
 import { VITE_RUN_UUID_ROUTE } from "../../../../../../src/runner/browser-env/vite/constants";
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
-import BrowserAgent from "../../../../../../src/worker/runner/browser-agent";
+import { BrowserAgent } from "../../../../../../src/worker/runner/browser-agent";
 import history from "../../../../../../src/browser/history";
 import logger from "../../../../../../src/utils/logger";
 import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";
@@ -42,6 +42,7 @@ import type { Test as TestType } from "../../../../../../src/test-reader/test-ob
 import type { BrowserConfig } from "../../../../../../src/config/browser-config";
 import type { WorkerRunTestResult } from "../../../../../../src/worker/testplane";
 import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-reconnect-error";
+import ExistingBrowser from "../../../../../../src/browser/existing-browser";
 
 interface TestOpts {
     title: string;
@@ -118,24 +119,25 @@ describe("worker/browser-env/runner/test-runner", () => {
         return promise;
     };
 
-    const mkBrowser_ = (opts: Partial<Browser> = {}): Browser => ({
-        publicAPI: {
-            url: sandbox.stub().resolves(),
-        } as unknown as Browser["publicAPI"],
-        config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
-        state: {
-            isBroken: false,
-        },
-        applyState: sandbox.stub(),
-        customCommands: [],
-        callstackHistory: {
-            enter: sandbox.stub(),
-            leave: sandbox.stub(),
-            markError: sandbox.stub(),
-            release: sandbox.stub(),
-        } as unknown as Browser["callstackHistory"],
-        ...opts,
-    });
+    const mkBrowser_ = (opts: Partial<Browser> = {}): ExistingBrowser =>
+        ({
+            publicAPI: {
+                url: sandbox.stub().resolves(),
+            } as unknown as Browser["publicAPI"],
+            config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
+            state: {
+                isBroken: false,
+            },
+            applyState: sandbox.stub(),
+            customCommands: [],
+            callstackHistory: {
+                enter: sandbox.stub(),
+                leave: sandbox.stub(),
+                markError: sandbox.stub(),
+                release: sandbox.stub(),
+            } as unknown as Browser["callstackHistory"],
+            ...opts,
+        } as ExistingBrowser);
 
     const mkElement_ = (opts: Partial<WebdriverIO.Element> = {}): WebdriverIO.Element => {
         return {
@@ -695,7 +697,8 @@ describe("worker/browser-env/runner/test-runner", () => {
             let browser: Browser;
 
             beforeEach(() => {
-                global.expect = sandbox.stub() as unknown as ExpectWebdriverIO.Expect;
+                (global as Partial<{ expect: ExpectWebdriverIO.Expect }>).expect =
+                    sandbox.stub() as unknown as ExpectWebdriverIO.Expect;
 
                 browser = mkBrowser_();
                 (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
@@ -707,7 +710,8 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             describe("should return error if", () => {
                 it("expect module is not found", done => {
-                    global.expect = undefined as unknown as ExpectWebdriverIO.Expect;
+                    (global as Partial<{ expect: ExpectWebdriverIO.Expect }>).expect =
+                        undefined as unknown as ExpectWebdriverIO.Expect;
 
                     const socket = mkSocket_() as BrowserViteSocket;
                     socketClientStub.returns(socket);

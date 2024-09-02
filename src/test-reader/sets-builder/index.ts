@@ -1,27 +1,31 @@
-const path = require("path");
-const globExtra = require("glob-extra");
-const _ = require("lodash");
-const Promise = require("bluebird");
+import path from "path";
+import * as globExtra from "glob-extra";
+import _ from "lodash";
 
-const SetCollection = require("./set-collection");
-const TestSet = require("./test-set");
+import { SetCollection } from "./set-collection";
+import { TestSet, TestSetData } from "./test-set";
+import { SetsConfigParsed } from "../../config/types";
+
+export type SetsBuilderOpts = {
+    defaultPaths: string[];
+};
 
 const FILE_EXTENSIONS = [".js", ".mjs"];
 
-module.exports = class SetsBuilder {
-    #sets;
+export class SetsBuilder {
+    #sets: Record<string, TestSet>;
     #filesToUse;
 
-    static create(sets, opts) {
+    static create(sets: Record<string, SetsConfigParsed>, opts: SetsBuilderOpts): SetsBuilder {
         return new SetsBuilder(sets, opts);
     }
 
-    constructor(sets, opts) {
+    constructor(sets: Record<string, SetsConfigParsed>, opts: SetsBuilderOpts) {
         this.#sets = _.mapValues(sets, set => TestSet.create(set));
         this.#filesToUse = this.#hasFiles() ? [] : opts.defaultPaths;
     }
 
-    useSets(setsToUse) {
+    useSets(setsToUse: string[]): SetsBuilder {
         this.#validateUnknownSets(setsToUse);
 
         if (!_.isEmpty(setsToUse)) {
@@ -31,7 +35,7 @@ module.exports = class SetsBuilder {
         return this;
     }
 
-    #validateUnknownSets(setsToUse) {
+    #validateUnknownSets(setsToUse: string[]): void {
         const setsNames = _.keys(this.#sets);
         const unknownSets = _.difference(setsToUse, setsNames);
 
@@ -48,7 +52,7 @@ module.exports = class SetsBuilder {
         throw new Error(error);
     }
 
-    useFiles(files) {
+    useFiles(files: string[]): SetsBuilder {
         if (!_.isEmpty(files)) {
             this.#filesToUse = files;
         }
@@ -56,50 +60,56 @@ module.exports = class SetsBuilder {
         return this;
     }
 
-    useBrowsers(browsers) {
+    useBrowsers(browsers: string[]): SetsBuilder {
         _.forEach(this.#sets, set => set.useBrowsers(browsers));
 
         return this;
     }
 
-    build(projectRoot, globOpts = {}, fileExtensions = FILE_EXTENSIONS) {
+    build(
+        projectRoot: string,
+        globOpts: { ignore?: string[] | string } = {},
+        fileExtensions = FILE_EXTENSIONS,
+    ): Promise<SetCollection> {
         const expandOpts = { formats: fileExtensions, root: projectRoot };
 
         if (globOpts.ignore) {
-            globOpts.ignore = [].concat(globOpts.ignore).map(ignorePattern => path.resolve(projectRoot, ignorePattern));
+            globOpts.ignore = ([] as string[])
+                .concat(globOpts.ignore)
+                .map(ignorePattern => path.resolve(projectRoot, ignorePattern));
         }
 
         return this.#transformDirsToMasks()
             .then(() => this.#resolvePaths(projectRoot))
-            .then(() => globExtra.expandPaths(this.#filesToUse, expandOpts, globOpts))
+            .then(() => globExtra.expandPaths(this.#filesToUse, expandOpts, globOpts as { ignore: string[] }))
             .then(expandedFiles => {
                 this.#validateFoundFiles(expandedFiles);
                 this.#useFiles(expandedFiles);
             })
-            .then(() => this.#expandFiles(expandOpts, globOpts))
+            .then(() => this.#expandFiles(expandOpts, globOpts as { ignore: string[] }))
             .then(() => SetCollection.create(this.#sets));
     }
 
-    #transformDirsToMasks() {
-        return Promise.map(this.#getSets(), set => set.transformDirsToMasks());
+    #transformDirsToMasks(): Promise<string[][]> {
+        return Promise.all(this.#getSets().map(set => set.transformDirsToMasks()));
     }
 
-    #getSets() {
+    #getSets(): TestSet[] {
         return _.values(this.#sets);
     }
 
-    #resolvePaths(projectRoot) {
+    #resolvePaths(projectRoot: string): void {
         _.forEach(this.#sets, set => set.resolveFiles(projectRoot));
     }
 
-    #validateFoundFiles(foundFiles) {
+    #validateFoundFiles(foundFiles: string[]): void {
         if (!_.isEmpty(this.#filesToUse) && _.isEmpty(foundFiles)) {
-            const paths = [].concat(this.#filesToUse).join(", ");
+            const paths = ([] as string[]).concat(this.#filesToUse).join(", ");
             throw new Error(`Cannot find files by specified paths: ${paths}`);
         }
     }
 
-    #useFiles(filesToUse) {
+    #useFiles(filesToUse: string[]): void {
         _.forEach(this.#sets, set => set.useFiles(filesToUse));
 
         if (!this.#hasFiles()) {
@@ -107,11 +117,11 @@ module.exports = class SetsBuilder {
         }
     }
 
-    #expandFiles(expandOpts, globOpts) {
-        return Promise.map(this.#getSets(), set => set.expandFiles(expandOpts, globOpts));
+    #expandFiles(expandOpts: globExtra.ExpandOpts, globOpts: globExtra.GlobOpts): Promise<TestSetData[]> {
+        return Promise.all(this.#getSets().map(set => set.expandFiles(expandOpts, globOpts)));
     }
 
-    #hasFiles() {
+    #hasFiles(): boolean {
         return _.some(this.#sets, set => !_.isEmpty(set.getFiles()));
     }
-};
+}

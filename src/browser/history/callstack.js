@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const { historyDataMap } = require("./utils");
+const { TestStepKey } = require("../../types");
 
 module.exports = class Callstack {
     constructor() {
@@ -12,13 +12,13 @@ module.exports = class Callstack {
     enter(data) {
         this._stack.push({
             ...data,
-            [historyDataMap.TIME_START]: Date.now(),
-            [historyDataMap.CHILDREN]: [],
+            [TestStepKey.TimeStart]: Date.now(),
+            [TestStepKey.Children]: [],
         });
     }
 
     leave(key) {
-        const currentNodeIndex = _.findLastIndex(this._stack, node => node[historyDataMap.KEY] === key);
+        const currentNodeIndex = _.findLastIndex(this._stack, node => node[TestStepKey.Key] === key);
         const wasRemovedByParent = currentNodeIndex === -1;
 
         if (wasRemovedByParent) {
@@ -30,11 +30,10 @@ module.exports = class Callstack {
         const parentNode = _.last(this._stack);
         const isCurrentNodeRoot = this._stack.length === 0;
 
-        currentNode[historyDataMap.TIME_END] = Date.now();
-        currentNode[historyDataMap.DURATION] =
-            currentNode[historyDataMap.TIME_END] - currentNode[historyDataMap.TIME_START];
+        currentNode[TestStepKey.TimeEnd] = Date.now();
+        currentNode[TestStepKey.Duration] = currentNode[TestStepKey.TimeEnd] - currentNode[TestStepKey.TimeStart];
 
-        isCurrentNodeRoot ? this._history.push(currentNode) : parentNode[historyDataMap.CHILDREN].push(currentNode);
+        isCurrentNodeRoot ? this._history.push(currentNode) : parentNode[TestStepKey.Children].push(currentNode);
     }
 
     markError(shouldPropagateFn) {
@@ -43,10 +42,10 @@ module.exports = class Callstack {
         let shouldContinue = Boolean(currentNode);
 
         while (shouldContinue) {
-            currentNode[historyDataMap.IS_FAILED] = true;
+            currentNode[TestStepKey.IsFailed] = true;
 
             parentNode = currentNode;
-            currentNode = _.last(currentNode[historyDataMap.CHILDREN]);
+            currentNode = _.last(currentNode[TestStepKey.Children]);
             shouldContinue = currentNode && shouldPropagateFn(parentNode, currentNode);
         }
     }

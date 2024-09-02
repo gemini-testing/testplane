@@ -1,7 +1,8 @@
 "use strict";
 
-const fs = require("fs");
+const fs = require("fs/promises");
 const proxyquire = require("proxyquire");
+const globExtra = require("glob-extra");
 
 describe("test-reader/sets-builder/test-set", () => {
     const sandbox = sinon.createSandbox();
@@ -10,10 +11,11 @@ describe("test-reader/sets-builder/test-set", () => {
     beforeEach(() => {
         globExtraStub = {
             expandPaths: sinon.stub(),
+            isMask: globExtra.isMask,
         };
-        TestSet = proxyquire("src/test-reader/sets-builder/test-set", {
+        ({ TestSet } = proxyquire("src/test-reader/sets-builder/test-set", {
             "glob-extra": globExtraStub,
-        });
+        }));
     });
 
     afterEach(() => sandbox.restore());
@@ -208,14 +210,14 @@ describe("test-reader/sets-builder/test-set", () => {
         beforeEach(() => sandbox.stub(fs, "stat"));
 
         it("should transform set paths to masks if paths are directories", () => {
-            fs.stat.yields(null, { isDirectory: () => true });
+            fs.stat.resolves({ isDirectory: () => true });
             const set = TestSet.create({ files: ["some/path"] });
 
             return set.transformDirsToMasks().then(() => assert.deepEqual(set.getFiles(), ["some/path/**"]));
         });
 
         it("should not mutate constructor arguments", () => {
-            fs.stat.yields(null, { isDirectory: () => true });
+            fs.stat.resolves({ isDirectory: () => true });
             const input = { files: ["some/path"] };
             const set = TestSet.create(input);
 
@@ -229,14 +231,14 @@ describe("test-reader/sets-builder/test-set", () => {
         });
 
         it("should not transform set paths to masks if paths are files", () => {
-            fs.stat.yields(null, { isDirectory: () => false });
+            fs.stat.resolves({ isDirectory: () => false });
             const set = TestSet.create({ files: ["some/path/file.js"] });
 
             return set.transformDirsToMasks().then(() => assert.deepEqual(set.getFiles(), ["some/path/file.js"]));
         });
 
         it("should throw an error if passed path does not exist", () => {
-            fs.stat.throws(new Error());
+            fs.stat.rejects(new Error());
 
             const set = TestSet.create({ files: ["some/error/file.js"] });
 

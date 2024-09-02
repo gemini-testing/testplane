@@ -1,18 +1,29 @@
-const _ = require("lodash");
-const validators = require("../validators");
-const env = require("../utils/env");
-const RuntimeConfig = require("../config/runtime-config");
+import _ from "lodash";
+import { validateUnknownBrowsers } from "../validators";
+import env from "../utils/env";
+import RuntimeConfig from "../config/runtime-config";
+import { TreeBuilder } from "./tree-builder";
+import { BrowserConfig } from "../config/browser-config";
+import { Config } from "../config";
 
-class InstructionsList {
-    #commonInstructions;
-    #fileInstructions;
+export type InstructionFnArgs = {
+    treeBuilder: TreeBuilder;
+    browserId: string;
+    config: BrowserConfig & { passive?: boolean };
+};
+
+export type InstructionFn = (args: InstructionFnArgs) => void;
+
+export class InstructionsList {
+    #commonInstructions: InstructionFn[];
+    #fileInstructions: Map<string, InstructionFn[]>;
 
     constructor() {
         this.#commonInstructions = [];
         this.#fileInstructions = new Map();
     }
 
-    push(fn, file) {
+    push(fn: InstructionFn, file?: string): InstructionsList {
         const instructions = file ? this.#fileInstructions.get(file) || [] : this.#commonInstructions;
 
         instructions.push(fn);
@@ -24,7 +35,7 @@ class InstructionsList {
         return this;
     }
 
-    exec(files, ctx = {}) {
+    exec(files: string[], ctx: InstructionFnArgs): void {
         this.#commonInstructions.forEach(fn => fn(ctx));
 
         files.forEach(file => {
@@ -34,23 +45,25 @@ class InstructionsList {
     }
 }
 
-function extendWithBrowserId({ treeBuilder, browserId }) {
+function extendWithBrowserId({ treeBuilder, browserId }: InstructionFnArgs): void {
     treeBuilder.addTrap(testObject => {
         testObject.browserId = browserId;
     });
 }
 
-function extendWithBrowserVersion({ treeBuilder, config }) {
+function extendWithBrowserVersion({ treeBuilder, config }: InstructionFnArgs): void {
     const {
         desiredCapabilities: { browserVersion, version },
-    } = config;
+    } = config as unknown as {
+        desiredCapabilities: { browserVersion: string; version: string };
+    };
 
     treeBuilder.addTrap(testObject => {
         testObject.browserVersion = browserVersion || version;
     });
 }
 
-function extendWithTimeout({ treeBuilder, config }) {
+function extendWithTimeout({ treeBuilder, config }: InstructionFnArgs): void {
     const { testTimeout } = config;
     const { replMode } = RuntimeConfig.getInstance();
 
@@ -63,7 +76,7 @@ function extendWithTimeout({ treeBuilder, config }) {
     });
 }
 
-function disableInPassiveBrowser({ treeBuilder, config }) {
+function disableInPassiveBrowser({ treeBuilder, config }: InstructionFnArgs): void {
     const { passive } = config;
 
     if (!passive) {
@@ -75,13 +88,13 @@ function disableInPassiveBrowser({ treeBuilder, config }) {
     });
 }
 
-function buildGlobalSkipInstruction(config) {
+function buildGlobalSkipInstruction(config: Config): InstructionFn {
     const { value: skipBrowsers, key: envKey } = env.parseCommaSeparatedValue([
         "TESTPLANE_SKIP_BROWSERS",
         "HERMIONE_SKIP_BROWSERS",
     ]);
 
-    validators.validateUnknownBrowsers(skipBrowsers, config.getBrowserIds());
+    validateUnknownBrowsers(skipBrowsers, config.getBrowserIds());
 
     return ({ treeBuilder, browserId }) => {
         if (!skipBrowsers.includes(browserId)) {
@@ -94,13 +107,10 @@ function buildGlobalSkipInstruction(config) {
     };
 }
 
-module.exports = {
-    InstructionsList,
-    Instructions: {
-        extendWithBrowserId,
-        extendWithBrowserVersion,
-        extendWithTimeout,
-        disableInPassiveBrowser,
-        buildGlobalSkipInstruction,
-    },
+export const Instructions = {
+    extendWithBrowserId,
+    extendWithBrowserVersion,
+    extendWithTimeout,
+    disableInPassiveBrowser,
+    buildGlobalSkipInstruction,
 };

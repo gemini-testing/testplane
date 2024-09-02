@@ -104,21 +104,32 @@ export interface AssertViewResultNoRefImage {
 
 export type AssertViewResult = AssertViewResultSuccess | AssertViewResultDiff | AssertViewResultNoRefImage;
 
-export interface CommandHistory {
-    /** Name: command name */
-    n: string;
-    /** Arguments: array of passed arguments */
-    a: unknown[];
-    /** Time start */
-    ts: number;
-    /** Time end */
-    te: number;
-    /** Duration */
-    d: number;
-    /** Scope: scope of execution (browser or element) */
-    s: "b" | "e";
-    /** Children: array of children commands */
-    c: CommandHistory[];
+export enum TestStepKey {
+    Name = "n",
+    Args = "a",
+    Scope = "s",
+    Duration = "d",
+    TimeStart = "ts",
+    TimeEnd = "te",
+    IsOverwritten = "o",
+    IsGroup = "g",
+    IsFailed = "f",
+    Children = "c",
+    Key = "k",
+}
+
+export interface TestStep {
+    [TestStepKey.Name]: string;
+    [TestStepKey.Args]: string[];
+    [TestStepKey.TimeStart]: number;
+    [TestStepKey.TimeEnd]: number;
+    [TestStepKey.Duration]: number;
+    [TestStepKey.Scope]: "b" | "e";
+    [TestStepKey.Children]: TestStep[];
+    [TestStepKey.Key]: symbol;
+    [TestStepKey.IsOverwritten]: boolean;
+    [TestStepKey.IsGroup]: boolean;
+    [TestStepKey.IsFailed]: boolean;
 }
 
 export interface ExecutionThreadToolCtx {
@@ -141,7 +152,8 @@ export interface TestResult extends Test {
      * @deprecated Use `testplaneCtx` instead
      */
     hermioneCtx: ExecutionThreadToolCtx;
-    history: CommandHistory;
+    /** @note history is not available for skipped tests */
+    history?: TestStep[];
     meta: { [name: string]: unknown };
     sessionId: string;
     startTime: number;

@@ -37,6 +37,9 @@ interface ImageDiffErrorData {
     diffRatio: number;
 }
 
+/**
+ * @category Errors
+ */
 export class ImageDiffError extends BaseStateError {
     message: string;
     diffOpts: DiffOptions;

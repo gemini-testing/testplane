@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const { TestStepKey } = require("../../types");
 
 const MAX_STRING_LENGTH = 50;
 
@@ -22,23 +23,9 @@ exports.normalizeCommandArgs = (name, args = []) => {
     });
 };
 
-exports.historyDataMap = {
-    NAME: "n",
-    ARGS: "a",
-    SCOPE: "s",
-    DURATION: "d",
-    TIME_START: "ts",
-    TIME_END: "te",
-    IS_OVERWRITTEN: "o",
-    IS_GROUP: "g",
-    IS_FAILED: "f",
-    CHILDREN: "c",
-    KEY: "k",
-};
-
 const isPromise = val => typeof _.get(val, "then") === "function";
 
-exports.isGroup = node => Boolean(node && node[exports.historyDataMap.IS_GROUP]);
+exports.isGroup = node => Boolean(node && node[TestStepKey.IsGroup]);
 
 exports.runWithHooks = ({ fn, before, after, error }) => {
     let isReturnedValuePromise = false;

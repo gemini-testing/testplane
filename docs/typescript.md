@@ -9,7 +9,7 @@ npm i -D ts-node
 
 And include Testplane types in your `tsconfig.json` file:
 
-```js
+```json
 // tsconfig.json
 {
     // other tsconfig options
@@ -23,7 +23,26 @@ And include Testplane types in your `tsconfig.json` file:
 }
 ```
 
-Now you will be able to write Testplane tests using typescript.
+Recommended config:
+
+```json
+{
+    "compilerOptions": {
+        "types": [
+            "testplane"
+        ],
+        "sourceMap": true,
+        "outDir": "../test-dist",
+        "target": "ESNext",
+        "module": "CommonJS",
+        "strict": true,
+        "lib": ["esnext", "dom"],
+        "esModuleInterop": true
+    }
+}
+```
+
+Note: this is the strictest possible setting, which works on Typescript 5.3+. If you want faster type-checks or have older Typescript version, use `"skipLibCheck": true` in `compilerOptions`. 
 
 ### testplane.ctx typings
 

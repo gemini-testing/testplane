@@ -1,18 +1,18 @@
-"use strict";
+import util from "util";
+import { Command } from "@gemini-testing/commander";
+import escapeRe from "escape-string-regexp";
 
-const util = require("util");
-const { Command } = require("@gemini-testing/commander");
-const escapeRe = require("escape-string-regexp");
+import defaults from "../config/defaults";
+import { configOverriding } from "./info";
+import { Testplane } from "../testplane";
+import pkg from "../../package.json";
+import logger from "../utils/logger";
+import { requireModule } from "../utils/module";
+import { shouldIgnoreUnhandledRejection } from "../utils/errors";
 
-const defaults = require("../config/defaults");
-const info = require("./info");
-const { Testplane } = require("../testplane");
-const pkg = require("../../package.json");
-const logger = require("../utils/logger");
-const { requireModule } = require("../utils/module");
-const { shouldIgnoreUnhandledRejection } = require("../utils/errors");
+export type TestplaneRunOpts = { cliName?: string };
 
-let testplane;
+let testplane: Testplane;
 
 process.on("uncaughtException", err => {
     logger.error(util.inspect(err));
@@ -20,7 +20,7 @@ process.on("uncaughtException", err => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
-    if (shouldIgnoreUnhandledRejection(reason)) {
+    if (shouldIgnoreUnhandledRejection(reason as Error)) {
         logger.warn(`Unhandled Rejection "${reason}" in testplane:master:${process.pid} was ignored`);
         return;
     }
@@ -32,23 +32,23 @@ process.on("unhandledRejection", (reason, p) => {
     ].join("\n");
 
     if (testplane) {
-        testplane.halt(error);
+        testplane.halt(new Error(error));
     } else {
         logger.error(error);
         process.exit(1);
     }
 });
 
-exports.run = (opts = {}) => {
+export const run = (opts: TestplaneRunOpts = {}): void => {
     const program = new Command(opts.cliName || "testplane");
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
 
-    const configPath = preparseOption(program, "config");
+    const configPath = preparseOption(program, "config") as string;
     testplane = Testplane.create(configPath);
 
     program
-        .on("--help", () => logger.log(info.configOverriding(opts)))
+        .on("--help", () => logger.log(configOverriding(opts)))
         .option("-b, --browser <browser>", "run tests only in specified browser", collect)
         .option("-s, --set <set>", "run tests only in the specified set", collect)
         .option("-r, --require <module>", "require module", collect)
@@ -70,7 +70,7 @@ exports.run = (opts = {}) => {
         .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
         .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .arguments("[paths...]")
-        .action(async paths => {
+        .action(async (paths: string[]) => {
             try {
                 const {
                     reporter: reporters,
@@ -107,7 +107,7 @@ exports.run = (opts = {}) => {
 
                 process.exit(isTestsSuccess ? 0 : 1);
             } catch (err) {
-                logger.error(err.stack || err);
+                logger.error((err as Error).stack || err);
                 process.exit(1);
             }
         });
@@ -117,11 +117,11 @@ exports.run = (opts = {}) => {
     program.parse(process.argv);
 };
 
-function collect(newValue, array = []) {
+function collect(newValue: string | string[], array: string[] = []): string[] {
     return array.concat(newValue);
 }
 
-function preparseOption(program, option) {
+function preparseOption(program: Command, option: string): unknown {
     // do not display any help, do not exit
     const configFileParser = Object.create(program);
     configFileParser.options = [].concat(program.options);
@@ -131,7 +131,7 @@ function preparseOption(program, option) {
     return configFileParser[option];
 }
 
-function compileGrep(grep) {
+function compileGrep(grep: string): RegExp {
     try {
         return new RegExp(`(${grep})|(${escapeRe(grep)})`);
     } catch (error) {
@@ -140,7 +140,7 @@ function compileGrep(grep) {
     }
 }
 
-async function handleRequires(requires = []) {
+async function handleRequires(requires: string[] = []): Promise<void> {
     for (const modulePath of requires) {
         await requireModule(modulePath);
     }

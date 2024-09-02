@@ -9,6 +9,9 @@ interface NoRefImageErrorData {
     refImg: RefImageInfo;
 }
 
+/**
+ * @category Errors
+ */
 export class NoRefImageError extends BaseStateError {
     static create<T extends NoRefImageError>(
         this: NoRefImageErrorConstructor<T>,
