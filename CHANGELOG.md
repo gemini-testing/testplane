@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.8](https://github.com/gemini-testing/testplane/compare/v8.19.7...v8.19.8) (2024-09-02)
+
+
+### Bug Fixes
+
+* make typescript compile without skipLibCheck in strict mode ([#995](https://github.com/gemini-testing/testplane/issues/995)) ([7273cf0](https://github.com/gemini-testing/testplane/commit/7273cf07f64037a75fecaf1d478b8c378feb4453))
+
 ### [8.19.7](https://github.com/gemini-testing/testplane/compare/v8.19.6...v8.19.7) (2024-08-28)
 
 
