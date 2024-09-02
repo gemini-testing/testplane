@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const { CommandHistoryKey } = require("../../types");
+const { TestStepKey } = require("../../types");
 
 module.exports = class Callstack {
     constructor() {
@@ -12,13 +12,13 @@ module.exports = class Callstack {
     enter(data) {
         this._stack.push({
             ...data,
-            [CommandHistoryKey.TimeStart]: Date.now(),
-            [CommandHistoryKey.Children]: [],
+            [TestStepKey.TimeStart]: Date.now(),
+            [TestStepKey.Children]: [],
         });
     }
 
     leave(key) {
-        const currentNodeIndex = _.findLastIndex(this._stack, node => node[CommandHistoryKey.Key] === key);
+        const currentNodeIndex = _.findLastIndex(this._stack, node => node[TestStepKey.Key] === key);
         const wasRemovedByParent = currentNodeIndex === -1;
 
         if (wasRemovedByParent) {
@@ -30,11 +30,10 @@ module.exports = class Callstack {
         const parentNode = _.last(this._stack);
         const isCurrentNodeRoot = this._stack.length === 0;
 
-        currentNode[CommandHistoryKey.TimeEnd] = Date.now();
-        currentNode[CommandHistoryKey.Duration] =
-            currentNode[CommandHistoryKey.TimeEnd] - currentNode[CommandHistoryKey.TimeStart];
+        currentNode[TestStepKey.TimeEnd] = Date.now();
+        currentNode[TestStepKey.Duration] = currentNode[TestStepKey.TimeEnd] - currentNode[TestStepKey.TimeStart];
 
-        isCurrentNodeRoot ? this._history.push(currentNode) : parentNode[CommandHistoryKey.Children].push(currentNode);
+        isCurrentNodeRoot ? this._history.push(currentNode) : parentNode[TestStepKey.Children].push(currentNode);
     }
 
     markError(shouldPropagateFn) {
@@ -43,10 +42,10 @@ module.exports = class Callstack {
         let shouldContinue = Boolean(currentNode);
 
         while (shouldContinue) {
-            currentNode[CommandHistoryKey.IsFailed] = true;
+            currentNode[TestStepKey.IsFailed] = true;
 
             parentNode = currentNode;
-            currentNode = _.last(currentNode[CommandHistoryKey.Children]);
+            currentNode = _.last(currentNode[TestStepKey.Children]);
             shouldContinue = currentNode && shouldPropagateFn(parentNode, currentNode);
         }
     }

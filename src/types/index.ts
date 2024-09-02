@@ -104,7 +104,7 @@ export interface AssertViewResultNoRefImage {
 
 export type AssertViewResult = AssertViewResultSuccess | AssertViewResultDiff | AssertViewResultNoRefImage;
 
-export enum CommandHistoryKey {
+export enum TestStepKey {
     Name = "n",
     Args = "a",
     Scope = "s",
@@ -118,18 +118,18 @@ export enum CommandHistoryKey {
     Key = "k",
 }
 
-export interface CommandHistory {
-    [CommandHistoryKey.Name]: string;
-    [CommandHistoryKey.Args]: string[];
-    [CommandHistoryKey.TimeStart]: number;
-    [CommandHistoryKey.TimeEnd]: number;
-    [CommandHistoryKey.Duration]: number;
-    [CommandHistoryKey.Scope]: "b" | "e";
-    [CommandHistoryKey.Children]: CommandHistory[];
-    [CommandHistoryKey.Key]: symbol;
-    [CommandHistoryKey.IsOverwritten]: boolean;
-    [CommandHistoryKey.IsGroup]: boolean;
-    [CommandHistoryKey.IsFailed]: boolean;
+export interface TestStep {
+    [TestStepKey.Name]: string;
+    [TestStepKey.Args]: string[];
+    [TestStepKey.TimeStart]: number;
+    [TestStepKey.TimeEnd]: number;
+    [TestStepKey.Duration]: number;
+    [TestStepKey.Scope]: "b" | "e";
+    [TestStepKey.Children]: TestStep[];
+    [TestStepKey.Key]: symbol;
+    [TestStepKey.IsOverwritten]: boolean;
+    [TestStepKey.IsGroup]: boolean;
+    [TestStepKey.IsFailed]: boolean;
 }
 
 export interface ExecutionThreadToolCtx {
@@ -152,7 +152,8 @@ export interface TestResult extends Test {
      * @deprecated Use `testplaneCtx` instead
      */
     hermioneCtx: ExecutionThreadToolCtx;
-    history: CommandHistory[];
+    /** @note history is not available for skipped tests */
+    history?: TestStep[];
     meta: { [name: string]: unknown };
     sessionId: string;
     startTime: number;

@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const { CommandHistoryKey } = require("src/types");
+const { TestStepKey } = require("../../types");
 
 const MAX_STRING_LENGTH = 50;
 
@@ -25,7 +25,7 @@ exports.normalizeCommandArgs = (name, args = []) => {
 
 const isPromise = val => typeof _.get(val, "then") === "function";
 
-exports.isGroup = node => Boolean(node && node[CommandHistoryKey.IsGroup]);
+exports.isGroup = node => Boolean(node && node[TestStepKey.IsGroup]);
 
 exports.runWithHooks = ({ fn, before, after, error }) => {
     let isReturnedValuePromise = false;
