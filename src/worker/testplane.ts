@@ -3,6 +3,7 @@ import { WorkerEvents } from "../events";
 import Runner from "./runner";
 import { BaseTestplane } from "../base-testplane";
 import { RefImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
+import { ConfigInput } from "../config/types";
 
 export interface WorkerRunTestOpts {
     browserId: string;
@@ -40,8 +41,8 @@ export interface Testplane {
 export class Testplane extends BaseTestplane {
     protected runner: Runner;
 
-    constructor(configPath: string) {
-        super(configPath);
+    constructor(config?: string | ConfigInput) {
+        super(config);
 
         this.runner = Runner.create(this._config);
 

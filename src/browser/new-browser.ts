@@ -1,7 +1,9 @@
 import { URLSearchParams } from "url";
+
 import URI from "urijs";
 import { isBoolean, assign, isEmpty } from "lodash";
 import { remote, RemoteOptions } from "webdriverio";
+
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
 import { runGroup } from "./history";

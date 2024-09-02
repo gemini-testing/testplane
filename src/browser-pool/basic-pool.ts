@@ -1,12 +1,12 @@
+import debug from "debug";
 import _ from "lodash";
+
 import { NewBrowser } from "../browser/new-browser";
 import { CancelledError } from "./cancelled-error";
 import { AsyncEmitter, MasterEvents } from "../events";
-import { Pool } from "./types";
-import debug from "debug";
+import { BrowserOpts, Pool } from "./types";
 import { Config } from "../config";
 import { Browser } from "../browser/browser";
-import { BrowserOpts } from "./limited-pool";
 
 export class BasicPool implements Pool {
     private _config: Config;

@@ -22,7 +22,7 @@ export class TestSet {
         this.#set = _.clone(set);
     }
 
-    expandFiles(expandOpts: globExtra.ExpandOpts, globOpts: globExtra.GlobOpts = {}): Promise<TestSetData> {
+    async expandFiles(expandOpts: globExtra.ExpandOpts, globOpts: globExtra.GlobOpts = {}): Promise<TestSetData> {
         const { files, ignoreFiles = [] } = this.#set;
         globOpts = _.clone(globOpts);
         globOpts.ignore = ([] as string[])
@@ -34,7 +34,7 @@ export class TestSet {
             .then(expandedFiles => (this.#set = _.extend(this.#set, { files: expandedFiles })));
     }
 
-    transformDirsToMasks(): Promise<string[]> {
+    async transformDirsToMasks(): Promise<string[]> {
         return Promise.all(
             this.#set.files.map(file => {
                 if (globExtra.isMask(file)) {

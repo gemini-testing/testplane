@@ -1,23 +1,18 @@
+import debug from "debug";
 import _ from "lodash";
 import yallist from "yallist";
-import { Pool } from "./types";
+
+import { BrowserOpts, Pool } from "./types";
 import { CancelledError } from "./cancelled-error";
-import debug from "debug";
 import { buildCompositeBrowserId } from "./utils";
 import { Browser } from "../browser/browser";
 
-export type LimitedPoolOpts = {
+export interface LimitedPoolOpts {
     limit: number;
     isSpecificBrowserLimiter?: boolean;
-};
+}
 
-export type BrowserOpts = {
-    force?: boolean;
-    version?: string;
-    highPriority?: boolean;
-};
-
-export type QueueItem = {
+interface QueueItem {
     id: string;
     opts: {
         force?: boolean;
@@ -25,7 +20,7 @@ export type QueueItem = {
     };
     resolve: (value: unknown) => void;
     reject: (value: unknown) => void;
-};
+}
 
 export class LimitedPool implements Pool {
     private _limit: number;
@@ -68,7 +63,7 @@ export class LimitedPool implements Pool {
         }
     }
 
-    freeBrowser(browser: Browser, opts: BrowserOpts = {}): Promise<void> {
+    async freeBrowser(browser: Browser, opts: BrowserOpts = {}): Promise<void> {
         --this._requests;
 
         const nextRequest = this._lookAtNextRequest();
@@ -97,7 +92,7 @@ export class LimitedPool implements Pool {
         this.underlyingPool.cancel();
     }
 
-    private _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
+    private async _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {
         if (this._launched < this._limit) {
             this.log("can launch one more");
             this._launched++;
@@ -113,7 +108,7 @@ export class LimitedPool implements Pool {
         });
     }
 
-    private _newBrowser(id: string, opts: object): Promise<Browser> {
+    private async _newBrowser(id: string, opts: object): Promise<Browser> {
         this.log(`launching new browser ${id} with opts:${JSON.stringify(opts)}`);
 
         return this.underlyingPool.getBrowser(id, opts).catch(e => {

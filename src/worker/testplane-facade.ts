@@ -1,5 +1,3 @@
-"use strict";
-
 import { Testplane, WorkerRunTestOpts, WorkerRunTestResult } from "./testplane";
 import RuntimeConfig from "../config/runtime-config";
 import debug from "debug";

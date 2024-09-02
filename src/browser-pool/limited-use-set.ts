@@ -7,11 +7,11 @@ import debug from "debug";
  * attempt to put an object there causes the object to be finalized.
  */
 
-export type LimitedUseSetOpts<T> = {
+export interface LimitedUseSetOpts<T> {
     useLimit: number;
     finalize: (value: T) => Promise<void>;
     formatItem: (value: T) => string;
-};
+}
 
 export class LimitedUseSet<T extends object = object> {
     private _useCounts: WeakMap<T, number>;

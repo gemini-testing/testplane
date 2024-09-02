@@ -31,7 +31,12 @@ export class BrowserAgent {
         this._pool = pool;
     }
 
-    getBrowser({ sessionId, sessionCaps, sessionOpts, state }: BrowserAgentBrowserOpts): Promise<ExistingBrowser> {
+    async getBrowser({
+        sessionId,
+        sessionCaps,
+        sessionOpts,
+        state,
+    }: BrowserAgentBrowserOpts): Promise<ExistingBrowser> {
         return this._pool.getBrowser({
             browserId: this.browserId,
             browserVersion: this.browserVersion,

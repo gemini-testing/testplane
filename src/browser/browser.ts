@@ -1,5 +1,9 @@
 import crypto from "crypto";
+import { RequestOptions } from "https";
+
+import { RemoteCapability } from "@wdio/types/build/Capabilities";
 import _ from "lodash";
+
 import { SAVE_HISTORY_MODE } from "../constants/config";
 import { X_REQUEST_ID_DELIMITER } from "../constants/browser";
 import history from "./history";
@@ -10,8 +14,6 @@ import { Config } from "../config";
 import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import Callstack from "./history/callstack";
-import { RemoteCapability } from "@wdio/types/build/Capabilities";
-import { RequestOptions } from "https";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",

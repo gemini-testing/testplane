@@ -5,3 +5,9 @@ export interface Pool<T extends Browser = Browser> {
     freeBrowser(browser: T, opts?: object): Promise<void>;
     cancel(): void;
 }
+
+export interface BrowserOpts {
+    force?: boolean;
+    version?: string;
+    highPriority?: boolean;
+}

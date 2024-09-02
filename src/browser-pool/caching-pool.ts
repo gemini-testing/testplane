@@ -1,5 +1,6 @@
-import { LimitedUseSet } from "./limited-use-set";
 import debug from "debug";
+
+import { LimitedUseSet } from "./limited-use-set";
 import { buildCompositeBrowserId } from "./utils";
 import { BasicPool } from "./basic-pool";
 import { Config } from "../config";
@@ -34,7 +35,7 @@ export class CachingPool implements Pool {
         return this._caches[compositeId];
     }
 
-    getBrowser(id: string, opts: { version?: string } = {}): Promise<NewBrowser> {
+    async getBrowser(id: string, opts: { version?: string } = {}): Promise<NewBrowser> {
         const { version } = opts;
         const cache = this._getCacheFor(id, version);
         const browser = cache.pop();
@@ -81,7 +82,7 @@ export class CachingPool implements Pool {
      * not be cached
      * @returns {Promise<undefined>}
      */
-    freeBrowser(browser: NewBrowser, options: FreeBrowserOpts = {}): Promise<void> {
+    async freeBrowser(browser: NewBrowser, options: FreeBrowserOpts = {}): Promise<void> {
         const shouldFreeForNextRequest = (): boolean => {
             const { compositeIdForNextRequest } = options;
 

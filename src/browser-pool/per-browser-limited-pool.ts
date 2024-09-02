@@ -1,6 +1,7 @@
-import { zipObject, forEach } from "lodash";
-import { Pool } from "./types";
 import debug from "debug";
+import { zipObject, forEach } from "lodash";
+
+import { Pool } from "./types";
 import { Config } from "../config";
 import { Browser } from "../browser/browser";
 import { LimitedPool } from "./limited-pool";
