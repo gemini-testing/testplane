@@ -26,12 +26,25 @@ export type { Config } from "./config";
 export type { ConfigInput } from "./config/types";
 export type { TestCollection } from "./test-collection";
 
+import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
+
 declare global {
-    // eslint-disable-next-line no-var
+    /* eslint-disable no-var */
+    // Here, we ignore clashes of types between Mocha and Testplane, because in production we don't include @types/mocha,
+    // but we need mocha types in development, so this is an issue only during development.
+    ///@ts-expect-error: see explanation above
+    var it: TestDefinition;
+    // @ts-expect-error: see explanation above
+    var describe: SuiteDefinition;
+    // @ts-expect-error: see explanation above
+    var beforeEach: TestHookDefinition;
+    // @ts-expect-error: see explanation above
+    var afterEach: TestHookDefinition;
+
     var testplane: GlobalHelper;
     /**
      * @deprecated Use `testplane` instead
      */
-    // eslint-disable-next-line no-var
     var hermione: GlobalHelper;
+    /* eslint-enable no-var */
 }

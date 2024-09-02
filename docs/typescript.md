@@ -42,7 +42,7 @@ Recommended config:
 }
 ```
 
-Now you will be able to write Testplane tests using typescript.
+Note: this is the strictest possible setting, which works on Typescript 5.3+. If you want faster type-checks or have older Typescript version, use `"skipLibCheck": true` in `compilerOptions`. 
 
 ### testplane.ctx typings
 

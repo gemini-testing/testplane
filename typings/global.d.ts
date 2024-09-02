@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/triple-slash-reference*/
-/// <reference path="./api.d.ts" />
 /// <reference path="./clear-require.d.ts" />
 /// <reference path="./escape-string-regexp.d.ts" />
 /* eslint-enable @typescript-eslint/triple-slash-reference */
