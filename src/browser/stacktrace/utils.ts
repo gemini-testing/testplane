@@ -47,7 +47,13 @@ const getErrorRawStackFrames = (e: ErrorWithStack): RawStackFrames => {
     const errorMessageStackIndex = e.stack.indexOf(e.message);
     const errorMessageEndsStackIndex = e.stack.indexOf("\n", errorMessageStackIndex + e.message.length);
 
-    return e.stack.slice(errorMessageEndsStackIndex + 1);
+    if (errorMessageStackIndex !== -1) {
+        return e.stack.slice(errorMessageEndsStackIndex + 1);
+    }
+
+    const stackTraceRegExpResult = STACK_FRAME_REG_EXP.exec(e.stack);
+
+    return stackTraceRegExpResult ? e.stack.slice(stackTraceRegExpResult.index) : "";
 };
 
 export const captureRawStackFrames = (filterFunc?: (...args: unknown[]) => unknown): RawStackFrames => {

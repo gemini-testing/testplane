@@ -109,6 +109,32 @@ describe("stacktrace/utils", () => {
             assert.equal(error.stack, expectedStack);
         });
 
+        it("should work with overwritten multiline error message", () => {
+            const error = new Error("foo");
+            const errorStack = [
+                "at fn (projectDir/node_modules/testplane/src/browser/history/index.js:80:27)",
+                "at exports.runWithHooks (projectDir/node_modules/testplane/src/browser/history/utils.js:49:23)",
+                "at runWithHistoryHooks (projectDir/node_modules/testplane/src/browser/history/index.js:32:12)",
+                "at Browser.decoratedWrapper (projectDir/node_modules/testplane/src/browser/history/index.js:77:20)",
+                "at fn (projectDir/node_modules/testplane/src/browser/stacktrace/index.ts:53:39)",
+                "at exports.runWithHooks (projectDir/node_modules/testplane/src/browser/history/utils.js:49:23)",
+                "at runWithStacktraceHooks (projectDir/node_modules/testplane/src/browser/stacktrace/index.ts:24:24)",
+                "at Browser.decoratedWrapper (projectDir/node_modules/testplane/src/browser/stacktrace/index.ts:51:46)",
+                "at Object.<anonymous> (projectDir/features/feature/test-name.testplane.js:16:28)",
+            ].join("\n");
+
+            error.stack = `${error.name}: ${error.message}\n${errorStack}`;
+            error.message = "some/\nnew\nerror\nmessage";
+            filterExtraStackFrames(error);
+
+            const expectedStack = [
+                "Error: some/\nnew\nerror\nmessage",
+                "at Object.<anonymous> (projectDir/features/feature/test-name.testplane.js:16:28)",
+            ].join("\n");
+
+            assert.equal(error.stack, expectedStack);
+        });
+
         it("should not filter out internal testplane frames if there is no user's code frame", () => {
             const error = new Error("my\nmulti-line\nerror\nmessage");
             const errorStack = [
