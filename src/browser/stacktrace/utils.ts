@@ -144,7 +144,7 @@ export const applyStackTraceIfBetter = (error: Error, stack: RawStackFrames): Er
     return error;
 };
 
-export const filterExtraWdioFrames = (error: Error): Error => {
+export const filterExtraStackFrames = (error: Error): Error => {
     if (!error || !error.message || !error.stack) {
         return error;
     }
@@ -158,21 +158,48 @@ export const filterExtraWdioFrames = (error: Error): Error => {
             return error;
         }
 
-        const isWdioFrame = (frame: StackFrame): boolean => {
-            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/webdriverio/"));
-        };
+        // If we found something more relevant (e.g. user's code), we can remove useless testplane internal frames
+        // If we haven't, we keep testplane internal frames
+        const shouldDropTestplaneInternalFrames =
+            getStackTraceRelevance(error) > FRAME_RELEVANCE.projectInternals.value;
 
-        const isIgnoredFunction = (frame: StackFrame): boolean => {
-            const funcName = frame.functionName;
+        const isIgnoredWebdriverioFrame = (frame: StackFrame): boolean => {
+            const isWebdriverioFrame = frame.fileName && frame.fileName.includes("/node_modules/webdriverio/");
+            const fnName = frame.functionName;
 
-            if (!funcName) {
+            if (!isWebdriverioFrame || !fnName) {
                 return false;
             }
 
-            return Boolean(WDIO_IGNORED_STACK_FUNCTIONS.some(fn => fn === funcName || "async " + fn === funcName));
+            return WDIO_IGNORED_STACK_FUNCTIONS.some(fn => fn === fnName || "async " + fn === fnName);
         };
 
-        const shouldIncludeFrame = (frame: StackFrame): boolean => !isWdioFrame(frame) || !isIgnoredFunction(frame);
+        const isWdioUtilsFrame = (frame: StackFrame): boolean => {
+            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/@wdio/utils/"));
+        };
+
+        const isTestplaneExtraInternalFrame = (frame: StackFrame): boolean => {
+            const testplaneExtraInternalFramePaths = [
+                "/node_modules/testplane/src/browser/history/",
+                "/node_modules/testplane/src/browser/stacktrace/",
+            ];
+
+            return Boolean(
+                frame.fileName && testplaneExtraInternalFramePaths.some(path => frame.fileName?.includes(path)),
+            );
+        };
+
+        const shouldIncludeFrame = (frame: StackFrame): boolean => {
+            if (isIgnoredWebdriverioFrame(frame) || isWdioUtilsFrame(frame)) {
+                return false;
+            }
+
+            if (shouldDropTestplaneInternalFrames && isTestplaneExtraInternalFrame(frame)) {
+                return false;
+            }
+
+            return true;
+        };
 
         const framesFiltered = rawFramesArr.filter((_, i) => shouldIncludeFrame(framesParsed[i])).join("\n");
 

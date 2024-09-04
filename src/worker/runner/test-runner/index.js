@@ -9,7 +9,7 @@ const OneTimeScreenshooter = require("./one-time-screenshooter");
 const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
-const { filterExtraWdioFrames } = require("../../../browser/stacktrace/utils");
+const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { TestplaneInternalError } = require("../../../errors");
 
@@ -95,7 +95,7 @@ module.exports = class TestRunner extends Runner {
         this._browserAgent.freeBrowser(this._browser);
 
         if (error) {
-            filterExtraWdioFrames(error);
+            filterExtraStackFrames(error);
 
             await extendWithCodeSnippet(error);
 
