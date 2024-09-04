@@ -3,7 +3,7 @@ import ErrorStackParser from "error-stack-parser";
 import type { SetRequired } from "type-fest";
 import logger from "../../utils/logger";
 import { softFileURLToPath } from "../../utils/fs";
-import { WDIO_IGNORED_STACK_FUNCTIONS, WDIO_STACK_TRACE_LIMIT } from "./constants";
+import { STACK_FRAME_REG_EXP, WDIO_IGNORED_STACK_FUNCTIONS, WDIO_STACK_TRACE_LIMIT } from "./constants";
 
 export type RawStackFrames = string;
 
@@ -151,7 +151,7 @@ export const filterExtraStackFrames = (error: Error): Error => {
 
     try {
         const rawFrames = getErrorRawStackFrames(error as ErrorWithStack);
-        const rawFramesArr = rawFrames.split("\n");
+        const rawFramesArr = rawFrames.split("\n").filter(frame => STACK_FRAME_REG_EXP.test(frame));
         const framesParsed = ErrorStackParser.parse(error);
 
         if (rawFramesArr.length !== framesParsed.length) {
