@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.19.9](https://github.com/gemini-testing/testplane/compare/v8.19.8...v8.19.9) (2024-09-05)
+
+
+### Bug Fixes
+
+* detect overwritten error message ([4486481](https://github.com/gemini-testing/testplane/commit/448648141766b08d9405ec9ccd4ec4baa5db9e10))
+* ensure raw stack frames are matching parsed ones ([f236b34](https://github.com/gemini-testing/testplane/commit/f236b34838c581d8829a00526bfca647314fe7c4))
+* remove extra stack frames ([47ae053](https://github.com/gemini-testing/testplane/commit/47ae05352b1a86436823bdcb1b6c075000a71917))
+
 ### [8.19.8](https://github.com/gemini-testing/testplane/compare/v8.19.7...v8.19.8) (2024-09-02)
 
 
