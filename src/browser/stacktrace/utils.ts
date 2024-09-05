@@ -3,7 +3,7 @@ import ErrorStackParser from "error-stack-parser";
 import type { SetRequired } from "type-fest";
 import logger from "../../utils/logger";
 import { softFileURLToPath } from "../../utils/fs";
-import { WDIO_IGNORED_STACK_FUNCTIONS, WDIO_STACK_TRACE_LIMIT } from "./constants";
+import { STACK_FRAME_REG_EXP, WDIO_IGNORED_STACK_FUNCTIONS, WDIO_STACK_TRACE_LIMIT } from "./constants";
 
 export type RawStackFrames = string;
 
@@ -47,7 +47,13 @@ const getErrorRawStackFrames = (e: ErrorWithStack): RawStackFrames => {
     const errorMessageStackIndex = e.stack.indexOf(e.message);
     const errorMessageEndsStackIndex = e.stack.indexOf("\n", errorMessageStackIndex + e.message.length);
 
-    return e.stack.slice(errorMessageEndsStackIndex + 1);
+    if (errorMessageStackIndex !== -1) {
+        return e.stack.slice(errorMessageEndsStackIndex + 1);
+    }
+
+    const stackTraceRegExpResult = STACK_FRAME_REG_EXP.exec(e.stack);
+
+    return stackTraceRegExpResult ? e.stack.slice(stackTraceRegExpResult.index) : "";
 };
 
 export const captureRawStackFrames = (filterFunc?: (...args: unknown[]) => unknown): RawStackFrames => {
@@ -144,35 +150,62 @@ export const applyStackTraceIfBetter = (error: Error, stack: RawStackFrames): Er
     return error;
 };
 
-export const filterExtraWdioFrames = (error: Error): Error => {
+export const filterExtraStackFrames = (error: Error): Error => {
     if (!error || !error.message || !error.stack) {
         return error;
     }
 
     try {
         const rawFrames = getErrorRawStackFrames(error as ErrorWithStack);
-        const rawFramesArr = rawFrames.split("\n");
+        const rawFramesArr = rawFrames.split("\n").filter(frame => STACK_FRAME_REG_EXP.test(frame));
         const framesParsed = ErrorStackParser.parse(error);
 
         if (rawFramesArr.length !== framesParsed.length) {
             return error;
         }
 
-        const isWdioFrame = (frame: StackFrame): boolean => {
-            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/webdriverio/"));
-        };
+        // If we found something more relevant (e.g. user's code), we can remove useless testplane internal frames
+        // If we haven't, we keep testplane internal frames
+        const shouldDropTestplaneInternalFrames =
+            getStackTraceRelevance(error) > FRAME_RELEVANCE.projectInternals.value;
 
-        const isIgnoredFunction = (frame: StackFrame): boolean => {
-            const funcName = frame.functionName;
+        const isIgnoredWebdriverioFrame = (frame: StackFrame): boolean => {
+            const isWebdriverioFrame = frame.fileName && frame.fileName.includes("/node_modules/webdriverio/");
+            const fnName = frame.functionName;
 
-            if (!funcName) {
+            if (!isWebdriverioFrame || !fnName) {
                 return false;
             }
 
-            return Boolean(WDIO_IGNORED_STACK_FUNCTIONS.some(fn => fn === funcName || "async " + fn === funcName));
+            return WDIO_IGNORED_STACK_FUNCTIONS.some(fn => fn === fnName || "async " + fn === fnName);
         };
 
-        const shouldIncludeFrame = (frame: StackFrame): boolean => !isWdioFrame(frame) || !isIgnoredFunction(frame);
+        const isWdioUtilsFrame = (frame: StackFrame): boolean => {
+            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/@wdio/utils/"));
+        };
+
+        const isTestplaneExtraInternalFrame = (frame: StackFrame): boolean => {
+            const testplaneExtraInternalFramePaths = [
+                "/node_modules/testplane/src/browser/history/",
+                "/node_modules/testplane/src/browser/stacktrace/",
+            ];
+
+            return Boolean(
+                frame.fileName && testplaneExtraInternalFramePaths.some(path => frame.fileName?.includes(path)),
+            );
+        };
+
+        const shouldIncludeFrame = (frame: StackFrame): boolean => {
+            if (isIgnoredWebdriverioFrame(frame) || isWdioUtilsFrame(frame)) {
+                return false;
+            }
+
+            if (shouldDropTestplaneInternalFrames && isTestplaneExtraInternalFrame(frame)) {
+                return false;
+            }
+
+            return true;
+        };
 
         const framesFiltered = rawFramesArr.filter((_, i) => shouldIncludeFrame(framesParsed[i])).join("\n");
 
