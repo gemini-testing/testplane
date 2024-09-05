@@ -1,0 +1,19 @@
+{
+  "name": "drag-and-drop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server:dev": "PORT=3000 http-server ./static/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "html-reporter": "^10.6.7",
+    "http-server": "^14.1.1",
+    "testplane": "^8.19.8",
+    "ts-node": "^10.9.2"
+  }
+}
