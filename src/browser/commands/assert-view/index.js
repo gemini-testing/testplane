@@ -175,7 +175,7 @@ module.exports.default = browser => {
     };
 
     const assertViewByViewport = async (state, opts) => {
-        opts = _.defaults(opts, {
+        opts = Object.assign(opts, {
             allowViewportOverflow: true,
             compositeImage: false,
             captureElementFromTop: false,

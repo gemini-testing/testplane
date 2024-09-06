@@ -283,7 +283,7 @@ describe("assertView command", () => {
                         });
 
                         it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
-                            await fn(browser, null, null, { [option]: true });
+                            await fn(browser, null, "selector", { [option]: true });
 
                             assert.calledOnceWith(
                                 browser.prepareScreenshot,
@@ -422,7 +422,7 @@ describe("assertView command", () => {
                             });
                             const browser = await initBrowser_({ browser: stubBrowser_(config) });
 
-                            await fn(browser, null, null, { [option]: "value-3" });
+                            await fn(browser, null, "selector", { [option]: "value-3" });
 
                             assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
                                 [option]: "value-3",
