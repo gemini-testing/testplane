@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.20.0](https://github.com/gemini-testing/testplane/compare/v8.19.9...v8.20.0) (2024-09-09)
+
+
+### Features
+
+* implement new cli command to read tests ([aad3322](https://github.com/gemini-testing/testplane/commit/aad3322a41a18c3743301bc0250e4b6276d3d51c))
+
 ### [8.19.9](https://github.com/gemini-testing/testplane/compare/v8.19.8...v8.19.9) (2024-09-05)
 
 
