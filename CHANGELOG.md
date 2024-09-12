@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.20.1](https://github.com/gemini-testing/testplane/compare/v8.20.0...v8.20.1) (2024-09-12)
+
 ## [8.20.0](https://github.com/gemini-testing/testplane/compare/v8.19.9...v8.20.0) (2024-09-09)
 
 
