@@ -1,5 +1,9 @@
 import _ from "lodash";
+import debug from "debug";
 import logger from "./logger";
+
+const swcDebugNamespace = "testplane:swc";
+const swcDebugLog = debug(swcDebugNamespace);
 
 export const tryToRegisterTsNode = (isSilent: boolean = false): void => {
     if (process.env.TS_ENABLE === "false") {
@@ -37,7 +41,15 @@ export const tryToRegisterTsNode = (isSilent: boolean = false): void => {
                             `testplane: you may install @swc/core for significantly faster reading of typescript tests.`,
                         );
                     } else {
-                        logger.warn(`testplane: could not load @swc/core:`, err);
+                        const isSwcDebugLogEnabled = debug.enabled(swcDebugNamespace);
+
+                        if (isSwcDebugLogEnabled) {
+                            swcDebugLog(err);
+                        } else {
+                            logger.warn(
+                                `testplane: could not load @swc/core. Run Testplane with "DEBUG=testplane:swc" to see details.`,
+                            );
+                        }
                     }
                 }
             }
