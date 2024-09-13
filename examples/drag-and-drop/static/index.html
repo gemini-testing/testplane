@@ -1,0 +1,61 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <style>
+        .dnd {
+            padding: 15px 0;
+            flex-wrap: wrap;
+            display: flex;
+            border: 1px solid green;
+            justify-content: space-around;
+            width: 440px;
+        }
+
+        .dnd__elem {
+            width: 170px;
+            height: 80px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid black;
+        }
+
+        img:hover {
+            cursor: grab;
+        }
+    </style>
+    <script>
+        function allowDrop(ev) {
+            ev.preventDefault();
+        }
+
+        function drag(ev) {
+            console.log('===', ev.target.getAttribute('data-qa'));
+            ev.dataTransfer.setData("text", ev.target.getAttribute('data-qa'));
+        }
+
+        function drop(ev) {
+            ev.preventDefault();
+            const data = ev.dataTransfer.getData("text");
+            console.log('data===', data);
+            ev.target.appendChild(document.querySelector(`[data-qa=${data}]`));
+        }
+    </script>
+    <link rel="icon" href="/img/favicon.ico">
+</head>
+
+<body>
+
+    <h2>Drag and Drop</h2>
+    <p>Drag the image back and forth between the two div elements.</p>
+
+<div class="dnd">
+    <div class="dnd__elem" data-qa="first-elem" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <img src="img/testplane.png" draggable="true" ondragstart="drag(event)" data-qa="draggable-image" width="80" height="80">
+    </div>
+
+    <div class="dnd__elem" data-qa="second-elem" ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+</div>
+</body>
+
+</html>
