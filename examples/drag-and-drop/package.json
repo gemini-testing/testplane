@@ -13,7 +13,7 @@
   "devDependencies": {
     "html-reporter": "^10.6.7",
     "http-server": "^14.1.1",
-    "testplane": "^8.20.2",
+    "testplane": "^8.20.3",
     "ts-node": "^10.9.2"
   }
 }
