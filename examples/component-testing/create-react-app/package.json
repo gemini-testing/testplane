@@ -43,7 +43,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",
     "html-reporter": "^10.6.8",
-    "testplane": "^8.19.5",
+    "testplane": "^8.20.3",
     "vite": "^5.2.12"
   }
 }
