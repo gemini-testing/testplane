@@ -14,7 +14,7 @@ import type { Plugin, Rollup } from "vite";
 const debug = createDebug("vite:plugin:generateIndexHtml");
 
 // modules that used only in NodeJS environment and don't need to be compiled
-const DEFAULT_MODULES_TO_MOCK = ["puppeteer-core", "archiver", "@wdio/repl"];
+const DEFAULT_MODULES_TO_MOCK = ["puppeteer-core", "archiver", "@wdio/repl", "jszip"];
 const POLYFILLS = [...builtinModules, ...builtinModules.map(m => `node:${m}`)];
 
 const virtualDriverModuleId = "virtual:@testplane/driver";
