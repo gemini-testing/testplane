@@ -37,7 +37,7 @@
     "globals": "^15.9.0",
     "html-reporter": "^10.6.7",
     "storybook": "^8.3.0",
-    "testplane": "^8.20.1",
+    "testplane": "^8.20.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.0.1",
