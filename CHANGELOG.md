@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.20.3](https://github.com/gemini-testing/testplane/compare/v8.20.2...v8.20.3) (2024-09-17)
+
+
+### Bug Fixes
+
+* **component-testing:** mock jszip module ([a64f2fc](https://github.com/gemini-testing/testplane/commit/a64f2fc6ca25747eee29fc243467256116777201))
+
 ### [8.20.2](https://github.com/gemini-testing/testplane/compare/v8.20.1...v8.20.2) (2024-09-13)
 
 
