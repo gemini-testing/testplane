@@ -112,12 +112,13 @@ function prepareScreenshotUnsafe(areas, opts) {
     } else if (allowViewportOverflow && viewPort.rectIntersects(rect)) {
         rect.overflowsTopBound(viewPort) && rect.recalculateHeight(viewPort);
         rect.overflowsLeftBound(viewPort) && rect.recalculateWidth(viewPort);
-    } else if (!captureElementFromTop && !viewPort.rectIntersects(rect)) {
+    } else if (!captureElementFromTop && !allowViewportOverflow && !viewPort.rectIntersects(rect)) {
         return {
             error: "OUTSIDE_OF_VIEWPORT",
             message:
                 "Can not capture element, because it is outside of viewport. " +
-                'Try to set "captureElementFromTop=true" to scroll to it before capture.'
+                'Try to set "captureElementFromTop=true" to scroll to it before capture' +
+                ' or to set "allowViewportOverflow=true" to ignore viewport overflow error.'
         };
     }
 
