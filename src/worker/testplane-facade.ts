@@ -31,6 +31,10 @@ module.exports = class TestplaneFacade {
         return this.promise;
     }
 
+    cancel(): void {
+        RuntimeConfig.getInstance().replServer?.close();
+    }
+
     syncConfig(): Promise<void> {
         this.syncConfig = (): Promise<void> => this.promise;
 

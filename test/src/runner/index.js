@@ -23,6 +23,7 @@ describe("NodejsEnvRunner", () => {
     const mkWorkers_ = () => {
         return {
             runTest: sandbox.stub().resolves(),
+            cancel: sandbox.stub().resolves(),
         };
     };
 
@@ -693,6 +694,17 @@ describe("NodejsEnvRunner", () => {
 
             assert.notCalled(BrowserRunner.prototype.run);
             assert.notCalled(BrowserRunner.prototype.cancel);
+        });
+
+        it("should cancel all executing workers", async () => {
+            const workers = mkWorkers_();
+            WorkersRegistry.prototype.register.withArgs(sinon.match.string, ["runTest", "cancel"]).returns(workers);
+            const runner = new Runner(makeConfigStub());
+
+            runner.init();
+            runner.cancel();
+
+            assert.calledOnceWithExactly(workers.cancel);
         });
     });
 });

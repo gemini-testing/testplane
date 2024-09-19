@@ -43,4 +43,29 @@ describe("worker", () => {
             return assert.isRejected(runTest("fullTitle", { some: "opts" }), /foo/);
         });
     });
+
+    describe("cancel", () => {
+        let cancel;
+
+        beforeEach(() => {
+            TestplaneFacade.prototype.cancel.returns();
+
+            const worker = require("src/worker");
+            cancel = worker.cancel;
+        });
+
+        it("should delegate cancel call to testplane facade", () => {
+            TestplaneFacade.prototype.cancel.returns();
+
+            cancel();
+
+            assert.calledOnceWithExactly(TestplaneFacade.prototype.cancel);
+        });
+
+        it("should throws on testplane facade cancel fail", () => {
+            TestplaneFacade.prototype.cancel.throws(new Error("o.O"));
+
+            assert.throws(() => cancel(), Error, "o.O");
+        });
+    });
 });
