@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.20.4](https://github.com/gemini-testing/testplane/compare/v8.20.3...v8.20.4) (2024-09-19)
+
+
+### Bug Fixes
+
+* **assertView:** do not fall when trying to take screenshot of the viewport ([be63d7c](https://github.com/gemini-testing/testplane/commit/be63d7c6ed4f48943a8ca7000315eb9ac06ee81e))
+* stop REPL servers on call "halt" method ([3fcf74d](https://github.com/gemini-testing/testplane/commit/3fcf74d96296cc5e6ca459637db810578ba01fe2))
+
 ### [8.20.3](https://github.com/gemini-testing/testplane/compare/v8.20.2...v8.20.3) (2024-09-17)
 
 
