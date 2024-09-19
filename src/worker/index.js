@@ -8,3 +8,7 @@ testplaneFacade.init();
 exports.runTest = (fullTitle, options) => {
     return testplaneFacade.runTest(fullTitle, options);
 };
+
+exports.cancel = () => {
+    return testplaneFacade.cancel();
+};

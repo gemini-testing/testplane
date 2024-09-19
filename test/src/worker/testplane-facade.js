@@ -3,6 +3,7 @@
 const proxyquire = require("proxyquire");
 const { AsyncEmitter } = require("src/events/async-emitter");
 const { Testplane } = require("src/worker/testplane");
+const RuntimeConfig = require("src/config/runtime-config");
 const { makeConfigStub } = require("../../utils");
 const ipc = require("src/utils/ipc");
 const TestplaneFacade = require("src/worker/testplane-facade");
@@ -77,6 +78,25 @@ describe("worker/testplane-facade", () => {
             await testplaneFacade.runTest();
 
             assert.callOrder(TestplaneFacade.prototype.syncConfig, testplane.runTest);
+        });
+    });
+
+    describe("cancel", () => {
+        beforeEach(() => {
+            sandbox.stub(RuntimeConfig, "getInstance").returns({});
+        });
+
+        it("should not throw if repl server is not exists in runtime config", () => {
+            assert.doesNotThrow(() => testplaneFacade.cancel());
+        });
+
+        it("should close repl server if it exists in runtime config", () => {
+            const replServer = { close: sandbox.stub() };
+            RuntimeConfig.getInstance.returns({ replServer });
+
+            testplaneFacade.cancel();
+
+            assert.calledOnceWithExactly(replServer.close);
         });
     });
 });

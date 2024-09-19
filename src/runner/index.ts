@@ -18,13 +18,14 @@ import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
 import * as logger from "../utils/logger";
 import { Config } from "../config";
-import type { runTest } from "../worker";
+import type { runTest, cancel } from "../worker";
 import type { Stats as RunnerStats } from "../stats";
 import EventEmitter from "events";
 import { Test } from "../types";
 
 interface WorkerMethods {
     runTest: typeof runTest;
+    cancel: typeof cancel;
 }
 
 export interface Workers extends EventEmitter, WorkerMethods {}
@@ -73,7 +74,7 @@ export class MainRunner extends Runner {
         }
 
         this.workersRegistry.init();
-        this.workers = this.workersRegistry.register(require.resolve("../worker"), ["runTest"]) as Workers;
+        this.workers = this.workersRegistry.register(require.resolve("../worker"), ["runTest", "cancel"]) as Workers;
         this.browserPool = pool.create(this.config, this);
     }
 
@@ -173,6 +174,8 @@ export class MainRunner extends Runner {
         this.browserPool?.cancel();
 
         this.activeBrowserRunners.forEach(runner => runner.cancel());
+
+        this.workers?.cancel();
     }
 
     registerWorkers<T extends ReadonlyArray<string>>(workerFilepath: string, exportedMethods: T): RegisterWorkers<T> {
