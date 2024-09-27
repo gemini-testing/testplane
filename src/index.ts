@@ -16,14 +16,13 @@ export type {
     Test,
     Suite,
     TestError,
-    AssertViewOpts,
     HermioneCtx,
     GlobalHelper,
     TestplaneCtx,
     TestFunctionCtx,
 } from "./types";
 export type { Config } from "./config";
-export type { ConfigInput } from "./config/types";
+export type { ConfigInput, AssertViewOpts } from "./config/types";
 export type {
     TestCollection,
     FormatterTreeSuite,
