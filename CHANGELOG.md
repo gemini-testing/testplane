@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.20.5](https://github.com/gemini-testing/testplane/compare/v8.20.4...v8.20.5) (2024-10-01)
+
+
+### Bug Fixes
+
+* specify "AssertViewOpts" type with all available options ([c9a0bf1](https://github.com/gemini-testing/testplane/commit/c9a0bf19f0c0309b9e74d3fa29f526eceaecf046))
+
 ### [8.20.4](https://github.com/gemini-testing/testplane/compare/v8.20.3...v8.20.4) (2024-09-19)
 
 
