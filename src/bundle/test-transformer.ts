@@ -5,7 +5,6 @@ import { TRANSFORM_EXTENSIONS, JS_EXTENSION_RE } from "./constants";
 import { requireModuleSync } from "../utils/module";
 
 import type { NodePath, PluginObj, TransformOptions } from "@babel/core";
-import type { ImportDeclaration } from "@babel/types";
 
 const STYLE_EXTESTION_RE = /\.(css|less|scss)$/;
 const IGNORE_STYLE_ERRORS = ["Unexpected token"];
@@ -30,10 +29,10 @@ export const setupTransformHook = (opts: { removeNonJsImports?: boolean } = {}):
         ],
     };
 
-    const customIgnoreImportsPlugin = (): PluginObj => ({
+    const customIgnoreImportsPlugin = ({ types: t }: { types: typeof babel.types }): PluginObj => ({
         name: "ignore-imports",
         visitor: {
-            ImportDeclaration(path: NodePath<ImportDeclaration>): void {
+            ImportDeclaration(path: NodePath<babel.types.ImportDeclaration>): void {
                 const extname = nodePath.extname(path.node.source.value);
 
                 if (extname && !extname.match(JS_EXTENSION_RE)) {
@@ -49,8 +48,9 @@ export const setupTransformHook = (opts: { removeNonJsImports?: boolean } = {}):
                         return;
                     }
 
-                    if (err.code === "ERR_REQUIRE_ESM") {
+                    if ((err as NodeJS.ErrnoException).code === "ERR_REQUIRE_ESM") {
                         mockEsmModuleImport(t, path);
+                        return;
                     }
                 }
             },
@@ -115,8 +115,6 @@ function genVarDeclKey(
     t: typeof babel.types,
     node: NodePath<babel.types.ImportDeclaration>["node"],
 ): babel.types.Identifier | babel.types.ObjectPattern {
-    console.log("node.specifiers:", node.specifiers);
-
     if (node.specifiers.length === 1) {
         if (["ImportDefaultSpecifier", "ImportNamespaceSpecifier"].includes(node.specifiers[0].type)) {
             return t.identifier(node.specifiers[0].local.name);
