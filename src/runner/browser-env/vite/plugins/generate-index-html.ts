@@ -148,6 +148,7 @@ function generateTemplate(env: WorkerInitializePayload, runUuid: string): string
 <html>
     <head>
         <title>Testplane Browser Test</title>
+        <link rel="icon" href="https://testplane.io/img/favicon.ico">
         <script type="module">
             window.__testplane__ = ${JSON.stringify({ runUuid, ...env })};
         </script>
