@@ -136,6 +136,90 @@ describe("test-transformer", () => {
 
                 assert.match(transformedCode, new RegExp(`require\\("${moduleName}"\\)`));
             });
+
+            describe("replace import of esm module with a proxy", () => {
+                const moduleName = "esm-module";
+                const error = { message: "require() of ES Module", code: "ERR_REQUIRE_ESM" };
+                const expectedProxyValue = [
+                    `new Proxy({}, {`,
+                    `  get: function (target, prop) {`,
+                    `    return prop in target ? target[prop] : new Proxy(() => {}, this);`,
+                    `  },`,
+                    `  apply: function () {`,
+                    `    return new Proxy(() => {}, this);`,
+                    `  }`,
+                    `});`,
+                ].join("\n");
+
+                let setupTransformHookStub!: typeof setupTransformHook;
+
+                beforeEach(() => {
+                    const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
+                        "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
+                            "../utils/module": {
+                                requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
+                            },
+                        }),
+                    });
+                    setupTransformHookStub = setupTransformHook;
+                });
+
+                it("should replace with default import", async () => {
+                    let transformedCode;
+                    (pirates.addHook as SinonStub).callsFake(cb => {
+                        transformedCode = cb(`import pkg from "${moduleName}"`, moduleName);
+                    });
+
+                    setupTransformHookStub({ removeNonJsImports: true });
+
+                    assert.match(transformedCode, `const pkg = ${expectedProxyValue}`);
+                });
+
+                it("should replace with namespace import", async () => {
+                    let transformedCode;
+                    (pirates.addHook as SinonStub).callsFake(cb => {
+                        transformedCode = cb(`import * as pkg from "${moduleName}"`, moduleName);
+                    });
+
+                    setupTransformHookStub({ removeNonJsImports: true });
+
+                    assert.match(transformedCode, `const pkg = ${expectedProxyValue}`);
+                });
+
+                it("should replace with property import", async () => {
+                    let transformedCode;
+                    (pirates.addHook as SinonStub).callsFake(cb => {
+                        transformedCode = cb(`import {a, b as c} from "${moduleName}"`, moduleName);
+                    });
+
+                    setupTransformHookStub({ removeNonJsImports: true });
+
+                    assert.match(transformedCode, `` + `const {\n` + `  a,\n` + `  c\n` + `} = ${expectedProxyValue}`);
+                });
+            });
+
+            it("should not replace import of esm module with a proxy if it doesn't fail with 'ERR_REQUIRE_ESM' code", () => {
+                const moduleName = "esm-module";
+                const error = { message: "Some error" };
+
+                const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
+                    "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
+                        "../utils/module": {
+                            requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
+                        },
+                    }),
+                });
+
+                let transformedCode;
+
+                (pirates.addHook as SinonStub).callsFake(cb => {
+                    transformedCode = cb(`import  "${moduleName}"`, moduleName);
+                });
+
+                setupTransformHook({ removeNonJsImports: true });
+
+                assert.match(transformedCode, new RegExp(`require\\("${moduleName}"\\)`));
+            });
         });
     });
 });
