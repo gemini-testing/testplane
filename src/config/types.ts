@@ -275,18 +275,20 @@ export type ConfigInput = Partial<CommonConfig> & {
     prepareEnvironment?: () => void | null;
 };
 
+export interface ConfigParsed extends CommonConfig {
+    browsers: Record<string, BrowserConfig>;
+    plugins: Record<string, Record<string, unknown>>;
+    sets: Record<string, SetsConfigParsed>;
+    prepareEnvironment?: () => void | null;
+}
+
 export interface RuntimeConfig {
     extend: (data: unknown) => this;
     [key: string]: unknown;
 }
 
 declare module "." {
-    export interface Config extends CommonConfig {
-        browsers: Record<string, BrowserConfig>;
-        plugins: Record<string, Record<string, unknown>>;
-        sets: Record<string, SetsConfigParsed>;
-        prepareEnvironment?: () => void | null;
-    }
+    export interface Config extends ConfigParsed {}
 }
 
 declare module "./browser-config" {

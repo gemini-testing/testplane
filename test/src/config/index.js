@@ -32,25 +32,28 @@ describe("config", () => {
 
     describe("constructor", () => {
         it("should parse options", () => {
-            initConfig();
+            initConfig({ configParserReturns: {} });
 
             assert.calledOnce(parseOptions);
         });
 
         it("should parse config from file", () => {
-            initConfig({ requireConfigReturns: "some-options" });
+            initConfig({ configParserReturns: {}, requireConfigReturns: "some-options" });
 
             assert.calledWithMatch(parseOptions, { options: "some-options", env: process.env, argv: process.argv });
         });
 
         it("should support default export", () => {
-            initConfig({ requireConfigReturns: { __esModule: true, default: { foo: "bar" } } });
+            initConfig({
+                configParserReturns: {},
+                requireConfigReturns: { __esModule: true, default: { foo: "bar" } },
+            });
 
             assert.calledWithMatch(parseOptions, { options: { foo: "bar" }, env: process.env, argv: process.argv });
         });
 
         it("should parse config from object", () => {
-            initConfig({ config: { someOption: "some-value" } });
+            initConfig({ configParserReturns: {}, config: { someOption: "some-value" } });
 
             assert.calledWithMatch(parseOptions, {
                 options: { someOption: "some-value" },
@@ -64,7 +67,9 @@ describe("config", () => {
         });
 
         it("should extend config with a config path", () => {
-            assert.include(initConfig({ config: "config-path" }), { configPath: "config-path" });
+            assert.include(initConfig({ configParserReturns: {}, config: "config-path" }), {
+                configPath: "config-path",
+            });
         });
 
         it('should wrap browser config with "BrowserConfig" instance', () => {

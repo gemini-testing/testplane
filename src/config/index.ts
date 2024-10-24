@@ -4,7 +4,8 @@ import defaults from "./defaults";
 import { BrowserConfig } from "./browser-config";
 import parseOptions from "./options";
 import logger from "../utils/logger";
-import { ConfigInput } from "./types";
+import { ConfigInput, ConfigParsed } from "./types";
+import { addUserAgentToArgs } from "./utils";
 
 export class Config {
     configPath!: string;
@@ -59,14 +60,15 @@ export class Config {
             options.prepareEnvironment();
         }
 
-        _.extend(
-            this,
-            parseOptions({
-                options,
-                env: process.env,
-                argv: process.argv,
-            }),
-        );
+        const parsedOptions = parseOptions({
+            options,
+            env: process.env,
+            argv: process.argv,
+        }) as ConfigParsed;
+
+        addUserAgentToArgs(parsedOptions);
+
+        _.extend(this, parsedOptions);
 
         this.browsers = _.mapValues(this.browsers, (browser, id) => {
             const browserOptions = _.extend({}, browser, {
