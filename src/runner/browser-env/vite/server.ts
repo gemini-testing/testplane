@@ -10,6 +10,8 @@ import chalk from "chalk";
 import logger from "../../../utils/logger";
 import { createSocketServer } from "./socket";
 import { plugin as generateIndexHtml } from "./plugins/generate-index-html";
+import { plugin as mockPlugin } from "./plugins/mock";
+import { ManualMock } from "./manual-mock";
 import { Config } from "../../../config";
 import { VITE_DEFAULT_CONFIG_ENV } from "./constants";
 
@@ -101,7 +103,13 @@ export class ViteServer {
     }
 
     private async _addRequiredVitePlugins(): Promise<void> {
-        this._viteConfig.plugins = [...(this._viteConfig.plugins || []), await generateIndexHtml()];
+        const manualMock = await ManualMock.create(this._viteConfig, this._options);
+
+        this._viteConfig.plugins = [
+            ...(this._viteConfig.plugins || []),
+            await generateIndexHtml(),
+            mockPlugin(manualMock),
+        ];
     }
 
     get baseUrl(): string | undefined {
