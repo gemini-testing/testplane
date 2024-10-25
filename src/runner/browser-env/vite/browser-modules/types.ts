@@ -107,6 +107,7 @@ declare global {
             errors: BrowserError[];
             socket: BrowserViteSocket;
             browser: WebdriverIO.Browser;
+            mockCache: Map<string, unknown>;
         } & WorkerInitializePayload;
         testplane: typeof Proxy;
         hermione: typeof Proxy;
@@ -114,3 +115,5 @@ declare global {
         expect: Expect;
     }
 }
+
+export type MockFactory = (originalImport?: unknown) => unknown;

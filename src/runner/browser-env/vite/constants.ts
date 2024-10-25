@@ -20,3 +20,8 @@ export const SOCKET_MAX_TIMEOUT = 2147483647;
 export const SOCKET_TIMED_OUT_ERROR = "operation has timed out";
 
 export const WORKER_ENV_BY_RUN_UUID = new Map<string, WorkerInitializePayload>();
+
+export const MOCK_MODULE_NAME = "testplane";
+
+export const DEFAULT_AUTOMOCK = false;
+export const DEFAULT_AUTOMOCK_DIRECTORY = "__mocks__";

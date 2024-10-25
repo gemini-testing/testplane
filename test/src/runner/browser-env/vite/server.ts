@@ -5,6 +5,7 @@ import P from "bluebird";
 import chalk from "chalk";
 
 import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
+import { ManualMock } from "../../../../../src/runner/browser-env/vite/manual-mock";
 import logger from "../../../../../src/utils/logger";
 import { makeConfigStub } from "../../../../utils";
 import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
@@ -12,14 +13,14 @@ import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
 import type { Config } from "../../../../../src/config";
 import type { BrowserTestRunEnvOptions } from "../../../../../src/runner/browser-env/vite/types";
 
-describe("runner/browser-env/vite", () => {
+describe("runner/browser-env/vite/server", () => {
     const sandbox = sinon.createSandbox();
     let ViteServerStub: typeof ViteServer;
     let getPortStub: SinonStub;
     let createSocketServer: SinonStub;
     let getNodeModulePathStub: SinonStub;
     let generateIndexHtmlPlugin: () => Vite.Plugin[];
-    let resolveModulePathsPlugin: () => Vite.Plugin[];
+    let mockPlugin: () => Vite.Plugin[];
 
     const mkViteServer_ = (opts: Partial<Vite.ViteDevServer> = {}): Vite.ViteDevServer =>
         ({
@@ -34,15 +35,10 @@ describe("runner/browser-env/vite", () => {
         } as Vite.ViteDevServer);
 
     const mkConfig_ = (opts?: Partial<Config>): Config => makeConfigStub(opts) as Config;
-    const mkConfigWithVite_ = (viteConfig: BrowserTestRunEnvOptions["viteConfig"]): Config => {
+    const mkConfigWithVite_ = (options: BrowserTestRunEnvOptions = {}): Config => {
         return mkConfig_({
             system: {
-                testRunEnv: [
-                    BROWSER_TEST_RUN_ENV,
-                    {
-                        viteConfig,
-                    },
-                ],
+                testRunEnv: [BROWSER_TEST_RUN_ENV, options],
             },
         } as Partial<Config>);
     };
@@ -55,13 +51,14 @@ describe("runner/browser-env/vite", () => {
         getPortStub = sandbox.stub().resolves(12345);
         getNodeModulePathStub = sandbox.stub().resolves("file:///default-cwd");
         generateIndexHtmlPlugin = sandbox.stub().returns([{ name: "default-plugin-1" }]);
-        resolveModulePathsPlugin = sandbox.stub().returns([{ name: "default-plugin-2" }]);
+        mockPlugin = sandbox.stub().returns([{ name: "default-plugin-2" }]);
+        sandbox.stub(ManualMock, "create").resolves(sinon.stub() as unknown as ManualMock);
 
         ({ ViteServer: ViteServerStub } = proxyquire("../../../../../src/runner/browser-env/vite/server", {
             "get-port": getPortStub,
             "./socket": { createSocketServer },
             "./plugins/generate-index-html": { plugin: generateIndexHtmlPlugin },
-            "./plugins/resolve-module-paths": { plugin: resolveModulePathsPlugin },
+            "./plugins/mock": { plugin: mockPlugin },
             "./utils": { getNodeModulePath: getNodeModulePathStub },
         }));
     });
@@ -116,7 +113,7 @@ describe("runner/browser-env/vite", () => {
 
             describe("with user config from file", () => {
                 it("on specified host and port", async () => {
-                    const config = mkConfigWithVite_("./test/fixtures/vite.conf.ts");
+                    const config = mkConfigWithVite_({ viteConfig: "./test/fixtures/vite.conf.ts" });
 
                     await ViteServerStub.create(config).start();
 
@@ -135,7 +132,7 @@ describe("runner/browser-env/vite", () => {
                             },
                         };
                     };
-                    const config = mkConfigWithVite_(userConfigFn);
+                    const config = mkConfigWithVite_({ viteConfig: userConfigFn });
 
                     await ViteServerStub.create(config).start();
 
@@ -145,9 +142,10 @@ describe("runner/browser-env/vite", () => {
 
             describe("with user config as object", () => {
                 it("on specified host and port", async () => {
-                    const config = mkConfigWithVite_({
+                    const viteConfig = {
                         server: { host: "2.2.2.2", port: 6000 },
-                    });
+                    };
+                    const config = mkConfigWithVite_({ viteConfig });
 
                     await ViteServerStub.create(config).start();
 
@@ -156,19 +154,50 @@ describe("runner/browser-env/vite", () => {
             });
 
             it("with plugins", async () => {
-                const config = mkConfigWithVite_({
+                const viteConfig = {
                     plugins: [{ name: "user-plugin-1" }, { name: "user-plugin-2" }],
-                });
+                };
+                const config = mkConfigWithVite_({ viteConfig });
                 (generateIndexHtmlPlugin as SinonStub).resolves([{ name: "gen-index-html" }]);
+                (mockPlugin as SinonStub).returns([{ name: "mock" }]);
 
                 await ViteServerStub.create(config).start();
 
                 assert.calledOnceWith(
                     Vite.createServer,
                     sinon.match({
-                        plugins: [{ name: "user-plugin-1" }, { name: "user-plugin-2" }, [{ name: "gen-index-html" }]],
+                        plugins: [
+                            { name: "user-plugin-1" },
+                            { name: "user-plugin-2" },
+                            [{ name: "gen-index-html" }],
+                            [{ name: "mock" }],
+                        ],
                     }),
                 );
+            });
+        });
+
+        describe("mock plugin", () => {
+            it("should create manual mock instance with config and options", async () => {
+                const options = {
+                    viteConfig: {
+                        server: { host: "2.2.2.2", port: 6000 },
+                    },
+                };
+                const config = mkConfigWithVite_(options);
+
+                await ViteServerStub.create(config).start();
+
+                assert.calledOnceWith(ManualMock.create as SinonStub, sinon.match(options.viteConfig), options);
+            });
+
+            it("should init mock plugin with manual mock module", async () => {
+                const manualMockInstance = sinon.stub();
+                (ManualMock.create as SinonStub).resolves(manualMockInstance);
+
+                await ViteServerStub.create(mkConfigWithVite_({})).start();
+
+                assert.calledOnceWith(mockPlugin, manualMockInstance);
             });
         });
 
