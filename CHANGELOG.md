@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.20.6](https://github.com/gemini-testing/testplane/compare/v8.20.5...v8.20.6) (2024-10-27)
+
+
+### Bug Fixes
+
+* add user agent to args automatically ([#1026](https://github.com/gemini-testing/testplane/issues/1026)) ([c2af168](https://github.com/gemini-testing/testplane/commit/c2af168042218deecc33bb1b2cd4cbb16502ee49))
+* **component-testing:** ability to import esm modules ([02498a3](https://github.com/gemini-testing/testplane/commit/02498a3823b5b991e126d0b663f62b1f5b7492da))
+* **component-testing:** correctly import components with css from third party libraries ([591cd5a](https://github.com/gemini-testing/testplane/commit/591cd5ab2200b236e7598f105f4cfb89c9f09e4b))
+
 ### [8.20.5](https://github.com/gemini-testing/testplane/compare/v8.20.4...v8.20.5) (2024-10-01)
 
 
