@@ -3,9 +3,14 @@
 const Promise = require("bluebird");
 const { ImageDiffError } = require("../errors/image-diff-error");
 const { NoRefImageError } = require("../errors/no-ref-image-error");
+const { InvalidRefImageError } = require("../errors/invalid-ref-image-error");
 
 exports.handleNoRefImage = (currImg, refImg, stateName) => {
     return Promise.reject(NoRefImageError.create(stateName, currImg, refImg));
+};
+
+exports.handleInvalidRefImage = (currImg, refImg, stateName) => {
+    return Promise.reject(new InvalidRefImageError(stateName, currImg, refImg));
 };
 
 exports.handleImageDiff = (currImg, refImg, stateName, opts) => {
