@@ -12,10 +12,10 @@ const validator = require("png-validator");
 const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
 const { ImageDiffError } = require("src/browser/commands/assert-view/errors/image-diff-error");
 const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
-const InvalidPngError = require("src/browser/commands/assert-view/errors/invalid-png-error");
 const RuntimeConfig = require("src/config/runtime-config");
 const updateRefs = require("src/browser/commands/assert-view/capture-processors/update-refs");
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../../utils");
+const { InvalidRefImageError } = require("src/browser/commands/assert-view/errors/invalid-ref-image-error");
 
 describe("assertView command", () => {
     const sandbox = sinon.createSandbox();
@@ -99,12 +99,20 @@ describe("assertView command", () => {
 
     afterEach(() => sandbox.restore());
 
-    it("should throw an error on invalid reference", async () => {
+    it("should save InvalidRefImageError to assertViewResults", async () => {
+        const constructorStub = sandbox.stub().returns(Object.create(InvalidRefImageError.prototype));
+        sandbox.stub(InvalidRefImageError, "constructor").callsFake(constructorStub);
+
         fs.readFile.withArgs("/ref/invalid").resolves("invalidPngBuffer");
         validator.pngValidator.withArgs("invalidPngBuffer").throws();
         const browser = await initBrowser_({ browser: stubBrowser_({ getScreenshotPath: () => "/ref/invalid" }) });
 
-        await assert.isRejected(browser.publicAPI.assertView("plain", ".selector"), InvalidPngError);
+        await browser.publicAPI.assertView("plain", ".selector");
+
+        const [error] = browser.publicAPI.executionContext.testplaneCtx.assertViewResults.get();
+        assert.instanceOf(error, InvalidRefImageError);
+        assert.equal(error.stateName, "plain");
+        assert.equal(error.refImg.path, "/ref/invalid");
     });
 
     it("should wait for all selectors to exist", async () => {

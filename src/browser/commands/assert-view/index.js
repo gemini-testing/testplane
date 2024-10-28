@@ -13,7 +13,6 @@ const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
 const { AssertViewError } = require("./errors/assert-view-error");
-const InvalidPngError = require("./errors/invalid-png-error");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -42,7 +41,7 @@ module.exports.default = browser => {
         disableAnimation,
     } = config;
 
-    const { handleNoRefImage, handleImageDiff } = getCaptureProcessors();
+    const { handleNoRefImage, handleImageDiff, handleInvalidRefImage } = getCaptureProcessors();
 
     const assertView = async (state, selectors, opts) => {
         opts = _.defaults(opts, assertViewOpts, {
@@ -112,7 +111,11 @@ module.exports.default = browser => {
         try {
             validatePng(refBuffer);
         } catch (err) {
-            throw new InvalidPngError(`Reference image in ${refImg.path} is not a valid png`);
+            await currImgInst.save(currImg.path);
+
+            return handleInvalidRefImage(currImg, refImg, state, { emitter }).catch(e =>
+                handleCaptureProcessorError(e),
+            );
         }
 
         const {

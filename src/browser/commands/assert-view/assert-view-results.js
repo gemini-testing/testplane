@@ -2,6 +2,7 @@
 
 const { ImageDiffError } = require("./errors/image-diff-error");
 const { NoRefImageError } = require("./errors/no-ref-image-error");
+const { InvalidRefImageError } = require("./errors/invalid-ref-image-error");
 
 module.exports = class AssertViewResults {
     static fromRawObject(results) {
@@ -10,6 +11,7 @@ module.exports = class AssertViewResults {
                 return (
                     (res.name === ImageDiffError.name && ImageDiffError.fromObject(res)) ||
                     (res.name === NoRefImageError.name && NoRefImageError.fromObject(res)) ||
+                    (res.name === InvalidRefImageError.name && InvalidRefImageError.fromObject(res)) ||
                     res
                 );
             }),
