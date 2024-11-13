@@ -36,6 +36,7 @@ interface RunOpts {
         onFail: boolean;
     };
     devtools: boolean;
+    local: boolean;
 }
 
 export type FailedListItem = {
@@ -99,12 +100,13 @@ export class Testplane extends BaseTestplane {
             inspectMode,
             replMode,
             devtools,
+            local,
             reporters = [],
         }: Partial<RunOpts> = {},
     ): Promise<boolean> {
         validateUnknownBrowsers(browsers!, _.keys(this._config.browsers));
 
-        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode, devtools });
+        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode, devtools, local });
 
         if (replMode?.enabled) {
             this._config.system.mochaOpts.timeout = 0;

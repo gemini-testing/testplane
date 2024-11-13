@@ -14,6 +14,7 @@ import { Config } from "../config";
 import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import Callstack from "./history/callstack";
+import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -33,6 +34,7 @@ export type BrowserOpts = {
     version?: string;
     state?: Record<string, unknown>;
     emitter?: AsyncEmitter;
+    wdPool?: WebdriverPool;
 };
 
 export type BrowserState = {
@@ -50,6 +52,8 @@ export class Browser {
     protected _callstackHistory: Callstack | null;
     protected _state: BrowserState;
     protected _customCommands: Set<CustomCommend>;
+    protected _wdPool?: WebdriverPool;
+    protected _wdProcess: WdProcess | null;
     id: string;
     version?: string;
 
@@ -69,11 +73,13 @@ export class Browser {
         this._debug = config.system.debug;
         this._session = null;
         this._callstackHistory = null;
+        this._wdProcess = null;
         this._state = {
             ...opts.state,
             isBroken: false,
         };
         this._customCommands = new Set();
+        this._wdPool = opts.wdPool;
     }
 
     setHttpTimeout(timeout: number | null): void {

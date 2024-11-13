@@ -204,6 +204,7 @@ describe("testplane", () => {
                     enabled: true,
                 },
                 devtools: true,
+                local: false,
             });
 
             assert.calledOnce(RuntimeConfig.getInstance);
@@ -213,6 +214,7 @@ describe("testplane", () => {
                 inspectMode: { inspect: true },
                 replMode: { enabled: true },
                 devtools: true,
+                local: false,
             });
             assert.callOrder(RuntimeConfig.getInstance, NodejsEnvRunner.create);
         });

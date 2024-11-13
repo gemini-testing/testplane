@@ -7,12 +7,14 @@ import { AsyncEmitter, MasterEvents } from "../events";
 import { BrowserOpts, Pool } from "./types";
 import { Config } from "../config";
 import { Browser } from "../browser/browser";
+import { WebdriverPool } from "./webdriver-pool";
 
 export class BasicPool implements Pool {
     private _config: Config;
     private _emitter: AsyncEmitter;
     private _activeSessions: Record<string, NewBrowser>;
     private _cancelled: boolean;
+    private _wdPool: WebdriverPool;
     log: debug.Debugger;
 
     static create(config: Config, emitter: AsyncEmitter): BasicPool {
@@ -26,10 +28,11 @@ export class BasicPool implements Pool {
 
         this._activeSessions = {};
         this._cancelled = false;
+        this._wdPool = new WebdriverPool();
     }
 
     async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
-        const browser = NewBrowser.create(this._config, { ...opts, id });
+        const browser = NewBrowser.create(this._config, { ...opts, id, wdPool: this._wdPool });
 
         try {
             await browser.init();

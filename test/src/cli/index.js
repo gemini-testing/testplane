@@ -305,4 +305,10 @@ describe("cli", () => {
 
         assert.calledWithMatch(Testplane.prototype.run, any, { devtools: true });
     });
+
+    it("should turn on local mode from cli", async () => {
+        await run_("--local");
+
+        assert.calledWithMatch(Testplane.prototype.run, any, { local: true });
+    });
 });

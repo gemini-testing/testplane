@@ -4,6 +4,7 @@ const { AsyncEmitter } = require("src/events/async-emitter");
 const { BasicPool } = require("src/browser-pool/basic-pool");
 const { NewBrowser } = require("src/browser/new-browser");
 const { CancelledError } = require("src/browser-pool/cancelled-error");
+const { WebdriverPool } = require("src/browser-pool/webdriver-pool");
 const { MasterEvents: Events } = require("src/events");
 const { stubBrowser } = require("./util");
 const _ = require("lodash");
@@ -33,13 +34,25 @@ describe("browser-pool/basic-pool", () => {
 
         await mkPool_({ config }).getBrowser("broId");
 
-        assert.calledWith(NewBrowser.create, config, { id: "broId" });
+        assert.calledWith(NewBrowser.create, config, sinon.match({ id: "broId" }));
     });
 
     it("should create new browser with specified version when requested", async () => {
         await mkPool_().getBrowser("broId", { version: "1.0" });
 
-        assert.calledWith(NewBrowser.create, sinon.match.any, { id: "broId", version: "1.0" });
+        assert.calledWith(NewBrowser.create, sinon.match.any, sinon.match({ id: "broId", version: "1.0" }));
+    });
+
+    it("should pass webdriver pool when creating new browser", async () => {
+        await mkPool_().getBrowser("broId");
+
+        assert.calledWith(
+            NewBrowser.create,
+            sinon.match.any,
+            sinon.match({
+                wdPool: sinon.match.instanceOf(WebdriverPool),
+            }),
+        );
     });
 
     it("should init browser", async () => {
@@ -84,7 +97,7 @@ describe("browser-pool/basic-pool", () => {
             const browser = stubBrowser();
             NewBrowser.create.returns(browser);
 
-            const onSessionStart = sinon.stub().named("onSessionStart");
+            const onSessionStart = sandbox.stub().named("onSessionStart");
             const emitter = new AsyncEmitter().on(Events.SESSION_START, onSessionStart);
 
             await mkPool_({ emitter }).getBrowser();
@@ -96,7 +109,7 @@ describe("browser-pool/basic-pool", () => {
             const browser = stubBrowser();
             NewBrowser.create.returns(browser);
 
-            const afterSessionStart = sinon.stub().named("afterSessionStart");
+            const afterSessionStart = sandbox.stub().named("afterSessionStart");
             const emitter = new AsyncEmitter().on(Events.SESSION_START, () => Promise.delay(1).then(afterSessionStart));
 
             await mkPool_({ emitter }).getBrowser();
@@ -137,7 +150,7 @@ describe("browser-pool/basic-pool", () => {
 
     describe("SESSION_END event", () => {
         it("should be emitted before browser quit", async () => {
-            const onSessionEnd = sinon.stub().named("onSessionEnd");
+            const onSessionEnd = sandbox.stub().named("onSessionEnd");
             const emitter = new AsyncEmitter().on(Events.SESSION_END, onSessionEnd);
 
             const pool = mkPool_({ emitter });
@@ -149,7 +162,7 @@ describe("browser-pool/basic-pool", () => {
         });
 
         it("handler should be waited before actual quit", async () => {
-            const afterSessionEnd = sinon.stub().named("afterSessionEnd");
+            const afterSessionEnd = sandbox.stub().named("afterSessionEnd");
             const emitter = new AsyncEmitter().on(Events.SESSION_END, () => Promise.delay(1).then(afterSessionEnd));
 
             const pool = mkPool_({ emitter });
