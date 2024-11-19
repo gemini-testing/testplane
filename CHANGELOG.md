@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.21.0](https://github.com/gemini-testing/testplane/compare/v8.20.6...v8.21.0) (2024-11-19)
+
+
+### Features
+
+* **component-testing:** implement mocks ([3e46d29](https://github.com/gemini-testing/testplane/commit/3e46d295efdd19ee33fb1a3bbf1c5a9c0597dee5))
+
+
+### Bug Fixes
+
+* make invalid png error similar to assert view errors ([#1028](https://github.com/gemini-testing/testplane/issues/1028)) ([2012c98](https://github.com/gemini-testing/testplane/commit/2012c98c12c03556859b3f5ed2323a7f2662421c))
+
 ### [8.20.6](https://github.com/gemini-testing/testplane/compare/v8.20.5...v8.20.6) (2024-10-27)
 
 
