@@ -180,8 +180,8 @@ export class NewBrowser extends Browser {
         if (!headless) {
             return capabilities;
         }
-        const capabilitySettings =
-            headlessBrowserOptions[capabilities.browserName as keyof typeof headlessBrowserOptions];
+        const browserNameLowerCase = capabilities.browserName?.toLocaleLowerCase() as string;
+        const capabilitySettings = headlessBrowserOptions[browserNameLowerCase];
         if (!capabilitySettings) {
             warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
             return capabilities;
