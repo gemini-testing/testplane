@@ -15,5 +15,7 @@ export const runBrowserDriver = async (
             return import("./firefox").then(module => module.runGeckoDriver(browserVersion, { debug }));
         case Driver.SAFARIDRIVER:
             return import("./safari").then(module => module.runSafariDriver({ debug }));
+        default:
+            throw new Error(`Invalid driver name: ${driverName}. Expected one of: ${Object.values(Driver).join(", ")}`);
     }
 };

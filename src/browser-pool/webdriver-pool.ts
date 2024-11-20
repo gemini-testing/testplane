@@ -32,6 +32,10 @@ export class WebdriverPool {
             );
         }
 
+        if (!browserVersion) {
+            throw new Error(`Couldn't run browser driver for "${browserName}" because its version is undefined`);
+        }
+
         const wdProcesses = this.driverProcess.get(driverName)?.get(browserVersion) ?? {};
 
         for (const port in wdProcesses) {

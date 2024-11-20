@@ -159,6 +159,8 @@ export const getMatchedBrowserVersion = (
         a = a.slice(a.indexOf("_") + 1);
         b = b.slice(b.indexOf("_") + 1);
 
+        // Firefox has versions like "stable_131.0a1" and "stable_129.0b9"
+        // Parsing raw numbers as hex values is needed in order to distinguish "129.0b9" and "129.0b7" for example
         return parseInt(a.replace(".", ""), 16) - parseInt(b.replace(".", ""), 16);
     };
 
