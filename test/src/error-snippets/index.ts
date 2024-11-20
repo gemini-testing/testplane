@@ -25,7 +25,6 @@ describe("error-snippets", () => {
         let fetchStub: SinonStub;
         let formatErrorSnippetStub: SinonStub;
         let findRelevantStackFrameStub: SinonStub;
-        let loggerStub: { warn: SinonStub };
 
         beforeEach(() => {
             fsReadFileStub = sandbox.stub(fs, "readFile");
@@ -33,12 +32,10 @@ describe("error-snippets", () => {
 
             formatErrorSnippetStub = sandbox.stub();
             findRelevantStackFrameStub = sandbox.stub();
-            loggerStub = { warn: sandbox.stub() };
 
             extendWithCodeSnippet = proxyquire("../../../src/error-snippets", {
                 "./utils": { formatErrorSnippet: formatErrorSnippetStub },
                 "./frames": { findRelevantStackFrame: findRelevantStackFrameStub },
-                "../utils/logger": loggerStub,
             }).extendWithCodeSnippet;
         });
 
@@ -63,8 +60,6 @@ describe("error-snippets", () => {
             await assert.eventually.isUndefined(extendWithCodeSnippet());
             await assert.eventually.isNull(extendWithCodeSnippet(null));
             await assert.eventually.equal(extendWithCodeSnippet(""), "");
-
-            assert.notCalled(loggerStub.warn);
         });
 
         it("should not modify error, if could not find relevant stack frame", async () => {
@@ -74,7 +69,6 @@ describe("error-snippets", () => {
 
             await extendWithCodeSnippet(error);
 
-            assert.notCalled(loggerStub.warn);
             assert.strictEqual(error, savedError);
         });
 
@@ -89,7 +83,6 @@ describe("error-snippets", () => {
 
             assert.strictEqual(error, savedError);
             assert.strictEqual(error, result);
-            assert.calledOnceWith(loggerStub.warn, "Unable to apply code snippet:");
         });
 
         it("should return the same Object.is object", async () => {
@@ -101,7 +94,6 @@ describe("error-snippets", () => {
 
             const result = await extendWithCodeSnippet(error);
 
-            assert.notCalled(loggerStub.warn);
             assert.equal(error, result);
         });
 
@@ -114,7 +106,6 @@ describe("error-snippets", () => {
 
             const result = await extendWithCodeSnippet(error);
 
-            assert.notCalled(loggerStub.warn);
             assert.equal(result.snippet, "code snippet");
         });
 
@@ -130,7 +121,6 @@ describe("error-snippets", () => {
 
             const result = await extendWithCodeSnippet(error);
 
-            assert.notCalled(loggerStub.warn);
             assert.equal(result.snippet, "code snippet");
         });
 
@@ -141,9 +131,9 @@ describe("error-snippets", () => {
             fsReadFileStub.returns("source code");
             formatErrorSnippetStub.throws(new Error());
 
-            await extendWithCodeSnippet(error);
+            const returnedError = await extendWithCodeSnippet(error);
 
-            assert.calledOnceWith(loggerStub.warn, "Unable to apply code snippet:");
+            assert.strictEqual(error, returnedError);
         });
     });
 });
