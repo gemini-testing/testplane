@@ -1,7 +1,6 @@
 import { findRelevantStackFrame, resolveLocationWithStackFrame } from "./frames";
 import { extractSourceMaps, resolveLocationWithSourceMap } from "./source-maps";
 import { getSourceCodeFile, formatErrorSnippet, shouldNotAddCodeSnippet } from "./utils";
-import logger from "../utils/logger";
 import type { ResolvedFrame, SufficientStackFrame, WithSnippetError } from "./types";
 
 const stackFrameLocationResolver = async (stackFrame: SufficientStackFrame): Promise<ResolvedFrame> => {
@@ -31,8 +30,6 @@ export const extendWithCodeSnippet = async (err: WithSnippetError): Promise<With
 
         return err;
     } catch (snippetError) {
-        logger.warn("Unable to apply code snippet:", snippetError);
-
         return err;
     }
 };
