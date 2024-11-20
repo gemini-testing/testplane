@@ -5,7 +5,7 @@
         "src/**/__*",
         "src/**/*.test.ts",
         "src/browser/client-scripts",
-        "src/bundle",
+        "src/bundle/cjs",
         "src/runner/browser-env/vite/browser-modules"
     ],
     "compilerOptions": {

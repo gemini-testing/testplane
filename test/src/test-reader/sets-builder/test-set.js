@@ -2,7 +2,7 @@
 
 const fs = require("fs/promises");
 const proxyquire = require("proxyquire");
-const globExtra = require("glob-extra");
+const globExtra = require("../../../../src/bundle/glob-extra");
 
 describe("test-reader/sets-builder/test-set", () => {
     const sandbox = sinon.createSandbox();
@@ -14,7 +14,7 @@ describe("test-reader/sets-builder/test-set", () => {
             isMask: globExtra.isMask,
         };
         ({ TestSet } = proxyquire("src/test-reader/sets-builder/test-set", {
-            "glob-extra": globExtraStub,
+            "../../bundle/glob-extra": globExtraStub,
         }));
     });
 
