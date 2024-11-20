@@ -1,7 +1,6 @@
 import path from "path";
-import * as globExtra from "glob-extra";
 import _ from "lodash";
-
+import * as globExtra from "../../bundle/glob-extra";
 import { SetCollection } from "./set-collection";
 import { TestSet, TestSetData } from "./test-set";
 import { SetsConfigParsed } from "../../config/types";

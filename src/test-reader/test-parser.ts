@@ -9,7 +9,7 @@ import { TreeBuilder } from "./tree-builder";
 import { readFiles } from "./mocha-reader";
 import { TestReaderEvents } from "../events";
 import { Context, TestParserAPI } from "./test-parser-api";
-import { setupTransformHook } from "./test-transformer";
+import { setupTransformHook } from "../bundle/test-transformer";
 import { MasterEvents } from "../events";
 import _ from "lodash";
 import clearRequire from "clear-require";

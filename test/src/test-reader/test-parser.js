@@ -38,7 +38,7 @@ describe("test-reader/test-parser", () => {
             "clear-require": clearRequire,
             "./mocha-reader": { readFiles },
             "./controllers/browser-version-controller": browserVersionController,
-            "./test-transformer": { setupTransformHook },
+            "../bundle/test-transformer": { setupTransformHook },
         }).TestParser;
 
         sandbox.stub(fs, "readJSON").resolves([]);

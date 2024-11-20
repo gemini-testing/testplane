@@ -1,7 +1,7 @@
 import * as pirates from "pirates";
 import sinon, { SinonStub } from "sinon";
 import proxyquire from "proxyquire";
-import { setupTransformHook, TRANSFORM_EXTENSIONS } from "../../../src/test-reader/test-transformer";
+import { setupTransformHook, TRANSFORM_EXTENSIONS } from "../../../src/bundle/test-transformer";
 
 describe("test-transformer", () => {
     const sandbox = sinon.createSandbox();
@@ -93,9 +93,9 @@ describe("test-transformer", () => {
                         const moduleName = "some-module";
                         const error = { message: "Unexpected token {", stack: `foo${extName}:100500\nbar\nqux` };
 
-                        const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
-                            "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
-                                "../utils/module": {
+                        const { setupTransformHook } = proxyquire("../../../src/bundle/test-transformer", {
+                            "./cjs": proxyquire.noCallThru().load("../../../src/bundle/cjs/test-transformer", {
+                                "../../utils/module": {
                                     requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
                                 },
                             }),
@@ -118,9 +118,9 @@ describe("test-transformer", () => {
                 const moduleName = "some-module";
                 const error = { message: "Some error", stack: `foo.js:100500\nbar\nqux` };
 
-                const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
-                    "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
-                        "../utils/module": {
+                const { setupTransformHook } = proxyquire("../../../src/bundle/test-transformer", {
+                    "./cjs": proxyquire.noCallThru().load("../../../src/bundle/cjs/test-transformer", {
+                        "../../utils/module": {
                             requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
                         },
                     }),
@@ -154,9 +154,9 @@ describe("test-transformer", () => {
                 let setupTransformHookStub!: typeof setupTransformHook;
 
                 beforeEach(() => {
-                    const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
-                        "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
-                            "../utils/module": {
+                    const { setupTransformHook } = proxyquire("../../../src/bundle/test-transformer", {
+                        "./cjs": proxyquire.noCallThru().load("../../../src/bundle/cjs/test-transformer", {
+                            "../../utils/module": {
                                 requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
                             },
                         }),
@@ -202,9 +202,9 @@ describe("test-transformer", () => {
                 const moduleName = "esm-module";
                 const error = { message: "Some error" };
 
-                const { setupTransformHook } = proxyquire("../../../src/test-reader/test-transformer", {
-                    "../bundle": proxyquire.noCallThru().load("../../../src/bundle/test-transformer", {
-                        "../utils/module": {
+                const { setupTransformHook } = proxyquire("../../../src/bundle/test-transformer", {
+                    "./cjs": proxyquire.noCallThru().load("../../../src/bundle/cjs/test-transformer", {
+                        "../../utils/module": {
                             requireModuleSync: sandbox.stub().withArgs(moduleName).throws(error),
                         },
                     }),

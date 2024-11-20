@@ -1,8 +1,8 @@
-import * as globExtra from "glob-extra";
 import _ from "lodash";
 import mm from "micromatch";
 import path from "path";
 import fs from "fs/promises";
+import * as globExtra from "../../bundle/glob-extra";
 import { SetsConfigParsed } from "../../config/types";
 
 export type TestSetData = {

@@ -1,6 +1,6 @@
 "use strict";
 
-const globExtra = require("glob-extra");
+const globExtra = require("../../../../src/bundle/glob-extra");
 const fs = require("fs/promises");
 const proxyquire = require("proxyquire");
 
@@ -17,14 +17,14 @@ describe("test-reader/sets-builder", () => {
             isMask: globExtra.isMask,
         };
         ({ TestSet } = proxyquire("src/test-reader/sets-builder/test-set", {
-            "glob-extra": globExtraStub,
+            "../../bundle/glob-extra": globExtraStub,
         }));
         sandbox.stub(TestSet.prototype, "resolveFiles");
         ({ SetCollection } = proxyquire("src/test-reader/sets-builder/set-collection", {
-            "glob-extra": globExtraStub,
+            "../../bundle/glob-extra": globExtraStub,
         }));
         ({ SetsBuilder } = proxyquire("src/test-reader/sets-builder", {
-            "glob-extra": globExtraStub,
+            "../../bundle/glob-extra": globExtraStub,
             "./test-set": {
                 TestSet,
             },

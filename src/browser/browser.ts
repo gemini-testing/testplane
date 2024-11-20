@@ -1,7 +1,5 @@
 import crypto from "crypto";
 import { RequestOptions } from "https";
-
-import { RemoteCapability } from "@wdio/types/build/Capabilities";
 import _ from "lodash";
 
 import { SAVE_HISTORY_MODE } from "../constants/config";
@@ -15,6 +13,8 @@ import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import Callstack from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
+
+import type { Capabilities } from "@wdio/types";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -184,7 +184,7 @@ export class Browser {
         return this._state;
     }
 
-    get capabilities(): RemoteCapability {
+    get capabilities(): Capabilities.RemoteCapability {
         return this.publicAPI.capabilities;
     }
 
