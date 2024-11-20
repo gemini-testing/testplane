@@ -23,6 +23,7 @@ export const runGeckoDriver = async (
     const geckoDriver = await startGeckoDriver({
         customGeckoDriverPath: geckoDriverPath,
         port: randomPort,
+        log: debug ? "debug" : "fatal",
         spawnOpts: {
             windowsHide: true,
             detached: false,

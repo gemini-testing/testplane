@@ -18,7 +18,7 @@ export const runChromeDriver = async (
     const milestone = getMilestone(chromeVersion);
     const randomPort = await getPort();
 
-    const chromeDriver = spawn(chromeDriverPath, [`--port=${randomPort}`], {
+    const chromeDriver = spawn(chromeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,
         detached: false,
     });

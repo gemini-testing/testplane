@@ -1,6 +1,6 @@
 import { download as downloadGeckoDriver } from "geckodriver";
 import { GECKODRIVER_CARGO_TOML } from "../constants";
-import { installBinary, getBinaryPath, getMatchingDriverVersion } from "../registry";
+import { installBinary, getBinaryPath, getMatchedDriverVersion } from "../registry";
 import { Driver, browserInstallerDebug, getBrowserPlatform, getGeckoDriverDir, retryFetch } from "../utils";
 
 const getLatestGeckoDriverVersion = async (): Promise<string> => {
@@ -20,10 +20,12 @@ const getLatestGeckoDriverVersion = async (): Promise<string> => {
 
 export const installLatestGeckoDriver = async (firefoxVersion: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyDriverVersion = getMatchingDriverVersion(Driver.GECKODRIVER, platform, firefoxVersion);
+    const existingLocallyDriverVersion = getMatchedDriverVersion(Driver.GECKODRIVER, platform, firefoxVersion);
 
     if (existingLocallyDriverVersion && !force) {
-        browserInstallerDebug(`skip installing geckodriver for firefox@${firefoxVersion}`);
+        browserInstallerDebug(
+            `A locally installed geckodriver for firefox@${firefoxVersion} browser was found. Skipping the installation`,
+        );
 
         return getBinaryPath(Driver.GECKODRIVER, platform, existingLocallyDriverVersion);
     }

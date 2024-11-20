@@ -9,7 +9,7 @@ import signalHandler from "../signal-handler";
 import { runGroup } from "./history";
 import { warn } from "../utils/logger";
 import { getInstance } from "../config/runtime-config";
-import { DEVTOOLS_PROTOCOL, LOCAL_GRID_URL } from "../constants/config";
+import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL, LOCAL_GRID_URL } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
@@ -127,7 +127,7 @@ export class NewBrowser extends Browser {
 
         let gridUrl;
 
-        if (this._isLocalGridUrl() && config.automationProtocol === "webdriver") {
+        if (this._isLocalGridUrl() && config.automationProtocol === WEBDRIVER_PROTOCOL) {
             gridUrl = await this._getLocalWebdriverGridUrl();
         } else {
             // if automationProtocol is not "webdriver", fallback to default grid url from "local"
@@ -159,7 +159,7 @@ export class NewBrowser extends Browser {
         return options as RemoteOptions;
     }
 
-    protected async _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
+    protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
         const capabilitiesExtendedByVersion = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
@@ -170,7 +170,7 @@ export class NewBrowser extends Browser {
 
         return this._isLocalGridUrl()
             ? this._addExecutablePath(config, capabilitiesWithAddedHeadless)
-            : capabilitiesWithAddedHeadless;
+            : Promise.resolve(capabilitiesWithAddedHeadless);
     }
 
     protected _addHeadlessCapability(

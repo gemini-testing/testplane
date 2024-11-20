@@ -3,18 +3,18 @@ import {
     Browser,
     browserInstallerDebug,
     getBrowserPlatform,
-    getFirefoxBrowserDir,
+    getBrowsersDir,
     type DownloadProgressCallback,
 } from "../utils";
-import { installBinary, getBinaryPath, getMatchingBrowserVersion } from "../registry";
+import { installBinary, getBinaryPath, getMatchedBrowserVersion } from "../registry";
 import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
 
 export const installFirefox = async (version: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = getMatchingBrowserVersion(Browser.FIREFOX, platform, version);
+    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.FIREFOX, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
-        browserInstallerDebug(`skip installing firefox@${version}`);
+        browserInstallerDebug(`A locally installed firefox@${version} browser was found. Skipping the installation`);
 
         return getBinaryPath(Browser.FIREFOX, platform, existingLocallyBrowserVersion);
     }
@@ -22,7 +22,7 @@ export const installFirefox = async (version: string, { force = false } = {}): P
     const normalizedVersion = normalizeFirefoxVersion(version);
     const buildId = getFirefoxBuildId(normalizedVersion);
 
-    const cacheDir = getFirefoxBrowserDir();
+    const cacheDir = getBrowsersDir();
     const canBeInstalled = await canDownload({ browser: Browser.FIREFOX, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {

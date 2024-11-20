@@ -13,7 +13,7 @@ describe("browser-installer/chromium/browser", () => {
     let canDownloadStub: SinonStub;
 
     let getBinaryPathStub: SinonStub;
-    let getMatchingBrowserVersionStub: SinonStub;
+    let getMatchedBrowserVersionStub: SinonStub;
     let installBinaryStub: SinonStub;
 
     beforeEach(() => {
@@ -22,7 +22,7 @@ describe("browser-installer/chromium/browser", () => {
         canDownloadStub = sandbox.stub().resolves(true);
 
         getBinaryPathStub = sandbox.stub().returns(null);
-        getMatchingBrowserVersionStub = sandbox.stub().returns(null);
+        getMatchedBrowserVersionStub = sandbox.stub().returns(null);
         installBinaryStub = sandbox.stub();
 
         installChromium = proxyquire("../../../../src/browser-installer/chromium/browser", {
@@ -33,7 +33,7 @@ describe("browser-installer/chromium/browser", () => {
             "./utils": { getChromiumBuildId: getChromiumBuildIdStub },
             "../registry": {
                 getBinaryPath: getBinaryPathStub,
-                getMatchingBrowserVersion: getMatchingBrowserVersionStub,
+                getMatchedBrowserVersion: getMatchedBrowserVersionStub,
                 installBinary: installBinaryStub,
             },
         }).installChromium;
@@ -41,8 +41,8 @@ describe("browser-installer/chromium/browser", () => {
 
     afterEach(() => sandbox.restore());
 
-    it("should try to resolve browser path locally without 'force' flag", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("80");
+    it("should try to resolve browser path locally by default", async () => {
+        getMatchedBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("80");
         getBinaryPathStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("/browser/path");
 
         const binaryPath = await installChromium("80");
@@ -53,33 +53,33 @@ describe("browser-installer/chromium/browser", () => {
     });
 
     it("should not try to resolve browser path locally with 'force' flag", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("80");
-        getBinaryPathStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("/browser/path");
+        getMatchedBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns("80");
         getChromiumBuildIdStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").resolves("100500");
 
         installBinaryStub
             .withArgs(Browser.CHROMIUM, sinon.match.string, "80", sinon.match.func)
-            .resolves("/new/browser/path");
+            .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installChromium("80", { force: true });
 
-        assert.equal(binaryPath, "/new/browser/path");
+        assert.notCalled(getBinaryPathStub);
+        assert.equal(binaryPath, "/new/downloaded/browser/path");
     });
 
     it("should download browser if it is not downloaded", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns(null);
+        getMatchedBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").returns(null);
         getChromiumBuildIdStub.withArgs(Browser.CHROMIUM, sinon.match.string, "80").resolves("100500");
         installBinaryStub
             .withArgs(Browser.CHROMIUM, sinon.match.string, "80", sinon.match.func)
-            .resolves("/new/browser/path");
+            .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installChromium("80");
 
-        assert.equal(binaryPath, "/new/browser/path");
+        assert.equal(binaryPath, "/new/downloaded/browser/path");
     });
 
     it("should throw an error if version is too low", async () => {
-        getMatchingBrowserVersionStub.returns(null);
+        getMatchedBrowserVersionStub.returns(null);
 
         await assert.isRejected(
             installChromium("60"),
@@ -93,12 +93,9 @@ describe("browser-installer/chromium/browser", () => {
     });
 
     it("should throw an error if can't download the browser", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "115").returns(null);
+        getMatchedBrowserVersionStub.withArgs(Browser.CHROMIUM, sinon.match.string, "115").returns(null);
         getChromiumBuildIdStub.withArgs(Browser.CHROMIUM, sinon.match.string, "115").resolves("100500");
         canDownloadStub.resolves(false);
-        installBinaryStub
-            .withArgs(Browser.CHROMIUM, sinon.match.string, "115.0.5678.170", sinon.match.func)
-            .resolves("/new/browser/path");
 
         await assert.isRejected(
             installChromium("115"),

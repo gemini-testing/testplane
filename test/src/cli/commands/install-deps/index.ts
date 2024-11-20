@@ -6,7 +6,7 @@ import { Testplane } from "../../../../../src/testplane";
 import type { Writable } from "type-fest";
 import type { Config } from "../../../../../src/config";
 
-describe("cli/commands/install-browsers", () => {
+describe("cli/commands/install-deps", () => {
     const sandbox = sinon.createSandbox();
 
     let cli: { run: () => void };
@@ -15,7 +15,7 @@ describe("cli/commands/install-browsers", () => {
     let installBrowsersWithDriversStub: SinonStub;
 
     const installBrowsers_ = async (argv: string = ""): Promise<void> => {
-        process.argv = ["foo/bar/node", "foo/bar/script", "install-browsers", ...argv.split(" ")].filter(Boolean);
+        process.argv = ["foo/bar/node", "foo/bar/script", "install-deps", ...argv.split(" ")].filter(Boolean);
         cli.run();
 
         await (Command.prototype.action as SinonStub).lastCall.returnValue;
@@ -45,8 +45,8 @@ describe("cli/commands/install-browsers", () => {
         installBrowsersWithDriversStub = sandbox.stub();
 
         cli = proxyquire("../../../../../src/cli", {
-            [path.resolve(process.cwd(), "src/cli/commands/install-browsers")]: proxyquire(
-                "../../../../../src/cli/commands/install-browsers",
+            [path.resolve(process.cwd(), "src/cli/commands/install-deps")]: proxyquire(
+                "../../../../../src/cli/commands/install-deps",
                 {
                     "../../../browser-installer": {
                         installBrowsersWithDrivers: installBrowsersWithDriversStub,

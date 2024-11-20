@@ -40,7 +40,7 @@ describe("browser-installer/edge", () => {
         await runEdgeDriver("130");
 
         assert.calledOnceWith(installEdgeDriverStub, "130");
-        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=10050"]);
+        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=10050", "--silent"]);
     });
 
     it("should wait for port to be active", async () => {
@@ -72,6 +72,7 @@ describe("browser-installer/edge", () => {
     it("should pipe logs if debug is enabled", async () => {
         const result = await runEdgeDriver("130", { debug: true });
 
+        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=12345", "--verbose"]);
         assert.calledOnceWith(pipeLogsWithPrefixStub, result.process, "[edgedriver@130] ");
     });
 

@@ -8,14 +8,16 @@ import {
     Driver,
     type DownloadProgressCallback,
 } from "../utils";
-import { getBinaryPath, getMatchingDriverVersion, installBinary } from "../registry";
+import { getBinaryPath, getMatchedDriverVersion, installBinary } from "../registry";
 
 export const installChromeDriver = async (chromeVersion: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyDriverVersion = getMatchingDriverVersion(Driver.CHROMEDRIVER, platform, chromeVersion);
+    const existingLocallyDriverVersion = getMatchedDriverVersion(Driver.CHROMEDRIVER, platform, chromeVersion);
 
     if (existingLocallyDriverVersion && !force) {
-        browserInstallerDebug(`skip installing chromedriver for chrome@${chromeVersion}`);
+        browserInstallerDebug(
+            `A locally installed chromedriver for chrome@${chromeVersion} was found. Skipping the installation`,
+        );
 
         return getBinaryPath(Driver.CHROMEDRIVER, platform, existingLocallyDriverVersion);
     }

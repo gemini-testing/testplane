@@ -45,6 +45,7 @@ describe("browser-installer/firefox", () => {
         assert.calledOnceWith(startGeckoDriverStub, {
             customGeckoDriverPath: "/driver/path",
             port: 10050,
+            log: "fatal",
             spawnOpts: {
                 windowsHide: true,
                 detached: false,
@@ -81,6 +82,12 @@ describe("browser-installer/firefox", () => {
     it("should pipe logs if debug is enabled", async () => {
         const result = await runGeckoDriver("130", { debug: true });
 
+        assert.calledOnceWith(startGeckoDriverStub, {
+            customGeckoDriverPath: "/driver/path",
+            port: 12345,
+            log: "debug",
+            spawnOpts: { windowsHide: true, detached: false },
+        });
         assert.calledOnceWith(pipeLogsWithPrefixStub, result.process, "[geckodriver@130] ");
     });
 

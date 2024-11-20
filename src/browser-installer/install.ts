@@ -96,17 +96,17 @@ export const installBrowsersWithDrivers = async (
 ): Promise<Record<string, Awaited<ForceInstallBinaryResult>>> => {
     const uniqBrowsers = _.uniqBy(browsersToInstall, b => `${b.browserName}@${b.browserVersion}`);
     const installPromises = [] as Promise<void>[];
-    const installBrowsersResult: Record<string, Awaited<ForceInstallBinaryResult>> = {};
+    const browsersInstallResult: Record<string, Awaited<ForceInstallBinaryResult>> = {};
 
     for (const { browserName, browserVersion } of uniqBrowsers) {
         installPromises.push(
             forceInstallBinaries(installBrowser, browserName, browserVersion).then(result => {
-                installBrowsersResult[`${browserName}@${browserVersion}`] = result;
+                browsersInstallResult[`${browserName}@${browserVersion}`] = result;
             }),
         );
     }
 
     await Promise.all(installPromises);
 
-    return installBrowsersResult;
+    return browsersInstallResult;
 };

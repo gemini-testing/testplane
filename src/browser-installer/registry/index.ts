@@ -85,7 +85,7 @@ const getBinaryVersions = (name: BinaryName, platform: BrowserPlatform): string[
 const hasBinaryVersion = (name: BinaryName, platform: BrowserPlatform, version: string): boolean =>
     getBinaryVersions(name, platform).includes(version);
 
-export const getMatchingDriverVersion = (
+export const getMatchedDriverVersion = (
     driverName: SupportedDriver,
     platform: BrowserPlatform,
     browserVersion: string,
@@ -105,9 +105,7 @@ export const getMatchingDriverVersion = (
             return null;
         }
 
-        const suitableBuildIdsSorted = suitableBuildIds.sort(semverVersionsComparator);
-
-        return suitableBuildIdsSorted[suitableBuildIdsSorted.length - 1];
+        return suitableBuildIds.sort(semverVersionsComparator).pop() as string;
     }
 
     if (driverName === Driver.GECKODRIVER) {
@@ -120,7 +118,7 @@ export const getMatchingDriverVersion = (
     return null;
 };
 
-export const getMatchingBrowserVersion = (
+export const getMatchedBrowserVersion = (
     browserName: SupportedBrowser,
     platform: BrowserPlatform,
     browserVersion: string,

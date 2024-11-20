@@ -43,7 +43,7 @@ describe("browser-installer/chrome", () => {
         await runChromeDriver("130");
 
         assert.calledOnceWith(installChromeDriverStub, "130");
-        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=10050"]);
+        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=10050", "--silent"]);
     });
 
     it("should wait for port to be active", async () => {
@@ -75,6 +75,7 @@ describe("browser-installer/chrome", () => {
     it("should pipe logs if debug is enabled", async () => {
         const result = await runChromeDriver("130", { debug: true });
 
+        assert.calledOnceWith(spawnStub, "/driver/path", ["--port=12345", "--verbose"]);
         assert.calledOnceWith(pipeLogsWithPrefixStub, result.process, "[chromedriver@130] ");
     });
 

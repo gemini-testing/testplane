@@ -14,7 +14,7 @@ export const runEdgeDriver = async (
     const edgeDriverPath = await installEdgeDriver(edgeVersion);
     const randomPort = await getPort();
 
-    const edgeDriver = spawn(edgeDriverPath, [`--port=${randomPort}`], {
+    const edgeDriver = spawn(edgeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,
         detached: false,
     });

@@ -15,7 +15,7 @@ describe("browser-installer/registry", () => {
     let progressBarRegisterStub: SinonStub;
     let loggerWarnStub: SinonStub;
 
-    const createRegisry_ = (contents: Record<string, Record<string, string>> = {}): typeof Registry => {
+    const createRegistry_ = (contents: Record<string, Record<string, string>> = {}): typeof Registry => {
         return proxyquire("../../../src/browser-installer/registry", {
             "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
             "fs-extra": { readJsonSync: () => contents, existsSync: () => true },
@@ -46,7 +46,7 @@ describe("browser-installer/registry", () => {
 
     describe("getBinaryPath", () => {
         it("should return binary path", async () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chrome_mac_arm: {
                     "115.0.5790.170": "../browsers/chrome",
@@ -59,7 +59,7 @@ describe("browser-installer/registry", () => {
         });
 
         it("should throw an error if browser is not installed", async () => {
-            registry = createRegisry_({});
+            registry = createRegistry_({});
 
             const fn = (): Promise<string> => registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "115");
 
@@ -68,7 +68,7 @@ describe("browser-installer/registry", () => {
 
         it("should throw an error if browser version is not installed", async () => {
             // eslint-disable-next-line camelcase
-            registry = createRegisry_({ chrome_mac_arm: {} });
+            registry = createRegistry_({ chrome_mac_arm: {} });
 
             const fn = (): Promise<string> => registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "120");
 
@@ -76,9 +76,9 @@ describe("browser-installer/registry", () => {
         });
     });
 
-    describe("getMatchingBrowserVersion", () => {
+    describe("getMatchedBrowserVersion", () => {
         it("should return matching latest chrome browser version", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chrome_mac_arm: {
                     "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
@@ -87,15 +87,15 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchingBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
         });
 
         it("should return matching latest firefox browser version", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 firefox_mac_arm: {
                     "stable_117.0b2": "../browsers/chrome-117-0b2",
@@ -104,15 +104,15 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117");
-            const versionFull = registry.getMatchingBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117.0");
+            const version = registry.getMatchedBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117");
+            const versionFull = registry.getMatchedBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117.0");
 
             assert.equal(version, "stable_117.0b9");
             assert.equal(versionFull, "stable_117.0b9");
         });
 
         it("should return null if no installed browser matching requirements", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chrome_mac_arm: {
                     "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
@@ -121,17 +121,17 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116");
-            const versionFull = registry.getMatchingBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116.0");
+            const version = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116");
+            const versionFull = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116.0");
 
             assert.equal(version, null);
             assert.equal(versionFull, null);
         });
     });
 
-    describe("getMatchingDriverVersion", () => {
+    describe("getMatchedDriverVersion", () => {
         it("should return matching chromedriver version", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chromedriver_mac_arm: {
                     "115.0.5790.170": "../drivers/chromedriver-115-0-5790-170",
@@ -140,19 +140,15 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingDriverVersion(Driver.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchingDriverVersion(
-                Driver.CHROMEDRIVER,
-                BrowserPlatform.MAC_ARM,
-                "115.0",
-            );
+            const version = registry.getMatchedDriverVersion(Driver.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(Driver.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
         });
 
         it("should return matching chromedriver version", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 edgedriver_mac_arm: {
                     "115.0.5790.170": "../drivers/edgedriver-115-0-5790-170",
@@ -161,15 +157,15 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchingDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
         });
 
         it("should return latest version for geckodriver", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 geckodriver_mac_arm: {
                     "0.33.0": "../drivers/geckodriver-33",
@@ -178,21 +174,21 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchingDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchingDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, "0.35.0");
             assert.equal(versionFull, "0.35.0");
         });
 
         it("should return null if matching version is not found", () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chromedriver_mac_arm: {},
             });
 
-            const version = registry.getMatchingDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchingDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, null);
             assert.equal(versionFull, null);
@@ -209,7 +205,7 @@ describe("browser-installer/registry", () => {
         });
 
         it("should not install binary if it is already installed", async () => {
-            registry = createRegisry_({
+            registry = createRegistry_({
                 // eslint-disable-next-line camelcase
                 chrome_mac_arm: {
                     "115.0.5320.180": "../browser/path",

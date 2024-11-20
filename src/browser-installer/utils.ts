@@ -60,16 +60,15 @@ export const getMilestone = (version: string | number): string => {
 };
 
 export const semverVersionsComparator = (a: string, b: string): number => {
-    const versionPartsA = a
-        .replaceAll(/[^\d.]/g, "")
-        .split(".")
-        .filter(Boolean)
-        .map(Number);
-    const versionPartsB = b
-        .replaceAll(/[^\d.]/g, "")
-        .split(".")
-        .filter(Boolean)
-        .map(Number);
+    const splitVersion = (version: string): number[] =>
+        version
+            .replaceAll(/[^\d.]/g, "")
+            .split(".")
+            .filter(Boolean)
+            .map(Number);
+
+    const versionPartsA = splitVersion(a);
+    const versionPartsB = splitVersion(b);
 
     for (let i = 0; i < Math.min(versionPartsA.length, versionPartsB.length); i++) {
         if (versionPartsA[i] !== versionPartsB[i]) {
@@ -91,7 +90,7 @@ export const normalizeChromeVersion = (version: string): string => {
         return versionParts.slice(0, 3).join(".");
     }
 
-    return getMilestone(version);
+    return versionParts[0];
 };
 
 export const getBrowserPlatform = (): BrowserPlatform => {
@@ -124,7 +123,7 @@ const getCacheDir = (envValueOverride = process.env.TESTPLANE_BROWSERS_PATH): st
 export const getRegistryPath = (envValueOverride?: string): string =>
     path.join(getCacheDir(envValueOverride), "registry.json");
 
-const getBrowsersDir = (): string => path.join(getCacheDir(), "browsers");
+export const getBrowsersDir = (): string => path.join(getCacheDir(), "browsers");
 const getDriversDir = (): string => path.join(getCacheDir(), "drivers");
 
 const getDriverDir = (driverName: string, driverVersion: string): string =>
@@ -137,9 +136,6 @@ export const getEdgeDriverDir = (driverVersion: string): string =>
 export const getChromiumDriverDir = (driverVersion: string): string =>
     getDriverDir("chromedriver", getBrowserPlatform() + "-" + driverVersion);
 export const getChromeDriverDir = (): string => getDriversDir(); // path is set by @puppeteer/browsers.install
-
-export const getFirefoxBrowserDir = (): string => getBrowsersDir(); // path is set by @puppeteer/browsers.install
-export const getChromeBrowserDir = (): string => getBrowsersDir(); // path is set by @puppeteer/browsers.install
 
 export const retryFetch = async (
     url: Parameters<typeof fetch>[0],
@@ -169,7 +165,7 @@ export const downloadFile = async (url: string, filePath: string): Promise<void>
     const response = await fetch(url);
 
     if (!response.ok || !response.body) {
-        throw new Error(`Unable to download file from ${url}`);
+        throw new Error(`Unable to download file from ${url}: ${response.statusText}`);
     }
 
     const stream = Readable.fromWeb(response.body as never).pipe(writeStream);

@@ -12,7 +12,7 @@ describe("browser-installer/firefox/browser", () => {
     let canDownloadStub: SinonStub;
 
     let getBinaryPathStub: SinonStub;
-    let getMatchingBrowserVersionStub: SinonStub;
+    let getMatchedBrowserVersionStub: SinonStub;
     let installBinaryStub: SinonStub;
 
     beforeEach(() => {
@@ -20,7 +20,7 @@ describe("browser-installer/firefox/browser", () => {
         canDownloadStub = sandbox.stub().resolves(true);
 
         getBinaryPathStub = sandbox.stub().returns(null);
-        getMatchingBrowserVersionStub = sandbox.stub().returns(null);
+        getMatchedBrowserVersionStub = sandbox.stub().returns(null);
         installBinaryStub = sandbox.stub();
 
         installFirefox = proxyquire("../../../../src/browser-installer/firefox/browser", {
@@ -30,7 +30,7 @@ describe("browser-installer/firefox/browser", () => {
             },
             "../registry": {
                 getBinaryPath: getBinaryPathStub,
-                getMatchingBrowserVersion: getMatchingBrowserVersionStub,
+                getMatchedBrowserVersion: getMatchedBrowserVersionStub,
                 installBinary: installBinaryStub,
             },
         }).installFirefox;
@@ -38,8 +38,8 @@ describe("browser-installer/firefox/browser", () => {
 
     afterEach(() => sandbox.restore());
 
-    it("should try to resolve browser path locally without 'force' flag", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("115.0");
+    it("should try to resolve browser path locally by default", async () => {
+        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("115.0");
         getBinaryPathStub.withArgs(Browser.FIREFOX, sinon.match.string, "115.0").returns("/browser/path");
 
         const binaryPath = await installFirefox("115");
@@ -49,35 +49,31 @@ describe("browser-installer/firefox/browser", () => {
     });
 
     it("should not try to resolve browser path locally with 'force' flag", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("stable_115.0");
-        getBinaryPathStub.withArgs(Browser.FIREFOX, sinon.match.string, "stable_115.0").returns("/browser/path");
-
+        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("stable_115.0");
         installBinaryStub
             .withArgs(Browser.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
-            .resolves("/new/browser/path");
+            .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installFirefox("115", { force: true });
 
-        assert.equal(binaryPath, "/new/browser/path");
+        assert.notCalled(getBinaryPathStub);
+        assert.equal(binaryPath, "/new/downloaded/browser/path");
     });
 
     it("should download browser if it is not downloaded", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
+        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
         installBinaryStub
             .withArgs(Browser.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
-            .resolves("/new/browser/path");
+            .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installFirefox("115");
 
-        assert.equal(binaryPath, "/new/browser/path");
+        assert.equal(binaryPath, "/new/downloaded/browser/path");
     });
 
     it("should throw an error if can't download the browser", async () => {
-        getMatchingBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
+        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
         canDownloadStub.resolves(false);
-        installBinaryStub
-            .withArgs(Browser.FIREFOX, sinon.match.string, "115.0.5678.170", sinon.match.func)
-            .resolves("/new/browser/path");
 
         await assert.isRejected(
             installFirefox("115"),

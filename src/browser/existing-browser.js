@@ -90,7 +90,7 @@ module.exports = class ExistingBrowser extends Browser {
         }
 
         // https://github.com/webdriverio/webdriverio/issues/11396
-        if (this._config.automationProtocol === "webdriver" && opts.disableAnimation) {
+        if (this._config.automationProtocol === WEBDRIVER_PROTOCOL && opts.disableAnimation) {
             await this._disableIframeAnimations();
         }
 
@@ -375,7 +375,7 @@ module.exports = class ExistingBrowser extends Browser {
     async _cleanupPageAnimations() {
         await this._cleanupFrameAnimations();
 
-        if (this._config.automationProtocol === "webdriver") {
+        if (this._config.automationProtocol === WEBDRIVER_PROTOCOL) {
             await this._cleanupIframeAnimations();
         }
     }

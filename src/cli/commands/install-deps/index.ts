@@ -3,7 +3,27 @@ import { CliCommands } from "../../constants";
 import logger from "../../../utils/logger";
 import { installBrowsersWithDrivers, BrowserInstallStatus } from "../../../browser-installer";
 
-const { INSTALL_BROWSERS: commandName } = CliCommands;
+const { INSTALL_DEPS: commandName } = CliCommands;
+
+type BrowsersInstallPerStatus = {
+    ok: Array<{ tag: string }>;
+    skip: Array<{ tag: string; reason: string }>;
+    error: Array<{ tag: string; reason: string }>;
+};
+
+const logResult = <T extends (typeof BrowserInstallStatus)[keyof typeof BrowserInstallStatus]>(
+    browsersInstallPerStatus: BrowsersInstallPerStatus,
+    logType: "log" | "warn" | "error",
+    status: T,
+    heading: string,
+    formatLine: (arg: BrowsersInstallPerStatus[T][number]) => string,
+): void => {
+    if (!browsersInstallPerStatus[status].length) {
+        return;
+    }
+
+    logger[logType]([heading, ...browsersInstallPerStatus[status].map(formatLine), ""].join("\n"));
+};
 
 export const registerCmd = (cliTool: typeof commander, testplane: Testplane): void => {
     cliTool
@@ -38,10 +58,10 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
 
                 const browsersInstallResult = await installBrowsersWithDrivers(browsersToInstall);
                 const browserTags = Object.keys(browsersInstallResult);
-                const browsersInstallPerStatus = {
-                    [BrowserInstallStatus.Ok]: [] as { tag: string }[],
-                    [BrowserInstallStatus.Skip]: [] as { tag: string; reason: string }[],
-                    [BrowserInstallStatus.Error]: [] as { tag: string; reason: string }[],
+                const browsersInstallPerStatus: BrowsersInstallPerStatus = {
+                    [BrowserInstallStatus.Ok]: [],
+                    [BrowserInstallStatus.Skip]: [],
+                    [BrowserInstallStatus.Error]: [],
                 };
 
                 for (const tag of browserTags) {
@@ -55,20 +75,8 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
                     }
                 }
 
-                const logResult = <T extends (typeof BrowserInstallStatus)[keyof typeof BrowserInstallStatus]>(
-                    logType: "log" | "warn" | "error",
-                    status: T,
-                    heading: string,
-                    formatLine: (arg: (typeof browsersInstallPerStatus)[T][number]) => string,
-                ): void => {
-                    if (!browsersInstallPerStatus[status].length) {
-                        return;
-                    }
-
-                    logger[logType]([heading, ...browsersInstallPerStatus[status].map(formatLine), ""].join("\n"));
-                };
-
                 logResult(
+                    browsersInstallPerStatus,
                     "log",
                     BrowserInstallStatus.Ok,
                     "These browsers are downloaded successfully:",
@@ -76,6 +84,7 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
                 );
 
                 logResult(
+                    browsersInstallPerStatus,
                     "warn",
                     BrowserInstallStatus.Skip,
                     "Browser install for these browsers was skipped:",
@@ -83,6 +92,7 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
                 );
 
                 logResult(
+                    browsersInstallPerStatus,
                     "error",
                     BrowserInstallStatus.Error,
                     "An error occured while trying to download these browsers:",

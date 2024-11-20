@@ -3,12 +3,12 @@ import { MIN_CHROME_FOR_TESTING_VERSION } from "../constants";
 import {
     browserInstallerDebug,
     getBrowserPlatform,
-    getChromeBrowserDir,
+    getBrowsersDir,
     getMilestone,
     Browser,
     type DownloadProgressCallback,
 } from "../utils";
-import { getBinaryPath, getMatchingBrowserVersion, installBinary } from "../registry";
+import { getBinaryPath, getMatchedBrowserVersion, installBinary } from "../registry";
 import { normalizeChromeVersion } from "../utils";
 
 export const installChrome = async (version: string, { force = false } = {}): Promise<string> => {
@@ -23,10 +23,10 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
     }
 
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = getMatchingBrowserVersion(Browser.CHROME, platform, version);
+    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.CHROME, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
-        browserInstallerDebug(`skip installing chrome@${version}`);
+        browserInstallerDebug(`A locally installed chrome@${version} browser was found. Skipping the installation`);
 
         return getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
     }
@@ -34,7 +34,7 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
     const normalizedVersion = normalizeChromeVersion(version);
     const buildId = await resolveBuildId(Browser.CHROME, platform, normalizedVersion);
 
-    const cacheDir = getChromeBrowserDir();
+    const cacheDir = getBrowsersDir();
     const canBeInstalled = await canDownload({ browser: Browser.CHROME, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
