@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.21.1](https://github.com/gemini-testing/testplane/compare/v8.21.0...v8.21.1) (2024-11-21)
+
+
+### Bug Fixes
+
+* remove extra warning on code snippet extend error ([714434a](https://github.com/gemini-testing/testplane/commit/714434a401848c1c60f5c9ddd6da6a5e075cccbe))
+
 ## [8.21.0](https://github.com/gemini-testing/testplane/compare/v8.20.6...v8.21.0) (2024-11-19)
 
 
