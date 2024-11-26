@@ -2,24 +2,37 @@
 
 const crypto = require("crypto");
 const webdriverio = require("webdriverio");
-const logger = require("src/utils/logger");
+const proxyquire = require("proxyquire");
 const signalHandler = require("src/signal-handler");
 const history = require("src/browser/history");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const RuntimeConfig = require("src/config/runtime-config");
-const { mkNewBrowser_: mkBrowser_, mkSessionStub_ } = require("./utils");
 
 describe("NewBrowser", () => {
     const sandbox = sinon.createSandbox();
     let session;
+    let mkBrowser_, mkSessionStub_, mkWdPool_, installBrowserStub, warnStub;
 
     beforeEach(() => {
+        installBrowserStub = sandbox.stub().resolves("/browser/path");
+        warnStub = sandbox.stub();
+
+        ({
+            mkNewBrowser_: mkBrowser_,
+            mkSessionStub_,
+            mkWdPool_,
+        } = proxyquire("./utils", {
+            "src/browser/new-browser": proxyquire("src/browser/new-browser", {
+                "../browser-installer": { installBrowser: installBrowserStub },
+                "../utils/logger": { warn: warnStub },
+            }),
+        }));
+
         session = mkSessionStub_();
-        sandbox.stub(logger);
         sandbox.stub(webdriverio, "remote").resolves(session);
 
-        sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined });
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined, local: undefined });
     });
 
     afterEach(() => sandbox.restore());
@@ -138,7 +151,7 @@ describe("NewBrowser", () => {
                     desiredCapabilities: { browserName: "safari" },
                 }).init();
 
-                assert.calledOnceWith(logger.warn, "WARNING: Headless setting is not supported for safari browserName");
+                assert.calledOnceWith(warnStub, "WARNING: Headless setting is not supported for safari browserName");
             });
         });
 
@@ -224,7 +237,7 @@ describe("NewBrowser", () => {
 
             it("should call user handler from config", async () => {
                 const request = { headers: {} };
-                const transformRequestStub = sinon.stub().returns(request);
+                const transformRequestStub = sandbox.stub().returns(request);
 
                 await mkBrowser_({ transformRequest: transformRequestStub }).init();
 
@@ -265,7 +278,7 @@ describe("NewBrowser", () => {
 
         describe("transformResponse option", () => {
             it("should call user handler from config", async () => {
-                const transformResponseStub = sinon.stub();
+                const transformResponseStub = sandbox.stub();
                 const response = {};
 
                 await mkBrowser_({ transformResponse: transformResponseStub }).init();
@@ -339,7 +352,7 @@ describe("NewBrowser", () => {
                     session.setTimeout.withArgs({ pageLoad: 100500 }).throws(new Error("o.O"));
 
                     await assert.isRejected(browser.init(), "o.O");
-                    assert.notCalled(logger.warn);
+                    assert.notCalled(warnStub);
                 });
             });
 
@@ -349,7 +362,75 @@ describe("NewBrowser", () => {
                 session.setTimeout.withArgs({ pageLoad: 100500 }).throws(new Error("o.O"));
 
                 await assert.isFulfilled(browser.init());
-                assert.calledOnceWith(logger.warn, "WARNING: Can not set page load timeout: o.O");
+                assert.calledOnceWith(warnStub, "WARNING: Can not set page load timeout: o.O");
+            });
+        });
+
+        describe("should use local grid url", () => {
+            it("if gridUrl is 'local'", async () => {
+                installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
+                RuntimeConfig.getInstance.returns({ local: false });
+                const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
+                const browser = mkBrowser_(
+                    {
+                        gridUrl: "local",
+                        automationProtocol: "webdriver",
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                        },
+                    },
+                    { wdPool },
+                );
+
+                await browser.init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    protocol: "http",
+                    hostname: "localhost",
+                    port: 12345,
+                    path: "/",
+                    capabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                        "goog:chromeOptions": {
+                            binary: "/browser/path/chrome/115.0",
+                        },
+                    },
+                });
+            });
+
+            it("if local cli arg is set", async () => {
+                installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
+                RuntimeConfig.getInstance.returns({ local: true });
+                const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
+                const browser = mkBrowser_(
+                    {
+                        gridUrl: "http://localhost:4444/wd/hub",
+                        automationProtocol: "webdriver",
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                        },
+                    },
+                    { wdPool },
+                );
+
+                await browser.init();
+
+                assert.calledWithMatch(webdriverio.remote, {
+                    protocol: "http",
+                    hostname: "localhost",
+                    port: 12345,
+                    path: "/",
+                    capabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                        "goog:chromeOptions": {
+                            binary: "/browser/path/chrome/115.0",
+                        },
+                    },
+                });
             });
         });
     });
@@ -390,6 +471,55 @@ describe("NewBrowser", () => {
 
             assert.propertyVal(session.options, "connectionRetryTimeout", 100500);
         });
+
+        it("should free webdriver session", async () => {
+            RuntimeConfig.getInstance.returns({ local: false });
+            const wdProcess = { gridUrl: "http://localhost:12345", free: sandbox.stub(), kill: sandbox.stub() };
+            const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+            const browser = mkBrowser_(
+                {
+                    gridUrl: "local",
+                    automationProtocol: "webdriver",
+                    desiredCapabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                    },
+                },
+                { wdPool },
+            );
+
+            await browser.init();
+
+            await browser.quit();
+
+            assert.notCalled(wdProcess.kill);
+            assert.calledOnce(wdProcess.free);
+        });
+
+        it("should kill webdriver session if cant quit normally", async () => {
+            RuntimeConfig.getInstance.returns({ local: false });
+            session.deleteSession.rejects(new Error("failed end"));
+            const wdProcess = { gridUrl: "http://localhost:12345", free: sandbox.stub(), kill: sandbox.stub() };
+            const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+            const browser = mkBrowser_(
+                {
+                    gridUrl: "local",
+                    automationProtocol: "webdriver",
+                    desiredCapabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                    },
+                },
+                { wdPool },
+            );
+
+            await browser.init();
+
+            await browser.quit();
+
+            assert.notCalled(wdProcess.free);
+            assert.calledOnce(wdProcess.kill);
+        });
     });
 
     describe("sessionId", () => {
@@ -409,7 +539,7 @@ describe("NewBrowser", () => {
 
             await browser.quit();
 
-            assert.called(logger.warn);
+            assert.called(warnStub);
         });
     });
 });

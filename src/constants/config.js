@@ -10,4 +10,5 @@ module.exports = {
     },
     NODEJS_TEST_RUN_ENV: "nodejs",
     BROWSER_TEST_RUN_ENV: "browser",
+    LOCAL_GRID_URL: "local",
 };

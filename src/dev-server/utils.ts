@@ -2,7 +2,7 @@ import { pipeline, Transform, TransformCallback } from "stream";
 import path from "path";
 import fs from "fs";
 import chalk from "chalk";
-import type { ChildProcessWithoutNullStreams } from "child_process";
+import type { ChildProcess, ChildProcessWithoutNullStreams } from "child_process";
 import logger from "../utils/logger";
 import type { Config } from "../config";
 
@@ -55,12 +55,21 @@ class WithPrefixTransformer extends Transform {
     }
 }
 
-export const pipeLogsWithPrefix = (childProcess: ChildProcessWithoutNullStreams, prefix: string): void => {
+export const pipeLogsWithPrefix = (
+    childProcess: ChildProcess | ChildProcessWithoutNullStreams,
+    prefix: string,
+): void => {
     const logOnErrorCb = (error: Error | null): void => {
         if (error) {
             logger.error("Got an error trying to pipeline dev server logs:", error.message);
         }
     };
+
+    if (!childProcess.stdout || !childProcess.stderr) {
+        logger.error("Couldn't pipe child process logs as it seems to not be spawned successfully");
+
+        return;
+    }
 
     pipeline(childProcess.stdout, new WithPrefixTransformer(prefix), process.stdout, logOnErrorCb);
     pipeline(childProcess.stderr, new WithPrefixTransformer(prefix), process.stderr, logOnErrorCb);

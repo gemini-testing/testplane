@@ -9,9 +9,11 @@ import signalHandler from "../signal-handler";
 import { runGroup } from "./history";
 import { warn } from "../utils/logger";
 import { getInstance } from "../config/runtime-config";
-import { DEVTOOLS_PROTOCOL } from "../constants/config";
+import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL, LOCAL_GRID_URL } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
+import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
+import { installBrowser, type SupportedBrowser } from "../browser-installer";
 
 export type CapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
 export type HeadlessBrowserOptions = Record<
@@ -41,6 +43,10 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
         getArgs: (): string[] => ["--headless"],
     },
     edge: {
+        capabilityName: "ms:edgeOptions",
+        getArgs: (): string[] => ["--headless"],
+    },
+    microsoftedge: {
         capabilityName: "ms:edgeOptions",
         getArgs: (): string[] => ["--headless"],
     },
@@ -77,13 +83,17 @@ export class NewBrowser extends Browser {
         try {
             this.setHttpTimeout(this._config.sessionQuitTimeout);
             await this._session!.deleteSession();
+            this._wdProcess?.free();
         } catch (e) {
             warn(`WARNING: Can not close session: ${(e as Error).message}`);
+            this._wdProcess?.kill();
+        } finally {
+            this._wdProcess = null;
         }
     }
 
-    protected _createSession(): Promise<WebdriverIO.Browser> {
-        const sessionOpts = this._getSessionOpts();
+    protected async _createSession(): Promise<WebdriverIO.Browser> {
+        const sessionOpts = await this._getSessionOpts();
 
         return remote(sessionOpts);
     }
@@ -108,10 +118,26 @@ export class NewBrowser extends Browser {
         }
     }
 
-    protected _getSessionOpts(): RemoteOptions {
+    protected _isLocalGridUrl(): boolean {
+        return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
+    }
+
+    protected async _getSessionOpts(): Promise<RemoteOptions> {
         const config = this._config;
-        const gridUri = new URI(config.gridUrl);
-        const capabilities = this._extendCapabilities(config);
+
+        let gridUrl;
+
+        if (this._isLocalGridUrl() && config.automationProtocol === WEBDRIVER_PROTOCOL) {
+            gridUrl = await this._getLocalWebdriverGridUrl();
+        } else {
+            // if automationProtocol is not "webdriver", fallback to default grid url from "local"
+            // because in "devtools" protocol we dont need gridUrl, but it still has to be valid URL
+            gridUrl = config.gridUrl === LOCAL_GRID_URL ? DEFAULT_GRID_URL : config.gridUrl;
+        }
+
+        const gridUri = new URI(gridUrl);
+
+        const capabilities = await this._extendCapabilities(config);
         const { devtools } = getInstance();
 
         const options = {
@@ -133,7 +159,7 @@ export class NewBrowser extends Browser {
         return options as RemoteOptions;
     }
 
-    protected _extendCapabilities(config: BrowserConfig): WebdriverIO.Capabilities {
+    protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
         const capabilitiesExtendedByVersion = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
@@ -141,7 +167,10 @@ export class NewBrowser extends Browser {
             config.headless,
             capabilitiesExtendedByVersion!,
         );
-        return capabilitiesWithAddedHeadless;
+
+        return this._isLocalGridUrl()
+            ? this._addExecutablePath(config, capabilitiesWithAddedHeadless)
+            : Promise.resolve(capabilitiesWithAddedHeadless);
     }
 
     protected _addHeadlessCapability(
@@ -151,8 +180,8 @@ export class NewBrowser extends Browser {
         if (!headless) {
             return capabilities;
         }
-        const capabilitySettings =
-            headlessBrowserOptions[capabilities.browserName as keyof typeof headlessBrowserOptions];
+        const browserNameLowerCase = capabilities.browserName?.toLocaleLowerCase() as string;
+        const capabilitySettings = headlessBrowserOptions[browserNameLowerCase];
         if (!capabilitySettings) {
             warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
             return capabilities;
@@ -173,6 +202,43 @@ export class NewBrowser extends Browser {
             desiredCapabilities!.browserVersion || sessionEnvFlags.isW3C ? "browserVersion" : "version";
 
         return assign({}, desiredCapabilities, { [versionKeyName]: this.version });
+    }
+
+    protected async _getLocalWebdriverGridUrl(): Promise<string> {
+        if (!this._wdPool) {
+            throw new Error("webdriver pool is not defined");
+        }
+
+        if (this._wdProcess) {
+            return this._wdProcess.gridUrl;
+        }
+
+        this._wdProcess = await this._wdPool.getWebdriver(
+            this._config.desiredCapabilities?.browserName as SupportedBrowser,
+            this._config.desiredCapabilities?.browserVersion as string,
+            { debug: this._config.system.debug },
+        );
+
+        return this._wdProcess.gridUrl;
+    }
+
+    protected async _addExecutablePath(
+        config: BrowserConfig,
+        capabilities: WebdriverIO.Capabilities,
+    ): Promise<WebdriverIO.Capabilities> {
+        const browserNameLowerCase = config.desiredCapabilities?.browserName?.toLowerCase() as string;
+        const executablePath = await installBrowser(
+            this._config.desiredCapabilities?.browserName as SupportedBrowser,
+            this._config.desiredCapabilities?.browserVersion as string,
+        );
+
+        if (executablePath) {
+            const { capabilityName } = headlessBrowserOptions[browserNameLowerCase];
+            capabilities[capabilityName] ||= {};
+            capabilities[capabilityName]!.binary ||= executablePath;
+        }
+
+        return capabilities;
     }
 
     protected _getGridHost(url: URI): string {

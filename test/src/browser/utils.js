@@ -49,7 +49,26 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkNewBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", state: {} }) => {
+exports.mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
+    getWebdriver: sinon
+        .stub()
+        .named("getWebdriver")
+        .resolves({
+            gridUrl,
+            free: sinon.stub().named("free"),
+            kill: sinon.stub().named("kill"),
+        }),
+});
+
+exports.mkNewBrowser_ = (
+    configOpts,
+    opts = {
+        id: "browser",
+        version: "1.0",
+        state: {},
+        wdPool: exports.mkWdPool_(),
+    },
+) => {
     return NewBrowser.create(createBrowserConfig_(configOpts), opts);
 };
 

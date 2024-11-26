@@ -1,0 +1,13 @@
+export const CHROMEDRIVER_STORAGE_API = "https://chromedriver.storage.googleapis.com";
+export const GECKODRIVER_CARGO_TOML = "https://raw.githubusercontent.com/mozilla/geckodriver/release/Cargo.toml";
+export const MSEDGEDRIVER_API = "https://msedgedriver.azureedge.net";
+export const SAFARIDRIVER_PATH = "/usr/bin/safaridriver";
+export const MIN_CHROME_FOR_TESTING_VERSION = 113;
+export const MIN_CHROMEDRIVER_FOR_TESTING_VERSION = 115;
+export const MIN_CHROMEDRIVER_MAC_ARM_NEW_ARCHIVE_NAME = 106;
+export const MIN_CHROMIUM_MAC_ARM_VERSION = 93;
+export const MIN_CHROMIUM_VERSION = 73;
+export const MIN_EDGEDRIVER_VERSION = 94;
+export const DRIVER_WAIT_TIMEOUT = 10 * 1000; // 10s
+export const BYTES_PER_KILOBYTE = 1 << 10; // eslint-disable-line no-bitwise
+export const BYTES_PER_MEGABYTE = BYTES_PER_KILOBYTE << 10; // eslint-disable-line no-bitwise

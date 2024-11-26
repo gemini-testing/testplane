@@ -67,6 +67,7 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
         .option("--repl-before-test [type]", "open repl interface before test run", Boolean, false)
         .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
         .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
+        .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
         .arguments("[paths...]")
         .action(async (paths: string[]) => {
             try {
@@ -83,6 +84,7 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
                     replBeforeTest,
                     replOnFail,
                     devtools,
+                    local,
                 } = program;
 
                 await handleRequires(requireModules);
@@ -101,6 +103,7 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
                         onFail: replOnFail,
                     },
                     devtools: devtools || false,
+                    local: local || false,
                 });
 
                 process.exit(isTestsSuccess ? 0 : 1);
