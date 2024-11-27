@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.22.2](https://github.com/gemini-testing/testplane/compare/v8.22.1...v8.22.2) (2024-11-27)
+
+
+### Bug Fixes
+
+* export runnable types ([2d1005e](https://github.com/gemini-testing/testplane/commit/2d1005e2cfd0d1afc71d71f67f3d60f9bb65c518))
+
 ### [8.22.1](https://github.com/gemini-testing/testplane/compare/v8.22.0...v8.22.1) (2024-11-27)
 
 
