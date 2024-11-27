@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.22.1](https://github.com/gemini-testing/testplane/compare/v8.22.0...v8.22.1) (2024-11-27)
+
+
+### Bug Fixes
+
+* correctly specify types for "mochaOpts" and "patternsOnReject" ([87b7351](https://github.com/gemini-testing/testplane/commit/87b73511c5fe49dd217a8b7b192a3e8ca1f31daa))
+* speed up install deps ([c3a362a](https://github.com/gemini-testing/testplane/commit/c3a362ad1553970c3802385441f900cae56c2573))
+
 ## [8.22.0](https://github.com/gemini-testing/testplane/compare/v8.21.1...v8.22.0) (2024-11-27)
 
 
