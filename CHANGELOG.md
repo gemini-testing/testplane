@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.22.0](https://github.com/gemini-testing/testplane/compare/v8.21.1...v8.22.0) (2024-11-27)
+
+
+### Features
+
+* auto browser download ([#1029](https://github.com/gemini-testing/testplane/issues/1029)) ([8229698](https://github.com/gemini-testing/testplane/commit/822969891beea9849c6422f0bc87551f6aabef74))
+
 ### [8.21.1](https://github.com/gemini-testing/testplane/compare/v8.21.0...v8.21.1) (2024-11-21)
 
 
