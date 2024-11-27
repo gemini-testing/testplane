@@ -20,6 +20,7 @@ export type {
     HermioneCtx,
     GlobalHelper,
     TestplaneCtx,
+    TestFunction,
     TestFunctionCtx,
 } from "./types";
 export type { Config } from "./config";
@@ -34,6 +35,7 @@ export type {
 export type { StatsResult } from "./stats";
 
 import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
+export type { TestDefinition, SuiteDefinition, TestHookDefinition };
 
 declare global {
     /* eslint-disable no-var */
