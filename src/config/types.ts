@@ -128,15 +128,8 @@ export interface ExpectOptsConfig {
     interval: number;
 }
 
-export interface MochaOpts {
-    /** milliseconds to wait before considering a test slow. */
-    slow?: number;
-
-    /** timeout in milliseconds or time string like '1s'. */
-    timeout?: number;
-
-    /** string or regexp to filter tests with. */
-    grep?: string | RegExp;
+export interface MochaOpts extends Omit<Mocha.MochaOptions, "ui"> {
+    ui?: string | ((suite: Mocha.Suite) => void);
 }
 
 export interface SystemConfig {
@@ -144,7 +137,7 @@ export interface SystemConfig {
     mochaOpts: MochaOpts;
     expectOpts: ExpectOptsConfig;
     ctx: { [name: string]: unknown };
-    patternsOnReject: Array<string>;
+    patternsOnReject: Array<string | RegExp>;
     workers: number;
     testsPerWorker: number;
     diffColor: string;
