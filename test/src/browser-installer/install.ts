@@ -17,6 +17,9 @@ describe("browser-installer/install", () => {
     let installLatestGeckoDriverStub: SinonStub;
     let installEdgeDriverStub: SinonStub;
 
+    let isUbuntuStub: SinonStub;
+    let installUbuntuPackageDependenciesStub: SinonStub;
+
     beforeEach(() => {
         installChromeStub = sandbox.stub();
         installChromeDriverStub = sandbox.stub();
@@ -24,10 +27,17 @@ describe("browser-installer/install", () => {
         installLatestGeckoDriverStub = sandbox.stub();
         installEdgeDriverStub = sandbox.stub();
 
+        isUbuntuStub = sandbox.stub().resolves(false);
+        installUbuntuPackageDependenciesStub = sandbox.stub().resolves();
+
         const installer = proxyquire("../../../src/browser-installer/install", {
             "./chrome": { installChrome: installChromeStub, installChromeDriver: installChromeDriverStub },
             "./edge": { installEdgeDriver: installEdgeDriverStub },
             "./firefox": { installFirefox: installFirefoxStub, installLatestGeckoDriver: installLatestGeckoDriverStub },
+            "./ubuntu-packages": {
+                isUbuntu: isUbuntuStub,
+                installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub,
+            },
         });
 
         installBrowser = installer.installBrowser;
@@ -36,88 +46,128 @@ describe("browser-installer/install", () => {
 
     afterEach(() => sandbox.restore());
 
-    [true, false].forEach(force => {
-        describe(`installBrowser, force: ${force}`, () => {
-            describe("chrome", () => {
-                it("should install browser", async () => {
-                    installChromeStub.withArgs("115").resolves("/browser/path");
+    describe(`installBrowser`, () => {
+        [true, false].forEach(force => {
+            describe(`force: ${force}`, () => {
+                describe("chrome", () => {
+                    it("should install browser", async () => {
+                        installChromeStub.withArgs("115").resolves("/browser/path");
 
-                    const binaryPath = await installBrowser("chrome", "115", { force });
+                        const binaryPath = await installBrowser("chrome", "115", { force });
 
-                    assert.equal(binaryPath, "/browser/path");
-                    assert.calledOnceWith(installChromeStub, "115", { force });
-                    assert.notCalled(installChromeDriverStub);
+                        assert.equal(binaryPath, "/browser/path");
+                        assert.calledOnceWith(installChromeStub, "115", { force });
+                        assert.notCalled(installChromeDriverStub);
+                    });
+
+                    it("should install browser with webdriver", async () => {
+                        installChromeStub.withArgs("115").resolves("/browser/path");
+
+                        const binaryPath = await installBrowser("chrome", "115", {
+                            force,
+                            shouldInstallWebDriver: true,
+                        });
+
+                        assert.equal(binaryPath, "/browser/path");
+                        assert.calledOnceWith(installChromeStub, "115", { force });
+                        assert.calledOnceWith(installChromeDriverStub, "115", { force });
+                    });
                 });
 
-                it("should install browser with webdriver", async () => {
-                    installChromeStub.withArgs("115").resolves("/browser/path");
+                describe("firefox", () => {
+                    it("should install browser", async () => {
+                        installFirefoxStub.withArgs("115").resolves("/browser/path");
 
-                    const binaryPath = await installBrowser("chrome", "115", { force, installWebDriver: true });
+                        const binaryPath = await installBrowser("firefox", "115", { force });
 
-                    assert.equal(binaryPath, "/browser/path");
-                    assert.calledOnceWith(installChromeStub, "115", { force });
-                    assert.calledOnceWith(installChromeDriverStub, "115", { force });
+                        assert.equal(binaryPath, "/browser/path");
+                        assert.calledOnceWith(installFirefoxStub, "115", { force });
+                        assert.notCalled(installLatestGeckoDriverStub);
+                    });
+
+                    it("should install browser with webdriver", async () => {
+                        installFirefoxStub.withArgs("115").resolves("/browser/path");
+
+                        const binaryPath = await installBrowser("firefox", "115", {
+                            force,
+                            shouldInstallWebDriver: true,
+                        });
+
+                        assert.equal(binaryPath, "/browser/path");
+                        assert.calledOnceWith(installFirefoxStub, "115", { force });
+                        assert.calledOnceWith(installLatestGeckoDriverStub, "115", { force });
+                    });
+                });
+
+                describe("edge", () => {
+                    it("should return null", async () => {
+                        const binaryPath = await installBrowser("MicrosoftEdge", "115", { force });
+
+                        assert.equal(binaryPath, null);
+                        assert.notCalled(installEdgeDriverStub);
+                    });
+
+                    it("should install webdriver", async () => {
+                        const binaryPath = await installBrowser("MicrosoftEdge", "115", {
+                            force,
+                            shouldInstallWebDriver: true,
+                        });
+
+                        assert.equal(binaryPath, null);
+                        assert.calledOnceWith(installEdgeDriverStub, "115", { force });
+                    });
+                });
+
+                describe("safari", () => {
+                    it("should return null", async () => {
+                        const binaryPath = await installBrowser("safari", "115", {
+                            force,
+                            shouldInstallWebDriver: true,
+                        });
+
+                        assert.equal(binaryPath, null);
+                    });
+                });
+
+                it("should throw exception on unsupported browser name", async () => {
+                    await assert.isRejected(
+                        installBrowser("foobar", "115", { force }),
+                        /Couldn't install browser 'foobar', as it is not supported/,
+                    );
+                });
+
+                it("should throw exception on empty browser version", async () => {
+                    await assert.isRejected(
+                        installBrowser("chrome", "", { force }),
+                        /Couldn't install browser 'chrome' because it has invalid version: ''/,
+                    );
                 });
             });
+        });
 
-            describe("firefox", () => {
-                it("should install browser", async () => {
-                    installFirefoxStub.withArgs("115").resolves("/browser/path");
+        ["chrome", "firefox"].forEach(browser => {
+            it(`should not install ubuntu dependencies if flag is unset for ${browser}`, async () => {
+                isUbuntuStub.resolves(true);
 
-                    const binaryPath = await installBrowser("firefox", "115", { force });
+                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: false });
 
-                    assert.equal(binaryPath, "/browser/path");
-                    assert.calledOnceWith(installFirefoxStub, "115", { force });
-                    assert.notCalled(installLatestGeckoDriverStub);
-                });
-
-                it("should install browser with webdriver", async () => {
-                    installFirefoxStub.withArgs("115").resolves("/browser/path");
-
-                    const binaryPath = await installBrowser("firefox", "115", { force, installWebDriver: true });
-
-                    assert.equal(binaryPath, "/browser/path");
-                    assert.calledOnceWith(installFirefoxStub, "115", { force });
-                    assert.calledOnceWith(installLatestGeckoDriverStub, "115", { force });
-                });
+                assert.notCalled(installUbuntuPackageDependenciesStub);
             });
 
-            describe("edge", () => {
-                it("should return null", async () => {
-                    const binaryPath = await installBrowser("MicrosoftEdge", "115", { force });
+            it(`should not install ubuntu dependencies if its not ubuntu for ${browser}`, async () => {
+                isUbuntuStub.resolves(false);
 
-                    assert.equal(binaryPath, null);
-                    assert.notCalled(installEdgeDriverStub);
-                });
+                await installBrowser(browser, "115");
 
-                it("should install webdriver", async () => {
-                    const binaryPath = await installBrowser("MicrosoftEdge", "115", { force, installWebDriver: true });
-
-                    assert.equal(binaryPath, null);
-                    assert.calledOnceWith(installEdgeDriverStub, "115", { force });
-                });
+                assert.notCalled(installUbuntuPackageDependenciesStub);
             });
 
-            describe("safari", () => {
-                it("should return null", async () => {
-                    const binaryPath = await installBrowser("safari", "115", { force, installWebDriver: true });
+            it(`should install ubuntu dependencies by default if its ubuntu for ${browser}`, async () => {
+                isUbuntuStub.resolves(true);
 
-                    assert.equal(binaryPath, null);
-                });
-            });
+                await installBrowser(browser, "115");
 
-            it("should throw exception on unsupported browser name", async () => {
-                await assert.isRejected(
-                    installBrowser("foobar", "115", { force }),
-                    /Couldn't install browser 'foobar', as it is not supported/,
-                );
-            });
-
-            it("should throw exception on empty browser version", async () => {
-                await assert.isRejected(
-                    installBrowser("chrome", "", { force }),
-                    /Couldn't install browser 'chrome' because it has invalid version: ''/,
-                );
+                assert.calledOnce(installUbuntuPackageDependenciesStub);
             });
         });
     });
