@@ -6,7 +6,7 @@ import _ from "lodash";
 export const installBrowser = async (
     browserName?: string,
     browserVersion?: string,
-    { force = false, installWebDriver = false } = {},
+    { force = false, shouldInstallWebDriver = false, shouldInstallUbuntuPackages = true } = {},
 ): Promise<string | null> => {
     const unsupportedBrowserError = new Error(
         [
@@ -25,28 +25,30 @@ export const installBrowser = async (
         );
     }
 
+    const { isUbuntu, installUbuntuPackageDependencies } = await import("./ubuntu-packages");
+
+    const needToInstallUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
+
     if (/chrome/i.test(browserName)) {
         const { installChrome, installChromeDriver } = await import("./chrome");
 
-        return installWebDriver
-            ? await Promise.all([
-                  installChrome(browserVersion, { force }),
-                  installChromeDriver(browserVersion, { force }),
-              ]).then(binaries => binaries[0])
-            : installChrome(browserVersion, { force });
+        return await Promise.all([
+            installChrome(browserVersion, { force }),
+            shouldInstallWebDriver && installChromeDriver(browserVersion, { force }),
+            needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
+        ]).then(result => result[0]);
     } else if (/firefox/i.test(browserName)) {
         const { installFirefox, installLatestGeckoDriver } = await import("./firefox");
 
-        return installWebDriver
-            ? await Promise.all([
-                  installFirefox(browserVersion, { force }),
-                  installLatestGeckoDriver(browserVersion, { force }),
-              ]).then(binaries => binaries[0])
-            : installFirefox(browserVersion, { force });
+        return await Promise.all([
+            installFirefox(browserVersion, { force }),
+            shouldInstallWebDriver && installLatestGeckoDriver(browserVersion, { force }),
+            needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
+        ]).then(result => result[0]);
     } else if (/edge/i.test(browserName)) {
         const { installEdgeDriver } = await import("./edge");
 
-        if (installWebDriver) {
+        if (shouldInstallWebDriver) {
             await installEdgeDriver(browserVersion, { force });
         }
 
@@ -79,7 +81,7 @@ const forceInstallBinaries = async (
     browserName?: string,
     browserVersion?: string,
 ): ForceInstallBinaryResult => {
-    return installFn(browserName, browserVersion, { force: true, installWebDriver: true })
+    return installFn(browserName, browserVersion, { force: true, shouldInstallWebDriver: true })
         .then(successResult => {
             return successResult
                 ? { status: BrowserInstallStatus.Ok }

@@ -6,6 +6,7 @@
         "src/**/*.test.ts",
         "src/browser/client-scripts",
         "src/bundle/cjs",
+        "src/collect-ubuntu-browser-dependencies",
         "src/runner/browser-env/vite/browser-modules"
     ],
     "compilerOptions": {

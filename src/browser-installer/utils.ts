@@ -124,6 +124,7 @@ export const getRegistryPath = (envValueOverride?: string): string =>
     path.join(getCacheDir(envValueOverride), "registry.json");
 
 export const getBrowsersDir = (): string => path.join(getCacheDir(), "browsers");
+export const getUbuntuPackagesDir = (): string => path.join(getCacheDir(), "packages");
 const getDriversDir = (): string => path.join(getCacheDir(), "drivers");
 
 const getDriverDir = (driverName: string, driverVersion: string): string =>
