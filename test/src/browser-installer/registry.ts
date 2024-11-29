@@ -9,7 +9,7 @@ describe("browser-installer/registry", () => {
 
     let registry: typeof Registry;
 
-    let readJsonSyncStub: SinonStub;
+    let readJSONSyncStub: SinonStub;
     let outputJSONSyncStub: SinonStub;
     let existsSyncStub: SinonStub;
     let progressBarRegisterStub: SinonStub;
@@ -18,13 +18,13 @@ describe("browser-installer/registry", () => {
     const createRegistry_ = (contents: Record<string, Record<string, string>> = {}): typeof Registry => {
         return proxyquire("../../../src/browser-installer/registry", {
             "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
-            "fs-extra": { readJsonSync: () => contents, existsSync: () => true },
+            "fs-extra": { readJSONSync: () => contents, existsSync: () => true },
             "../../utils/logger": { warn: loggerWarnStub },
         });
     };
 
     beforeEach(() => {
-        readJsonSyncStub = sandbox.stub().returns({});
+        readJSONSyncStub = sandbox.stub().returns({});
         outputJSONSyncStub = sandbox.stub();
         existsSyncStub = sandbox.stub().returns(false);
         progressBarRegisterStub = sandbox.stub();
@@ -35,7 +35,7 @@ describe("browser-installer/registry", () => {
             "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
             "../../utils/logger": { warn: loggerWarnStub },
             "fs-extra": {
-                readJsonSync: readJsonSyncStub,
+                readJSONSync: readJSONSyncStub,
                 outputJSONSync: outputJSONSyncStub,
                 existsSync: existsSyncStub,
             },

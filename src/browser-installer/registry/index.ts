@@ -1,5 +1,5 @@
 import type { BrowserPlatform } from "@puppeteer/browsers";
-import { readJsonSync, outputJSONSync, existsSync } from "fs-extra";
+import { readJSONSync, outputJSONSync, existsSync } from "fs-extra";
 import path from "path";
 import {
     getRegistryPath,
@@ -23,7 +23,7 @@ type RegistryKey = `${BinaryName}_${BrowserPlatform}`;
 type Registry = Record<RegistryKey, VersionToPathMap>;
 
 const registryPath = getRegistryPath();
-const registry: Registry = existsSync(registryPath) ? readJsonSync(registryPath) : {};
+const registry: Registry = existsSync(registryPath) ? readJSONSync(registryPath) : {};
 
 let cliProgressBar: ReturnType<typeof createBrowserDownloadProgressBar> | null = null;
 let warnedFirstTimeInstall = false;
