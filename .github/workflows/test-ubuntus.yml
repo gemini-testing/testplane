@@ -1,0 +1,28 @@
+name: Collect ubuntu browser dependencies
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+jobs:
+    collect:
+        name: Collect browser dependencies
+        runs-on: ${{ matrix.os }}
+        env:
+            BRANCH_NAME: resolve-ubuntu-dependencies-${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Setup Node JS
+              uses: actions/setup-node@v2
+              with:
+                  node-version: 18
+                  registry-url: https://registry.npmjs.org
+            - run: sudo apt-get update
+            - run: sudo apt-get install -y fontconfig
+            - run: npm ci
+            - run: npm run build
+            - run: cd e2e-test && npm i && npx testplane install-deps && npx testplane --local
