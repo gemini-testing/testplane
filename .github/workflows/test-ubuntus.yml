@@ -25,4 +25,4 @@ jobs:
             - run: sudo apt-get install -y fontconfig
             - run: npm ci
             - run: npm run build
-            - run: cd e2e-test && npm i && npx testplane install-deps && npx testplane --local
+            - run: cd e2e-test && npm i && DEBUG=testplane:browser-installer npx testplane install-deps && DEBUG=testplane:browser-installer WDIO_LOG_LEVEL=error npx testplane --local

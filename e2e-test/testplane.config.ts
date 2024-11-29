@@ -2,7 +2,7 @@ const mkChrome = (browserVersion: string): Record<string, unknown> => ({
     desiredCapabilities: {
         browserName: "chrome",
         browserVersion,
-        ...(Number(browserVersion.split(".")[0]) <= 90 ? { "goog:chromeOptions": { args: ["--no-sandbox"] } } : {}),
+        "goog:chromeOptions": { args: ["--no-sandbox"] },
     },
 });
 
@@ -23,7 +23,7 @@ export default {
     automationProtocol: "webdriver",
     headless: true,
     system: {
-        debug: false,
+        debug: true,
         parallelLimit: 1,
     },
     sets: {
@@ -42,6 +42,7 @@ export default {
                 "firefox110",
                 "firefox120",
                 "firefox130",
+                "firefox134",
             ],
         },
     },
@@ -53,7 +54,6 @@ export default {
         chrome110: mkChrome("110.0"),
         chrome120: mkChrome("120.0"),
         chrome130: mkChrome("130.0"),
-        chrome: mkChrome("123.0"),
         firefox60: mkFirefox("60.0"),
         firefox70: mkFirefox("70.0"),
         firefox80: mkFirefox("80.0"),
@@ -61,6 +61,7 @@ export default {
         firefox100: mkFirefox("100.0"),
         firefox110: mkFirefox("110.0"),
         firefox120: mkFirefox("120.0"),
-        firefox130: mkFirefox("120.0"),
+        firefox130: mkFirefox("130.0"),
+        firefox134: mkFirefox("134.0"),
     },
 };
