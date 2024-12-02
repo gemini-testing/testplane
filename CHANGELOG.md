@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.22.3](https://github.com/gemini-testing/testplane/compare/v8.22.2...v8.22.3) (2024-12-02)
+
+
+### Bug Fixes
+
+* correctly specify "system" field for "ConfigInput" type ([0e34741](https://github.com/gemini-testing/testplane/commit/0e34741d6cec19e09298aa8c1456f16714341a37))
+* specify "mochaOpts" type without using types from "mocha" ([cb9563b](https://github.com/gemini-testing/testplane/commit/cb9563b1071a3fd36d3d04290ba34c91a5d63b28))
+
 ### [8.22.2](https://github.com/gemini-testing/testplane/compare/v8.22.1...v8.22.2) (2024-11-27)
 
 
