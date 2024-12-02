@@ -260,9 +260,13 @@ export interface SetsConfigParsed {
     browsers: Array<string>;
 }
 
+type PartialCommonConfig = Partial<Omit<CommonConfig, "system">> & {
+    system?: Partial<SystemConfig>;
+};
+
 // Only browsers desiredCapabilities are required in input config
-export type ConfigInput = Partial<CommonConfig> & {
-    browsers: Record<string, Partial<CommonConfig> & { desiredCapabilities: WebdriverIO.Capabilities }>;
+export type ConfigInput = Partial<PartialCommonConfig> & {
+    browsers: Record<string, PartialCommonConfig & { desiredCapabilities: WebdriverIO.Capabilities }>;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
     prepareEnvironment?: () => void | null;
