@@ -1,6 +1,6 @@
 import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
-import type { Test } from "../types";
+import type { Suite, Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import { RequestOptions } from "https";
 
@@ -128,8 +128,94 @@ export interface ExpectOptsConfig {
     interval: number;
 }
 
-export interface MochaOpts extends Omit<Mocha.MochaOptions, "ui"> {
-    ui?: string | ((suite: Mocha.Suite) => void);
+// copied from Mocha.MochaOptions (cannot be used directly so that there are no conflicts in global variables)
+export interface MochaOpts {
+    /** Propagate uncaught errors? */
+    allowUncaught?: boolean;
+
+    /** Force `done` callback or promise? */
+    asyncOnly?: boolean;
+
+    /** bail on the first test failure. */
+    bail?: boolean;
+
+    /** Check for global variable leaks? */
+    checkLeaks?: boolean;
+
+    /** Color TTY output from reporter */
+    color?: boolean;
+
+    /** Delay root suite execution? */
+    delay?: boolean;
+
+    /** Show diff on failure? */
+    diff?: boolean;
+
+    /** Report tests without running them? */
+    dryRun?: boolean;
+
+    /** Test filter given string. */
+    fgrep?: string;
+
+    /** Tests marked `only` fail the suite? */
+    forbidOnly?: boolean;
+
+    /** Pending tests fail the suite? */
+    forbidPending?: boolean;
+
+    /** Full stacktrace upon failure? */
+    fullTrace?: boolean;
+
+    /** Variables expected in global scope. */
+    globals?: string[];
+
+    /** Test filter given regular expression. */
+    grep?: string | RegExp;
+
+    /** Enable desktop notifications? */
+    growl?: boolean;
+
+    /** Display inline diffs? */
+    inlineDiffs?: boolean;
+
+    /** Invert test filter matches? */
+    invert?: boolean;
+
+    /** Disable syntax highlighting? */
+    noHighlighting?: boolean;
+
+    /** Reporter name or constructor. */
+    reporter?: string;
+
+    /** Reporter settings object. */
+    reporterOptions?: unknown;
+
+    /** Number of times to retry failed tests. */
+    retries?: number;
+
+    /** Slow threshold value. */
+    slow?: number;
+
+    /** Timeout threshold value. */
+    timeout?: number | string;
+
+    /** Run jobs in parallel */
+    parallel?: boolean;
+
+    /** Max number of worker processes for parallel runs. */
+    jobs?: number;
+
+    /** Hooks to bootstrap the root suite with. */
+    rootHooks?: unknown;
+
+    /** Pathname of `rootHooks` plugin for parallel runs. */
+    require?: string[];
+
+    /** Should be `true` if `Mocha` process is running in a worker process. */
+    isWorker?: boolean;
+
+    /** Interface name or path to file with custom interface implementation. */
+    ui?: string | Suite;
 }
 
 export interface SystemConfig {
