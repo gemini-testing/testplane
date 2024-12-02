@@ -115,6 +115,12 @@ const unpackUbuntuPackages = async (packagesDir: string, destination: string): P
 };
 
 export const installUbuntuPackages = async (packages: string[], destination: string): Promise<void> => {
+    if (!packages) {
+        browserInstallerDebug(`There are no ubuntu packages to install`);
+
+        return fs.ensureDir(destination);
+    }
+
     const withRecursiveDependencies = await resolveTransitiveDependencies(packages);
 
     browserInstallerDebug(`Resolved direct packages to ${withRecursiveDependencies.length} dependencies`);

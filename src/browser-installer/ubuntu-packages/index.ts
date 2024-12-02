@@ -16,9 +16,14 @@ const readUbuntuPackageDependencies = async (ubuntuMilestone: string): Promise<s
     try {
         return await fs.readJSON(getDependenciesArrayFilePath(ubuntuMilestone));
     } catch (_) {
-        throw new Error(
-            `Unable to read ubuntu dependencies for Ubuntu@${ubuntuMilestone}, as this version currently not supported`,
+        logger.warn(
+            [
+                `Unable to read ubuntu dependencies for Ubuntu@${ubuntuMilestone}, as this version currently not supported`,
+                `Assuming all necessary packages are installed already`,
+            ].join("\n"),
         );
+
+        return [];
     }
 };
 
