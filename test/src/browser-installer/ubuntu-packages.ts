@@ -15,6 +15,7 @@ describe("browser-installer/ubuntu-packages", () => {
 
     let fsStub: Record<keyof typeof import("fs-extra"), SinonStub>;
     let loggerLogStub: SinonStub;
+    let loggerWarnStub: SinonStub;
     let installUbuntuPackagesStub: SinonStub;
     let getUbuntuMilestoneStub: SinonStub;
 
@@ -28,6 +29,7 @@ describe("browser-installer/ubuntu-packages", () => {
         } as Record<keyof typeof import("fs-extra"), SinonStub>;
 
         loggerLogStub = sandbox.stub();
+        loggerWarnStub = sandbox.stub();
         installUbuntuPackagesStub = sandbox.stub();
         getUbuntuMilestoneStub = sandbox.stub().resolves("20");
 
@@ -35,7 +37,7 @@ describe("browser-installer/ubuntu-packages", () => {
             "fs-extra": fsStub,
             "./apt": { installUbuntuPackages: installUbuntuPackagesStub },
             "./utils": { getUbuntuMilestone: getUbuntuMilestoneStub },
-            "../../utils/logger": { log: loggerLogStub },
+            "../../utils/logger": { log: loggerLogStub, warn: loggerWarnStub },
         });
 
         ({ writeUbuntuPackageDependencies, installUbuntuPackageDependencies, getUbuntuLinkerEnv } = ubuntuPackages);
@@ -96,6 +98,22 @@ describe("browser-installer/ubuntu-packages", () => {
             assert.notCalled(fsStub.readJSON.withArgs(sinon.match("ubuntu-20-dependencies.json")));
             assert.notCalled(loggerLogStub);
             assert.notCalled(installUbuntuPackagesStub);
+        });
+
+        it("should log warning if current ubuntu version is not supported", async () => {
+            getUbuntuMilestoneStub.resolves("100500");
+            fsStub.readJSON.withArgs(sinon.match("ubuntu-100500-dependencies.json")).rejects(new Error("No such file"));
+
+            await installUbuntuPackageDependencies();
+
+            assert.calledOnceWith(
+                loggerWarnStub,
+                [
+                    `Unable to read ubuntu dependencies for Ubuntu@100500, as this version currently not supported`,
+                    `Assuming all necessary packages are installed already`,
+                ].join("\n"),
+            );
+            assert.calledOnceWith(installUbuntuPackagesStub, []);
         });
     });
 
