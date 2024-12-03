@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.22.4](https://github.com/gemini-testing/testplane/compare/v8.22.3...v8.22.4) (2024-12-03)
+
+
+### Bug Fixes
+
+* ability to specify "mochaOpts.ui" as function ([58c1811](https://github.com/gemini-testing/testplane/commit/58c1811e8b4703bb4e6f9ed78e296fb73776efec))
+
 ### [8.22.3](https://github.com/gemini-testing/testplane/compare/v8.22.2...v8.22.3) (2024-12-02)
 
 
