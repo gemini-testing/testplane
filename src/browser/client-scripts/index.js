@@ -159,7 +159,7 @@ function disableFrameAnimationsUnsafe() {
 
     var styleElements = [];
 
-    util.forEachRoot(function (root) {
+    function appendDisableAnimationStyleElement(root) {
         var styleElement = document.createElement("style");
         styleElement.innerHTML =
             everythingSelector +
@@ -176,6 +176,30 @@ function disableFrameAnimationsUnsafe() {
 
         root.appendChild(styleElement);
         styleElements.push(styleElement);
+    }
+
+    function createDefaultTrustedTypesPolicy() {
+        if (window.trustedTypes && window.trustedTypes.createPolicy) {
+            window.trustedTypes.createPolicy("default", {
+                createHTML: function (string) {
+                    return string;
+                }
+            });
+        }
+    }
+
+    util.forEachRoot(function (root) {
+        try {
+            appendDisableAnimationStyleElement(root);
+        } catch (err) {
+            if (err && err.message && err.message.includes("This document requires 'TrustedHTML' assignment")) {
+                createDefaultTrustedTypesPolicy();
+
+                appendDisableAnimationStyleElement(root);
+            } else {
+                throw err;
+            }
+        }
     });
 
     window.__cleanupAnimation = function () {
