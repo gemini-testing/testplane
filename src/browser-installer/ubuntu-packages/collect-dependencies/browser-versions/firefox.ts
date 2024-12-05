@@ -1,7 +1,7 @@
 import _ from "lodash";
-import { getMilestone, retryFetch } from "../../browser-installer/utils";
+import { getMilestone, retryFetch } from "../../../utils";
 import { FIREFOX_VERSIONS_API_URL } from "../constants";
-import { MIN_FIREFOX_VERSION } from "../../browser-installer/constants";
+import { MIN_FIREFOX_VERSION } from "../../../constants";
 
 type FirefoxVersionInfo = {
     category: "major" | "esr" | "stability" | "dev";

@@ -3,9 +3,9 @@ import sinon, { type SinonStub } from "sinon";
 import type {
     searchSharedObjectPackage as SearchSharedObjectPackage,
     getBinarySharedObjectDependencies as GetBinarySharedObjectDependencies,
-} from "../../../src/collect-ubuntu-browser-dependencies/shared-object";
+} from "../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/shared-object";
 
-describe("collect-ubuntu-browser-dependencies/shared-object", () => {
+describe("browser-installer/ubuntu-packages/collect-dependencies/shared-object", () => {
     const sandbox = sinon.createSandbox();
 
     let searchSharedObjectPackage: typeof SearchSharedObjectPackage;
@@ -18,12 +18,15 @@ describe("collect-ubuntu-browser-dependencies/shared-object", () => {
         readElfStub = sandbox.stub().resolves();
         aptFileSearchStub = sandbox.stub().resolves();
 
-        const sharedObject = proxyquire("../../../src/collect-ubuntu-browser-dependencies/shared-object", {
-            "./ubuntu": {
-                readElf: readElfStub,
-                aptFileSearch: aptFileSearchStub,
+        const sharedObject = proxyquire(
+            "../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/shared-object",
+            {
+                "./ubuntu": {
+                    readElf: readElfStub,
+                    aptFileSearch: aptFileSearchStub,
+                },
             },
-        });
+        );
 
         ({ searchSharedObjectPackage, getBinarySharedObjectDependencies } = sharedObject);
     });

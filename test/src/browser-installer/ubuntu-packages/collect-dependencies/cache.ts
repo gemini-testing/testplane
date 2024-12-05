@@ -1,8 +1,11 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type { Cache as CacheType, CacheData } from "../../../src/collect-ubuntu-browser-dependencies/cache";
+import type {
+    Cache as CacheType,
+    CacheData,
+} from "../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/cache";
 
-describe("collect-ubuntu-browser-dependencies/shared-object", () => {
+describe("browser-installer/ubuntu-packages/collect-dependencies/shared-object", () => {
     const sandbox = sinon.createSandbox();
 
     let cache: CacheType;
@@ -39,7 +42,7 @@ describe("collect-ubuntu-browser-dependencies/shared-object", () => {
             stat: sinon.stub().resolves({ isDirectory: false }),
         } as Record<keyof typeof import("fs-extra"), SinonStub>;
 
-        const Cache = proxyquire("../../../src/collect-ubuntu-browser-dependencies/cache", {
+        const Cache = proxyquire("../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/cache", {
             "fs-extra": fsStub,
         }).Cache;
 

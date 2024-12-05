@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 import _ from "lodash";
 import path from "path";
-import { getMilestone } from "../../browser-installer/utils";
+import { getMilestone } from "../../../utils";
 import type { BrowserWithVersion } from "../utils";
 
 type SharedObjectName = string;

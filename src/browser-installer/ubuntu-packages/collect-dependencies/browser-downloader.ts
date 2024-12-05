@@ -1,8 +1,8 @@
 import path from "path";
 import fs from "fs";
 import _ from "lodash";
-import { installBrowser } from "../browser-installer";
-import { getRegistryPath } from "../browser-installer/utils";
+import { installBrowser } from "../..";
+import { getRegistryPath } from "../../utils";
 import type { BrowserWithVersion } from "./utils";
 
 type BinaryNameWithArchPrefix = string;
