@@ -1,4 +1,4 @@
-import { retryFetch } from "../../browser-installer/utils";
+import { retryFetch } from "../../../utils";
 import { CHROME_FOR_TESTING_VERSIONS_API_URL } from "../constants";
 
 type ChromeVersionInfo = {

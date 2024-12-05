@@ -1,4 +1,4 @@
-import { getBrowserPlatform } from "../../browser-installer/utils";
+import { getBrowserPlatform } from "../../../utils";
 
 export const fetchChromiumMilestoneVersions = async (): Promise<string[]> => {
     try {

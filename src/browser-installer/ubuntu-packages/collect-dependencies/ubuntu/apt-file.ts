@@ -1,7 +1,7 @@
 import execa from "execa";
 import { getCliArgs } from "../utils";
 import { throwIfFailed } from "./utils";
-import { ensureUnixBinaryExists } from "../../browser-installer/ubuntu-packages";
+import { ensureUnixBinaryExists } from "../..";
 
 const APT_FILE_BINARY_NAME = "apt-file";
 

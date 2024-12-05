@@ -1,6 +1,6 @@
-import { getCliArgs } from "../../../src/collect-ubuntu-browser-dependencies/utils";
+import { getCliArgs } from "../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/utils";
 
-describe("collect-ubuntu-browser-dependencies/utils", () => {
+describe("browser-installer/ubuntu-packages/collect-dependencies/utils", () => {
     describe("getCliArgs", () => {
         it("should support long cli keys", () => {
             assert.deepEqual(getCliArgs({ foo: true }), ["--foo"]);

@@ -4,7 +4,7 @@ import type {
     writeUbuntuPackageDependencies as WriteUbuntuPackageDependencies,
     installUbuntuPackageDependencies as InstallUbuntuPackageDependencies,
     getUbuntuLinkerEnv as GetUbuntuLinkerEnv,
-} from "../../../src/browser-installer/ubuntu-packages";
+} from "../../../../src/browser-installer/ubuntu-packages";
 
 describe("browser-installer/ubuntu-packages", () => {
     const sandbox = sinon.createSandbox();
@@ -33,7 +33,7 @@ describe("browser-installer/ubuntu-packages", () => {
         installUbuntuPackagesStub = sandbox.stub();
         getUbuntuMilestoneStub = sandbox.stub().resolves("20");
 
-        const ubuntuPackages = proxyquire("../../../src/browser-installer/ubuntu-packages", {
+        const ubuntuPackages = proxyquire("../../../../src/browser-installer/ubuntu-packages", {
             "fs-extra": fsStub,
             "./apt": { installUbuntuPackages: installUbuntuPackagesStub },
             "./utils": { getUbuntuMilestone: getUbuntuMilestoneStub },

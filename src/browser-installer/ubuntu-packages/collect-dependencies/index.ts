@@ -4,8 +4,8 @@ import { getBinarySharedObjectDependencies, searchSharedObjectPackage } from "./
 import { Cache } from "./cache";
 import { fetchBrowsersMilestones } from "./browser-versions/index";
 import { downloadBrowserVersions } from "./browser-downloader";
-import { getUbuntuMilestone, writeUbuntuPackageDependencies } from "../browser-installer/ubuntu-packages";
-import logger from "../utils/logger";
+import { getUbuntuMilestone, writeUbuntuPackageDependencies } from "..";
+import logger from "../../../utils/logger";
 
 const createResolveSharedObjectToPackageName =
     (cache: Cache) =>
