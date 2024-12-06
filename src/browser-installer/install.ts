@@ -1,24 +1,14 @@
 import _ from "lodash";
+import { Browser, getNormalizedBrowserName, type SupportedBrowser } from "./utils";
 
 /**
- * @returns path to browser binary
+ * @returns path to installed browser binary
  */
 export const installBrowser = async (
-    browserName?: string,
+    browserName: SupportedBrowser,
     browserVersion?: string,
-    { force = false, shouldInstallWebDriver = false, shouldInstallUbuntuPackages = true } = {},
+    { force = false, shouldInstallWebDriver = false, shouldInstallUbuntuPackages = false } = {},
 ): Promise<string | null> => {
-    const unsupportedBrowserError = new Error(
-        [
-            `Couldn't install browser '${browserName}', as it is not supported`,
-            `Currently supported for installation browsers: 'chrome', 'firefox`,
-        ].join("\n"),
-    );
-
-    if (!browserName) {
-        throw unsupportedBrowserError;
-    }
-
     if (!browserVersion) {
         throw new Error(
             `Couldn't install browser '${browserName}' because it has invalid version: '${browserVersion}'`,
@@ -29,35 +19,46 @@ export const installBrowser = async (
 
     const needToInstallUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
 
-    if (/chrome/i.test(browserName)) {
-        const { installChrome, installChromeDriver } = await import("./chrome");
+    switch (browserName) {
+        case Browser.CHROME:
+        case Browser.CHROMIUM: {
+            const { installChrome, installChromeDriver } = await import("./chrome");
 
-        return await Promise.all([
-            installChrome(browserVersion, { force }),
-            shouldInstallWebDriver && installChromeDriver(browserVersion, { force }),
-            needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
-        ]).then(result => result[0]);
-    } else if (/firefox/i.test(browserName)) {
-        const { installFirefox, installLatestGeckoDriver } = await import("./firefox");
+            const [browserPath] = await Promise.all([
+                installChrome(browserVersion, { force }),
+                shouldInstallWebDriver && installChromeDriver(browserVersion, { force }),
+                needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
+            ]);
 
-        return await Promise.all([
-            installFirefox(browserVersion, { force }),
-            shouldInstallWebDriver && installLatestGeckoDriver(browserVersion, { force }),
-            needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
-        ]).then(result => result[0]);
-    } else if (/edge/i.test(browserName)) {
-        const { installEdgeDriver } = await import("./edge");
-
-        if (shouldInstallWebDriver) {
-            await installEdgeDriver(browserVersion, { force });
+            return browserPath;
         }
 
-        return null;
-    } else if (/safari/i.test(browserName)) {
-        return null;
-    }
+        case Browser.FIREFOX: {
+            const { installFirefox, installLatestGeckoDriver } = await import("./firefox");
 
-    throw unsupportedBrowserError;
+            const [browserPath] = await Promise.all([
+                installFirefox(browserVersion, { force }),
+                shouldInstallWebDriver && installLatestGeckoDriver(browserVersion, { force }),
+                needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
+            ]);
+
+            return browserPath;
+        }
+
+        case Browser.EDGE: {
+            const { installEdgeDriver } = await import("./edge");
+
+            if (shouldInstallWebDriver) {
+                await installEdgeDriver(browserVersion, { force });
+            }
+
+            return null;
+        }
+
+        case Browser.SAFARI: {
+            return null;
+        }
+    }
 };
 
 export const BrowserInstallStatus = {
@@ -81,7 +82,16 @@ const forceInstallBinaries = async (
     browserName?: string,
     browserVersion?: string,
 ): ForceInstallBinaryResult => {
-    return installFn(browserName, browserVersion, { force: true, shouldInstallWebDriver: true })
+    const normalizedBrowserName = getNormalizedBrowserName(browserName);
+
+    if (!normalizedBrowserName) {
+        return {
+            status: BrowserInstallStatus.Error,
+            reason: `Installing ${browserName} is unsupported. Supported browsers: "chrome", "firefox", "safari", "edge"`,
+        };
+    }
+
+    return installFn(normalizedBrowserName, browserVersion, { force: true, shouldInstallWebDriver: true })
         .then(successResult => {
             return successResult
                 ? { status: BrowserInstallStatus.Ok }

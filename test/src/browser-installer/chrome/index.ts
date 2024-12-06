@@ -107,14 +107,6 @@ describe("browser-installer/chrome", () => {
             assert.notCalled(installUbuntuPackageDependenciesStub);
         });
 
-        it(`should try to install ubuntu packages if its ubuntu`, async () => {
-            isUbuntuStub.resolves(true);
-
-            await runChromeDriver("130");
-
-            assert.calledOnce(installUbuntuPackageDependenciesStub);
-        });
-
         it(`should not set ubuntu linker env variables if its not ubuntu`, async () => {
             installChromeDriverStub.resolves("/driver/path");
             getPortStub.resolves(10050);
@@ -126,6 +118,7 @@ describe("browser-installer/chrome", () => {
             assert.calledOnceWith(spawnStub, sinon.match.string, sinon.match.array, {
                 windowsHide: true,
                 detached: false,
+                env: process.env,
             });
         });
 

@@ -1,29 +1,31 @@
-import { Browser, Driver } from "../../../src/browser-installer/utils";
+import { Browser } from "../../../src/browser-installer/utils";
 import * as utils from "../../../src/browser-installer/utils";
 
 describe("browser-installer/utils", () => {
-    describe("getDriverNameForBrowserName", () => {
-        it("CHROMEDRIVER", () => {
-            assert.equal(utils.getDriverNameForBrowserName(Browser.CHROME), Driver.CHROMEDRIVER);
-            assert.equal(utils.getDriverNameForBrowserName(Browser.CHROMIUM), Driver.CHROMEDRIVER);
+    describe("getNormalizedBrowserName", () => {
+        it("CHROME", () => {
+            assert.equal(utils.getNormalizedBrowserName("chrome"), Browser.CHROME);
         });
 
-        it("GECKODRIVER", () => {
-            assert.equal(utils.getDriverNameForBrowserName(Browser.FIREFOX), Driver.GECKODRIVER);
+        it("FIREFOX", () => {
+            assert.equal(utils.getNormalizedBrowserName("firefox"), Browser.FIREFOX);
         });
 
-        it("SAFARIDRIVER", () => {
-            assert.equal(utils.getDriverNameForBrowserName(Browser.SAFARI), Driver.SAFARIDRIVER);
+        it("EDGE", () => {
+            assert.equal(utils.getNormalizedBrowserName("edge"), Browser.EDGE);
+            assert.equal(utils.getNormalizedBrowserName("MicrosoftEdge"), Browser.EDGE);
+            assert.equal(utils.getNormalizedBrowserName("msedge"), Browser.EDGE);
         });
 
-        it("EDGEDRIVER", () => {
-            assert.equal(utils.getDriverNameForBrowserName(Browser.EDGE), Driver.EDGEDRIVER);
+        it("SAFARI", () => {
+            assert.equal(utils.getNormalizedBrowserName("safari"), Browser.SAFARI);
         });
 
         it("null", () => {
             const invalidValue = "unknown" as (typeof Browser)[keyof typeof Browser];
 
-            assert.equal(utils.getDriverNameForBrowserName(invalidValue), null);
+            assert.equal(utils.getNormalizedBrowserName(invalidValue), null);
+            assert.equal(utils.getNormalizedBrowserName(), null);
         });
     });
 

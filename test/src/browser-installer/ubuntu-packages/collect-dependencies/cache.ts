@@ -4,6 +4,7 @@ import type {
     Cache as CacheType,
     CacheData,
 } from "../../../../../src/browser-installer/ubuntu-packages/collect-dependencies/cache";
+import { Browser } from "../../../../../src/browser-installer/utils";
 
 describe("browser-installer/ubuntu-packages/collect-dependencies/shared-object", () => {
     const sandbox = sinon.createSandbox();
@@ -58,8 +59,8 @@ describe("browser-installer/ubuntu-packages/collect-dependencies/shared-object",
         });
 
         const filteredBrowsers = cache.filterProcessedBrowsers([
-            { browserName: "chrome", browserVersion: "80.0.123.17" },
-            { browserName: "chrome", browserVersion: "82.0.123.17" },
+            { browserName: Browser.CHROME, browserVersion: "80.0.123.17" },
+            { browserName: Browser.CHROME, browserVersion: "82.0.123.17" },
         ]);
 
         assert.deepEqual(filteredBrowsers, [{ browserName: "chrome", browserVersion: "82.0.123.17" }]);
@@ -67,8 +68,8 @@ describe("browser-installer/ubuntu-packages/collect-dependencies/shared-object",
 
     it("should save processed browsers", async () => {
         cache.saveProcessedBrowsers([
-            { browserName: "chrome", browserVersion: "80.0.123.17" },
-            { browserName: "chrome", browserVersion: "82.0.123.17" },
+            { browserName: Browser.CHROME, browserVersion: "80.0.123.17" },
+            { browserName: Browser.CHROME, browserVersion: "82.0.123.17" },
         ]);
 
         const cacheData = await getCache_();

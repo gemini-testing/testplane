@@ -4,6 +4,7 @@ import type {
     installBrowser as InstallBrowser,
     installBrowsersWithDrivers as InstallBrowsersWithDrivers,
 } from "../../../src/browser-installer/install";
+import { Browser } from "../../../src/browser-installer/utils";
 
 describe("browser-installer/install", () => {
     const sandbox = sinon.createSandbox();
@@ -53,7 +54,7 @@ describe("browser-installer/install", () => {
                     it("should install browser", async () => {
                         installChromeStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser("chrome", "115", { force });
+                        const binaryPath = await installBrowser(Browser.CHROME, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
                         assert.calledOnceWith(installChromeStub, "115", { force });
@@ -63,7 +64,7 @@ describe("browser-installer/install", () => {
                     it("should install browser with webdriver", async () => {
                         installChromeStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser("chrome", "115", {
+                        const binaryPath = await installBrowser(Browser.CHROME, "115", {
                             force,
                             shouldInstallWebDriver: true,
                         });
@@ -78,7 +79,7 @@ describe("browser-installer/install", () => {
                     it("should install browser", async () => {
                         installFirefoxStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser("firefox", "115", { force });
+                        const binaryPath = await installBrowser(Browser.FIREFOX, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
                         assert.calledOnceWith(installFirefoxStub, "115", { force });
@@ -88,7 +89,7 @@ describe("browser-installer/install", () => {
                     it("should install browser with webdriver", async () => {
                         installFirefoxStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser("firefox", "115", {
+                        const binaryPath = await installBrowser(Browser.FIREFOX, "115", {
                             force,
                             shouldInstallWebDriver: true,
                         });
@@ -129,27 +130,20 @@ describe("browser-installer/install", () => {
                     });
                 });
 
-                it("should throw exception on unsupported browser name", async () => {
-                    await assert.isRejected(
-                        installBrowser("foobar", "115", { force }),
-                        /Couldn't install browser 'foobar', as it is not supported/,
-                    );
-                });
-
                 it("should throw exception on empty browser version", async () => {
                     await assert.isRejected(
-                        installBrowser("chrome", "", { force }),
+                        installBrowser(Browser.CHROME, "", { force }),
                         /Couldn't install browser 'chrome' because it has invalid version: ''/,
                     );
                 });
             });
         });
 
-        ["chrome", "firefox"].forEach(browser => {
-            it(`should not install ubuntu dependencies if flag is unset for ${browser}`, async () => {
+        [Browser.CHROME, Browser.FIREFOX].forEach(browser => {
+            it(`should not install ubuntu dependencies by default for ${browser}`, async () => {
                 isUbuntuStub.resolves(true);
 
-                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: false });
+                await installBrowser(browser, "115");
 
                 assert.notCalled(installUbuntuPackageDependenciesStub);
             });
@@ -157,15 +151,15 @@ describe("browser-installer/install", () => {
             it(`should not install ubuntu dependencies if its not ubuntu for ${browser}`, async () => {
                 isUbuntuStub.resolves(false);
 
-                await installBrowser(browser, "115");
+                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: true });
 
                 assert.notCalled(installUbuntuPackageDependenciesStub);
             });
 
-            it(`should install ubuntu dependencies by default if its ubuntu for ${browser}`, async () => {
+            it(`should install ubuntu dependencies if its ubuntu for ${browser}`, async () => {
                 isUbuntuStub.resolves(true);
 
-                await installBrowser(browser, "115");
+                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: true });
 
                 assert.calledOnce(installUbuntuPackageDependenciesStub);
             });

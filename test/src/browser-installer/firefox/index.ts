@@ -62,6 +62,7 @@ describe("browser-installer/firefox", () => {
             spawnOpts: {
                 windowsHide: true,
                 detached: false,
+                env: process.env,
             },
         });
     });
@@ -99,7 +100,7 @@ describe("browser-installer/firefox", () => {
             customGeckoDriverPath: "/driver/path",
             port: 12345,
             log: "debug",
-            spawnOpts: { windowsHide: true, detached: false },
+            spawnOpts: { windowsHide: true, detached: false, env: process.env },
         });
         assert.calledOnceWith(pipeLogsWithPrefixStub, result.process, "[geckodriver@130] ");
     });
@@ -119,14 +120,6 @@ describe("browser-installer/firefox", () => {
             assert.notCalled(installUbuntuPackageDependenciesStub);
         });
 
-        it(`should try to install ubuntu packages if its ubuntu`, async () => {
-            isUbuntuStub.resolves(true);
-
-            await runGeckoDriver("130");
-
-            assert.calledOnce(installUbuntuPackageDependenciesStub);
-        });
-
         it(`should not set ubuntu linker env variables if its not ubuntu`, async () => {
             installLatestGeckoDriverStub.resolves("/driver/path");
             getPortStub.resolves(10050);
@@ -142,6 +135,7 @@ describe("browser-installer/firefox", () => {
                 spawnOpts: {
                     windowsHide: true,
                     detached: false,
+                    env: process.env,
                 },
             });
         });
