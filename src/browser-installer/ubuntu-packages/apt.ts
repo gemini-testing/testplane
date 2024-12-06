@@ -1,3 +1,4 @@
+import _ from "lodash";
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
@@ -35,11 +36,9 @@ const resolveTransitiveDependencies = async (directDependencies: string[]): Prom
 
     const fullDependencies = await Promise.all(directDependencies.map(listDependencies));
 
-    const dependenciesSet = new Set<string>();
+    const rawDependencies = _.flatten(fullDependencies);
 
-    fullDependencies.forEach(depsArray => depsArray.forEach(dependency => dependenciesSet.add(dependency)));
-
-    return Array.from(dependenciesSet);
+    return _.uniq(rawDependencies);
 };
 
 /** @link https://manpages.org/apt/8 */
@@ -73,11 +72,7 @@ const filterNotExistingDependencies = async (dependencies: string[]): Promise<st
         });
     });
 
-    const dependenciesSet = new Set(dependencies);
-
-    existingDependencies.forEach(existingDependency => dependenciesSet.delete(existingDependency));
-
-    return Array.from(dependenciesSet);
+    return _.difference(dependencies, existingDependencies);
 };
 
 /** @link https://manpages.org/apt-get/8 */
