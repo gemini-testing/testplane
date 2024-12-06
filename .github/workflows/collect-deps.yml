@@ -27,23 +27,24 @@ jobs:
                   registry-url: https://registry.npmjs.org
             - name: Prepare Ubuntu
               run: sudo apt-get update && sudo apt-get install -y apt-file && sudo apt-file update
-            - run: npm ci
+            - name: Install npm dependencies
+              run: npm ci
             - name: Config git
               run: git config --global user.name "y-infra" && git config --global user.email "y-infra@yandex.ru"
-            - name: Fetch branches
-              run: git fetch --all
             - name: Checkout to branch
               run: |
                   if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+                      git fetch origin ${{ env.BRANCH_NAME }}
                       git checkout ${{ env.BRANCH_NAME }}
                       git pull
                   else
                       git checkout -b ${{ env.BRANCH_NAME }}
                   fi
-            - run: npm run resolve-ubuntu-dependencies
-            - run: git add src
+            - name: Resolve Ubuntu dependencies
+              run: npm run resolve-ubuntu-dependencies
             - name: Commit changes
               run: |
+                  git add src
                   git status
                   if git diff-index --quiet HEAD src; then
                       echo 'No changes'
