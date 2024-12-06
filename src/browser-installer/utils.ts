@@ -29,21 +29,27 @@ export const Driver = {
 export type SupportedBrowser = (typeof Browser)[keyof typeof Browser];
 export type SupportedDriver = (typeof Driver)[keyof typeof Driver];
 
-export const getDriverNameForBrowserName = (browserName: SupportedBrowser): SupportedDriver | null => {
-    if (browserName === Browser.CHROME || browserName === Browser.CHROMIUM) {
-        return Driver.CHROMEDRIVER;
+export const getNormalizedBrowserName = (
+    browserName?: string,
+): Exclude<SupportedBrowser, typeof Browser.CHROMIUM> | null => {
+    if (!browserName) {
+        return null;
     }
 
-    if (browserName === Browser.FIREFOX) {
-        return Driver.GECKODRIVER;
+    if (/chrome/i.test(browserName)) {
+        return Browser.CHROME;
     }
 
-    if (browserName === Browser.SAFARI) {
-        return Driver.SAFARIDRIVER;
+    if (/firefox/i.test(browserName)) {
+        return Browser.FIREFOX;
     }
 
-    if (browserName === Browser.EDGE) {
-        return Driver.EDGEDRIVER;
+    if (/edge/i.test(browserName)) {
+        return Browser.EDGE;
+    }
+
+    if (/safari/i.test(browserName)) {
+        return Browser.SAFARI;
     }
 
     return null;

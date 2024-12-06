@@ -1,4 +1,6 @@
-export type BrowserWithVersion = { browserName: string; browserVersion: string };
+import type { SupportedBrowser } from "../../utils";
+
+export type BrowserWithVersion = { browserName: SupportedBrowser; browserVersion: string };
 
 export const getCliArgs = <T extends Record<string, boolean>>(flags?: T): string[] => {
     if (!flags) {

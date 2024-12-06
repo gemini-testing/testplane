@@ -13,7 +13,6 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL, LOCAL_GRID_URL } from "../consta
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
-import { installBrowser, type SupportedBrowser } from "../browser-installer";
 
 export type CapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
 export type HeadlessBrowserOptions = Record<
@@ -214,8 +213,8 @@ export class NewBrowser extends Browser {
         }
 
         this._wdProcess = await this._wdPool.getWebdriver(
-            this._config.desiredCapabilities?.browserName as SupportedBrowser,
-            this._config.desiredCapabilities?.browserVersion as string,
+            this._config.desiredCapabilities?.browserName,
+            this._config.desiredCapabilities?.browserVersion,
             { debug: this._config.system.debug },
         );
 
@@ -226,13 +225,26 @@ export class NewBrowser extends Browser {
         config: BrowserConfig,
         capabilities: WebdriverIO.Capabilities,
     ): Promise<WebdriverIO.Capabilities> {
-        const browserNameLowerCase = config.desiredCapabilities?.browserName?.toLowerCase() as string;
+        const { getNormalizedBrowserName, installBrowser } = await import("../browser-installer");
+        const normalizedBrowserName = getNormalizedBrowserName(this._config.desiredCapabilities?.browserName);
+
+        if (!normalizedBrowserName) {
+            throw new Error(
+                [
+                    `Running auto local "${this._config.desiredCapabilities?.browserName}" is unsupported`,
+                    `Supported browsers: "chrome", "firefox", "safari", "edge"`,
+                ].join("\n"),
+            );
+        }
+
         const executablePath = await installBrowser(
-            this._config.desiredCapabilities?.browserName as SupportedBrowser,
-            this._config.desiredCapabilities?.browserVersion as string,
+            normalizedBrowserName,
+            this._config.desiredCapabilities?.browserVersion,
+            { shouldInstallWebDriver: false, shouldInstallUbuntuPackages: true },
         );
 
         if (executablePath) {
+            const browserNameLowerCase = config.desiredCapabilities?.browserName?.toLowerCase() as string;
             const { capabilityName } = headlessBrowserOptions[browserNameLowerCase];
             capabilities[capabilityName] ||= {};
             capabilities[capabilityName]!.binary ||= executablePath;
