@@ -1,11 +1,12 @@
 import _ from "lodash";
 import fs from "fs-extra";
 import path from "path";
-import { browserInstallerDebug, getUbuntuPackagesDir } from "../utils";
+import { getOsPackagesDir, type DownloadProgressCallback, browserInstallerDebug } from "../utils";
 import { installUbuntuPackages } from "./apt";
 import { getUbuntuMilestone } from "./utils";
 import logger from "../../utils/logger";
-import { LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME } from "../constants";
+import { LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME, LINUX_UBUNTU_RELEASE_ID } from "../constants";
+import { getOsPackagesPath, hasOsPackages, installOsPackages } from "../registry";
 
 export { isUbuntu, getUbuntuMilestone, ensureUnixBinaryExists } from "./utils";
 
@@ -35,32 +36,27 @@ export const writeUbuntuPackageDependencies = async (ubuntuMilestone: string, de
     await fs.outputJSON(getDependenciesArrayFilePath(ubuntuMilestone), packagesToWrite, { spaces: 4 });
 };
 
-let installUbuntuPackageDependenciesPromise: Promise<void>;
+export const installUbuntuPackageDependencies = async (): Promise<string> => {
+    const ubuntuMilestone = await getUbuntuMilestone();
 
-export const installUbuntuPackageDependencies = async (): Promise<void> => {
-    if (installUbuntuPackageDependenciesPromise) {
-        return installUbuntuPackageDependenciesPromise;
+    browserInstallerDebug(`installing ubuntu${ubuntuMilestone} dependencies`);
+
+    if (hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
+        browserInstallerDebug(`installing ubuntu${ubuntuMilestone} dependencies`);
+
+        return getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
     }
 
-    installUbuntuPackageDependenciesPromise = new Promise<void>((resolve, reject) => {
-        const ubuntuPackagesDir = getUbuntuPackagesDir();
+    const downloadFn = async (downloadProgressCallback: DownloadProgressCallback): Promise<string> => {
+        const ubuntuPackageDependencies = await readUbuntuPackageDependencies(ubuntuMilestone);
+        const ubuntuPackagesDir = getOsPackagesDir(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
 
-        if (fs.existsSync(ubuntuPackagesDir)) {
-            browserInstallerDebug("Skip installing ubuntu packages, as they are installed already");
+        await installUbuntuPackages(ubuntuPackageDependencies, ubuntuPackagesDir, { downloadProgressCallback });
 
-            resolve();
-        } else {
-            logger.log("Downloading extra deb packages to local browsers execution...");
+        return ubuntuPackagesDir;
+    };
 
-            getUbuntuMilestone()
-                .then(ubuntuMilestone => readUbuntuPackageDependencies(ubuntuMilestone))
-                .then(dependencies => installUbuntuPackages(dependencies, ubuntuPackagesDir))
-                .then(resolve)
-                .catch(reject);
-        }
-    });
-
-    return installUbuntuPackageDependenciesPromise;
+    return installOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone, downloadFn);
 };
 
 const listDirsAbsolutePath = async (dirBasePath: string, ...prefix: string[]): Promise<string[]> => {
@@ -88,34 +84,25 @@ const listDirsAbsolutePath = async (dirBasePath: string, ...prefix: string[]): P
     return directories;
 };
 
-let getUbuntuLinkerEnvPromise: Promise<Record<string, string>>;
+const getUbuntuLinkerEnvRaw = async (): Promise<Record<string, string>> => {
+    const ubuntuMilestone = await getUbuntuMilestone();
 
-export const getUbuntuLinkerEnv = async (): Promise<Record<string, string>> => {
-    if (getUbuntuLinkerEnvPromise) {
-        return getUbuntuLinkerEnvPromise;
+    if (!hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
+        return {};
     }
 
-    getUbuntuLinkerEnvPromise = new Promise<Record<string, string>>((resolve, reject) => {
-        const ubuntuPackagesDir = getUbuntuPackagesDir();
+    const ubuntuPackagesDir = await getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
 
-        if (!fs.existsSync(ubuntuPackagesDir)) {
-            return resolve({});
-        }
+    const currentRuntimeLibrariesEnvValue = process.env[LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME];
 
-        const currentRuntimeLibrariesEnvValue = process.env[LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME];
+    const [libDirs, usrLibDirs] = await Promise.all([
+        listDirsAbsolutePath(ubuntuPackagesDir, "lib"),
+        listDirsAbsolutePath(ubuntuPackagesDir, "usr", "lib"),
+    ]);
 
-        Promise.all([
-            listDirsAbsolutePath(ubuntuPackagesDir, "lib"),
-            listDirsAbsolutePath(ubuntuPackagesDir, "usr", "lib"),
-        ])
-            .then(([libDirs, usrLibDirs]) => {
-                const libraryPaths = [...libDirs, ...usrLibDirs, currentRuntimeLibrariesEnvValue].filter(Boolean);
+    const libraryPaths = [...libDirs, ...usrLibDirs, currentRuntimeLibrariesEnvValue].filter(Boolean);
 
-                return { [LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME]: libraryPaths.join(":") };
-            })
-            .then(resolve)
-            .catch(reject);
-    });
-
-    return getUbuntuLinkerEnvPromise;
+    return { [LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME]: libraryPaths.join(":") };
 };
+
+export const getUbuntuLinkerEnv = _.once(getUbuntuLinkerEnvRaw);

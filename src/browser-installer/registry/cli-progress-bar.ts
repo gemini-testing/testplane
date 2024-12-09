@@ -1,35 +1,39 @@
 import { MultiBar, type SingleBar } from "cli-progress";
 import type { DownloadProgressCallback } from "../utils";
-import { BYTES_PER_MEGABYTE } from "../constants";
 
 export type RegisterProgressBarFn = (browserName: string, browserVersion: string) => DownloadProgressCallback;
 
-export const createBrowserDownloadProgressBar = (): { register: RegisterProgressBarFn } => {
+export const createBrowserDownloadProgressBar = (): { register: RegisterProgressBarFn; stop: () => void } => {
     const progressBar = new MultiBar({
         stopOnComplete: true,
         forceRedraw: true,
         autopadding: true,
         hideCursor: true,
         fps: 5,
-        format: " [{bar}] | {filename} | {value}/{total} MB",
+        format: " [{bar}] | {filename} | {value}%",
     });
 
     const register: RegisterProgressBarFn = (browserName, browserVersion) => {
         let bar: SingleBar;
 
-        const downloadProgressCallback: DownloadProgressCallback = (downloadedBytes, totalBytes) => {
+        const downloadProgressCallback: DownloadProgressCallback = (done, total = 100) => {
             if (!bar) {
-                const totalMB = Math.round((totalBytes / BYTES_PER_MEGABYTE) * 100) / 100;
-                bar = progressBar.create(totalMB, 0, { filename: `${browserName}@${browserVersion}` });
+                bar = progressBar.create(100, 0, { filename: `${browserName}@${browserVersion}` });
             }
 
-            const downloadedMB = Math.round((downloadedBytes / BYTES_PER_MEGABYTE) * 100) / 100;
+            const downloadedPercents = Math.floor((done / total) * 100);
 
-            bar.update(downloadedMB);
+            bar.update(downloadedPercents);
         };
 
         return downloadProgressCallback;
     };
 
-    return { register };
+    const stop = (): void => {
+        progressBar.stop();
+    };
+
+    process.once("exit", stop);
+
+    return { register, stop };
 };

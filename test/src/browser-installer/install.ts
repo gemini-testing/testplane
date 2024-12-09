@@ -174,6 +174,22 @@ describe("browser-installer/install", () => {
             assert.calledOnceWith(installChromeDriverStub, "115", { force: true });
         });
 
+        it("should install ubuntu packages on ubuntu", async () => {
+            isUbuntuStub.resolves(true);
+
+            await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
+
+            assert.calledOnceWith(installUbuntuPackageDependenciesStub);
+        });
+
+        it("should not install ubuntu packages if its not ubuntu", async () => {
+            isUbuntuStub.resolves(false);
+
+            await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
+
+            assert.notCalled(installUbuntuPackageDependenciesStub);
+        });
+
         it("should return result with browsers install status", async () => {
             installChromeStub.rejects(new Error("test chrome install error"));
             installFirefoxStub.resolves("/browser/path");

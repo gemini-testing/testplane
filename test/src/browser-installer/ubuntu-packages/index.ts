@@ -5,6 +5,7 @@ import type {
     installUbuntuPackageDependencies as InstallUbuntuPackageDependencies,
     getUbuntuLinkerEnv as GetUbuntuLinkerEnv,
 } from "../../../../src/browser-installer/ubuntu-packages";
+import type { DownloadProgressCallback } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/ubuntu-packages", () => {
     const sandbox = sinon.createSandbox();
@@ -18,6 +19,9 @@ describe("browser-installer/ubuntu-packages", () => {
     let loggerWarnStub: SinonStub;
     let installUbuntuPackagesStub: SinonStub;
     let getUbuntuMilestoneStub: SinonStub;
+    let hasOsPackagesStub: SinonStub;
+    let getOsPackagesPathStub: SinonStub;
+    let installOsPackagesStub: SinonStub;
 
     beforeEach(() => {
         fsStub = {
@@ -32,11 +36,29 @@ describe("browser-installer/ubuntu-packages", () => {
         loggerWarnStub = sandbox.stub();
         installUbuntuPackagesStub = sandbox.stub();
         getUbuntuMilestoneStub = sandbox.stub().resolves("20");
+        hasOsPackagesStub = sandbox.stub().returns(false);
+        getOsPackagesPathStub = sandbox.stub().resolves("/.testplane/packages/ubuntu/20");
+        installOsPackagesStub = sandbox
+            .stub()
+            .callsFake(
+                async (
+                    _,
+                    __,
+                    installFn: (downloadProgressCallback: DownloadProgressCallback) => Promise<string>,
+                ): Promise<string> => {
+                    return installFn(sinon.stub());
+                },
+            );
 
         const ubuntuPackages = proxyquire("../../../../src/browser-installer/ubuntu-packages", {
             "fs-extra": fsStub,
             "./apt": { installUbuntuPackages: installUbuntuPackagesStub },
             "./utils": { getUbuntuMilestone: getUbuntuMilestoneStub },
+            "../registry": {
+                hasOsPackages: hasOsPackagesStub,
+                getOsPackagesPath: getOsPackagesPathStub,
+                installOsPackages: installOsPackagesStub,
+            },
             "../../utils/logger": { log: loggerLogStub, warn: loggerWarnStub },
         });
 
@@ -72,32 +94,7 @@ describe("browser-installer/ubuntu-packages", () => {
 
             await installUbuntuPackageDependencies();
 
-            assert.calledOnceWith(loggerLogStub, "Downloading extra deb packages to local browsers execution...");
             assert.calledOnceWith(installUbuntuPackagesStub, ["foo", "bar"], sinon.match("packages"));
-        });
-
-        it("should read dependencies and install packages only once per multiple function calls", async () => {
-            getUbuntuMilestoneStub.resolves("20");
-            fsStub.existsSync.withArgs(sinon.match("packages")).returns(false);
-            fsStub.readJSON.withArgs(sinon.match("ubuntu-20-dependencies.json")).resolves(["foo", "bar"]);
-
-            const promise1 = await installUbuntuPackageDependencies();
-            const promise2 = await installUbuntuPackageDependencies();
-
-            assert.equal(promise1, promise2);
-            assert.calledOnce(fsStub.readJSON);
-            assert.calledOnceWith(installUbuntuPackagesStub, ["foo", "bar"], sinon.match("packages"));
-        });
-
-        it("should skip installation if directory with packages exists", async () => {
-            getUbuntuMilestoneStub.resolves("20");
-            fsStub.existsSync.withArgs(sinon.match("packages")).returns(true);
-
-            await installUbuntuPackageDependencies();
-
-            assert.notCalled(fsStub.readJSON.withArgs(sinon.match("ubuntu-20-dependencies.json")));
-            assert.notCalled(loggerLogStub);
-            assert.notCalled(installUbuntuPackagesStub);
         });
 
         it("should log warning if current ubuntu version is not supported", async () => {
@@ -119,6 +116,7 @@ describe("browser-installer/ubuntu-packages", () => {
 
     describe("getUbuntuLinkerEnv", () => {
         beforeEach(() => {
+            hasOsPackagesStub.returns(true);
             fsStub.existsSync.withArgs(sinon.match("packages")).returns(true);
             fsStub.readdir.withArgs(sinon.match("/lib")).resolves(["foo", "bar"]);
             fsStub.readdir.withArgs(sinon.match("/usr/lib")).resolves(["baz", "qux"]);
@@ -128,10 +126,10 @@ describe("browser-installer/ubuntu-packages", () => {
         it("should resolve ubuntu linker env", async () => {
             const env = await getUbuntuLinkerEnv();
 
-            assert.match(env.LD_LIBRARY_PATH, "/packages/lib/foo");
-            assert.match(env.LD_LIBRARY_PATH, "/packages/lib/bar");
-            assert.match(env.LD_LIBRARY_PATH, "/packages/usr/lib/baz");
-            assert.match(env.LD_LIBRARY_PATH, "/packages/usr/lib/qux");
+            assert.match(env.LD_LIBRARY_PATH, "/packages/ubuntu/20/lib/foo");
+            assert.match(env.LD_LIBRARY_PATH, "/packages/ubuntu/20/lib/bar");
+            assert.match(env.LD_LIBRARY_PATH, "/packages/ubuntu/20/usr/lib/baz");
+            assert.match(env.LD_LIBRARY_PATH, "/packages/ubuntu/20/usr/lib/qux");
         });
 
         it("should concat existing LD_LIBRARY_PATH", async () => {

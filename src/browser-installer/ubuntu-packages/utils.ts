@@ -1,6 +1,8 @@
+import _ from "lodash";
 import { exec } from "child_process";
 import fs from "fs";
 import { browserInstallerDebug } from "../utils";
+import { LINUX_UBUNTU_RELEASE_ID } from "../constants";
 
 /** @link https://manpages.org/os-release/5 */
 const OS_RELEASE_PATH = "/etc/os-release";
@@ -61,22 +63,16 @@ const osRelease = async (): Promise<OsRelease> => {
     return result;
 };
 
-let isUbuntuCached: boolean | null = null;
+const osReleaseCached = _.once(osRelease);
 
 export const isUbuntu = async (): Promise<boolean> => {
-    if (isUbuntuCached !== null) {
-        return isUbuntuCached;
-    }
-
-    isUbuntuCached = await osRelease()
-        .then(release => release.ID === "ubuntu")
+    return osReleaseCached()
+        .then(release => release.ID === LINUX_UBUNTU_RELEASE_ID)
         .catch(() => false);
-
-    return isUbuntuCached;
 };
 
 export const getUbuntuMilestone = async (): Promise<string> => {
-    const release = await osRelease();
+    const release = await osReleaseCached();
 
     if (!release.VERSION_ID) {
         throw new Error(`VERSION_ID is missing in ${OS_RELEASE_PATH}. Probably its not Ubuntu`);
