@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Browser, getNormalizedBrowserName, type SupportedBrowser } from "./utils";
+import { Browser, browserInstallerDebug, getNormalizedBrowserName, type SupportedBrowser } from "./utils";
 
 /**
  * @returns path to installed browser binary
@@ -18,6 +18,15 @@ export const installBrowser = async (
     const { isUbuntu, installUbuntuPackageDependencies } = await import("./ubuntu-packages");
 
     const needToInstallUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
+
+    browserInstallerDebug(
+        [
+            `install ${browserName}@${browserVersion}`,
+            `shouldInstallWebDriver:${shouldInstallWebDriver}`,
+            `shouldInstallUbuntuPackages:${shouldInstallUbuntuPackages}`,
+            `needToInstallUbuntuPackages:${needToInstallUbuntuPackages}`,
+        ].join(", "),
+    );
 
     switch (browserName) {
         case Browser.CHROME:
@@ -83,6 +92,7 @@ const forceInstallBinaries = async (
     browserVersion?: string,
 ): ForceInstallBinaryResult => {
     const normalizedBrowserName = getNormalizedBrowserName(browserName);
+    const installOpts = { force: true, shouldInstallWebDriver: true, shouldInstallUbuntuPackages: true };
 
     if (!normalizedBrowserName) {
         return {
@@ -91,7 +101,7 @@ const forceInstallBinaries = async (
         };
     }
 
-    return installFn(normalizedBrowserName, browserVersion, { force: true, shouldInstallWebDriver: true })
+    return installFn(normalizedBrowserName, browserVersion, installOpts)
         .then(successResult => {
             return successResult
                 ? { status: BrowserInstallStatus.Ok }

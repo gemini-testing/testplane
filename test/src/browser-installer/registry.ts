@@ -1,44 +1,42 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type * as Registry from "../../../src/browser-installer/registry";
-import { Browser, Driver, type DownloadProgressCallback } from "../../../src/browser-installer/utils";
+import type * as RegistryType from "../../../src/browser-installer/registry";
+import { Browser, Driver, type DownloadProgressCallback, type Registry } from "../../../src/browser-installer/utils";
 import { BrowserPlatform } from "@puppeteer/browsers";
+import type { PartialDeep } from "type-fest";
 
 describe("browser-installer/registry", () => {
     const sandbox = sinon.createSandbox();
 
-    let registry: typeof Registry;
+    let registry: typeof RegistryType;
 
-    let readJSONSyncStub: SinonStub;
+    let readRegistryStub: SinonStub;
     let outputJSONSyncStub: SinonStub;
-    let existsSyncStub: SinonStub;
     let progressBarRegisterStub: SinonStub;
     let loggerWarnStub: SinonStub;
 
-    const createRegistry_ = (contents: Record<string, Record<string, string>> = {}): typeof Registry => {
+    const createRegistry_ = (contents: PartialDeep<Registry> = {} as Registry): typeof RegistryType => {
+        contents.binaries ||= {};
+        contents.osPackages ||= {};
+        contents.meta ||= { version: 1 };
+
         return proxyquire("../../../src/browser-installer/registry", {
-            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
-            "fs-extra": { readJSONSync: () => contents, existsSync: () => true },
+            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json", readRegistry: () => contents },
             "../../utils/logger": { warn: loggerWarnStub },
         });
     };
 
     beforeEach(() => {
-        readJSONSyncStub = sandbox.stub().returns({});
+        readRegistryStub = sandbox.stub().returns({ binaries: {}, osPackages: {}, meta: { version: 1 } });
         outputJSONSyncStub = sandbox.stub();
-        existsSyncStub = sandbox.stub().returns(false);
         progressBarRegisterStub = sandbox.stub();
         loggerWarnStub = sandbox.stub();
 
         registry = proxyquire("../../../src/browser-installer/registry", {
             "./cli-progress-bar": { createBrowserDownloadProgressBar: () => ({ register: progressBarRegisterStub }) },
-            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
+            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json", readRegistry: readRegistryStub },
             "../../utils/logger": { warn: loggerWarnStub },
-            "fs-extra": {
-                readJSONSync: readJSONSyncStub,
-                outputJSONSync: outputJSONSyncStub,
-                existsSync: existsSyncStub,
-            },
+            "fs-extra": { outputJSONSync: outputJSONSyncStub },
         });
     });
 
@@ -47,9 +45,11 @@ describe("browser-installer/registry", () => {
     describe("getBinaryPath", () => {
         it("should return binary path", async () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chrome_mac_arm: {
-                    "115.0.5790.170": "../browsers/chrome",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chrome_mac_arm: {
+                        "115.0.5790.170": "../browsers/chrome",
+                    },
                 },
             });
 
@@ -68,7 +68,7 @@ describe("browser-installer/registry", () => {
 
         it("should throw an error if browser version is not installed", async () => {
             // eslint-disable-next-line camelcase
-            registry = createRegistry_({ chrome_mac_arm: {} });
+            registry = createRegistry_({ binaries: { chrome_mac_arm: {} } });
 
             const fn = (): Promise<string> => registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "120");
 
@@ -79,11 +79,13 @@ describe("browser-installer/registry", () => {
     describe("getMatchedBrowserVersion", () => {
         it("should return matching latest chrome browser version", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chrome_mac_arm: {
-                    "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
-                    "114.0.6980.170": "../browsers/chrome-114-0-6980-170",
-                    "115.0.5320.180": "../browsers/chrome-115-0-5230-180",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chrome_mac_arm: {
+                        "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
+                        "114.0.6980.170": "../browsers/chrome-114-0-6980-170",
+                        "115.0.5320.180": "../browsers/chrome-115-0-5230-180",
+                    },
                 },
             });
 
@@ -96,11 +98,13 @@ describe("browser-installer/registry", () => {
 
         it("should return matching latest firefox browser version", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                firefox_mac_arm: {
-                    "stable_117.0b2": "../browsers/chrome-117-0b2",
-                    "stable_118.0": "../browsers/firefox-118-0",
-                    "stable_117.0b9": "../browsers/firefox-117-0b9",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    firefox_mac_arm: {
+                        "stable_117.0b2": "../browsers/chrome-117-0b2",
+                        "stable_118.0": "../browsers/firefox-118-0",
+                        "stable_117.0b9": "../browsers/firefox-117-0b9",
+                    },
                 },
             });
 
@@ -113,11 +117,13 @@ describe("browser-installer/registry", () => {
 
         it("should return null if no installed browser matching requirements", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chrome_mac_arm: {
-                    "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
-                    "114.0.6980.170": "../browsers/chrome-114-0-6980-170",
-                    "115.0.5320.180": "../browsers/chrome-115-0-5230-180",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chrome_mac_arm: {
+                        "115.0.5790.170": "../browsers/chrome-115-0-5790-170",
+                        "114.0.6980.170": "../browsers/chrome-114-0-6980-170",
+                        "115.0.5320.180": "../browsers/chrome-115-0-5230-180",
+                    },
                 },
             });
 
@@ -132,11 +138,13 @@ describe("browser-installer/registry", () => {
     describe("getMatchedDriverVersion", () => {
         it("should return matching chromedriver version", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chromedriver_mac_arm: {
-                    "115.0.5790.170": "../drivers/chromedriver-115-0-5790-170",
-                    "114.0.6980.170": "../drivers/chromedriver-114-0-6980-170",
-                    "115.0.5320.180": "../drivers/chromedriver-115-0-5230-180",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chromedriver_mac_arm: {
+                        "115.0.5790.170": "../drivers/chromedriver-115-0-5790-170",
+                        "114.0.6980.170": "../drivers/chromedriver-114-0-6980-170",
+                        "115.0.5320.180": "../drivers/chromedriver-115-0-5230-180",
+                    },
                 },
             });
 
@@ -149,11 +157,13 @@ describe("browser-installer/registry", () => {
 
         it("should return matching chromedriver version", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                edgedriver_mac_arm: {
-                    "115.0.5790.170": "../drivers/edgedriver-115-0-5790-170",
-                    "114.0.6980.170": "../drivers/edgedriver-114-0-6980-170",
-                    "115.0.5320.180": "../drivers/edgedriver-115-0-5230-180",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    edgedriver_mac_arm: {
+                        "115.0.5790.170": "../drivers/edgedriver-115-0-5790-170",
+                        "114.0.6980.170": "../drivers/edgedriver-114-0-6980-170",
+                        "115.0.5320.180": "../drivers/edgedriver-115-0-5230-180",
+                    },
                 },
             });
 
@@ -166,11 +176,13 @@ describe("browser-installer/registry", () => {
 
         it("should return latest version for geckodriver", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                geckodriver_mac_arm: {
-                    "0.33.0": "../drivers/geckodriver-33",
-                    "0.35.0": "../drivers/geckodriver-35",
-                    "0.34.0": "../drivers/geckodriver-34",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    geckodriver_mac_arm: {
+                        "0.33.0": "../drivers/geckodriver-33",
+                        "0.35.0": "../drivers/geckodriver-35",
+                        "0.34.0": "../drivers/geckodriver-34",
+                    },
                 },
             });
 
@@ -183,8 +195,10 @@ describe("browser-installer/registry", () => {
 
         it("should return null if matching version is not found", () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chromedriver_mac_arm: {},
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chromedriver_mac_arm: {},
+                },
             });
 
             const version = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
@@ -206,9 +220,11 @@ describe("browser-installer/registry", () => {
 
         it("should not install binary if it is already installed", async () => {
             registry = createRegistry_({
-                // eslint-disable-next-line camelcase
-                chrome_mac_arm: {
-                    "115.0.5320.180": "../browser/path",
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chrome_mac_arm: {
+                        "115.0.5320.180": "../browser/path",
+                    },
                 },
             });
 
@@ -235,8 +251,12 @@ describe("browser-installer/registry", () => {
                 outputJSONSyncStub,
                 "/testplane/registry/registry.json",
                 {
-                    // eslint-disable-next-line camelcase
-                    chrome_mac_arm: { "115.0.5320.180": "../browser/path" },
+                    binaries: {
+                        // eslint-disable-next-line camelcase
+                        chrome_mac_arm: { "115.0.5320.180": "../browser/path" },
+                    },
+                    osPackages: {},
+                    meta: { version: 1 },
                 },
                 { replacer: sinon.match.func },
             );

@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs-extra";
 import { exec } from "child_process";
 import { ensureUnixBinaryExists } from "./utils";
-import { browserInstallerDebug } from "../utils";
+import { browserInstallerDebug, type DownloadProgressCallback } from "../utils";
 import { MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED } from "../constants";
 
 /** @link https://manpages.org/apt-cache/8 */
@@ -96,7 +96,7 @@ const downloadUbuntuPackages = async (dependencies: string[], targetDir: string)
 
 /** @link https://manpages.org/dpkg */
 const unpackUbuntuPackages = async (packagesDir: string, destination: string): Promise<void> => {
-    await ensureUnixBinaryExists("dpkg");
+    await Promise.all([ensureUnixBinaryExists("dpkg"), fs.ensureDir(destination)]);
 
     return new Promise((resolve, reject) => {
         exec(`for pkg in *.deb; do dpkg -x $pkg ${destination}; done`, { cwd: packagesDir }, err => {
@@ -109,34 +109,26 @@ const unpackUbuntuPackages = async (packagesDir: string, destination: string): P
     });
 };
 
-export const installUbuntuPackages = async (packages: string[], destination: string): Promise<void> => {
+export const installUbuntuPackages = async (
+    packages: string[],
+    destination: string,
+    { downloadProgressCallback }: { downloadProgressCallback: DownloadProgressCallback },
+): Promise<void> => {
     if (!packages) {
         browserInstallerDebug(`There are no ubuntu packages to install`);
 
-        return fs.ensureDir(destination);
+        return;
     }
 
     const withRecursiveDependencies = await resolveTransitiveDependencies(packages);
+
+    downloadProgressCallback(40);
 
     browserInstallerDebug(`Resolved direct packages to ${withRecursiveDependencies.length} dependencies`);
 
     const dependenciesToDownload = await filterNotExistingDependencies(withRecursiveDependencies);
 
-    browserInstallerDebug(`There are ${dependenciesToDownload.length} deb packages to download`);
-
-    if (!dependenciesToDownload.length) {
-        return fs.ensureDir(destination);
-    }
-
-    const tmpPackagesDir = await fs.mkdtemp(path.join(os.tmpdir(), "testplane-ubuntu-apt-packages"));
-
-    await downloadUbuntuPackages(dependenciesToDownload, tmpPackagesDir);
-
-    browserInstallerDebug(`Downloaded ${dependenciesToDownload.length} deb packages`);
-
-    await unpackUbuntuPackages(tmpPackagesDir, destination);
-
-    browserInstallerDebug(`Unpacked ${dependenciesToDownload.length} deb packages`);
+    downloadProgressCallback(70);
 
     const missingPkgs = MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED.filter(pkg => dependenciesToDownload.includes(pkg));
 
@@ -145,7 +137,26 @@ export const installUbuntuPackages = async (packages: string[], destination: str
             [
                 "Missing some packages, which needs to be installed manually",
                 `Use \`apt-get install ${missingPkgs.join(" ")}\` to install them`,
+                `Then run "testplane install-deps" again\n`,
             ].join("\n"),
         );
     }
+
+    browserInstallerDebug(`There are ${dependenciesToDownload.length} deb packages to download`);
+
+    if (!dependenciesToDownload.length) {
+        return;
+    }
+
+    const tmpPackagesDir = await fs.mkdtemp(path.join(os.tmpdir(), "testplane-ubuntu-apt-packages"));
+
+    await downloadUbuntuPackages(dependenciesToDownload, tmpPackagesDir);
+
+    downloadProgressCallback(100);
+
+    browserInstallerDebug(`Downloaded ${dependenciesToDownload.length} deb packages`);
+
+    await unpackUbuntuPackages(tmpPackagesDir, destination);
+
+    browserInstallerDebug(`Unpacked ${dependenciesToDownload.length} deb packages`);
 };
