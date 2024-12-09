@@ -11,8 +11,7 @@ export const runEdgeDriver = async (
     edgeVersion: string,
     { debug = false }: { debug?: boolean } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
-    const edgeDriverPath = await installEdgeDriver(edgeVersion);
-    const randomPort = await getPort();
+    const [edgeDriverPath, randomPort] = await Promise.all([installEdgeDriver(edgeVersion), getPort()]);
 
     const edgeDriver = spawn(edgeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,

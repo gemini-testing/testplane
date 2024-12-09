@@ -6,6 +6,7 @@ import { installFirefox } from "./browser";
 import { installLatestGeckoDriver } from "./driver";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_TIMEOUT } from "../constants";
+import { getUbuntuLinkerEnv, isUbuntu } from "../ubuntu-packages";
 
 export { installFirefox, installLatestGeckoDriver };
 
@@ -13,12 +14,13 @@ export const runGeckoDriver = async (
     firefoxVersion: string,
     { debug = false } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
-    const [geckoDriverPath] = await Promise.all([
+    const [geckoDriverPath, randomPort, geckoDriverEnv] = await Promise.all([
         installLatestGeckoDriver(firefoxVersion),
-        installFirefox(firefoxVersion),
+        getPort(),
+        isUbuntu()
+            .then(isUbuntu => (isUbuntu ? getUbuntuLinkerEnv() : null))
+            .then(extraEnv => (extraEnv ? { ...process.env, ...extraEnv } : process.env)),
     ]);
-
-    const randomPort = await getPort();
 
     const geckoDriver = await startGeckoDriver({
         customGeckoDriverPath: geckoDriverPath,
@@ -27,6 +29,7 @@ export const runGeckoDriver = async (
         spawnOpts: {
             windowsHide: true,
             detached: false,
+            env: geckoDriverEnv,
         },
     });
 
