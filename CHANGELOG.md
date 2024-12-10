@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.22.5](https://github.com/gemini-testing/testplane/compare/v8.22.4...v8.22.5) (2024-12-10)
+
+
+### Bug Fixes
+
+* error when trying to disable animation ([ee931e2](https://github.com/gemini-testing/testplane/commit/ee931e2e6d849f8ca66add3f0d91e891e9be0ec4))
+
 ### [8.22.4](https://github.com/gemini-testing/testplane/compare/v8.22.3...v8.22.4) (2024-12-03)
 
 
