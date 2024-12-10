@@ -16,6 +16,10 @@ describe("browser-installer/firefox", () => {
     let getPortStub: SinonStub;
     let waitPortStub: SinonStub;
 
+    let isUbuntuStub: SinonStub;
+    let getUbuntuLinkerEnvStub: SinonStub;
+    let installUbuntuPackageDependenciesStub: SinonStub;
+
     beforeEach(() => {
         pipeLogsWithPrefixStub = sandbox.stub();
         installFirefoxStub = sandbox.stub().resolves("/browser/path");
@@ -24,10 +28,19 @@ describe("browser-installer/firefox", () => {
         getPortStub = sandbox.stub().resolves(12345);
         waitPortStub = sandbox.stub().resolves();
 
+        isUbuntuStub = sandbox.stub().resolves(false);
+        getUbuntuLinkerEnvStub = sandbox.stub().resolves({ LD_LINKER_PATH: "foobar" });
+        installUbuntuPackageDependenciesStub = sandbox.stub().resolves();
+
         runGeckoDriver = proxyquire("../../../../src/browser-installer/firefox", {
             "../../dev-server/utils": { pipeLogsWithPrefix: pipeLogsWithPrefixStub },
             "./browser": { installFirefox: installFirefoxStub },
             "./driver": { installLatestGeckoDriver: installLatestGeckoDriverStub },
+            "../ubuntu-packages": {
+                isUbuntu: isUbuntuStub,
+                getUbuntuLinkerEnv: getUbuntuLinkerEnvStub,
+                installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub,
+            },
             geckodriver: { start: startGeckoDriverStub },
             "wait-port": waitPortStub,
             "get-port": getPortStub,
@@ -49,6 +62,7 @@ describe("browser-installer/firefox", () => {
             spawnOpts: {
                 windowsHide: true,
                 detached: false,
+                env: process.env,
             },
         });
     });
@@ -86,7 +100,7 @@ describe("browser-installer/firefox", () => {
             customGeckoDriverPath: "/driver/path",
             port: 12345,
             log: "debug",
-            spawnOpts: { windowsHide: true, detached: false },
+            spawnOpts: { windowsHide: true, detached: false, env: process.env },
         });
         assert.calledOnceWith(pipeLogsWithPrefixStub, result.process, "[geckodriver@130] ");
     });
@@ -95,5 +109,54 @@ describe("browser-installer/firefox", () => {
         await runGeckoDriver("130");
 
         assert.notCalled(pipeLogsWithPrefixStub);
+    });
+
+    describe("ubuntu", () => {
+        it(`should not try to install ubuntu packages if its not ubuntu`, async () => {
+            isUbuntuStub.resolves(false);
+
+            await runGeckoDriver("130");
+
+            assert.notCalled(installUbuntuPackageDependenciesStub);
+        });
+
+        it(`should not set ubuntu linker env variables if its not ubuntu`, async () => {
+            installLatestGeckoDriverStub.resolves("/driver/path");
+            getPortStub.resolves(10050);
+            isUbuntuStub.resolves(false);
+
+            await runGeckoDriver("130");
+
+            assert.notCalled(getUbuntuLinkerEnvStub);
+            assert.calledOnceWith(startGeckoDriverStub, {
+                customGeckoDriverPath: "/driver/path",
+                port: 10050,
+                log: "fatal",
+                spawnOpts: {
+                    windowsHide: true,
+                    detached: false,
+                    env: process.env,
+                },
+            });
+        });
+
+        it(`should set ubuntu linker env variables if its ubuntu`, async () => {
+            isUbuntuStub.resolves(true);
+            getUbuntuLinkerEnvStub.resolves({ foo: "bar" });
+
+            await runGeckoDriver("130");
+
+            assert.calledOnceWith(
+                startGeckoDriverStub,
+                sinon.match({
+                    spawnOpts: {
+                        env: {
+                            ...process.env,
+                            foo: "bar",
+                        },
+                    },
+                }),
+            );
+        });
     });
 });

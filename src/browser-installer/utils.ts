@@ -1,13 +1,14 @@
 import { detectBrowserPlatform, BrowserPlatform, Browser as PuppeteerBrowser } from "@puppeteer/browsers";
 import extractZip from "extract-zip";
+import _ from "lodash";
 import os from "os";
 import path from "path";
-import { createWriteStream } from "fs";
+import fs from "fs-extra";
 import { Readable } from "stream";
 import debug from "debug";
 import { MIN_CHROMIUM_MAC_ARM_VERSION } from "./constants";
 
-export type DownloadProgressCallback = (downloadedBytes: number, totalBytes: number) => void;
+export type DownloadProgressCallback = (done: number, total?: number) => void;
 
 export const browserInstallerDebug = debug("testplane:browser-installer");
 
@@ -29,21 +30,39 @@ export const Driver = {
 export type SupportedBrowser = (typeof Browser)[keyof typeof Browser];
 export type SupportedDriver = (typeof Driver)[keyof typeof Driver];
 
-export const getDriverNameForBrowserName = (browserName: SupportedBrowser): SupportedDriver | null => {
-    if (browserName === Browser.CHROME || browserName === Browser.CHROMIUM) {
-        return Driver.CHROMEDRIVER;
+export type VersionToPathMap = Record<string, string | Promise<string>>;
+export type BinaryName = Exclude<SupportedBrowser | SupportedDriver, SupportedBrowser & SupportedDriver>;
+export type BinaryKey = `${BinaryName}_${BrowserPlatform}`;
+export type OsName = string;
+export type OsVersion = string;
+export type OsPackagesKey = `${OsName}_${OsVersion}`;
+export type Registry = {
+    binaries: Record<BinaryKey, VersionToPathMap>;
+    osPackages: Record<OsPackagesKey, string | Promise<string>>;
+    meta: { version: number };
+};
+
+export const getNormalizedBrowserName = (
+    browserName?: string,
+): Exclude<SupportedBrowser, typeof Browser.CHROMIUM> | null => {
+    if (!browserName) {
+        return null;
     }
 
-    if (browserName === Browser.FIREFOX) {
-        return Driver.GECKODRIVER;
+    if (/chrome/i.test(browserName)) {
+        return Browser.CHROME;
     }
 
-    if (browserName === Browser.SAFARI) {
-        return Driver.SAFARIDRIVER;
+    if (/firefox/i.test(browserName)) {
+        return Browser.FIREFOX;
     }
 
-    if (browserName === Browser.EDGE) {
-        return Driver.EDGEDRIVER;
+    if (/edge/i.test(browserName)) {
+        return Browser.EDGE;
+    }
+
+    if (/safari/i.test(browserName)) {
+        return Browser.SAFARI;
     }
 
     return null;
@@ -123,11 +142,41 @@ const getCacheDir = (envValueOverride = process.env.TESTPLANE_BROWSERS_PATH): st
 export const getRegistryPath = (envValueOverride?: string): string =>
     path.join(getCacheDir(envValueOverride), "registry.json");
 
+export const readRegistry = (registryPath: string): Registry => {
+    const registry: Registry = {
+        binaries: {} as Record<BinaryKey, VersionToPathMap>,
+        osPackages: {} as Record<OsPackagesKey, string>,
+        meta: { version: 1 },
+    };
+
+    let fsData: Record<string, unknown>;
+
+    if (fs.existsSync(registryPath)) {
+        fsData = fs.readJSONSync(registryPath);
+
+        const isRegistryV0 = fsData && !fsData.meta;
+        const isRegistryWithVersion = typeof _.get(fsData, "meta.version") === "number";
+
+        if (isRegistryWithVersion) {
+            return fsData as Registry;
+        }
+
+        if (isRegistryV0) {
+            registry.binaries = fsData as Record<BinaryKey, VersionToPathMap>;
+        }
+    }
+
+    return registry;
+};
+
 export const getBrowsersDir = (): string => path.join(getCacheDir(), "browsers");
 const getDriversDir = (): string => path.join(getCacheDir(), "drivers");
 
 const getDriverDir = (driverName: string, driverVersion: string): string =>
     path.join(getDriversDir(), driverName, driverVersion);
+
+export const getOsPackagesDir = (osName: OsName, osVersion: OsVersion): string =>
+    path.join(getCacheDir(), "packages", osName, osVersion);
 
 export const getGeckoDriverDir = (driverVersion: string): string =>
     getDriverDir("geckodriver", getBrowserPlatform() + "-" + driverVersion);
@@ -161,7 +210,7 @@ export const retryFetch = async (
 };
 
 export const downloadFile = async (url: string, filePath: string): Promise<void> => {
-    const writeStream = createWriteStream(filePath);
+    const writeStream = fs.createWriteStream(filePath);
     const response = await fetch(url);
 
     if (!response.ok || !response.body) {

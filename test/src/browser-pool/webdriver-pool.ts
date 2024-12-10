@@ -41,7 +41,7 @@ describe("browser-pool/webdriver-pool", () => {
         const driver = await wdPool.getWebdriver("MicrosoftEdge", "135.0");
 
         assert.equal(driver.gridUrl, "http://localhost:100500");
-        assert.calledOnceWith(runBrowserDriverStub, "edgedriver", "135.0", { debug: false });
+        assert.calledOnceWith(runBrowserDriverStub, "MicrosoftEdge", "135.0", { debug: false });
     });
 
     it("should run browser driver with debug mode", async () => {

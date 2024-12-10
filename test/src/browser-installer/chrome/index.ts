@@ -16,6 +16,10 @@ describe("browser-installer/chrome", () => {
     let getPortStub: SinonStub;
     let waitPortStub: SinonStub;
 
+    let isUbuntuStub: SinonStub;
+    let getUbuntuLinkerEnvStub: SinonStub;
+    let installUbuntuPackageDependenciesStub: SinonStub;
+
     beforeEach(() => {
         pipeLogsWithPrefixStub = sandbox.stub();
         installChromeStub = sandbox.stub().resolves("/browser/path");
@@ -24,10 +28,19 @@ describe("browser-installer/chrome", () => {
         getPortStub = sandbox.stub().resolves(12345);
         waitPortStub = sandbox.stub().resolves();
 
+        isUbuntuStub = sandbox.stub().resolves(false);
+        getUbuntuLinkerEnvStub = sandbox.stub().resolves({ LD_LINKER_PATH: "foobar" });
+        installUbuntuPackageDependenciesStub = sandbox.stub().resolves();
+
         runChromeDriver = proxyquire("../../../../src/browser-installer/chrome", {
             "../../dev-server/utils": { pipeLogsWithPrefix: pipeLogsWithPrefixStub },
             "./driver": { installChromeDriver: installChromeDriverStub },
             "./browser": { installChrome: installChromeStub },
+            "../ubuntu-packages": {
+                isUbuntu: isUbuntuStub,
+                getUbuntuLinkerEnv: getUbuntuLinkerEnvStub,
+                installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub,
+            },
             child_process: { spawn: spawnStub }, // eslint-disable-line camelcase
             "wait-port": waitPortStub,
             "get-port": getPortStub,
@@ -83,5 +96,46 @@ describe("browser-installer/chrome", () => {
         await runChromeDriver("130");
 
         assert.notCalled(pipeLogsWithPrefixStub);
+    });
+
+    describe("ubuntu", () => {
+        it(`should not try to install ubuntu packages if its not ubuntu`, async () => {
+            isUbuntuStub.resolves(false);
+
+            await runChromeDriver("130");
+
+            assert.notCalled(installUbuntuPackageDependenciesStub);
+        });
+
+        it(`should not set ubuntu linker env variables if its not ubuntu`, async () => {
+            installChromeDriverStub.resolves("/driver/path");
+            getPortStub.resolves(10050);
+            isUbuntuStub.resolves(false);
+
+            await runChromeDriver("130");
+
+            assert.notCalled(getUbuntuLinkerEnvStub);
+            assert.calledOnceWith(spawnStub, sinon.match.string, sinon.match.array, {
+                windowsHide: true,
+                detached: false,
+                env: process.env,
+            });
+        });
+
+        it(`should set ubuntu linker env variables if its ubuntu`, async () => {
+            isUbuntuStub.resolves(true);
+            getUbuntuLinkerEnvStub.resolves({ foo: "bar" });
+
+            await runChromeDriver("130");
+
+            assert.calledOnceWith(spawnStub, sinon.match.string, sinon.match.array, {
+                windowsHide: true,
+                detached: false,
+                env: {
+                    ...process.env,
+                    foo: "bar",
+                },
+            });
+        });
     });
 });
