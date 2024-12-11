@@ -9,6 +9,7 @@ export const createBrowserDownloadProgressBar = (): { register: RegisterProgress
         forceRedraw: true,
         autopadding: true,
         hideCursor: true,
+        clearOnComplete: true,
         fps: 5,
         format: " [{bar}] | {filename} | {value}%",
     });
