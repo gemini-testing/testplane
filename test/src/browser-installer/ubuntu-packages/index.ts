@@ -55,9 +55,11 @@ describe("browser-installer/ubuntu-packages", () => {
             "./apt": { installUbuntuPackages: installUbuntuPackagesStub },
             "./utils": { getUbuntuMilestone: getUbuntuMilestoneStub },
             "../registry": {
-                hasOsPackages: hasOsPackagesStub,
-                getOsPackagesPath: getOsPackagesPathStub,
-                installOsPackages: installOsPackagesStub,
+                default: {
+                    hasOsPackages: hasOsPackagesStub,
+                    getOsPackagesPath: getOsPackagesPathStub,
+                    installOsPackages: installOsPackagesStub,
+                },
             },
             "../../utils/logger": { log: loggerLogStub, warn: loggerWarnStub },
         });

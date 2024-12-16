@@ -1,5 +1,5 @@
 import { install as puppeteerInstall, canDownload } from "@puppeteer/browsers";
-import { installBinary, getBinaryPath, getMatchedBrowserVersion } from "../registry";
+import registry from "../registry";
 import { getMilestone, browserInstallerDebug, getBrowsersDir, Browser, type DownloadProgressCallback } from "../utils";
 import { getChromiumBuildId } from "./utils";
 import { getChromePlatform } from "../utils";
@@ -18,12 +18,12 @@ export const installChromium = async (version: string, { force = false } = {}): 
     }
 
     const platform = getChromePlatform(version);
-    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.CHROMIUM, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.CHROMIUM, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chromium@${version} browser was found. Skipping the installation`);
 
-        return getBinaryPath(Browser.CHROMIUM, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(Browser.CHROMIUM, platform, existingLocallyBrowserVersion);
     }
 
     const buildId = await getChromiumBuildId(platform, milestone);
@@ -52,5 +52,5 @@ export const installChromium = async (version: string, { force = false } = {}): 
             unpack: true,
         }).then(result => result.executablePath);
 
-    return installBinary(Browser.CHROMIUM, platform, milestone, installFn);
+    return registry.installBinary(Browser.CHROMIUM, platform, milestone, installFn);
 };

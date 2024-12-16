@@ -6,7 +6,7 @@ import { installUbuntuPackages } from "./apt";
 import { getUbuntuMilestone } from "./utils";
 import logger from "../../utils/logger";
 import { LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME, LINUX_UBUNTU_RELEASE_ID } from "../constants";
-import { getOsPackagesPath, hasOsPackages, installOsPackages } from "../registry";
+import registry from "../registry";
 
 export { isUbuntu, getUbuntuMilestone, ensureUnixBinaryExists } from "./utils";
 
@@ -41,10 +41,10 @@ export const installUbuntuPackageDependencies = async (): Promise<string> => {
 
     browserInstallerDebug(`installing ubuntu${ubuntuMilestone} dependencies`);
 
-    if (hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
+    if (registry.hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
         browserInstallerDebug(`installing ubuntu${ubuntuMilestone} dependencies`);
 
-        return getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
+        return registry.getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
     }
 
     const downloadFn = async (downloadProgressCallback: DownloadProgressCallback): Promise<string> => {
@@ -56,7 +56,7 @@ export const installUbuntuPackageDependencies = async (): Promise<string> => {
         return ubuntuPackagesDir;
     };
 
-    return installOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone, downloadFn);
+    return registry.installOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone, downloadFn);
 };
 
 const listDirsAbsolutePath = async (dirBasePath: string, ...prefix: string[]): Promise<string[]> => {
@@ -87,11 +87,11 @@ const listDirsAbsolutePath = async (dirBasePath: string, ...prefix: string[]): P
 const getUbuntuLinkerEnvRaw = async (): Promise<Record<string, string>> => {
     const ubuntuMilestone = await getUbuntuMilestone();
 
-    if (!hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
+    if (!registry.hasOsPackages(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone)) {
         return {};
     }
 
-    const ubuntuPackagesDir = await getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
+    const ubuntuPackagesDir = await registry.getOsPackagesPath(LINUX_UBUNTU_RELEASE_ID, ubuntuMilestone);
 
     const currentRuntimeLibrariesEnvValue = process.env[LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME];
 

@@ -6,17 +6,17 @@ import {
     getBrowsersDir,
     type DownloadProgressCallback,
 } from "../utils";
-import { installBinary, getBinaryPath, getMatchedBrowserVersion } from "../registry";
+import registry from "../registry";
 import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
 
 export const installFirefox = async (version: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.FIREFOX, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.FIREFOX, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed firefox@${version} browser was found. Skipping the installation`);
 
-        return getBinaryPath(Browser.FIREFOX, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(Browser.FIREFOX, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeFirefoxVersion(version);
@@ -47,5 +47,5 @@ export const installFirefox = async (version: string, { force = false } = {}): P
             unpack: true,
         }).then(result => result.executablePath);
 
-    return installBinary(Browser.FIREFOX, platform, buildId, installFn);
+    return registry.installBinary(Browser.FIREFOX, platform, buildId, installFn);
 };

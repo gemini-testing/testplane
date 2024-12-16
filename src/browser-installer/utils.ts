@@ -1,6 +1,5 @@
 import { detectBrowserPlatform, BrowserPlatform, Browser as PuppeteerBrowser } from "@puppeteer/browsers";
 import extractZip from "extract-zip";
-import _ from "lodash";
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
@@ -36,7 +35,7 @@ export type BinaryKey = `${BinaryName}_${BrowserPlatform}`;
 export type OsName = string;
 export type OsVersion = string;
 export type OsPackagesKey = `${OsName}_${OsVersion}`;
-export type Registry = {
+export type RegistryFileContents = {
     binaries: Record<BinaryKey, VersionToPathMap>;
     osPackages: Record<OsPackagesKey, string | Promise<string>>;
     meta: { version: number };
@@ -141,33 +140,6 @@ const getCacheDir = (envValueOverride = process.env.TESTPLANE_BROWSERS_PATH): st
 
 export const getRegistryPath = (envValueOverride?: string): string =>
     path.join(getCacheDir(envValueOverride), "registry.json");
-
-export const readRegistry = (registryPath: string): Registry => {
-    const registry: Registry = {
-        binaries: {} as Record<BinaryKey, VersionToPathMap>,
-        osPackages: {} as Record<OsPackagesKey, string>,
-        meta: { version: 1 },
-    };
-
-    let fsData: Record<string, unknown>;
-
-    if (fs.existsSync(registryPath)) {
-        fsData = fs.readJSONSync(registryPath);
-
-        const isRegistryV0 = fsData && !fsData.meta;
-        const isRegistryWithVersion = typeof _.get(fsData, "meta.version") === "number";
-
-        if (isRegistryWithVersion) {
-            return fsData as Registry;
-        }
-
-        if (isRegistryV0) {
-            registry.binaries = fsData as Record<BinaryKey, VersionToPathMap>;
-        }
-    }
-
-    return registry;
-};
 
 export const getBrowsersDir = (): string => path.join(getCacheDir(), "browsers");
 const getDriversDir = (): string => path.join(getCacheDir(), "drivers");

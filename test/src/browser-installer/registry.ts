@@ -1,7 +1,12 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type * as RegistryType from "../../../src/browser-installer/registry";
-import { Browser, Driver, type DownloadProgressCallback, type Registry } from "../../../src/browser-installer/utils";
+import type RegistryType from "../../../src/browser-installer/registry";
+import {
+    Browser,
+    Driver,
+    type DownloadProgressCallback,
+    type RegistryFileContents,
+} from "../../../src/browser-installer/utils";
 import { BrowserPlatform } from "@puppeteer/browsers";
 import type { PartialDeep } from "type-fest";
 
@@ -10,34 +15,50 @@ describe("browser-installer/registry", () => {
 
     let registry: typeof RegistryType;
 
-    let readRegistryStub: SinonStub;
+    let existsSyncStub: SinonStub;
+    let readJSONSyncStub: SinonStub;
     let outputJSONSyncStub: SinonStub;
     let progressBarRegisterStub: SinonStub;
     let loggerWarnStub: SinonStub;
 
-    const createRegistry_ = (contents: PartialDeep<Registry> = {} as Registry): typeof RegistryType => {
+    const createRegistry_ = (
+        contents: PartialDeep<RegistryFileContents> = {} as RegistryFileContents,
+    ): typeof RegistryType => {
         contents.binaries ||= {};
         contents.osPackages ||= {};
         contents.meta ||= { version: 1 };
 
+        existsSyncStub.returns(true);
+        readJSONSyncStub.returns(contents);
+
         return proxyquire("../../../src/browser-installer/registry", {
-            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json", readRegistry: () => contents },
             "../../utils/logger": { warn: loggerWarnStub },
-        });
+            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
+            "fs-extra": {
+                existsSync: existsSyncStub,
+                readJSONSync: readJSONSyncStub,
+                outputJSONSync: outputJSONSyncStub,
+            },
+        }).default;
     };
 
     beforeEach(() => {
-        readRegistryStub = sandbox.stub().returns({ binaries: {}, osPackages: {}, meta: { version: 1 } });
+        existsSyncStub = sandbox.stub().returns(false);
+        readJSONSyncStub = sandbox.stub().returns({ binaries: {}, osPackages: {}, meta: { version: 1 } });
         outputJSONSyncStub = sandbox.stub();
         progressBarRegisterStub = sandbox.stub();
         loggerWarnStub = sandbox.stub();
 
         registry = proxyquire("../../../src/browser-installer/registry", {
             "./cli-progress-bar": { createBrowserDownloadProgressBar: () => ({ register: progressBarRegisterStub }) },
-            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json", readRegistry: readRegistryStub },
+            "../utils": { getRegistryPath: () => "/testplane/registry/registry.json" },
             "../../utils/logger": { warn: loggerWarnStub },
-            "fs-extra": { outputJSONSync: outputJSONSyncStub },
-        });
+            "fs-extra": {
+                existsSync: existsSyncStub,
+                readJSONSync: readJSONSyncStub,
+                outputJSONSync: outputJSONSyncStub,
+            },
+        }).default;
     });
 
     afterEach(() => sandbox.restore());

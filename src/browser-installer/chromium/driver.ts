@@ -2,7 +2,7 @@ import fs from "fs-extra";
 import path from "path";
 import { noop } from "lodash";
 import { CHROMEDRIVER_STORAGE_API, MIN_CHROMIUM_VERSION } from "../constants";
-import { installBinary } from "../registry";
+import registry from "../registry";
 import {
     downloadFile,
     getChromiumDriverDir,
@@ -50,5 +50,5 @@ export const installChromeDriverManually = async (milestone: string): Promise<st
         return chromeDriverPath;
     };
 
-    return installBinary(Driver.CHROMEDRIVER, platform, driverVersion, installFn);
+    return registry.installBinary(Driver.CHROMEDRIVER, platform, driverVersion, installFn);
 };

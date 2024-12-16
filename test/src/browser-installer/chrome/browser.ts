@@ -37,9 +37,11 @@ describe("browser-installer/chrome/browser", () => {
                 canDownload: canDownloadStub,
             },
             "../registry": {
-                getBinaryPath: getBinaryPathStub,
-                getMatchedBrowserVersion: getMatchedBrowserVersionStub,
-                installBinary: installBinaryStub,
+                default: {
+                    getBinaryPath: getBinaryPathStub,
+                    getMatchedBrowserVersion: getMatchedBrowserVersionStub,
+                    installBinary: installBinaryStub,
+                },
             },
         }).installChrome;
     });

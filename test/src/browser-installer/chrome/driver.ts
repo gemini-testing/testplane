@@ -37,9 +37,11 @@ describe("browser-installer/chrome/driver", () => {
                 canDownload: canDownloadStub,
             },
             "../registry": {
-                getBinaryPath: getBinaryPathStub,
-                getMatchedDriverVersion: getMatchedDriverVersionStub,
-                installBinary: installBinaryStub,
+                default: {
+                    getBinaryPath: getBinaryPathStub,
+                    getMatchedDriverVersion: getMatchedDriverVersionStub,
+                    installBinary: installBinaryStub,
+                },
             },
         }).installChromeDriver;
     });

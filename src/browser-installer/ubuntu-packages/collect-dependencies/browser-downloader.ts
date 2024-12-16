@@ -2,10 +2,10 @@ import path from "path";
 import fs from "fs";
 import _ from "lodash";
 import { installBrowser } from "../..";
-import { getRegistryPath, type Registry } from "../../utils";
+import { getRegistryPath, type RegistryFileContents } from "../../utils";
 import type { BrowserWithVersion } from "./utils";
 
-const getRegistryBinaryPaths = (registry: Registry): string[] => {
+const getRegistryBinaryPaths = (registry: RegistryFileContents): string[] => {
     const versionToPathMap = Object.values(registry.binaries);
     const binaryPaths = _.flatMap(versionToPathMap, Object.values);
     const registryPath = getRegistryPath();

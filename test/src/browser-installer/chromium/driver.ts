@@ -20,7 +20,7 @@ describe("browser-installer/chromium/driver", () => {
                 ...require("../../../../src/browser-installer/utils"),
                 retryFetch: retryFetchStub,
             },
-            "../registry": { installBinary: installBinaryStub },
+            "../registry": { default: { installBinary: installBinaryStub } },
         }).installChromeDriverManually;
     });
 

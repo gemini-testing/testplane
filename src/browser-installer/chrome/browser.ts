@@ -8,7 +8,7 @@ import {
     Browser,
     type DownloadProgressCallback,
 } from "../utils";
-import { getBinaryPath, getMatchedBrowserVersion, installBinary } from "../registry";
+import registry from "../registry";
 import { normalizeChromeVersion } from "../utils";
 
 export const installChrome = async (version: string, { force = false } = {}): Promise<string> => {
@@ -23,12 +23,12 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
     }
 
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.CHROME, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.CHROME, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chrome@${version} browser was found. Skipping the installation`);
 
-        return getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeChromeVersion(version);
@@ -57,5 +57,5 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
             unpack: true,
         }).then(result => result.executablePath);
 
-    return installBinary(Browser.CHROME, platform, buildId, installFn);
+    return registry.installBinary(Browser.CHROME, platform, buildId, installFn);
 };
