@@ -15,43 +15,31 @@ export const installBrowser = async (
         );
     }
 
-    const { isUbuntu, installUbuntuPackageDependencies } = await import("./ubuntu-packages");
+    const { isUbuntu } = await import("./ubuntu-packages");
 
-    const needToInstallUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
+    const needUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
 
     browserInstallerDebug(
         [
             `install ${browserName}@${browserVersion}`,
             `shouldInstallWebDriver:${shouldInstallWebDriver}`,
             `shouldInstallUbuntuPackages:${shouldInstallUbuntuPackages}`,
-            `needToInstallUbuntuPackages:${needToInstallUbuntuPackages}`,
+            `needUbuntuPackages:${needUbuntuPackages}`,
         ].join(", "),
     );
 
     switch (browserName) {
         case Browser.CHROME:
         case Browser.CHROMIUM: {
-            const { installChrome, installChromeDriver } = await import("./chrome");
+            const { installChrome } = await import("./chrome");
 
-            const [browserPath] = await Promise.all([
-                installChrome(browserVersion, { force }),
-                shouldInstallWebDriver && installChromeDriver(browserVersion, { force }),
-                needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
-            ]);
-
-            return browserPath;
+            return installChrome(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
         case Browser.FIREFOX: {
-            const { installFirefox, installLatestGeckoDriver } = await import("./firefox");
+            const { installFirefox } = await import("./firefox");
 
-            const [browserPath] = await Promise.all([
-                installFirefox(browserVersion, { force }),
-                shouldInstallWebDriver && installLatestGeckoDriver(browserVersion, { force }),
-                needToInstallUbuntuPackages && installUbuntuPackageDependencies(),
-            ]);
-
-            return browserPath;
+            return installFirefox(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
         case Browser.EDGE: {

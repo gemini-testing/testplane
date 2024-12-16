@@ -8,8 +8,10 @@ import {
 } from "../utils";
 import registry from "../registry";
 import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
+import { installLatestGeckoDriver } from "./driver";
+import { installUbuntuPackageDependencies } from "../ubuntu-packages";
 
-export const installFirefox = async (version: string, { force = false } = {}): Promise<string> => {
+const installFirefoxBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
     const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.FIREFOX, platform, version);
 
@@ -48,4 +50,17 @@ export const installFirefox = async (version: string, { force = false } = {}): P
         }).then(result => result.executablePath);
 
     return registry.installBinary(Browser.FIREFOX, platform, buildId, installFn);
+};
+
+export const installFirefox = async (
+    version: string,
+    { force = false, needWebDriver = false, needUbuntuPackages = false } = {},
+): Promise<string> => {
+    const [browserPath] = await Promise.all([
+        installFirefoxBrowser(version, { force }),
+        needWebDriver && installLatestGeckoDriver(version, { force }),
+        needUbuntuPackages && installUbuntuPackageDependencies(),
+    ]);
+
+    return browserPath;
 };

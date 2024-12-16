@@ -57,8 +57,11 @@ describe("browser-installer/install", () => {
                         const binaryPath = await installBrowser(Browser.CHROME, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "115", { force });
-                        assert.notCalled(installChromeDriverStub);
+                        assert.calledOnceWith(installChromeStub, "115", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: false,
+                        });
                     });
 
                     it("should install browser with webdriver", async () => {
@@ -70,8 +73,11 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "115", { force });
-                        assert.calledOnceWith(installChromeDriverStub, "115", { force });
+                        assert.calledOnceWith(installChromeStub, "115", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: true,
+                        });
                     });
                 });
 
@@ -82,8 +88,11 @@ describe("browser-installer/install", () => {
                         const binaryPath = await installBrowser(Browser.FIREFOX, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installFirefoxStub, "115", { force });
-                        assert.notCalled(installLatestGeckoDriverStub);
+                        assert.calledOnceWith(installFirefoxStub, "115", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: false,
+                        });
                     });
 
                     it("should install browser with webdriver", async () => {
@@ -95,8 +104,11 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installFirefoxStub, "115", { force });
-                        assert.calledOnceWith(installLatestGeckoDriverStub, "115", { force });
+                        assert.calledOnceWith(installFirefoxStub, "115", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: true,
+                        });
                     });
                 });
 
@@ -138,40 +150,17 @@ describe("browser-installer/install", () => {
                 });
             });
         });
-
-        [Browser.CHROME, Browser.FIREFOX].forEach(browser => {
-            it(`should not install ubuntu dependencies by default for ${browser}`, async () => {
-                isUbuntuStub.resolves(true);
-
-                await installBrowser(browser, "115");
-
-                assert.notCalled(installUbuntuPackageDependenciesStub);
-            });
-
-            it(`should not install ubuntu dependencies if its not ubuntu for ${browser}`, async () => {
-                isUbuntuStub.resolves(false);
-
-                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: true });
-
-                assert.notCalled(installUbuntuPackageDependenciesStub);
-            });
-
-            it(`should install ubuntu dependencies if its ubuntu for ${browser}`, async () => {
-                isUbuntuStub.resolves(true);
-
-                await installBrowser(browser, "115", { shouldInstallUbuntuPackages: true });
-
-                assert.calledOnce(installUbuntuPackageDependenciesStub);
-            });
-        });
     });
 
     describe("installBrowsersWithDrivers", () => {
         it("should force install browser with driver", async () => {
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installChromeStub, "115", { force: true });
-            assert.calledOnceWith(installChromeDriverStub, "115", { force: true });
+            assert.calledOnceWith(installChromeStub, "115", {
+                force: true,
+                needUbuntuPackages: false,
+                needWebDriver: true,
+            });
         });
 
         it("should install ubuntu packages on ubuntu", async () => {
@@ -179,7 +168,11 @@ describe("browser-installer/install", () => {
 
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installUbuntuPackageDependenciesStub);
+            assert.calledOnceWith(installChromeStub, "115", {
+                force: true,
+                needWebDriver: true,
+                needUbuntuPackages: true,
+            });
         });
 
         it("should not install ubuntu packages if its not ubuntu", async () => {

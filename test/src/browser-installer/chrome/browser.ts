@@ -18,6 +18,9 @@ describe("browser-installer/chrome/browser", () => {
     let getMatchedBrowserVersionStub: SinonStub;
     let installBinaryStub: SinonStub;
 
+    let installChromeDriverStub: SinonStub;
+    let installUbuntuPackageDependenciesStub: SinonStub;
+
     beforeEach(() => {
         installChromiumStub = sandbox.stub().resolves("/chromium/browser/path");
 
@@ -29,8 +32,13 @@ describe("browser-installer/chrome/browser", () => {
         getMatchedBrowserVersionStub = sandbox.stub().returns(null);
         installBinaryStub = sandbox.stub();
 
+        installChromeDriverStub = sandbox.stub();
+        installUbuntuPackageDependenciesStub = sandbox.stub();
+
         installChrome = proxyquire("../../../../src/browser-installer/chrome/browser", {
+            "./driver": { installChromeDriver: installChromeDriverStub },
             "../chromium": { installChromium: installChromiumStub },
+            "../ubuntu-packages": { installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub },
             "@puppeteer/browsers": {
                 resolveBuildId: resolveBuildIdStub,
                 install: puppeteerInstallStub,
@@ -109,5 +117,17 @@ describe("browser-installer/chrome/browser", () => {
                 "Version examples: '120', '120.0'",
             ].join("\n"),
         );
+    });
+
+    it("should try to install chromedriver if 'needWebDriver' is set", async () => {
+        await installChrome("115", { needWebDriver: true });
+
+        assert.calledOnceWith(installChromeDriverStub, "115", { force: false });
+    });
+
+    it("should try to install ubuntu dependencies if 'needWebDriver' is set", async () => {
+        await installChrome("115", { needUbuntuPackages: true });
+
+        assert.calledOnceWith(installUbuntuPackageDependenciesStub);
     });
 });

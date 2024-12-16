@@ -10,8 +10,10 @@ import {
 } from "../utils";
 import registry from "../registry";
 import { normalizeChromeVersion } from "../utils";
+import { installUbuntuPackageDependencies } from "../ubuntu-packages";
+import { installChromeDriver } from "./driver";
 
-export const installChrome = async (version: string, { force = false } = {}): Promise<string> => {
+const installChromeBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROME_FOR_TESTING_VERSION) {
@@ -58,4 +60,17 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
         }).then(result => result.executablePath);
 
     return registry.installBinary(Browser.CHROME, platform, buildId, installFn);
+};
+
+export const installChrome = async (
+    version: string,
+    { force = false, needWebDriver = false, needUbuntuPackages = false } = {},
+): Promise<string> => {
+    const [browserPath] = await Promise.all([
+        installChromeBrowser(version, { force }),
+        needWebDriver && installChromeDriver(version, { force }),
+        needUbuntuPackages && installUbuntuPackageDependencies(),
+    ]);
+
+    return browserPath;
 };
