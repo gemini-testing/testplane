@@ -10,14 +10,17 @@ describe("browser-installer/run", () => {
 
     let installBrowserStub: SinonStub;
     let runChromeDriverStub: SinonStub;
+    let runGeckoDriverStub: SinonStub;
 
     beforeEach(() => {
         installBrowserStub = sandbox.stub();
         runChromeDriverStub = sandbox.stub();
+        runGeckoDriverStub = sandbox.stub();
 
         runBrowserDriver = proxyquire.noCallThru()("../../../src/browser-installer/run", {
             "./install": { installBrowser: installBrowserStub },
             "./chrome": { runChromeDriver: runChromeDriverStub },
+            "./firefox": { runGeckoDriver: runGeckoDriverStub },
         }).runBrowserDriver;
     });
 
@@ -31,14 +34,23 @@ describe("browser-installer/run", () => {
         });
     });
 
-    [Browser.CHROME, Browser.EDGE, Browser.FIREFOX].forEach(browser => {
-        it(`should try to install ${browser} before running its driver`, async () => {
-            await runBrowserDriver(browser, "some-version");
+    it(`should try to install chrome before running its driver`, async () => {
+        await runBrowserDriver(Browser.CHROME, "some-version");
 
-            assert.calledOnceWith(installBrowserStub, browser, "some-version", {
-                shouldInstallWebDriver: true,
-                shouldInstallUbuntuPackages: true,
-            });
+        assert.calledOnceWith(installBrowserStub, Browser.CHROME, "some-version", {
+            shouldInstallWebDriver: true,
+            shouldInstallUbuntuPackages: true,
         });
+        assert.callOrder(installBrowserStub, runChromeDriverStub);
+    });
+
+    it(`should try to install firefox before running its driver`, async () => {
+        await runBrowserDriver(Browser.FIREFOX, "some-version");
+
+        assert.calledOnceWith(installBrowserStub, Browser.FIREFOX, "some-version", {
+            shouldInstallWebDriver: true,
+            shouldInstallUbuntuPackages: true,
+        });
+        assert.callOrder(installBrowserStub, runGeckoDriverStub);
     });
 });

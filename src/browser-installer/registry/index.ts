@@ -13,16 +13,21 @@ import {
     type SupportedBrowser,
     type SupportedDriver,
     type DownloadProgressCallback,
-    type BinaryKey,
-    type BinaryName,
-    type OsName,
-    type OsVersion,
-    type OsPackagesKey,
-    type VersionToPathMap,
-    type RegistryFileContents,
 } from "../utils";
 import { getFirefoxBuildId } from "../firefox/utils";
 import logger from "../../utils/logger";
+
+type VersionToPathMap = Record<string, string | Promise<string>>;
+type BinaryName = Exclude<SupportedBrowser | SupportedDriver, SupportedBrowser & SupportedDriver>;
+type BinaryKey = `${BinaryName}_${BrowserPlatform}`;
+type OsName = string;
+type OsVersion = string;
+type OsPackagesKey = `${OsName}_${OsVersion}`;
+export type RegistryFileContents = {
+    binaries: Record<BinaryKey, VersionToPathMap>;
+    osPackages: Record<OsPackagesKey, string | Promise<string>>;
+    meta: { version: number };
+};
 
 const getRegistryBinaryKey = (name: BinaryName, platform: BrowserPlatform): BinaryKey => `${name}_${platform}`;
 const getRegistryOsPackagesKey = (name: OsName, version: OsVersion): OsPackagesKey => `${name}_${version}`;
@@ -245,28 +250,13 @@ class Registry {
     }
 
     private readRegistry(): RegistryFileContents {
-        const registry: RegistryFileContents = {
-            binaries: {} as Record<BinaryKey, VersionToPathMap>,
-            osPackages: {} as Record<OsPackagesKey, string>,
-            meta: { version: 1 },
-        };
+        const registry: RegistryFileContents = fs.existsSync(this.registryPath)
+            ? fs.readJSONSync(this.registryPath)
+            : {};
 
-        let fsData: Record<string, unknown>;
-
-        if (fs.existsSync(this.registryPath)) {
-            fsData = fs.readJSONSync(this.registryPath);
-
-            const isRegistryV0 = fsData && !fsData.meta;
-            const isRegistryWithVersion = typeof _.get(fsData, "meta.version") === "number";
-
-            if (isRegistryWithVersion) {
-                return fsData as RegistryFileContents;
-            }
-
-            if (isRegistryV0) {
-                registry.binaries = fsData as Record<BinaryKey, VersionToPathMap>;
-            }
-        }
+        registry.binaries ||= {} as Record<BinaryKey, VersionToPathMap>;
+        registry.osPackages ||= {} as Record<OsPackagesKey, string>;
+        registry.meta ||= { version: 1 };
 
         return registry;
     }

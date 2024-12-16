@@ -2,7 +2,8 @@ import path from "path";
 import fs from "fs";
 import _ from "lodash";
 import { installBrowser } from "../..";
-import { getRegistryPath, type RegistryFileContents } from "../../utils";
+import { getRegistryPath } from "../../utils";
+import type { RegistryFileContents } from "../../registry";
 import type { BrowserWithVersion } from "./utils";
 
 const getRegistryBinaryPaths = (registry: RegistryFileContents): string[] => {

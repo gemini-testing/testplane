@@ -29,18 +29,6 @@ export const Driver = {
 export type SupportedBrowser = (typeof Browser)[keyof typeof Browser];
 export type SupportedDriver = (typeof Driver)[keyof typeof Driver];
 
-export type VersionToPathMap = Record<string, string | Promise<string>>;
-export type BinaryName = Exclude<SupportedBrowser | SupportedDriver, SupportedBrowser & SupportedDriver>;
-export type BinaryKey = `${BinaryName}_${BrowserPlatform}`;
-export type OsName = string;
-export type OsVersion = string;
-export type OsPackagesKey = `${OsName}_${OsVersion}`;
-export type RegistryFileContents = {
-    binaries: Record<BinaryKey, VersionToPathMap>;
-    osPackages: Record<OsPackagesKey, string | Promise<string>>;
-    meta: { version: number };
-};
-
 export const getNormalizedBrowserName = (
     browserName?: string,
 ): Exclude<SupportedBrowser, typeof Browser.CHROMIUM> | null => {
@@ -147,7 +135,7 @@ const getDriversDir = (): string => path.join(getCacheDir(), "drivers");
 const getDriverDir = (driverName: string, driverVersion: string): string =>
     path.join(getDriversDir(), driverName, driverVersion);
 
-export const getOsPackagesDir = (osName: OsName, osVersion: OsVersion): string =>
+export const getOsPackagesDir = (osName: string, osVersion: string): string =>
     path.join(getCacheDir(), "packages", osName, osVersion);
 
 export const getGeckoDriverDir = (driverVersion: string): string =>

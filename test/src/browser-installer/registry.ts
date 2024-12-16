@@ -1,12 +1,8 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type RegistryType from "../../../src/browser-installer/registry";
-import {
-    Browser,
-    Driver,
-    type DownloadProgressCallback,
-    type RegistryFileContents,
-} from "../../../src/browser-installer/utils";
+import type { RegistryFileContents } from "../../../src/browser-installer/registry";
+import { Browser, Driver, type DownloadProgressCallback } from "../../../src/browser-installer/utils";
 import { BrowserPlatform } from "@puppeteer/browsers";
 import type { PartialDeep } from "type-fest";
 
