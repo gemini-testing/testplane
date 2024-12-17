@@ -6,6 +6,7 @@ import { DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getMilestone } from "../utils";
 import { installChrome } from "./browser";
 import { installChromeDriver } from "./driver";
+import { isUbuntu, getUbuntuLinkerEnv } from "../ubuntu-packages";
 
 export { installChrome, installChromeDriver };
 
@@ -13,18 +14,22 @@ export const runChromeDriver = async (
     chromeVersion: string,
     { debug = false } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
-    const [chromeDriverPath] = await Promise.all([installChromeDriver(chromeVersion), installChrome(chromeVersion)]);
-
-    const milestone = getMilestone(chromeVersion);
-    const randomPort = await getPort();
+    const [chromeDriverPath, randomPort, chromeDriverEnv] = await Promise.all([
+        installChromeDriver(chromeVersion),
+        getPort(),
+        isUbuntu()
+            .then(isUbuntu => (isUbuntu ? getUbuntuLinkerEnv() : null))
+            .then(extraEnv => (extraEnv ? { ...process.env, ...extraEnv } : process.env)),
+    ]);
 
     const chromeDriver = spawn(chromeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,
         detached: false,
+        env: chromeDriverEnv,
     });
 
     if (debug) {
-        pipeLogsWithPrefix(chromeDriver, `[chromedriver@${milestone}] `);
+        pipeLogsWithPrefix(chromeDriver, `[chromedriver@${getMilestone(chromeVersion)}] `);
     }
 
     const gridUrl = `http://127.0.0.1:${randomPort}`;

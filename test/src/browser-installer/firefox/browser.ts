@@ -15,6 +15,9 @@ describe("browser-installer/firefox/browser", () => {
     let getMatchedBrowserVersionStub: SinonStub;
     let installBinaryStub: SinonStub;
 
+    let installLatestGeckoDriverStub: SinonStub;
+    let installUbuntuPackageDependenciesStub: SinonStub;
+
     beforeEach(() => {
         puppeteerInstallStub = sandbox.stub().resolves({ executablePath: "/firefox/browser/path" });
         canDownloadStub = sandbox.stub().resolves(true);
@@ -23,15 +26,22 @@ describe("browser-installer/firefox/browser", () => {
         getMatchedBrowserVersionStub = sandbox.stub().returns(null);
         installBinaryStub = sandbox.stub();
 
+        installLatestGeckoDriverStub = sandbox.stub();
+        installUbuntuPackageDependenciesStub = sandbox.stub();
+
         installFirefox = proxyquire("../../../../src/browser-installer/firefox/browser", {
+            "./driver": { installLatestGeckoDriver: installLatestGeckoDriverStub },
+            "../ubuntu-packages": { installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub },
             "@puppeteer/browsers": {
                 install: puppeteerInstallStub,
                 canDownload: canDownloadStub,
             },
             "../registry": {
-                getBinaryPath: getBinaryPathStub,
-                getMatchedBrowserVersion: getMatchedBrowserVersionStub,
-                installBinary: installBinaryStub,
+                default: {
+                    getBinaryPath: getBinaryPathStub,
+                    getMatchedBrowserVersion: getMatchedBrowserVersionStub,
+                    installBinary: installBinaryStub,
+                },
             },
         }).installFirefox;
     });
@@ -83,5 +93,17 @@ describe("browser-installer/firefox/browser", () => {
                 "Version examples: '120', '130.0', '131.0'",
             ].join("\n"),
         );
+    });
+
+    it("should try to install geckodriver if 'needWebDriver' is set", async () => {
+        await installFirefox("115", { needWebDriver: true });
+
+        assert.calledOnceWith(installLatestGeckoDriverStub, "115", { force: false });
+    });
+
+    it("should try to install ubuntu dependencies if 'needWebDriver' is set", async () => {
+        await installFirefox("115", { needUbuntuPackages: true });
+
+        assert.calledOnceWith(installUbuntuPackageDependenciesStub);
     });
 });

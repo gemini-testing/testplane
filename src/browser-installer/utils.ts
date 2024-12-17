@@ -2,12 +2,12 @@ import { detectBrowserPlatform, BrowserPlatform, Browser as PuppeteerBrowser } f
 import extractZip from "extract-zip";
 import os from "os";
 import path from "path";
-import { createWriteStream } from "fs";
+import fs from "fs-extra";
 import { Readable } from "stream";
 import debug from "debug";
 import { MIN_CHROMIUM_MAC_ARM_VERSION } from "./constants";
 
-export type DownloadProgressCallback = (downloadedBytes: number, totalBytes: number) => void;
+export type DownloadProgressCallback = (done: number, total?: number) => void;
 
 export const browserInstallerDebug = debug("testplane:browser-installer");
 
@@ -29,21 +29,27 @@ export const Driver = {
 export type SupportedBrowser = (typeof Browser)[keyof typeof Browser];
 export type SupportedDriver = (typeof Driver)[keyof typeof Driver];
 
-export const getDriverNameForBrowserName = (browserName: SupportedBrowser): SupportedDriver | null => {
-    if (browserName === Browser.CHROME || browserName === Browser.CHROMIUM) {
-        return Driver.CHROMEDRIVER;
+export const getNormalizedBrowserName = (
+    browserName?: string,
+): Exclude<SupportedBrowser, typeof Browser.CHROMIUM> | null => {
+    if (!browserName) {
+        return null;
     }
 
-    if (browserName === Browser.FIREFOX) {
-        return Driver.GECKODRIVER;
+    if (/chrome/i.test(browserName)) {
+        return Browser.CHROME;
     }
 
-    if (browserName === Browser.SAFARI) {
-        return Driver.SAFARIDRIVER;
+    if (/firefox/i.test(browserName)) {
+        return Browser.FIREFOX;
     }
 
-    if (browserName === Browser.EDGE) {
-        return Driver.EDGEDRIVER;
+    if (/edge/i.test(browserName)) {
+        return Browser.EDGE;
+    }
+
+    if (/safari/i.test(browserName)) {
+        return Browser.SAFARI;
     }
 
     return null;
@@ -129,6 +135,9 @@ const getDriversDir = (): string => path.join(getCacheDir(), "drivers");
 const getDriverDir = (driverName: string, driverVersion: string): string =>
     path.join(getDriversDir(), driverName, driverVersion);
 
+export const getOsPackagesDir = (osName: string, osVersion: string): string =>
+    path.join(getCacheDir(), "packages", osName, osVersion);
+
 export const getGeckoDriverDir = (driverVersion: string): string =>
     getDriverDir("geckodriver", getBrowserPlatform() + "-" + driverVersion);
 export const getEdgeDriverDir = (driverVersion: string): string =>
@@ -161,7 +170,7 @@ export const retryFetch = async (
 };
 
 export const downloadFile = async (url: string, filePath: string): Promise<void> => {
-    const writeStream = createWriteStream(filePath);
+    const writeStream = fs.createWriteStream(filePath);
     const response = await fetch(url);
 
     if (!response.ok || !response.body) {

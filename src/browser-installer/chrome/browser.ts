@@ -8,10 +8,12 @@ import {
     Browser,
     type DownloadProgressCallback,
 } from "../utils";
-import { getBinaryPath, getMatchedBrowserVersion, installBinary } from "../registry";
+import registry from "../registry";
 import { normalizeChromeVersion } from "../utils";
+import { installUbuntuPackageDependencies } from "../ubuntu-packages";
+import { installChromeDriver } from "./driver";
 
-export const installChrome = async (version: string, { force = false } = {}): Promise<string> => {
+const installChromeBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROME_FOR_TESTING_VERSION) {
@@ -23,12 +25,12 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
     }
 
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = getMatchedBrowserVersion(Browser.CHROME, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.CHROME, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chrome@${version} browser was found. Skipping the installation`);
 
-        return getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeChromeVersion(version);
@@ -57,5 +59,18 @@ export const installChrome = async (version: string, { force = false } = {}): Pr
             unpack: true,
         }).then(result => result.executablePath);
 
-    return installBinary(Browser.CHROME, platform, buildId, installFn);
+    return registry.installBinary(Browser.CHROME, platform, buildId, installFn);
+};
+
+export const installChrome = async (
+    version: string,
+    { force = false, needWebDriver = false, needUbuntuPackages = false } = {},
+): Promise<string> => {
+    const [browserPath] = await Promise.all([
+        installChromeBrowser(version, { force }),
+        needWebDriver && installChromeDriver(version, { force }),
+        needUbuntuPackages && installUbuntuPackageDependencies(),
+    ]);
+
+    return browserPath;
 };

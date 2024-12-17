@@ -28,9 +28,11 @@ describe("browser-installer/edge/driver", () => {
                 retryFetch: retryFetchStub,
             },
             "../registry": {
-                getBinaryPath: getBinaryPathStub,
-                getMatchedDriverVersion: getMatchedDriverVersionStub,
-                installBinary: installBinaryStub,
+                default: {
+                    getBinaryPath: getBinaryPathStub,
+                    getMatchedDriverVersion: getMatchedDriverVersionStub,
+                    installBinary: installBinaryStub,
+                },
             },
         }).installEdgeDriver;
     });

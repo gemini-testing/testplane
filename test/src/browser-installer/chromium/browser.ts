@@ -32,9 +32,11 @@ describe("browser-installer/chromium/browser", () => {
             },
             "./utils": { getChromiumBuildId: getChromiumBuildIdStub },
             "../registry": {
-                getBinaryPath: getBinaryPathStub,
-                getMatchedBrowserVersion: getMatchedBrowserVersionStub,
-                installBinary: installBinaryStub,
+                default: {
+                    getBinaryPath: getBinaryPathStub,
+                    getMatchedBrowserVersion: getMatchedBrowserVersionStub,
+                    installBinary: installBinaryStub,
+                },
             },
         }).installChromium;
     });
