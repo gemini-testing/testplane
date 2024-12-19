@@ -309,6 +309,7 @@ export interface CommonConfig {
     system: SystemConfig;
     headless: "old" | "new" | boolean | null;
     isolation: boolean;
+    passive: boolean;
 
     lastFailed: {
         only: boolean;
