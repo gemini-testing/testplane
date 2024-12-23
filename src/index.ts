@@ -22,6 +22,7 @@ export type {
     TestplaneCtx,
     TestFunction,
     TestFunctionCtx,
+    ExecutionThreadCtx,
 } from "./types";
 export type { Config } from "./config";
 export type { ConfigInput, AssertViewOpts } from "./config/types";

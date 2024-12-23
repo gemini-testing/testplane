@@ -1,7 +1,7 @@
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
-import type { ExecutionThreadToolCtx } from "../types";
+import type { ExecutionThreadCtx, ExecutionThreadToolCtx } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 import Callstack from "./history/callstack";
@@ -131,10 +131,7 @@ declare global {
                  * @deprecated Use `testplaneCtx` instead
                  */
                 hermioneCtx: ExecutionThreadToolCtx;
-                ctx: {
-                    browser: WebdriverIO.Browser;
-                    currentTest: Test;
-                };
+                ctx: ExecutionThreadCtx;
             };
 
             openAndWait: OpenAndWaitCommand;
