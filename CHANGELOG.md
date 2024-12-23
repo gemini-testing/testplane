@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.23.1](https://github.com/gemini-testing/testplane/compare/v8.23.0...v8.23.1) (2024-12-23)
+
+
+### Bug Fixes
+
+* expose ExecutionThreadCtx ([#1043](https://github.com/gemini-testing/testplane/issues/1043)) ([e96ce70](https://github.com/gemini-testing/testplane/commit/e96ce708430cdbef0f45944c24fc95f7aea1f6d7))
+
 ## [8.23.0](https://github.com/gemini-testing/testplane/compare/v8.22.5...v8.23.0) (2024-12-17)
 
 
