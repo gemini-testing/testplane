@@ -140,6 +140,11 @@ export interface ExecutionThreadToolCtx {
     };
 }
 
+export interface ExecutionThreadCtx {
+    browser: WebdriverIO.Browser;
+    currentTest: Test;
+}
+
 export interface TestResult extends Test {
     assertViewResults: Array<AssertViewResult>;
     description?: string;
