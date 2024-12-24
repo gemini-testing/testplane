@@ -432,6 +432,37 @@ describe("NewBrowser", () => {
                     },
                 });
             });
+
+            it("should remove unknown capabilities", async () => {
+                installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
+                RuntimeConfig.getInstance.returns({ local: true });
+                const wdPool = mkWdPool_({ gridUrl: "http://localhost:23456/" });
+                const browser = mkBrowser_(
+                    {
+                        gridUrl: "http://localhost:4444/wd/hub",
+                        automationProtocol: "webdriver",
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                            "selenoid:options": { baz: "qux" },
+                            "moz:firefoxOptions": {},
+                            perfLoggingPrefs: { foo: "bar" },
+                        },
+                    },
+                    { wdPool },
+                );
+
+                await browser.init();
+
+                assert.deepEqual(webdriverio.remote.lastCall.args[0].capabilities, {
+                    browserName: "chrome",
+                    browserVersion: "115.0",
+                    "goog:chromeOptions": {
+                        binary: "/browser/path/chrome/115.0",
+                    },
+                    perfLoggingPrefs: { foo: "bar" },
+                });
+            });
         });
     });
 
