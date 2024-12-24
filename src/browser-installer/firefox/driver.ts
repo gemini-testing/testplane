@@ -1,7 +1,7 @@
 import { download as downloadGeckoDriver } from "geckodriver";
 import { GECKODRIVER_CARGO_TOML } from "../constants";
 import registry from "../registry";
-import { Driver, browserInstallerDebug, getBrowserPlatform, getGeckoDriverDir, retryFetch } from "../utils";
+import { DriverName, browserInstallerDebug, getBrowserPlatform, getGeckoDriverDir, retryFetch } from "../utils";
 
 const getLatestGeckoDriverVersion = async (): Promise<string> => {
     const cargoVersionsToml = await retryFetch(GECKODRIVER_CARGO_TOML).then(res => res.text());
@@ -20,19 +20,23 @@ const getLatestGeckoDriverVersion = async (): Promise<string> => {
 
 export const installLatestGeckoDriver = async (firefoxVersion: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyDriverVersion = registry.getMatchedDriverVersion(Driver.GECKODRIVER, platform, firefoxVersion);
+    const existingLocallyDriverVersion = registry.getMatchedDriverVersion(
+        DriverName.GECKODRIVER,
+        platform,
+        firefoxVersion,
+    );
 
     if (existingLocallyDriverVersion && !force) {
         browserInstallerDebug(
             `A locally installed geckodriver for firefox@${firefoxVersion} browser was found. Skipping the installation`,
         );
 
-        return registry.getBinaryPath(Driver.GECKODRIVER, platform, existingLocallyDriverVersion);
+        return registry.getBinaryPath(DriverName.GECKODRIVER, platform, existingLocallyDriverVersion);
     }
 
     const latestVersion = await getLatestGeckoDriverVersion();
 
     const installFn = (): Promise<string> => downloadGeckoDriver(latestVersion, getGeckoDriverDir(latestVersion));
 
-    return registry.installBinary(Driver.GECKODRIVER, platform, latestVersion, installFn);
+    return registry.installBinary(DriverName.GECKODRIVER, platform, latestVersion, installFn);
 };

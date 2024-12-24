@@ -1,5 +1,7 @@
 import _ from "lodash";
-import { Browser, browserInstallerDebug, getNormalizedBrowserName, type SupportedBrowser } from "./utils";
+import { browserInstallerDebug, type SupportedBrowser } from "./utils";
+import { getNormalizedBrowserName } from "../utils/browser";
+import { BrowserName } from "../browser/types";
 
 /**
  * @returns path to installed browser binary
@@ -29,20 +31,20 @@ export const installBrowser = async (
     );
 
     switch (browserName) {
-        case Browser.CHROME:
-        case Browser.CHROMIUM: {
+        case BrowserName.CHROME:
+        case BrowserName.CHROMIUM: {
             const { installChrome } = await import("./chrome");
 
             return installChrome(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
-        case Browser.FIREFOX: {
+        case BrowserName.FIREFOX: {
             const { installFirefox } = await import("./firefox");
 
             return installFirefox(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
-        case Browser.EDGE: {
+        case BrowserName.EDGE: {
             const { installEdgeDriver } = await import("./edge");
 
             if (shouldInstallWebDriver) {
@@ -52,7 +54,7 @@ export const installBrowser = async (
             return null;
         }
 
-        case Browser.SAFARI: {
+        case BrowserName.SAFARI: {
             return null;
         }
     }

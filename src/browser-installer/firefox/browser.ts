@@ -1,31 +1,26 @@
 import { canDownload, install as puppeteerInstall } from "@puppeteer/browsers";
-import {
-    Browser,
-    browserInstallerDebug,
-    getBrowserPlatform,
-    getBrowsersDir,
-    type DownloadProgressCallback,
-} from "../utils";
+import { browserInstallerDebug, getBrowserPlatform, getBrowsersDir, type DownloadProgressCallback } from "../utils";
 import registry from "../registry";
 import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
 import { installLatestGeckoDriver } from "./driver";
 import { installUbuntuPackageDependencies } from "../ubuntu-packages";
+import { BrowserName } from "../../browser/types";
 
 const installFirefoxBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.FIREFOX, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed firefox@${version} browser was found. Skipping the installation`);
 
-        return registry.getBinaryPath(Browser.FIREFOX, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(BrowserName.FIREFOX, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeFirefoxVersion(version);
     const buildId = getFirefoxBuildId(normalizedVersion);
 
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: Browser.FIREFOX, platform, buildId, cacheDir });
+    const canBeInstalled = await canDownload({ browser: BrowserName.FIREFOX, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
         throw new Error(
@@ -45,11 +40,11 @@ const installFirefoxBrowser = async (version: string, { force = false } = {}): P
             buildId,
             cacheDir,
             downloadProgressCallback,
-            browser: Browser.FIREFOX,
+            browser: BrowserName.FIREFOX,
             unpack: true,
         }).then(result => result.executablePath);
 
-    return registry.installBinary(Browser.FIREFOX, platform, buildId, installFn);
+    return registry.installBinary(BrowserName.FIREFOX, platform, buildId, installFn);
 };
 
 export const installFirefox = async (

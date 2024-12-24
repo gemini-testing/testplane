@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type { installChromeDriver as InstallChromeDriverType } from "../../../../src/browser-installer/chrome/driver";
-import { Driver } from "../../../../src/browser-installer/utils";
+import { DriverName } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/chrome/driver", () => {
     const sandbox = sinon.createSandbox();
@@ -49,8 +49,8 @@ describe("browser-installer/chrome/driver", () => {
     afterEach(() => sandbox.restore());
 
     it("should try to resolve driver path locally by default", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").returns("115.0");
-        getBinaryPathStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115.0").returns("/driver/path");
+        getMatchedDriverVersionStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").returns("115.0");
+        getBinaryPathStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115.0").returns("/driver/path");
 
         const driverPath = await installChromeDriver("115");
 
@@ -60,10 +60,10 @@ describe("browser-installer/chrome/driver", () => {
     });
 
     it("should not try to resolve driver path locally with 'force' flag", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").returns("115.0");
-        resolveBuildIdStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
+        getMatchedDriverVersionStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").returns("115.0");
+        resolveBuildIdStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
         installBinaryStub
-            .withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
+            .withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
             .resolves("/new/downloaded/driver/path");
 
         const driverPath = await installChromeDriver("115", { force: true });
@@ -73,10 +73,10 @@ describe("browser-installer/chrome/driver", () => {
     });
 
     it("should download driver if it is not downloaded", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").returns(null);
-        resolveBuildIdStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
+        getMatchedDriverVersionStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").returns(null);
+        resolveBuildIdStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
         installBinaryStub
-            .withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
+            .withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
             .resolves("/new/downloaded/driver/path");
 
         const driverPath = await installChromeDriver("115");
@@ -96,8 +96,8 @@ describe("browser-installer/chrome/driver", () => {
     });
 
     it("should throw an error if can't download the driver", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").returns(null);
-        resolveBuildIdStub.withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
+        getMatchedDriverVersionStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").returns(null);
+        resolveBuildIdStub.withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115").resolves("115.0.5678.170");
         canDownloadStub.resolves(false);
 
         await assert.isRejected(

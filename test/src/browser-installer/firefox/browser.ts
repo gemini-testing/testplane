@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type { installFirefox as InstallFirefoxType } from "../../../../src/browser-installer/firefox/browser";
-import { Browser } from "../../../../src/browser-installer/utils";
+import { BrowserName } from "../../../../src/browser/types";
 
 describe("browser-installer/firefox/browser", () => {
     const sandbox = sinon.createSandbox();
@@ -49,8 +49,8 @@ describe("browser-installer/firefox/browser", () => {
     afterEach(() => sandbox.restore());
 
     it("should try to resolve browser path locally by default", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("115.0");
-        getBinaryPathStub.withArgs(Browser.FIREFOX, sinon.match.string, "115.0").returns("/browser/path");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115").returns("115.0");
+        getBinaryPathStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115.0").returns("/browser/path");
 
         const binaryPath = await installFirefox("115");
 
@@ -59,9 +59,9 @@ describe("browser-installer/firefox/browser", () => {
     });
 
     it("should not try to resolve browser path locally with 'force' flag", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns("stable_115.0");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115").returns("stable_115.0");
         installBinaryStub
-            .withArgs(Browser.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
+            .withArgs(BrowserName.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
             .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installFirefox("115", { force: true });
@@ -71,9 +71,9 @@ describe("browser-installer/firefox/browser", () => {
     });
 
     it("should download browser if it is not downloaded", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
+        getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115").returns(null);
         installBinaryStub
-            .withArgs(Browser.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
+            .withArgs(BrowserName.FIREFOX, sinon.match.string, "stable_115.0", sinon.match.func)
             .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installFirefox("115");
@@ -82,7 +82,7 @@ describe("browser-installer/firefox/browser", () => {
     });
 
     it("should throw an error if can't download the browser", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.FIREFOX, sinon.match.string, "115").returns(null);
+        getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115").returns(null);
         canDownloadStub.resolves(false);
 
         await assert.isRejected(

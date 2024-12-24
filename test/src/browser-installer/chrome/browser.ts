@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
+import { BrowserName } from "../../../../src/browser/types";
 import type { installChrome as InstallChromeType } from "../../../../src/browser-installer/chrome/browser";
-import { Browser } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/chrome/browser", () => {
     const sandbox = sinon.createSandbox();
@@ -57,8 +57,8 @@ describe("browser-installer/chrome/browser", () => {
     afterEach(() => sandbox.restore());
 
     it("should try to resolve browser path locally by default", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.CHROME, sinon.match.string, "115").returns("115.0");
-        getBinaryPathStub.withArgs(Browser.CHROME, sinon.match.string, "115.0").returns("/browser/path");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").returns("115.0");
+        getBinaryPathStub.withArgs(BrowserName.CHROME, sinon.match.string, "115.0").returns("/browser/path");
 
         const binaryPath = await installChrome("115");
 
@@ -68,11 +68,11 @@ describe("browser-installer/chrome/browser", () => {
     });
 
     it("should not try to resolve browser path locally with 'force' flag", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.CHROME, sinon.match.string, "115").returns("115.0");
-        resolveBuildIdStub.withArgs(Browser.CHROME, sinon.match.string, "115").resolves("115.0.5678.170");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").returns("115.0");
+        resolveBuildIdStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").resolves("115.0.5678.170");
 
         installBinaryStub
-            .withArgs(Browser.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
+            .withArgs(BrowserName.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
             .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installChrome("115", { force: true });
@@ -82,10 +82,10 @@ describe("browser-installer/chrome/browser", () => {
     });
 
     it("should download browser if it is not downloaded", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.CHROME, sinon.match.string, "115").returns(null);
-        resolveBuildIdStub.withArgs(Browser.CHROME, sinon.match.string, "115").resolves("115.0.5678.170");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").returns(null);
+        resolveBuildIdStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").resolves("115.0.5678.170");
         installBinaryStub
-            .withArgs(Browser.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
+            .withArgs(BrowserName.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
             .resolves("/new/downloaded/browser/path");
 
         const binaryPath = await installChrome("115");
@@ -105,8 +105,8 @@ describe("browser-installer/chrome/browser", () => {
     });
 
     it("should throw an error if can't download the browser", async () => {
-        getMatchedBrowserVersionStub.withArgs(Browser.CHROME, sinon.match.string, "115").returns(null);
-        resolveBuildIdStub.withArgs(Browser.CHROME, sinon.match.string, "115").resolves("115");
+        getMatchedBrowserVersionStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").returns(null);
+        resolveBuildIdStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").resolves("115");
         canDownloadStub.resolves(false);
 
         await assert.isRejected(

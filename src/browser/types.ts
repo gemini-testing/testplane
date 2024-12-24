@@ -1,3 +1,4 @@
+import { Browser as PuppeteerBrowser } from "@puppeteer/browsers";
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
@@ -6,6 +7,16 @@ import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 import Callstack from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
+
+export const BrowserName = {
+    CHROME: PuppeteerBrowser.CHROME,
+    CHROMIUM: PuppeteerBrowser.CHROMIUM,
+    FIREFOX: PuppeteerBrowser.FIREFOX,
+    SAFARI: "safari",
+    EDGE: "MicrosoftEdge",
+} as const;
+
+export type W3CBrowserName = Exclude<(typeof BrowserName)[keyof typeof BrowserName], PuppeteerBrowser.CHROMIUM>;
 
 export interface BrowserMeta {
     pid: number;

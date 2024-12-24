@@ -5,8 +5,7 @@ import path from "path";
 import {
     getRegistryPath,
     browserInstallerDebug,
-    Driver,
-    Browser,
+    DriverName,
     getMilestone,
     normalizeChromeVersion,
     semverVersionsComparator,
@@ -16,6 +15,7 @@ import {
 } from "../utils";
 import { getFirefoxBuildId } from "../firefox/utils";
 import logger from "../../utils/logger";
+import { BrowserName } from "../../browser/types";
 
 type VersionToPathMap = Record<string, string | Promise<string>>;
 type BinaryName = Exclude<SupportedBrowser | SupportedDriver, SupportedBrowser & SupportedDriver>;
@@ -98,7 +98,7 @@ class Registry {
             return null;
         }
 
-        if (driverName === Driver.CHROMEDRIVER || driverName === Driver.EDGEDRIVER) {
+        if (driverName === DriverName.CHROMEDRIVER || driverName === DriverName.EDGEDRIVER) {
             const milestone = getMilestone(browserVersion);
             const buildIds = this.getBinaryVersions(driverName, platform);
             const suitableBuildIds = buildIds.filter(buildId => buildId.startsWith(milestone));
@@ -110,7 +110,7 @@ class Registry {
             return suitableBuildIds.sort(semverVersionsComparator).pop() as string;
         }
 
-        if (driverName === Driver.GECKODRIVER) {
+        if (driverName === DriverName.GECKODRIVER) {
             const buildIds = Object.keys(this.registry.binaries[registryKey]);
             const buildIdsSorted = buildIds.sort(semverVersionsComparator);
 
@@ -134,15 +134,15 @@ class Registry {
         let buildPrefix: string;
 
         switch (browserName) {
-            case Browser.CHROME:
+            case BrowserName.CHROME:
                 buildPrefix = normalizeChromeVersion(browserVersion);
                 break;
 
-            case Browser.CHROMIUM:
+            case BrowserName.CHROMIUM:
                 buildPrefix = getMilestone(browserVersion);
                 break;
 
-            case Browser.FIREFOX:
+            case BrowserName.FIREFOX:
                 buildPrefix = getFirefoxBuildId(browserVersion);
                 break;
 
@@ -166,7 +166,7 @@ class Registry {
             return parseInt(a.replace(".", ""), 16) - parseInt(b.replace(".", ""), 16);
         };
 
-        const comparator = browserName === Browser.FIREFOX ? firefoxVersionComparator : semverVersionsComparator;
+        const comparator = browserName === BrowserName.FIREFOX ? firefoxVersionComparator : semverVersionsComparator;
         const suitableBuildIdsSorted = suitableBuildIds.sort(comparator);
 
         return suitableBuildIdsSorted[suitableBuildIdsSorted.length - 1];

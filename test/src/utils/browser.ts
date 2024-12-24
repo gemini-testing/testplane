@@ -1,7 +1,35 @@
-import { isSupportIsolation } from "src/utils/browser";
+import { isSupportIsolation, getNormalizedBrowserName } from "src/utils/browser";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "src/constants/browser";
+import { BrowserName } from "src/browser/types";
 
 describe("browser-utils", () => {
+    describe("getNormalizedBrowserName", () => {
+        it("CHROME", () => {
+            assert.equal(getNormalizedBrowserName("chrome"), BrowserName.CHROME);
+        });
+
+        it("FIREFOX", () => {
+            assert.equal(getNormalizedBrowserName("firefox"), BrowserName.FIREFOX);
+        });
+
+        it("EDGE", () => {
+            assert.equal(getNormalizedBrowserName("edge"), BrowserName.EDGE);
+            assert.equal(getNormalizedBrowserName("MicrosoftEdge"), BrowserName.EDGE);
+            assert.equal(getNormalizedBrowserName("msedge"), BrowserName.EDGE);
+        });
+
+        it("SAFARI", () => {
+            assert.equal(getNormalizedBrowserName("safari"), BrowserName.SAFARI);
+        });
+
+        it("null", () => {
+            const invalidValue = "unknown" as (typeof BrowserName)[keyof typeof BrowserName];
+
+            assert.equal(getNormalizedBrowserName(invalidValue), null);
+            assert.equal(getNormalizedBrowserName(), null);
+        });
+    });
+
     describe("isSupportIsolation", () => {
         describe("should return 'false' if", () => {
             it("specified browser is not chrome", () => {

@@ -8,24 +8,28 @@ import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
 import { runGroup } from "./history";
 import { warn } from "../utils/logger";
+import { getNormalizedBrowserName } from "../utils/browser";
 import { getInstance } from "../config/runtime-config";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL, LOCAL_GRID_URL } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
+import { BrowserName, type W3CBrowserName } from "./types";
 
-export type CapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
-export type HeadlessBrowserOptions = Record<
-    string,
-    {
-        capabilityName: CapabilityName;
-        getArgs: (headlessMode: BrowserConfig["headless"]) => string[];
-    }
+export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
+export type HeadlessBrowserOptions = Partial<
+    Record<
+        W3CBrowserName,
+        {
+            capabilityName: VendorSpecificCapabilityName;
+            getArgs: (headlessMode: BrowserConfig["headless"]) => string[];
+        }
+    >
 >;
 const DEFAULT_PORT = 4444;
 
 const headlessBrowserOptions: HeadlessBrowserOptions = {
-    chrome: {
+    [BrowserName.CHROME]: {
         capabilityName: "goog:chromeOptions",
         getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
             const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
@@ -33,19 +37,11 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
             return [headlessValue, "disable-gpu"];
         },
     },
-    firefox: {
+    [BrowserName.FIREFOX]: {
         capabilityName: "moz:firefoxOptions",
         getArgs: (): string[] => ["-headless"],
     },
-    msedge: {
-        capabilityName: "ms:edgeOptions",
-        getArgs: (): string[] => ["--headless"],
-    },
-    edge: {
-        capabilityName: "ms:edgeOptions",
-        getArgs: (): string[] => ["--headless"],
-    },
-    microsoftedge: {
+    [BrowserName.EDGE]: {
         capabilityName: "ms:edgeOptions",
         getArgs: (): string[] => ["--headless"],
     },
@@ -168,7 +164,7 @@ export class NewBrowser extends Browser {
         );
 
         return this._isLocalGridUrl()
-            ? this._addExecutablePath(config, capabilitiesWithAddedHeadless)
+            ? this._applyLocalBrowserCapabilities(config, capabilitiesWithAddedHeadless)
             : Promise.resolve(capabilitiesWithAddedHeadless);
     }
 
@@ -179,14 +175,19 @@ export class NewBrowser extends Browser {
         if (!headless) {
             return capabilities;
         }
-        const browserNameLowerCase = capabilities.browserName?.toLocaleLowerCase() as string;
-        const capabilitySettings = headlessBrowserOptions[browserNameLowerCase];
+        const browserNameW3C = getNormalizedBrowserName(capabilities.browserName);
+
+        if (!browserNameW3C) {
+            return capabilities;
+        }
+
+        const capabilitySettings = headlessBrowserOptions[browserNameW3C];
         if (!capabilitySettings) {
             warn(`WARNING: Headless setting is not supported for ${capabilities.browserName} browserName`);
             return capabilities;
         }
-        const browserCapabilities = (capabilities[capabilitySettings.capabilityName as CapabilityName] ??
-            {}) as WebdriverIO.Capabilities[CapabilityName];
+        const browserCapabilities = (capabilities[capabilitySettings.capabilityName as VendorSpecificCapabilityName] ??
+            {}) as WebdriverIO.Capabilities[VendorSpecificCapabilityName];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (capabilities as any)[capabilitySettings.capabilityName] = {
             ...browserCapabilities,
@@ -221,33 +222,36 @@ export class NewBrowser extends Browser {
         return this._wdProcess.gridUrl;
     }
 
-    protected async _addExecutablePath(
+    protected async _applyLocalBrowserCapabilities(
         config: BrowserConfig,
         capabilities: WebdriverIO.Capabilities,
     ): Promise<WebdriverIO.Capabilities> {
-        const { getNormalizedBrowserName, installBrowser } = await import("../browser-installer");
-        const normalizedBrowserName = getNormalizedBrowserName(this._config.desiredCapabilities?.browserName);
+        const { installBrowser } = await import("../browser-installer");
+        const browserNameW3C = getNormalizedBrowserName(config.desiredCapabilities?.browserName);
 
-        if (!normalizedBrowserName) {
+        if (!browserNameW3C) {
             throw new Error(
                 [
-                    `Running auto local "${this._config.desiredCapabilities?.browserName}" is unsupported`,
+                    `Running auto local "${config.desiredCapabilities?.browserName}" is unsupported`,
                     `Supported browsers: "chrome", "firefox", "safari", "edge"`,
                 ].join("\n"),
             );
         }
 
-        const executablePath = await installBrowser(
-            normalizedBrowserName,
-            this._config.desiredCapabilities?.browserVersion,
-            { shouldInstallWebDriver: false, shouldInstallUbuntuPackages: true },
-        );
+        const executablePath = await installBrowser(browserNameW3C, config.desiredCapabilities?.browserVersion, {
+            shouldInstallWebDriver: false,
+            shouldInstallUbuntuPackages: true,
+        });
 
         if (executablePath) {
-            const browserNameLowerCase = config.desiredCapabilities?.browserName?.toLowerCase() as string;
-            const { capabilityName } = headlessBrowserOptions[browserNameLowerCase];
-            capabilities[capabilityName] ||= {};
-            capabilities[capabilityName]!.binary ||= executablePath;
+            const capabilitySettings = headlessBrowserOptions[browserNameW3C];
+
+            if (!capabilitySettings) {
+                return capabilities;
+            }
+
+            capabilities[capabilitySettings.capabilityName] ||= {};
+            capabilities[capabilitySettings.capabilityName]!.binary ||= executablePath;
         }
 
         return capabilities;
