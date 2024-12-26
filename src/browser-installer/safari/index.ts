@@ -4,6 +4,8 @@ import waitPort from "wait-port";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_TIMEOUT, SAFARIDRIVER_PATH } from "../constants";
 
+export { resolveSafariVersion } from "./browser";
+
 export const runSafariDriver = async ({ debug = false }: { debug?: boolean } = {}): Promise<{
     gridUrl: string;
     process: ChildProcess;

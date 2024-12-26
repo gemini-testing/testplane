@@ -5,6 +5,7 @@ import waitPort from "wait-port";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_TIMEOUT } from "../constants";
 
+export { resolveEdgeVersion } from "./browser";
 export { installEdgeDriver };
 
 export const runEdgeDriver = async (

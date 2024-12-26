@@ -11,12 +11,6 @@ export const installBrowser = async (
     browserVersion?: string,
     { force = false, shouldInstallWebDriver = false, shouldInstallUbuntuPackages = false } = {},
 ): Promise<string | null> => {
-    if (!browserVersion) {
-        throw new Error(
-            `Couldn't install browser '${browserName}' because it has invalid version: '${browserVersion}'`,
-        );
-    }
-
     const { isUbuntu } = await import("./ubuntu-packages");
 
     const needUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
@@ -33,22 +27,25 @@ export const installBrowser = async (
     switch (browserName) {
         case BrowserName.CHROME:
         case BrowserName.CHROMIUM: {
-            const { installChrome } = await import("./chrome");
+            const { installChrome, resolveLatestChromeVersion } = await import("./chrome");
+            const version = browserVersion || (await resolveLatestChromeVersion(force));
 
-            return installChrome(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
+            return installChrome(version, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
         case BrowserName.FIREFOX: {
-            const { installFirefox } = await import("./firefox");
+            const { installFirefox, resolveLatestFirefoxVersion } = await import("./firefox");
+            const version = browserVersion || (await resolveLatestFirefoxVersion(force));
 
-            return installFirefox(browserVersion, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
+            return installFirefox(version, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
         }
 
         case BrowserName.EDGE: {
-            const { installEdgeDriver } = await import("./edge");
+            const { installEdgeDriver, resolveEdgeVersion } = await import("./edge");
+            const version = browserVersion || (await resolveEdgeVersion());
 
             if (shouldInstallWebDriver) {
-                await installEdgeDriver(browserVersion, { force });
+                await installEdgeDriver(version, { force });
             }
 
             return null;
@@ -113,7 +110,9 @@ export const installBrowsersWithDrivers = async (
     for (const { browserName, browserVersion } of uniqBrowsers) {
         installPromises.push(
             forceInstallBinaries(installBrowser, browserName, browserVersion).then(result => {
-                browsersInstallResult[`${browserName}@${browserVersion}`] = result;
+                const key = browserVersion ? `${browserName}@${browserVersion}` : String(browserName);
+
+                browsersInstallResult[key] = result;
             }),
         );
     }
