@@ -1,10 +1,12 @@
+import _ from "lodash";
 import { resolveBuildId, canDownload, install as puppeteerInstall } from "@puppeteer/browsers";
-import { MIN_CHROME_FOR_TESTING_VERSION } from "../constants";
+import { CHROME_FOR_TESTING_LATEST_STABLE_API_URL, MIN_CHROME_FOR_TESTING_VERSION } from "../constants";
 import {
     browserInstallerDebug,
     getBrowserPlatform,
     getBrowsersDir,
     getMilestone,
+    retryFetch,
     type DownloadProgressCallback,
 } from "../utils";
 import registry from "../registry";
@@ -74,3 +76,20 @@ export const installChrome = async (
 
     return browserPath;
 };
+
+export const resolveLatestChromeVersion = _.memoize(async (force = false): Promise<string> => {
+    if (!force) {
+        const platform = getBrowserPlatform();
+        const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.CHROME, platform);
+
+        if (existingLocallyBrowserVersion) {
+            return existingLocallyBrowserVersion;
+        }
+    }
+
+    return retryFetch(CHROME_FOR_TESTING_LATEST_STABLE_API_URL)
+        .then(res => res.text())
+        .catch(() => {
+            throw new Error("Couldn't resolve latest chrome version");
+        });
+});
