@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type { installChromeDriverManually as installChromeDriverManuallyType } from "../../../../src/browser-installer/chromium/driver";
-import { Driver } from "../../../../src/browser-installer/utils";
+import { DriverName } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/chromium/driver", () => {
     const sandbox = sinon.createSandbox();
@@ -31,7 +31,7 @@ describe("browser-installer/chromium/driver", () => {
             text: () => Promise.resolve("115.0.5678.170"),
         });
         installBinaryStub
-            .withArgs(Driver.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
+            .withArgs(DriverName.CHROMEDRIVER, sinon.match.string, "115.0.5678.170", sinon.match.func)
             .resolves("/driver/path");
 
         const driverPath = await installChromeDriverManually("115");

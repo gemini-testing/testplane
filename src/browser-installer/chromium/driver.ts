@@ -9,7 +9,7 @@ import {
     retryFetch,
     unzipFile,
     normalizeChromeVersion,
-    Driver,
+    DriverName,
     getBrowserPlatform,
 } from "../utils";
 import { getChromeDriverArchiveTmpPath, getChromeDriverArchiveUrl } from "./utils";
@@ -50,5 +50,5 @@ export const installChromeDriverManually = async (milestone: string): Promise<st
         return chromeDriverPath;
     };
 
-    return registry.installBinary(Driver.CHROMEDRIVER, platform, driverVersion, installFn);
+    return registry.installBinary(DriverName.CHROMEDRIVER, platform, driverVersion, installFn);
 };

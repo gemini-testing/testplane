@@ -1,9 +1,10 @@
 import { install as puppeteerInstall, canDownload } from "@puppeteer/browsers";
 import registry from "../registry";
-import { getMilestone, browserInstallerDebug, getBrowsersDir, Browser, type DownloadProgressCallback } from "../utils";
+import { getMilestone, browserInstallerDebug, getBrowsersDir, type DownloadProgressCallback } from "../utils";
 import { getChromiumBuildId } from "./utils";
 import { getChromePlatform } from "../utils";
 import { MIN_CHROMIUM_VERSION } from "../constants";
+import { BrowserName } from "../../browser/types";
 
 export const installChromium = async (version: string, { force = false } = {}): Promise<string> => {
     const milestone = getMilestone(version);
@@ -18,17 +19,17 @@ export const installChromium = async (version: string, { force = false } = {}): 
     }
 
     const platform = getChromePlatform(version);
-    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.CHROMIUM, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.CHROMIUM, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chromium@${version} browser was found. Skipping the installation`);
 
-        return registry.getBinaryPath(Browser.CHROMIUM, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(BrowserName.CHROMIUM, platform, existingLocallyBrowserVersion);
     }
 
     const buildId = await getChromiumBuildId(platform, milestone);
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: Browser.CHROMIUM, platform, buildId, cacheDir });
+    const canBeInstalled = await canDownload({ browser: BrowserName.CHROMIUM, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
         throw new Error(
@@ -48,9 +49,9 @@ export const installChromium = async (version: string, { force = false } = {}): 
             buildId,
             cacheDir,
             downloadProgressCallback,
-            browser: Browser.CHROMIUM,
+            browser: BrowserName.CHROMIUM,
             unpack: true,
         }).then(result => result.executablePath);
 
-    return registry.installBinary(Browser.CHROMIUM, platform, milestone, installFn);
+    return registry.installBinary(BrowserName.CHROMIUM, platform, milestone, installFn);
 };

@@ -4,7 +4,7 @@ import type {
     installBrowser as InstallBrowser,
     installBrowsersWithDrivers as InstallBrowsersWithDrivers,
 } from "../../../src/browser-installer/install";
-import { Browser } from "../../../src/browser-installer/utils";
+import { BrowserName } from "../../../src/browser/types";
 
 describe("browser-installer/install", () => {
     const sandbox = sinon.createSandbox();
@@ -54,7 +54,7 @@ describe("browser-installer/install", () => {
                     it("should install browser", async () => {
                         installChromeStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser(Browser.CHROME, "115", { force });
+                        const binaryPath = await installBrowser(BrowserName.CHROME, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
                         assert.calledOnceWith(installChromeStub, "115", {
@@ -67,7 +67,7 @@ describe("browser-installer/install", () => {
                     it("should install browser with webdriver", async () => {
                         installChromeStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser(Browser.CHROME, "115", {
+                        const binaryPath = await installBrowser(BrowserName.CHROME, "115", {
                             force,
                             shouldInstallWebDriver: true,
                         });
@@ -85,7 +85,7 @@ describe("browser-installer/install", () => {
                     it("should install browser", async () => {
                         installFirefoxStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser(Browser.FIREFOX, "115", { force });
+                        const binaryPath = await installBrowser(BrowserName.FIREFOX, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
                         assert.calledOnceWith(installFirefoxStub, "115", {
@@ -98,7 +98,7 @@ describe("browser-installer/install", () => {
                     it("should install browser with webdriver", async () => {
                         installFirefoxStub.withArgs("115").resolves("/browser/path");
 
-                        const binaryPath = await installBrowser(Browser.FIREFOX, "115", {
+                        const binaryPath = await installBrowser(BrowserName.FIREFOX, "115", {
                             force,
                             shouldInstallWebDriver: true,
                         });
@@ -144,7 +144,7 @@ describe("browser-installer/install", () => {
 
                 it("should throw exception on empty browser version", async () => {
                     await assert.isRejected(
-                        installBrowser(Browser.CHROME, "", { force }),
+                        installBrowser(BrowserName.CHROME, "", { force }),
                         /Couldn't install browser 'chrome' because it has invalid version: ''/,
                     );
                 });

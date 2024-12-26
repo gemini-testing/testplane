@@ -2,9 +2,10 @@ import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type RegistryType from "../../../src/browser-installer/registry";
 import type { RegistryFileContents } from "../../../src/browser-installer/registry";
-import { Browser, Driver, type DownloadProgressCallback } from "../../../src/browser-installer/utils";
+import { DriverName, type DownloadProgressCallback } from "../../../src/browser-installer/utils";
 import { BrowserPlatform } from "@puppeteer/browsers";
 import type { PartialDeep } from "type-fest";
+import { BrowserName } from "../../../src/browser/types";
 
 describe("browser-installer/registry", () => {
     const sandbox = sinon.createSandbox();
@@ -70,7 +71,7 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const result = await registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0.5790.170");
+            const result = await registry.getBinaryPath(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115.0.5790.170");
 
             assert.equal(result, "/testplane/registry/browsers/chrome");
         });
@@ -78,7 +79,8 @@ describe("browser-installer/registry", () => {
         it("should throw an error if browser is not installed", async () => {
             registry = createRegistry_({});
 
-            const fn = (): Promise<string> => registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "115");
+            const fn = (): Promise<string> =>
+                registry.getBinaryPath(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115");
 
             await assert.isRejected(fn(), "Binary 'chrome' on 'mac_arm' is not installed");
         });
@@ -87,7 +89,8 @@ describe("browser-installer/registry", () => {
             // eslint-disable-next-line camelcase
             registry = createRegistry_({ binaries: { chrome_mac_arm: {} } });
 
-            const fn = (): Promise<string> => registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "120");
+            const fn = (): Promise<string> =>
+                registry.getBinaryPath(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "120");
 
             await assert.isRejected(fn(), "Version '120' of driver 'chrome' on 'mac_arm' is not installed");
         });
@@ -106,8 +109,8 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115.0");
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
@@ -125,8 +128,12 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117");
-            const versionFull = registry.getMatchedBrowserVersion(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "117.0");
+            const version = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, BrowserPlatform.MAC_ARM, "117");
+            const versionFull = registry.getMatchedBrowserVersion(
+                BrowserName.FIREFOX,
+                BrowserPlatform.MAC_ARM,
+                "117.0",
+            );
 
             assert.equal(version, "stable_117.0b9");
             assert.equal(versionFull, "stable_117.0b9");
@@ -144,8 +151,8 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116");
-            const versionFull = registry.getMatchedBrowserVersion(Browser.CHROME, BrowserPlatform.MAC_ARM, "116.0");
+            const version = registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "116");
+            const versionFull = registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "116.0");
 
             assert.equal(version, null);
             assert.equal(versionFull, null);
@@ -165,8 +172,12 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedDriverVersion(Driver.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchedDriverVersion(Driver.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(DriverName.CHROMEDRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(
+                DriverName.CHROMEDRIVER,
+                BrowserPlatform.MAC_ARM,
+                "115.0",
+            );
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
@@ -184,8 +195,12 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchedDriverVersion(Driver.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(DriverName.EDGEDRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(
+                DriverName.EDGEDRIVER,
+                BrowserPlatform.MAC_ARM,
+                "115.0",
+            );
 
             assert.equal(version, "115.0.5790.170");
             assert.equal(versionFull, "115.0.5790.170");
@@ -203,8 +218,12 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(DriverName.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(
+                DriverName.GECKODRIVER,
+                BrowserPlatform.MAC_ARM,
+                "115.0",
+            );
 
             assert.equal(version, "0.35.0");
             assert.equal(versionFull, "0.35.0");
@@ -218,8 +237,12 @@ describe("browser-installer/registry", () => {
                 },
             });
 
-            const version = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
-            const versionFull = registry.getMatchedDriverVersion(Driver.GECKODRIVER, BrowserPlatform.MAC_ARM, "115.0");
+            const version = registry.getMatchedDriverVersion(DriverName.GECKODRIVER, BrowserPlatform.MAC_ARM, "115");
+            const versionFull = registry.getMatchedDriverVersion(
+                DriverName.GECKODRIVER,
+                BrowserPlatform.MAC_ARM,
+                "115.0",
+            );
 
             assert.equal(version, null);
             assert.equal(versionFull, null);
@@ -228,7 +251,7 @@ describe("browser-installer/registry", () => {
 
     describe("installBinary", () => {
         it("should install binary and return its executable path", async () => {
-            const result = await registry.installBinary(Browser.CHROME, BrowserPlatform.LINUX, "100.0.0.0", () =>
+            const result = await registry.installBinary(BrowserName.CHROME, BrowserPlatform.LINUX, "100.0.0.0", () =>
                 Promise.resolve("/browser/path"),
             );
 
@@ -247,7 +270,7 @@ describe("browser-installer/registry", () => {
 
             const installFn = sinon.stub().resolves("/another/browser/path");
             const result = await registry.installBinary(
-                Browser.CHROME,
+                BrowserName.CHROME,
                 BrowserPlatform.MAC_ARM,
                 "115.0.5320.180",
                 installFn,
@@ -259,9 +282,13 @@ describe("browser-installer/registry", () => {
 
         it("should save binary to registry after install", async () => {
             const installFn = sinon.stub().resolves("/testplane/registry/browser/path");
-            await registry.installBinary(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0.5320.180", installFn);
+            await registry.installBinary(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115.0.5320.180", installFn);
 
-            const savedPath = await registry.getBinaryPath(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0.5320.180");
+            const savedPath = await registry.getBinaryPath(
+                BrowserName.CHROME,
+                BrowserPlatform.MAC_ARM,
+                "115.0.5320.180",
+            );
 
             assert.equal(savedPath, "/testplane/registry/browser/path");
             assert.calledOnceWith(
@@ -288,9 +315,9 @@ describe("browser-installer/registry", () => {
                 return "/testplane/registry/browser/path";
             };
 
-            await registry.installBinary(Browser.CHROME, BrowserPlatform.MAC_ARM, "115.0.5320.180", installFn);
+            await registry.installBinary(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "115.0.5320.180", installFn);
 
-            await registry.installBinary(Browser.FIREFOX, BrowserPlatform.MAC_ARM, "120.0.5320.180", installFn);
+            await registry.installBinary(BrowserName.FIREFOX, BrowserPlatform.MAC_ARM, "120.0.5320.180", installFn);
 
             assert.calledWith(loggerWarnStub, "Downloading Testplane browsers");
             assert.calledWith(loggerWarnStub, "Note: this is one-time action. It may take a while...");

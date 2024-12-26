@@ -1,5 +1,6 @@
 import type { ChildProcess } from "child_process";
-import { runBrowserDriver, getNormalizedBrowserName } from "../browser-installer";
+import { runBrowserDriver } from "../browser-installer";
+import { getNormalizedBrowserName } from "../utils/browser";
 import type { SupportedBrowser } from "../browser-installer";
 
 type BrowserVersion = string;

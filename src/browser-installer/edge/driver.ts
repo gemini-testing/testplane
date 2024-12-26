@@ -1,6 +1,6 @@
 import { download as downloadEdgeDriver } from "edgedriver";
 import {
-    Driver,
+    DriverName,
     browserInstallerDebug,
     getBrowserPlatform,
     getEdgeDriverDir,
@@ -29,14 +29,14 @@ const getLatestMajorEdgeDriverVersion = async (milestone: string): Promise<strin
 
 export const installEdgeDriver = async (edgeVersion: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
-    const existingLocallyDriverVersion = registry.getMatchedDriverVersion(Driver.EDGEDRIVER, platform, edgeVersion);
+    const existingLocallyDriverVersion = registry.getMatchedDriverVersion(DriverName.EDGEDRIVER, platform, edgeVersion);
 
     if (existingLocallyDriverVersion && !force) {
         browserInstallerDebug(
             `A locally installed edgedriver for edge@${edgeVersion} browser was found. Skipping the installation`,
         );
 
-        return registry.getBinaryPath(Driver.EDGEDRIVER, platform, existingLocallyDriverVersion);
+        return registry.getBinaryPath(DriverName.EDGEDRIVER, platform, existingLocallyDriverVersion);
     }
 
     const milestone = getMilestone(edgeVersion);
@@ -49,5 +49,5 @@ export const installEdgeDriver = async (edgeVersion: string, { force = false } =
 
     const installFn = (): Promise<string> => downloadEdgeDriver(driverVersion, getEdgeDriverDir(driverVersion));
 
-    return registry.installBinary(Driver.EDGEDRIVER, platform, driverVersion, installFn);
+    return registry.installBinary(DriverName.EDGEDRIVER, platform, driverVersion, installFn);
 };

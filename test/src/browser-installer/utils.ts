@@ -1,34 +1,6 @@
-import { Browser } from "../../../src/browser-installer/utils";
 import * as utils from "../../../src/browser-installer/utils";
 
 describe("browser-installer/utils", () => {
-    describe("getNormalizedBrowserName", () => {
-        it("CHROME", () => {
-            assert.equal(utils.getNormalizedBrowserName("chrome"), Browser.CHROME);
-        });
-
-        it("FIREFOX", () => {
-            assert.equal(utils.getNormalizedBrowserName("firefox"), Browser.FIREFOX);
-        });
-
-        it("EDGE", () => {
-            assert.equal(utils.getNormalizedBrowserName("edge"), Browser.EDGE);
-            assert.equal(utils.getNormalizedBrowserName("MicrosoftEdge"), Browser.EDGE);
-            assert.equal(utils.getNormalizedBrowserName("msedge"), Browser.EDGE);
-        });
-
-        it("SAFARI", () => {
-            assert.equal(utils.getNormalizedBrowserName("safari"), Browser.SAFARI);
-        });
-
-        it("null", () => {
-            const invalidValue = "unknown" as (typeof Browser)[keyof typeof Browser];
-
-            assert.equal(utils.getNormalizedBrowserName(invalidValue), null);
-            assert.equal(utils.getNormalizedBrowserName(), null);
-        });
-    });
-
     it("createBrowserLabel", () => {
         assert.equal(utils.createBrowserLabel("browserName", "browserVersion"), "browserName@browserVersion");
     });

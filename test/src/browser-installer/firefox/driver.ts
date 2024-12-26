@@ -1,7 +1,7 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type { installLatestGeckoDriver as InstallLatestGeckoDriverType } from "../../../../src/browser-installer/firefox/driver";
-import { Driver } from "../../../../src/browser-installer/utils";
+import { DriverName } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/firefox/driver", () => {
     const sandbox = sinon.createSandbox();
@@ -40,8 +40,8 @@ describe("browser-installer/firefox/driver", () => {
     afterEach(() => sandbox.restore());
 
     it("should try to resolve driver path locally by default", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.GECKODRIVER, sinon.match.string, "115").returns("115.0");
-        getBinaryPathStub.withArgs(Driver.GECKODRIVER, sinon.match.string, "115.0").returns("/driver/path");
+        getMatchedDriverVersionStub.withArgs(DriverName.GECKODRIVER, sinon.match.string, "115").returns("115.0");
+        getBinaryPathStub.withArgs(DriverName.GECKODRIVER, sinon.match.string, "115.0").returns("/driver/path");
 
         const driverPath = await installLatestGeckoDriver("115");
 
@@ -51,12 +51,12 @@ describe("browser-installer/firefox/driver", () => {
     });
 
     it("should not try to resolve driver path locally with 'force' flag", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.GECKODRIVER, sinon.match.string, "115").returns("115.0");
+        getMatchedDriverVersionStub.withArgs(DriverName.GECKODRIVER, sinon.match.string, "115").returns("115.0");
         retryFetchStub.withArgs("https://raw.githubusercontent.com/mozilla/geckodriver/release/Cargo.toml").resolves({
             text: () => Promise.resolve("version = '0.35.0'"),
         });
         installBinaryStub
-            .withArgs(Driver.GECKODRIVER, sinon.match.string, "0.35.0", sinon.match.func)
+            .withArgs(DriverName.GECKODRIVER, sinon.match.string, "0.35.0", sinon.match.func)
             .resolves("/new/downloaded/driver/path");
 
         const driverPath = await installLatestGeckoDriver("115", { force: true });
@@ -66,12 +66,12 @@ describe("browser-installer/firefox/driver", () => {
     });
 
     it("should download driver if it is not downloaded", async () => {
-        getMatchedDriverVersionStub.withArgs(Driver.GECKODRIVER, sinon.match.string, "115").returns(null);
+        getMatchedDriverVersionStub.withArgs(DriverName.GECKODRIVER, sinon.match.string, "115").returns(null);
         retryFetchStub.withArgs("https://raw.githubusercontent.com/mozilla/geckodriver/release/Cargo.toml").resolves({
             text: () => Promise.resolve("version = '0.35.0'"),
         });
         installBinaryStub
-            .withArgs(Driver.GECKODRIVER, sinon.match.string, "0.35.0", sinon.match.func)
+            .withArgs(DriverName.GECKODRIVER, sinon.match.string, "0.35.0", sinon.match.func)
             .resolves("/new/downloaded/driver/path");
 
         const driverPath = await installLatestGeckoDriver("115");

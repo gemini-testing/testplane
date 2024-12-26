@@ -6,54 +6,21 @@ import fs from "fs-extra";
 import { Readable } from "stream";
 import debug from "debug";
 import { MIN_CHROMIUM_MAC_ARM_VERSION } from "./constants";
+import type { BrowserName } from "../browser/types";
 
 export type DownloadProgressCallback = (done: number, total?: number) => void;
 
 export const browserInstallerDebug = debug("testplane:browser-installer");
 
-export const Browser = {
-    CHROME: PuppeteerBrowser.CHROME,
-    CHROMIUM: PuppeteerBrowser.CHROMIUM,
-    FIREFOX: PuppeteerBrowser.FIREFOX,
-    SAFARI: "safari",
-    EDGE: "MicrosoftEdge",
-} as const;
-
-export const Driver = {
+export const DriverName = {
     CHROMEDRIVER: PuppeteerBrowser.CHROMEDRIVER,
     GECKODRIVER: "geckodriver",
     SAFARIDRIVER: "safaridriver",
     EDGEDRIVER: "edgedriver",
 } as const;
 
-export type SupportedBrowser = (typeof Browser)[keyof typeof Browser];
-export type SupportedDriver = (typeof Driver)[keyof typeof Driver];
-
-export const getNormalizedBrowserName = (
-    browserName?: string,
-): Exclude<SupportedBrowser, typeof Browser.CHROMIUM> | null => {
-    if (!browserName) {
-        return null;
-    }
-
-    if (/chrome/i.test(browserName)) {
-        return Browser.CHROME;
-    }
-
-    if (/firefox/i.test(browserName)) {
-        return Browser.FIREFOX;
-    }
-
-    if (/edge/i.test(browserName)) {
-        return Browser.EDGE;
-    }
-
-    if (/safari/i.test(browserName)) {
-        return Browser.SAFARI;
-    }
-
-    return null;
-};
+export type SupportedBrowser = (typeof BrowserName)[keyof typeof BrowserName];
+export type SupportedDriver = (typeof DriverName)[keyof typeof DriverName];
 
 export const createBrowserLabel = (browserName: string, version = "latest"): string => browserName + "@" + version;
 

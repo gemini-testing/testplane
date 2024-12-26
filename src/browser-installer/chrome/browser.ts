@@ -5,13 +5,13 @@ import {
     getBrowserPlatform,
     getBrowsersDir,
     getMilestone,
-    Browser,
     type DownloadProgressCallback,
 } from "../utils";
 import registry from "../registry";
 import { normalizeChromeVersion } from "../utils";
 import { installUbuntuPackageDependencies } from "../ubuntu-packages";
 import { installChromeDriver } from "./driver";
+import { BrowserName } from "../../browser/types";
 
 const installChromeBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const milestone = getMilestone(version);
@@ -25,19 +25,19 @@ const installChromeBrowser = async (version: string, { force = false } = {}): Pr
     }
 
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(Browser.CHROME, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.CHROME, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chrome@${version} browser was found. Skipping the installation`);
 
-        return registry.getBinaryPath(Browser.CHROME, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(BrowserName.CHROME, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeChromeVersion(version);
-    const buildId = await resolveBuildId(Browser.CHROME, platform, normalizedVersion);
+    const buildId = await resolveBuildId(BrowserName.CHROME, platform, normalizedVersion);
 
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: Browser.CHROME, platform, buildId, cacheDir });
+    const canBeInstalled = await canDownload({ browser: BrowserName.CHROME, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
         throw new Error(
@@ -55,11 +55,11 @@ const installChromeBrowser = async (version: string, { force = false } = {}): Pr
             buildId,
             cacheDir,
             downloadProgressCallback,
-            browser: Browser.CHROME,
+            browser: BrowserName.CHROME,
             unpack: true,
         }).then(result => result.executablePath);
 
-    return registry.installBinary(Browser.CHROME, platform, buildId, installFn);
+    return registry.installBinary(BrowserName.CHROME, platform, buildId, installFn);
 };
 
 export const installChrome = async (
