@@ -1,7 +1,6 @@
 import _ from "lodash";
 import { getMilestone, retryFetch } from "../../../utils";
-import { FIREFOX_VERSIONS_API_URL } from "../constants";
-import { MIN_FIREFOX_VERSION } from "../../../constants";
+import { FIREFOX_VERSIONS_ALL_VERSIONS_API_URL, MIN_FIREFOX_VERSION } from "../../../constants";
 
 type FirefoxVersionInfo = {
     category: "major" | "esr" | "stability" | "dev";
@@ -13,7 +12,7 @@ type FirefoxVersionsApiResponse = { releases: Record<string, FirefoxVersionInfo>
 
 export const fetchFirefoxMilestoneVersions = async (): Promise<string[]> => {
     try {
-        const response = await retryFetch(FIREFOX_VERSIONS_API_URL);
+        const response = await retryFetch(FIREFOX_VERSIONS_ALL_VERSIONS_API_URL);
         const data = (await response.json()) as FirefoxVersionsApiResponse;
         const stableVersions = Object.values(data.releases)
             .filter(data => ["stability", "esr"].includes(data.category))

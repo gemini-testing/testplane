@@ -1,10 +1,18 @@
+import _ from "lodash";
 import { canDownload, install as puppeteerInstall } from "@puppeteer/browsers";
-import { browserInstallerDebug, getBrowserPlatform, getBrowsersDir, type DownloadProgressCallback } from "../utils";
+import {
+    browserInstallerDebug,
+    getBrowserPlatform,
+    getBrowsersDir,
+    retryFetch,
+    type DownloadProgressCallback,
+} from "../utils";
 import registry from "../registry";
 import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
 import { installLatestGeckoDriver } from "./driver";
 import { installUbuntuPackageDependencies } from "../ubuntu-packages";
 import { BrowserName } from "../../browser/types";
+import { FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL } from "../constants";
 
 const installFirefoxBrowser = async (version: string, { force = false } = {}): Promise<string> => {
     const platform = getBrowserPlatform();
@@ -59,3 +67,21 @@ export const installFirefox = async (
 
     return browserPath;
 };
+
+export const resolveLatestFirefoxVersion = _.memoize(async (force = false): Promise<string> => {
+    if (!force) {
+        const platform = getBrowserPlatform();
+        const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, platform);
+
+        if (existingLocallyBrowserVersion) {
+            return existingLocallyBrowserVersion;
+        }
+    }
+
+    return retryFetch(FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL)
+        .then(res => res.json())
+        .then(({ LATEST_FIREFOX_VERSION }) => LATEST_FIREFOX_VERSION)
+        .catch(() => {
+            throw new Error("Couldn't resolve latest firefox version");
+        });
+});

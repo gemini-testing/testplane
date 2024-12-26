@@ -141,13 +141,6 @@ describe("browser-installer/install", () => {
                         assert.equal(binaryPath, null);
                     });
                 });
-
-                it("should throw exception on empty browser version", async () => {
-                    await assert.isRejected(
-                        installBrowser(BrowserName.CHROME, "", { force }),
-                        /Couldn't install browser 'chrome' because it has invalid version: ''/,
-                    );
-                });
             });
         });
     });

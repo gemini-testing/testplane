@@ -2,13 +2,13 @@ import type { ChildProcess } from "child_process";
 import { start as startGeckoDriver } from "geckodriver";
 import getPort from "get-port";
 import waitPort from "wait-port";
-import { installFirefox } from "./browser";
+import { installFirefox, resolveLatestFirefoxVersion } from "./browser";
 import { installLatestGeckoDriver } from "./driver";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getUbuntuLinkerEnv, isUbuntu } from "../ubuntu-packages";
 
-export { installFirefox, installLatestGeckoDriver };
+export { installFirefox, resolveLatestFirefoxVersion, installLatestGeckoDriver };
 
 export const runGeckoDriver = async (
     firefoxVersion: string,

@@ -47,6 +47,22 @@ const logDownloadingBrowsersWarningOnce = _.once(() => {
     logger.warn("Note: this is one-time action. It may take a while...");
 });
 
+const getBuildPrefix = (browserName: SupportedBrowser, browserVersion: string): string | null => {
+    switch (browserName) {
+        case BrowserName.CHROME:
+            return normalizeChromeVersion(browserVersion);
+
+        case BrowserName.CHROMIUM:
+            return getMilestone(browserVersion);
+
+        case BrowserName.FIREFOX:
+            return getFirefoxBuildId(browserVersion);
+
+        default:
+            return null;
+    }
+};
+
 class Registry {
     private registryPath = getRegistryPath();
     private registry = this.readRegistry();
@@ -123,7 +139,7 @@ class Registry {
     public getMatchedBrowserVersion(
         browserName: SupportedBrowser,
         platform: BrowserPlatform,
-        browserVersion: string,
+        browserVersion?: string,
     ): string | null {
         const registryKey = getRegistryBinaryKey(browserName, platform);
 
@@ -131,27 +147,21 @@ class Registry {
             return null;
         }
 
-        let buildPrefix: string;
-
-        switch (browserName) {
-            case BrowserName.CHROME:
-                buildPrefix = normalizeChromeVersion(browserVersion);
-                break;
-
-            case BrowserName.CHROMIUM:
-                buildPrefix = getMilestone(browserVersion);
-                break;
-
-            case BrowserName.FIREFOX:
-                buildPrefix = getFirefoxBuildId(browserVersion);
-                break;
-
-            default:
-                return null;
-        }
-
         const buildIds = this.getBinaryVersions(browserName, platform);
-        const suitableBuildIds = buildIds.filter(buildId => buildId.startsWith(buildPrefix));
+
+        let suitableBuildIds;
+
+        if (!browserVersion) {
+            suitableBuildIds = buildIds;
+        } else {
+            const buildPrefix = getBuildPrefix(browserName, browserVersion);
+
+            if (buildPrefix === null) {
+                return null;
+            }
+
+            suitableBuildIds = buildIds.filter(buildId => buildId.startsWith(buildPrefix));
+        }
 
         if (!suitableBuildIds.length) {
             return null;

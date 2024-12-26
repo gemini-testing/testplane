@@ -4,11 +4,11 @@ import waitPort from "wait-port";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getMilestone } from "../utils";
-import { installChrome } from "./browser";
+import { installChrome, resolveLatestChromeVersion } from "./browser";
 import { installChromeDriver } from "./driver";
 import { isUbuntu, getUbuntuLinkerEnv } from "../ubuntu-packages";
 
-export { installChrome, installChromeDriver };
+export { installChrome, resolveLatestChromeVersion, installChromeDriver };
 
 export const runChromeDriver = async (
     chromeVersion: string,
