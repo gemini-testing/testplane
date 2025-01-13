@@ -1,5 +1,5 @@
 import type { ChildProcess } from "child_process";
-import { runBrowserDriver } from "../browser-installer";
+import { resolveBrowserVersion, runBrowserDriver } from "../browser-installer";
 import { getNormalizedBrowserName } from "../utils/browser";
 import type { SupportedBrowser } from "../browser-installer";
 
@@ -33,11 +33,9 @@ export class WebdriverPool {
             );
         }
 
-        if (!browserVersion) {
-            throw new Error(`Couldn't run browser driver for "${browserName}" because its version is undefined`);
-        }
+        const browserVersionNormalized = browserVersion || (await resolveBrowserVersion(browserNameNormalized));
 
-        const wdProcesses = this.driverProcess.get(browserNameNormalized)?.get(browserVersion) ?? {};
+        const wdProcesses = this.driverProcess.get(browserNameNormalized)?.get(browserVersionNormalized) ?? {};
 
         for (const port in wdProcesses) {
             if (!wdProcesses[port].isBusy) {
@@ -46,12 +44,12 @@ export class WebdriverPool {
                 return {
                     gridUrl: wdProcesses[port].gridUrl,
                     free: () => this.freeWebdriver(port),
-                    kill: () => this.killWebdriver(browserNameNormalized, browserVersion, port),
+                    kill: () => this.killWebdriver(browserNameNormalized, browserVersionNormalized, port),
                 };
             }
         }
 
-        return this.createWebdriverProcess(browserNameNormalized, browserVersion, { debug });
+        return this.createWebdriverProcess(browserNameNormalized, browserVersionNormalized, { debug });
     }
 
     private freeWebdriver(port: Port): void {

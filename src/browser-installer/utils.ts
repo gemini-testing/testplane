@@ -22,7 +22,7 @@ export const DriverName = {
 export type SupportedBrowser = (typeof BrowserName)[keyof typeof BrowserName];
 export type SupportedDriver = (typeof DriverName)[keyof typeof DriverName];
 
-export const createBrowserLabel = (browserName: string, version = "latest"): string => browserName + "@" + version;
+export const createBrowserLabel = (browserName: string, version: string): string => browserName + "@" + version;
 
 export const getMilestone = (version: string | number): string => {
     if (typeof version === "number") {
