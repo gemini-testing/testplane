@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.24.0](https://github.com/gemini-testing/testplane/compare/v8.23.1...v8.24.0) (2025-01-13)
+
+
+### Features
+
+* add 'list-browsers' command ([ff62aad](https://github.com/gemini-testing/testplane/commit/ff62aadb9bc86e81df9ac430d52a756c1aca675f))
+* add ability to run local browsers without specified browserVersion ([7827fd0](https://github.com/gemini-testing/testplane/commit/7827fd07e8e6c1ee9c42afd92b5590ee3535666d))
+
+
+### Bug Fixes
+
+* remove unknown capabilities when running local browser ([6e75965](https://github.com/gemini-testing/testplane/commit/6e75965cdcc58b84ee3b504033ae1b122bba7e75))
+
 ### [8.23.1](https://github.com/gemini-testing/testplane/compare/v8.23.0...v8.23.1) (2024-12-23)
 
 
