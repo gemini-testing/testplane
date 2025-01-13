@@ -62,6 +62,7 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
     cliTool
         .command(commandName)
         .description("Lists all browsers from the config")
+        .option("-c, --config <path>", "path to configuration file")
         .option(
             "--type [type]",
             "return browsers in specified type ('tags': browserName and browserVersion, 'ids': browserId from config)",
