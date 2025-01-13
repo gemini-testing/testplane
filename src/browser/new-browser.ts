@@ -1,7 +1,7 @@
 import { URLSearchParams } from "url";
 
 import URI from "urijs";
-import { isBoolean, assign, isEmpty } from "lodash";
+import { isBoolean, assign, isEmpty, set } from "lodash";
 import { remote, RemoteOptions } from "webdriverio";
 
 import { Browser, BrowserOpts } from "./browser";
@@ -10,7 +10,13 @@ import { runGroup } from "./history";
 import { warn } from "../utils/logger";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { getInstance } from "../config/runtime-config";
-import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL, LOCAL_GRID_URL } from "../constants/config";
+import {
+    DEVTOOLS_PROTOCOL,
+    WEBDRIVER_PROTOCOL,
+    LOCAL_GRID_URL,
+    W3C_CAPABILITIES,
+    VENDOR_CAPABILITIES,
+} from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
@@ -254,7 +260,18 @@ export class NewBrowser extends Browser {
             capabilities[capabilitySettings.capabilityName]!.binary ||= executablePath;
         }
 
-        return capabilities;
+        const filteredCapabilities: WebdriverIO.Capabilities = Object.keys(capabilities)
+            .filter(capabilityName => {
+                const isW3CCapability = W3C_CAPABILITIES.includes(capabilityName);
+                const isVendorSpecificCapability = VENDOR_CAPABILITIES[browserNameW3C].includes(capabilityName);
+
+                return isW3CCapability || isVendorSpecificCapability;
+            })
+            .reduce((acc, capabilityName) => {
+                return set(acc, [capabilityName], capabilities[capabilityName as keyof WebdriverIO.Capabilities]);
+            }, {});
+
+        return filteredCapabilities;
     }
 
     protected _getGridHost(url: URI): string {
