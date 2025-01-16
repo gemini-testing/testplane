@@ -29,6 +29,7 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
     cliTool
         .command(commandName)
         .description("Install browsers to run locally with 'gridUrl': 'local' or '--local' cli argument")
+        .option("-c, --config <path>", "path to configuration file")
         .arguments("[browsers...]")
         .action(async (browsers: string[]) => {
             try {
