@@ -12,7 +12,8 @@ export default (browser: Browser): void => {
             options: ScrollIntoViewOptions | boolean = { block: "start", inline: "nearest" },
         ): Promise<void> {
             await session.execute<Promise<void>, [WebdriverIO.Element, ScrollIntoViewOptions | boolean]>(
-                function (elem, options) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                function f(elem, options): Promise<void | any> {
                     return elem.scrollIntoView(options);
                 },
                 this,

@@ -1,7 +1,7 @@
 // This module replaces testplane import and works only in browser environment
 
 export * from "@vitest/spy";
-export { Key } from "webdriverio";
+export { Key } from "@testplane/webdriverio";
 import type { MockFactory } from "./types.js";
 
 // solution found here - https://stackoverflow.com/questions/48674303/resolve-relative-path-to-absolute-url-from-es6-module-in-browser

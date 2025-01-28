@@ -4,7 +4,7 @@
 const url = require("url");
 const Promise = require("bluebird");
 const _ = require("lodash");
-const webdriverio = require("webdriverio");
+const webdriverio = require("@testplane/webdriverio");
 const { sessionEnvironmentDetector } = require("../bundle/@wdio-utils");
 const { Browser } = require("./browser");
 const commandsList = require("./commands");

@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import type { Matches, Mock } from "webdriverio";
+// import type { Matches, Mock } from "@testplane/types";
 import logger from "./logger";
 
 export interface PageLoaderOpts {
@@ -12,7 +12,8 @@ export interface PageLoaderOpts {
 
 export default class PageLoader extends EventEmitter {
     private session: WebdriverIO.Browser;
-    private mock?: Mock | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private mock?: any | null;
     private selectors: string[];
     private predicate?: () => boolean | Promise<boolean>;
     private timeout: number;
@@ -134,14 +135,16 @@ export default class PageLoader extends EventEmitter {
             }
         });
 
-        this.mock.on("match", (match: Matches) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        this.mock.on("match", (match: any) => {
             if (this.isMatchError(match)) {
                 this.emit("networkError", match);
             }
         });
     }
 
-    private isMatchError(match: Matches): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private isMatchError(match: any): boolean {
         return match.statusCode >= 400 && match.statusCode < 600;
     }
 

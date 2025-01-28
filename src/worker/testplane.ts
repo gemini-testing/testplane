@@ -4,6 +4,7 @@ import Runner from "./runner";
 import { BaseTestplane } from "../base-testplane";
 import { RefImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 import { ConfigInput } from "../config/types";
+import { Testrunner } from "@testplane/types/build/Options";
 
 export interface WorkerRunTestOpts {
     browserId: string;
@@ -11,7 +12,7 @@ export interface WorkerRunTestOpts {
     file: string;
     sessionId: string;
     sessionCaps: WdioBrowser["capabilities"];
-    sessionOpts: WdioBrowser["options"];
+    sessionOpts: Testrunner;
     state: Record<string, unknown>;
 }
 
