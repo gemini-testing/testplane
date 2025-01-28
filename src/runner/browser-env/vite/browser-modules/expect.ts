@@ -49,8 +49,10 @@ function mockMatcher(matcherName: string): MockMatcherFn {
         /**
          * Check if context is ChainablePromiseElement
          */
-        if (isContextObject && "then" in context && typeof context.selector === "object") {
-            matcherPayload.element = await context;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (isContextObject && "then" in context && typeof (context as any).selector === "object") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            matcherPayload.element = await context as any;
         }
 
         /**

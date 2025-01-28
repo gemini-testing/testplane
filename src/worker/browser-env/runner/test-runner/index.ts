@@ -19,7 +19,7 @@ import RuntimeConfig from "../../../../config/runtime-config";
 import { AbortOnReconnectError } from "../../../../errors/abort-on-reconnect-error";
 
 import { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
-import type { Selector } from "webdriverio";
+import type { ChainablePromiseElement, Selector } from "@testplane/webdriverio";
 import type { AsymmetricMatchers } from "expect";
 import type { WorkerTestRunnerRunOpts, WorkerTestRunnerCtorOpts } from "../../../runner/test-runner/types";
 import type { BrowserConfig } from "../../../../config/browser-config";
@@ -196,7 +196,8 @@ export class TestRunner extends NodejsEnvTestRunner {
                     file: this._file,
                     sessionId: this._runOpts.sessionId,
                     capabilities: this._runOpts.sessionCaps,
-                    requestedCapabilities: this._runOpts.sessionOpts.capabilities,
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    requestedCapabilities: (this._runOpts.sessionOpts as any).capabilities,
                     customCommands: browser.customCommands,
                     config: this._config as BrowserConfig,
                     expectMatchers: Object.getOwnPropertyNames(expectMatchers),
@@ -272,7 +273,7 @@ export class TestRunner extends NodejsEnvTestRunner {
                         context = await session.$$(payload.element);
                     } else if (payload.element.elementId) {
                         context = await session.$(payload.element);
-                        context.selector = payload.element.selector as Selector;
+                        context.selector = payload.element.selector as Promise<Selector>;
                     } else {
                         context = await session.$(payload.element.selector as Selector);
                     }
@@ -330,11 +331,13 @@ function transformExpectArg(arg: any): unknown {
 async function getWdioInstance(
     session: WebdriverIO.Browser,
     element?: WebdriverIO.Element,
-): Promise<WebdriverIO.Browser | WebdriverIO.Element> {
+): Promise<WebdriverIO.Browser | ChainablePromiseElement> {
     const wdioInstance = element ? await session.$(element) : session;
 
-    if (isWdioElement(wdioInstance) && !wdioInstance.selector) {
-        wdioInstance.selector = element?.selector as Selector;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (isWdioElement(wdioInstance as WebdriverIO.Browser) && !(wdioInstance as any).selector) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (wdioInstance as any).selector = element?.selector as Selector;
     }
 
     return wdioInstance;

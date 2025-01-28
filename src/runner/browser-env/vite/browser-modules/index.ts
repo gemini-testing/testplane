@@ -1,4 +1,4 @@
-import { remote } from "webdriverio";
+import { remote } from "@testplane/webdriverio";
 import { automationProtocolPath } from "virtual:@testplane/driver";
 import { MochaWrapper } from "./mocha/index.js";
 import { initExpect } from "./expect.js";

@@ -2,7 +2,8 @@ import { URLSearchParams } from "url";
 
 import URI from "urijs";
 import { isBoolean, assign, isEmpty, set } from "lodash";
-import { remote, RemoteOptions } from "webdriverio";
+import { remote } from "@testplane/webdriverio";
+import type { Capabilities } from "@testplane/types";
 
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
@@ -123,7 +124,7 @@ export class NewBrowser extends Browser {
         return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
     }
 
-    protected async _getSessionOpts(): Promise<RemoteOptions> {
+    protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
         const config = this._config;
 
         let gridUrl;
@@ -139,6 +140,8 @@ export class NewBrowser extends Browser {
         const gridUri = new URI(gridUrl);
 
         const capabilities = await this._extendCapabilities(config);
+        console.log('res caps:', capabilities);
+
         const { devtools } = getInstance();
 
         const options = {
@@ -156,11 +159,15 @@ export class NewBrowser extends Browser {
             waitforInterval: config.waitInterval,
             ...this._getSessionOptsFromConfig(),
         };
+        console.log('options:', options);
 
-        return options as RemoteOptions;
+
+        return options as Capabilities.WebdriverIOConfig;
     }
 
     protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
+        console.log('config.caps:', config.desiredCapabilities);
+
         const capabilitiesExtendedByVersion = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
@@ -168,10 +175,18 @@ export class NewBrowser extends Browser {
             config.headless,
             capabilitiesExtendedByVersion!,
         );
+        console.log('before EXTEND, config.desiredCapabilities?.webSocketUrl:', config.desiredCapabilities?.webSocketUrl);
+        console.log('is empty, config.desiredCapabilities?.webSocketUrl:', isEmpty(config.desiredCapabilities?.webSocketUrl));
+
+        const capabilitiesWithWebSocketUrl = !config.desiredCapabilities?.webSocketUrl
+            ? this._extendCapabilitiesByWebSocketUrl(capabilitiesExtendedByVersion!)
+            : capabilitiesWithAddedHeadless;
+
+        console.log('after EXTEND:', capabilitiesWithWebSocketUrl);
 
         return this._isLocalGridUrl()
-            ? this._applyLocalBrowserCapabilities(config, capabilitiesWithAddedHeadless)
-            : Promise.resolve(capabilitiesWithAddedHeadless);
+            ? this._applyLocalBrowserCapabilities(config, capabilitiesWithWebSocketUrl)
+            : Promise.resolve(capabilitiesWithWebSocketUrl);
     }
 
     protected _addHeadlessCapability(
@@ -208,6 +223,14 @@ export class NewBrowser extends Browser {
             desiredCapabilities!.browserVersion || sessionEnvFlags.isW3C ? "browserVersion" : "version";
 
         return assign({}, desiredCapabilities, { [versionKeyName]: this.version });
+    }
+
+    protected _extendCapabilitiesByWebSocketUrl(capabilities: WebdriverIO.Capabilities): WebdriverIO.Capabilities {
+        console.log('HERE < DO NOT CALL IT');
+
+        capabilities["wdio:enforceWebDriverClassic"] = true;
+
+        return capabilities;
     }
 
     protected async _getLocalWebdriverGridUrl(): Promise<string> {

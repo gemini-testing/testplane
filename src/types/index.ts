@@ -16,7 +16,7 @@ import { BaseTestplane } from "../base-testplane";
 import Callstack from "../browser/history/callstack";
 import { CoordBounds, LooksSameOptions } from "looks-same";
 
-export type { Browser as WdioBrowser } from "webdriverio";
+export type { Browser as WdioBrowser } from "@testplane/webdriverio";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";

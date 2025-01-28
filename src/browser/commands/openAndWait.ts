@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Matches } from "webdriverio";
+// import { Matches } from "@testplane/webdriverio";
 import PageLoader from "../../utils/page-loader";
 import type { Browser } from "../types";
 import { BrowserConfig } from "../../config/browser-config";
@@ -10,14 +10,16 @@ interface WaitOpts {
     waitNetworkIdle?: boolean;
     waitNetworkIdleTimeout?: number;
     failOnNetworkError?: boolean;
-    shouldThrowError?: (match: Matches) => boolean;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    shouldThrowError?: (match: any) => boolean;
     ignoreNetworkErrorsPatterns?: Array<RegExp | string>;
     timeout?: number;
 }
 
 const emptyPageUrl = "about:blank";
 
-const is: Record<string, (match: Matches) => boolean> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const is: Record<string, (match: any) => boolean> = {
     image: match => match.headers?.Accept?.includes("image"),
     stylesheet: match => match.headers?.Accept?.includes("text/css"),
     font: match => _.isString(match.url) && [".ttf", ".woff", ".woff2"].some(ext => match.url.endsWith(ext)),
@@ -124,7 +126,8 @@ function isMatchPatterns(patterns: Array<RegExp | string> = [], str: string): bo
     return patterns.some(pattern => (_.isString(pattern) ? str.includes(pattern) : pattern.exec(str)));
 }
 
-function shouldThrowErrorDefault(match: Matches): boolean {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function shouldThrowErrorDefault(match: any): boolean {
     if (is.favicon(match)) {
         return false;
     }
