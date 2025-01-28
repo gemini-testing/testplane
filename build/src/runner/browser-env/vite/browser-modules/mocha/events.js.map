@@ -1,0 +1,1 @@
+{"version":3,"file":"events.js","sourceRoot":"","sources":["../../../../../../../src/runner/browser-env/vite/browser-modules/mocha/events.ts"],"names":[],"mappings":"AAAA,MAAM,CAAC,MAAM,WAAW,GAAG;IACvB,SAAS,EAAE,OAAO;IAClB,QAAQ,EAAE,MAAM;IAChB,oBAAoB,EAAE,YAAY;IAClC,mBAAmB,EAAE,WAAW;CAC1B,CAAC"}
