@@ -1,0 +1,14 @@
+import { ConfigParsed } from "./types";
+type ValueType = "string" | "number" | "boolean" | "object" | "undefined" | "function";
+export declare const is: (type: ValueType, name: string) => (value: unknown) => void;
+export declare const assertNonNegativeNumber: (value: number, name: string) => void;
+export declare const assertOptionalObject: (value: unknown, name: string) => void;
+export declare const assertOptionalArray: (value: unknown, name: string) => void;
+export declare const assertNonNegativeInteger: (value: number, name: string) => void;
+export declare const assertEnum: (enumValues: string[], value: string, name: string) => void;
+export declare const assertPositiveInteger: (value: number, name: string) => void;
+export declare const assertPositiveIntegerOrInfinity: (value: number, name: string) => void;
+export declare const parseBoolean: (value: string, name: string) => boolean;
+export declare const parsePrimitive: <T = unknown>(str: string) => T;
+export declare const addUserAgentToArgs: (config: ConfigParsed) => ConfigParsed;
+export {};

@@ -1,0 +1,163 @@
+export = ExistingBrowser;
+declare class ExistingBrowser extends Browser {
+    static create(config: any, opts: any): {
+        _emitter: any;
+        _camera: Camera;
+        _meta: {
+            pid: number;
+            browserVersion: string | undefined;
+            testXReqId: string | undefined;
+            traceparent: string | undefined;
+        };
+        init({ sessionId, sessionCaps, sessionOpts }: {
+            sessionId: any;
+            sessionCaps: any;
+            sessionOpts: any;
+        } | undefined, calibrator: any): globalThis.Promise<any>;
+        _session: WebdriverIO.Browser | null;
+        markAsBroken(): void;
+        quit(): void;
+        prepareScreenshot(selectors: any, opts?: {}): globalThis.Promise<any>;
+        cleanupScreenshot(opts?: {}): globalThis.Promise<void>;
+        open(url: any): globalThis.Promise<void | WebdriverIO.Request>;
+        evalScript(script: any): globalThis.Promise<any>;
+        injectScript(script: any): globalThis.Promise<any>;
+        captureViewportImage(page: any, screenshotDelay: any): globalThis.Promise<import("../image")>;
+        scrollBy(params: any): globalThis.Promise<any>;
+        _attachSession({ sessionId, sessionCaps, sessionOpts }: {
+            sessionId: any;
+            sessionCaps: any;
+            sessionOpts?: {} | undefined;
+        }): globalThis.Promise<WebdriverIO.Browser>;
+        _initMeta(): {
+            pid: number;
+            browserVersion: string | undefined;
+            testXReqId: string | undefined;
+            traceparent: string | undefined;
+        };
+        _takeScreenshot(): globalThis.Promise<string>;
+        _addCommands(): void;
+        _overrideGetElementsList(session: any): void;
+        _addMetaAccessCommands(session: any): void;
+        _decorateUrlMethod(session: any): void;
+        _resolveUrl(uri: any): any;
+        _performIsolation({ sessionCaps, sessionOpts }: {
+            sessionCaps: any;
+            sessionOpts: any;
+        }): globalThis.Promise<void>;
+        _prepareSession(): globalThis.Promise<void>;
+        _setOrientation(orientation: any): globalThis.Promise<void>;
+        _setWindowSize(size: any): globalThis.Promise<void>;
+        _performCalibration(calibrator: any): any;
+        _calibration: any;
+        _buildClientScripts(): globalThis.Promise<clientBridge.ClientBridge>;
+        _clientBridge: clientBridge.ClientBridge | undefined;
+        _runInEachIframe(cb: any): globalThis.Promise<void>;
+        _disableFrameAnimations(): globalThis.Promise<any>;
+        _disableIframeAnimations(): globalThis.Promise<void>;
+        _cleanupFrameAnimations(): globalThis.Promise<any>;
+        _cleanupIframeAnimations(): globalThis.Promise<void>;
+        _cleanupPageAnimations(): globalThis.Promise<void>;
+        _stubCommands(): void;
+        readonly meta: {
+            pid: number;
+            browserVersion: string | undefined;
+            testXReqId: string | undefined;
+            traceparent: string | undefined;
+        };
+        readonly emitter: any;
+        _config: import("../config/browser-config").BrowserConfig;
+        _debug: boolean;
+        _callstackHistory: import("./history/callstack") | null;
+        _state: import("./browser").BrowserState;
+        _customCommands: Set<import("./browser").CustomCommend>;
+        _wdPool?: import("../browser-pool/webdriver-pool").WebdriverPool | undefined;
+        _wdProcess: import("../browser-pool/webdriver-pool").WdProcess | null;
+        id: string;
+        version?: string | undefined;
+        setHttpTimeout(timeout: number | null): void;
+        restoreHttpTimeout(): void;
+        applyState(state: Record<string, unknown>): void;
+        _addSteps(): void;
+        _extendStacktrace(): void;
+        _addHistory(): void;
+        _addExtendOptionsMethod(session: WebdriverIO.Browser): void;
+        _getSessionOptsFromConfig(optNames?: string[]): Record<string, unknown>;
+        _startCollectingCustomCommands(): void;
+        readonly fullId: string;
+        readonly publicAPI: WebdriverIO.Browser;
+        readonly sessionId: string;
+        readonly config: import("../config/browser-config").BrowserConfig;
+        readonly state: import("./browser").BrowserState;
+        readonly capabilities: import("@wdio/types/build/Capabilities").RemoteCapability;
+        readonly callstackHistory: import("./history/callstack");
+        readonly customCommands: import("./browser").CustomCommend[];
+    };
+    constructor(config: any, opts: any);
+    _emitter: any;
+    _camera: Camera;
+    _meta: {
+        pid: number;
+        browserVersion: string | undefined;
+        testXReqId: string | undefined;
+        traceparent: string | undefined;
+    };
+    init({ sessionId, sessionCaps, sessionOpts }: {
+        sessionId: any;
+        sessionCaps: any;
+        sessionOpts: any;
+    } | undefined, calibrator: any): globalThis.Promise<this>;
+    markAsBroken(): void;
+    quit(): void;
+    prepareScreenshot(selectors: any, opts?: {}): globalThis.Promise<any>;
+    cleanupScreenshot(opts?: {}): globalThis.Promise<void>;
+    open(url: any): globalThis.Promise<void | WebdriverIO.Request>;
+    evalScript(script: any): globalThis.Promise<any>;
+    injectScript(script: any): globalThis.Promise<any>;
+    captureViewportImage(page: any, screenshotDelay: any): globalThis.Promise<import("../image")>;
+    scrollBy(params: any): globalThis.Promise<any>;
+    _attachSession({ sessionId, sessionCaps, sessionOpts }: {
+        sessionId: any;
+        sessionCaps: any;
+        sessionOpts?: {} | undefined;
+    }): globalThis.Promise<WebdriverIO.Browser>;
+    _initMeta(): {
+        pid: number;
+        browserVersion: string | undefined;
+        testXReqId: string | undefined;
+        traceparent: string | undefined;
+    };
+    _takeScreenshot(): globalThis.Promise<string>;
+    _overrideGetElementsList(session: any): void;
+    _addMetaAccessCommands(session: any): void;
+    _decorateUrlMethod(session: any): void;
+    _resolveUrl(uri: any): any;
+    _performIsolation({ sessionCaps, sessionOpts }: {
+        sessionCaps: any;
+        sessionOpts: any;
+    }): globalThis.Promise<void>;
+    _prepareSession(): globalThis.Promise<void>;
+    _setOrientation(orientation: any): globalThis.Promise<void>;
+    _setWindowSize(size: any): globalThis.Promise<void>;
+    _performCalibration(calibrator: any): any;
+    _calibration: any;
+    _buildClientScripts(): globalThis.Promise<clientBridge.ClientBridge>;
+    _clientBridge: clientBridge.ClientBridge | undefined;
+    _runInEachIframe(cb: any): globalThis.Promise<void>;
+    _disableFrameAnimations(): globalThis.Promise<any>;
+    _disableIframeAnimations(): globalThis.Promise<void>;
+    _cleanupFrameAnimations(): globalThis.Promise<any>;
+    _cleanupIframeAnimations(): globalThis.Promise<void>;
+    _cleanupPageAnimations(): globalThis.Promise<void>;
+    _stubCommands(): void;
+    get meta(): {
+        pid: number;
+        browserVersion: string | undefined;
+        testXReqId: string | undefined;
+        traceparent: string | undefined;
+    };
+    get emitter(): any;
+}
+import { Browser } from "./browser";
+import Camera = require("./camera");
+import clientBridge = require("./client-bridge");
