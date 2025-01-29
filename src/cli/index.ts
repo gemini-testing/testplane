@@ -1,5 +1,4 @@
 import path from "node:path";
-import util from "node:util";
 import { Command } from "@gemini-testing/commander";
 
 import defaults from "../config/defaults";
@@ -8,6 +7,7 @@ import { Testplane } from "../testplane";
 import pkg from "../../package.json";
 import logger from "../utils/logger";
 import { shouldIgnoreUnhandledRejection } from "../utils/errors";
+import { utilInspectSafe } from "../utils/secret-replacer";
 import { withCommonCliOptions, collectCliValues, handleRequires } from "../utils/cli";
 import { CliCommands } from "./constants";
 
@@ -16,7 +16,7 @@ export type TestplaneRunOpts = { cliName?: string };
 let testplane: Testplane;
 
 process.on("uncaughtException", err => {
-    logger.error(util.inspect(err));
+    logger.error(utilInspectSafe(err));
     process.exit(1);
 });
 
@@ -28,8 +28,8 @@ process.on("unhandledRejection", (reason, p) => {
 
     const error = [
         `Unhandled Rejection in testplane:master:${process.pid}:`,
-        `Promise: ${util.inspect(p)}`,
-        `Reason: ${util.inspect(reason)}`,
+        `Promise: ${utilInspectSafe(p)}`,
+        `Reason: ${utilInspectSafe(reason)}`,
     ].join("\n");
 
     if (testplane) {
