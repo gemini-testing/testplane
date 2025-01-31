@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.25.1](https://github.com/gemini-testing/testplane/compare/v8.25.0...v8.25.1) (2025-01-31)
+
+
+### Bug Fixes
+
+* remove tokens in unhandled rejection log ([e1dba75](https://github.com/gemini-testing/testplane/commit/e1dba759145ecd77e5b0444773d13de86d8d4679))
+
 ## [8.25.0](https://github.com/gemini-testing/testplane/compare/v8.24.0...v8.25.0) (2025-01-16)
 
 
