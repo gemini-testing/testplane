@@ -1,11 +1,12 @@
 import * as webdriverio from "webdriverio";
 import sinon, { SinonStub } from "sinon";
 
-import clientBridge from "src/browser/client-bridge";
-import logger from "src/utils/logger";
+import * as clientBridge from "src/browser/client-bridge";
+import * as logger from "src/utils/logger";
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 
-import type ExistingBrowser from "src/browser/existing-browser";
+import type {ExistingBrowser} from "src/browser/existing-browser";
+import {Calibrator} from "src/browser/calibrator";
 
 describe('"clearSession" command', () => {
     const sandbox = sinon.createSandbox();
@@ -13,7 +14,7 @@ describe('"clearSession" command', () => {
     const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
         (webdriverio.attach as SinonStub).resolves(session);
 
-        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: {} });
+        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities }, {} as Calibrator);
     };
 
     beforeEach(() => {

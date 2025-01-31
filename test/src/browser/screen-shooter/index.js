@@ -1,6 +1,6 @@
 "use strict";
 
-const Image = require("src/image");
+const {Image} = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const Viewport = require("src/browser/screen-shooter/viewport");
 

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sinon, { type SinonStub } from "sinon";
-import ClientBridge from "src/browser/client-bridge/client-bridge";
+import {ClientBridge} from "src/browser/client-bridge/client-bridge";
 import { build as buildClientBridge } from "src/browser/client-bridge";
 
 describe("clientBridge", () => {
@@ -23,7 +23,7 @@ describe("clientBridge", () => {
                 readFileStub.withArgs(sinon.match.string, { encoding: "utf8" }).resolves("foo bar native script");
                 ClientBridgeCreateStub.withArgs("browser", "foo bar native script").returns({ clientBridge: "native" });
 
-                const result = await buildClientBridge("browser");
+                const result = await buildClientBridge("browser" as any);
 
                 const fileName = path.basename(readFileStub.firstCall.args[0]);
 
@@ -35,7 +35,7 @@ describe("clientBridge", () => {
                 readFileStub.withArgs(sinon.match.string, { encoding: "utf8" }).resolves("foo bar compat script");
                 ClientBridgeCreateStub.withArgs("browser", "foo bar compat script").returns({ clientBridge: "compat" });
 
-                const result = await buildClientBridge("browser", { calibration: { needsCompatLib: true } });
+                const result = await buildClientBridge("browser" as any, { calibration: { needsCompatLib: true } });
 
                 const fileName = path.basename(readFileStub.firstCall.args[0]);
 

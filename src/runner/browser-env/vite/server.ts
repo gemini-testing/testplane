@@ -7,7 +7,7 @@ import _ from "lodash";
 import getPort from "get-port";
 import chalk from "chalk";
 
-import logger from "../../../utils/logger";
+import * as logger from "../../../utils/logger";
 import { createSocketServer } from "./socket";
 import { plugin as generateIndexHtml } from "./plugins/generate-index-html";
 import { plugin as mockPlugin } from "./plugins/mock";

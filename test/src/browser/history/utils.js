@@ -23,8 +23,8 @@ describe("commands-history", () => {
                 ]);
             });
 
-            it("should not modify an argument if it is not string or object", () => {
-                assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), [false, null, 100]);
+            it("should convert argument to string if it is not string or object", () => {
+                assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), ['false', 'null', '100']);
             });
         });
 

@@ -1,6 +1,6 @@
 import _ from "lodash";
 import type { Command } from "@gemini-testing/commander";
-import logger from "./logger";
+import * as logger from "./logger";
 import { requireModule } from "./module";
 
 export const collectCliValues = (newValue: unknown, array = [] as unknown[]): unknown[] => {

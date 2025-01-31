@@ -4,15 +4,17 @@ const Promise = require("bluebird");
 const _ = require("lodash");
 
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
-const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const logger = require("src/utils/logger");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
+const proxyquire = require("proxyquire");
 
 describe("worker/runner/test-runner/execution-thread", () => {
     const sandbox = sinon.createSandbox();
+    let loggerLogStub;
+    let ExecutionThread;
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();
@@ -49,10 +51,15 @@ describe("worker/runner/test-runner/execution-thread", () => {
     };
 
     beforeEach(() => {
+        loggerLogStub = sinon.stub();
+        ExecutionThread = proxyquire("src/worker/runner/test-runner/execution-thread", {
+            "../../../utils/logger": {
+                log: loggerLogStub
+            }
+        });
         sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").callsFake(e => Promise.resolve(e));
         sandbox.stub(OneTimeScreenshooter.prototype, "captureScreenshotOnAssertViewFail").resolves();
         sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { onFail: false } });
-        sandbox.stub(logger, "log");
     });
 
     afterEach(() => sandbox.restore());
@@ -427,7 +434,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
                             .catch(() => {});
 
                         await assert.callOrder(
-                            logger.log.withArgs("Caught error:", err),
+                            loggerLogStub.withArgs("Caught error:", err),
                             browser.publicAPI.switchToRepl,
                         );
                     });

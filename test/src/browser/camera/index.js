@@ -1,14 +1,24 @@
 "use strict";
 
-const Camera = require("src/browser/camera");
-const Image = require("src/image");
-const utils = require("src/browser/camera/utils");
+// const {Camera} = require("src/browser/camera");
+const {Image} = require("src/image");
+const proxyquire = require("proxyquire");
+// const utils = require("src/browser/camera/utils");
 
 describe("browser/camera", () => {
     const sandbox = sinon.createSandbox();
+    let Camera;
+    let isFullPageStub;
     let image;
 
     beforeEach(() => {
+        isFullPageStub = sinon.stub();
+        Camera = proxyquire("src/browser/camera", {
+            "./utils": {
+                isFullPage: isFullPageStub,
+            }
+        }).Camera;
+
         image = sinon.createStubInstance(Image);
         image.getSize.resolves({ width: 100500, height: 500100 });
         image.crop.resolves();
@@ -55,8 +65,6 @@ describe("browser/camera", () => {
                 };
 
                 beforeEach(() => {
-                    sandbox.stub(utils, "isFullPage");
-
                     page = {
                         viewport: {
                             left: 1,
@@ -74,7 +82,7 @@ describe("browser/camera", () => {
                 });
 
                 it("should crop fullPage image with viewport value if page disposition was set", async () => {
-                    utils.isFullPage.returns(true);
+                    isFullPageStub.returns(true);
 
                     await mkCamera_({ screenshotMode: "fullPage" }).captureViewportImage(page);
 
@@ -82,7 +90,7 @@ describe("browser/camera", () => {
                 });
 
                 it("should crop not fullPage image to the left and right", async () => {
-                    utils.isFullPage.returns(false);
+                    isFullPageStub.returns(false);
 
                     await mkCamera_({ screenshotMode: "viewport" }).captureViewportImage(page);
 

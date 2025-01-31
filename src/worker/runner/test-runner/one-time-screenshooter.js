@@ -2,7 +2,7 @@
 
 const Promise = require("bluebird");
 
-const Image = require("../../../image");
+const { Image } = require("../../../image");
 const ScreenShooter = require("../../../browser/screen-shooter");
 const logger = require("../../../utils/logger");
 

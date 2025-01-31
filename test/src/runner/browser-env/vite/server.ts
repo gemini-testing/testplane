@@ -6,7 +6,7 @@ import chalk from "chalk";
 
 import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
 import { ManualMock } from "../../../../../src/runner/browser-env/vite/manual-mock";
-import logger from "../../../../../src/utils/logger";
+import * as logger from "../../../../../src/utils/logger";
 import { makeConfigStub } from "../../../../utils";
 import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
 

@@ -6,7 +6,7 @@ import createDebug from "debug";
 import { MODULE_NAMES, MOCK_MODULE_NAME } from "../constants";
 import { getNodeModulePath, getImportMetaUrl, getTestInfoFromViteRequest } from "../utils";
 import { polyfillPath } from "../polyfill";
-import logger from "../../../../utils/logger";
+import * as logger from "../../../../utils/logger";
 
 import type { WorkerInitializePayload } from "../browser-modules/types";
 import type { Plugin, Rollup } from "vite";

@@ -1,4 +1,4 @@
-import ExistingBrowser from "../../browser/existing-browser";
+import {ExistingBrowser} from "../../browser/existing-browser";
 import { WdioBrowser } from "../../types";
 import BrowserPool from "./browser-pool";
 
