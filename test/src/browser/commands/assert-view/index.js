@@ -4,8 +4,8 @@ const { EventEmitter } = require("events");
 const _ = require("lodash");
 const fs = require("fs-extra");
 const webdriverio = require("webdriverio");
-const clientBridge = require("src/browser/client-bridge");
-const Image = require("src/image");
+// const clientBridge = require("src/browser/client-bridge");
+const {Image} = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const temp = require("src/temp");
 const validator = require("png-validator");
@@ -16,9 +16,11 @@ const RuntimeConfig = require("src/config/runtime-config");
 const updateRefs = require("src/browser/commands/assert-view/capture-processors/update-refs");
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../../utils");
 const { InvalidRefImageError } = require("src/browser/commands/assert-view/errors/invalid-ref-image-error");
+const proxyquire = require("proxyquire");
 
 describe("assertView command", () => {
     const sandbox = sinon.createSandbox();
+    let ExistingBrowser;
 
     const assertViewBrowser = async (browser, state = "plain", selector = ".selector", opts = {}) => {
         return browser.publicAPI.assertView(state, selector, opts);
@@ -55,9 +57,7 @@ describe("assertView command", () => {
     };
 
     const stubBrowser_ = config => {
-        sandbox.stub(clientBridge, "build").resolves();
-
-        const browser = mkBrowser_(config);
+        const browser = mkBrowser_(config, undefined, ExistingBrowser);
         sandbox.stub(browser, "prepareScreenshot").resolves({});
         sandbox.stub(browser, "captureViewportImage").resolves(stubImage_());
         sandbox.stub(browser, "emitter").get(() => new EventEmitter());
@@ -73,6 +73,12 @@ describe("assertView command", () => {
     };
 
     beforeEach(() => {
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            "./client-bridge": {
+                build: sinon.stub().resolves()
+            }
+        }).ExistingBrowser;
+
         sandbox.stub(Image, "create").returns(Object.create(Image.prototype));
         sandbox.stub(Image, "compare").resolves({ diffImage: { createBuffer: sandbox.stub() } });
         sandbox.stub(Image.prototype, "getSize");

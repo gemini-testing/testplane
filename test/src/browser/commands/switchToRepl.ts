@@ -6,9 +6,9 @@ import chalk from "chalk";
 import sinon, { type SinonStub, type SinonSpy } from "sinon";
 
 import RuntimeConfig from "src/config/runtime-config";
-import clientBridge from "src/browser/client-bridge";
+import * as clientBridge from "src/browser/client-bridge";
 
-import type ExistingBrowser from "src/browser/existing-browser";
+import type {ExistingBrowser} from "src/browser/existing-browser";
 
 describe('"switchToRepl" command', () => {
     const sandbox = sinon.createSandbox();

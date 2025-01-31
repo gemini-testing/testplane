@@ -3,7 +3,7 @@
 const P = require("bluebird");
 const webdriverio = require("webdriverio");
 const proxyquire = require("proxyquire");
-const Callstack = require("../../../../src/browser/history/callstack");
+const { Callstack } = require("../../../../src/browser/history/callstack");
 const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_ } = require("../utils");
 
 describe("commands-history", () => {

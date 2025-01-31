@@ -13,7 +13,7 @@ import { AlsoController } from "../test-reader/controllers/also-controller";
 import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
 import { WorkerProcess } from "../utils/worker-process";
 import { BaseTestplane } from "../base-testplane";
-import Callstack from "../browser/history/callstack";
+import type { Callstack } from "../browser/history/callstack";
 import { CoordBounds, LooksSameOptions } from "looks-same";
 
 export type { Browser as WdioBrowser } from "webdriverio";
@@ -67,6 +67,7 @@ export interface RefImageInfo extends ImageInfo {
 }
 
 export interface DiffOptions extends LooksSameOptions {
+    diff: string;
     current: string;
     reference: string;
     diffColor: string;

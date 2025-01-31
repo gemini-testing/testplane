@@ -4,14 +4,14 @@ import _ from "lodash";
 
 import { SAVE_HISTORY_MODE } from "../constants/config";
 import { X_REQUEST_ID_DELIMITER } from "../constants/browser";
-import history from "./history";
+import * as history from "./history";
 import { enhanceStacktraces } from "./stacktrace";
 import { getBrowserCommands, getElementCommands } from "./history/commands";
 import addRunStepCommand from "./commands/runStep";
 import { Config } from "../config";
 import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
-import Callstack from "./history/callstack";
+import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
 
 import type { Capabilities } from "@wdio/types";
@@ -33,7 +33,7 @@ export type BrowserOpts = {
     id: string;
     version?: string;
     state?: Record<string, unknown>;
-    emitter?: AsyncEmitter;
+    emitter: AsyncEmitter;
     wdPool?: WebdriverPool;
 };
 
@@ -46,6 +46,7 @@ export type BrowserState = {
 export type CustomCommend = { name: string; elementScope: boolean };
 
 export class Browser {
+    protected _emitter: AsyncEmitter;
     protected _config: BrowserConfig;
     protected _debug: boolean;
     protected _session: WebdriverIO.Browser | null;
@@ -80,6 +81,7 @@ export class Browser {
         };
         this._customCommands = new Set();
         this._wdPool = opts.wdPool;
+        this._emitter = opts.emitter;
     }
 
     setHttpTimeout(timeout: number | null): void {
@@ -112,7 +114,7 @@ export class Browser {
 
     protected _addHistory(): void {
         if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
-            this._callstackHistory = history.initCommandHistory(this._session);
+            this._callstackHistory = history.initCommandHistory(this._session as WebdriverIO.Browser);
         }
     }
 
@@ -195,5 +197,9 @@ export class Browser {
     get customCommands(): CustomCommend[] {
         const allCustomCommands = Array.from(this._customCommands);
         return _.uniqWith(allCustomCommands, _.isEqual);
+    }
+
+    get emitter(): AsyncEmitter {
+        return this._emitter;
     }
 }

@@ -6,9 +6,9 @@ const _ = require("lodash");
 const Promise = require("bluebird");
 const webdriverio = require("webdriverio");
 const jsdom = require("jsdom-global");
-const Browser = require("src/browser/existing-browser");
-const Calibrator = require("src/browser/calibrator");
-const Camera = require("src/browser/camera");
+const {ExistingBrowser} = require("src/browser/existing-browser");
+const {Calibrator} = require("src/browser/calibrator");
+const {Camera} = require("src/browser/camera");
 const clientBridge = require("src/browser/client-bridge");
 const logger = require("src/utils/logger");
 const history = require("src/browser/history");
@@ -705,7 +705,7 @@ describe("ExistingBrowser", () => {
             });
 
             it("should perform calibration if `calibrate` is turn on", async () => {
-                calibrator.calibrate.withArgs(sinon.match.instanceOf(Browser)).resolves({ foo: "bar" });
+                calibrator.calibrate.withArgs(sinon.match.instanceOf(ExistingBrowser)).resolves({ foo: "bar" });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);

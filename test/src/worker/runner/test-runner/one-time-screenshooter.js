@@ -2,14 +2,15 @@
 
 const _ = require("lodash");
 const Promise = require("bluebird");
-const Image = require("src/image");
+const {Image} = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
-const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
-const logger = require("src/utils/logger");
 const { mkSessionStub_ } = require("../../../browser/utils");
+const proxyquire = require("proxyquire");
 
 describe("worker/runner/test-runner/one-time-screenshooter", () => {
     const sandbox = sinon.createSandbox();
+    let OneTimeScreenshooter;
+    let logger;
 
     const mkBrowser_ = (opts = {}) => {
         const session = mkSessionStub_();
@@ -53,9 +54,16 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
     };
 
     beforeEach(() => {
+        logger = {
+            warn: sinon.stub()
+        };
+        OneTimeScreenshooter = proxyquire("src/worker/runner/test-runner/one-time-screenshooter", {
+            "../../../utils/logger": logger
+        });
+
         sandbox.stub(ScreenShooter.prototype, "capture").resolves(stubImage_());
         sandbox.stub(Image, "fromBase64").returns(stubImage_());
-        sandbox.stub(logger, "warn");
+        // sandbox.stub(logger, "warn");
     });
 
     afterEach(() => sandbox.restore());

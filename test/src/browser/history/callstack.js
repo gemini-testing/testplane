@@ -1,6 +1,6 @@
 "use strict";
 
-const Callstack = require("src/browser/history/callstack");
+const { Callstack } = require("src/browser/history/callstack");
 const { TestStepKey } = require("src/types");
 
 describe("commands-history", () => {

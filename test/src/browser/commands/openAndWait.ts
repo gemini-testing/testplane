@@ -4,7 +4,8 @@ import FakeTimers from "@sinonjs/fake-timers";
 import PageLoader from "src/utils/page-loader";
 import { DEVTOOLS_PROTOCOL } from "src/constants/config";
 import { mkSessionStub_ as mkSessionStubOrigin_, mkExistingBrowser_ } from "../utils";
-import type ExistingBrowser from "src/browser/existing-browser";
+import type {ExistingBrowser} from "src/browser/existing-browser";
+import {Calibrator} from "src/browser/calibrator";
 
 type SessionOrigin = ReturnType<typeof mkSessionStubOrigin_>;
 type Session = SessionOrigin & { openAndWait(uri: string, opts: Record<string, unknown>): Promise<void> };
@@ -83,7 +84,7 @@ describe('"openAndWait" command', () => {
     const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
         wdioAttachStub.resolves(session);
 
-        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: {} });
+        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities }, {} as Calibrator);
     };
 
     it("should add command", async () => {

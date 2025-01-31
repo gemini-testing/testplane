@@ -14,7 +14,7 @@ import {
     type DownloadProgressCallback,
 } from "../utils";
 import { getFirefoxBuildId } from "../firefox/utils";
-import logger from "../../utils/logger";
+import * as logger from "../../utils/logger";
 import { BrowserName } from "../../browser/types";
 
 type VersionToPathMap = Record<string, string | Promise<string>>;

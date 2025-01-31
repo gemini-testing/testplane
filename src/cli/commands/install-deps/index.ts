@@ -1,6 +1,6 @@
 import { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
-import logger from "../../../utils/logger";
+import * as logger from "../../../utils/logger";
 import { installBrowsersWithDrivers, BrowserInstallStatus } from "../../../browser-installer";
 
 const { INSTALL_DEPS: commandName } = CliCommands;

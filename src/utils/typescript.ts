@@ -1,6 +1,6 @@
 import _ from "lodash";
 import debug from "debug";
-import logger from "./logger";
+import * as logger from "./logger";
 
 const swcDebugNamespace = "testplane:swc";
 const swcDebugLog = debug(swcDebugNamespace);

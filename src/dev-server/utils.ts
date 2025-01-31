@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import chalk from "chalk";
 import type { ChildProcess, ChildProcessWithoutNullStreams } from "child_process";
-import logger from "../utils/logger";
+import * as logger from "../utils/logger";
 import type { Config } from "../config";
 
 export const findCwd = (configPath: string): string => {

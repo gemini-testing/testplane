@@ -18,8 +18,8 @@ import { VITE_RUN_UUID_ROUTE } from "../../../../../../src/runner/browser-env/vi
 import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
 import { BrowserAgent } from "../../../../../../src/worker/runner/browser-agent";
-import history from "../../../../../../src/browser/history";
-import logger from "../../../../../../src/utils/logger";
+import * as history from "../../../../../../src/browser/history";
+import * as logger from "../../../../../../src/utils/logger";
 import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";
 import RuntimeConfig from "../../../../../../src/config/runtime-config";
 
@@ -42,7 +42,7 @@ import type { Test as TestType } from "../../../../../../src/test-reader/test-ob
 import type { BrowserConfig } from "../../../../../../src/config/browser-config";
 import type { WorkerRunTestResult } from "../../../../../../src/worker/testplane";
 import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-reconnect-error";
-import ExistingBrowser from "../../../../../../src/browser/existing-browser";
+import {ExistingBrowser} from "../../../../../../src/browser/existing-browser";
 
 interface TestOpts {
     title: string;

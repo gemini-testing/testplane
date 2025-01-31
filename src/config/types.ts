@@ -293,7 +293,7 @@ export interface CommonConfig {
     assertViewOpts: AssertViewOpts;
     expectOpts: ExpectOptsConfig;
     meta: { [name: string]: unknown };
-    windowSize: string | { width: number; height: number } | null;
+    windowSize: { width: number; height: number } | null;
     orientation: "landscape" | "portrait" | null;
     resetCursor: boolean;
     headers: Record<string, string> | null;
