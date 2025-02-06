@@ -4,6 +4,9 @@
 # misc
 .DS_Store
 
+# screens
+src/**/*.ts-screens/*
+
 # reports
 /testplane-report
 .testplane
