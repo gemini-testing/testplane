@@ -189,14 +189,19 @@ function buildBrowserOptions(defaultFactory, extra) {
                     throw new Error('"screenshotsDir" must be a string or function');
                 }
             },
-            map: (value, _, __, { isSetByUser }) => {
-                const deprecatedScreensPath = "hermione/screens";
-
-                if (!isSetByUser && fs.existsSync(deprecatedScreensPath) && !fs.existsSync(value)) {
-                    return deprecatedScreensPath;
+            map: (value, config, __, { isSetByUser }) => {
+                if (isSetByUser) {
+                    return value;
                 }
 
-                return value;
+                const topLevelScreenshotsDir = _.get(config, "screenshotsDir");
+                if (topLevelScreenshotsDir) {
+                    return topLevelScreenshotsDir;
+                }
+
+                const deprecatedScreensPath = "hermione/screens";
+
+                return fs.existsSync(deprecatedScreensPath) && !fs.existsSync(value) ? deprecatedScreensPath : value;
             },
         }),
 
