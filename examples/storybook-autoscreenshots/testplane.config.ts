@@ -2,7 +2,7 @@ import path from "path";
 import {getStoryFile} from "@testplane/storybook"
 
 export default {
-    gridUrl: "http://localhost:4444/wd/hub",
+    gridUrl: "local",
     baseUrl: "http://localhost",
     pageLoadTimeout: 0,
     httpTimeout: 60000,
@@ -27,16 +27,21 @@ export default {
                 "testplane-tests/**/*.testplane.(t|j)s"
             ],
             browsers: [
-                "chrome"
+                "chrome", "firefox"
             ]
         }
     },
     browsers: {
         chrome: {
-            automationProtocol: "devtools",
             headless: true,
             desiredCapabilities: {
                 browserName: "chrome"
+            }
+        },
+        firefox: {
+            headless: true,
+            desiredCapabilities: {
+                browserName: "firefox"
             }
         }
     },
