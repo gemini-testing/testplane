@@ -531,7 +531,11 @@ describe("config browser-options", () => {
         });
 
         it("should fallback default value to hermione/screens, if it exists and default dir not exists", () => {
-            const readConfig = {};
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_(),
+                },
+            };
             Config.read.returns(readConfig);
             sandbox
                 .stub(fs, "existsSync")
@@ -543,10 +547,15 @@ describe("config browser-options", () => {
             const config = createConfig();
 
             assert.equal(config.screenshotsDir, "hermione/screens");
+            assert.equal(config.browsers.b1.screenshotsDir, "hermione/screens");
         });
 
         it("should use default testplane/screens if both hermione/screens and testplane/screens exists", () => {
-            const readConfig = {};
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_(),
+                },
+            };
             Config.read.returns(readConfig);
             sandbox
                 .stub(fs, "existsSync")
@@ -558,10 +567,15 @@ describe("config browser-options", () => {
             const config = createConfig();
 
             assert.equal(config.screenshotsDir, "testplane/screens");
+            assert.equal(config.browsers.b1.screenshotsDir, "testplane/screens");
         });
 
         it("should not fallback default value to hermione/screens, if not exists", () => {
-            const readConfig = {};
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_(),
+                },
+            };
             Config.read.returns(readConfig);
             sandbox
                 .stub(fs, "existsSync")
@@ -573,10 +587,16 @@ describe("config browser-options", () => {
             const config = createConfig();
 
             assert.equal(config.screenshotsDir, "testplane/screens");
+            assert.equal(config.browsers.b1.screenshotsDir, "testplane/screens");
         });
 
         it("should not fallback value to hermione/screens, if defined", () => {
-            const readConfig = { screenshotsDir: "some/dir" };
+            const readConfig = {
+                screenshotsDir: "some/dir",
+                browsers: {
+                    b1: mkBrowser_({ screenshotsDir: "another/dir" }),
+                },
+            };
             Config.read.returns(readConfig);
             sandbox
                 .stub(fs, "existsSync")
@@ -588,6 +608,7 @@ describe("config browser-options", () => {
             const config = createConfig();
 
             assert.equal(config.screenshotsDir, "some/dir");
+            assert.equal(config.browsers.b1.screenshotsDir, "another/dir");
         });
     });
 
