@@ -1,21 +1,37 @@
 "use strict";
 
-const webdriverio = require("webdriverio");
-const history = require("src/browser/history");
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../utils");
+const proxyquire = require("proxyquire");
 
 describe('"runStep" command', () => {
     const sandbox = sinon.createSandbox();
+    let ExistingBrowser, webdriverioAttachStub;
 
     beforeEach(() => {
-        sandbox.stub(webdriverio, "attach");
-        sandbox.stub(history, "initCommandHistory").returns(null);
+        webdriverioAttachStub = sandbox.stub();
+
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            webdriverio: {
+                attach: webdriverioAttachStub,
+            },
+            "./browser": proxyquire("src/browser/browser", {
+                "./history": {
+                    initCommandHistory: sandbox.stub().returns(null),
+                },
+            }),
+            "./client-bridge": {
+                build: sandbox.stub().resolves(),
+            },
+        }).ExistingBrowser;
     });
 
     afterEach(() => sandbox.restore());
 
-    const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}) => {
-        webdriverio.attach.resolves(session);
+    const initBrowser_ = ({
+        browser = mkBrowser_(undefined, undefined, ExistingBrowser),
+        session = mkSessionStub_(),
+    } = {}) => {
+        webdriverioAttachStub.resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });
     };

@@ -3,7 +3,7 @@
 const P = require("bluebird");
 const webdriverio = require("webdriverio");
 const proxyquire = require("proxyquire");
-const Callstack = require("../../../../src/browser/history/callstack");
+const { Callstack } = require("../../../../src/browser/history/callstack");
 const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_ } = require("../utils");
 
 describe("commands-history", () => {
@@ -59,7 +59,7 @@ describe("commands-history", () => {
 
             assert.propertyVal(node, "n", "url");
             assert.propertyVal(node, "s", "b");
-            assert.propertyVal(node, "o", 1);
+            assert.propertyVal(node, "o", true);
             assert.deepPropertyVal(node, "a", ["site.com"]);
         });
 

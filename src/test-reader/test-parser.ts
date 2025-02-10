@@ -15,7 +15,7 @@ import _ from "lodash";
 import clearRequire from "clear-require";
 import path from "path";
 import fs from "fs-extra";
-import logger from "../utils/logger";
+import * as logger from "../utils/logger";
 import { getShortMD5 } from "../utils/crypto";
 import { Test } from "./test-object";
 import { Config } from "../config";

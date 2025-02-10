@@ -3,7 +3,7 @@ import * as _ from "lodash";
 import defaults from "./defaults";
 import { BrowserConfig } from "./browser-config";
 import parseOptions from "./options";
-import logger from "../utils/logger";
+import * as logger from "../utils/logger";
 import { ConfigInput, ConfigParsed } from "./types";
 import { addUserAgentToArgs } from "./utils";
 

@@ -1,5 +1,5 @@
 import ErrorStackParser from "error-stack-parser";
-import logger from "../utils/logger";
+import * as logger from "../utils/logger";
 import { getFrameRelevance } from "../browser/stacktrace/utils";
 import type { ResolvedFrame, SufficientStackFrame } from "./types";
 import { softFileURLToPath } from "../utils/fs";

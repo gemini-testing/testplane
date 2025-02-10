@@ -32,7 +32,7 @@ export class BasicPool implements Pool {
     }
 
     async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
-        const browser = NewBrowser.create(this._config, { ...opts, id, wdPool: this._wdPool });
+        const browser = NewBrowser.create(this._config, { ...opts, id, wdPool: this._wdPool, emitter: this._emitter });
 
         try {
             await browser.init();

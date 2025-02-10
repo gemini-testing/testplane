@@ -1,16 +1,17 @@
-"use strict";
+import path from "path";
+import fs from "fs";
+import { ClientBridge } from "./client-bridge";
+import { ExistingBrowser } from "../existing-browser";
 
-const path = require("path");
-const fs = require("fs");
-const ClientBridge = require("./client-bridge");
+const bundlesCache: Record<string, string> = {};
 
-const bundlesCache = {};
+export { ClientBridge };
 
-exports.ClientBridge = ClientBridge;
-
-exports.build = async (browser, opts = {}) => {
-    const needsCompatLib = opts.calibration && opts.calibration.needsCompatLib;
-
+export const build = async (
+    browser: ExistingBrowser,
+    opts: { calibration?: { needsCompatLib?: boolean } } = {},
+): Promise<ClientBridge> => {
+    const needsCompatLib = opts.calibration?.needsCompatLib ?? false;
     const scriptFileName = needsCompatLib ? "bundle.compat.js" : "bundle.native.js";
 
     if (bundlesCache[scriptFileName]) {

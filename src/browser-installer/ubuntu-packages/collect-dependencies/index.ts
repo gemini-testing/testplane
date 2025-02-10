@@ -5,7 +5,7 @@ import { Cache } from "./cache";
 import { fetchBrowsersMilestones } from "./browser-versions/index";
 import { downloadBrowserVersions } from "./browser-downloader";
 import { getUbuntuMilestone, writeUbuntuPackageDependencies } from "..";
-import logger from "../../../utils/logger";
+import * as logger from "../../../utils/logger";
 
 const createResolveSharedObjectToPackageName =
     (cache: Cache) =>
