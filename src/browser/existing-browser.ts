@@ -255,11 +255,10 @@ export class ExistingBrowser extends Browser {
     }
 
     protected _overrideGetElementsList(session: WebdriverIO.Browser): void {
+        // prettier-ignore
         for (const attachToElement of [false, true]) {
             // @ts-expect-error This is a temporary hack to patch wdio's breaking changes.
-            session.overwriteCommand(
-                "$$",
-                async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
+            session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
                     const arr: WebdriverIO.Element[] & { parent?: unknown; foundWith?: unknown; selector?: unknown } =
                         [];
                     const res = await origCommand(selector);
