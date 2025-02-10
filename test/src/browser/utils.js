@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const EventEmitter = require("events");
 const { NewBrowser } = require("src/browser/new-browser");
-const {ExistingBrowser} = require("src/browser/existing-browser");
+const { ExistingBrowser } = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
 function createBrowserConfig_(opts = {}) {
@@ -68,11 +68,16 @@ exports.mkNewBrowser_ = (
         state: {},
         wdPool: exports.mkWdPool_(),
     },
+    BrowserClass = NewBrowser,
 ) => {
-    return NewBrowser.create(createBrowserConfig_(configOpts), opts);
+    return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 
-exports.mkExistingBrowser_ = (configOpts, opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" }, BrowserClass = ExistingBrowser) => {
+exports.mkExistingBrowser_ = (
+    configOpts,
+    opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" },
+    BrowserClass = ExistingBrowser,
+) => {
     return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 

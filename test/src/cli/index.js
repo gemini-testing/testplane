@@ -2,17 +2,17 @@
 
 const { Command } = require("@gemini-testing/commander");
 const proxyquire = require("proxyquire").noCallThru();
-const testplaneCli = require("src/cli");
 const { configOverriding } = require("src/cli/info");
 const defaults = require("src/config/defaults");
 const { Testplane } = require("src/testplane");
-const logger = require("src/utils/logger");
 const { collectCliValues, withCommonCliOptions } = require("src/utils/cli");
 
 const any = sinon.match.any;
 
 describe("cli", () => {
     const sandbox = sinon.createSandbox();
+    let testplaneCli;
+    let loggerLogStub, loggerWarnStub, loggerErrorStub;
 
     const run_ = async (argv = "", cli) => {
         process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];
@@ -24,13 +24,28 @@ describe("cli", () => {
     };
 
     beforeEach(() => {
+        loggerLogStub = sandbox.stub();
+        loggerWarnStub = sandbox.stub();
+        loggerErrorStub = sandbox.stub();
+
+        testplaneCli = proxyquire("src/cli", {
+            "../utils/cli": proxyquire("src/utils/cli", {
+                "./logger": {
+                    log: loggerLogStub,
+                    warn: loggerWarnStub,
+                    error: loggerErrorStub,
+                },
+            }),
+            "../utils/logger": {
+                log: loggerLogStub,
+                warn: loggerWarnStub,
+                error: loggerErrorStub,
+            },
+        });
+
         sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "run").resolves();
         sandbox.stub(Testplane.prototype, "extendCli");
-
-        sandbox.stub(logger, "log");
-        sandbox.stub(logger, "error");
-        sandbox.stub(logger, "warn");
 
         sandbox.stub(process, "exit");
 
@@ -163,7 +178,7 @@ describe("cli", () => {
         it("should warn about invalid regex", async () => {
             await run_("--grep (foo|bar");
 
-            assert.calledOnceWith(logger.warn, sinon.match("(foo|bar"));
+            assert.calledOnceWith(loggerWarnStub, sinon.match("(foo|bar"));
         });
     });
 
@@ -225,7 +240,7 @@ describe("cli", () => {
 
         await run_();
 
-        assert.calledWith(logger.error, "some-stack");
+        assert.calledWith(loggerErrorStub, "some-stack");
     });
 
     it("should log an error on reject if stack does not exist", async () => {
@@ -235,7 +250,7 @@ describe("cli", () => {
 
         await run_();
 
-        assert.calledWithMatch(logger.error, err);
+        assert.calledWithMatch(loggerErrorStub, err);
     });
 
     it("should turn on debug mode from cli", async () => {

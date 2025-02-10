@@ -1,5 +1,5 @@
 import { ClientBridgeError } from "./error";
-import {ExistingBrowser} from "../existing-browser";
+import { ExistingBrowser } from "../existing-browser";
 
 export class ClientBridge {
     private _browser: ExistingBrowser;

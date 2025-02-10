@@ -78,7 +78,11 @@ const overwriteOverwriteCommand = (session: WebdriverIO.Browser, callstack: Call
             return origCommand(name, wrapper, elementScope);
         }
 
-        function decoratedWrapper(this: WebdriverIO.Browser, origFn: (...args: unknown[]) => unknown, ...args: unknown[]): unknown {
+        function decoratedWrapper(
+            this: WebdriverIO.Browser,
+            origFn: (...args: unknown[]) => unknown,
+            ...args: unknown[]
+        ): unknown {
             return runWithHistoryHooks({
                 callstack,
                 nodeData: { name, args, elementScope, overwrite: true },

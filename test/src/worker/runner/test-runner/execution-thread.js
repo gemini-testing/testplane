@@ -7,7 +7,6 @@ const AssertViewResults = require("src/browser/commands/assert-view/assert-view-
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
-const logger = require("src/utils/logger");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
 const proxyquire = require("proxyquire");
 
@@ -54,8 +53,8 @@ describe("worker/runner/test-runner/execution-thread", () => {
         loggerLogStub = sinon.stub();
         ExecutionThread = proxyquire("src/worker/runner/test-runner/execution-thread", {
             "../../../utils/logger": {
-                log: loggerLogStub
-            }
+                log: loggerLogStub,
+            },
         });
         sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").callsFake(e => Promise.resolve(e));
         sandbox.stub(OneTimeScreenshooter.prototype, "captureScreenshotOnAssertViewFail").resolves();

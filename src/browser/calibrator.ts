@@ -2,8 +2,8 @@ import fs from "fs";
 import path from "path";
 import looksSame from "looks-same";
 import { CoreError } from "./core-error";
-import {ExistingBrowser} from "./existing-browser";
-import {RGBA} from "../image";
+import { ExistingBrowser } from "./existing-browser";
+import { RGBA } from "../image";
 
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" } as const;
 
@@ -58,7 +58,7 @@ export class Calibrator {
 
         if (!imageFeatures) {
             throw new CoreError(
-                "Could not calibrate. This could be due to calibration page has failed to open properly"
+                "Could not calibrate. This could be due to calibration page has failed to open properly",
             );
         }
 
@@ -73,7 +73,10 @@ export class Calibrator {
         return calibratedFeatures;
     }
 
-    private async _analyzeImage(image: Image, params: { calculateColorLength?: boolean }): Promise<ImageAnalysisResult | null> {
+    private async _analyzeImage(
+        image: Image,
+        params: { calculateColorLength?: boolean },
+    ): Promise<ImageAnalysisResult | null> {
         const imageHeight = (await image.getSize()).height;
 
         for (let y = 0; y < imageHeight; y++) {
@@ -87,7 +90,11 @@ export class Calibrator {
     }
 }
 
-async function analyzeRow(row: number, image: Image, params: { calculateColorLength?: boolean } = {}): Promise<ImageAnalysisResult | null> {
+async function analyzeRow(
+    row: number,
+    image: Image,
+    params: { calculateColorLength?: boolean } = {},
+): Promise<ImageAnalysisResult | null> {
     const markerStart = await findMarkerInRow(row, image, DIRECTION.FORWARD);
 
     if (markerStart === -1) {

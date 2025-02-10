@@ -1,23 +1,23 @@
 import url from "url";
 import _ from "lodash";
-import type {AttachOptions, ChainablePromiseArray, ElementArray} from "webdriverio";
-import {attach} from "webdriverio";
+import type { AttachOptions, ChainablePromiseArray, ElementArray } from "webdriverio";
+import { attach } from "webdriverio";
 import { sessionEnvironmentDetector } from "../bundle/@wdio-utils";
-import {Browser, BrowserOpts} from "./browser";
+import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
-import {Camera, PageMeta} from "./camera";
-import {type ClientBridge, build as buildClientBridge} from "./client-bridge";
+import { Camera, PageMeta } from "./camera";
+import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
 import { WEBDRIVER_PROTOCOL } from "../constants/config";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
-import {Config} from "../config";
-import {Image, Rect} from "../image";
-import type {CalibrationResult, Calibrator} from "./calibrator";
-import {NEW_ISSUE_LINK} from "../constants/help";
-import type {Options} from "@wdio/types";
+import { Config } from "../config";
+import { Image, Rect } from "../image";
+import type { CalibrationResult, Calibrator } from "./calibrator";
+import { NEW_ISSUE_LINK } from "../constants/help";
+import type { Options } from "@wdio/types";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -48,14 +48,18 @@ const CLIENT_BRIDGE_HINT = "client bridge";
 
 function ensure<T>(value: T | undefined | null, hint?: string): asserts value is T {
     if (!value) {
-        throw new Error(`Execution can't proceed, because a crucial component was not initialized${hint ? " (" + hint + ")" : ""}. This is likely due to a bug on our side.\n` +
-            `\nPlease file an issue at ${NEW_ISSUE_LINK}, we will try to fix it as soon as possible.`);
+        throw new Error(
+            `Execution can't proceed, because a crucial component was not initialized${
+                hint ? " (" + hint + ")" : ""
+            }. This is likely due to a bug on our side.\n` +
+                `\nPlease file an issue at ${NEW_ISSUE_LINK}, we will try to fix it as soon as possible.`,
+        );
     }
 }
 
 const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData => {
     return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
-}
+};
 
 export class ExistingBrowser extends Browser {
     protected _camera: Camera;
@@ -122,7 +126,9 @@ export class ExistingBrowser extends Browser {
         ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
         const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
         if (isClientBridgeErrorData(result)) {
-            throw new Error(`Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`);
+            throw new Error(
+                `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
+            );
         }
 
         // https://github.com/webdriverio/webdriverio/issues/11396
@@ -133,7 +139,7 @@ export class ExistingBrowser extends Browser {
         return result;
     }
 
-    async cleanupScreenshot(opts: {disableAnimation?: boolean} = {}): Promise<void> {
+    async cleanupScreenshot(opts: { disableAnimation?: boolean } = {}): Promise<void> {
         if (opts.disableAnimation) {
             await this._cleanupPageAnimations();
         }
@@ -159,7 +165,7 @@ export class ExistingBrowser extends Browser {
 
     async captureViewportImage(page?: PageMeta, screenshotDelay?: number): Promise<Image> {
         if (screenshotDelay) {
-            await new Promise((resolve) => setTimeout(resolve, screenshotDelay));
+            await new Promise(resolve => setTimeout(resolve, screenshotDelay));
         }
 
         return this._camera.captureViewportImage(page);
@@ -195,7 +201,11 @@ export class ExistingBrowser extends Browser {
         }, params);
     }
 
-    protected async _attachSession({ sessionId, sessionCaps, sessionOpts = {capabilities: {}} }: SessionOptions): Promise<WebdriverIO.Browser> {
+    protected async _attachSession({
+        sessionId,
+        sessionCaps,
+        sessionOpts = { capabilities: {} },
+    }: SessionOptions): Promise<WebdriverIO.Browser> {
         const detectedSessionEnvFlags = sessionEnvironmentDetector({
             capabilities: sessionCaps!,
             requestedCapabilities: sessionOpts.capabilities,
@@ -247,16 +257,21 @@ export class ExistingBrowser extends Browser {
     protected _overrideGetElementsList(session: WebdriverIO.Browser): void {
         for (const attachToElement of [false, true]) {
             // @ts-expect-error This is a temporary hack to patch wdio's breaking changes.
-            session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
-                const arr: WebdriverIO.Element[] & {parent?: unknown; foundWith?: unknown; selector?: unknown} = [];
-                const res = await origCommand(selector);
-                for await (const el of res) arr.push(el);
-                arr.parent = res.parent;
-                arr.foundWith = res.foundWith;
-                arr.selector = res.selector;
+            session.overwriteCommand(
+                "$$",
+                async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
+                    const arr: WebdriverIO.Element[] & { parent?: unknown; foundWith?: unknown; selector?: unknown } =
+                        [];
+                    const res = await origCommand(selector);
+                    for await (const el of res) arr.push(el);
+                    arr.parent = res.parent;
+                    arr.foundWith = res.foundWith;
+                    arr.selector = res.selector;
 
-                return arr as unknown as ChainablePromiseArray<ElementArray>;
-            }, attachToElement);
+                    return arr as unknown as ChainablePromiseArray<ElementArray>;
+                },
+                attachToElement,
+            );
         }
     }
 
@@ -296,17 +311,24 @@ export class ExistingBrowser extends Browser {
         return this._config.baseUrl ? url.resolve(this._config.baseUrl, uri) : uri;
     }
 
-    protected async _performIsolation({ sessionCaps, sessionOpts }: Pick<SessionOptions, "sessionCaps" | "sessionOpts">): Promise<void> {
+    protected async _performIsolation({
+        sessionCaps,
+        sessionOpts,
+    }: Pick<SessionOptions, "sessionCaps" | "sessionOpts">): Promise<void> {
         ensure(this._session, BROWSER_SESSION_HINT);
         if (!this._config.isolation) {
             return;
         }
 
-        const { browserName, browserVersion = "", version = "" } = sessionCaps as SessionOptions['sessionCaps'] & {version?: string;} || {};
+        const {
+            browserName,
+            browserVersion = "",
+            version = "",
+        } = (sessionCaps as SessionOptions["sessionCaps"] & { version?: string }) || {};
         if (!isSupportIsolation(browserName!, browserVersion)) {
             logger.warn(
                 `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
-                `but got ${browserName}@${browserVersion || version}`,
+                    `but got ${browserName}@${browserVersion || version}`,
             );
             return;
         }
@@ -348,7 +370,7 @@ export class ExistingBrowser extends Browser {
         }
     }
 
-    protected async _setWindowSize(size: {width: number; height: number} | null): Promise<void> {
+    protected async _setWindowSize(size: { width: number; height: number } | null): Promise<void> {
         if (size) {
             ensure(this._session, BROWSER_SESSION_HINT);
             await this._session.setWindowSize(size.width, size.height);
@@ -367,8 +389,9 @@ export class ExistingBrowser extends Browser {
     }
 
     protected async _buildClientScripts(): Promise<ClientBridge> {
-        return buildClientBridge(this, { calibration: this._calibration })
-            .then(clientBridge => (this._clientBridge = clientBridge));
+        return buildClientBridge(this, { calibration: this._calibration }).then(
+            clientBridge => (this._clientBridge = clientBridge),
+        );
     }
 
     protected async _runInEachIframe(cb: (...args: unknown[]) => unknown): Promise<void> {

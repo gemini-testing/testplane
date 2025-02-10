@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import looksSame from "looks-same";
-import {DiffOptions, ImageSize} from "./types";
+import { DiffOptions, ImageSize } from "./types";
 
 interface SharpImageData {
     data: Buffer;
@@ -178,14 +178,16 @@ export class Image {
 
     async toPngBuffer(opts: { resolveWithObject: true }): Promise<PngImageData>;
     async toPngBuffer(opts: { resolveWithObject?: false }): Promise<Buffer>;
-    async toPngBuffer(opts: { resolveWithObject?: boolean } = { resolveWithObject: true }): Promise<PngImageData | Buffer> {
+    async toPngBuffer(
+        opts: { resolveWithObject?: boolean } = { resolveWithObject: true },
+    ): Promise<PngImageData | Buffer> {
         if (opts.resolveWithObject) {
-            const imgData = await this._img.png().toBuffer({resolveWithObject: true});
+            const imgData = await this._img.png().toBuffer({ resolveWithObject: true });
 
             return { data: imgData.data, size: { height: imgData.info.height, width: imgData.info.width } };
         }
 
-        return await this._img.png().toBuffer();
+        return await this._img.png().toBuffer({ resolveWithObject: false });
     }
 
     static compare(path1: string, path2: string, opts: CompareOptions = {}): Promise<looksSame.LooksSameResult> {
@@ -201,7 +203,7 @@ export class Image {
             compareOptions.antialiasingTolerance = opts.antialiasingTolerance;
         }
 
-        return looksSame(path1, path2, {...compareOptions, createDiffImage: true});
+        return looksSame(path1, path2, { ...compareOptions, createDiffImage: true });
     }
 
     static buildDiff(opts: DiffOptions): Promise<null> {

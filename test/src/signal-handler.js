@@ -1,8 +1,8 @@
 "use strict";
 
-const logger = require("src/utils/logger");
 const clearRequire = require("clear-require");
 const Promise = require("bluebird");
+const proxyquire = require("proxyquire");
 
 describe("src/signal-handler", () => {
     const sandbox = sinon.createSandbox();
@@ -20,10 +20,13 @@ describe("src/signal-handler", () => {
     beforeEach(() => {
         sandbox.stub(process, "on");
         sandbox.stub(process, "exit");
-        sandbox.stub(logger, "log");
 
         clearRequire("src/signal-handler");
-        signalHandler = require("src/signal-handler");
+        signalHandler = proxyquire("src/signal-handler", {
+            "./utils/logger": {
+                log: sandbox.stub(),
+            },
+        });
     });
 
     afterEach(() => sandbox.restore());

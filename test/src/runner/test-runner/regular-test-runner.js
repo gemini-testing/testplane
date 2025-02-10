@@ -4,17 +4,17 @@ const crypto = require("crypto");
 const _ = require("lodash");
 
 const BrowserAgent = require("src/runner/browser-agent");
-const RegularTestRunner = require("src/runner/test-runner/regular-test-runner");
 const WorkersRegistry = require("src/utils/workers-registry");
-const logger = require("src/utils/logger");
 const { MasterEvents: Events } = require("src/events");
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
 const { Test } = require("src/test-reader/test-object");
 const Promise = require("bluebird");
 const { EventEmitter } = require("events");
+const proxyquire = require("proxyquire");
 
 describe("runner/test-runner/regular-test-runner", () => {
     const sandbox = sinon.createSandbox();
+    let RegularTestRunner;
 
     const stubTestResult_ = (opts = {}) => {
         return _.defaults(opts, {
@@ -65,6 +65,12 @@ describe("runner/test-runner/regular-test-runner", () => {
     };
 
     beforeEach(() => {
+        RegularTestRunner = proxyquire("src/runner/test-runner/regular-test-runner", {
+            "../../utils/logger": {
+                warn: sandbox.stub(),
+            },
+        });
+
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(stubBrowser_());
         sandbox.stub(BrowserAgent.prototype, "freeBrowser").resolves();
 
@@ -73,7 +79,6 @@ describe("runner/test-runner/regular-test-runner", () => {
         sandbox.stub(AssertViewResults, "fromRawObject").returns(Object.create(AssertViewResults.prototype));
         sandbox.stub(AssertViewResults.prototype, "get").returns({});
 
-        sandbox.stub(logger, "warn");
         sandbox.stub(crypto, "randomUUID").returns("");
         sandbox.stub(crypto, "randomBytes").callsFake(size => {
             return Buffer.from("11".repeat(size), "hex");

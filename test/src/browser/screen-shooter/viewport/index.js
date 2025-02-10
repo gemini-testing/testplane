@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 
-const {Image} = require("src/image");
+const { Image } = require("src/image");
 const Viewport = require("src/browser/screen-shooter/viewport");
 const CoordValidator = require("src/browser/screen-shooter/viewport/coord-validator");
 

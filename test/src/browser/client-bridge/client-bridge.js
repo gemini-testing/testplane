@@ -1,6 +1,6 @@
 "use strict";
 const Promise = require("bluebird");
-const {ClientBridge} = require("src/browser/client-bridge/client-bridge");
+const { ClientBridge } = require("src/browser/client-bridge/client-bridge");
 const { ClientBridgeError } = require("src/browser/client-bridge/error");
 
 const CALL = '__geminiCore.example(1, "two")';

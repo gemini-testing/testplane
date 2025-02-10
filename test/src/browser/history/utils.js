@@ -24,7 +24,7 @@ describe("commands-history", () => {
             });
 
             it("should convert argument to string if it is not string or object", () => {
-                assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), ['false', 'null', '100']);
+                assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), ["false", "null", "100"]);
             });
         });
 

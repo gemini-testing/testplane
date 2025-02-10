@@ -5,7 +5,7 @@ const _ = require("lodash");
 const fs = require("fs-extra");
 const webdriverio = require("webdriverio");
 // const clientBridge = require("src/browser/client-bridge");
-const {Image} = require("src/image");
+const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const temp = require("src/temp");
 const validator = require("png-validator");
@@ -75,8 +75,8 @@ describe("assertView command", () => {
     beforeEach(() => {
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
             "./client-bridge": {
-                build: sinon.stub().resolves()
-            }
+                build: sinon.stub().resolves(),
+            },
         }).ExistingBrowser;
 
         sandbox.stub(Image, "create").returns(Object.create(Image.prototype));
