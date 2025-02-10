@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 const Promise = require("bluebird");
-const {Image} = require("src/image");
+const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const { mkSessionStub_ } = require("../../../browser/utils");
 const proxyquire = require("proxyquire");
@@ -55,10 +55,10 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
 
     beforeEach(() => {
         logger = {
-            warn: sinon.stub()
+            warn: sinon.stub(),
         };
         OneTimeScreenshooter = proxyquire("src/worker/runner/test-runner/one-time-screenshooter", {
-            "../../../utils/logger": logger
+            "../../../utils/logger": logger,
         });
 
         sandbox.stub(ScreenShooter.prototype, "capture").resolves(stubImage_());

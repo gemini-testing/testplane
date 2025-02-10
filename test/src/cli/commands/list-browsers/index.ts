@@ -1,13 +1,15 @@
 import { Command } from "@gemini-testing/commander";
 import sinon, { SinonStub } from "sinon";
 
-import logger from "../../../../../src/utils/logger";
 import { Testplane } from "../../../../../src/testplane";
-import * as testplaneCli from "../../../../../src/cli";
+import * as testplaneCliOriginal from "../../../../../src/cli";
+import proxyquire from "proxyquire";
+import path from "node:path";
 
 describe("cli/commands/list-browsers", () => {
     const sandbox = sinon.createSandbox();
 
+    let testplaneCli: typeof testplaneCliOriginal;
     let testplaneStub: Testplane;
     let loggerErrorStub: SinonStub;
     let consoleInfoStub: SinonStub;
@@ -20,6 +22,27 @@ describe("cli/commands/list-browsers", () => {
     };
 
     beforeEach(() => {
+        loggerErrorStub = sandbox.stub();
+
+        testplaneCli = proxyquire("src/cli", {
+            [path.resolve(__dirname, "../../../../../src/cli/commands/list-browsers")]: proxyquire.noCallThru()(
+                "../../../../../src/cli/commands/list-browsers",
+                {
+                    "../../../utils/logger": {
+                        error: loggerErrorStub,
+                    },
+                },
+            ),
+            "../utils/cli": proxyquire("src/utils/cli", {
+                "./logger": {
+                    error: loggerErrorStub,
+                },
+            }),
+            "../utils/logger": {
+                error: loggerErrorStub,
+            },
+        });
+
         testplaneStub = Object.create(Testplane.prototype);
 
         Object.defineProperty(testplaneStub, "config", {
@@ -35,7 +58,6 @@ describe("cli/commands/list-browsers", () => {
 
         sandbox.stub(Testplane, "create").returns(testplaneStub);
 
-        loggerErrorStub = sandbox.stub(logger, "error");
         consoleInfoStub = sandbox.stub(console, "info");
         sandbox.stub(process, "exit");
 

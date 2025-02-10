@@ -1,17 +1,23 @@
 const fs = require("fs");
 const chalk = require("chalk");
-const logger = require("src/utils/logger");
-const FileInformer = require("src/reporters/informers/file");
+const proxyquire = require("proxyquire");
 
 describe("reporter/informers/file", () => {
     const sandbox = sinon.createSandbox();
     let fsStream;
+    let FileInformer;
+    let loggerLogStub;
 
     beforeEach(() => {
         fsStream = { write: sandbox.stub(), end: sandbox.stub() };
         sandbox.stub(fs, "createWriteStream").returns(fsStream);
+        loggerLogStub = sandbox.stub();
 
-        sandbox.stub(logger, "log");
+        FileInformer = proxyquire("src/reporters/informers/file", {
+            "../../utils/logger": {
+                log: loggerLogStub,
+            },
+        });
     });
 
     afterEach(() => sandbox.restore());
@@ -28,7 +34,7 @@ describe("reporter/informers/file", () => {
         FileInformer.create(opts);
 
         assert.calledOnceWith(
-            logger.log,
+            loggerLogStub,
             `Information with test results for report: "${opts.type}" will be saved to a file: "${opts.path}"`,
         );
     });

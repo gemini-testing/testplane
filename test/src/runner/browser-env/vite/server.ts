@@ -6,7 +6,6 @@ import chalk from "chalk";
 
 import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
 import { ManualMock } from "../../../../../src/runner/browser-env/vite/manual-mock";
-import * as logger from "../../../../../src/utils/logger";
 import { makeConfigStub } from "../../../../utils";
 import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
 
@@ -21,6 +20,7 @@ describe("runner/browser-env/vite/server", () => {
     let getNodeModulePathStub: SinonStub;
     let generateIndexHtmlPlugin: () => Vite.Plugin[];
     let mockPlugin: () => Vite.Plugin[];
+    let loggerLogStub: SinonStub;
 
     const mkViteServer_ = (opts: Partial<Vite.ViteDevServer> = {}): Vite.ViteDevServer =>
         ({
@@ -45,8 +45,8 @@ describe("runner/browser-env/vite/server", () => {
 
     beforeEach(() => {
         sandbox.stub(Vite, "createServer").resolves(mkViteServer_());
-        sandbox.stub(logger, "log");
 
+        loggerLogStub = sandbox.stub();
         createSocketServer = sandbox.stub();
         getPortStub = sandbox.stub().resolves(12345);
         getNodeModulePathStub = sandbox.stub().resolves("file:///default-cwd");
@@ -60,6 +60,9 @@ describe("runner/browser-env/vite/server", () => {
             "./plugins/generate-index-html": { plugin: generateIndexHtmlPlugin },
             "./plugins/mock": { plugin: mockPlugin },
             "./utils": { getNodeModulePath: getNodeModulePathStub },
+            "../../../utils/logger": {
+                log: loggerLogStub,
+            },
         }));
     });
 
@@ -230,7 +233,7 @@ describe("runner/browser-env/vite/server", () => {
 
             await ViteServerStub.create(mkConfig_()).start();
 
-            assert.calledOnceWith(logger.log, chalk.green("Vite server started on http://localhost:4444"));
+            assert.calledOnceWith(loggerLogStub, chalk.green("Vite server started on http://localhost:4444"));
         });
     });
 

@@ -1,25 +1,32 @@
 "use strict";
 
-const { validateUnknownBrowsers } = require("src/validators");
-const logger = require("src/utils/logger");
+const proxyquire = require("proxyquire");
 
 describe("validators", () => {
     const sandbox = sinon.createSandbox();
+    let validateUnknownBrowsers;
+    let loggerWarnStub;
+
+    beforeEach(() => {
+        loggerWarnStub = sandbox.stub();
+
+        validateUnknownBrowsers = proxyquire("src/validators", {
+            "./utils/logger": {
+                warn: loggerWarnStub,
+            },
+        }).validateUnknownBrowsers;
+    });
 
     afterEach(() => {
         sandbox.restore();
     });
 
     describe("validateUnknownBrowsers", () => {
-        beforeEach(() => {
-            sandbox.stub(logger, "warn");
-        });
-
         it("should warn about unknown browsers", () => {
             validateUnknownBrowsers(["foo"], ["bar", "baz"]);
 
             assert.calledWith(
-                logger.warn,
+                loggerWarnStub,
                 sinon.match(/Unknown browser ids: foo(.+) specified in the config file: bar, baz/),
             );
         });
@@ -27,13 +34,13 @@ describe("validators", () => {
         it("should not warn if all browsers are known", () => {
             validateUnknownBrowsers(["foo"], ["foo", "bar"]);
 
-            assert.notCalled(logger.warn);
+            assert.notCalled(loggerWarnStub);
         });
 
         it("should warn only about unknown browsers", () => {
             validateUnknownBrowsers(["foo", "bar", "baz"], ["baz", "qux"]);
 
-            assert.calledWith(logger.warn, sinon.match(/Unknown browser ids: foo, bar\./));
+            assert.calledWith(loggerWarnStub, sinon.match(/Unknown browser ids: foo, bar\./));
         });
     });
 });

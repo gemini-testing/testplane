@@ -18,12 +18,11 @@ const { TestCollection } = require("src/test-collection");
 const { MasterEvents: RunnerEvents, CommonSyncEvents, MasterAsyncEvents, MasterSyncEvents } = require("src/events");
 const { MainRunner: NodejsEnvRunner } = require("src/runner");
 const { MainRunner: BrowserEnvRunner } = require("src/runner/browser-env");
-const logger = require("src/utils/logger");
 const { makeConfigStub } = require("../utils");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
-    let Testplane, initReporters, signalHandler;
+    let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub;
 
     const mkTestplane_ = config => {
         Config.create.returns(config || makeConfigStub());
@@ -44,7 +43,6 @@ describe("testplane", () => {
     const mkNodejsEnvRunner_ = runFn => mkRunnerStubHelper_(NodejsEnvRunner, runFn);
 
     beforeEach(() => {
-        sandbox.stub(logger, "warn");
         sandbox.stub(Config, "create").returns(makeConfigStub());
         sandbox.stub(pluginsLoader, "load").returns([]);
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
@@ -56,9 +54,22 @@ describe("testplane", () => {
         initReporters = sandbox.stub().resolves();
         signalHandler = new AsyncEmitter();
 
+        loggerWarnStub = sandbox.stub();
+        loggerErrorStub = sandbox.stub();
+
         Testplane = proxyquire("src/testplane", {
             "./reporters": { initReporters },
             "./signal-handler": signalHandler,
+            "./utils/logger": {
+                warn: loggerWarnStub,
+                error: loggerErrorStub,
+            },
+            "./validators": proxyquire("src/validators", {
+                "./utils/logger": {
+                    warn: loggerWarnStub,
+                    error: loggerErrorStub,
+                },
+            }),
         }).Testplane;
     });
 
@@ -187,7 +198,7 @@ describe("testplane", () => {
             mkNodejsEnvRunner_();
 
             return runTestplane([], { browsers: ["bro3"] }).then(() =>
-                assert.calledWithMatch(logger.warn, /Unknown browser ids: bro3/),
+                assert.calledWithMatch(loggerWarnStub, /Unknown browser ids: bro3/),
             );
         });
 
@@ -844,7 +855,6 @@ describe("testplane", () => {
         beforeEach(() => {
             testplane = mkTestplane_();
 
-            sandbox.stub(logger, "error");
             sandbox.stub(process, "exit");
             sandbox
                 .stub(NodejsEnvRunner.prototype, "run")
@@ -860,7 +870,7 @@ describe("testplane", () => {
             });
 
             return testplane.run().finally(() => {
-                assert.calledOnceWith(logger.error, "Terminating on critical error:", err);
+                assert.calledOnceWith(loggerErrorStub, "Terminating on critical error:", err);
             });
         });
 
@@ -911,7 +921,7 @@ describe("testplane", () => {
                     .run()
                     .finally(() => Promise.delay(300))
                     .then(() => {
-                        assert.calledWithMatch(logger.error, /Forcing shutdown.../);
+                        assert.calledWithMatch(loggerErrorStub, /Forcing shutdown.../);
                         assert.calledOnceWith(process.exit, 1);
                     });
             });

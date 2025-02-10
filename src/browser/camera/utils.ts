@@ -1,4 +1,4 @@
-import {ImageArea, PageMeta, ScreenshotMode} from ".";
+import { ImageArea, PageMeta, ScreenshotMode } from ".";
 
 export const isFullPage = (imageArea: ImageArea, page: PageMeta, screenshotMode: ScreenshotMode): boolean => {
     switch (screenshotMode) {

@@ -5,13 +5,13 @@ import sinon, { SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 
 import { Formatters } from "../../../../../src/test-collection";
-import logger from "../../../../../src/utils/logger";
 import { Testplane } from "../../../../../src/testplane";
-import * as testplaneCli from "../../../../../src/cli";
+import * as testplaneCliOriginal from "../../../../../src/cli";
 import { TestCollection } from "../../../../../src/test-collection";
 
 describe("cli/commands/list-tests", () => {
     const sandbox = sinon.createSandbox();
+    let testplaneCli: typeof testplaneCliOriginal;
 
     const listTests_ = async (argv: string = "", cli: { run: VoidFunction } = testplaneCli): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "list-tests", ...argv.split(" ")].filter(Boolean);
@@ -21,13 +21,27 @@ describe("cli/commands/list-tests", () => {
     };
 
     beforeEach(() => {
+        testplaneCli = proxyquire("src/cli", {
+            "../utils/logger": {
+                warn: sinon.stub(),
+                error: sinon.stub(),
+            },
+            [path.resolve(__dirname, "../../../../../src/cli/commands/list-tests")]: proxyquire.noCallThru()(
+                "../../../../../src/cli/commands/list-tests",
+                {
+                    "../../../utils/logger": {
+                        warn: sinon.stub(),
+                        error: sinon.stub(),
+                    },
+                },
+            ),
+        });
         sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "readTests").resolves(TestCollection.create({}));
 
         sandbox.stub(fs, "ensureDir").resolves();
         sandbox.stub(fs, "writeJson").resolves();
 
-        sandbox.stub(logger, "error");
         sandbox.stub(console, "info");
         sandbox.stub(process, "exit");
 
@@ -44,6 +58,10 @@ describe("cli/commands/list-tests", () => {
                 {
                     "../../../test-collection": {
                         validateFormatter: validateFormatterStub,
+                    },
+                    "../../../utils/logger": {
+                        warn: sinon.stub(),
+                        error: sinon.stub(),
                     },
                 },
             ),

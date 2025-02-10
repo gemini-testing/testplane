@@ -88,7 +88,7 @@ describe("worker/runner/test-runner", () => {
         TestRunner = proxyquire("src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
-            }
+            },
         });
 
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(mkBrowser_());

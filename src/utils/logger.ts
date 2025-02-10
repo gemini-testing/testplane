@@ -7,7 +7,6 @@ const withTimestampPrefix =
         console[logFnName](`[${timestamp}]`, ...args);
     };
 
-
 export const log = withTimestampPrefix("log");
 export const warn = withTimestampPrefix("warn");
 export const error = withTimestampPrefix("error");

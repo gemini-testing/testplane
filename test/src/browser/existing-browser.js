@@ -3,14 +3,9 @@
 const { EventEmitter } = require("events");
 const crypto = require("crypto");
 const _ = require("lodash");
-const Promise = require("bluebird");
-const webdriverio = require("webdriverio");
 const jsdom = require("jsdom-global");
-const {ExistingBrowser} = require("src/browser/existing-browser");
-const {Calibrator} = require("src/browser/calibrator");
-const {Camera} = require("src/browser/camera");
-const clientBridge = require("src/browser/client-bridge");
-const logger = require("src/utils/logger");
+const { Calibrator } = require("src/browser/calibrator");
+const { Camera } = require("src/browser/camera");
 const history = require("src/browser/history");
 const {
     SAVE_HISTORY_MODE,
@@ -21,17 +16,24 @@ const {
 } = require("src/constants/config");
 const { MIN_CHROME_VERSION_SUPPORT_ISOLATION, X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const {
-    mkExistingBrowser_: mkBrowser_,
+    mkExistingBrowser_,
     mkSessionStub_,
     mkCDPStub_,
     mkCDPBrowserCtx_,
     mkCDPPage_,
     mkCDPTarget_,
 } = require("./utils");
+const proxyquire = require("proxyquire");
 
 describe("ExistingBrowser", () => {
     const sandbox = sinon.createSandbox();
     let session;
+    let ExistingBrowser;
+    let webdriverioAttachStub, clientBridgeBuildStub, loggerWarnStub, initCommandHistoryStub, runGroupStub;
+
+    const mkBrowser_ = (configOpts, opts) => {
+        return mkExistingBrowser_(configOpts, opts, ExistingBrowser);
+    };
 
     const initBrowser_ = (browser = mkBrowser_(), sessionData = {}, calibrator) => {
         sessionData = _.defaults(sessionData, {
@@ -45,16 +47,39 @@ describe("ExistingBrowser", () => {
     const stubClientBridge_ = () => {
         const bridge = { call: sandbox.stub().resolves({}) };
 
-        clientBridge.build.resolves(bridge);
+        clientBridgeBuildStub.resolves(bridge);
 
         return bridge;
     };
 
     beforeEach(() => {
         session = mkSessionStub_();
-        sandbox.stub(webdriverio, "attach").resolves(session);
-        sandbox.stub(logger, "warn");
-        sandbox.stub(clientBridge, "build").resolves();
+        webdriverioAttachStub = sandbox.stub().resolves(session);
+        clientBridgeBuildStub = sandbox.stub().resolves();
+        loggerWarnStub = sandbox.stub();
+        initCommandHistoryStub = sandbox.stub();
+        runGroupStub = sandbox.stub();
+
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            webdriverio: {
+                attach: webdriverioAttachStub,
+            },
+            "./client-bridge": {
+                build: clientBridgeBuildStub,
+            },
+            "../utils/logger": {
+                warn: loggerWarnStub,
+            },
+            "./browser": proxyquire("src/browser/browser", {
+                "./history": {
+                    initCommandHistory: initCommandHistoryStub.callsFake(history.initCommandHistory),
+                    runGroup: runGroupStub.callsFake(history.runGroup),
+                },
+            }),
+            "./history": {
+                runGroup: runGroupStub.callsFake(history.runGroup),
+            },
+        }).ExistingBrowser;
     });
 
     afterEach(() => sandbox.restore());
@@ -128,8 +153,8 @@ describe("ExistingBrowser", () => {
                 },
             });
 
-            assert.calledOnce(webdriverio.attach);
-            assert.calledWithMatch(webdriverio.attach, { ...detectedSessionEnvFlags, isChrome: true });
+            assert.calledOnce(webdriverioAttachStub);
+            assert.calledWithMatch(webdriverioAttachStub, { ...detectedSessionEnvFlags, isChrome: true });
         });
 
         it("should attach to browser with session environment flags from config", async () => {
@@ -139,8 +164,8 @@ describe("ExistingBrowser", () => {
 
             await initBrowser_(browser);
 
-            assert.calledOnce(webdriverio.attach);
-            assert.calledWithMatch(webdriverio.attach, sessionEnvFlags);
+            assert.calledOnce(webdriverioAttachStub);
+            assert.calledWithMatch(webdriverioAttachStub, sessionEnvFlags);
         });
 
         it("should attach to browser with options from master session", async () => {
@@ -148,7 +173,7 @@ describe("ExistingBrowser", () => {
 
             await initBrowser_(mkBrowser_(), { sessionOpts });
 
-            assert.calledWithMatch(webdriverio.attach, { ...sessionOpts, options: sessionOpts });
+            assert.calledWithMatch(webdriverioAttachStub, { ...sessionOpts, options: sessionOpts });
         });
 
         describe("collect custom command", () => {
@@ -193,7 +218,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({ transformRequest: transformRequestStub }));
 
-                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                const { transformRequest } = webdriverioAttachStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.calledOnceWith(transformRequestStub, request);
@@ -208,7 +233,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({ transformRequest: transformRequestStub }));
 
-                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                const { transformRequest } = webdriverioAttachStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.equal(request.headers["X-Request-ID"], "100500");
@@ -221,7 +246,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({}, { state }));
 
-                const { transformRequest } = webdriverio.attach.lastCall.args[0];
+                const { transformRequest } = webdriverioAttachStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
@@ -235,7 +260,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({ transformResponse: transformResponseStub }));
 
-                const { transformResponse } = webdriverio.attach.lastCall.args[0];
+                const { transformResponse } = webdriverioAttachStub.lastCall.args[0];
                 transformResponse(response);
 
                 assert.calledOnceWith(transformResponseStub, response);
@@ -248,7 +273,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_(), { sessionOpts });
 
-                assert.calledOnceWith(webdriverio.attach, sinon.match.has("options", sessionOpts));
+                assert.calledOnceWith(webdriverioAttachStub, sinon.match.has("options", sessionOpts));
             });
 
             it("should attach to browser with caps merged from master session opts and caps", async () => {
@@ -257,7 +282,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_(), { sessionCaps, sessionOpts: { capabilities } });
 
-                assert.calledWithMatch(webdriverio.attach, {
+                assert.calledWithMatch(webdriverioAttachStub, {
                     capabilities: { ...capabilities, ...sessionCaps },
                 });
             });
@@ -269,21 +294,17 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_(), { sessionOpts: { capabilities } });
 
-                assert.calledWithMatch(webdriverio.attach, { requestedCapabilities: capabilities });
+                assert.calledWithMatch(webdriverioAttachStub, { requestedCapabilities: capabilities });
             });
         });
 
         describe("commands-history", () => {
-            beforeEach(() => {
-                sandbox.spy(history, "initCommandHistory");
-            });
-
             it("should NOT init commands-history if it is off", async () => {
                 const browser = mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.NONE });
 
                 await initBrowser_(browser);
 
-                assert.notCalled(history.initCommandHistory);
+                assert.notCalled(initCommandHistoryStub);
             });
 
             describe("should save history of executed commands", () => {
@@ -292,7 +313,7 @@ describe("ExistingBrowser", () => {
 
                     await initBrowser_(browser);
 
-                    assert.calledOnceWith(history.initCommandHistory, session);
+                    assert.calledOnceWith(initCommandHistoryStub, session);
                 });
 
                 it("if it is enabled for failed tests only", async () => {
@@ -300,7 +321,7 @@ describe("ExistingBrowser", () => {
 
                     await initBrowser_(browser);
 
-                    assert.calledOnceWith(history.initCommandHistory, session);
+                    assert.calledOnceWith(initCommandHistoryStub, session);
                 });
             });
 
@@ -309,7 +330,7 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(browser);
 
-                assert.calledOnceWith(history.initCommandHistory, session);
+                assert.calledOnceWith(initCommandHistoryStub, session);
             });
 
             it("should init commands-history before any commands have added", async () => {
@@ -317,16 +338,15 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(browser);
 
-                assert.callOrder(history.initCommandHistory, session.addCommand);
+                assert.callOrder(initCommandHistoryStub, session.addCommand);
             });
 
             it('should log "init" to history if "saveHistory" is set', async () => {
                 const browser = mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL });
-                sandbox.stub(history, "runGroup");
 
                 await initBrowser_(browser, {});
 
-                assert.calledOnceWith(history.runGroup, sinon.match.any, "testplane: init browser", sinon.match.func);
+                assert.calledOnceWith(runGroupStub, sinon.match.any, "testplane: init browser", sinon.match.func);
             });
         });
 
@@ -516,7 +536,7 @@ describe("ExistingBrowser", () => {
                     await initBrowser_(mkBrowser_({ isolation: false }));
 
                     assert.notCalled(session.getPuppeteer);
-                    assert.notCalled(logger.warn);
+                    assert.notCalled(loggerWarnStub);
                 });
 
                 it("test wasn't run in chrome", async () => {
@@ -543,7 +563,7 @@ describe("ExistingBrowser", () => {
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
                     assert.calledOnceWith(
-                        logger.warn,
+                        loggerWarnStub,
                         `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
                             "but got chrome@90.0",
                     );
@@ -555,7 +575,7 @@ describe("ExistingBrowser", () => {
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
                     assert.calledOnceWith(
-                        logger.warn,
+                        loggerWarnStub,
                         `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
                             "but got chrome@70.0",
                     );
@@ -658,7 +678,7 @@ describe("ExistingBrowser", () => {
 
             await initBrowser_(browser);
 
-            assert.calledOnce(logger.warn);
+            assert.calledOnce(loggerWarnStub);
         });
 
         describe("set browser orientation", () => {
@@ -738,7 +758,7 @@ describe("ExistingBrowser", () => {
 
             await initBrowser_(browser, {}, calibrator);
 
-            assert.calledOnceWith(clientBridge.build, browser, { calibration: { foo: "bar" } });
+            assert.calledOnceWith(clientBridgeBuildStub, browser, { calibration: { foo: "bar" } });
         });
     });
 
@@ -969,7 +989,7 @@ describe("ExistingBrowser", () => {
     describe("captureViewportImage", () => {
         beforeEach(() => {
             sandbox.stub(Camera.prototype, "captureViewportImage");
-            sandbox.stub(Promise, "delay").returns(Promise.resolve());
+            sandbox.stub(global, "setTimeout").callsFake(fn => fn());
         });
 
         it("should delay capturing on the passed time", () => {
@@ -978,8 +998,8 @@ describe("ExistingBrowser", () => {
             return mkBrowser_({ screenshotDelay: 100500 })
                 .captureViewportImage({ foo: "bar" }, 2000)
                 .then(() => {
-                    assert.calledOnceWith(Promise.delay, 2000);
-                    assert.callOrder(Promise.delay, Camera.prototype.captureViewportImage);
+                    assert.calledOnceWith(global.setTimeout, sinon.match.any, 2000);
+                    assert.callOrder(global.setTimeout, Camera.prototype.captureViewportImage);
                 });
         });
 

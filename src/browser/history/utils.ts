@@ -1,5 +1,5 @@
 import _ from "lodash";
-import {TestStep, TestStepKey} from "../../types";
+import { TestStep, TestStepKey } from "../../types";
 
 const MAX_STRING_LENGTH = 50;
 

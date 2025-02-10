@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import sinon, { type SinonStub } from "sinon";
-import {ClientBridge} from "src/browser/client-bridge/client-bridge";
+import { ClientBridge } from "src/browser/client-bridge/client-bridge";
 import { build as buildClientBridge } from "src/browser/client-bridge";
 
 describe("clientBridge", () => {

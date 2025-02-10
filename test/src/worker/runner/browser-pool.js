@@ -2,9 +2,9 @@
 
 const EventEmitter = require("events").EventEmitter;
 const _ = require("lodash");
-const {ExistingBrowser} = require("src/browser/existing-browser");
+const { ExistingBrowser } = require("src/browser/existing-browser");
 const BrowserPool = require("src/worker/runner/browser-pool");
-const {Calibrator} = require("src/browser/calibrator");
+const { Calibrator } = require("src/browser/calibrator");
 const { WorkerEvents: RunnerEvents } = require("src/events");
 const ipc = require("src/utils/ipc");
 

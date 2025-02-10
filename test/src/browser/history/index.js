@@ -59,7 +59,7 @@ describe("commands-history", () => {
 
             assert.propertyVal(node, "n", "url");
             assert.propertyVal(node, "s", "b");
-            assert.propertyVal(node, "o", 1);
+            assert.propertyVal(node, "o", true);
             assert.deepPropertyVal(node, "a", ["site.com"]);
         });
 

@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
 import { ClientBridge } from "./client-bridge";
-import {ExistingBrowser} from "../existing-browser";
+import { ExistingBrowser } from "../existing-browser";
 
 const bundlesCache: Record<string, string> = {};
 
@@ -9,7 +9,7 @@ export { ClientBridge };
 
 export const build = async (
     browser: ExistingBrowser,
-    opts: { calibration?: { needsCompatLib?: boolean } } = {}
+    opts: { calibration?: { needsCompatLib?: boolean } } = {},
 ): Promise<ClientBridge> => {
     const needsCompatLib = opts.calibration?.needsCompatLib ?? false;
     const scriptFileName = needsCompatLib ? "bundle.compat.js" : "bundle.native.js";

@@ -1,7 +1,7 @@
 "use strict";
 
 // const {Camera} = require("src/browser/camera");
-const {Image} = require("src/image");
+const { Image } = require("src/image");
 const proxyquire = require("proxyquire");
 // const utils = require("src/browser/camera/utils");
 
@@ -16,7 +16,7 @@ describe("browser/camera", () => {
         Camera = proxyquire("src/browser/camera", {
             "./utils": {
                 isFullPage: isFullPageStub,
-            }
+            },
         }).Camera;
 
         image = sinon.createStubInstance(Image);
