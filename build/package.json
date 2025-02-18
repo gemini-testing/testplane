@@ -1,6 +1,6 @@
 {
     "name": "testplane",
-    "version": "8.25.0",
+    "version": "8.25.2",
     "description": "Tests framework based on mocha and wdio",
     "main": "build/src/index.js",
     "files": [
@@ -56,8 +56,8 @@
         "@gemini-testing/commander": "2.15.4",
         "@jspm/core": "2.0.1",
         "@puppeteer/browsers": "2.4.0",
-        "@testplane/types": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/types@e124460",
-        "@testplane/webdriverio": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/webdriverio@e124460",
+        "@testplane/types": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/types@31f7b09",
+        "@testplane/webdriverio": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/webdriverio@a6854a8",
         "@vitest/spy": "2.1.4",
         "@wdio/protocols": "8.38.0",
         "@wdio/utils": "8.39.0",

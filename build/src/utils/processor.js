@@ -1,10 +1,10 @@
 "use strict";
 const _ = require("lodash");
-const util = require("util");
 const { WORKER_UNHANDLED_REJECTION } = require("../constants/process-messages");
 const logger = require("./logger");
 const ipc = require("./ipc");
 const { shouldIgnoreUnhandledRejection } = require("./errors");
+const { utilInspectSafe } = require("./secret-replacer");
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {
         logger.warn(`Unhandled Rejection "${reason}" in testplane:worker:${process.pid} was ignored`);
@@ -12,8 +12,8 @@ process.on("unhandledRejection", (reason, p) => {
     }
     const error = [
         `Unhandled Rejection in testplane:worker:${process.pid}:`,
-        `Promise: ${util.inspect(p)}`,
-        `Reason: ${util.inspect(reason)}`,
+        `Promise: ${utilInspectSafe(p)}`,
+        `Reason: ${utilInspectSafe(reason)}`,
     ].join("\n");
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
 });

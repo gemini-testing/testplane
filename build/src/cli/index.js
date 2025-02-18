@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.run = void 0;
 const node_path_1 = __importDefault(require("node:path"));
-const node_util_1 = __importDefault(require("node:util"));
 const commander_1 = require("@gemini-testing/commander");
 const defaults_1 = __importDefault(require("../config/defaults"));
 const info_1 = require("./info");
@@ -13,11 +12,12 @@ const testplane_1 = require("../testplane");
 const package_json_1 = __importDefault(require("../../package.json"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const errors_1 = require("../utils/errors");
+const secret_replacer_1 = require("../utils/secret-replacer");
 const cli_1 = require("../utils/cli");
 const constants_1 = require("./constants");
 let testplane;
 process.on("uncaughtException", err => {
-    logger_1.default.error(node_util_1.default.inspect(err));
+    logger_1.default.error((0, secret_replacer_1.utilInspectSafe)(err));
     process.exit(1);
 });
 process.on("unhandledRejection", (reason, p) => {
@@ -27,8 +27,8 @@ process.on("unhandledRejection", (reason, p) => {
     }
     const error = [
         `Unhandled Rejection in testplane:master:${process.pid}:`,
-        `Promise: ${node_util_1.default.inspect(p)}`,
-        `Reason: ${node_util_1.default.inspect(reason)}`,
+        `Promise: ${(0, secret_replacer_1.utilInspectSafe)(p)}`,
+        `Reason: ${(0, secret_replacer_1.utilInspectSafe)(reason)}`,
     ].join("\n");
     if (testplane) {
         testplane.halt(new Error(error));
