@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.25.2](https://github.com/gemini-testing/testplane/compare/v8.25.1...v8.25.2) (2025-02-18)
+
+
+### Bug Fixes
+
+* correctly define screenshotsDir option for browsers ([abaa769](https://github.com/gemini-testing/testplane/commit/abaa769c1c8ff5e353a16818e271f07a726a84a1))
+
 ### [8.25.1](https://github.com/gemini-testing/testplane/compare/v8.25.0...v8.25.1) (2025-01-31)
 
 
