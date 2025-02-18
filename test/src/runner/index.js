@@ -7,7 +7,6 @@ const temp = require("src/temp");
 const RuntimeConfig = require("src/config/runtime-config");
 const { Stats: RunnerStats } = require("src/stats");
 const { MasterEvents: RunnerEvents, RunnerSyncEvents } = require("src/events");
-const logger = require("src/utils/logger");
 const WorkersRegistry = require("src/utils/workers-registry");
 const { BrowserRunner } = require("src/runner/browser-runner");
 const { TestCollection } = require("src/test-collection");
@@ -54,7 +53,6 @@ describe("NodejsEnvRunner", () => {
         sandbox.stub(temp, "init");
 
         sandbox.stub(temp, "serialize");
-        sandbox.stub(logger, "warn");
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
         sandbox.stub(TestCollection.prototype);
@@ -65,6 +63,9 @@ describe("NodejsEnvRunner", () => {
 
         Runner = proxyquire("src/runner", {
             "../browser-pool": BrowserPool,
+            "../utils/logger": {
+                warn: sandbox.stub(),
+            },
         }).MainRunner;
     });
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
 import RuntimeConfig from "../../config/runtime-config";
-import logger from "../../utils/logger";
+import * as logger from "../../utils/logger";
 import type { Browser } from "../types";
 
 const REPL_LINE_EVENT = "line";

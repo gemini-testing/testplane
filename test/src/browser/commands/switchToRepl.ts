@@ -1,28 +1,33 @@
 import repl, { type REPLServer } from "node:repl";
 import { EventEmitter } from "node:events";
 import proxyquire from "proxyquire";
-import * as webdriverio from "webdriverio";
 import chalk from "chalk";
 import sinon, { type SinonStub, type SinonSpy } from "sinon";
+import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 
 import RuntimeConfig from "src/config/runtime-config";
-import clientBridge from "src/browser/client-bridge";
 
-import type ExistingBrowser from "src/browser/existing-browser";
+import type { ExistingBrowser as ExistingBrowserOriginal } from "src/browser/existing-browser";
 
 describe('"switchToRepl" command', () => {
     const sandbox = sinon.createSandbox();
 
-    let mkBrowser_: SinonStub;
-    let mkSessionStub_: SinonStub;
-
+    let ExistingBrowser: typeof ExistingBrowserOriginal;
     let logStub: SinonStub;
     let warnStub: SinonStub;
+    let webdriverioAttachStub: SinonStub;
+    let clientBridgeBuildStub;
 
-    const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
-        (webdriverio.attach as SinonStub).resolves(session);
+    const initBrowser_ = ({
+        browser = mkBrowser_(undefined, undefined, ExistingBrowser),
+        session = mkSessionStub_(),
+    } = {}): Promise<ExistingBrowserOriginal> => {
+        (webdriverioAttachStub as SinonStub).resolves(session);
 
-        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: {} });
+        return browser.init(
+            { sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: { capabilities: {} } },
+            {} as any,
+        );
     };
 
     const mkReplServer_ = (): REPLServer => {
@@ -46,25 +51,27 @@ describe('"switchToRepl" command', () => {
     };
 
     beforeEach(() => {
-        mkBrowser_ = sandbox.stub();
-        mkSessionStub_ = sandbox.stub();
-
         logStub = sandbox.stub();
         warnStub = sandbox.stub();
 
-        sandbox.stub(webdriverio, "attach");
-        sandbox.stub(clientBridge, "build").resolves();
+        webdriverioAttachStub = sandbox.stub();
+        clientBridgeBuildStub = sandbox.stub().resolves();
+
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            webdriverio: {
+                attach: webdriverioAttachStub,
+            },
+            "./client-bridge": {
+                build: clientBridgeBuildStub,
+            },
+            "../utils/logger": { warn: warnStub, log: logStub },
+            "./commands/switchToRepl": proxyquire("src/browser/commands/switchToRepl", {
+                "../../utils/logger": { warn: warnStub, log: logStub },
+            }),
+        }).ExistingBrowser;
+
         sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { enabled: false }, extend: sinon.stub() });
         sandbox.stub(process, "chdir");
-
-        ({ mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = proxyquire("../utils", {
-            "src/browser/existing-browser": proxyquire("src/browser/existing-browser", {
-                "../utils/logger": { warn: warnStub, log: logStub },
-                "./commands/switchToRepl": proxyquire("src/browser/commands/switchToRepl", {
-                    "../../utils/logger": { warn: warnStub, log: logStub },
-                }),
-            }),
-        }));
     });
 
     afterEach(() => sandbox.restore());

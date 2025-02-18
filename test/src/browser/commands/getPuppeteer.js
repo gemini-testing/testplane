@@ -1,22 +1,36 @@
 "use strict";
 
 const _ = require("lodash");
-const webdriverio = require("webdriverio");
-const clientBridge = require("src/browser/client-bridge");
 const { mkExistingBrowser_: mkBrowser_, mkSessionStub_ } = require("../utils");
+const proxyquire = require("proxyquire");
 
 describe('"getPuppeteer" command', () => {
     const sandbox = sinon.createSandbox();
+    let ExistingBrowser;
+    let webdriverioAttachStub;
+    let clientBridgeBuildStub;
 
     beforeEach(() => {
-        sandbox.stub(webdriverio, "attach");
-        sandbox.stub(clientBridge, "build").resolves();
+        webdriverioAttachStub = sandbox.stub();
+        clientBridgeBuildStub = sandbox.stub().resolves();
+
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            webdriverio: {
+                attach: webdriverioAttachStub,
+            },
+            "./client-bridge": {
+                build: clientBridgeBuildStub,
+            },
+        }).ExistingBrowser;
     });
 
     afterEach(() => sandbox.restore());
 
-    const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}) => {
-        webdriverio.attach.resolves(session);
+    const initBrowser_ = ({
+        browser = mkBrowser_(undefined, undefined, ExistingBrowser),
+        session = mkSessionStub_(),
+    } = {}) => {
+        webdriverioAttachStub.resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities });
     };
@@ -40,7 +54,7 @@ describe('"getPuppeteer" command', () => {
 
     it("should overwrite command", async () => {
         const session = mkSessionStub_();
-        const browser = mkBrowser_({ browserWSEndpoint: "ws://foo.bar/devtools" });
+        const browser = mkBrowser_({ browserWSEndpoint: "ws://foo.bar/devtools" }, undefined, ExistingBrowser);
 
         await initBrowser_({ browser, session });
 
@@ -76,7 +90,11 @@ describe('"getPuppeteer" command', () => {
                     return Promise.resolve();
                 });
 
-                const browser = mkBrowser_({ browserWSEndpoint: "ws://new.endpoint/devtools" });
+                const browser = mkBrowser_(
+                    { browserWSEndpoint: "ws://new.endpoint/devtools" },
+                    undefined,
+                    ExistingBrowser,
+                );
 
                 await initBrowser_({ browser, session });
                 await session.getPuppeteer();
@@ -105,7 +123,11 @@ describe('"getPuppeteer" command', () => {
                 const session = mkSessionStub_();
                 session.capabilities = capabilities;
                 session.sessionId = "100500";
-                const browser = mkBrowser_({ browserWSEndpoint: "ws://new.endpoint/devtools" });
+                const browser = mkBrowser_(
+                    { browserWSEndpoint: "ws://new.endpoint/devtools" },
+                    undefined,
+                    ExistingBrowser,
+                );
 
                 await initBrowser_({ browser, session });
                 await session.getPuppeteer();

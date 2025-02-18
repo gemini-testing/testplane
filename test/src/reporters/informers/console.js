@@ -1,13 +1,22 @@
-const logger = require("src/utils/logger");
-const ConsoleInformer = require("src/reporters/informers/console");
+const proxyquire = require("proxyquire");
 
 describe("reporter/informers/console", () => {
     const sandbox = sinon.createSandbox();
+    let ConsoleInformer;
+    let loggerLogStub, loggerWarnStub, loggerErrorStub;
 
     beforeEach(() => {
-        sandbox.stub(logger, "log");
-        sandbox.stub(logger, "warn");
-        sandbox.stub(logger, "error");
+        loggerLogStub = sandbox.stub();
+        loggerWarnStub = sandbox.stub();
+        loggerErrorStub = sandbox.stub();
+
+        ConsoleInformer = proxyquire("src/reporters/informers/console", {
+            "../../utils/logger": {
+                log: loggerLogStub,
+                warn: loggerWarnStub,
+                error: loggerErrorStub,
+            },
+        });
     });
 
     afterEach(() => sandbox.restore());
@@ -16,7 +25,7 @@ describe("reporter/informers/console", () => {
         it("should send log message to console", () => {
             ConsoleInformer.create().log("message");
 
-            assert.calledOnceWith(logger.log, "message");
+            assert.calledOnceWith(loggerLogStub, "message");
         });
     });
 
@@ -24,7 +33,7 @@ describe("reporter/informers/console", () => {
         it("should send warn message to console", () => {
             ConsoleInformer.create().warn("message");
 
-            assert.calledOnceWith(logger.warn, "message");
+            assert.calledOnceWith(loggerWarnStub, "message");
         });
     });
 
@@ -32,7 +41,7 @@ describe("reporter/informers/console", () => {
         it("should send error message to console", () => {
             ConsoleInformer.create().error("message");
 
-            assert.calledOnceWith(logger.error, "message");
+            assert.calledOnceWith(loggerErrorStub, "message");
         });
     });
 
@@ -40,13 +49,13 @@ describe("reporter/informers/console", () => {
         it("should do nothing if message is not passed", () => {
             ConsoleInformer.create().end();
 
-            assert.notCalled(logger.log);
+            assert.notCalled(loggerLogStub);
         });
 
         it("should send end message to console", () => {
             ConsoleInformer.create().end("message");
 
-            assert.calledOnceWith(logger.log, "message");
+            assert.calledOnceWith(loggerLogStub, "message");
         });
     });
 });

@@ -1,6 +1,6 @@
 import { ImageInfo, RefImageInfo } from "../../../../types";
 
-import Image from "../../../../image";
+import { Image } from "../../../../image";
 import { BaseStateError } from "./base-state-error";
 
 import type { LooksSameOptions, LooksSameResult } from "looks-same";

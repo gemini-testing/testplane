@@ -1,36 +1,49 @@
 "use strict";
 
 const crypto = require("crypto");
-const webdriverio = require("webdriverio");
 const proxyquire = require("proxyquire");
 const signalHandler = require("src/signal-handler");
 const history = require("src/browser/history");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const RuntimeConfig = require("src/config/runtime-config");
+const { mkNewBrowser_, mkSessionStub_, mkWdPool_ } = require("./utils");
 
 describe("NewBrowser", () => {
     const sandbox = sinon.createSandbox();
     let session;
-    let mkBrowser_, mkSessionStub_, mkWdPool_, installBrowserStub, warnStub;
+    let NewBrowser, webdriverioRemoteStub, runGroupStub, initCommandHistoryStub, installBrowserStub, warnStub;
+
+    const mkBrowser_ = (configOpts, opts) => {
+        return mkNewBrowser_(configOpts, opts, NewBrowser);
+    };
 
     beforeEach(() => {
+        session = mkSessionStub_();
         installBrowserStub = sandbox.stub().resolves("/browser/path");
         warnStub = sandbox.stub();
+        webdriverioRemoteStub = sandbox.stub().resolves(session);
+        runGroupStub = sandbox.stub().callsFake(history.runGroup);
+        initCommandHistoryStub = sandbox.stub();
 
-        ({
-            mkNewBrowser_: mkBrowser_,
-            mkSessionStub_,
-            mkWdPool_,
-        } = proxyquire("./utils", {
-            "src/browser/new-browser": proxyquire("src/browser/new-browser", {
-                "../browser-installer": { installBrowser: installBrowserStub },
-                "../utils/logger": { warn: warnStub },
+        NewBrowser = proxyquire("src/browser/new-browser", {
+            webdriverio: {
+                remote: webdriverioRemoteStub,
+            },
+            "../browser-installer": { installBrowser: installBrowserStub },
+            "../utils/logger": { warn: warnStub },
+            "./history": {
+                runGroup: runGroupStub,
+            },
+            "./browser": proxyquire("src/browser/browser", {
+                "./history": {
+                    runGroup: runGroupStub,
+                    initCommandHistory: initCommandHistoryStub,
+                },
             }),
-        }));
+        }).NewBrowser;
 
-        session = mkSessionStub_();
-        sandbox.stub(webdriverio, "remote").resolves(session);
+        // sandbox.stub(webdriverio, "remote").resolves(session);
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined, local: undefined });
     });
@@ -41,7 +54,7 @@ describe("NewBrowser", () => {
         it("should create session with properties from browser config", async () => {
             await mkBrowser_().init();
 
-            assert.calledOnceWith(webdriverio.remote, {
+            assert.calledOnceWith(webdriverioRemoteStub, {
                 protocol: "http",
                 hostname: "test_host",
                 port: 4444,
@@ -63,13 +76,13 @@ describe("NewBrowser", () => {
 
             await mkBrowser_().init();
 
-            assert.calledWithMatch(webdriverio.remote, { automationProtocol: DEVTOOLS_PROTOCOL });
+            assert.calledWithMatch(webdriverioRemoteStub, { automationProtocol: DEVTOOLS_PROTOCOL });
         });
 
         it("should pass default port if it is not specified in grid url", async () => {
             await mkBrowser_({ gridUrl: "http://some-host/some-path" }).init();
 
-            assert.calledWithMatch(webdriverio.remote, { port: 4444 });
+            assert.calledWithMatch(webdriverioRemoteStub, { port: 4444 });
         });
 
         describe("headless setting", () => {
@@ -80,7 +93,7 @@ describe("NewBrowser", () => {
                         desiredCapabilities: { browserName: "chrome" },
                     }).init();
 
-                    assert.calledWithMatch(webdriverio.remote, {
+                    assert.calledWithMatch(webdriverioRemoteStub, {
                         capabilities: {
                             browserName: "chrome",
                             "goog:chromeOptions": { args: ["headless", "disable-gpu"] },
@@ -94,7 +107,7 @@ describe("NewBrowser", () => {
                         desiredCapabilities: { browserName: "chrome" },
                     }).init();
 
-                    assert.calledWithMatch(webdriverio.remote, {
+                    assert.calledWithMatch(webdriverioRemoteStub, {
                         capabilities: {
                             browserName: "chrome",
                             "goog:chromeOptions": { args: ["headless=new", "disable-gpu"] },
@@ -109,7 +122,7 @@ describe("NewBrowser", () => {
                     desiredCapabilities: { browserName: "firefox" },
                 }).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: {
                         browserName: "firefox",
                         "moz:firefoxOptions": { args: ["-headless"] },
@@ -123,7 +136,7 @@ describe("NewBrowser", () => {
                     desiredCapabilities: { browserName: "msedge" },
                 }).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: { browserName: "msedge", "ms:edgeOptions": { args: ["--headless"] } },
                 });
             });
@@ -137,7 +150,7 @@ describe("NewBrowser", () => {
                     },
                 }).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: {
                         browserName: "chrome",
                         "goog:chromeOptions": { args: ["my", "custom", "flags", "headless", "disable-gpu"] },
@@ -162,7 +175,7 @@ describe("NewBrowser", () => {
                     { id: "browser", version: "2.0" },
                 ).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: { browserName: "browser", browserVersion: "2.0" },
                 });
             });
@@ -170,7 +183,7 @@ describe("NewBrowser", () => {
             it("w3c protocol is used", async () => {
                 await mkBrowser_({ sessionEnvFlags: { isW3C: true } }, { id: "browser", version: "2.0" }).init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: { browserName: "browser", browserVersion: "2.0" },
                 });
             });
@@ -202,19 +215,19 @@ describe("NewBrowser", () => {
         it("should use session request timeout for create a session", async () => {
             await mkBrowser_({ sessionRequestTimeout: 100500, httpTimeout: 500100 }).init();
 
-            assert.calledWithMatch(webdriverio.remote, { connectionRetryTimeout: 100500 });
+            assert.calledWithMatch(webdriverioRemoteStub, { connectionRetryTimeout: 100500 });
         });
 
         it("should use http timeout for create a session if session request timeout not set", async () => {
             await mkBrowser_({ sessionRequestTimeout: null, httpTimeout: 500100 }).init();
 
-            assert.calledWithMatch(webdriverio.remote, { connectionRetryTimeout: 500100 });
+            assert.calledWithMatch(webdriverioRemoteStub, { connectionRetryTimeout: 500100 });
         });
 
         it("should reset options to default after create a session", async () => {
             await mkBrowser_().init();
 
-            assert.callOrder(webdriverio.remote, session.extendOptions);
+            assert.callOrder(webdriverioRemoteStub, session.extendOptions);
         });
 
         it("should reset http timeout to default after create a session", async () => {
@@ -241,7 +254,7 @@ describe("NewBrowser", () => {
 
                 await mkBrowser_({ transformRequest: transformRequestStub }).init();
 
-                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                const { transformRequest } = webdriverioRemoteStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.calledOnceWith(transformRequestStub, request);
@@ -256,7 +269,7 @@ describe("NewBrowser", () => {
 
                 await mkBrowser_({ transformRequest: transformRequestStub }).init();
 
-                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                const { transformRequest } = webdriverioRemoteStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.equal(request.headers["X-Request-ID"], "100500");
@@ -269,7 +282,7 @@ describe("NewBrowser", () => {
 
                 await mkBrowser_({}, { state }).init();
 
-                const { transformRequest } = webdriverio.remote.lastCall.args[0];
+                const { transformRequest } = webdriverioRemoteStub.lastCall.args[0];
                 transformRequest(request);
 
                 assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
@@ -283,7 +296,7 @@ describe("NewBrowser", () => {
 
                 await mkBrowser_({ transformResponse: transformResponseStub }).init();
 
-                const { transformResponse } = webdriverio.remote.lastCall.args[0];
+                const { transformResponse } = webdriverioRemoteStub.lastCall.args[0];
                 transformResponse(response);
 
                 assert.calledOnceWith(transformResponseStub, response);
@@ -291,40 +304,35 @@ describe("NewBrowser", () => {
         });
 
         describe("commands-history", () => {
-            beforeEach(() => {
-                sandbox.spy(history, "initCommandHistory");
-            });
-
             it("should NOT init commands-history if it is off", async () => {
                 await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.NONE }).init();
 
-                assert.notCalled(history.initCommandHistory);
+                assert.notCalled(initCommandHistoryStub);
             });
 
             it("should save history of executed commands if it is enabled", async () => {
                 await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL }).init();
 
-                assert.calledOnceWith(history.initCommandHistory, session);
+                assert.calledOnceWith(initCommandHistoryStub, session);
             });
 
             it("should save history of executed commands if it is enabled on fails", async () => {
                 await mkBrowser_({ saveHistoryMode: "onlyFailed" }).init();
 
-                assert.calledOnceWith(history.initCommandHistory, session);
+                assert.calledOnceWith(initCommandHistoryStub, session);
             });
 
             it("should init commands-history before any commands have added", async () => {
                 await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL }).init();
 
-                assert.callOrder(history.initCommandHistory, session.addCommand);
+                assert.callOrder(initCommandHistoryStub, session.addCommand);
             });
 
             it('should log "init" to history if "saveHistoryMode" and "pageLoadTimeout" are set', async () => {
                 const browser = mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL, pageLoadTimeout: 500100 });
-                sandbox.stub(history, "runGroup");
                 await browser.init();
 
-                assert.calledOnceWith(history.runGroup, sinon.match.any, "testplane: init browser", sinon.match.func);
+                assert.calledOnceWith(runGroupStub, sinon.match.any, "testplane: init browser", sinon.match.func);
             });
         });
 
@@ -385,7 +393,7 @@ describe("NewBrowser", () => {
 
                 await browser.init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     protocol: "http",
                     hostname: "localhost",
                     port: 12345,
@@ -418,7 +426,7 @@ describe("NewBrowser", () => {
 
                 await browser.init();
 
-                assert.calledWithMatch(webdriverio.remote, {
+                assert.calledWithMatch(webdriverioRemoteStub, {
                     protocol: "http",
                     hostname: "localhost",
                     port: 12345,
@@ -454,7 +462,7 @@ describe("NewBrowser", () => {
 
                 await browser.init();
 
-                assert.deepEqual(webdriverio.remote.lastCall.args[0].capabilities, {
+                assert.deepEqual(webdriverioRemoteStub.lastCall.args[0].capabilities, {
                     browserName: "chrome",
                     browserVersion: "115.0",
                     "goog:chromeOptions": {

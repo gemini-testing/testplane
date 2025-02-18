@@ -1,7 +1,7 @@
 import _ from "lodash";
 import { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
-import logger from "../../../utils/logger";
+import * as logger from "../../../utils/logger";
 
 const { LIST_BROWSERS: commandName } = CliCommands;
 

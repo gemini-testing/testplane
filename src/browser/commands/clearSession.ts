@@ -1,5 +1,5 @@
 import type { Browser } from "../types";
-import logger from "../../utils/logger";
+import * as logger from "../../utils/logger";
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;

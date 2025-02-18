@@ -1,6 +1,4 @@
-"use strict";
-
-module.exports = [
+export const customCommandFileNames = [
     "assert-view",
     "clearSession",
     "getConfig",

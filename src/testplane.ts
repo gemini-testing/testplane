@@ -13,7 +13,7 @@ import { TestReader } from "./test-reader";
 import { TestCollection } from "./test-collection";
 import { validateUnknownBrowsers } from "./validators";
 import { initReporters } from "./reporters";
-import logger from "./utils/logger";
+import * as logger from "./utils/logger";
 import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";

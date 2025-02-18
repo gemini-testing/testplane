@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import type { Matches, Mock } from "webdriverio";
-import logger from "./logger";
+import * as logger from "./logger";
 
 export interface PageLoaderOpts {
     selectors: string[];

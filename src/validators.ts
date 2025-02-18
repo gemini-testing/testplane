@@ -1,7 +1,7 @@
 import { format } from "util";
 import chalk from "chalk";
 import _ from "lodash";
-import logger from "./utils/logger";
+import * as logger from "./utils/logger";
 
 export const validateUnknownBrowsers = (browsers: string[], configBrowsers: string[]): void => {
     const unknownBrowsers = getUnknownBrowsers(browsers, configBrowsers);

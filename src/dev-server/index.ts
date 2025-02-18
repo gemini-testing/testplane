@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import debug from "debug";
 import { Config } from "../config";
 import { findCwd, pipeLogsWithPrefix, waitDevServerReady } from "./utils";
-import logger = require("../utils/logger");
+import * as logger from "../utils/logger";
 import type { Testplane } from "../testplane";
 
 export type DevServerOpts = { testplane: Testplane; devServerConfig: Config["devServer"]; configPath: string };

@@ -1,30 +1,52 @@
-"use strict";
+import _ from "lodash";
+import { Image } from "../../image";
+import * as utils from "./utils";
 
-const Image = require("../../image");
-const _ = require("lodash");
-const utils = require("./utils");
+export interface ImageArea {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+}
 
-module.exports = class Camera {
-    static create(screenshotMode, takeScreenshot) {
+export type ScreenshotMode = "fullpage" | "viewport" | "auto";
+
+export interface PageMeta {
+    viewport: ImageArea;
+    documentHeight: number;
+    documentWidth: number;
+}
+
+interface Calibration {
+    left: number;
+    top: number;
+}
+
+export class Camera {
+    private _screenshotMode: ScreenshotMode;
+    private _takeScreenshot: () => Promise<string>;
+    private _calibration: Calibration | null;
+
+    static create(screenshotMode: ScreenshotMode, takeScreenshot: () => Promise<string>): Camera {
         return new this(screenshotMode, takeScreenshot);
     }
 
-    constructor(screenshotMode, takeScreenshot) {
+    constructor(screenshotMode: ScreenshotMode, takeScreenshot: () => Promise<string>) {
         this._screenshotMode = screenshotMode;
         this._takeScreenshot = takeScreenshot;
         this._calibration = null;
     }
 
-    calibrate(calibration) {
+    calibrate(calibration: Calibration): void {
         this._calibration = calibration;
     }
 
-    async captureViewportImage(page) {
+    async captureViewportImage(page?: PageMeta): Promise<Image> {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
         const { width, height } = await image.getSize();
-        const imageArea = { left: 0, top: 0, width, height };
+        const imageArea: ImageArea = { left: 0, top: 0, width, height };
 
         const calibratedArea = this._calibrateArea(imageArea);
         const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, page);
@@ -36,7 +58,7 @@ module.exports = class Camera {
         return image;
     }
 
-    _calibrateArea(imageArea) {
+    private _calibrateArea(imageArea: ImageArea): ImageArea {
         if (!this._calibration) {
             return imageArea;
         }
@@ -46,7 +68,7 @@ module.exports = class Camera {
         return { left, top, width: imageArea.width - left, height: imageArea.height - top };
     }
 
-    _cropAreaToViewport(imageArea, page) {
+    private _cropAreaToViewport(imageArea: ImageArea, page?: PageMeta): ImageArea {
         if (!page) {
             return imageArea;
         }
@@ -65,4 +87,4 @@ module.exports = class Camera {
             height: Math.min(imageArea.height - cropArea.top, cropArea.height),
         };
     }
-};
+}
