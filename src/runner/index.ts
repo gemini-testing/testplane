@@ -62,7 +62,11 @@ export class MainRunner extends Runner {
 
         this.workersRegistry = WorkersRegistry.create(this.config);
         this.workers = null;
-        eventsUtils.passthroughEvent(this.workersRegistry, this, [MasterEvents.NEW_WORKER_PROCESS, MasterEvents.ERROR]);
+        eventsUtils.passthroughEvent(this.workersRegistry, this, [
+            MasterEvents.NEW_WORKER_PROCESS,
+            MasterEvents.ERROR,
+            MasterEvents.DOM_SNAPSHOTS,
+        ]);
 
         temp.init(this.config.system.tempDir);
         RuntimeConfig.getInstance().extend({ tempOpts: temp.serialize() });

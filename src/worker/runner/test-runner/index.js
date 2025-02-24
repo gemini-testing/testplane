@@ -18,7 +18,7 @@ module.exports = class TestRunner extends Runner {
         return new this(...args);
     }
 
-    constructor({ test, file, config, browserAgent }) {
+    constructor({ test, file, config, browserAgent, attempt }) {
         super();
 
         this._test = test.clone();
@@ -27,6 +27,7 @@ module.exports = class TestRunner extends Runner {
         this._file = file;
         this._config = config;
         this._browserAgent = browserAgent;
+        this._attempt = attempt;
     }
 
     async run({ sessionId, sessionCaps, sessionOpts, state }) {
@@ -117,6 +118,7 @@ module.exports = class TestRunner extends Runner {
             testplaneCtx,
             hermioneCtx: testplaneCtx,
             screenshooter: this._screenshooter,
+            attempt: this._attempt,
         });
         const hookRunner = HookRunner.create(test, executionThread);
         const { callstackHistory } = this._browser;
@@ -128,13 +130,21 @@ module.exports = class TestRunner extends Runner {
             const shouldRunBeforeEach = preparePageActions.length || hookRunner.hasBeforeEachHooks();
 
             if (shouldRunBeforeEach) {
-                await history.runGroup(callstackHistory, "beforeEach", async () => {
-                    for (const action of preparePageActions) {
-                        await action();
-                    }
+                await history.runGroup(
+                    {
+                        callstack: callstackHistory,
+                        config: this._config,
+                        session: this._browser.publicAPI,
+                    },
+                    "beforeEach",
+                    async () => {
+                        for (const action of preparePageActions) {
+                            await action();
+                        }
 
-                    await hookRunner.runBeforeEachHooks();
-                });
+                        await hookRunner.runBeforeEachHooks();
+                    },
+                );
             }
 
             await executionThread.run(test);
@@ -150,7 +160,15 @@ module.exports = class TestRunner extends Runner {
             const needsAfterEach = hookRunner.hasAfterEachHooks();
 
             if (needsAfterEach) {
-                await history.runGroup(callstackHistory, "afterEach", () => hookRunner.runAfterEachHooks());
+                await history.runGroup(
+                    {
+                        callstack: callstackHistory,
+                        config: this._config,
+                        session: this._browser.publicAPI,
+                    },
+                    "afterEach",
+                    () => hookRunner.runAfterEachHooks(),
+                );
             }
         } catch (e) {
             error = error || e;
@@ -166,7 +184,15 @@ module.exports = class TestRunner extends Runner {
 
         const fn = async () => {
             // TODO: make it on browser.init when "actions" method will be implemented in all webdrivers
-            await history.runGroup(browser.callstackHistory, "resetCursor", () => this._resetCursorPosition(browser));
+            await history.runGroup(
+                {
+                    callstack: browser.callstackHistory,
+                    config: this._config,
+                    session: this._browser.publicAPI,
+                },
+                "resetCursor",
+                () => this._resetCursorPosition(browser),
+            );
         };
 
         return [fn];
