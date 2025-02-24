@@ -8,6 +8,7 @@ const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
 const { isSupportIsolation } = require("../utils/browser");
+const { RecordMode } = require("./types");
 
 const is = utils.is;
 
@@ -369,5 +370,37 @@ function buildBrowserOptions(defaultFactory, extra) {
         }),
 
         passive: options.boolean("passive"),
+
+        record: option({
+            defaultValue: defaultFactory("record"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => {
+                const validateMode = mode => {
+                    if (!Object.values(RecordMode).includes(mode)) {
+                        throw new Error(
+                            `Record mode must be one of the following strings: ${Object.values(RecordMode).join(
+                                ", ",
+                            )}. Got: ${JSON.stringify(mode)}.`,
+                        );
+                    }
+                };
+
+                if (typeof value === "string") {
+                    validateMode(value);
+                    return true;
+                }
+
+                validateMode(value.mode);
+                return true;
+            },
+            map: value => {
+                if (typeof value === "string") {
+                    return { mode: value };
+                }
+
+                return value;
+            },
+        }),
     });
 }

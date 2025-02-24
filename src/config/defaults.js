@@ -1,6 +1,7 @@
 "use strict";
 
 const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, NODEJS_TEST_RUN_ENV } = require("../constants/config");
+const { RecordMode } = require("./types");
 
 module.exports = {
     baseUrl: "http://localhost",
@@ -116,6 +117,7 @@ module.exports = {
         },
     },
     passive: false,
+    record: RecordMode.Off,
 };
 
 module.exports.configPaths = [

@@ -16,7 +16,7 @@ module.exports = class RegularTestRunner extends Runner {
         this._browser = null;
     }
 
-    async run(workers) {
+    async run(workers, retriesPerformed) {
         let freeBrowserPromise;
 
         try {
@@ -32,7 +32,7 @@ module.exports = class RegularTestRunner extends Runner {
 
             this._test.startTime = Date.now();
 
-            const results = await this._runTest(workers);
+            const results = await this._runTest(workers, retriesPerformed);
             this._applyTestResults(results);
 
             this._emit(MasterEvents.TEST_PASS);
@@ -53,7 +53,7 @@ module.exports = class RegularTestRunner extends Runner {
         this.emit(event, this._test);
     }
 
-    async _runTest(workers) {
+    async _runTest(workers, attempt) {
         if (!this._browser) {
             throw this._test.err;
         }
@@ -66,6 +66,7 @@ module.exports = class RegularTestRunner extends Runner {
             sessionOpts: this._browser.publicAPI.options,
             file: this._test.file,
             state: this._browser.state,
+            attempt,
         });
     }
 

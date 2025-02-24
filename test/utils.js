@@ -35,6 +35,7 @@ function makeConfigStub(opts = {}) {
             input: "some-path",
             output: "some-other-path",
         },
+        record: { mode: "off" },
     });
 
     const config = {
@@ -74,6 +75,7 @@ function makeBrowserConfigStub(opts = {}, browserId) {
         system: opts.system,
         urlHttpTimeout: opts.urlHttpTimeout,
         httpTimeout: opts.httpTimeout,
+        record: { mode: "off" },
     };
 }
 

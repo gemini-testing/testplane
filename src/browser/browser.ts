@@ -43,7 +43,7 @@ export type BrowserState = {
     isBroken?: boolean;
 };
 
-export type CustomCommend = { name: string; elementScope: boolean };
+export type CustomCommand = { name: string; elementScope: boolean };
 
 export class Browser {
     protected _emitter: AsyncEmitter;
@@ -52,7 +52,7 @@ export class Browser {
     protected _session: WebdriverIO.Browser | null;
     protected _callstackHistory: Callstack | null;
     protected _state: BrowserState;
-    protected _customCommands: Set<CustomCommend>;
+    protected _customCommands: Set<CustomCommand>;
     protected _wdPool?: WebdriverPool;
     protected _wdProcess: WdProcess | null;
     id: string;
@@ -114,7 +114,7 @@ export class Browser {
 
     protected _addHistory(): void {
         if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
-            this._callstackHistory = history.initCommandHistory(this._session as WebdriverIO.Browser);
+            this._callstackHistory = history.initCommandHistory(this._session as WebdriverIO.Browser, this._config);
         }
     }
 
@@ -194,7 +194,7 @@ export class Browser {
         return this._callstackHistory!;
     }
 
-    get customCommands(): CustomCommend[] {
+    get customCommands(): CustomCommand[] {
         const allCustomCommands = Array.from(this._customCommands);
         return _.uniqWith(allCustomCommands, _.isEqual);
     }

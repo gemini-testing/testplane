@@ -1905,4 +1905,68 @@ describe("config browser-options", () => {
             assert.isTrue(config.browsers.b2.headless);
         });
     });
+
+    describe("record", () => {
+        it("should set record to off by default", () => {
+            const readConfig = {};
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.record, { mode: "off" });
+        });
+
+        it("should throw if record is not a valid string", () => {
+            const readConfig = { record: "something" };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(createConfig, /Record mode must be one of the following strings/);
+        });
+
+        it("should parse string into object", () => {
+            const readConfig = { record: "on-for-retries" };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.record, { mode: "on-for-retries" });
+        });
+
+        it("should throw if record.mode is invalid", () => {
+            const readConfig = { record: { mode: "something" } };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(createConfig, /Record mode must be one of the following strings/);
+        });
+
+        it("should preserve correct object", () => {
+            const readConfig = { record: { mode: "on-for-retries" } };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.record, { mode: "on-for-retries" });
+        });
+
+        it("should work correctly with browser overrides", () => {
+            const readConfig = {
+                record: "on-for-retries",
+                browsers: {
+                    b1: mkBrowser_(),
+                    b2: mkBrowser_({ record: { mode: "off" } }),
+                },
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.browsers.b1.record, { mode: "on-for-retries" });
+            assert.deepEqual(config.browsers.b2.record, { mode: "off" });
+        });
+    });
 });
