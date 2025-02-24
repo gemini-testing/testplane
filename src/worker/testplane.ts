@@ -13,6 +13,7 @@ export interface WorkerRunTestOpts {
     sessionCaps: WdioBrowser["capabilities"];
     sessionOpts: WdioBrowser["options"];
     state: Record<string, unknown>;
+    attempt: number;
 }
 
 export interface AssertViewResultsSuccess {

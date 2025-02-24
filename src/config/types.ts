@@ -249,6 +249,21 @@ type ReadinessProbeObj = {
 
 type ReadinessProbe = ReadinessProbeFn | ReadinessProbeObj;
 
+export enum RecordMode {
+    // Record and save all test runs
+    On = "on",
+    // Do not record any test runs
+    Off = "off",
+    // Record and save all retries
+    OnForRetries = "on-for-retries",
+    // Record all test runs, but save only last failed run
+    SaveLastFailedRun = "save-last-failed-run",
+}
+
+export interface RecordConfig {
+    mode: RecordMode;
+}
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
@@ -333,6 +348,8 @@ export interface CommonConfig {
         logs: boolean;
         readinessProbe: ReadinessProbe;
     };
+
+    record: RecordConfig;
 }
 
 export interface SetsConfig {
@@ -347,8 +364,9 @@ export interface SetsConfigParsed {
     browsers: Array<string>;
 }
 
-type PartialCommonConfig = Partial<Omit<CommonConfig, "system">> & {
+type PartialCommonConfig = Partial<Omit<CommonConfig, "system" | "record">> & {
     system?: Partial<SystemConfig>;
+    record?: RecordMode | RecordConfig;
 };
 
 // Only browsers desiredCapabilities are required in input config

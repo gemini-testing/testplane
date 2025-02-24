@@ -202,9 +202,17 @@ export class TestRunner extends NodejsEnvTestRunner {
                     expectMatchers: Object.getOwnPropertyNames(expectMatchers),
                 });
 
-                await history.runGroup(browser.callstackHistory, "openVite", async () => {
-                    await this._openViteUrl(browser);
-                });
+                await history.runGroup(
+                    {
+                        callstack: browser.callstackHistory,
+                        session: this._browser.publicAPI,
+                        config: this._config,
+                    },
+                    "openVite",
+                    async () => {
+                        await this._openViteUrl(browser);
+                    },
+                );
             },
             ...super._getPreparePageActions(browser, history),
         ];

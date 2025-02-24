@@ -129,6 +129,10 @@ module.exports = class WorkersRegistry extends EventEmitter {
                         this.emit(MasterEvents.ERROR, data.error);
                     }
                     break;
+                case MasterEvents.DOM_SNAPSHOTS: {
+                    this.emit(MasterEvents.DOM_SNAPSHOTS, data.context, data.data);
+                    break;
+                }
                 default:
                     if (data.event) {
                         this._registeredWorkers.forEach(workers => workers.emit(data.event, _.omit(data, "event")));
