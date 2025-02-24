@@ -43,8 +43,6 @@ describe("NewBrowser", () => {
             }),
         }).NewBrowser;
 
-        // sandbox.stub(webdriverio, "remote").resolves(session);
-
         sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined, local: undefined });
     });
 

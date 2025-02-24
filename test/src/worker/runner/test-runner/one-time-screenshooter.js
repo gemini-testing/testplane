@@ -63,7 +63,6 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
 
         sandbox.stub(ScreenShooter.prototype, "capture").resolves(stubImage_());
         sandbox.stub(Image, "fromBase64").returns(stubImage_());
-        // sandbox.stub(logger, "warn");
     });
 
     afterEach(() => sandbox.restore());

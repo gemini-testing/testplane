@@ -1,9 +1,7 @@
 "use strict";
 
-// const {Camera} = require("src/browser/camera");
 const { Image } = require("src/image");
 const proxyquire = require("proxyquire");
-// const utils = require("src/browser/camera/utils");
 
 describe("browser/camera", () => {
     const sandbox = sinon.createSandbox();

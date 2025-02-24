@@ -413,10 +413,6 @@ describe("worker/runner/test-runner", () => {
         });
 
         describe("beforeEach hooks", () => {
-            // beforeEach(() => {
-            //     sandbox.spy(history, "runGroup");
-            // });
-
             it("should be called before test hook", async () => {
                 await run_();
 
@@ -480,10 +476,6 @@ describe("worker/runner/test-runner", () => {
         });
 
         describe("afterEach hooks", () => {
-            // beforeEach(() => {
-            //     sandbox.spy(history, "runGroup");
-            // });
-
             it("should be called if beforeEach hook failed", async () => {
                 HookRunner.prototype.hasBeforeEachHooks.returns(true);
                 HookRunner.prototype.hasAfterEachHooks.returns(true);

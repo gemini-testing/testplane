@@ -4,7 +4,6 @@ const { EventEmitter } = require("events");
 const _ = require("lodash");
 const fs = require("fs-extra");
 const webdriverio = require("webdriverio");
-// const clientBridge = require("src/browser/client-bridge");
 const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const temp = require("src/temp");
