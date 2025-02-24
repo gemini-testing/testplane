@@ -4,7 +4,7 @@ import path from "path";
 import { getOsPackagesDir, type DownloadProgressCallback, browserInstallerDebug } from "../utils";
 import { installUbuntuPackages } from "./apt";
 import { getUbuntuMilestone } from "./utils";
-import logger from "../../utils/logger";
+import * as logger from "../../utils/logger";
 import { LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME, LINUX_UBUNTU_RELEASE_ID } from "../constants";
 import registry from "../registry";
 

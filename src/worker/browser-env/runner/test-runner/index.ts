@@ -14,7 +14,7 @@ import {
     BRO_INIT_INTERVAL_ON_RECONNECT,
 } from "./constants";
 import { VITE_RUN_UUID_ROUTE } from "../../../../runner/browser-env/vite/constants";
-import logger from "../../../../utils/logger";
+import * as logger from "../../../../utils/logger";
 import RuntimeConfig from "../../../../config/runtime-config";
 import { AbortOnReconnectError } from "../../../../errors/abort-on-reconnect-error";
 

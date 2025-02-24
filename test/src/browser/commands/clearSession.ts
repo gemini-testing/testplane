@@ -1,25 +1,43 @@
 import * as webdriverio from "webdriverio";
 import sinon, { SinonStub } from "sinon";
 
-import clientBridge from "src/browser/client-bridge";
-import logger from "src/utils/logger";
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 
-import type ExistingBrowser from "src/browser/existing-browser";
+import type { ExistingBrowser as ExistingBrowserOriginal } from "src/browser/existing-browser";
+import { Calibrator } from "src/browser/calibrator";
+import proxyquire from "proxyquire";
 
 describe('"clearSession" command', () => {
     const sandbox = sinon.createSandbox();
+    let ExistingBrowser: typeof ExistingBrowserOriginal;
+    let loggerWarnStub: SinonStub;
 
-    const initBrowser_ = ({ browser = mkBrowser_(), session = mkSessionStub_() } = {}): Promise<ExistingBrowser> => {
+    const initBrowser_ = ({
+        browser = mkBrowser_(undefined, undefined, ExistingBrowser),
+        session = mkSessionStub_(),
+    } = {}): Promise<ExistingBrowserOriginal> => {
         (webdriverio.attach as SinonStub).resolves(session);
 
-        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities, sessionOpts: {} });
+        return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities }, {} as Calibrator);
     };
 
     beforeEach(() => {
+        loggerWarnStub = sandbox.stub();
+        ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            "./client-bridge": {
+                build: sandbox.stub().resolves(),
+            },
+            "../utils/logger": {
+                warn: loggerWarnStub,
+            },
+            "./commands/clearSession": proxyquire("src/browser/commands/clearSession", {
+                "../../utils/logger": {
+                    warn: loggerWarnStub,
+                },
+            }),
+        }).ExistingBrowser;
+
         sandbox.stub(webdriverio, "attach");
-        sandbox.stub(clientBridge, "build").resolves();
-        sandbox.stub(logger, "warn");
 
         global.window = {
             localStorage: { clear: sinon.stub() } as unknown as Storage,
@@ -73,7 +91,7 @@ describe('"clearSession" command', () => {
                 await initBrowser_({ session });
 
                 await assert.isFulfilled(session.clearSession());
-                assert.calledOnceWith(logger.warn, `Couldn't clear ${storageName}: ${err.message}`);
+                assert.calledOnceWith(loggerWarnStub, `Couldn't clear ${storageName}: ${err.message}`);
             });
 
             it("should throw if clear storage fails with not handled error", async () => {

@@ -2,7 +2,6 @@
 
 const _ = require("lodash");
 const Promise = require("bluebird");
-const TestRunner = require("src/worker/runner/test-runner");
 const HookRunner = require("src/worker/runner/test-runner/hook-runner");
 const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
@@ -13,9 +12,12 @@ const { Suite, Test } = require("src/test-reader/test-object");
 const history = require("src/browser/history");
 const { SAVE_HISTORY_MODE } = require("src/constants/config");
 const { makeConfigStub } = require("../../../../utils");
+const proxyquire = require("proxyquire");
 
 describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
+    let historyRunGroupStub;
+    let TestRunner;
 
     const mkTest_ = (opts = {}) => {
         opts.fn = opts.fn || sinon.spy();
@@ -82,6 +84,13 @@ describe("worker/runner/test-runner", () => {
     };
 
     beforeEach(() => {
+        historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
+        TestRunner = proxyquire("src/worker/runner/test-runner", {
+            "../../../browser/history": {
+                runGroup: historyRunGroupStub,
+            },
+        });
+
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(mkBrowser_());
         sandbox.stub(BrowserAgent.prototype, "freeBrowser");
 
@@ -404,10 +413,6 @@ describe("worker/runner/test-runner", () => {
         });
 
         describe("beforeEach hooks", () => {
-            beforeEach(() => {
-                sandbox.spy(history, "runGroup");
-            });
-
             it("should be called before test hook", async () => {
                 await run_();
 
@@ -446,7 +451,7 @@ describe("worker/runner/test-runner", () => {
 
                 await run_();
 
-                assert.calledWith(history.runGroup, sinon.match.any, "resetCursor", sinon.match.func);
+                assert.calledWith(historyRunGroupStub, sinon.match.any, "resetCursor", sinon.match.func);
             });
 
             it('should log "beforeEach" in history if beforeEach hooks exist', async () => {
@@ -456,7 +461,7 @@ describe("worker/runner/test-runner", () => {
 
                 await run_();
 
-                assert.calledWith(history.runGroup, sinon.match.any, "beforeEach", sinon.match.func);
+                assert.calledWith(historyRunGroupStub, sinon.match.any, "beforeEach", sinon.match.func);
             });
 
             it('should not log "beforeEach" in history if beforeEach hooks do not exist', async () => {
@@ -466,15 +471,11 @@ describe("worker/runner/test-runner", () => {
 
                 await run_();
 
-                assert.neverCalledWith(history.runGroup, sinon.match.any, "beforeEach", sinon.match.func);
+                assert.neverCalledWith(historyRunGroupStub, sinon.match.any, "beforeEach", sinon.match.func);
             });
         });
 
         describe("afterEach hooks", () => {
-            beforeEach(() => {
-                sandbox.spy(history, "runGroup");
-            });
-
             it("should be called if beforeEach hook failed", async () => {
                 HookRunner.prototype.hasBeforeEachHooks.returns(true);
                 HookRunner.prototype.hasAfterEachHooks.returns(true);
@@ -519,7 +520,7 @@ describe("worker/runner/test-runner", () => {
 
                 await run_();
 
-                assert.calledWith(history.runGroup, sinon.match.any, "afterEach", sinon.match.func);
+                assert.calledWith(historyRunGroupStub, sinon.match.any, "afterEach", sinon.match.func);
             });
 
             it('should not log "afterEach" in history if afterEach hooks do not exist', async () => {
@@ -529,7 +530,7 @@ describe("worker/runner/test-runner", () => {
 
                 await run_();
 
-                assert.neverCalledWith(history.runGroup, sinon.match.any, "afterEach", sinon.match.func);
+                assert.neverCalledWith(historyRunGroupStub, sinon.match.any, "afterEach", sinon.match.func);
             });
         });
 

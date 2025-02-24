@@ -1,7 +1,7 @@
 "use strict";
 
-const Browser = require("../../browser/existing-browser");
-const Calibrator = require("../../browser/calibrator");
+const { ExistingBrowser } = require("../../browser/existing-browser");
+const { Calibrator } = require("../../browser/calibrator");
 const { WorkerEvents } = require("../../events");
 const ipc = require("../../utils/ipc");
 
@@ -17,7 +17,7 @@ module.exports = class BrowserPool {
     }
 
     async getBrowser({ browserId, browserVersion, sessionId, sessionCaps, sessionOpts, state }) {
-        const browser = Browser.create(this._config, {
+        const browser = ExistingBrowser.create(this._config, {
             id: browserId,
             version: browserVersion,
             state,

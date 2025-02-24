@@ -5,7 +5,7 @@ import type { BrowserConfig } from "./../config/browser-config";
 import type { ExecutionThreadCtx, ExecutionThreadToolCtx } from "../types";
 import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
-import Callstack from "./history/callstack";
+import type { Callstack } from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
 
 export const BrowserName = {

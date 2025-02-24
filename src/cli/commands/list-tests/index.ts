@@ -2,10 +2,11 @@ import path from "node:path";
 import fs from "fs-extra";
 
 import { Testplane } from "../../../testplane";
-import { Formatters, validateFormatter } from "../../../test-collection";
+import { Formatters } from "../../../test-collection/constants";
+import { validateFormatter } from "../../../test-collection";
 import { CliCommands } from "../../constants";
 import { withCommonCliOptions, collectCliValues, handleRequires, type CommonCmdOpts } from "../../../utils/cli";
-import logger from "../../../utils/logger";
+import * as logger from "../../../utils/logger";
 
 import type { ValueOf } from "../../../types/helpers";
 

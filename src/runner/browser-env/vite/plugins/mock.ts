@@ -4,7 +4,7 @@ import createDebug from "debug";
 import { parse, print, visit, types } from "recast";
 
 import { ManualMock } from "../manual-mock";
-import logger from "../../../../utils/logger";
+import * as logger from "../../../../utils/logger";
 import { MOCK_MODULE_NAME } from "../constants";
 import { getTestInfoFromViteRequest, getPathWithoutExtName } from "../utils";
 

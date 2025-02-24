@@ -25,7 +25,7 @@ export const runWithStacktraceHooks = ({
         before: () => stackFrames.enter(key, frames),
         fn,
         after: () => stackFrames.leave(key),
-        error: (err: Error) => applyStackTraceIfBetter(err, frames),
+        error: err => applyStackTraceIfBetter(err, frames),
     });
 };
 

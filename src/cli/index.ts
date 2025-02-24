@@ -5,7 +5,7 @@ import defaults from "../config/defaults";
 import { configOverriding } from "./info";
 import { Testplane } from "../testplane";
 import pkg from "../../package.json";
-import logger from "../utils/logger";
+import * as logger from "../utils/logger";
 import { shouldIgnoreUnhandledRejection } from "../utils/errors";
 import { utilInspectSafe } from "../utils/secret-replacer";
 import { withCommonCliOptions, collectCliValues, handleRequires } from "../utils/cli";

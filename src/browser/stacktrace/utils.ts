@@ -1,7 +1,7 @@
 import _ from "lodash";
 import ErrorStackParser from "error-stack-parser";
 import type { SetRequired } from "type-fest";
-import logger from "../../utils/logger";
+import * as logger from "../../utils/logger";
 import { softFileURLToPath } from "../../utils/fs";
 import { STACK_FRAME_REG_EXP, WDIO_IGNORED_STACK_FUNCTIONS, WDIO_STACK_TRACE_LIMIT } from "./constants";
 
@@ -131,8 +131,8 @@ const applyStackTrace = (error: Error, stack: RawStackFrames): Error => {
     return error;
 };
 
-export const applyStackTraceIfBetter = (error: Error, stack: RawStackFrames): Error => {
-    if (!error || !error.message) {
+export const applyStackTraceIfBetter = <T>(error: T, stack: RawStackFrames): T => {
+    if (!error || !(error instanceof Error) || !error.message) {
         return error;
     }
 

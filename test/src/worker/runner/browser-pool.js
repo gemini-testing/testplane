@@ -2,11 +2,10 @@
 
 const EventEmitter = require("events").EventEmitter;
 const _ = require("lodash");
-const Browser = require("src/browser/existing-browser");
+const { ExistingBrowser } = require("src/browser/existing-browser");
 const BrowserPool = require("src/worker/runner/browser-pool");
-const Calibrator = require("src/browser/calibrator");
+const { Calibrator } = require("src/browser/calibrator");
 const { WorkerEvents: RunnerEvents } = require("src/events");
-const logger = require("src/utils/logger");
 const ipc = require("src/utils/ipc");
 
 describe("worker/browser-pool", () => {
@@ -40,8 +39,7 @@ describe("worker/browser-pool", () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(logger, "warn");
-        sandbox.stub(Browser, "create");
+        sandbox.stub(ExistingBrowser, "create");
         sandbox.stub(ipc, "emit");
     });
 
@@ -52,11 +50,11 @@ describe("worker/browser-pool", () => {
             const config = stubConfig();
             const emitter = new EventEmitter();
             const browserPool = createPool({ config, emitter });
-            Browser.create.returns(stubBrowser({ browserId: "bro-id" }));
+            ExistingBrowser.create.returns(stubBrowser({ browserId: "bro-id" }));
 
             await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "1.0", state: {} });
 
-            assert.calledOnceWith(Browser.create, config, {
+            assert.calledOnceWith(ExistingBrowser.create, config, {
                 id: "bro-id",
                 version: "1.0",
                 state: {},
@@ -66,7 +64,7 @@ describe("worker/browser-pool", () => {
 
         it("should init a new created browser ", async () => {
             const browser = stubBrowser({ browserId: "bro-id" });
-            Browser.create.returns(browser);
+            ExistingBrowser.create.returns(browser);
 
             await createPool().getBrowser({
                 browserId: "bro-id",
@@ -89,7 +87,7 @@ describe("worker/browser-pool", () => {
 
             emitter.on(RunnerEvents.NEW_BROWSER, onNewBrowser);
 
-            Browser.create.returns(stubBrowser({ id: "bro-id", publicAPI: { some: "api" } }));
+            ExistingBrowser.create.returns(stubBrowser({ id: "bro-id", publicAPI: { some: "api" } }));
 
             await browserPool.getBrowser({ browserId: "bro-id", browserVersion: "10.1" });
 
@@ -100,7 +98,7 @@ describe("worker/browser-pool", () => {
             const config = stubConfig();
             const browserPool = createPool({ config });
             const browser = stubBrowser({ browserId: "bro-id" });
-            Browser.create.returns(browser);
+            ExistingBrowser.create.returns(browser);
 
             return assert.becomes(browserPool.getBrowser({ browserId: "bro-id" }), browser);
         });
@@ -111,7 +109,7 @@ describe("worker/browser-pool", () => {
             });
 
             it("should be rejected if instance of browser was not created", () => {
-                Browser.create.throws(new Error("foo bar"));
+                ExistingBrowser.create.throws(new Error("foo bar"));
 
                 return assert.isRejected(createPool().getBrowser({}), /foo bar/);
             });
@@ -119,7 +117,7 @@ describe("worker/browser-pool", () => {
             describe("init fails", () => {
                 const stubBrowserWhichRejectsOnInit = (params = {}) => {
                     const browser = stubBrowser(params);
-                    Browser.create.returns(browser);
+                    ExistingBrowser.create.returns(browser);
 
                     browser.init.rejects();
 
@@ -178,7 +176,7 @@ describe("worker/browser-pool", () => {
 
         it("should quit from browser", async () => {
             const browserPool = createPool();
-            Browser.create.returns(stubBrowser());
+            ExistingBrowser.create.returns(stubBrowser());
 
             const browser = await browserPool.getBrowser({ browserId: "bro-id" });
             browserPool.freeBrowser(browser);

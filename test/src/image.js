@@ -47,7 +47,7 @@ describe("Image", () => {
         Image = proxyquire("src/image", {
             "looks-same": looksSameStub,
             sharp: mkSharpInstance,
-        });
+        }).Image;
 
         image = Image.create("imgBuffer");
     });
