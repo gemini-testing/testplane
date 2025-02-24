@@ -6,7 +6,7 @@ const { NewBrowser } = require("src/browser/new-browser");
 const { ExistingBrowser } = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
-function createBrowserConfig_(opts = {}) {
+export function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
         desiredCapabilities: { browserName: "browser", version: "1.0" },
         baseUrl: "http://base_url",
@@ -39,6 +39,9 @@ function createBrowserConfig_(opts = {}) {
         headless: null,
         saveHistory: true,
         isolation: false,
+        record: {
+            mode: "off",
+        },
     });
 
     return {
