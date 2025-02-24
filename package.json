@@ -57,7 +57,7 @@
     "@jspm/core": "2.0.1",
     "@puppeteer/browsers": "2.4.0",
     "@testplane/types": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/types@31f7b09",
-    "@testplane/webdriverio": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/webdriverio@a6854a8",
+    "@testplane/webdriverio": "https://pkg.pr.new/gemini-testing/webdriverio/@testplane/webdriverio@f3c7cf0",
     "@vitest/spy": "2.1.4",
     "@wdio/protocols": "8.38.0",
     "@wdio/utils": "8.39.0",
