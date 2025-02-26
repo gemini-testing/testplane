@@ -958,7 +958,12 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await runWithEmitBrowserInit(socket);
 
-            assert.calledWith(historyRunGroupStub as SinonStub, browser.callstackHistory, "openVite", sinon.match.func);
+            assert.calledWith(
+                historyRunGroupStub as SinonStub,
+                { callstack: browser.callstackHistory, config: sinon.match.any, session: sinon.match.any },
+                "openVite",
+                sinon.match.func,
+            );
         });
 
         it(`should open vite server url with "/${VITE_RUN_UUID_ROUTE}/:uuid" format`, async () => {
