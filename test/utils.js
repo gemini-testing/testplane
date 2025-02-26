@@ -45,6 +45,7 @@ function makeConfigStub(opts = {}) {
         sets: opts.sets,
         configPath: opts.configPath,
         lastFailed: opts.lastFailed,
+        record: opts.record,
     };
 
     opts.browsers.forEach(browserId => {
