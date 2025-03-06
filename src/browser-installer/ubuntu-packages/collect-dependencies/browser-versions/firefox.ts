@@ -15,7 +15,7 @@ export const fetchFirefoxMilestoneVersions = async (): Promise<string[]> => {
         const response = await retryFetch(FIREFOX_VERSIONS_ALL_VERSIONS_API_URL);
         const data = (await response.json()) as FirefoxVersionsApiResponse;
         const stableVersions = Object.values(data.releases)
-            .filter(data => ["stability", "esr"].includes(data.category))
+            .filter(data => ["major", "stability", "esr"].includes(data.category))
             .filter(data => Number(getMilestone(data.version)) >= MIN_FIREFOX_VERSION);
 
         const majorGrouped = _.groupBy(stableVersions, data => data.version.split(".")[0]);
