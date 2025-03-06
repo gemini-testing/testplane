@@ -55,7 +55,7 @@
     "@babel/code-frame": "7.24.2",
     "@gemini-testing/commander": "2.15.4",
     "@jspm/core": "2.0.1",
-    "@puppeteer/browsers": "2.4.0",
+    "@puppeteer/browsers": "2.7.1",
     "@vitest/spy": "2.1.4",
     "@wdio/protocols": "8.38.0",
     "@wdio/utils": "8.39.0",
