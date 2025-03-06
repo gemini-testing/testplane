@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.25.3](https://github.com/gemini-testing/testplane/compare/v8.25.2...v8.25.3) (2025-03-06)
+
+
+### Bug Fixes
+
+* auto firefox@135+ versions download ([d567d45](https://github.com/gemini-testing/testplane/commit/d567d45c358c3529de389a54dfa5c2bd397214b1))
+
 ### [8.25.2](https://github.com/gemini-testing/testplane/compare/v8.25.1...v8.25.2) (2025-02-18)
 
 
