@@ -13,8 +13,9 @@ import { AlsoController } from "../test-reader/controllers/also-controller";
 import { BrowserVersionController } from "../test-reader/controllers/browser-version-controller";
 import { WorkerProcess } from "../utils/worker-process";
 import { BaseTestplane } from "../base-testplane";
-import type { Callstack } from "../browser/history/callstack";
 import { CoordBounds, LooksSameOptions } from "looks-same";
+import type { eventWithTime as RrwebEvent } from "@rrweb/types";
+import type { runGroup } from "../browser/history";
 
 export type { Browser as WdioBrowser } from "webdriverio";
 
@@ -144,6 +145,7 @@ export interface ExecutionThreadToolCtx {
 export interface ExecutionThreadCtx {
     browser: WebdriverIO.Browser;
     currentTest: Test;
+    attempt: number;
 }
 
 export interface TestResult extends Test {
@@ -198,13 +200,22 @@ export interface BeforeFileReadData extends AfterFileReadData {
 }
 
 export interface BrowserHistory {
-    runGroup: (callstack: Callstack, name: string, fn: () => unknown | Promise<unknown>) => Promise<unknown>;
+    runGroup: typeof runGroup;
 }
 
 export type SyncSessionEventCallback = (
     browser: WebdriverIO.Browser,
     browserInfo: { browserId: string; browserVersion: string },
 ) => void;
+
+export interface TestContext {
+    testPath: string[];
+    browserId: string;
+}
+
+export interface SnapshotsData {
+    rrwebSnapshots: RrwebEvent[];
+}
 
 export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
@@ -223,6 +234,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["TEST_FAIL"], callback: (test: TestResult) => void): T;
     (event: Events["TEST_PENDING"], callback: (test: Test) => void): T;
     (event: Events["RETRY"], callback: (test: TestResultWithRetries) => void): T;
+    (event: Events["DOM_SNAPSHOTS"], callback: (context: TestContext, data: SnapshotsData) => void): T;
 
     (event: Events["CLI"], callback: (commander: commander.CommanderStatic) => void): T;
     (event: Events["BEGIN"], callback: () => void): T;

@@ -10,12 +10,13 @@ module.exports = class ExecutionThread {
         return new this(...args);
     }
 
-    constructor({ test, browser, testplaneCtx, screenshooter }) {
+    constructor({ test, browser, testplaneCtx, screenshooter, attempt }) {
         this._testplaneCtx = testplaneCtx;
         this._screenshooter = screenshooter;
         this._ctx = {
             browser: browser.publicAPI,
             currentTest: test,
+            attempt,
         };
 
         this._runtimeConfig = RuntimeConfig.getInstance();
