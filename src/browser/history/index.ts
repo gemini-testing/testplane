@@ -1,9 +1,8 @@
 import { eventWithTime } from "@rrweb/types";
 import { Callstack } from "./callstack";
 import * as cmds from "./commands";
-import { isGroup, normalizeCommandArgs, runWithHooks } from "./utils";
+import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } from "./utils";
 import { BrowserConfig } from "../../config/browser-config";
-import { RecordMode } from "../../config/types";
 import { TestStep, TestStepKey } from "../../types";
 import { filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
 
@@ -75,7 +74,7 @@ const runWithHistoryHooks = <T>({ session, callstack, nodeData, fn, config }: Ru
         before: async () => {
             const recordMode = config.record.mode;
             const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
-            const shouldRecord = recordMode !== RecordMode.Off && !(recordMode === RecordMode.OnForRetries && !isRetry);
+            const shouldRecord = shouldRecordSnapshots(recordMode, isRetry);
 
             let rrwebEvents: eventWithTime[] = [];
             if (shouldRecord && process.send && session.executionContext) {

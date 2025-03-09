@@ -1,5 +1,6 @@
 import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
+import { RecordMode } from "src/config";
 
 const MAX_STRING_LENGTH = 50;
 
@@ -65,4 +66,12 @@ export const runWithHooks = <T>({ fn, before, after, error }: HookFunctions<T>):
             after();
         }
     }
+};
+
+export const shouldRecordSnapshots = (recordMode: RecordMode, isRetry: boolean): boolean => {
+    return (
+        recordMode === RecordMode.On ||
+        recordMode === RecordMode.LastFailedRun ||
+        (recordMode === RecordMode.RetriesOnly && isRetry)
+    );
 };

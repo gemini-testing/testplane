@@ -255,9 +255,9 @@ export enum RecordMode {
     // Do not record any test runs
     Off = "off",
     // Record and save all retries
-    OnForRetries = "on-for-retries",
+    RetriesOnly = "retries-only",
     // Record all test runs, but save only last failed run
-    SaveLastFailedRun = "save-last-failed-run",
+    LastFailedRun = "last-failed-run",
 }
 
 export interface RecordConfig {
