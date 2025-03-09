@@ -58,6 +58,8 @@ export function filterEvents(rrwebEvents: eventWithTime[]): eventWithTime[] {
     return rrwebEvents.filter(e => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const dataAny = e?.data as any;
+        // cd_frame_id_ attribute is specific for chromedriver and in rare cases can be captured by rrweb
+        // It doesn't hold any value, and we want to get rid of it here.
         return !dataAny?.attributes?.[0]?.attributes?.["cd_frame_id_"];
     });
 }

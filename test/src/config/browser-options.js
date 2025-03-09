@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const fs = require("fs-extra");
 
-const { Config } = require("src/config");
+const { Config, RecordMode } = require("src/config");
 const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 
@@ -1926,13 +1926,13 @@ describe("config browser-options", () => {
         });
 
         it("should parse string into object", () => {
-            const readConfig = { record: "on-for-retries" };
+            const readConfig = { record: RecordMode.RetriesOnly };
 
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.record, { mode: "on-for-retries" });
+            assert.deepEqual(config.record, { mode: RecordMode.RetriesOnly });
         });
 
         it("should throw if record.mode is invalid", () => {
@@ -1944,18 +1944,18 @@ describe("config browser-options", () => {
         });
 
         it("should preserve correct object", () => {
-            const readConfig = { record: { mode: "on-for-retries" } };
+            const readConfig = { record: { mode: RecordMode.RetriesOnly } };
 
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.record, { mode: "on-for-retries" });
+            assert.deepEqual(config.record, { mode: RecordMode.RetriesOnly });
         });
 
         it("should work correctly with browser overrides", () => {
             const readConfig = {
-                record: "on-for-retries",
+                record: RecordMode.RetriesOnly,
                 browsers: {
                     b1: mkBrowser_(),
                     b2: mkBrowser_({ record: { mode: "off" } }),
@@ -1965,8 +1965,8 @@ describe("config browser-options", () => {
 
             const config = createConfig();
 
-            assert.deepEqual(config.browsers.b1.record, { mode: "on-for-retries" });
-            assert.deepEqual(config.browsers.b2.record, { mode: "off" });
+            assert.deepEqual(config.browsers.b1.record, { mode: RecordMode.RetriesOnly });
+            assert.deepEqual(config.browsers.b2.record, { mode: RecordMode.Off });
         });
     });
 });
