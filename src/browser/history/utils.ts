@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
-import { RecordMode } from "src/config";
+import { RecordMode } from "../../config";
 
 const MAX_STRING_LENGTH = 50;
 
