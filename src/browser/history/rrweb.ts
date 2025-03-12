@@ -6,7 +6,7 @@ import { SnapshotsData, TestContext } from "../../types";
 import { runWithoutHistory } from "./index";
 import path from "path";
 
-const rrwebCode = fs.readFileSync(path.join(require.resolve("@rrweb/record"), "../record.umd.min.cjs"), "utf-8");
+const rrwebCode = fs.readFileSync(path.join(__dirname, "../client-scripts/rrweb-record.min.js"), "utf-8");
 
 export async function installRrwebAndCollectEvents(
     session: WebdriverIO.Browser,

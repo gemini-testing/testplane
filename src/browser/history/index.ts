@@ -72,17 +72,21 @@ const runWithHistoryHooks = <T>({ session, callstack, nodeData, fn, config }: Ru
 
     return runWithHooks({
         before: async () => {
-            const recordMode = config.record.mode;
-            const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
-            const shouldRecord = shouldRecordSnapshots(recordMode, isRetry);
+            try {
+                const recordMode = config.record.mode;
+                const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
+                const shouldRecord = shouldRecordSnapshots(recordMode, isRetry);
 
-            let rrwebEvents: eventWithTime[] = [];
-            if (shouldRecord && process.send && session.executionContext) {
-                rrwebEvents = await installRrwebAndCollectEvents(session, callstack);
+                let rrwebEvents: eventWithTime[] = [];
+                if (shouldRecord && process.send && session.executionContext?.titlePath?.()) {
+                    rrwebEvents = await installRrwebAndCollectEvents(session, callstack);
+                }
+
+                const rrwebEventsFiltered = filterEvents(rrwebEvents);
+                sendFilteredEvents(session, rrwebEventsFiltered);
+            } catch (e) {
+                console.warn("An error occurred during capturing snapshots in browser.", e);
             }
-
-            const rrwebEventsFiltered = filterEvents(rrwebEvents);
-            sendFilteredEvents(session, rrwebEventsFiltered);
 
             callstack.enter(mkHistoryNode(nodeData));
         },
