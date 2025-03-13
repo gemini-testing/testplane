@@ -259,13 +259,15 @@ export class ExistingBrowser extends Browser {
         for (const attachToElement of [false, true]) {
             // @ts-expect-error This is a temporary hack to patch wdio's breaking changes.
             session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
-                    const arr: WebdriverIO.Element[] & { parent?: unknown; foundWith?: unknown; selector?: unknown } =
-                        [];
+                    const arr: WebdriverIO.Element[] & Partial<Pick<ElementArray, "parent" | "foundWith" | "selector" | "props">> = [];
+
                     const res = await origCommand(selector);
                     for await (const el of res) arr.push(el);
+
                     arr.parent = res.parent;
                     arr.foundWith = res.foundWith;
                     arr.selector = res.selector;
+                    arr.props = res.props;
 
                     return arr as unknown as ChainablePromiseArray<ElementArray>;
                 },
