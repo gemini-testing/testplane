@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.25.4](https://github.com/gemini-testing/testplane/compare/v8.25.3...v8.25.4) (2025-03-13)
+
+
+### Bug Fixes
+
+* correctly wrap "$$" to support all commands from expect ([3463f0b](https://github.com/gemini-testing/testplane/commit/3463f0b168163eacf5fa384d9c5952583cb39fec))
+
 ### [8.25.3](https://github.com/gemini-testing/testplane/compare/v8.25.2...v8.25.3) (2025-03-06)
 
 
