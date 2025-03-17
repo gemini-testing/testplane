@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.26.0](https://github.com/gemini-testing/testplane/compare/v8.25.4...v8.26.0) (2025-03-17)
+
+
+### Features
+
+* first implementation of time travel ([#1062](https://github.com/gemini-testing/testplane/issues/1062)) ([f9f59f9](https://github.com/gemini-testing/testplane/commit/f9f59f94d1e81367d143fc139c817c41bca565ff))
+
 ### [8.25.4](https://github.com/gemini-testing/testplane/compare/v8.25.3...v8.25.4) (2025-03-13)
 
 
