@@ -67,11 +67,19 @@ export class NewBrowser extends Browser {
         this._addSteps();
         this._addHistory();
 
-        await runGroup(this._callstackHistory, "testplane: init browser", async () => {
-            this._addCommands();
-            this.restoreHttpTimeout();
-            await this._setPageLoadTimeout();
-        });
+        await runGroup(
+            {
+                session: this._session,
+                callstack: this._callstackHistory!,
+                config: this._config,
+            },
+            "testplane: init browser",
+            async () => {
+                this._addCommands();
+                this.restoreHttpTimeout();
+                await this._setPageLoadTimeout();
+            },
+        );
 
         return this;
     }

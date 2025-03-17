@@ -39,7 +39,7 @@ module.exports = class InsistantTestRunner extends Runner {
 
         passthroughEvent(runner, this, [MasterEvents.TEST_BEGIN, MasterEvents.TEST_PASS, MasterEvents.TEST_END]);
 
-        await runner.run(workers);
+        await runner.run(workers, this._retriesPerformed);
 
         if (retry) {
             ++this._retriesPerformed;

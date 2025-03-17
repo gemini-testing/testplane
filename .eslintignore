@@ -1,3 +1,4 @@
 build
 node_modules
 examples
+src/browser/client-scripts/rrweb-record.min.js

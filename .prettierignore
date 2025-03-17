@@ -5,3 +5,4 @@ package.json
 package-lock.json
 *.md
 examples
+src/browser/client-scripts/rrweb-record.min.js

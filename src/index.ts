@@ -25,6 +25,7 @@ export type {
     ExecutionThreadCtx,
 } from "./types";
 export type { Config } from "./config";
+export { RecordMode } from "./config";
 export type { ConfigInput, AssertViewOpts } from "./config/types";
 export type {
     TestCollection,

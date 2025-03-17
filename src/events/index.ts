@@ -41,6 +41,8 @@ export const RunnerSyncEvents = {
     TEST_PENDING: "pendingTest",
 
     RETRY: "retry",
+
+    DOM_SNAPSHOTS: "domSnapshots",
 } as const;
 
 export type RunnerSyncEvents = typeof RunnerSyncEvents;

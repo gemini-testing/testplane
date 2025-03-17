@@ -18,6 +18,7 @@ import { Image, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@wdio/types";
+import { runWithoutHistory } from "./history";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -86,20 +87,28 @@ export class ExistingBrowser extends Browser {
         this._addSteps();
         this._addHistory();
 
-        await history.runGroup(this._callstackHistory, "testplane: init browser", async () => {
-            this._addCommands();
-            await this._performIsolation({ sessionCaps, sessionOpts });
+        await history.runGroup(
+            {
+                session: this._session,
+                callstack: this._callstackHistory!,
+                config: this._config,
+            },
+            "testplane: init browser",
+            async () => {
+                this._addCommands();
+                await this._performIsolation({ sessionCaps, sessionOpts });
 
-            try {
-                this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
-            } catch (e: unknown) {
-                logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, (e as Error)?.stack);
-            }
+                try {
+                    this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
+                } catch (e: unknown) {
+                    logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, (e as Error)?.stack);
+                }
 
-            await this._prepareSession();
-            await this._performCalibration(calibrator);
-            await this._buildClientScripts();
-        });
+                await this._prepareSession();
+                await this._performCalibration(calibrator);
+                await this._buildClientScripts();
+            },
+        );
 
         return this;
     }
@@ -119,29 +128,34 @@ export class ExistingBrowser extends Browser {
     }
 
     async prepareScreenshot(selectors: string[] | Rect[], opts: PrepareScreenshotOpts = {}): Promise<unknown> {
-        opts = _.extend(opts, {
-            usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true,
+        // Running this fragment with history causes rrweb snapshots to break on pages with iframes
+        return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
+            opts = _.extend(opts, {
+                usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true,
+            });
+
+            ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
+            const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
+            if (isClientBridgeErrorData(result)) {
+                throw new Error(
+                    `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
+                );
+            }
+
+            // https://github.com/webdriverio/webdriverio/issues/11396
+            if (this._config.automationProtocol === WEBDRIVER_PROTOCOL && opts.disableAnimation) {
+                await this._disableIframeAnimations();
+            }
+
+            return result;
         });
-
-        ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-        const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
-        if (isClientBridgeErrorData(result)) {
-            throw new Error(
-                `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
-            );
-        }
-
-        // https://github.com/webdriverio/webdriverio/issues/11396
-        if (this._config.automationProtocol === WEBDRIVER_PROTOCOL && opts.disableAnimation) {
-            await this._disableIframeAnimations();
-        }
-
-        return result;
     }
 
     async cleanupScreenshot(opts: { disableAnimation?: boolean } = {}): Promise<void> {
         if (opts.disableAnimation) {
-            await this._cleanupPageAnimations();
+            return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
+                await this._cleanupPageAnimations();
+            });
         }
     }
 

@@ -6,7 +6,7 @@ const { NewBrowser } = require("src/browser/new-browser");
 const { ExistingBrowser } = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
-function createBrowserConfig_(opts = {}) {
+export function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
         desiredCapabilities: { browserName: "browser", version: "1.0" },
         baseUrl: "http://base_url",
@@ -39,6 +39,9 @@ function createBrowserConfig_(opts = {}) {
         headless: null,
         saveHistory: true,
         isolation: false,
+        record: {
+            mode: "off",
+        },
     });
 
     return {
@@ -49,7 +52,7 @@ function createBrowserConfig_(opts = {}) {
     };
 }
 
-exports.mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
+export const mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
     getWebdriver: sinon
         .stub()
         .named("getWebdriver")
@@ -60,20 +63,20 @@ exports.mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
         }),
 });
 
-exports.mkNewBrowser_ = (
+export const mkNewBrowser_ = (
     configOpts,
     opts = {
         id: "browser",
         version: "1.0",
         state: {},
-        wdPool: exports.mkWdPool_(),
+        wdPool: mkWdPool_(),
     },
     BrowserClass = NewBrowser,
 ) => {
     return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 
-exports.mkExistingBrowser_ = (
+export const mkExistingBrowser_ = (
     configOpts,
     opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" },
     BrowserClass = ExistingBrowser,
@@ -81,7 +84,7 @@ exports.mkExistingBrowser_ = (
     return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 
-exports.mkMockStub_ = () => {
+export const mkMockStub_ = () => {
     const eventEmitter = new EventEmitter();
 
     return {
@@ -91,7 +94,28 @@ exports.mkMockStub_ = () => {
     };
 };
 
-exports.mkSessionStub_ = () => {
+export const mkCDPTarget_ = () => ({
+    _targetId: "12345",
+});
+
+export const mkCDPPage_ = () => ({
+    target: sinon.stub().named("target").returns(mkCDPTarget_()),
+    close: sinon.stub().named("close").resolves(),
+});
+
+export const mkCDPBrowserCtx_ = () => ({
+    newPage: sinon.stub().named("newPage").resolves(mkCDPPage_()),
+    isIncognito: sinon.stub().named("isIncognito").returns(false),
+    pages: sinon.stub().named("pages").resolves([]),
+    close: sinon.stub().named("close").resolves(),
+});
+
+export const mkCDPStub_ = () => ({
+    browserContexts: sinon.stub().named("browserContexts").returns([]),
+    createIncognitoBrowserContext: sinon.stub().named("createIncognitoBrowserContext").resolves(mkCDPBrowserCtx_()),
+});
+
+export const mkSessionStub_ = () => {
     const session = {};
     const wdioElement = {
         selector: ".selector",
@@ -125,9 +149,9 @@ exports.mkSessionStub_ = () => {
     session.waitUntil = sinon.stub().named("waitUntil").resolves();
     session.setTimeout = sinon.stub().named("setTimeout").resolves();
     session.setTimeouts = sinon.stub().named("setTimeouts").resolves();
-    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves(exports.mkCDPStub_());
+    session.getPuppeteer = sinon.stub().named("getPuppeteer").resolves(mkCDPStub_());
     session.$ = sinon.stub().named("$").resolves(wdioElement);
-    session.mock = sinon.stub().named("mock").resolves(exports.mkMockStub_());
+    session.mock = sinon.stub().named("mock").resolves(mkMockStub_());
     session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
     session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
     session.findElements = sinon.stub().named("findElements").resolves([]);
@@ -152,27 +176,3 @@ exports.mkSessionStub_ = () => {
 
     return session;
 };
-
-exports.mkCDPStub_ = () => ({
-    browserContexts: sinon.stub().named("browserContexts").returns([]),
-    createIncognitoBrowserContext: sinon
-        .stub()
-        .named("createIncognitoBrowserContext")
-        .resolves(exports.mkCDPBrowserCtx_()),
-});
-
-exports.mkCDPBrowserCtx_ = () => ({
-    newPage: sinon.stub().named("newPage").resolves(exports.mkCDPPage_()),
-    isIncognito: sinon.stub().named("isIncognito").returns(false),
-    pages: sinon.stub().named("pages").resolves([]),
-    close: sinon.stub().named("close").resolves(),
-});
-
-exports.mkCDPPage_ = () => ({
-    target: sinon.stub().named("target").returns(exports.mkCDPTarget_()),
-    close: sinon.stub().named("close").resolves(),
-});
-
-exports.mkCDPTarget_ = () => ({
-    _targetId: "12345",
-});

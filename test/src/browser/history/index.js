@@ -4,7 +4,7 @@ const P = require("bluebird");
 const webdriverio = require("webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
-const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_ } = require("../utils");
+const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_, createBrowserConfig_ } = require("../utils");
 
 describe("commands-history", () => {
     const sandbox = sinon.createSandbox();
@@ -24,16 +24,22 @@ describe("commands-history", () => {
     });
 
     describe("initCommandHistory", () => {
+        let browserConfig;
+
+        beforeEach(() => {
+            browserConfig = createBrowserConfig_().forBrowser();
+        });
+
         it("should return an instance of callstack", () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session);
+            const stack = initCommandHistory(session, browserConfig);
 
             assert.instanceOf(stack, Callstack);
         });
 
         it('should wrap "addCommand" command', async () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session);
+            const stack = initCommandHistory(session, browserConfig);
 
             session.addCommand("foo", (a1, a2) => P.resolve(a1, a2));
 
@@ -49,7 +55,7 @@ describe("commands-history", () => {
 
         it('should wrap "overwriteCommand" command', async () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session);
+            const stack = initCommandHistory(session, browserConfig);
 
             session.overwriteCommand("url", (a1, a2) => P.resolve(a1, a2));
 
@@ -66,7 +72,7 @@ describe("commands-history", () => {
         it('should save context while wrapping for "addCommand"', async () => {
             const session = mkSessionStub_();
 
-            initCommandHistory(session);
+            initCommandHistory(session, browserConfig);
             session.addCommand("foo", function () {
                 return this;
             });
@@ -79,7 +85,7 @@ describe("commands-history", () => {
         it('should save element context while wrapping for "addCommand" with elemScope: true', async () => {
             const session = mkSessionStub_();
 
-            initCommandHistory(session);
+            initCommandHistory(session, browserConfig);
             session.addCommand(
                 "foo",
                 function () {
@@ -97,7 +103,7 @@ describe("commands-history", () => {
         it('should save element context while wrapping for "overwriteCommand" with elemScope: true', async () => {
             const session = mkSessionStub_();
 
-            initCommandHistory(session);
+            initCommandHistory(session, browserConfig);
             session.addCommand("foo", () => {}, true);
             session.overwriteCommand(
                 "foo",
@@ -117,7 +123,7 @@ describe("commands-history", () => {
             getBrowserCommands.returns(["url"]);
 
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session);
+            const stack = initCommandHistory(session, browserConfig);
 
             await session.url("site.com");
             await session.execute();
@@ -135,7 +141,7 @@ describe("commands-history", () => {
             getElementCommands.returns(["click"]);
 
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session);
+            const stack = initCommandHistory(session, browserConfig);
 
             const element = await session.$();
 
@@ -163,13 +169,13 @@ describe("commands-history", () => {
         });
 
         it("should execute function, if callstack is not inited", () => {
-            runGroup(null, "foo", fnStub);
+            runGroup({ callstack: null }, "foo", fnStub);
 
             assert.calledOnce(fnStub);
         });
 
         it("should execute function with callstack", () => {
-            runGroup(callstackStub, "foo", fnStub);
+            runGroup({ callstack: callstackStub, config: { record: {} }, session: {} }, "foo", fnStub);
 
             assert.callOrder(callstackStub.enter, fnStub, callstackStub.leave);
         });
@@ -212,7 +218,12 @@ describe("commands-history", () => {
 
             beforeEach(async () => {
                 sandbox.stub(webdriverio, "attach").resolves(mkSessionStub_());
-                browser = mkExistingBrowser_({ saveHistory: true });
+                const ExistingBrowser = proxyquire("src/browser/existing-browser", {
+                    "./client-bridge": {
+                        build: sandbox.stub().resolves(),
+                    },
+                }).ExistingBrowser;
+                browser = mkExistingBrowser_({ saveHistory: true }, undefined, ExistingBrowser);
 
                 await browser.init({ sessionOpts: {}, sessionCaps: {} });
             });

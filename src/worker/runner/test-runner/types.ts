@@ -13,6 +13,7 @@ export interface WorkerTestRunnerCtorOpts {
     file: string;
     config: BrowserConfig;
     browserAgent: BrowserAgent;
+    attempt: number;
 }
 
 export interface ExecutionThreadCtorOpts {
@@ -21,4 +22,5 @@ export interface ExecutionThreadCtorOpts {
     testplaneCtx: WorkerRunTestTestplaneCtx;
     hermioneCtx: WorkerRunTestTestplaneCtx;
     screenshooter: OneTimeScreenshooter;
+    attempt: number;
 }
