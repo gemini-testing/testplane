@@ -14,8 +14,6 @@ import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
 
-import type { Capabilities } from "@wdio/types";
-
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
     "agent",
@@ -186,7 +184,7 @@ export class Browser {
         return this._state;
     }
 
-    get capabilities(): Capabilities.RemoteCapability {
+    get capabilities(): WebdriverIO.Capabilities {
         return this.publicAPI.capabilities;
     }
 

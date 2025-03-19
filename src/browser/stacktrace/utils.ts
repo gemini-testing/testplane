@@ -181,7 +181,7 @@ export const filterExtraStackFrames = (error: Error): Error => {
         };
 
         const isWdioUtilsFrame = (frame: StackFrame): boolean => {
-            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/@wdio/utils/"));
+            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/@testplane/wdio-utils/"));
         };
 
         const isTestplaneExtraInternalFrame = (frame: StackFrame): boolean => {

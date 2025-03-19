@@ -16,18 +16,33 @@ module.exports.default = browser => {
             let isSettled = false;
             let rejectTimeout;
 
+            console.log('BEFORE GET ORIG GET PUPP');
+            console.log('origGetPuppeteer:', origGetPuppeteer.toString());
+            // console.log('this:', this);
+            // console.log('this.default:', this.default);
+
+            // this.puppeteer = 1;
+            // this.puppeteer = 2;
+            // console.log('this.puppeteer:', this.puppeteer);
+
             origGetPuppeteer()
                 .then(puppeteer => {
+                    console.log('PUPP, puppeteer:', puppeteer);
+
                     if (!isSettled) {
                         resolve(puppeteer);
                     }
                 })
                 .catch(error => {
+                    console.log('PUPP, get error:', error);
+
                     if (!isSettled) {
                         reject(error);
                     }
                 })
                 .finally(() => {
+                    console.log('PUPP, finnally');
+
                     isSettled = true;
                     clearTimeout(rejectTimeout);
                 });

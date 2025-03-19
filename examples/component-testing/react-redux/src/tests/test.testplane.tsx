@@ -17,4 +17,6 @@ it('should render react button', async ({browser}) => {
     await browser.$('#inc').click();
 
     await expect(counter).toHaveText('Counter: 2');
+
+    await browser.pause(20000);
 });

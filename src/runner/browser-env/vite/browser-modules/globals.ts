@@ -4,6 +4,7 @@ import { BROWSER_EVENT_PREFIX } from "./constants.js";
 import type { BrowserViteSocket } from "./types.js";
 
 const RECONNECT_KEY = "__testplane__.reconnect";
+console.log('inside GLOBALS JS FILE')
 
 const connectToSocket = (): BrowserViteSocket => {
     const socket = io({

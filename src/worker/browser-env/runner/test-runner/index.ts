@@ -19,7 +19,8 @@ import RuntimeConfig from "../../../../config/runtime-config";
 import { AbortOnReconnectError } from "../../../../errors/abort-on-reconnect-error";
 
 import { BrowserEventNames } from "../../../../runner/browser-env/vite/types";
-import type { Selector } from "webdriverio";
+// import type { ChainablePromiseArray, Selector, ChainablePromiseElement } from "webdriverio";
+import type { Selector, ChainablePromiseElement } from "@testplane/webdriverio";
 import type { AsymmetricMatchers } from "expect";
 import type { WorkerTestRunnerRunOpts, WorkerTestRunnerCtorOpts } from "../../../runner/test-runner/types";
 import type { BrowserConfig } from "../../../../config/browser-config";
@@ -196,7 +197,9 @@ export class TestRunner extends NodejsEnvTestRunner {
                     file: this._file,
                     sessionId: this._runOpts.sessionId,
                     capabilities: this._runOpts.sessionCaps,
-                    requestedCapabilities: this._runOpts.sessionOpts.capabilities,
+                    requestedCapabilities: (
+                        this._runOpts.sessionOpts as { capabilities: WebdriverIO.Browser["capabilities"] }
+                    ).capabilities,
                     customCommands: browser.customCommands,
                     config: this._config as BrowserConfig,
                     expectMatchers: Object.getOwnPropertyNames(expectMatchers),
@@ -268,14 +271,14 @@ export class TestRunner extends NodejsEnvTestRunner {
                 let context = payload.context || session;
 
                 if (payload.element) {
-                    if (_.isArray(payload.element)) {
-                        context = await session.$$(payload.element);
-                    } else if (payload.element.elementId) {
-                        context = await session.$(payload.element);
-                        context.selector = payload.element.selector as Selector;
-                    } else {
-                        context = await session.$(payload.element.selector as Selector);
-                    }
+                    // if (_.isArray(payload.element)) {
+                    //     context = await session.$$(payload.element);
+                    // } else if (payload.element.elementId) {
+                    //     context = await session.$(payload.element);
+                    //     context.selector = payload.element.selector as Selector;
+                    // } else {
+                    context = await session.$(payload.element.selector as Selector);
+                    // }
                 }
 
                 const result = await matcher.apply(payload.scope, [context, ...payload.args.map(transformExpectArg)]);
@@ -330,16 +333,16 @@ function transformExpectArg(arg: any): unknown {
 async function getWdioInstance(
     session: WebdriverIO.Browser,
     element?: WebdriverIO.Element,
-): Promise<WebdriverIO.Browser | WebdriverIO.Element> {
+): Promise<WebdriverIO.Browser | ChainablePromiseElement> {
     const wdioInstance = element ? await session.$(element) : session;
 
-    if (isWdioElement(wdioInstance) && !wdioInstance.selector) {
-        wdioInstance.selector = element?.selector as Selector;
-    }
+    // if (isWdioElement(wdioInstance) && !wdioInstance.selector) {
+    //     wdioInstance.selector = element?.selector as Selector;
+    // }
 
     return wdioInstance;
 }
 
-function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
-    return Boolean((ctx as WebdriverIO.Element).elementId);
-}
+// function isWdioElement(ctx: WebdriverIO.Browser | ChainablePromiseElement): ctx is ChainablePromiseElement {
+//     return Boolean((ctx as ChainablePromiseElement).elementId);
+// }

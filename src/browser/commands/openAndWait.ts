@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Matches } from "webdriverio";
+import type { local } from "@testplane/webdriver";
 import PageLoader from "../../utils/page-loader";
 import type { Browser } from "../types";
 import { BrowserConfig } from "../../config/browser-config";
@@ -10,18 +10,19 @@ interface WaitOpts {
     waitNetworkIdle?: boolean;
     waitNetworkIdleTimeout?: number;
     failOnNetworkError?: boolean;
-    shouldThrowError?: (match: Matches) => boolean;
+    shouldThrowError?: (match: local.NetworkBeforeRequestSentParameters) => boolean;
     ignoreNetworkErrorsPatterns?: Array<RegExp | string>;
     timeout?: number;
 }
 
 const emptyPageUrl = "about:blank";
 
-const is: Record<string, (match: Matches) => boolean> = {
-    image: match => match.headers?.Accept?.includes("image"),
-    stylesheet: match => match.headers?.Accept?.includes("text/css"),
-    font: match => _.isString(match.url) && [".ttf", ".woff", ".woff2"].some(ext => match.url.endsWith(ext)),
-    favicon: match => _.isString(match.url) && match.url.endsWith("/favicon.ico"),
+const is: Record<string, (match: local.NetworkBeforeRequestSentParameters) => boolean> = {
+    image: match => match.request.headers.filter(h => h.name === "Accept").some(h => h.value.value === "image"),
+    stylesheet: match => match.request.headers.filter(h => h.name === "Accept").some(h => h.value.value === "text/css"),
+    font: match =>
+        _.isString(match.request.url) && [".ttf", ".woff", ".woff2"].some(ext => match.request.url.endsWith(ext)),
+    favicon: match => _.isString(match.request.url) && match.request.url.endsWith("/favicon.ico"),
 };
 
 const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Browser) =>
@@ -108,6 +109,7 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
                 checkLoaded();
             });
 
+            console.log('BEFORE PAGE LOADER LOAD');
             pageLoader.load(goToPage).then(checkLoaded);
         }).finally(() => pageLoader.unsubscribe());
     };
@@ -124,7 +126,7 @@ function isMatchPatterns(patterns: Array<RegExp | string> = [], str: string): bo
     return patterns.some(pattern => (_.isString(pattern) ? str.includes(pattern) : pattern.exec(str)));
 }
 
-function shouldThrowErrorDefault(match: Matches): boolean {
+function shouldThrowErrorDefault(match: local.NetworkBeforeRequestSentParameters): boolean {
     if (is.favicon(match)) {
         return false;
     }

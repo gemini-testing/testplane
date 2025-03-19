@@ -31,7 +31,7 @@ import {
 } from "../../../../../../src/worker/browser-env/runner/test-runner/types";
 import type { Socket } from "socket.io-client";
 import type { MatcherState } from "expect";
-import type { ChainablePromiseElement } from "webdriverio";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 import type {
     WorkerTestRunnerRunOpts,
     WorkerTestRunnerCtorOpts,

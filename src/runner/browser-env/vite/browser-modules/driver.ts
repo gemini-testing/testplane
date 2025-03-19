@@ -8,9 +8,9 @@ import {
     SeleniumProtocol,
     GeckoProtocol,
     WebDriverBidiProtocol,
-} from "@wdio/protocols";
-import { webdriverMonad, sessionEnvironmentDetector, devtoolsEnvironmentDetector } from "@wdio/utils";
-import { getEnvironmentVars } from "webdriver";
+} from "@testplane/wdio-protocols";
+import { webdriverMonad, sessionEnvironmentDetector, devtoolsEnvironmentDetector } from "@testplane/wdio-utils";
+import { getEnvironmentVars } from "@testplane/webdriver";
 import { SOCKET_MAX_TIMEOUT, SOCKET_TIMED_OUT_ERROR, MAX_ARGS_LENGTH } from "./constants.js";
 import { BrowserEventNames } from "./types.js";
 

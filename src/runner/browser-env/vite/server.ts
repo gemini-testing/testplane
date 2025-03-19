@@ -105,6 +105,8 @@ export class ViteServer {
     private async _addRequiredVitePlugins(): Promise<void> {
         const manualMock = await ManualMock.create(this._viteConfig, this._options);
 
+        console.log('this._viteConfig.plugins:', this._viteConfig.plugins);
+
         this._viteConfig.plugins = [
             ...(this._viteConfig.plugins || []),
             await generateIndexHtml(),

@@ -1,8 +1,8 @@
 import { URLSearchParams } from "url";
-
 import URI from "urijs";
 import { isBoolean, assign, isEmpty, set } from "lodash";
-import { remote, RemoteOptions } from "webdriverio";
+import { remote } from "@testplane/webdriverio";
+import type { Capabilities } from "@testplane/wdio-types";
 
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
@@ -65,7 +65,7 @@ export class NewBrowser extends Browser {
 
         this._extendStacktrace();
         this._addSteps();
-        this._addHistory();
+        // this._addHistory();
 
         await runGroup(this._callstackHistory, "testplane: init browser", async () => {
             this._addCommands();
@@ -123,7 +123,7 @@ export class NewBrowser extends Browser {
         return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
     }
 
-    protected async _getSessionOpts(): Promise<RemoteOptions> {
+    protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
         const config = this._config;
 
         let gridUrl;
@@ -157,16 +157,17 @@ export class NewBrowser extends Browser {
             ...this._getSessionOptsFromConfig(),
         };
 
-        return options as RemoteOptions;
+        return options as Capabilities.WebdriverIOConfig;
     }
 
     protected _extendCapabilities(config: BrowserConfig): Promise<WebdriverIO.Capabilities> {
         const capabilitiesExtendedByVersion = this.version
             ? this._extendCapabilitiesByVersion()
             : config.desiredCapabilities;
+        const capabilitiesExtendedByProtocol = this._addWebDriverClassicCapability(capabilitiesExtendedByVersion!);
         const capabilitiesWithAddedHeadless = this._addHeadlessCapability(
             config.headless,
-            capabilitiesExtendedByVersion!,
+            capabilitiesExtendedByProtocol!,
         );
 
         return this._isLocalGridUrl()
@@ -200,6 +201,14 @@ export class NewBrowser extends Browser {
             args: [...(browserCapabilities!.args ?? []), ...capabilitySettings.getArgs(headless)],
         };
         return capabilities;
+    }
+
+    protected _addWebDriverClassicCapability(capabilities: WebdriverIO.Capabilities): WebdriverIO.Capabilities {
+        if (capabilities?.webSocketUrl || "wdio:enforceWebDriverClassic" in capabilities) {
+            return capabilities;
+        }
+
+        return assign({}, capabilities, { "wdio:enforceWebDriverClassic": true });
     }
 
     protected _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {

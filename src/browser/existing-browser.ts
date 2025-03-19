@@ -1,8 +1,7 @@
 import url from "url";
 import _ from "lodash";
-import type { AttachOptions, ChainablePromiseArray, ElementArray } from "webdriverio";
-import { attach } from "webdriverio";
-import { sessionEnvironmentDetector } from "../bundle/@wdio-utils";
+import { attach, type AttachOptions, type ChainablePromiseArray, type ElementArray } from "@testplane/webdriverio";
+import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
 import { Camera, PageMeta } from "./camera";
@@ -17,14 +16,14 @@ import { Config } from "../config";
 import { Image, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
-import type { Options } from "@wdio/types";
+import type { Options } from "@testplane/wdio-types";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 interface SessionOptions {
     sessionId: string;
     sessionCaps?: WebdriverIO.Capabilities;
-    sessionOpts?: Options.WebdriverIO;
+    sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
 }
 
 interface PrepareScreenshotOpts {
@@ -84,7 +83,7 @@ export class ExistingBrowser extends Browser {
 
         this._extendStacktrace();
         this._addSteps();
-        this._addHistory();
+        // this._addHistory();
 
         await history.runGroup(this._callstackHistory, "testplane: init browser", async () => {
             this._addCommands();
@@ -145,7 +144,7 @@ export class ExistingBrowser extends Browser {
         }
     }
 
-    open(url: string): Promise<string> {
+    open(url: string): Promise<WebdriverIO.Request | string | void> {
         ensure(this._session, BROWSER_SESSION_HINT);
 
         return this._session.url(url);
@@ -258,10 +257,10 @@ export class ExistingBrowser extends Browser {
         // prettier-ignore
         for (const attachToElement of [false, true]) {
             // @ts-expect-error This is a temporary hack to patch wdio's breaking changes.
-            session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
+            session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray => {
                     const arr: WebdriverIO.Element[] & Partial<Pick<ElementArray, "parent" | "foundWith" | "selector" | "props">> = [];
+                    const res = await origCommand(selector) as unknown as WebdriverIO.ElementArray;
 
-                    const res = await origCommand(selector);
                     for await (const el of res) arr.push(el);
 
                     arr.parent = res.parent;
@@ -269,7 +268,7 @@ export class ExistingBrowser extends Browser {
                     arr.selector = res.selector;
                     arr.props = res.props;
 
-                    return arr as unknown as ChainablePromiseArray<ElementArray>;
+                    return arr as unknown as ChainablePromiseArray;
                 },
                 attachToElement,
             );
@@ -282,7 +281,7 @@ export class ExistingBrowser extends Browser {
     }
 
     protected _decorateUrlMethod(session: WebdriverIO.Browser): void {
-        session.overwriteCommand("url", async (origUrlFn, uri) => {
+        session.overwriteCommand("url", async (origUrlFn, uri): Promise<void | string | WebdriverIO.Request> => {
             if (!uri) {
                 return session.getUrl();
             }
@@ -321,6 +320,8 @@ export class ExistingBrowser extends Browser {
             return;
         }
 
+        console.log('PERFORM ISOLATION');
+
         const {
             browserName,
             browserVersion = "",
@@ -335,28 +336,38 @@ export class ExistingBrowser extends Browser {
         }
 
         const puppeteer = await this._session.getPuppeteer();
+        console.log('getPuppeteer res:', puppeteer);
         const browserCtxs = puppeteer.browserContexts();
+        console.log('browserCtxs:', browserCtxs);
 
-        const incognitoCtx = await puppeteer.createIncognitoBrowserContext();
+        const incognitoCtx = await puppeteer.createBrowserContext();
+        // const incognitoCtx = await (puppeteer as any).createBrowserContext();
         const page = await incognitoCtx.newPage();
 
         if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
             const windowIds = await this._session.getWindowHandles();
-            const incognitoWindowId = windowIds.find(id => id.includes(page.target()._targetId));
+            console.log('windowIds:', windowIds);
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
+            console.log('incognitoWindowId:', incognitoWindowId);
 
             await this._session.switchToWindow(incognitoWindowId!);
+            // await this._session.pause(2000);
+
+            // await this._session.url('https://testplane.io');
         }
 
-        for (const ctx of browserCtxs) {
-            if (ctx.isIncognito()) {
-                await ctx.close();
-                continue;
-            }
+        // for (const ctx of browserCtxs) {
+        //     if (ctx.isIncognito()) {
+        //         await ctx.close();
+        //         continue;
+        //     }
 
-            for (const page of await ctx.pages()) {
-                await page.close();
-            }
-        }
+        //     for (const page of await ctx.pages()) {
+        //         await page.close();
+        //     }
+        // }
     }
 
     protected async _prepareSession(): Promise<void> {

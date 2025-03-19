@@ -14,7 +14,12 @@ import type { Plugin, Rollup } from "vite";
 const debug = createDebug("vite:plugin:generateIndexHtml");
 
 // modules that used only in NodeJS environment and don't need to be compiled
-const DEFAULT_MODULES_TO_STUB = ["puppeteer-core", "archiver", "@wdio/repl", "jszip"];
+const DEFAULT_MODULES_TO_STUB = [
+    "puppeteer-core", "archiver", "@testplane/wdio-repl", "jszip",
+    'import-meta-resolve', 'archiver', 'glob', '@testplane/devtools', 'ws', 'decamelize',
+    'geckodriver', 'safaridriver', 'edgedriver', '@puppeteer/browsers', 'locate-app', 'wait-port',
+    'lodash.isequal'
+];
 const POLYFILLS = [...builtinModules, ...builtinModules.map(m => `node:${m}`)];
 
 const virtualDriverModuleId = "virtual:@testplane/driver";
@@ -40,14 +45,18 @@ export const plugin = async (): Promise<Plugin[]> => {
     const driverModulePath = path.resolve(browserModulesPath, "driver.js");
     const mockModulePath = path.resolve(browserModulesPath, "mock.js");
 
+    console.log('browserModulesPath:', browserModulesPath);
+    console.log('globalsModulePath:', globalsModulePath);
+
     const automationProtocolPath = `/@fs${driverModulePath}`;
 
     const stubDefaultModulePath = path.resolve(browserModulesPath, "stubs/default-module.js");
     const stubImportMetaResolvePath = path.resolve(browserModulesPath, "stubs/import-meta-resolve.js");
-    const stubWdioLoggerPath = path.resolve(browserModulesPath, "stubs/@wdio-logger.js");
+    const stubWdioLoggerPath = path.resolve(browserModulesPath, "stubs/@testplane-wdio-logger.js");
 
     const modulesToStub = DEFAULT_MODULES_TO_STUB.reduce((acc, val) => _.set(acc, val, stubDefaultModulePath), {
-        "@wdio/logger": stubWdioLoggerPath,
+        // "@wdio/logger": stubWdioLoggerPath,
+        "@testplane/wdio-logger": stubWdioLoggerPath,
         "import-meta-resolve": stubImportMetaResolvePath,
     }) as Record<string, string>;
 
@@ -80,6 +89,8 @@ export const plugin = async (): Promise<Plugin[]> => {
             },
 
             resolveId: async (id: string): Promise<string | void> => {
+                console.log('id:', id);
+
                 if (id === virtualModules.driver.id) {
                     return virtualModules.driver.resolvedId;
                 }

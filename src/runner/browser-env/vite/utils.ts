@@ -41,16 +41,25 @@ export const prepareError = (error: Error): Error => {
 };
 
 export const getTestInfoFromViteRequest = (req: Connect.IncomingMessage): TestInfoFromViteRequest | null => {
-    if (!req.url?.endsWith("index.html") || !req.originalUrl) {
+    console.log('req.url:', req.url);
+    console.log('req.originalUrl:', req.originalUrl);
+
+    if (!req.url?.endsWith("index.html") || !req.originalUrl || req.originalUrl.includes('@testplane')) {
         return null;
     }
 
     const parsedUrl = url.parse(req.originalUrl);
+    console.log('parsedUrl:', parsedUrl);
     const [routeName, runUuid] = _.compact(parsedUrl.pathname?.split("/"));
+
+    console.log('routeName:', routeName);
+    console.log('runUuid:', runUuid);
 
     if (routeName !== VITE_RUN_UUID_ROUTE || !runUuid) {
         throw new Error(`Pathname must be in "/${VITE_RUN_UUID_ROUTE}/:uuid" format, but got: ${req.originalUrl}`);
     }
+
+    console.log('WORKER_ENV_BY_RUN_UUID, runUuid', runUuid);
 
     const env = WORKER_ENV_BY_RUN_UUID.get(runUuid);
     if (!env) {

@@ -1,5 +1,8 @@
 export default {
     baseUrl: "http://localhost",
+    // gridUrl: "http://sw.yandex-team.ru:80/wd/v1/quotas/testplane",
+    // gridUrl: "local",
+    // automationProtocol: "webdriver",
     automationProtocol: "devtools",
     sessionsPerBrowser: 1,
     testsPerSession: 10,
@@ -21,7 +24,11 @@ export default {
     browsers: {
         "linux-chrome": {
             desiredCapabilities: {
-                browserName: "chrome"
+                browserName: "chrome",
+                // browserVersion: "134.0",
+
+                webSocketUrl: false,
+                'wdio:enforceWebDriverClassic' : true,
             }
         }
     },

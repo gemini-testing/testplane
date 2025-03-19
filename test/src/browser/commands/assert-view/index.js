@@ -3,7 +3,7 @@
 const { EventEmitter } = require("events");
 const _ = require("lodash");
 const fs = require("fs-extra");
-const webdriverio = require("webdriverio");
+const webdriverio = require("@testplane/webdriverio");
 const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const temp = require("src/temp");

@@ -1,4 +1,4 @@
-import * as webdriverio from "webdriverio";
+import * as webdriverio from "@testplane/webdriverio";
 import sinon, { SinonStub } from "sinon";
 
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";

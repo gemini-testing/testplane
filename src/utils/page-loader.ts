@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import type { Matches, Mock } from "webdriverio";
+import type { local } from "@testplane/webdriver";
 import * as logger from "./logger";
 
 export interface PageLoaderOpts {
@@ -12,7 +12,7 @@ export interface PageLoaderOpts {
 
 export default class PageLoader extends EventEmitter {
     private session: WebdriverIO.Browser;
-    private mock?: Mock | null;
+    private mock?: WebdriverIO.Mock | null;
     private selectors: string[];
     private predicate?: () => boolean | Promise<boolean>;
     private timeout: number;
@@ -47,7 +47,7 @@ export default class PageLoader extends EventEmitter {
         this.startAwaitingNetworkIdleWithTimeout();
     }
 
-    public unsubscribe(): Promise<void> | undefined {
+    public unsubscribe(): Promise<void | WebdriverIO.Mock> | undefined {
         return this.mock?.restore().catch(() => {
             logger.warn("PageLoader: Got error while unsubscribing");
         });
@@ -102,15 +102,20 @@ export default class PageLoader extends EventEmitter {
     }
 
     private async initMock(): Promise<void> {
+        console.log('INIT MOCK');
+
         if (!this.waitNetworkIdle) {
             return;
         }
 
-        this.mock = await this.session.mock("**").catch(() => {
+        this.mock = await this.session.mock("**").catch((err) => {
+            console.log('PageLoader: err:', err);
             logger.warn(`PageLoader: Could not create CDP interceptor`);
 
             return null;
         });
+
+        console.log('this.mock:', this.mock);
 
         if (!this.mock) {
             this.markNetworkIdle();
@@ -134,15 +139,20 @@ export default class PageLoader extends EventEmitter {
             }
         });
 
-        this.mock.on("match", (match: Matches) => {
+        this.mock.on("match", (match: local.NetworkBeforeRequestSentParameters) => {
+            console.log('ON MATCH:', match);
+
             if (this.isMatchError(match)) {
                 this.emit("networkError", match);
             }
         });
     }
 
-    private isMatchError(match: Matches): boolean {
-        return match.statusCode >= 400 && match.statusCode < 600;
+    private isMatchError(match: local.NetworkBeforeRequestSentParameters): boolean {
+        // TODO: ############### FIX
+        console.log("match request:", match.request);
+        return false;
+        // return match.statusCode >= 400 && match.statusCode < 600;
     }
 
     private markNetworkIdle(): boolean {

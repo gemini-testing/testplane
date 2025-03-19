@@ -28,6 +28,8 @@ export abstract class BaseTestplane extends AsyncEmitter {
     protected constructor(config?: string | ConfigInput) {
         super();
 
+        console.log('@@@ BASE TESTPLANE #');
+
         this._interceptors = [];
 
         tryToRegisterTsNode(this.isWorker());
