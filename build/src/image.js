@@ -1,0 +1,150 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Image = void 0;
+const sharp_1 = __importDefault(require("sharp"));
+const looks_same_1 = __importDefault(require("looks-same"));
+class Image {
+    static create(buffer) {
+        return new this(buffer);
+    }
+    constructor(buffer) {
+        this._imageData = null;
+        this._ignoreData = [];
+        // eslint-disable-next-line no-use-before-define
+        this._composeImages = [];
+        this._img = (0, sharp_1.default)(buffer);
+    }
+    async getSize() {
+        const imgSizes = await Promise.all([this, ...this._composeImages].map(img => img._img.metadata()));
+        return imgSizes.reduce((totalSize, img) => {
+            return {
+                width: Math.max(totalSize.width, img.width),
+                height: totalSize.height + img.height,
+            };
+        }, { width: 0, height: 0 });
+    }
+    async crop(rect) {
+        const { height, width } = await this._img.metadata();
+        this._img.extract({
+            left: rect.left,
+            top: rect.top,
+            width: Math.min(width, rect.left + rect.width) - rect.left,
+            height: Math.min(height, rect.top + rect.height) - rect.top,
+        });
+        await this._forceRefreshImageData();
+    }
+    addJoin(attachedImages) {
+        this._composeImages = this._composeImages.concat(attachedImages);
+    }
+    async applyJoin() {
+        if (!this._composeImages.length)
+            return;
+        const { height, width } = await this._img.metadata();
+        const imagesData = await Promise.all(this._composeImages.map(img => img._getImageData()));
+        const compositeData = [];
+        let newHeight = height;
+        for (const { data, info } of imagesData) {
+            compositeData.push({
+                input: data,
+                left: 0,
+                top: newHeight,
+                raw: {
+                    width: info.width,
+                    height: info.height,
+                    channels: info.channels,
+                },
+            });
+            newHeight += info.height;
+        }
+        this._img.resize({
+            width,
+            height: newHeight,
+            fit: "contain",
+            position: "top",
+        });
+        this._img.composite(compositeData);
+    }
+    async addClear({ width, height, left, top }) {
+        const { channels } = await this._img.metadata();
+        this._ignoreData.push({
+            input: {
+                create: {
+                    channels: channels,
+                    background: { r: 0, g: 0, b: 0, alpha: 1 },
+                    width,
+                    height,
+                },
+            },
+            left,
+            top,
+        });
+    }
+    applyClear() {
+        this._img.composite(this._ignoreData);
+    }
+    async _getImageData() {
+        if (!this._imageData) {
+            this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
+        }
+        return this._imageData;
+    }
+    async _forceRefreshImageData() {
+        this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
+        this._img = (0, sharp_1.default)(this._imageData.data, {
+            raw: {
+                width: this._imageData.info.width,
+                height: this._imageData.info.height,
+                channels: this._imageData.info.channels,
+            },
+        });
+        this._composeImages = [];
+        this._ignoreData = [];
+    }
+    async getRGBA(x, y) {
+        const { data, info } = await this._getImageData();
+        const idx = (info.width * y + x) * info.channels;
+        return {
+            r: data[idx],
+            g: data[idx + 1],
+            b: data[idx + 2],
+            a: info.channels === 4 ? data[idx + 3] : 1,
+        };
+    }
+    async save(file) {
+        await this._img.png().toFile(file);
+    }
+    static fromBase64(base64) {
+        return new this(Buffer.from(base64, "base64"));
+    }
+    async toPngBuffer(opts = { resolveWithObject: true }) {
+        if (opts.resolveWithObject) {
+            const imgData = await this._img.png().toBuffer({ resolveWithObject: true });
+            return { data: imgData.data, size: { height: imgData.info.height, width: imgData.info.width } };
+        }
+        return await this._img.png().toBuffer({ resolveWithObject: false });
+    }
+    static compare(path1, path2, opts = {}) {
+        const compareOptions = {
+            ignoreCaret: opts.canHaveCaret,
+            pixelRatio: opts.pixelRatio,
+            ...opts.compareOpts,
+        };
+        if (opts.tolerance) {
+            compareOptions.tolerance = opts.tolerance;
+        }
+        if (opts.antialiasingTolerance) {
+            compareOptions.antialiasingTolerance = opts.antialiasingTolerance;
+        }
+        return (0, looks_same_1.default)(path1, path2, { ...compareOptions, createDiffImage: true });
+    }
+    static buildDiff(opts) {
+        const { diffColor: highlightColor, ...otherOpts } = opts;
+        const diffOptions = { highlightColor, ...otherOpts };
+        return looks_same_1.default.createDiff(diffOptions);
+    }
+}
+exports.Image = Image;
+//# sourceMappingURL=image.js.map

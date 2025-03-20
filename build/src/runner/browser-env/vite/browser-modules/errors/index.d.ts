@@ -1,0 +1,10 @@
+import { BrowserError } from "./browser.js";
+import { LoadPageError } from "./load-page.js";
+import { ViteRuntimeError } from "./vite-runtime.js";
+export type ErrorOnRunRunnable = ViteRuntimeError | BrowserError | Error;
+export type ErrorOnPageLoad = LoadPageError | ErrorOnRunRunnable;
+export type ViteError = ErrorOnPageLoad | ErrorOnRunRunnable;
+export declare const prepareError: (error: Error) => Error;
+export declare const getErrorsOnPageLoad: (initError?: Error) => ErrorOnPageLoad[];
+export declare const getErrorsOnRunRunnable: (runnableError?: Error) => ViteError[];
+export { BrowserError, LoadPageError, ViteRuntimeError };

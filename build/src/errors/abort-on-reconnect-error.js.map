@@ -1,0 +1,1 @@
+{"version":3,"file":"abort-on-reconnect-error.js","sourceRoot":"","sources":["../../../src/errors/abort-on-reconnect-error.ts"],"names":[],"mappings":";;;AAAA;;GAEG;AACH,MAAa,qBAAsB,SAAQ,KAAK;IAC5C;QACI,KAAK,CAAC,2DAA2D,CAAC,CAAC;QAEnE,IAAI,CAAC,IAAI,GAAG,IAAI,CAAC,WAAW,CAAC,IAAI,CAAC;IACtC,CAAC;CACJ;AAND,sDAMC"}
