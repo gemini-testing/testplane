@@ -125,6 +125,7 @@ export const mkSessionStub_ = () => {
 
     session.sessionId = "1234567890";
     session.isW3C = false;
+    session.isBidi = false;
 
     session.options = {};
     session.capabilities = {};

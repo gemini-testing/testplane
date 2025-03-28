@@ -31,7 +31,7 @@ import {
 } from "../../../../../../src/worker/browser-env/runner/test-runner/types";
 import type { Socket } from "socket.io-client";
 import type { MatcherState } from "expect";
-import type { ChainablePromiseElement } from "webdriverio";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 import type {
     WorkerTestRunnerRunOpts,
     WorkerTestRunnerCtorOpts,
@@ -840,7 +840,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                 });
 
                 it("context as an elements array", done => {
-                    const elements = ["elem1", "elem2"] as unknown as ChainablePromiseElement<WebdriverIO.Element>;
+                    const elements = ["elem1", "elem2"] as unknown as ChainablePromiseElement;
                     const elementsRes = ["elem1_res", "elem2_res"];
                     const browser = mkBrowser_();
                     browser.publicAPI.$$ = sandbox.stub().withArgs(elements).resolves(elementsRes);

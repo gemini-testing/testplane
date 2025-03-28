@@ -3,7 +3,7 @@ import sinon, { SinonStub, SinonSpy } from "sinon";
 import FakeTimers from "@sinonjs/fake-timers";
 import { mkSessionStub_, mkMockStub_ } from "../browser/utils";
 import type PageLoaderType from "../../../src/utils/page-loader";
-import { Element, WaitForOptions } from "webdriverio";
+import { Element, WaitForOptions } from "@testplane/webdriverio";
 
 type PageLoaderClass = typeof import("../../../src/utils/page-loader").default;
 type PageLoaderSpy = Omit<PageLoaderType, "emit"> & { emit: SinonSpy };

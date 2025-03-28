@@ -61,7 +61,7 @@ describe("ExistingBrowser", () => {
         runGroupStub = sandbox.stub();
 
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
-            webdriverio: {
+            "@testplane/webdriverio": {
                 attach: webdriverioAttachStub,
             },
             "./client-bridge": {
@@ -154,7 +154,7 @@ describe("ExistingBrowser", () => {
             });
 
             assert.calledOnce(webdriverioAttachStub);
-            assert.calledWithMatch(webdriverioAttachStub, { ...detectedSessionEnvFlags, isChrome: true });
+            assert.calledWithMatch(webdriverioAttachStub, { ...detectedSessionEnvFlags, isChrome: false });
         });
 
         it("should attach to browser with session environment flags from config", async () => {
@@ -660,6 +660,24 @@ describe("ExistingBrowser", () => {
 
                 assert.calledOnceWithExactly(incognitoBrowserCtx.close);
                 assert.notCalled(defaultBrowserCtx.close);
+            });
+
+            it("should not close pages in BiDi protocol", async () => {
+                webdriverioAttachStub.resolves({ ...mkSessionStub_(), isBidi: true });
+
+                const defaultBrowserCtx = mkCDPBrowserCtx_();
+                const page1 = mkCDPPage_();
+                const page2 = mkCDPPage_();
+                defaultBrowserCtx.pages.resolves([page1, page2]);
+                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0", webSocketUrl: true };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.notCalled(page1.close);
+                assert.notCalled(page2.close);
+                assert.notCalled(incognitoPage.close);
             });
         });
 

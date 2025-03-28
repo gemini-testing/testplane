@@ -1,6 +1,7 @@
 import { expect, type Expect } from "expect";
 import { ASYMMETRIC_MATCHER } from "./constants.js";
 import { BrowserEventNames, type BrowserRunExpectMatcherPayload, MockMatcherFn } from "./types.js";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 
 export const initExpect = (): Expect => {
     const mockedMatchers = mockMatchers(window.__testplane__.expectMatchers);
@@ -49,8 +50,8 @@ function mockMatcher(matcherName: string): MockMatcherFn {
         /**
          * Check if context is ChainablePromiseElement
          */
-        if (isContextObject && "then" in context && typeof context.selector === "object") {
-            matcherPayload.element = await context;
+        if (isContextObject && typeof (context as { selector: string }).selector === "object") {
+            matcherPayload.element = (await context) as ChainablePromiseElement;
         }
 
         /**

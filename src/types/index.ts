@@ -17,7 +17,7 @@ import { CoordBounds, LooksSameOptions } from "looks-same";
 import type { eventWithTime as RrwebEvent } from "@rrweb/types";
 import type { runGroup } from "../browser/history";
 
-export type { Browser as WdioBrowser } from "webdriverio";
+export type { Browser as WdioBrowser } from "@testplane/webdriverio";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";

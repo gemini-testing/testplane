@@ -27,7 +27,7 @@ describe("NewBrowser", () => {
         initCommandHistoryStub = sandbox.stub();
 
         NewBrowser = proxyquire("src/browser/new-browser", {
-            webdriverio: {
+            "@testplane/webdriverio": {
                 remote: webdriverioRemoteStub,
             },
             "../browser-installer": { installBrowser: installBrowserStub },
@@ -58,7 +58,11 @@ describe("NewBrowser", () => {
                 port: 4444,
                 path: "/wd/hub",
                 queryParams: { query: "value" },
-                capabilities: { browserName: "browser", version: "1.0" },
+                capabilities: {
+                    browserName: "browser",
+                    version: "1.0",
+                    "wdio:enforceWebDriverClassic": true,
+                },
                 automationProtocol: WEBDRIVER_PROTOCOL,
                 waitforTimeout: 100,
                 waitforInterval: 50,
@@ -183,6 +187,40 @@ describe("NewBrowser", () => {
 
                 assert.calledWithMatch(webdriverioRemoteStub, {
                     capabilities: { browserName: "browser", browserVersion: "2.0" },
+                });
+            });
+        });
+
+        describe('should create session with extended "wdio:enforceWebDriverClassic"', () => {
+            it('should set capability if "webSocketUrl" is not set by user', async () => {
+                const desiredCapabilities = { browserName: "chrome" };
+
+                await mkBrowser_({ desiredCapabilities }).init();
+
+                assert.calledWithMatch(webdriverioRemoteStub, {
+                    capabilities: { ...desiredCapabilities, "wdio:enforceWebDriverClassic": true },
+                });
+            });
+
+            describe("should not set capability if", () => {
+                it('"webSocketUrl" set by user', async () => {
+                    const desiredCapabilities = { browserName: "chrome", webSocketUrl: true };
+
+                    await mkBrowser_({ desiredCapabilities }).init();
+
+                    assert.calledWithMatch(webdriverioRemoteStub, {
+                        capabilities: desiredCapabilities,
+                    });
+                });
+
+                it('"wdio:enforceWebDriverClassic" set by user', async () => {
+                    const desiredCapabilities = { browserName: "chrome", "wdio:enforceWebDriverClassic": false };
+
+                    await mkBrowser_({ desiredCapabilities }).init();
+
+                    assert.calledWithMatch(webdriverioRemoteStub, {
+                        capabilities: desiredCapabilities,
+                    });
                 });
             });
         });
@@ -463,6 +501,7 @@ describe("NewBrowser", () => {
                 assert.deepEqual(webdriverioRemoteStub.lastCall.args[0].capabilities, {
                     browserName: "chrome",
                     browserVersion: "115.0",
+                    "wdio:enforceWebDriverClassic": true,
                     "goog:chromeOptions": {
                         binary: "/browser/path/chrome/115.0",
                     },

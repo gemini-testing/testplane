@@ -11,7 +11,7 @@ describe('"runStep" command', () => {
         webdriverioAttachStub = sandbox.stub();
 
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
-            webdriverio: {
+            "@testplane/webdriverio": {
                 attach: webdriverioAttachStub,
             },
             "./browser": proxyquire("src/browser/browser", {

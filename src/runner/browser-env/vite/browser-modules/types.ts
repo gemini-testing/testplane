@@ -2,7 +2,7 @@ import { BROWSER_EVENT_PREFIX, WORKER_EVENT_PREFIX, CONSOLE_METHODS } from "./co
 import { BrowserError, type ViteError } from "./errors/index.js";
 import type { Socket } from "socket.io-client";
 import type { Expect, MatcherState } from "expect";
-import type { ChainablePromiseElement, ElementArray } from "webdriverio";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 
 export type RunnableFn = (
     this: { browser: WebdriverIO.Browser },
@@ -27,8 +27,8 @@ export interface BrowserRunExpectMatcherPayload {
     name: string;
     scope: MatcherState;
     args: unknown[];
-    element?: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>;
-    context?: WebdriverIO.Browser | WebdriverIO.Element | ElementArray | ChainablePromiseElement<WebdriverIO.Element>;
+    element?: WebdriverIO.Element | ChainablePromiseElement;
+    context?: WebdriverIO.Browser | WebdriverIO.Element | WebdriverIO.ElementArray | ChainablePromiseElement;
 }
 
 export interface BrowserCallConsoleMethodPayload {
@@ -61,7 +61,7 @@ export interface WorkerInitializePayload {
     file: string;
     sessionId: WebdriverIO.Browser["sessionId"];
     capabilities: WebdriverIO.Browser["capabilities"];
-    requestedCapabilities: WebdriverIO.Browser["options"]["capabilities"];
+    requestedCapabilities: WebdriverIO.Browser["capabilities"];
     customCommands: { name: string; elementScope: boolean }[];
     // TODO: use BrowserConfig type after migrate to esm
     config: {

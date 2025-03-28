@@ -24,6 +24,8 @@ export const W3C_CAPABILITIES = [
     "strictFileInteractability",
     "unhandledPromptBehavior",
     "userAgent",
+    "websocketUrl",
+    "wdio:enforceWebDriverClassic",
 ];
 
 export const VENDOR_CAPABILITIES: Record<W3CBrowserName, string[]> = {

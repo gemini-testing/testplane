@@ -11,7 +11,7 @@ export interface WorkerRunTestOpts {
     file: string;
     sessionId: string;
     sessionCaps: WdioBrowser["capabilities"];
-    sessionOpts: WdioBrowser["options"];
+    sessionOpts: WdioBrowser["options"] & { capabilities: WdioBrowser["capabilities"] };
     state: Record<string, unknown>;
     attempt: number;
 }

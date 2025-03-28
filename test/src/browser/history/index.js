@@ -1,7 +1,7 @@
 "use strict";
 
 const P = require("bluebird");
-const webdriverio = require("webdriverio");
+const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
 const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_, createBrowserConfig_ } = require("../utils");

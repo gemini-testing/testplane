@@ -22,7 +22,7 @@ describe('"openAndWait" command', () => {
 
     beforeEach(() => {
         ({ mkExistingBrowser_: mkBrowser_ } = proxyquire("../utils", {
-            webdriverio: { attach: wdioAttachStub, "@global": true },
+            "@testplane/webdriverio": { attach: wdioAttachStub, "@global": true },
             "./client-bridge": { build: sandbox.stub().resolves(), "@global": true },
         }));
 

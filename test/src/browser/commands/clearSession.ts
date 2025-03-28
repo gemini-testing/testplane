@@ -1,4 +1,3 @@
-import * as webdriverio from "webdriverio";
 import sinon, { SinonStub } from "sinon";
 
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
@@ -10,20 +9,25 @@ import proxyquire from "proxyquire";
 describe('"clearSession" command', () => {
     const sandbox = sinon.createSandbox();
     let ExistingBrowser: typeof ExistingBrowserOriginal;
+    let webdriverioAttachStub: SinonStub;
     let loggerWarnStub: SinonStub;
 
     const initBrowser_ = ({
         browser = mkBrowser_(undefined, undefined, ExistingBrowser),
         session = mkSessionStub_(),
     } = {}): Promise<ExistingBrowserOriginal> => {
-        (webdriverio.attach as SinonStub).resolves(session);
+        webdriverioAttachStub.resolves(session);
 
         return browser.init({ sessionId: session.sessionId, sessionCaps: session.capabilities }, {} as Calibrator);
     };
 
     beforeEach(() => {
+        webdriverioAttachStub = sandbox.stub();
         loggerWarnStub = sandbox.stub();
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
+            "@testplane/webdriverio": {
+                attach: webdriverioAttachStub,
+            },
             "./client-bridge": {
                 build: sandbox.stub().resolves(),
             },
@@ -36,8 +40,6 @@ describe('"clearSession" command', () => {
                 },
             }),
         }).ExistingBrowser;
-
-        sandbox.stub(webdriverio, "attach");
 
         global.window = {
             localStorage: { clear: sinon.stub() } as unknown as Storage,
