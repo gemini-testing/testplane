@@ -1,5 +1,5 @@
 import EventEmitter from "events";
-import type { Matches, Mock } from "webdriverio";
+import type { Matches } from "@testplane/webdriverio";
 import * as logger from "./logger";
 
 export interface PageLoaderOpts {
@@ -12,7 +12,7 @@ export interface PageLoaderOpts {
 
 export default class PageLoader extends EventEmitter {
     private session: WebdriverIO.Browser;
-    private mock?: Mock | null;
+    private mock?: WebdriverIO.Mock | null;
     private selectors: string[];
     private predicate?: () => boolean | Promise<boolean>;
     private timeout: number;
@@ -47,7 +47,7 @@ export default class PageLoader extends EventEmitter {
         this.startAwaitingNetworkIdleWithTimeout();
     }
 
-    public unsubscribe(): Promise<void> | undefined {
+    public unsubscribe(): Promise<void | WebdriverIO.Mock> | undefined {
         return this.mock?.restore().catch(() => {
             logger.warn("PageLoader: Got error while unsubscribing");
         });

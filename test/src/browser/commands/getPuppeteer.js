@@ -15,7 +15,7 @@ describe('"getPuppeteer" command', () => {
         clientBridgeBuildStub = sandbox.stub().resolves();
 
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
-            webdriverio: {
+            "@testplane/webdriverio": {
                 attach: webdriverioAttachStub,
             },
             "./client-bridge": {

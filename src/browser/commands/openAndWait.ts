@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Matches } from "webdriverio";
+import { Matches } from "@testplane/webdriverio";
 import PageLoader from "../../utils/page-loader";
 import type { Browser } from "../types";
 import { BrowserConfig } from "../../config/browser-config";

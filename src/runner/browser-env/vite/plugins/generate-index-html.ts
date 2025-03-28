@@ -44,10 +44,10 @@ export const plugin = async (): Promise<Plugin[]> => {
 
     const stubDefaultModulePath = path.resolve(browserModulesPath, "stubs/default-module.js");
     const stubImportMetaResolvePath = path.resolve(browserModulesPath, "stubs/import-meta-resolve.js");
-    const stubWdioLoggerPath = path.resolve(browserModulesPath, "stubs/@wdio-logger.js");
+    const stubWdioLoggerPath = path.resolve(browserModulesPath, "stubs/@testplane-wdio-logger.js");
 
     const modulesToStub = DEFAULT_MODULES_TO_STUB.reduce((acc, val) => _.set(acc, val, stubDefaultModulePath), {
-        "@wdio/logger": stubWdioLoggerPath,
+        "@testplane/wdio-logger": stubWdioLoggerPath,
         "import-meta-resolve": stubImportMetaResolvePath,
     }) as Record<string, string>;
 

@@ -8,7 +8,7 @@ import "expect-webdriverio";
 
 import { GlobalHelper } from "./types";
 export { Testplane as default } from "./testplane";
-export { Key } from "webdriverio";
+export { Key } from "@testplane/webdriverio";
 export * from "./mock";
 
 export type {

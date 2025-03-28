@@ -1,8 +1,7 @@
 import url from "url";
 import _ from "lodash";
-import type { AttachOptions, ChainablePromiseArray, ElementArray } from "webdriverio";
-import { attach } from "webdriverio";
-import { sessionEnvironmentDetector } from "../bundle/@wdio-utils";
+import { attach, type AttachOptions, type ElementArray } from "@testplane/webdriverio";
+import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
 import { Camera, PageMeta } from "./camera";
@@ -17,7 +16,7 @@ import { Config } from "../config";
 import { Image, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
-import type { Options } from "@wdio/types";
+import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
@@ -25,7 +24,7 @@ const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 interface SessionOptions {
     sessionId: string;
     sessionCaps?: WebdriverIO.Capabilities;
-    sessionOpts?: Options.WebdriverIO;
+    sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
 }
 
 interface PrepareScreenshotOpts {
@@ -159,7 +158,7 @@ export class ExistingBrowser extends Browser {
         }
     }
 
-    open(url: string): Promise<string> {
+    open(url: string): Promise<WebdriverIO.Request | string | void> {
         ensure(this._session, BROWSER_SESSION_HINT);
 
         return this._session.url(url);
@@ -272,10 +271,10 @@ export class ExistingBrowser extends Browser {
         // prettier-ignore
         for (const attachToElement of [false, true]) {
             // @ts-expect-error This is a temporary hack to patch wdio's breaking changes.
-            session.overwriteCommand("$$", async (origCommand, selector): ChainablePromiseArray<ElementArray> => {
+            session.overwriteCommand("$$", async (origCommand, selector): Promise<WebdriverIO.ElementArray> => {
                     const arr: WebdriverIO.Element[] & Partial<Pick<ElementArray, "parent" | "foundWith" | "selector" | "props">> = [];
+                    const res = await origCommand(selector) as unknown as WebdriverIO.ElementArray;
 
-                    const res = await origCommand(selector);
                     for await (const el of res) arr.push(el);
 
                     arr.parent = res.parent;
@@ -283,7 +282,7 @@ export class ExistingBrowser extends Browser {
                     arr.selector = res.selector;
                     arr.props = res.props;
 
-                    return arr as unknown as ChainablePromiseArray<ElementArray>;
+                    return arr as unknown as WebdriverIO.ElementArray;
                 },
                 attachToElement,
             );
@@ -296,7 +295,7 @@ export class ExistingBrowser extends Browser {
     }
 
     protected _decorateUrlMethod(session: WebdriverIO.Browser): void {
-        session.overwriteCommand("url", async (origUrlFn, uri) => {
+        session.overwriteCommand("url", async (origUrlFn, uri): Promise<void | string | WebdriverIO.Request> => {
             if (!uri) {
                 return session.getUrl();
             }
@@ -356,9 +355,15 @@ export class ExistingBrowser extends Browser {
 
         if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
             const windowIds = await this._session.getWindowHandles();
-            const incognitoWindowId = windowIds.find(id => id.includes(page.target()._targetId));
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
 
             await this._session.switchToWindow(incognitoWindowId!);
+        }
+
+        if (this._session.isBidi) {
+            return;
         }
 
         for (const ctx of browserCtxs) {
