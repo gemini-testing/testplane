@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.27.0](https://github.com/gemini-testing/testplane/compare/v8.26.0...v8.27.0) (2025-04-02)
+
+
+### Features
+
+* support BiDi protocol ([fb43b7d](https://github.com/gemini-testing/testplane/commit/fb43b7d27b06c7962b94b14f21782567f22a67df))
+
 ## [8.26.0](https://github.com/gemini-testing/testplane/compare/v8.25.4...v8.26.0) (2025-03-17)
 
 
