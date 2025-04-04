@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.27.1](https://github.com/gemini-testing/testplane/compare/v8.27.0...v8.27.1) (2025-04-04)
+
+
+### Bug Fixes
+
+* fix firefox rrweb recordings and track color scheme changes ([#1072](https://github.com/gemini-testing/testplane/issues/1072)) ([4c56d96](https://github.com/gemini-testing/testplane/commit/4c56d969409b4c3a0169333de3cfeb1c2bc75256))
+
 ## [8.27.0](https://github.com/gemini-testing/testplane/compare/v8.26.0...v8.27.0) (2025-04-02)
 
 
