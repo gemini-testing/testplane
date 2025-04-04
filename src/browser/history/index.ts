@@ -78,7 +78,7 @@ const runWithHistoryHooks = <T>({ session, callstack, nodeData, fn, config }: Ru
                 const shouldRecord = shouldRecordSnapshots(recordMode, isRetry);
 
                 let rrwebEvents: eventWithTime[] = [];
-                if (shouldRecord && process.send && session.executionContext?.titlePath?.()) {
+                if (shouldRecord && process.send && session.executionContext?.ctx?.currentTest) {
                     rrwebEvents = await installRrwebAndCollectEvents(session, callstack);
                 }
 

@@ -18,8 +18,7 @@ export async function installRrwebAndCollectEvents(
             try {
                 // @ts-expect-error
                 if (!window.rrweb) {
-                    eval(rrwebRecordFnCode);
-
+                    window.eval(rrwebRecordFnCode);
                     // @ts-expect-error
                     window.lastProcessedRrwebEvent = -1;
                     // @ts-expect-error
@@ -33,6 +32,22 @@ export async function installRrwebAndCollectEvents(
                             window.rrwebEvents.push(event);
                         },
                     });
+
+                    // @ts-expect-error
+                    window.rrweb.record.addCustomEvent("color-scheme-change", {
+                        colorScheme:
+                            window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                                ? "dark"
+                                : "light",
+                    });
+
+                    window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
+                            // @ts-expect-error
+                            window.rrweb.record.addCustomEvent("color-scheme-change", {
+                                colorScheme: event.matches ? "dark" : "light",
+                            });
+                        });
                 }
             } catch (e) {
                 /**/
@@ -65,12 +80,13 @@ export function filterEvents(rrwebEvents: eventWithTime[]): eventWithTime[] {
 }
 
 export function sendFilteredEvents(session: WebdriverIO.Browser, rrwebEvents: eventWithTime[]): void {
-    if (rrwebEvents.length > 0 && process.send) {
+    const currentTest = session.executionContext?.ctx?.currentTest;
+    if (rrwebEvents.length > 0 && process.send && currentTest) {
         process.send({
             event: MasterEvents.DOM_SNAPSHOTS,
             context: {
-                testPath: session.executionContext?.titlePath?.(),
-                browserId: session.executionContext?.browserId,
+                testPath: currentTest.titlePath(),
+                browserId: currentTest.browserId,
             } satisfies TestContext,
             data: {
                 rrwebSnapshots: rrwebEvents,
