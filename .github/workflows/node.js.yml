@@ -27,3 +27,7 @@ jobs:
                   cache: "npm"
             - run: npm ci
             - run: npm test
+
+            - name: Publish
+              if: ${{ startsWith(matrix.node-version, '20') }}
+              run: npx pkg-pr-new publish
