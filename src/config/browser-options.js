@@ -7,6 +7,7 @@ const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
+const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { RecordMode } = require("./types");
 
@@ -31,9 +32,22 @@ exports.getPerBrowser = () => {
             validate: (value, config) => {
                 if (_.isNull(value) && _.isNull(config.desiredCapabilities)) {
                     throw new Error('Each browser must have "desiredCapabilities" option');
-                } else {
-                    utils.assertOptionalObject(value, "desiredCapabilities");
                 }
+
+                const { browserName, browserVersion, webSocketUrl } = value;
+                const browserSupportBidi = BROWSERS_SUPPORT_BIDI.find(b => b.name === browserName);
+
+                if (webSocketUrl === true && browserSupportBidi && browserVersion) {
+                    const browserVersionMajor = browserVersion.split(".")[0];
+
+                    if (Number(browserVersionMajor) < browserSupportBidi.minVersion) {
+                        throw new Error(
+                            `BiDi protocol is not supported in ${browserName}@${browserVersion}, use ${browserName}@${browserSupportBidi.minVersion}.0 and higher`,
+                        );
+                    }
+                }
+
+                utils.assertOptionalObject(value, "desiredCapabilities");
             },
             map: (value, config) => _.extend({}, config.desiredCapabilities, value),
         }),
