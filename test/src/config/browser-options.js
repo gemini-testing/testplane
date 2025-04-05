@@ -6,6 +6,7 @@ const fs = require("fs-extra");
 const { Config, RecordMode } = require("src/config");
 const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
+const { BROWSERS_SUPPORT_BIDI } = require("src/constants/browser");
 
 describe("config browser-options", () => {
     const sandbox = sinon.createSandbox();
@@ -51,6 +52,70 @@ describe("config browser-options", () => {
                 Config.read.returns(readConfig);
 
                 assert.throws(() => createConfig(), Error, '"desiredCapabilities" must be an object');
+            });
+        });
+
+        describe("BiDi protocol", () => {
+            BROWSERS_SUPPORT_BIDI.forEach(({ name: browserName, minVersion }) => {
+                describe(browserName, () => {
+                    it("should throw error if browser not support protocol", () => {
+                        const browserVersion = `${minVersion - 1}.0`;
+                        const readConfig = {
+                            browsers: {
+                                b1: {
+                                    desiredCapabilities: {
+                                        browserName,
+                                        browserVersion,
+                                        webSocketUrl: true,
+                                    },
+                                },
+                            },
+                        };
+
+                        Config.read.returns(readConfig);
+
+                        assert.throws(
+                            () => createConfig(),
+                            Error,
+                            `BiDi protocol is not supported in ${browserName}@${browserVersion}, use ${browserName}@${minVersion}.0 and higher`,
+                        );
+                    });
+
+                    it("should not throw if browser support protocol", () => {
+                        const readConfig = {
+                            browsers: {
+                                b1: {
+                                    desiredCapabilities: {
+                                        browserName,
+                                        browserVersion: `${minVersion}.0`,
+                                        webSocketUrl: true,
+                                    },
+                                },
+                            },
+                        };
+
+                        Config.read.returns(readConfig);
+
+                        assert.doesNotThrow(() => createConfig());
+                    });
+
+                    it('should not throw if "browserVersion" is not specified', () => {
+                        const readConfig = {
+                            browsers: {
+                                b1: {
+                                    desiredCapabilities: {
+                                        browserName,
+                                        webSocketUrl: true,
+                                    },
+                                },
+                            },
+                        };
+
+                        Config.read.returns(readConfig);
+
+                        assert.doesNotThrow(() => createConfig());
+                    });
+                });
             });
         });
 
