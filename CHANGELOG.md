@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.27.2](https://github.com/gemini-testing/testplane/compare/v8.27.1...v8.27.2) (2025-04-09)
+
+
+### Bug Fixes
+
+* throw error if chrome not support bidi protocol ([9e3efd9](https://github.com/gemini-testing/testplane/commit/9e3efd93b314713f673954a48e7e01e931b98451))
+
 ### [8.27.1](https://github.com/gemini-testing/testplane/compare/v8.27.0...v8.27.1) (2025-04-04)
 
 
