@@ -606,6 +606,14 @@ describe("ExistingBrowser", () => {
                 assert.calledOnceWithExactly(incognitoBrowserCtx.newPage);
             });
 
+            it("should work with chrome-headless-shell", async () => {
+                const sessionCaps = { browserName: "chrome-headless-shell", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.callOrder(cdp.browserContexts, cdp.createIncognitoBrowserContext, incognitoBrowserCtx.newPage);
+            });
+
             describe(`in "${WEBDRIVER_PROTOCOL}" protocol`, () => {
                 it("should switch to incognito window", async () => {
                     incognitoTarget._targetId = "456";
