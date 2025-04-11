@@ -3,8 +3,11 @@ import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 
 export const isSupportIsolation = (browserName: string, browserVersion = ""): boolean => {
     const browserVersionMajor = browserVersion.split(".")[0];
+    const supportedBrowsers = ["chrome", "chrome-headless-shell"];
 
-    return browserName === "chrome" && Number(browserVersionMajor) >= MIN_CHROME_VERSION_SUPPORT_ISOLATION;
+    return (
+        supportedBrowsers.includes(browserName) && Number(browserVersionMajor) >= MIN_CHROME_VERSION_SUPPORT_ISOLATION
+    );
 };
 
 export const getNormalizedBrowserName = (browserName?: string): W3CBrowserName | null => {
