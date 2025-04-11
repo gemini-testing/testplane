@@ -15,6 +15,7 @@ export const runBrowserDriver = async (
     switch (browserName) {
         case BrowserName.CHROME:
         case BrowserName.CHROMIUM:
+        case BrowserName.CHROMEHEADLESSSHELL:
             return import("./chrome").then(module => module.runChromeDriver(browserVersion, { debug }));
         case BrowserName.FIREFOX:
             return import("./firefox").then(module => module.runGeckoDriver(browserVersion, { debug }));

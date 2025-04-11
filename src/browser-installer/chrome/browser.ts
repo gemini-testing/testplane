@@ -15,7 +15,11 @@ import { installUbuntuPackageDependencies } from "../ubuntu-packages";
 import { installChromeDriver } from "./driver";
 import { BrowserName } from "../../browser/types";
 
-const installChromeBrowser = async (version: string, { force = false } = {}): Promise<string> => {
+const installChromeBrowser = async (
+    browserName: typeof BrowserName.CHROME | typeof BrowserName.CHROMEHEADLESSSHELL,
+    version: string,
+    { force = false } = {},
+): Promise<string> => {
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROME_FOR_TESTING_VERSION) {
@@ -27,24 +31,24 @@ const installChromeBrowser = async (version: string, { force = false } = {}): Pr
     }
 
     const platform = getBrowserPlatform();
-    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.CHROME, platform, version);
+    const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(browserName, platform, version);
 
     if (existingLocallyBrowserVersion && !force) {
         browserInstallerDebug(`A locally installed chrome@${version} browser was found. Skipping the installation`);
 
-        return registry.getBinaryPath(BrowserName.CHROME, platform, existingLocallyBrowserVersion);
+        return registry.getBinaryPath(browserName, platform, existingLocallyBrowserVersion);
     }
 
     const normalizedVersion = normalizeChromeVersion(version);
-    const buildId = await resolveBuildId(BrowserName.CHROME, platform, normalizedVersion);
+    const buildId = await resolveBuildId(browserName, platform, normalizedVersion);
 
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: BrowserName.CHROME, platform, buildId, cacheDir });
+    const canBeInstalled = await canDownload({ browser: browserName, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
         throw new Error(
             [
-                `chrome@${version} can't be installed.`,
+                `${browserName}@${version} can't be installed.`,
                 `Probably the version '${version}' is invalid, please try another version.`,
                 "Version examples: '120', '120.0'",
             ].join("\n"),
@@ -57,19 +61,20 @@ const installChromeBrowser = async (version: string, { force = false } = {}): Pr
             buildId,
             cacheDir,
             downloadProgressCallback,
-            browser: BrowserName.CHROME,
+            browser: browserName,
             unpack: true,
         }).then(result => result.executablePath);
 
-    return registry.installBinary(BrowserName.CHROME, platform, buildId, installFn);
+    return registry.installBinary(browserName, platform, buildId, installFn);
 };
 
 export const installChrome = async (
+    browserName: typeof BrowserName.CHROME | typeof BrowserName.CHROMEHEADLESSSHELL,
     version: string,
     { force = false, needWebDriver = false, needUbuntuPackages = false } = {},
 ): Promise<string> => {
     const [browserPath] = await Promise.all([
-        installChromeBrowser(version, { force }),
+        installChromeBrowser(browserName, version, { force }),
         needWebDriver && installChromeDriver(version, { force }),
         needUbuntuPackages && installUbuntuPackageDependencies(),
     ]);

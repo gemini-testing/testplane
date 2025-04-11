@@ -11,6 +11,7 @@ import { Test, Hook } from "../test-reader/test-object";
 export const BrowserName = {
     CHROME: PuppeteerBrowser.CHROME,
     CHROMIUM: PuppeteerBrowser.CHROMIUM,
+    CHROMEHEADLESSSHELL: PuppeteerBrowser.CHROMEHEADLESSSHELL,
     FIREFOX: PuppeteerBrowser.FIREFOX,
     SAFARI: "safari",
     EDGE: "MicrosoftEdge",

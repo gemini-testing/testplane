@@ -52,12 +52,12 @@ describe("browser-installer/install", () => {
             describe(`force: ${force}`, () => {
                 describe("chrome", () => {
                     it("should install browser", async () => {
-                        installChromeStub.withArgs("115").resolves("/browser/path");
+                        installChromeStub.withArgs("chrome", "115").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.CHROME, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "115", {
+                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
@@ -65,7 +65,7 @@ describe("browser-installer/install", () => {
                     });
 
                     it("should install browser with webdriver", async () => {
-                        installChromeStub.withArgs("115").resolves("/browser/path");
+                        installChromeStub.withArgs("chrome", "115").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.CHROME, "115", {
                             force,
@@ -73,7 +73,7 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "115", {
+                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: true,
@@ -149,7 +149,7 @@ describe("browser-installer/install", () => {
         it("should force install browser with driver", async () => {
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installChromeStub, "115", {
+            assert.calledOnceWith(installChromeStub, "chrome", "115", {
                 force: true,
                 needUbuntuPackages: false,
                 needWebDriver: true,
@@ -161,7 +161,7 @@ describe("browser-installer/install", () => {
 
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installChromeStub, "115", {
+            assert.calledOnceWith(installChromeStub, "chrome", "115", {
                 force: true,
                 needWebDriver: true,
                 needUbuntuPackages: true,

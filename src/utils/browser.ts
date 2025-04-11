@@ -15,6 +15,10 @@ export const getNormalizedBrowserName = (browserName?: string): W3CBrowserName |
         return null;
     }
 
+    if (/chrome-headless-shell/i.test(browserName)) {
+        return BrowserName.CHROMEHEADLESSSHELL;
+    }
+
     if (/chrome/i.test(browserName)) {
         return BrowserName.CHROME;
     }

@@ -76,7 +76,7 @@ describe("browser-installer/chrome/browser", () => {
             getMatchedBrowserVersionStub.withArgs(BrowserName.CHROME, sinon.match.string, "115").returns("115.0");
             getBinaryPathStub.withArgs(BrowserName.CHROME, sinon.match.string, "115.0").returns("/browser/path");
 
-            const binaryPath = await installChrome("115");
+            const binaryPath = await installChrome(BrowserName.CHROME, "115");
 
             assert.equal(binaryPath, "/browser/path");
             assert.notCalled(resolveBuildIdStub);
@@ -91,7 +91,7 @@ describe("browser-installer/chrome/browser", () => {
                 .withArgs(BrowserName.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
                 .resolves("/new/downloaded/browser/path");
 
-            const binaryPath = await installChrome("115", { force: true });
+            const binaryPath = await installChrome(BrowserName.CHROME, "115", { force: true });
 
             assert.notCalled(getBinaryPathStub);
             assert.equal(binaryPath, "/new/downloaded/browser/path");
@@ -104,7 +104,7 @@ describe("browser-installer/chrome/browser", () => {
                 .withArgs(BrowserName.CHROME, sinon.match.string, "115.0.5678.170", sinon.match.func)
                 .resolves("/new/downloaded/browser/path");
 
-            const binaryPath = await installChrome("115");
+            const binaryPath = await installChrome(BrowserName.CHROME, "115");
 
             assert.equal(binaryPath, "/new/downloaded/browser/path");
         });
@@ -113,7 +113,7 @@ describe("browser-installer/chrome/browser", () => {
             getMatchedBrowserVersionStub.returns(null);
             installChromiumStub.withArgs("80").resolves("/browser/chromium/path");
 
-            const result = await installChrome("80");
+            const result = await installChrome(BrowserName.CHROME, "80");
 
             assert.equal(result, "/browser/chromium/path");
             assert.notCalled(resolveBuildIdStub);
@@ -126,7 +126,7 @@ describe("browser-installer/chrome/browser", () => {
             canDownloadStub.resolves(false);
 
             await assert.isRejected(
-                installChrome("115"),
+                installChrome(BrowserName.CHROME, "115"),
                 [
                     `chrome@115 can't be installed.`,
                     `Probably the version '115' is invalid, please try another version.`,
@@ -136,13 +136,13 @@ describe("browser-installer/chrome/browser", () => {
         });
 
         it("should try to install chromedriver if 'needWebDriver' is set", async () => {
-            await installChrome("115", { needWebDriver: true });
+            await installChrome(BrowserName.CHROME, "115", { needWebDriver: true });
 
             assert.calledOnceWith(installChromeDriverStub, "115", { force: false });
         });
 
         it("should try to install ubuntu dependencies if 'needWebDriver' is set", async () => {
-            await installChrome("115", { needUbuntuPackages: true });
+            await installChrome(BrowserName.CHROME, "115", { needUbuntuPackages: true });
 
             assert.calledOnceWith(installUbuntuPackageDependenciesStub);
         });
