@@ -43,6 +43,14 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
             return [headlessValue, "disable-gpu"];
         },
     },
+    [BrowserName.CHROMEHEADLESSSHELL]: {
+        capabilityName: "goog:chromeOptions",
+        getArgs: (headlessMode: BrowserConfig["headless"]): string[] => {
+            const headlessValue = isBoolean(headlessMode) ? "headless" : `headless=${headlessMode}`;
+
+            return [headlessValue, "disable-gpu"];
+        },
+    },
     [BrowserName.FIREFOX]: {
         capabilityName: "moz:firefoxOptions",
         getArgs: (): string[] => ["-headless"],

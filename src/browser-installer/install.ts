@@ -26,11 +26,17 @@ export const installBrowser = async (
 
     switch (browserName) {
         case BrowserName.CHROME:
-        case BrowserName.CHROMIUM: {
+        case BrowserName.CHROMIUM:
+        case BrowserName.CHROMEHEADLESSSHELL: {
             const { installChrome, resolveLatestChromeVersion } = await import("./chrome");
+            const w3cBrowserName = browserName === BrowserName.CHROMIUM ? BrowserName.CHROME : browserName;
             const version = browserVersion || (await resolveLatestChromeVersion(force));
 
-            return installChrome(version, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
+            return installChrome(w3cBrowserName, version, {
+                force,
+                needUbuntuPackages,
+                needWebDriver: shouldInstallWebDriver,
+            });
         }
 
         case BrowserName.FIREFOX: {

@@ -31,6 +31,7 @@ export const W3C_CAPABILITIES = [
 export const VENDOR_CAPABILITIES: Record<W3CBrowserName, string[]> = {
     // https://developer.chrome.com/docs/chromedriver/capabilities
     [BrowserName.CHROME]: ["goog:chromeOptions", "perfLoggingPrefs"],
+    [BrowserName.CHROMEHEADLESSSHELL]: ["goog:chromeOptions", "perfLoggingPrefs"],
     // https://developer.mozilla.org/en-US/docs/Web/WebDriver/Capabilities/firefoxOptions
     [BrowserName.FIREFOX]: ["moz:firefoxOptions"],
     // https://learn.microsoft.com/en-us/microsoft-edge/webdriver-chromium/capabilities-edge-options

@@ -50,6 +50,7 @@ const logDownloadingBrowsersWarningOnce = _.once(() => {
 const getBuildPrefix = (browserName: SupportedBrowser, browserVersion: string): string | null => {
     switch (browserName) {
         case BrowserName.CHROME:
+        case BrowserName.CHROMEHEADLESSSHELL:
             return normalizeChromeVersion(browserVersion);
 
         case BrowserName.CHROMIUM:

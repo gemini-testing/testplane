@@ -8,6 +8,10 @@ describe("browser-utils", () => {
             assert.equal(getNormalizedBrowserName("chrome"), BrowserName.CHROME);
         });
 
+        it("CHROMEHEADLESSSHELL", () => {
+            assert.equal(getNormalizedBrowserName("chrome-headless-shell"), BrowserName.CHROMEHEADLESSSHELL);
+        });
+
         it("FIREFOX", () => {
             assert.equal(getNormalizedBrowserName("firefox"), BrowserName.FIREFOX);
         });
@@ -47,6 +51,10 @@ describe("browser-utils", () => {
 
         it(`should return 'true' if specified chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} or higher`, () => {
             assert.isTrue(isSupportIsolation("chrome", `${MIN_CHROME_VERSION_SUPPORT_ISOLATION}.0`));
+        });
+
+        it(`should return 'true' if specified chrome-headless-shell@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} or higher`, () => {
+            assert.isTrue(isSupportIsolation("chrome-headless-shell", `${MIN_CHROME_VERSION_SUPPORT_ISOLATION}.0`));
         });
     });
 });
