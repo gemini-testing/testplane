@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.28.0](https://github.com/gemini-testing/testplane/compare/v8.27.2...v8.28.0) (2025-04-15)
+
+
+### Features
+
+* **local-browsers:** add ability to install+run chrome-headless-shell ([cee002c](https://github.com/gemini-testing/testplane/commit/cee002c9e78c084388a4a4fb11cf671ab064f23f))
+
+
+### Bug Fixes
+
+* add headless-shell isolation support ([36c3eec](https://github.com/gemini-testing/testplane/commit/36c3eec68e69eb2a83b186b77e5921e0c8429f28))
+
 ### [8.27.2](https://github.com/gemini-testing/testplane/compare/v8.27.1...v8.27.2) (2025-04-09)
 
 
