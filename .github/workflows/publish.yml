@@ -18,12 +18,12 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Checkout
-              uses: actions/checkout@v2
+              uses: actions/checkout@v4
               with:
                   fetch-depth: 0
                   token: ${{ secrets.GH_ACCESS_TOKEN }}
             - name: Setup Node JS
-              uses: actions/setup-node@v2
+              uses: actions/setup-node@v4
               with:
                   node-version: 18
                   registry-url: https://registry.npmjs.org
