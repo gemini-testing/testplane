@@ -1,36 +1,36 @@
 name: Bug Report
-description: Create a bug report for Hermione
+description: Create a bug report for Testplane
 labels: ["type: bug"]
 body:
     - type: markdown
       attributes:
           value: |
               If this issue affects many people in a company/big team, create a post for your company in the following discussion:
-              [https://github.com/gemini-testing/hermione/discussions/838](https://github.com/gemini-testing/hermione/discussions/838)
+              [https://github.com/gemini-testing/testplane/discussions/838](https://github.com/gemini-testing/testplane/discussions/838)
               and link the issue in your post.
 
               This will help us prioritize issues that affect more people.
     - type: checkboxes
       attributes:
           label: Verify latest release
-          description: "Please run `npm install hermione@latest` to try the latest version of Hermione. Some issues may already be fixed in the latest release, so please verify that your issue reproduces before opening a new issue."
+          description: "Please run `npm install testplane@latest` to try the latest version of Testplane. Some issues may already be fixed in the latest release, so please verify that your issue reproduces before opening a new issue."
           options:
-              - label: I verified that the issue exists in the latest Hermione release
+              - label: I verified that the issue exists in the latest Testplane release
     - type: input
       attributes:
-          label: Hermione version
+          label: Testplane version
           description: Fill only if you are not using the latest major version (v8)
     - type: input
       id: last-working-version
       attributes:
-          label: Last Hermione version that worked
+          label: Last Testplane version that worked
           placeholder: e.g. 8.0.3
     - type: dropdown
       attributes:
-          label: Which area(s) of Hermione are affected? (leave empty if unsure)
+          label: Which area(s) of Testplane are affected? (leave empty if unsure)
           multiple: true
           options:
-              - "Hermione core"
+              - "Testplane core"
               - "Plugins"
               - "Configuration"
               - "CLI"
@@ -49,7 +49,7 @@ body:
           description: |
               How do you trigger this bug? Please walk us through it step by step.
               How to create example:
-                  1. npm init hermione-app my-example
+                  1. npm init testplane@latest my-example
                   2. add reproduction steps to the my-example dir
                   3. commit and push my-example dir to github
       validations:
