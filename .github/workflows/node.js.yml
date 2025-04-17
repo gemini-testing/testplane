@@ -28,6 +28,10 @@ jobs:
             - run: npm ci
             - run: npm test
 
+            - name: Build
+              if: ${{ startsWith(matrix.node-version, '20') }}
+              run: npm run build
+
             - name: Publish
               if: ${{ startsWith(matrix.node-version, '20') }}
               run: npx pkg-pr-new publish
