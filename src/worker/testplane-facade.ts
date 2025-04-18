@@ -61,18 +61,18 @@ module.exports = class TestplaneFacade {
                     runtimeConfig: { requireModules?: string[] };
                 }) => {
                     try {
-                        const promise = Promise.resolve();
+                        let promise = Promise.resolve();
 
                         if (runtimeConfig.requireModules) {
                             runtimeConfig.requireModules.forEach(modulePath => {
-                                promise.then(() => requireModule(modulePath as string));
+                                promise = promise.then(() => requireModule(modulePath as string));
                             });
                         }
 
-                        RuntimeConfig.getInstance().extend(runtimeConfig);
-                        const testplane = Testplane.create(configPath);
+                        promise = promise.then(() => {
+                            RuntimeConfig.getInstance().extend(runtimeConfig);
+                            const testplane = Testplane.create(configPath);
 
-                        promise.then(() => {
                             debug("worker initialized");
                             resolve(testplane);
                         });

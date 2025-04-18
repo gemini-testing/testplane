@@ -5,7 +5,7 @@ import { Testplane } from "../../../testplane";
 import { Formatters } from "../../../test-collection/constants";
 import { validateFormatter } from "../../../test-collection";
 import { CliCommands } from "../../constants";
-import { withCommonCliOptions, collectCliValues, handleRequires, type CommonCmdOpts } from "../../../utils/cli";
+import { withCommonCliOptions, collectCliValues, type CommonCmdOpts } from "../../../utils/cli";
 import * as logger from "../../../utils/logger";
 
 import type { ValueOf } from "../../../types/helpers";
@@ -30,12 +30,11 @@ export const registerCmd = (cliTool: ListTestsCmd, testplane: Testplane): void =
         .option("--formatter [name]", "return tests in specified format", String, Formatters.LIST)
         .arguments("[paths...]")
         .action(async (paths: string[], options: ListTestsCmdOpts) => {
-            const { grep, browser: browsers, set: sets, require: requireModules } = cliTool;
+            const { grep, browser: browsers, set: sets } = cliTool;
             const { ignore, silent, outputFile, formatter } = options;
 
             try {
                 validateFormatter(formatter);
-                handleRequires(requireModules);
 
                 const testCollection = await testplane.readTests(paths, {
                     browsers,
