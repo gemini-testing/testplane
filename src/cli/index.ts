@@ -40,10 +40,19 @@ process.on("unhandledRejection", (reason, p) => {
     }
 });
 
-export const run = (opts: TestplaneRunOpts = {}): void => {
+export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
     const program = new Command(opts.cliName || "testplane");
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
+
+    const programToParseRequires = new Command(opts.cliName || "testplane")
+        .version(pkg.version)
+        .allowUnknownOption()
+        .option("-r, --require <module>", "require module", collectCliValues);
+    const requireModules = preparseOption(programToParseRequires, "require") as string[];
+    if (requireModules) {
+        await handleRequires(requireModules);
+    }
 
     const configPath = preparseOption(program, "config") as string;
     testplane = Testplane.create(configPath);
@@ -77,7 +86,6 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
                     set: sets,
                     grep,
                     updateRefs,
-                    require: requireModules,
                     inspect,
                     inspectBrk,
                     repl,
@@ -86,8 +94,6 @@ export const run = (opts: TestplaneRunOpts = {}): void => {
                     devtools,
                     local,
                 } = program;
-
-                await handleRequires(requireModules);
 
                 const isTestsSuccess = await testplane.run(paths, {
                     reporters: reporters || defaults.reporters,
