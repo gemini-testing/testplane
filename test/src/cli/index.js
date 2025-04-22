@@ -18,7 +18,7 @@ describe("cli", () => {
         process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];
 
         cli = cli || testplaneCli;
-        cli.run();
+        await cli.run();
 
         await Command.prototype.action.lastCall.returnValue;
     };
@@ -88,7 +88,7 @@ describe("cli", () => {
     it('should require modules specified in "require" option', async () => {
         const handleRequires = sandbox.stub();
         const stubTestplaneCli = proxyquire("src/cli", {
-            "../utils/cli": { handleRequires, withCommonCliOptions },
+            "../utils/cli": { handleRequires, withCommonCliOptions, collectCliValues },
         });
 
         await run_("--require foo", stubTestplaneCli);
