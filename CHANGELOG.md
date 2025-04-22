@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.28.1](https://github.com/gemini-testing/testplane/compare/v8.28.0...v8.28.1) (2025-04-22)
+
+
+### Bug Fixes
+
+* require modules before reading config ([#1079](https://github.com/gemini-testing/testplane/issues/1079)) ([1fba547](https://github.com/gemini-testing/testplane/commit/1fba547dd7e0959453bd99ee6c800ca1475eb5bb))
+
 ## [8.28.0](https://github.com/gemini-testing/testplane/compare/v8.27.2...v8.28.0) (2025-04-15)
 
 
