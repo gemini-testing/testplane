@@ -59,6 +59,10 @@ export class BrowserRunner extends Runner {
         return true;
     }
 
+    async waitTestsCompletion(): Promise<void> {
+        await this.running.done();
+    }
+
     private async _runTest(test: Test): Promise<void> {
         const browserAgent = BrowserAgent.create({
             id: this._browserId,

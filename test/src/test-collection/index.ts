@@ -14,6 +14,7 @@ describe("test-collection", () => {
 
     interface TestOpts {
         title: string;
+        browserId: string;
         browserVersion: string;
         parent: Suite;
     }
@@ -226,6 +227,34 @@ describe("test-collection", () => {
                 { test: test2, browserId: "bro", browserVersion: "1.0" },
                 { test: test4, browserId: "bro", browserVersion: "2.0" },
                 { test: test3, browserId: "bro", browserVersion: "1.0" },
+            ]);
+        });
+    });
+
+    describe("eachTestAcrossBrowsers", () => {
+        it("should iterate over tests across browsers with different versions", () => {
+            const test1 = mkTest_({ title: "test1", browserId: "bro1" });
+            const test2 = mkTest_({ title: "test2", browserId: "bro1" });
+            const test3 = mkTest_({ title: "test3", browserId: "bro2", browserVersion: "1.0" });
+            const test4 = mkTest_({ title: "test4", browserId: "bro2", browserVersion: "1.0" });
+            const test5 = mkTest_({ title: "test5", browserId: "bro2", browserVersion: "2.0" });
+
+            const collection = TestCollection.create({
+                bro1: [test1, test2],
+                bro2: [test3, test4, test5],
+            });
+
+            const tests: { test: Test; browserId: string; browserVersion?: string }[] = [];
+            collection.eachTestAcrossBrowsers((test, browserId, browserVersion) =>
+                tests.push({ test, browserId, browserVersion }),
+            );
+
+            assert.deepEqual(tests, [
+                { test: test1, browserId: "bro1", browserVersion: undefined },
+                { test: test3, browserId: "bro2", browserVersion: "1.0" },
+                { test: test5, browserId: "bro2", browserVersion: "2.0" },
+                { test: test2, browserId: "bro1", browserVersion: undefined },
+                { test: test4, browserId: "bro2", browserVersion: "1.0" },
             ]);
         });
     });

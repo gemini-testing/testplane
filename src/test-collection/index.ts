@@ -157,6 +157,23 @@ export class TestCollection {
         }
     }
 
+    eachTestAcrossBrowsers(cb: (test: Test, browserId: string, browserVersion?: string) => void): void {
+        const browserTests = this.getBrowsers().flatMap(browserId => {
+            return Object.values(_.groupBy(this.#specs[browserId], "browserVersion"));
+        });
+        const maxLength = Math.max(...browserTests.map(tests => tests.length));
+
+        for (let testIdx = 0; testIdx < maxLength; testIdx++) {
+            for (let broIdx = 0; broIdx < browserTests.length; broIdx++) {
+                const test = browserTests[broIdx][testIdx];
+
+                if (test) {
+                    cb(test, test.browserId, test.browserVersion);
+                }
+            }
+        }
+    }
+
     disableAll(browserId?: string): this {
         if (browserId) {
             this.#specs[browserId] = this.#originalSpecs[browserId].map(test => this.#mkDisabledTest(test));

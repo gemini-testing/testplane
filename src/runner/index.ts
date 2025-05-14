@@ -110,21 +110,28 @@ export class MainRunner extends Runner {
             return true;
         }
 
-        const collection = TestCollection.create({ [browserId]: [test] });
-        this.running.add(this._runTestsInBrowser(collection, browserId));
+        const browserRunner = this._addTestToBrowserRunner(test, browserId);
+        this.running.add(this._waitBrowserRunnerTestsCompletion(browserRunner));
 
         return true;
     }
 
     protected async _runTests(testCollection: TestCollection): Promise<void> {
-        testCollection.getBrowsers().forEach((browserId: string) => {
-            this.running.add(this._runTestsInBrowser(testCollection, browserId));
-        });
+        testCollection.eachTestAcrossBrowsers((test, browserId) => this._addTestToBrowserRunner(test, browserId));
+
+        this.activeBrowserRunners.forEach(runner => this.running.add(this._waitBrowserRunnerTestsCompletion(runner)));
 
         return this.running.done();
     }
 
-    protected async _runTestsInBrowser(testCollection: TestCollection, browserId: string): Promise<void> {
+    protected _addTestToBrowserRunner(test: Test, browserId: string): BrowserRunner {
+        const browserRunner = this.activeBrowserRunners.get(browserId) || this._createBrowserRunner(browserId);
+        browserRunner.addTestToRun(test);
+
+        return browserRunner;
+    }
+
+    protected _createBrowserRunner(browserId: string): BrowserRunner {
         const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers);
 
         eventsUtils.passthroughEvent(runner, this, this.getEventsToPassthrough());
@@ -132,9 +139,12 @@ export class MainRunner extends Runner {
 
         this.activeBrowserRunners.set(browserId, runner);
 
-        await runner.run(testCollection);
+        return runner;
+    }
 
-        this.activeBrowserRunners.delete(browserId);
+    protected async _waitBrowserRunnerTestsCompletion(runner: BrowserRunner): Promise<void> {
+        await runner.waitTestsCompletion();
+        this.activeBrowserRunners.delete(runner.browserId);
     }
 
     protected getEventsToPassthrough(): RunnerSyncEvent[] {

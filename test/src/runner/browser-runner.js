@@ -1,7 +1,6 @@
 "use strict";
 
 const Promise = require("bluebird");
-// const { BrowserRunner } = require("src/runner/browser-runner");
 const BrowserAgent = require("src/runner/browser-agent");
 const BrowserPool = require("src/browser-pool");
 const { create } = require("src/runner/test-runner");
@@ -131,6 +130,24 @@ describe("runner/browser-runner", () => {
 
             assert.calledTwice(TestRunner.prototype.run);
             assert.calledOnce(addedTestRunner);
+        });
+    });
+
+    describe("waitTestsCompletion", () => {
+        it("should wait for all tests to complete", async () => {
+            const runner = mkRunner_({ browserId: "bro" });
+            const afterFirstTest = sinon.stub().named("afterFirstTest");
+            const afterSecondTest = sinon.stub().named("afterSecondTest");
+            const afterWait = sinon.stub().named("afterWait");
+
+            TestRunner.prototype.run.onFirstCall().callsFake(() => Promise.delay(1).then(afterFirstTest));
+            TestRunner.prototype.run.onSecondCall().callsFake(() => Promise.delay(10).then(afterSecondTest));
+
+            runner.addTestToRun(Test.create({ title: "foo" }));
+            runner.addTestToRun(Test.create({ title: "bar" }));
+            await runner.waitTestsCompletion().then(afterWait);
+
+            assert.callOrder(afterFirstTest, afterSecondTest, afterWait);
         });
     });
 
