@@ -8,7 +8,7 @@ type MoveToOptions = {
 
 // As of now, we can't export type of the command function directly. See: https://github.com/webdriverio/webdriverio/issues/12527
 export type MoveCursorToCommand = (
-    this: WebdriverIO.Element | ChainablePromiseElement,
+    this: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>,
     options: MoveToOptions,
 ) => Promise<void>;
 

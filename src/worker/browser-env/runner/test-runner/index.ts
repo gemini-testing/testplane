@@ -279,10 +279,10 @@ export class TestRunner extends NodejsEnvTestRunner {
 
                 if (payload.element) {
                     if (_.isArray(payload.element)) {
-                        context = (await session.$$(payload.element)) as unknown as WebdriverIO.ElementArray;
+                        context = await session.$$(payload.element);
                     } else if (payload.element.elementId) {
                         context = await session.$(payload.element);
-                        context.selector = payload.element.selector as Promise<Selector>;
+                        context.selector = payload.element.selector as Selector;
                     } else {
                         context = await session.$(payload.element.selector as Selector);
                     }
@@ -339,17 +339,17 @@ function transformExpectArg(arg: any): unknown {
 
 async function getWdioInstance(
     session: WebdriverIO.Browser,
-    element?: WebdriverIO.Element,
-): Promise<WebdriverIO.Browser | ChainablePromiseElement> {
+    element?: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>,
+): Promise<WebdriverIO.Browser | ChainablePromiseElement<WebdriverIO.Element>> {
     const wdioInstance = element ? await session.$(element) : session;
 
     if (isWdioElement(wdioInstance) && !wdioInstance.selector) {
-        wdioInstance.selector = element?.selector as unknown as Promise<Selector>;
+        wdioInstance.selector = element?.selector as Selector;
     }
 
     return wdioInstance;
 }
 
-function isWdioElement(ctx: WebdriverIO.Browser | ChainablePromiseElement): ctx is ChainablePromiseElement {
-    return Boolean((ctx as ChainablePromiseElement).elementId);
+function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
+    return Boolean((ctx as WebdriverIO.Element).elementId);
 }
