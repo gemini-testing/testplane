@@ -27,8 +27,12 @@ export interface BrowserRunExpectMatcherPayload {
     name: string;
     scope: MatcherState;
     args: unknown[];
-    element?: WebdriverIO.Element | ChainablePromiseElement;
-    context?: WebdriverIO.Browser | WebdriverIO.Element | WebdriverIO.ElementArray | ChainablePromiseElement;
+    element?: WebdriverIO.Element | ChainablePromiseElement<WebdriverIO.Element>;
+    context?:
+        | WebdriverIO.Browser
+        | WebdriverIO.Element
+        | WebdriverIO.ElementArray
+        | ChainablePromiseElement<WebdriverIO.Element>;
 }
 
 export interface BrowserCallConsoleMethodPayload {
