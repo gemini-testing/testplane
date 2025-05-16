@@ -1,0 +1,14 @@
+{
+  "name": "standalone",
+  "version": "1.0.0",
+  "description": "Testplane Standalone Browser API example",
+  "scripts": {
+    "example": "tsx standalone-browser.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "testplane": "latest"
+  }
+}

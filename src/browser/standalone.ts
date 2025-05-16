@@ -118,7 +118,7 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
 
     existingBrowser.publicAPI.overwriteCommand('deleteSession', async function() {
         await existingBrowser.quit();
-        await newBrowser.quit();
+        await newBrowser.kill();
     });
     
     return existingBrowser.publicAPI;
