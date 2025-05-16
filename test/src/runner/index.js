@@ -9,6 +9,7 @@ const { Stats: RunnerStats } = require("src/stats");
 const { MasterEvents: RunnerEvents, RunnerSyncEvents } = require("src/events");
 const WorkersRegistry = require("src/utils/workers-registry");
 const { BrowserRunner } = require("src/runner/browser-runner");
+const { Test } = require("src/test-reader/test-object");
 const { TestCollection } = require("src/test-collection");
 
 const { makeConfigStub } = require("../../utils");
@@ -26,20 +27,46 @@ describe("NodejsEnvRunner", () => {
         };
     };
 
+    const onWaitTestsCompletion_ = fn => {
+        BrowserRunner.prototype.waitTestsCompletion.callsFake(function () {
+            fn(this);
+            return Promise.resolve();
+        });
+    };
+
+    const stubTestCollection_ = (tests = []) => {
+        TestCollection.prototype.eachTestAcrossBrowsers.callsFake(cb =>
+            tests.forEach(test => {
+                cb(test, test.browserId, test.browserVersion);
+            }),
+        );
+    };
+
+    const mkTestCollection_ = (tests = []) => {
+        const testCollection = TestCollection.create();
+        stubTestCollection_(tests);
+
+        return testCollection;
+    };
+
+    const mkTest_ = (opts = { title: "default-title" }) => {
+        const paramNames = ["title"];
+
+        const test = new Test(_.pick(opts, paramNames));
+        for (const [key, value] of _.entries(_.omit(opts, paramNames))) {
+            _.set(test, key, value);
+        }
+
+        return test;
+    };
+
     const run_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
         const stats = opts.stats || sinon.createStubInstance(RunnerStats);
         const runner = opts.runner || new Runner(config);
         runner.init();
 
-        return runner.run(opts.testCollection || TestCollection.create(), stats);
-    };
-
-    const onRun = fn => {
-        BrowserRunner.prototype.run.callsFake(function () {
-            fn(this);
-            return Promise.resolve();
-        });
+        return runner.run(opts.testCollection || mkTestCollection_([mkTest_()]), stats);
     };
 
     beforeEach(() => {
@@ -58,8 +85,8 @@ describe("NodejsEnvRunner", () => {
         sandbox.stub(TestCollection.prototype);
 
         sandbox.spy(BrowserRunner, "create");
-        sandbox.stub(BrowserRunner.prototype, "run").resolves();
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
+        sandbox.stub(BrowserRunner.prototype, "waitTestsCompletion").resolves();
 
         Runner = proxyquire("src/runner", {
             "../browser-pool": BrowserPool,
@@ -107,7 +134,7 @@ describe("NodejsEnvRunner", () => {
 
     describe("run", () => {
         beforeEach(() => {
-            TestCollection.prototype.getBrowsers.returns(["defaultBrowser"]);
+            stubTestCollection_(mkTest_({ browserId: "defaultBrowser" }));
         });
 
         describe("workers", () => {
@@ -170,10 +197,14 @@ describe("NodejsEnvRunner", () => {
             it("should pass workers to each browser runner", async () => {
                 const workers = mkWorkers_();
                 WorkersRegistry.prototype.register.returns(workers);
+                const testCollection = mkTestCollection_([
+                    mkTest_({ browserId: "foo" }),
+                    mkTest_({ browserId: "bar" }),
+                ]);
 
-                TestCollection.prototype.getBrowsers.returns(["bro1", "bro2"]);
-                await run_();
+                await run_({ testCollection });
 
+                assert.calledTwice(BrowserRunner.create);
                 assert.alwaysCalledWith(
                     BrowserRunner.create,
                     sinon.match.any,
@@ -208,7 +239,7 @@ describe("NodejsEnvRunner", () => {
                 assert.calledOnceWith(onRunnerStart, runner);
             });
 
-            it("should start browser runner only after RUNNER_START handler finish", async () => {
+            it("should add tests to run in browser runner only after RUNNER_START handler finish", async () => {
                 const mediator = sinon.spy().named("mediator");
                 const onRunnerStart = sinon
                     .stub()
@@ -218,16 +249,16 @@ describe("NodejsEnvRunner", () => {
 
                 await run_({ runner });
 
-                assert.callOrder(mediator, BrowserRunner.prototype.run);
+                assert.callOrder(mediator, BrowserRunner.prototype.addTestToRun);
             });
 
-            it("should not run any browser runner if RUNNER_START handler failed", async () => {
+            it("should not add tests to run in browser runner if RUNNER_START handler failed", async () => {
                 const onRunnerStart = sinon.stub().named("onRunnerStart").rejects("some-error");
                 const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, onRunnerStart);
 
                 await run_({ runner }).catch(() => {});
 
-                assert.notCalled(BrowserRunner.prototype.run);
+                assert.notCalled(BrowserRunner.prototype.addTestToRun);
             });
         });
 
@@ -249,9 +280,9 @@ describe("NodejsEnvRunner", () => {
         });
 
         it("should create browser runners for all browsers from config", async () => {
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
 
-            await run_();
+            await run_({ testCollection });
 
             assert.calledTwice(BrowserRunner.create);
             assert.calledWith(BrowserRunner.create, "foo");
@@ -267,39 +298,42 @@ describe("NodejsEnvRunner", () => {
         });
 
         it("should create browser runners with the same browser pool", async () => {
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
             const pool = Object.create(null);
 
             BrowserPool.create.returns(pool);
 
-            await run_();
+            await run_({ testCollection });
 
             assert.calledTwice(BrowserRunner.create);
             assert.calledWith(BrowserRunner.create, sinon.match.any, sinon.match.any, pool);
             assert.calledWith(BrowserRunner.create, sinon.match.any, sinon.match.any, pool);
         });
 
-        it("should pass test collection to browser runner", async () => {
-            const testCollection = TestCollection.create();
-            TestCollection.prototype.getBrowsers.returns(["foo"]);
+        it("should add tests to run in browser runner", async () => {
+            const test1 = mkTest_({ browserId: "foo" });
+            const test2 = mkTest_({ browserId: "bar" });
+            const testCollection = mkTestCollection_([test1, test2]);
 
             await run_({ testCollection });
 
-            assert.calledOnceWith(BrowserRunner.prototype.run, testCollection);
+            assert.calledTwice(BrowserRunner.prototype.addTestToRun);
+            assert.calledWith(BrowserRunner.prototype.addTestToRun, test1);
+            assert.calledWith(BrowserRunner.prototype.addTestToRun, test2);
         });
 
-        it("should wait until all browser runners will finish", async () => {
+        it("should wait until all tests in browser runners will finish", async () => {
             const firstResolveMarker = sandbox.stub().named("First resolve marker");
             const secondResolveMarker = sandbox.stub().named("Second resolve marker");
 
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
-            BrowserRunner.prototype.run
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
+            BrowserRunner.prototype.waitTestsCompletion
                 .onFirstCall()
                 .callsFake(() => Promise.resolve().then(firstResolveMarker))
                 .onSecondCall()
                 .callsFake(() => Promise.delay(1).then(secondResolveMarker));
 
-            await run_();
+            await run_({ testCollection });
 
             assert.calledOnce(firstResolveMarker);
             assert.calledOnce(secondResolveMarker);
@@ -307,12 +341,13 @@ describe("NodejsEnvRunner", () => {
 
         _.forEach(RunnerSyncEvents, (event, name) => {
             it(`should passthrough ${name} event from browser runner`, async () => {
-                onRun(browserRunner => browserRunner.emit(event, { foo: "bar" }));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit(event, { foo: "bar" }));
 
+                const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" })]);
                 const onEvent = sinon.stub().named(`on${name}`);
                 const runner = new Runner(makeConfigStub()).on(event, onEvent);
 
-                await run_({ runner });
+                await run_({ runner, testCollection });
 
                 assert.calledOnceWith(onEvent, { foo: "bar" });
             });
@@ -321,7 +356,7 @@ describe("NodejsEnvRunner", () => {
         describe("interceptors", () => {
             _.forEach(RunnerSyncEvents, (event, name) => {
                 it(`should call interceptor for ${name} with event name and event data`, async () => {
-                    onRun(browserRunner => browserRunner.emit(event, { foo: "bar" }));
+                    onWaitTestsCompletion_(browserRunner => browserRunner.emit(event, { foo: "bar" }));
 
                     const handler = sandbox.stub();
                     const runner = new Runner(makeConfigStub(), [{ event, handler }]);
@@ -332,7 +367,7 @@ describe("NodejsEnvRunner", () => {
                 });
 
                 it(`should intecept ${name} from browser runner`, async () => {
-                    onRun(browserRunner => browserRunner.emit(event));
+                    onWaitTestsCompletion_(browserRunner => browserRunner.emit(event));
 
                     const onEvent = sinon.stub().named(`on${name}`);
                     const onFoo = sinon.stub().named("onFoo");
@@ -349,7 +384,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should passthrough event if interceptor returns falsey value", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName", { foo: "bar" }));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName", { foo: "bar" }));
 
                 const onEvent = sinon.stub().named("onEvent");
                 const interceptor = { event: "eventName", handler: sandbox.stub().returns() };
@@ -361,7 +396,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should not emit event if interceptor returns an empty object", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named("onEvent");
                 const interceptor = { event: "eventName", handler: sandbox.stub().returns({}) };
@@ -373,7 +408,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should passthrough event if interceptor returns the same event", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName", { foo: "bar" }));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName", { foo: "bar" }));
 
                 const onEvent = sinon.stub().named(`onEvent`);
                 const handler = sandbox.stub().returns({ event: "eventName", data: { baz: "qux" } });
@@ -386,7 +421,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should apply all event interceptors", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named(`onEvent`);
                 const onFoo = sinon.stub().named("onFoo");
@@ -403,7 +438,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should apply appropriate event interceptors from the list of all ones", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named(`onEvent`);
                 const onFoo = sinon.stub().named("onFoo");
@@ -420,7 +455,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should pass events between interceptors", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named(`onEvent`);
                 const onFoo = sinon.stub().named("onFoo");
@@ -440,7 +475,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should handle cycles when passing events between interceptors", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named(`onEvent`);
                 const onFoo = sinon.stub().named("onFoo");
@@ -457,7 +492,7 @@ describe("NodejsEnvRunner", () => {
             });
 
             it("should handle errors from interceptor callback", async () => {
-                onRun(browserRunner => browserRunner.emit("eventName"));
+                onWaitTestsCompletion_(browserRunner => browserRunner.emit("eventName"));
 
                 const onEvent = sinon.stub().named("onEvent");
                 const onError = sinon.stub().named("onError");
@@ -482,14 +517,14 @@ describe("NodejsEnvRunner", () => {
 
                 await run_({ runner });
 
-                assert.callOrder(BrowserRunner.prototype.run, onEnd);
+                assert.callOrder(BrowserRunner.prototype.waitTestsCompletion, onEnd);
             });
 
             it("should be emitted even if some browser runner failed", async () => {
                 const onEnd = sinon.spy().named("onEnd");
                 const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, onEnd);
 
-                BrowserRunner.prototype.run.callsFake(() => Promise.reject());
+                BrowserRunner.prototype.waitTestsCompletion.callsFake(() => Promise.reject());
 
                 await run_({ runner }).catch(() => {});
 
@@ -518,7 +553,7 @@ describe("NodejsEnvRunner", () => {
 
                 await run_({ runner });
 
-                assert.callOrder(BrowserRunner.prototype.run, onRunnerEnd);
+                assert.callOrder(BrowserRunner.prototype.waitTestsCompletion, onRunnerEnd);
             });
 
             it("runner should wait until RUNNER_END handler finished", async () => {
@@ -551,7 +586,7 @@ describe("NodejsEnvRunner", () => {
                 const onRunnerEnd = sinon.spy().named("onRunnerEnd");
                 const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, onRunnerEnd);
 
-                BrowserRunner.prototype.run.callsFake(() => Promise.reject());
+                BrowserRunner.prototype.waitTestsCompletion.callsFake(() => Promise.reject());
 
                 await run_({ runner }).catch(() => {});
 
@@ -575,7 +610,7 @@ describe("NodejsEnvRunner", () => {
                     Promise.reject("handler-error"),
                 );
 
-                BrowserRunner.prototype.run.callsFake(() => Promise.reject("run-error"));
+                BrowserRunner.prototype.waitTestsCompletion.callsFake(() => Promise.reject("run-error"));
 
                 return assert.isRejected(run_({ runner }), /run-error/);
             });
@@ -583,10 +618,6 @@ describe("NodejsEnvRunner", () => {
     });
 
     describe("addTestToRun", () => {
-        beforeEach(() => {
-            TestCollection.prototype.getBrowsers.returns([]);
-        });
-
         it("should create new browser runner if there is no active one", async () => {
             const config = makeConfigStub({ browser: ["bro1"] });
             const pool = {};
@@ -596,26 +627,15 @@ describe("NodejsEnvRunner", () => {
             WorkersRegistry.prototype.register.returns(workers);
 
             const runner = new Runner(config);
-            const test = {};
-            await run_({ runner });
+            const test = mkTest_({ browserId: "bro2" });
+            const testCollection = mkTestCollection_([test]);
+            await run_({ runner, testCollection });
 
             runner.addTestToRun(test, "bro2");
 
             assert.calledOnceWith(BrowserRunner.create, "bro2", config, pool, workers);
-            assert.calledOnceWith(BrowserRunner.prototype.run, TestCollection.create({ bro2: [test] }, config));
-        });
-
-        it("should pass test to the browser runner", async () => {
-            const runner = new Runner(makeConfigStub());
-            const test = {};
-
-            sandbox.stub(BrowserRunner.prototype, "browserId").get(() => "bro");
-            BrowserRunner.prototype.run.callsFake(() => runner.addTestToRun(test, "bro"));
-            TestCollection.prototype.getBrowsers.returns(["bro"]);
-
-            await run_({ runner });
-
-            assert.calledWith(BrowserRunner.prototype.addTestToRun, test);
+            assert.calledOnceWith(BrowserRunner.prototype.addTestToRun, test);
+            assert.calledOnceWith(BrowserRunner.prototype.waitTestsCompletion);
         });
 
         it("should return false when runner is not running", async () => {
@@ -625,19 +645,17 @@ describe("NodejsEnvRunner", () => {
 
             assert.isFalse(added);
             assert.notCalled(BrowserRunner.prototype.addTestToRun);
-            assert.notCalled(BrowserRunner.prototype.run);
         });
 
         it("should return false when runner is cancelled", async () => {
             const runner = new Runner(makeConfigStub());
-            await run_({ runner });
+            await run_({ runner, testCollection: TestCollection.create() });
 
             runner.cancel();
             const added = runner.addTestToRun({});
 
             assert.isFalse(added);
             assert.notCalled(BrowserRunner.prototype.addTestToRun);
-            assert.notCalled(BrowserRunner.prototype.run);
         });
     });
 
@@ -661,39 +679,35 @@ describe("NodejsEnvRunner", () => {
         });
 
         it("should cancel all executing browser runners", async () => {
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
-
             const runner = new Runner(makeConfigStub());
-
-            BrowserRunner.prototype.run.onSecondCall().callsFake(() => {
+            BrowserRunner.prototype.addTestToRun.onSecondCall().callsFake(() => {
                 runner.cancel();
                 return Promise.resolve();
             });
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
 
-            await run_({ runner });
+            await run_({ runner, testCollection });
 
             assert.calledTwice(BrowserRunner.prototype.cancel);
         });
 
         it("should not cancel finished browser runner", async () => {
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
-
             const runner = new Runner(makeConfigStub());
+            const testCollection = mkTestCollection_([mkTest_({ browserId: "foo" }), mkTest_({ browserId: "bar" })]);
 
-            await run_({ runner });
+            await run_({ runner, testCollection });
             runner.cancel();
 
             assert.notCalled(BrowserRunner.prototype.cancel);
         });
 
-        it("shuld not run browser runners if cancelled", async () => {
-            TestCollection.prototype.getBrowsers.returns(["foo", "bar"]);
-
+        it("shuld not run tests in browser runners if cancelled", async () => {
             const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, () => runner.cancel());
 
             await run_({ runner });
 
-            assert.notCalled(BrowserRunner.prototype.run);
+            assert.notCalled(BrowserRunner.prototype.addTestToRun);
+            assert.notCalled(BrowserRunner.prototype.waitTestsCompletion);
             assert.notCalled(BrowserRunner.prototype.cancel);
         });
 
