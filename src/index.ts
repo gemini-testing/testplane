@@ -11,6 +11,8 @@ export { Testplane as default } from "./testplane";
 export { Key } from "@testplane/webdriverio";
 export * from "./mock";
 
+export * as unstable from "./unstable";
+
 export type {
     WdioBrowser,
     TestResult,
