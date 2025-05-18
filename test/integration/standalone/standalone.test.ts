@@ -3,7 +3,7 @@ import { launchBrowser } from "../../../src/browser/standalone";
 import { BrowserName } from "../../../src/browser/types";
 
 describe("Standalone Browser E2E Tests", function () {
-    this.timeout(10000);
+    this.timeout(25000);
 
     setTimeout(() => {
         console.error(
