@@ -24,7 +24,7 @@ describe("Standalone Browser E2E Tests", function () {
     });
 
     it("should launch browser and access a website", async function () {
-        browser = await launchBrowser({
+        const browserConfig = {
             desiredCapabilities: {
                 browserName,
             },
@@ -32,7 +32,15 @@ describe("Standalone Browser E2E Tests", function () {
             system: {
                 debug: Boolean(process.env.DEBUG) || false,
             },
-        });
+        };
+
+        if (/chrome/i.test(browserName)) {
+            browserConfig.desiredCapabilities["goog:chromeOptions"] = {
+                args: ["--no-sandbox", "--disable-dev-shm-usage"],
+            };
+        }
+
+        browser = await launchBrowser(browserConfig);
 
         assert.ok(browser, "Browser should be initialized");
         assert.ok(browser.sessionId, "Browser should have a valid session ID");
