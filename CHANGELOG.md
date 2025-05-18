@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.28.4](https://github.com/gemini-testing/testplane/compare/v8.28.3...v8.28.4) (2025-05-18)
+
+
+### Features
+
+* implement standalone browser mode ([#1085](https://github.com/gemini-testing/testplane/issues/1085)) ([453de30](https://github.com/gemini-testing/testplane/commit/453de30dcf14c4a6348aad88a21fec856992bb77))
+
 ### [8.28.3](https://github.com/gemini-testing/testplane/compare/v8.28.2...v8.28.3) (2025-05-16)
 
 ### [8.28.2](https://github.com/gemini-testing/testplane/compare/v8.28.1...v8.28.2) (2025-05-15)
