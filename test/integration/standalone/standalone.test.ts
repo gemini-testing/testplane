@@ -1,4 +1,5 @@
 import { strict as assert } from "assert";
+import _ from "lodash";
 import { launchBrowser } from "../../../src/browser/standalone";
 import { BrowserName } from "../../../src/browser/types";
 
@@ -35,9 +36,9 @@ describe("Standalone Browser E2E Tests", function () {
         };
 
         if (/chrome/i.test(browserName)) {
-            browserConfig.desiredCapabilities["goog:chromeOptions"] = {
+            _.set(browserConfig.desiredCapabilities, "goog:chromeOptions", {
                 args: ["--no-sandbox", "--disable-dev-shm-usage"],
-            };
+            });
         }
 
         browser = await launchBrowser(browserConfig);
