@@ -1,0 +1,42 @@
+name: Standalone Browser Integration Tests
+
+on:
+    pull_request:
+        branches: [master]
+
+jobs:
+    integration-test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20.18.1]
+                browser: [chrome, firefox]
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: "npm"
+
+            - name: Cache Testplane browsers and drivers
+              uses: actions/cache@v3
+              with:
+                  path: ~/.testplane
+                  key: ${{ runner.os }}-testplane-${{ matrix.browser }}
+                  restore-keys: |
+                      ${{ runner.os }}-testplane-${{ matrix.browser }}-
+                      ${{ runner.os }}-testplane-
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build project
+              run: npm run build
+
+            - name: Run integration tests for ${{ matrix.browser }}
+              env:
+                  BROWSER: ${{ matrix.browser }}
+              run: npm run test-integration
