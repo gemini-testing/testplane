@@ -109,6 +109,15 @@ export class NewBrowser extends Browser {
         }
     }
 
+    async kill(): Promise<void> {
+        try {
+            await this._session!.deleteSession();
+            this._wdProcess?.kill();
+        } catch (e) {
+            warn(`WARNING: Can not kill WebDriver process: ${(e as Error).message}`);
+        }
+    }
+
     protected async _createSession(): Promise<WebdriverIO.Browser> {
         const sessionOpts = await this._getSessionOpts();
 
