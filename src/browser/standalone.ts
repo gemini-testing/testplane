@@ -7,8 +7,7 @@ import { BrowserName, type W3CBrowserName } from "./types";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { LOCAL_GRID_URL } from "../constants/config";
 import { WebdriverPool } from "../browser-pool/webdriver-pool";
-import RuntimeConfig from "../config/runtime-config";
-import type { CommonConfig } from "../config/types";
+import type { CommonConfig, SystemConfig } from "../config/types";
 
 export type StandaloneBrowserOptions = Pick<
     CommonConfig,
@@ -31,7 +30,11 @@ export type StandaloneBrowserOptions = Pick<
     | "system"
 >;
 
-export type StandaloneBrowserOptionsInput = Partial<StandaloneBrowserOptions>;
+export type StandaloneBrowserOptionsInput = Partial<Omit<StandaloneBrowserOptions, "system">> & {
+    system?: Partial<SystemConfig>;
+};
+
+const webdriverPool = new WebdriverPool();
 
 export async function launchBrowser(options: StandaloneBrowserOptionsInput = {}): Promise<WebdriverIO.Browser> {
     const desiredCapabilities = options.desiredCapabilities || {};
@@ -47,11 +50,6 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
             ].join("\n"),
         );
     }
-
-    RuntimeConfig.getInstance().extend({
-        debug: options.system?.debug ?? true,
-        local: true,
-    });
 
     const browserConfig = {
         desiredCapabilities: {
@@ -79,12 +77,12 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
         browsers: {
             [browserName]: browserConfig,
         },
-        system: options.system || {
-            debug: true,
-        },
     });
 
-    const webdriverPool = new WebdriverPool();
+    if (!process.env.WDIO_LOG_LEVEL) {
+        process.env.WDIO_LOG_LEVEL = config.system.debug ? "trace" : "error";
+    }
+
     const emitter = new AsyncEmitter();
 
     const newBrowser = new NewBrowser(config, {
