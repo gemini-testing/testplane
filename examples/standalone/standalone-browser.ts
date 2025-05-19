@@ -1,4 +1,4 @@
-import { launchBrowser } from "../../build/src/unstable";
+import { launchBrowser } from "testplane/unstable";
 
 async function example() {
     console.log("Starting basic example with Chrome browser...");
