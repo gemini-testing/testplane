@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.29.0](https://github.com/gemini-testing/testplane/compare/v8.28.4...v8.29.0) (2025-05-20)
+
+
+### Features
+
+* request different types of browsers in parallel ([51e792e](https://github.com/gemini-testing/testplane/commit/51e792e375510b8c7b8b3bdd24d2f90a89d5792f))
+
 ### [8.28.4](https://github.com/gemini-testing/testplane/compare/v8.28.3...v8.28.4) (2025-05-18)
 
 
