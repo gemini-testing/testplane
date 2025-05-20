@@ -1,0 +1,19 @@
+{
+  "name": "android-apps",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "appium": "^2.18.0",
+    "appium-uiautomator2-driver": "^4.2.3",
+    "html-reporter": "10.17.1",
+    "testplane": "latest",
+    "ts-node": "10.9.2"
+  }
+}

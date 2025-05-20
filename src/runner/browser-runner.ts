@@ -71,7 +71,9 @@ export class BrowserRunner extends Runner {
         });
         const runner = TestRunner.create(test, this.config, browserAgent);
 
-        runner.on(MasterEvents.TEST_BEGIN, (test: Test) => this.suiteMonitor.testBegin(test));
+        runner.on(MasterEvents.TEST_BEGIN, (test: Test) => {
+            this.suiteMonitor.testBegin(test);
+        });
 
         this.passthroughEvents(runner, [
             MasterEvents.TEST_BEGIN,
