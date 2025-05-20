@@ -7,7 +7,7 @@ import * as logger from "../utils/logger";
 import { ConfigInput, ConfigParsed } from "./types";
 import { addUserAgentToArgs } from "./utils";
 
-export { RecordMode } from "./types";
+export { TimeTravelMode } from "./types";
 
 export class Config {
     configPath!: string;

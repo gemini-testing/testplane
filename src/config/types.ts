@@ -249,7 +249,7 @@ type ReadinessProbeObj = {
 
 type ReadinessProbe = ReadinessProbeFn | ReadinessProbeObj;
 
-export enum RecordMode {
+export enum TimeTravelMode {
     // Record and save all test runs
     On = "on",
     // Do not record any test runs
@@ -260,8 +260,8 @@ export enum RecordMode {
     LastFailedRun = "last-failed-run",
 }
 
-export interface RecordConfig {
-    mode: RecordMode;
+export interface TimeTravelConfig {
+    mode: TimeTravelMode;
 }
 
 export interface CommonConfig {
@@ -349,7 +349,7 @@ export interface CommonConfig {
         readinessProbe: ReadinessProbe;
     };
 
-    record: RecordConfig;
+    timeTravel: TimeTravelConfig;
 }
 
 export interface SetsConfig {
@@ -364,9 +364,9 @@ export interface SetsConfigParsed {
     browsers: Array<string>;
 }
 
-type PartialCommonConfig = Partial<Omit<CommonConfig, "system" | "record">> & {
+type PartialCommonConfig = Partial<Omit<CommonConfig, "system" | "timeTravel">> & {
     system?: Partial<SystemConfig>;
-    record?: RecordMode | RecordConfig;
+    timeTravel?: TimeTravelMode | TimeTravelConfig;
 };
 
 // Only browsers desiredCapabilities are required in input config

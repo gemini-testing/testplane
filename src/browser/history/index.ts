@@ -73,9 +73,9 @@ const runWithHistoryHooks = <T>({ session, callstack, nodeData, fn, config }: Ru
     return runWithHooks({
         before: async () => {
             try {
-                const recordMode = config.record.mode;
+                const timeTravelMode = config.timeTravel.mode;
                 const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
-                const shouldRecord = shouldRecordSnapshots(recordMode, isRetry);
+                const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
 
                 let rrwebEvents: eventWithTime[] = [];
                 if (shouldRecord && process.send && session.executionContext?.ctx?.currentTest) {

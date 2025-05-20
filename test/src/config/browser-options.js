@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const fs = require("fs-extra");
 
-const { Config, RecordMode } = require("src/config");
+const { Config, TimeTravelMode } = require("src/config");
 const defaults = require("src/config/defaults");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("src/constants/browser");
@@ -1971,67 +1971,67 @@ describe("config browser-options", () => {
         });
     });
 
-    describe("record", () => {
-        it("should set record to off by default", () => {
+    describe("timeTravel", () => {
+        it("should set timeTravel to off by default", () => {
             const readConfig = {};
 
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.record, { mode: "off" });
+            assert.deepEqual(config.timeTravel, { mode: "off" });
         });
 
-        it("should throw if record is not a valid string", () => {
-            const readConfig = { record: "something" };
+        it("should throw if timeTravel is not a valid string", () => {
+            const readConfig = { timeTravel: "something" };
 
             Config.read.returns(readConfig);
 
-            assert.throws(createConfig, /Record mode must be one of the following strings/);
+            assert.throws(createConfig, /TimeTravel mode must be one of the following strings/);
         });
 
         it("should parse string into object", () => {
-            const readConfig = { record: RecordMode.RetriesOnly };
+            const readConfig = { timeTravel: TimeTravelMode.RetriesOnly };
 
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.record, { mode: RecordMode.RetriesOnly });
+            assert.deepEqual(config.timeTravel, { mode: TimeTravelMode.RetriesOnly });
         });
 
-        it("should throw if record.mode is invalid", () => {
-            const readConfig = { record: { mode: "something" } };
+        it("should throw if timeTravel.mode is invalid", () => {
+            const readConfig = { timeTravel: { mode: "something" } };
 
             Config.read.returns(readConfig);
 
-            assert.throws(createConfig, /Record mode must be one of the following strings/);
+            assert.throws(createConfig, /TimeTravel mode must be one of the following strings/);
         });
 
         it("should preserve correct object", () => {
-            const readConfig = { record: { mode: RecordMode.RetriesOnly } };
+            const readConfig = { timeTravel: { mode: TimeTravelMode.RetriesOnly } };
 
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.record, { mode: RecordMode.RetriesOnly });
+            assert.deepEqual(config.timeTravel, { mode: TimeTravelMode.RetriesOnly });
         });
 
         it("should work correctly with browser overrides", () => {
             const readConfig = {
-                record: RecordMode.RetriesOnly,
+                timeTravel: TimeTravelMode.RetriesOnly,
                 browsers: {
                     b1: mkBrowser_(),
-                    b2: mkBrowser_({ record: { mode: "off" } }),
+                    b2: mkBrowser_({ timeTravel: { mode: "off" } }),
                 },
             };
             Config.read.returns(readConfig);
 
             const config = createConfig();
 
-            assert.deepEqual(config.browsers.b1.record, { mode: RecordMode.RetriesOnly });
-            assert.deepEqual(config.browsers.b2.record, { mode: RecordMode.Off });
+            assert.deepEqual(config.browsers.b1.timeTravel, { mode: TimeTravelMode.RetriesOnly });
+            assert.deepEqual(config.browsers.b2.timeTravel, { mode: TimeTravelMode.Off });
         });
     });
 });
