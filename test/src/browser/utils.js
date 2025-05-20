@@ -39,7 +39,7 @@ export function createBrowserConfig_(opts = {}) {
         headless: null,
         saveHistory: true,
         isolation: false,
-        record: {
+        timeTravel: {
             mode: "off",
         },
     });

@@ -9,7 +9,7 @@ const utils = require("./utils");
 const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
-const { RecordMode } = require("./types");
+const { TimeTravelMode } = require("./types");
 
 const is = utils.is;
 
@@ -385,15 +385,15 @@ function buildBrowserOptions(defaultFactory, extra) {
 
         passive: options.boolean("passive"),
 
-        record: option({
-            defaultValue: defaultFactory("record"),
+        timeTravel: option({
+            defaultValue: defaultFactory("timeTravel"),
             parseEnv: JSON.parse,
             parseCli: JSON.parse,
             validate: value => {
                 const validateMode = mode => {
-                    if (!Object.values(RecordMode).includes(mode)) {
+                    if (!Object.values(TimeTravelMode).includes(mode)) {
                         throw new Error(
-                            `Record mode must be one of the following strings: ${Object.values(RecordMode).join(
+                            `TimeTravel mode must be one of the following strings: ${Object.values(TimeTravelMode).join(
                                 ", ",
                             )}. Got: ${JSON.stringify(mode)}.`,
                         );

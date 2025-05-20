@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
-import { RecordMode } from "../../config";
+import { TimeTravelMode } from "../../config";
 
 const MAX_STRING_LENGTH = 50;
 
@@ -68,10 +68,10 @@ export const runWithHooks = <T>({ fn, before, after, error }: HookFunctions<T>):
     }
 };
 
-export const shouldRecordSnapshots = (recordMode: RecordMode, isRetry: boolean): boolean => {
+export const shouldRecordSnapshots = (timeTravelMode: TimeTravelMode, isRetry: boolean): boolean => {
     return (
-        recordMode === RecordMode.On ||
-        recordMode === RecordMode.LastFailedRun ||
-        (recordMode === RecordMode.RetriesOnly && isRetry)
+        timeTravelMode === TimeTravelMode.On ||
+        timeTravelMode === TimeTravelMode.LastFailedRun ||
+        (timeTravelMode === TimeTravelMode.RetriesOnly && isRetry)
     );
 };
