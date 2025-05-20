@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.2](https://github.com/gemini-testing/testplane/compare/v8.29.1...v8.29.2) (2025-05-20)
+
+
+### Features
+
+* add export runCli from testplane ([#1089](https://github.com/gemini-testing/testplane/issues/1089)) ([abd96da](https://github.com/gemini-testing/testplane/commit/abd96da6ee7a41cb081f897e173b4037633307c3))
+
 ### [8.29.1](https://github.com/gemini-testing/testplane/compare/v8.29.0...v8.29.1) (2025-05-20)
 
 
