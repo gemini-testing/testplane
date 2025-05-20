@@ -7,6 +7,7 @@ import "./browser/types";
 import "expect-webdriverio";
 
 import { GlobalHelper } from "./types";
+export { run as runCli } from "./cli";
 export { Testplane as default } from "./testplane";
 export { Key } from "@testplane/webdriverio";
 export * from "./mock";
