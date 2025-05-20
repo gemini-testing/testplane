@@ -16,3 +16,5 @@ npm-debug.log
 .editorconfig
 .eslintcache
 hermione-report
+bundle.compat.js
+bundle.native.js
