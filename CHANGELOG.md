@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.1](https://github.com/gemini-testing/testplane/compare/v8.29.0...v8.29.1) (2025-05-20)
+
+
+### Bug Fixes
+
+* rename record option to timeTravel ([#1087](https://github.com/gemini-testing/testplane/issues/1087)) ([d03453e](https://github.com/gemini-testing/testplane/commit/d03453e9146436b453c907ca0540381a8a11e249))
+* type of "WdioBrowser" should contain custom commands ([4bb6acc](https://github.com/gemini-testing/testplane/commit/4bb6accb5fa6fae8223ba03220ba7f828c2873a2))
+
 ## [8.29.0](https://github.com/gemini-testing/testplane/compare/v8.28.4...v8.29.0) (2025-05-20)
 
 
