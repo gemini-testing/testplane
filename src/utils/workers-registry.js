@@ -2,7 +2,7 @@
 
 const { EventEmitter } = require("events");
 const workerFarm = require("worker-farm");
-const Promise = require("bluebird");
+const { promisify } = require("util");
 const _ = require("lodash");
 const { MasterEvents } = require("../events");
 const RuntimeConfig = require("../config/runtime-config");
@@ -39,7 +39,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
 
     async end() {
         this._ended = true;
-        await Promise.promisify(workerFarm.end)(this._workerFarm);
+        await promisify(workerFarm.end)(this._workerFarm);
     }
 
     isEnded() {
@@ -55,7 +55,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
                 if (this._ended) {
                     return Promise.reject(new Error(`Can't execute method '${methodName}' because worker farm ended.`));
                 }
-                return Promise.promisify(this._workerFarm)(workerFilepath, methodName, args);
+                return promisify(this._workerFarm)(workerFilepath, methodName, args);
             };
         }
 

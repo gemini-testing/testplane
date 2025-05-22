@@ -1,7 +1,7 @@
 "use strict";
 
-const Promise = require("bluebird");
 const HookRunner = require("src/worker/runner/test-runner/hook-runner");
+const { promiseDelay } = require("src/utils/promise");
 const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
 const { Suite, Test, Hook } = require("src/test-reader/test-object");
 
@@ -89,7 +89,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
         it("should wait until first hook finished before next hook started", async () => {
             const afterFirstHook = sinon.spy().named("afterFirstHook");
-            const firstHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterFirstHook));
+            const firstHook = sinon.stub().callsFake(() => promiseDelay(10).then(afterFirstHook));
             const secondHook = sinon.spy().named("secondHook");
 
             const test = mkTest_({
@@ -105,7 +105,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
         it("should wait until parent hook finished before child hook start", async () => {
             const afterParentHook = sinon.spy().named("afterParentHook");
-            const parentHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterParentHook));
+            const parentHook = sinon.stub().callsFake(() => promiseDelay(10).then(afterParentHook));
             const childHook = sinon.spy().named("childHook");
 
             const test = mkTest_({
@@ -186,7 +186,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
         it("should wait until first hook finished before next hook started", async () => {
             const afterFirstHook = sinon.spy().named("afterFirstHook");
-            const firstHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterFirstHook));
+            const firstHook = sinon.stub().callsFake(() => promiseDelay(10).then(afterFirstHook));
             const secondHook = sinon.spy().named("secondHook");
 
             const test = mkTest_({
@@ -202,7 +202,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
         it("should wait until child hook finished before parent hook start", async () => {
             const afterChildHook = sinon.spy().named("afterChildHook");
-            const childHook = sinon.stub().callsFake(() => Promise.delay(10).then(afterChildHook));
+            const childHook = sinon.stub().callsFake(() => promiseDelay(10).then(afterChildHook));
             const parentHook = sinon.spy().named("parentHook");
 
             const test = mkTest_({

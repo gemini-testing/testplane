@@ -1,5 +1,4 @@
 "use strict";
-const Promise = require("bluebird");
 const { ClientBridge } = require("src/browser/client-bridge/client-bridge");
 const { ClientBridgeError } = require("src/browser/client-bridge/error");
 

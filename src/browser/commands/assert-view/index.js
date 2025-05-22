@@ -3,7 +3,6 @@
 const fs = require("fs-extra");
 const path = require("path");
 const _ = require("lodash");
-const Promise = require("bluebird");
 const { pngValidator: validatePng } = require("png-validator");
 const { Image } = require("../../../image");
 const ScreenShooter = require("../../screen-shooter");
@@ -159,16 +158,18 @@ module.exports.default = browser => {
     };
 
     const waitSelectorsForExist = async (browser, selectors) => {
-        await Promise.map([].concat(selectors), async selector => {
-            await browser
-                .$(selector)
-                .then(el => el.waitForExist())
-                .catch(() => {
-                    throw new Error(
-                        `element ("${selector}") still not existing after ${browser.options.waitforTimeout} ms`,
-                    );
-                });
-        });
+        await Promise.all(
+            [].concat(selectors).map(selector =>
+                browser
+                    .$(selector)
+                    .then(el => el.waitForExist())
+                    .catch(() => {
+                        throw new Error(
+                            `element ("${selector}") still not existing after ${browser.options.waitforTimeout} ms`,
+                        );
+                    }),
+            ),
+        );
     };
 
     const assertViewBySelector = async (browser, state, selectors, opts) => {

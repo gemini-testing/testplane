@@ -1,9 +1,8 @@
 "use strict";
 
-const Promise = require("bluebird");
-
 const { AsyncEmitter } = require("src/events/async-emitter");
 const utils = require("src/events/utils");
+const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("events/utils", () => {
     describe("passthroughEvent", () => {
@@ -78,7 +77,7 @@ describe("events/utils", () => {
 
             utils.passthroughEventAsync(from, to, "some-event");
 
-            to.on("some-event", () => Promise.delay(1).then(insideHandler));
+            to.on("some-event", () => promiseDelay(1).then(insideHandler));
 
             return from
                 .emitAndWait("some-event")

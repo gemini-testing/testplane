@@ -1,5 +1,5 @@
 const { EventEmitter } = require("events");
-const Promise = require("bluebird");
+const { promiseDelay } = require("../../../src/utils/promise");
 const proxyquire = require("proxyquire").noCallThru();
 
 describe('"initReporters" method', () => {
@@ -41,7 +41,7 @@ describe('"initReporters" method', () => {
         it("should wait until reporter is initialized", async () => {
             const afterCreateReporter = sinon.spy().named("afterCreateReporter");
             Reporter.create = () =>
-                Promise.delay(10).then(() => {
+                promiseDelay(10).then(() => {
                     afterCreateReporter();
                     return new Reporter();
                 });

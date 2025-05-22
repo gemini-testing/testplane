@@ -2,7 +2,6 @@ import process from "node:process";
 import crypto from "node:crypto";
 import { EventEmitter } from "node:stream";
 import _ from "lodash";
-import P from "bluebird";
 import sinon, { SinonStub, SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";
 
@@ -42,6 +41,7 @@ import type { BrowserConfig } from "../../../../../../src/config/browser-config"
 import type { WorkerRunTestResult } from "../../../../../../src/worker/testplane";
 import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-reconnect-error";
 import { ExistingBrowser } from "../../../../../../src/browser/existing-browser";
+import { promiseDelay } from "../../../../../../src/utils/promise";
 
 interface TestOpts {
     title: string;
@@ -116,7 +116,7 @@ describe("worker/browser-env/runner/test-runner", () => {
         opts: Partial<RunOpts> = {},
     ): Promise<WorkerRunTestResult> => {
         const promise = run_(opts);
-        await P.delay(10);
+        await promiseDelay(10);
         socket.emit(BrowserEventNames.initialize, []);
 
         return promise;
@@ -995,7 +995,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             const error = new Error("o.O");
 
             const promise = run_();
-            await P.delay(10);
+            await promiseDelay(10);
             socket.emit(BrowserEventNames.initialize, [error]);
 
             await assert.isRejected(promise, error);

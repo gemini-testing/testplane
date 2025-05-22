@@ -1,8 +1,7 @@
 "use strict";
 
-const P = require("bluebird");
-
 const { normalizeCommandArgs, runWithHooks, isGroup } = require("src/browser/history/utils");
+const { promiseDelay } = require("../../../../src/utils/promise");
 
 describe("commands-history", () => {
     describe("utils", () => {
@@ -35,11 +34,8 @@ describe("commands-history", () => {
             beforeEach(() => {
                 clock = sinon.useFakeTimers();
                 tick = async ms => {
-                    const p = P.resolve();
-
                     clock.tick(ms);
-
-                    return p;
+                    return Promise.resolve();
                 };
             });
 
@@ -62,7 +58,7 @@ describe("commands-history", () => {
 
                 it("a promise", async () => {
                     const before = sinon.stub();
-                    const fn = sinon.stub().callsFake(() => P.delay(1000));
+                    const fn = sinon.stub().callsFake(() => promiseDelay(1000));
                     const after = sinon.stub();
 
                     runWithHooks({ fn, before, after });
@@ -106,18 +102,17 @@ describe("commands-history", () => {
             });
 
             it("should return a result of a target", async () => {
-                const before = sinon.stub().callsFake(() => P.delay(1000));
-                const after = sinon.stub().callsFake(() => P.delay(1000));
-                const fn = sinon.stub().callsFake(() => P.delay(1000).then(() => "result"));
+                const before = sinon.stub();
+                const after = sinon.stub();
+                const fn = sinon
+                    .stub()
+                    .callsFake(() => new Promise(resolve => setTimeout(() => resolve("result"), 1000)));
 
-                const prom = runWithHooks({ fn, before, after });
+                let res = runWithHooks({ fn, before, after });
 
-                await tick(1);
-                await tick(3000);
+                await tick(1000);
 
-                const res = await prom;
-
-                assert.equal(res, "result");
+                assert.equal(await res, "result");
             });
         });
 

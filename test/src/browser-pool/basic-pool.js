@@ -1,5 +1,6 @@
 "use strict";
 
+const _ = require("lodash");
 const { AsyncEmitter } = require("src/events/async-emitter");
 const { BasicPool } = require("src/browser-pool/basic-pool");
 const { NewBrowser } = require("src/browser/new-browser");
@@ -7,9 +8,8 @@ const { CancelledError } = require("src/browser-pool/cancelled-error");
 const { WebdriverPool } = require("src/browser-pool/webdriver-pool");
 const { MasterEvents: Events } = require("src/events");
 const { stubBrowser } = require("./util");
-const _ = require("lodash");
-const Promise = require("bluebird");
 const { makeConfigStub } = require("../../utils");
+const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("browser-pool/basic-pool", () => {
     const sandbox = sinon.createSandbox();
@@ -110,7 +110,7 @@ describe("browser-pool/basic-pool", () => {
             NewBrowser.create.returns(browser);
 
             const afterSessionStart = sandbox.stub().named("afterSessionStart");
-            const emitter = new AsyncEmitter().on(Events.SESSION_START, () => Promise.delay(1).then(afterSessionStart));
+            const emitter = new AsyncEmitter().on(Events.SESSION_START, () => promiseDelay(1).then(afterSessionStart));
 
             await mkPool_({ emitter }).getBrowser();
 
@@ -163,7 +163,7 @@ describe("browser-pool/basic-pool", () => {
 
         it("handler should be waited before actual quit", async () => {
             const afterSessionEnd = sandbox.stub().named("afterSessionEnd");
-            const emitter = new AsyncEmitter().on(Events.SESSION_END, () => Promise.delay(1).then(afterSessionEnd));
+            const emitter = new AsyncEmitter().on(Events.SESSION_END, () => promiseDelay(1).then(afterSessionEnd));
 
             const pool = mkPool_({ emitter });
             const browser = await pool.getBrowser();

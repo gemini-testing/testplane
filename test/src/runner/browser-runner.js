@@ -1,6 +1,6 @@
 "use strict";
 
-const Promise = require("bluebird");
+const proxyquire = require("proxyquire");
 const BrowserAgent = require("src/runner/browser-agent");
 const BrowserPool = require("src/browser-pool");
 const { create } = require("src/runner/test-runner");
@@ -11,7 +11,7 @@ const SuiteMonitor = require("src/runner/suite-monitor");
 const { MasterEvents: Events } = require("src/events");
 
 const { makeConfigStub } = require("../../utils");
-const proxyquire = require("proxyquire");
+const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("runner/browser-runner", () => {
     const sandbox = sinon.createSandbox();
@@ -140,8 +140,8 @@ describe("runner/browser-runner", () => {
             const afterSecondTest = sinon.stub().named("afterSecondTest");
             const afterWait = sinon.stub().named("afterWait");
 
-            TestRunner.prototype.run.onFirstCall().callsFake(() => Promise.delay(1).then(afterFirstTest));
-            TestRunner.prototype.run.onSecondCall().callsFake(() => Promise.delay(10).then(afterSecondTest));
+            TestRunner.prototype.run.onFirstCall().callsFake(() => promiseDelay(1).then(afterFirstTest));
+            TestRunner.prototype.run.onSecondCall().callsFake(() => promiseDelay(10).then(afterSecondTest));
 
             runner.addTestToRun(Test.create({ title: "foo" }));
             runner.addTestToRun(Test.create({ title: "bar" }));
@@ -207,8 +207,8 @@ describe("runner/browser-runner", () => {
             const afterSecondTest = sinon.stub().named("afterSecondTest");
             const afterRun = sinon.stub().named("afterRun");
 
-            TestRunner.prototype.run.onFirstCall().callsFake(() => Promise.delay(1).then(afterFirstTest));
-            TestRunner.prototype.run.onSecondCall().callsFake(() => Promise.delay(10).then(afterSecondTest));
+            TestRunner.prototype.run.onFirstCall().callsFake(() => promiseDelay(1).then(afterFirstTest));
+            TestRunner.prototype.run.onSecondCall().callsFake(() => promiseDelay(10).then(afterSecondTest));
 
             await run_();
             afterRun();

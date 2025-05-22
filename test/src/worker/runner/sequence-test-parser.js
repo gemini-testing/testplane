@@ -4,7 +4,7 @@ const { SequenceTestParser } = require("src/worker/runner/sequence-test-parser")
 const { SimpleTestParser } = require("src/worker/runner/simple-test-parser");
 const { WorkerEvents: RunnerEvents } = require("src/events");
 const { makeConfigStub, makeTest } = require("../../../utils");
-const Promise = require("bluebird");
+const { promiseDelay } = require("../../../../src/utils/promise");
 
 describe("worker/runner/sequence-test-parser", () => {
     const sandbox = sinon.createSandbox();
@@ -63,7 +63,7 @@ describe("worker/runner/sequence-test-parser", () => {
 
             SimpleTestParser.prototype.parse.callsFake(async () => {
                 calls.push("parse");
-                await Promise.delay(1);
+                await promiseDelay(1);
                 calls.push("afterParse");
 
                 return [];

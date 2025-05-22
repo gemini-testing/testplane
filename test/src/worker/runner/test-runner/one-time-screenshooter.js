@@ -1,11 +1,11 @@
 "use strict";
 
 const _ = require("lodash");
-const Promise = require("bluebird");
+const proxyquire = require("proxyquire");
 const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const { mkSessionStub_ } = require("../../../browser/utils");
-const proxyquire = require("proxyquire");
+const { promiseDelay } = require("../../../../../src/utils/promise");
 
 describe("worker/runner/test-runner/one-time-screenshooter", () => {
     const sandbox = sinon.createSandbox();
@@ -172,7 +172,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it("should restore session http timeout after taking screenshot", async () => {
             const afterScreenshot = sinon.stub().named("afterScreenshot").resolves({});
             const browser = mkBrowser_();
-            browser.publicAPI.takeScreenshot.callsFake(() => Promise.delay(10).then(afterScreenshot));
+            browser.publicAPI.takeScreenshot.callsFake(() => promiseDelay(10).then(afterScreenshot));
 
             await mkScreenshooter_({ browser })[method](...getArgs());
 
@@ -192,7 +192,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it('should fail with timeout error on long execution of "screenshot" command', async () => {
             const config = { takeScreenshotOnFailsTimeout: 10 };
             const browser = mkBrowser_();
-            browser.publicAPI.takeScreenshot.callsFake(() => Promise.delay(20));
+            browser.publicAPI.takeScreenshot.callsFake(() => promiseDelay(20));
 
             const screenshooter = mkScreenshooter_({ config, browser });
 

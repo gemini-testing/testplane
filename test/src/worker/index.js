@@ -2,7 +2,6 @@
 
 const clearRequire = require("clear-require");
 const TestplaneFacade = require("src/worker/testplane-facade");
-const Promise = require("bluebird");
 
 describe("worker", () => {
     const sandbox = sinon.createSandbox();
