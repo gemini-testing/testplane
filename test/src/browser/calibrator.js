@@ -2,7 +2,6 @@
 
 const path = require("path");
 const fs = require("fs");
-const Promise = require("bluebird");
 const { Image } = require("src/image");
 const { Calibrator } = require("src/browser/calibrator");
 const { CoreError } = require("src/browser/core-error");

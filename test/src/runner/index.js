@@ -1,8 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const Promise = require("bluebird");
-
+const proxyquire = require("proxyquire");
 const temp = require("src/temp");
 const RuntimeConfig = require("src/config/runtime-config");
 const { Stats: RunnerStats } = require("src/stats");
@@ -11,9 +10,8 @@ const WorkersRegistry = require("src/utils/workers-registry");
 const { BrowserRunner } = require("src/runner/browser-runner");
 const { Test } = require("src/test-reader/test-object");
 const { TestCollection } = require("src/test-collection");
-
 const { makeConfigStub } = require("../../utils");
-const proxyquire = require("proxyquire");
+const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("NodejsEnvRunner", () => {
     const sandbox = sinon.createSandbox();
@@ -244,7 +242,7 @@ describe("NodejsEnvRunner", () => {
                 const onRunnerStart = sinon
                     .stub()
                     .named("onRunnerStart")
-                    .callsFake(() => Promise.delay(10).then(mediator));
+                    .callsFake(() => promiseDelay(10).then(mediator));
                 const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, onRunnerStart);
 
                 await run_({ runner });
@@ -267,7 +265,7 @@ describe("NodejsEnvRunner", () => {
             const onRunnerStart = sinon
                 .stub()
                 .named("onRunnerStart")
-                .callsFake(() => Promise.delay(10).then(mediator));
+                .callsFake(() => promiseDelay(10).then(mediator));
             const onBegin = sinon.stub().named("onBegin");
 
             const runner = new Runner(makeConfigStub())
@@ -331,7 +329,7 @@ describe("NodejsEnvRunner", () => {
                 .onFirstCall()
                 .callsFake(() => Promise.resolve().then(firstResolveMarker))
                 .onSecondCall()
-                .callsFake(() => Promise.delay(1).then(secondResolveMarker));
+                .callsFake(() => promiseDelay(1).then(secondResolveMarker));
 
             await run_({ testCollection });
 
@@ -561,7 +559,7 @@ describe("NodejsEnvRunner", () => {
                 const onRunnerEnd = sinon
                     .stub()
                     .named("onRunnerEnd")
-                    .callsFake(() => Promise.delay(1).then(finMarker));
+                    .callsFake(() => promiseDelay(1).then(finMarker));
 
                 const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_END, onRunnerEnd);
 

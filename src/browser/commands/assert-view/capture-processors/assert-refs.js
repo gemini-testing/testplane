@@ -1,6 +1,5 @@
 "use strict";
 
-const Promise = require("bluebird");
 const { ImageDiffError } = require("../errors/image-diff-error");
 const { NoRefImageError } = require("../errors/no-ref-image-error");
 const { InvalidRefImageError } = require("../errors/invalid-ref-image-error");

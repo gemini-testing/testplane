@@ -2,7 +2,6 @@
 
 const { EventEmitter } = require("events");
 const _ = require("lodash");
-const Promise = require("bluebird");
 const fs = require("fs-extra");
 const {
     WorkerEvents: { UPDATE_REFERENCE },
@@ -66,7 +65,7 @@ describe("browser/commands/assert-view/capture-processors/update-refs", () => {
             it(`should emit "${UPDATE_REFERENCE}" only after the reference image has been updated`, async () => {
                 const emitter = new EventEmitter();
                 const onUpdateReference = sandbox.spy().named("onUpdateReference");
-                fs.copy.callsFake(() => Promise.delay(10).then(Promise.resolve));
+                fs.copy.callsFake(() => new Promise(resolve => setTimeout(resolve, 10)));
 
                 emitter.on(UPDATE_REFERENCE, onUpdateReference);
 
