@@ -11,9 +11,9 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "html-reporter": "^10.6.7",
+    "html-reporter": "latest",
     "http-server": "^14.1.1",
-    "testplane": "^8.20.3",
+    "testplane": "latest",
     "ts-node": "^10.9.2"
   }
 }

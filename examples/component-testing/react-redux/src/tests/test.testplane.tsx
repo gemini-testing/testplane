@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import App from '../App';
 import { store } from '../counter';
 
-it('should render react button', async ({browser}) => {
+it('should increment counter on button click', async ({browser}) => {
     render(
         <Provider store={store}>
             <App />
