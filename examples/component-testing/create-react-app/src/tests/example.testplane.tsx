@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import App from "../App";
 
-it('should render react button', async ({ browser }) => {
+it('should check if the link exists', async ({ browser }) => {
     render(<App />);
 
     const linkElement = await browser.$("=Learn React");
