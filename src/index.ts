@@ -7,12 +7,14 @@ import "./browser/types";
 import "expect-webdriverio";
 
 import { GlobalHelper } from "./types";
+
 export { run as runCli } from "./cli";
 export { Testplane as default } from "./testplane";
 export { Key } from "@testplane/webdriverio";
 export * from "./mock";
 
 export * as unstable from "./unstable";
+export * as queries from "./browser/queries";
 
 export type {
     WdioBrowser,
@@ -40,6 +42,7 @@ export type {
 export type { StatsResult } from "./stats";
 
 import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
+
 export type { TestDefinition, SuiteDefinition, TestHookDefinition };
 
 declare global {
