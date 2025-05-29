@@ -23,6 +23,7 @@ export type W3CBrowserName = Exclude<(typeof BrowserName)[keyof typeof BrowserNa
 export interface BrowserMeta {
     pid: number;
     browserVersion: string;
+
     [name: string]: unknown;
 }
 
@@ -57,8 +58,9 @@ declare global {
             ...args: Parameters<Fn>
         ) => ReturnType<Fn>;
 
-        interface Browser {
+        interface Browser extends TestplaneQueries, TestplaneQueriesSync, TestplaneQueriesChainable {
             getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
+
             getMeta(this: WebdriverIO.Browser, key: string): Promise<unknown>;
 
             setMeta(this: WebdriverIO.Browser, key: string, value: unknown): Promise<void>;

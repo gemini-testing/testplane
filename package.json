@@ -69,6 +69,7 @@
     "@jspm/core": "2.0.1",
     "@puppeteer/browsers": "2.7.1",
     "@rrweb/record": "2.0.0-alpha.18",
+    "@testing-library/dom": "10.4.0",
     "@testplane/devtools": "8.32.3",
     "@testplane/wdio-protocols": "9.4.6",
     "@testplane/wdio-utils": "9.5.3",
