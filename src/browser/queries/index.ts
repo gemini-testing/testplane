@@ -61,26 +61,35 @@ function findContainerWithExecute(container: ElementBase): WebdriverIO.Browser {
 }
 
 async function injectDOMTestingLibrary(container: ElementBase) {
-    const containerWithExecute = findContainerWithExecute(container);
-    const shouldInjectDTL = await containerWithExecute.execute(function () {
+    const browser = findContainerWithExecute(container);
+    const shouldInjectDTL = await browser.execute(function () {
         return !window.TestingLibraryDom;
     });
 
     if (shouldInjectDTL) {
-        await containerWithExecute.execute(function (library) {
-            // add DOM Testing Library to page as a script tag to support Firefox
+        await browser.execute(function (library) {
             if (navigator.userAgent.indexOf("Firefox") !== -1) {
-                const script = window.document.createElement("script");
-                script.textContent = library;
-                window.document.head.append(script);
-                window.eval(library);
+                try {
+                    // Inject via inline-script
+                    const script = window.document.createElement("script");
+                    script.textContent = library;
+                    window.document.head.append(script);
+                    if (!window.TestingLibraryDom) {
+                        // Inject via eval
+                        window.eval(library);
+                    }
+                } catch (error) {
+                    throw new Error(
+                        `The DOM Testing Library cannot be injected on certain domains, particularly "${window.location.host}", due to restrictions imposed by the Content-Security-Policy (CSP) header.`,
+                    );
+                }
             } else {
                 eval(library);
             }
         }, DOM_TESTING_LIBRARY_UMD);
     }
 
-    await containerWithExecute.execute(function (config: Partial<Config>) {
+    await browser.execute(function (config: Partial<Config>) {
         window.TestingLibraryDom.configure(config);
     }, _config);
 }
@@ -109,7 +118,6 @@ function serializeArg(arg: QueryArg): SerializedArg {
 type SerializedQueryResult = { selector: string }[] | string | { selector: string } | null;
 
 async function executeQuery(query: QueryName, container: HTMLElement, ...args: SerializedArg[]) {
-    // const done = args.pop() as unknown as (result: SerializedQueryResult) => void;
     return new Promise((done: (result: SerializedQueryResult) => void) => {
         function deserializeObject(object: SerializedObject) {
             return Object.entries(object)
@@ -154,7 +162,7 @@ async function executeQuery(query: QueryName, container: HTMLElement, ...args: S
             }
 
             function makeSelectorResult(element: HTMLElement): { selector: string } {
-                const elementIdAttributeName = "data-wdio-testing-lib-element-id";
+                const elementIdAttributeName = "data-testplane-element-id";
                 let elementId = element.getAttribute(elementIdAttributeName);
 
                 // if id doesn't already exist create one and add it to element

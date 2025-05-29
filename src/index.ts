@@ -14,7 +14,6 @@ export { Key } from "@testplane/webdriverio";
 export * from "./mock";
 
 export * as unstable from "./unstable";
-export * as queries from "./browser/queries";
 
 export type {
     WdioBrowser,

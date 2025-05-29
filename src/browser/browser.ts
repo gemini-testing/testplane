@@ -13,7 +13,7 @@ import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
-import { setupBrowser } from "./queries";
+import { configure, setupBrowser } from "./queries";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -104,6 +104,7 @@ export class Browser {
     }
 
     protected _addQueries(): void {
+        configure({ testIdAttribute: this._config.testIdAttribute, asyncUtilTimeout: this._config.waitTimeout });
         setupBrowser(this._session!);
     }
 
