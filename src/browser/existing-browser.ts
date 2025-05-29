@@ -84,6 +84,7 @@ export class ExistingBrowser extends Browser {
 
         this._extendStacktrace();
         this._addSteps();
+        this._addQueries();
         this._addHistory();
 
         await history.runGroup(
