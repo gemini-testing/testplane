@@ -7,7 +7,7 @@ import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
-import { TestplaneQueries, TestplaneQueriesChainable, TestplaneQueriesSync } from "./queries";
+import { configure, TestplaneQueries, TestplaneQueriesChainable, TestplaneQueriesSync } from "./queries";
 
 export const BrowserName = {
     CHROME: PuppeteerBrowser.CHROME,
@@ -154,6 +154,11 @@ declare global {
             switchToRepl: (this: WebdriverIO.Browser, ctx?: Record<string, unknown>) => Promise<void>;
 
             clearSession: (this: WebdriverIO.Browser) => Promise<void>;
+
+            /**
+             * Allows to configure DOM Testing Library
+             */
+            configureDTL: typeof configure;
         }
 
         interface Element {
