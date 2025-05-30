@@ -1,8 +1,8 @@
 "use strict";
 
-const Promise = require("bluebird");
 const { LimitedPool } = require("src/browser-pool/limited-pool");
 const { CancelledError } = require("src/browser-pool/cancelled-error");
+const { promiseDelay } = require("../../../src/utils/promise");
 const stubBrowser = require("./util").stubBrowser;
 
 describe("browser-pool/limited-pool", () => {
@@ -54,7 +54,7 @@ describe("browser-pool/limited-pool", () => {
                 const pool = await makePool_({ limit: 1 });
                 await pool.getBrowser("bro", { some: "opt1" });
                 // should be called without await
-                Promise.delay(100).then(() => pool.freeBrowser(browser1));
+                promiseDelay(100).then(() => pool.freeBrowser(browser1));
                 await pool.getBrowser("bro", { another: "opt2" });
 
                 assert.calledWith(underlyingPool.getBrowser.secondCall, "bro", { another: "opt2" });
@@ -263,7 +263,7 @@ describe("browser-pool/limited-pool", () => {
 
             const result = pool.getBrowser("first").then(browser => {
                 const secondPromise = pool.getBrowser("second");
-                return Promise.delay(100)
+                return promiseDelay(100)
                     .then(() => pool.freeBrowser(browser))
                     .then(() => secondPromise);
             });
@@ -304,7 +304,7 @@ describe("browser-pool/limited-pool", () => {
                 .getBrowser("first")
                 .then(browser => {
                     const secondPromise = pool.getBrowser("second");
-                    return Promise.delay(100)
+                    return promiseDelay(100)
                         .then(() => pool.freeBrowser(browser))
                         .catch(() => secondPromise);
                 })
@@ -323,7 +323,7 @@ describe("browser-pool/limited-pool", () => {
                 .returns(Promise.resolve());
 
             return pool.getBrowser("first").then(browser => {
-                const freeFirstBrowser = Promise.delay(100)
+                const freeFirstBrowser = promiseDelay(100)
                     .then(() => pool.freeBrowser(browser))
                     .then(afterFree);
 

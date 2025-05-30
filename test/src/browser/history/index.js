@@ -1,6 +1,5 @@
 "use strict";
 
-const P = require("bluebird");
 const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
@@ -41,7 +40,7 @@ describe("commands-history", () => {
             const session = mkSessionStub_();
             const stack = initCommandHistory(session, browserConfig);
 
-            session.addCommand("foo", (a1, a2) => P.resolve(a1, a2));
+            session.addCommand("foo", (a1, a2) => Promise.resolve(a1, a2));
 
             await session.foo("arg1", "arg2");
 
@@ -57,7 +56,7 @@ describe("commands-history", () => {
             const session = mkSessionStub_();
             const stack = initCommandHistory(session, browserConfig);
 
-            session.overwriteCommand("url", (a1, a2) => P.resolve(a1, a2));
+            session.overwriteCommand("url", (a1, a2) => Promise.resolve(a1, a2));
 
             await session.url("site.com");
 

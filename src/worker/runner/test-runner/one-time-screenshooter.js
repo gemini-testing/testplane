@@ -1,10 +1,9 @@
 "use strict";
 
-const Promise = require("bluebird");
-
 const { Image } = require("../../../image");
 const ScreenShooter = require("../../../browser/screen-shooter");
 const logger = require("../../../utils/logger");
+const { promiseTimeout } = require("../../../utils/promise");
 
 module.exports = class OneTimeScreenshooter {
     static create(...args) {
@@ -51,9 +50,11 @@ module.exports = class OneTimeScreenshooter {
 
         this._browser.setHttpTimeout(this._screenshotTimeout);
 
-        this._screenshot = await Promise.resolve(this._makeScreenshot())
-            .timeout(this._screenshotTimeout, `timed out after ${this._screenshotTimeout} ms`)
-            .catch(e => logger.warn(`WARN: Failed to take screenshot on test fail: ${e}`));
+        this._screenshot = await promiseTimeout(
+            Promise.resolve(this._makeScreenshot()),
+            this._screenshotTimeout,
+            `timed out after ${this._screenshotTimeout} ms`,
+        ).catch(e => logger.warn(`WARN: Failed to take screenshot on test fail: ${e}`));
 
         this._browser.restoreHttpTimeout();
     }

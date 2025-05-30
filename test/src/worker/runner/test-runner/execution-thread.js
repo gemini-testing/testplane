@@ -1,14 +1,13 @@
 "use strict";
 
-const Promise = require("bluebird");
 const _ = require("lodash");
-
+const proxyquire = require("proxyquire");
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
-const proxyquire = require("proxyquire");
+const { promiseDelay } = require("../../../../../src/utils/promise");
 
 describe("worker/runner/test-runner/execution-thread", () => {
     const sandbox = sinon.createSandbox();
@@ -225,7 +224,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
             const runnable = mkRunnable_({
                 type: "test",
                 fullTitle: () => "bla bla",
-                fn: () => Promise.delay(20),
+                fn: () => promiseDelay(20),
                 timeout: 10,
             });
 
@@ -237,7 +236,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
         it("should not set timeout if timeouts are disabled", async () => {
             const runnable = mkRunnable_({
                 type: "test",
-                fn: () => Promise.delay(20),
+                fn: () => promiseDelay(20),
                 timeout: 0,
             });
 
@@ -304,7 +303,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
             it("should wait until screenshot will be taken", async () => {
                 const afterScreenshot = sinon.spy().named("afterScreenshot");
                 OneTimeScreenshooter.prototype.extendWithScreenshot.callsFake(() =>
-                    Promise.delay(10).then(afterScreenshot),
+                    promiseDelay(10).then(afterScreenshot),
                 );
 
                 const runnable = mkRunnable_({
@@ -324,7 +323,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     timeout: 10,
                 });
 
-                OneTimeScreenshooter.prototype.extendWithScreenshot.callsFake(() => Promise.delay(20));
+                OneTimeScreenshooter.prototype.extendWithScreenshot.callsFake(() => promiseDelay(20));
 
                 const executionThread = mkExecutionThread_();
 

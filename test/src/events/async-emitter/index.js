@@ -1,7 +1,7 @@
 "use strict";
 
 const { AsyncEmitter } = require("src/events/async-emitter");
-const Promise = require("bluebird");
+const { promiseDelay } = require("../../../../src/utils/promise");
 
 describe("events/async-emitter", () => {
     const sandbox = sinon.createSandbox();
@@ -18,8 +18,8 @@ describe("events/async-emitter", () => {
         const insideHandler2 = sinon.spy();
         const afterWait = sinon.spy();
 
-        emitter.on("event", () => Promise.delay(1).then(insideHandler1));
-        emitter.on("event", () => Promise.delay(2).then(insideHandler2));
+        emitter.on("event", () => promiseDelay(1).then(insideHandler1));
+        emitter.on("event", () => promiseDelay(2).then(insideHandler2));
 
         return emitter
             .emitAndWait("event")
@@ -34,7 +34,7 @@ describe("events/async-emitter", () => {
 
         emitter.on("event", () => rejectSyncHandler());
         emitter.on("event", () => rejectHandler());
-        emitter.on("event", () => Promise.delay(10).then(resolveHandler));
+        emitter.on("event", () => promiseDelay(10).then(resolveHandler));
 
         return emitter
             .emitAndWait("event")

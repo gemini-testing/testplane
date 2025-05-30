@@ -4,7 +4,6 @@ const _ = require("lodash");
 const fs = require("fs-extra");
 const { EventEmitter } = require("events");
 const pluginsLoader = require("plugins-loader");
-const Promise = require("bluebird");
 const proxyquire = require("proxyquire").noCallThru();
 
 const { Config } = require("src/config");
@@ -19,6 +18,7 @@ const { MasterEvents: RunnerEvents, CommonSyncEvents, MasterAsyncEvents, MasterS
 const { MainRunner: NodejsEnvRunner } = require("src/runner");
 const { MainRunner: BrowserEnvRunner } = require("src/runner/browser-env");
 const { makeConfigStub } = require("../utils");
+const { promiseDelay } = require("../../src/utils/promise");
 
 describe("testplane", () => {
     const sandbox = sinon.createSandbox();
@@ -274,7 +274,7 @@ describe("testplane", () => {
 
             it("should wait INIT handler before running tests", () => {
                 const afterInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
+                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
 
                 return testplane.run().then(() => assert.callOrder(afterInit, NodejsEnvRunner.prototype.run));
             });
@@ -730,7 +730,7 @@ describe("testplane", () => {
 
             it("should wait INIT handler before reading tests", async () => {
                 const afterInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => Promise.delay(20).then(afterInit));
+                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
 
                 await testplane.readTests();
 
@@ -919,7 +919,7 @@ describe("testplane", () => {
 
                 return testplane
                     .run()
-                    .finally(() => Promise.delay(300))
+                    .finally(() => promiseDelay(300))
                     .then(() => {
                         assert.calledWithMatch(loggerErrorStub, /Forcing shutdown.../);
                         assert.calledOnceWith(process.exit, 1);

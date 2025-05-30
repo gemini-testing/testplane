@@ -1,7 +1,6 @@
 import proxyquire from "proxyquire";
 import sinon, { SinonStub } from "sinon";
 import Vite from "vite";
-import P from "bluebird";
 import chalk from "chalk";
 
 import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
@@ -11,6 +10,7 @@ import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
 
 import type { Config } from "../../../../../src/config";
 import type { BrowserTestRunEnvOptions } from "../../../../../src/runner/browser-env/vite/types";
+import { promiseDelay } from "../../../../../src/utils/promise";
 
 describe("runner/browser-env/vite/server", () => {
     const sandbox = sinon.createSandbox();
@@ -127,7 +127,7 @@ describe("runner/browser-env/vite/server", () => {
             describe("with user config as function", () => {
                 it("on specified host and port", async () => {
                     const userConfigFn = async (): Promise<Vite.InlineConfig> => {
-                        await P.delay(20);
+                        await promiseDelay(20);
                         return {
                             server: {
                                 host: "1.1.1.1",

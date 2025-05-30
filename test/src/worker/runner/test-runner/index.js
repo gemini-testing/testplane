@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const Promise = require("bluebird");
+const proxyquire = require("proxyquire");
 const HookRunner = require("src/worker/runner/test-runner/hook-runner");
 const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
 const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
@@ -12,7 +12,7 @@ const { Suite, Test } = require("src/test-reader/test-object");
 const history = require("src/browser/history");
 const { SAVE_HISTORY_MODE } = require("src/constants/config");
 const { makeConfigStub } = require("../../../../utils");
-const proxyquire = require("proxyquire");
+const { promiseDelay } = require("../../../../../src/utils/promise");
 
 describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
@@ -421,7 +421,7 @@ describe("worker/runner/test-runner", () => {
 
             it("should wait beforeEach hooks finish before running test", async () => {
                 const afterBeforeEach = sinon.spy().named("afterBeforeEach");
-                HookRunner.prototype.runBeforeEachHooks.callsFake(() => Promise.delay(10).then(afterBeforeEach));
+                HookRunner.prototype.runBeforeEachHooks.callsFake(() => promiseDelay(10).then(afterBeforeEach));
                 const test = mkTest_();
 
                 await run_({ test });

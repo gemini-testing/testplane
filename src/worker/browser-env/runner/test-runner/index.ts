@@ -1,9 +1,9 @@
 import crypto from "node:crypto";
-import P from "bluebird";
 import _ from "lodash";
 import { io } from "socket.io-client";
 import urljoin from "url-join";
 
+import { promiseTimeout } from "../../../../utils/promise";
 import NodejsEnvTestRunner from "../../../runner/test-runner";
 import { wrapExecutionThread } from "./execution-thread";
 import { WorkerEventNames } from "./types";
@@ -143,34 +143,33 @@ export class TestRunner extends NodejsEnvTestRunner {
     private _waitBroInitOnReconnect(): Promise<void> {
         let intervalId: NodeJS.Timeout | null = null;
 
-        return new P((resolve, reject) => {
-            intervalId = setInterval(() => {
-                if (_.isNull(this._broInitResOnReconnect)) {
-                    return;
-                }
+        return promiseTimeout(
+            new Promise<void>((resolve, reject) => {
+                intervalId = setInterval(() => {
+                    if (_.isNull(this._broInitResOnReconnect)) {
+                        return;
+                    }
 
-                if (intervalId) {
-                    clearInterval(intervalId);
-                }
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                    }
 
-                if (_.isEmpty(this._broInitResOnReconnect)) {
-                    resolve();
-                } else {
-                    reject(this._broInitResOnReconnect[0]);
-                }
-            }, BRO_INIT_INTERVAL_ON_RECONNECT).unref();
-        })
-            .timeout(
-                BRO_INIT_TIMEOUT_ON_RECONNECT,
-                `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
-            )
-            .catch(err => {
-                if (intervalId) {
-                    clearInterval(intervalId);
-                }
+                    if (_.isEmpty(this._broInitResOnReconnect)) {
+                        resolve();
+                    } else {
+                        reject(this._broInitResOnReconnect[0]);
+                    }
+                }, BRO_INIT_INTERVAL_ON_RECONNECT).unref();
+            }),
+            BRO_INIT_TIMEOUT_ON_RECONNECT,
+            `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
+        ).catch(err => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
 
-                throw err;
-            });
+            throw err;
+        });
     }
 
     _getPreparePageActions(browser: Browser, history: BrowserHistory): (() => Promise<void>)[] {
@@ -298,7 +297,7 @@ export class TestRunner extends NodejsEnvTestRunner {
     }
 
     private async _openViteUrl(browser: Browser): Promise<void> {
-        const browserInitialize = new P((resolve, reject) => {
+        const browserInitialize = new Promise<void>((resolve, reject) => {
             this._socket.once(BrowserEventNames.initialize, errors => {
                 _.isEmpty(errors) ? resolve() : reject(errors[0]);
             });
@@ -308,7 +307,7 @@ export class TestRunner extends NodejsEnvTestRunner {
         const uri = urljoin(this._config.baseUrl, VITE_RUN_UUID_ROUTE, this._runUuid);
 
         await Promise.all([
-            browserInitialize.timeout(timeout, `Browser didn't connect to the Vite server in ${timeout}ms`),
+            promiseTimeout(browserInitialize, timeout, `Browser didn't connect to the Vite server in ${timeout}ms`),
             browser.publicAPI.url(uri),
         ]);
     }
