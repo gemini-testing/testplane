@@ -1,6 +1,6 @@
 "use strict";
 
-const Promise = require("bluebird");
+const { promiseMethod, promiseTimeout } = require("../../../utils/promise");
 const RuntimeConfig = require("../../../config/runtime-config");
 const logger = require("../../../utils/logger");
 const { AbortOnReconnectError } = require("../../../errors/abort-on-reconnect-error");
@@ -51,21 +51,21 @@ module.exports = class ExecutionThread {
             this._isReplBeforeTestOpened = true;
         }
 
-        let fnPromise = Promise.method(runnable.fn).call(this._ctx, this._ctx);
+        let fnPromise = promiseMethod(runnable.fn).call(this._ctx, this._ctx);
 
         if (runnable.timeout) {
             const msg = `'${runnable.fullTitle()}' timed out after ${runnable.timeout} ms`;
-            fnPromise = fnPromise.timeout(runnable.timeout, msg);
+            fnPromise = promiseTimeout(fnPromise, runnable.timeout, msg);
         }
 
         let error = null;
 
         return fnPromise
-            .tapCatch(async e => {
+            .catch(async e => {
                 error = e;
 
                 if (error instanceof AbortOnReconnectError) {
-                    return;
+                    throw e;
                 }
 
                 if (replMode?.onFail) {
@@ -73,7 +73,8 @@ module.exports = class ExecutionThread {
                     await this._ctx.browser.switchToRepl();
                 }
 
-                return this._screenshooter.extendWithScreenshot(e);
+                await this._screenshooter.extendWithScreenshot(e);
+                throw e;
             })
             .finally(async () => {
                 if (error instanceof AbortOnReconnectError) {

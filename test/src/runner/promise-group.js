@@ -1,8 +1,7 @@
 "use strict";
 
-const Promise = require("bluebird");
-
 const PromiseGroup = require("src/runner/promise-group");
+const { promiseDelay } = require("../../../src/utils/promise");
 
 describe("runner/promise-group", () => {
     const sandbox = sinon.createSandbox();
@@ -60,9 +59,12 @@ describe("runner/promise-group", () => {
             const afterSecond = sandbox.stub().named("afterSecond");
             const afterAll = sandbox.stub().named("afterAll");
 
-            group.add(Promise.delay(1)).then(afterFirst);
-            group.add(Promise.delay(10)).then(afterSecond);
-            await group.done().then(afterAll);
+            group.add(promiseDelay(1)).then(afterFirst);
+            group.add(promiseDelay(10)).then(afterSecond);
+
+            await group.done();
+
+            await promiseDelay(1).then(afterAll).then(promiseDelay(1));
 
             assert.callOrder(afterFirst, afterSecond, afterAll);
         });

@@ -8,7 +8,7 @@ const WorkersRegistry = require("src/utils/workers-registry");
 const { MasterEvents: Events } = require("src/events");
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
 const { Test } = require("src/test-reader/test-object");
-const Promise = require("bluebird");
+const { promiseDelay } = require("../../../../src/utils/promise");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
 
@@ -575,7 +575,7 @@ describe("runner/test-runner/regular-test-runner", () => {
                 const afterBrowserFree = sinon.stub().named("afterBrowserFree");
                 const afterRun = sinon.stub().named("afterRun");
 
-                BrowserAgent.prototype.freeBrowser.callsFake(() => Promise.delay(10).then(afterBrowserFree));
+                BrowserAgent.prototype.freeBrowser.callsFake(() => promiseDelay(10).then(afterBrowserFree));
 
                 await runTest_({
                     onRun: ({ workers }) => {
