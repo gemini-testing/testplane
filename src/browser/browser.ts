@@ -13,6 +13,7 @@ import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
+import { setupBrowser } from "./queries";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -100,6 +101,10 @@ export class Browser {
 
     protected _addCommands(): void {
         this._addExtendOptionsMethod(this._session!);
+    }
+
+    protected _addQueries(): void {
+        setupBrowser(this._session!);
     }
 
     protected _addSteps(): void {
