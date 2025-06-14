@@ -16,14 +16,39 @@ export interface CaptureSnapshotResult {
     textWasTruncated: boolean;
 }
 
-export const captureDomSnapshotInBrowser = ({
-    includeTags = [],
-    includeAttrs = [],
-    excludeTags = [],
-    excludeAttrs = [],
-    truncateText = true,
-    maxTextLength = 100,
-}: CaptureSnapshotOptions = {}): CaptureSnapshotResult => {
+export const captureDomSnapshotInBrowser = (
+    selectorOrElementOrOptions?: string | WebdriverIO.Element | CaptureSnapshotOptions,
+    maybeOptions?: CaptureSnapshotOptions,
+): CaptureSnapshotResult => {
+    let selector: string | undefined;
+    let element: globalThis.Element | undefined;
+    let options: CaptureSnapshotOptions;
+
+    if (typeof selectorOrElementOrOptions === "string") {
+        selector = selectorOrElementOrOptions;
+        options = maybeOptions || {};
+    } else if (
+        selectorOrElementOrOptions &&
+        typeof selectorOrElementOrOptions === "object" &&
+        "tagName" in selectorOrElementOrOptions
+    ) {
+        element = selectorOrElementOrOptions as globalThis.Element;
+        options = maybeOptions || {};
+    } else {
+        selector = undefined;
+        element = undefined;
+        options = (selectorOrElementOrOptions as CaptureSnapshotOptions) || {};
+    }
+
+    const {
+        includeTags = [],
+        includeAttrs = [],
+        excludeTags = [],
+        excludeAttrs = [],
+        truncateText = true,
+        maxTextLength = 100,
+    } = options;
+
     const BASE_EXCLUDED_TAGS = new Set([
         "HEAD",
         "LINK",
@@ -403,14 +428,39 @@ export const captureDomSnapshotInBrowser = ({
         }
     }
 
-    const startElement = document.body || document.documentElement;
-    if (!startElement) {
-        return {
-            snapshot: "# No elements found",
-            omittedTags: [],
-            omittedAttributes: [],
-            textWasTruncated: false,
-        };
+    let startElement: globalThis.Element | null;
+
+    if (element) {
+        startElement = element;
+    } else if (selector) {
+        try {
+            startElement = document.querySelector(selector);
+            if (!startElement) {
+                return {
+                    snapshot: `# Element not found: ${selector}`,
+                    omittedTags: [],
+                    omittedAttributes: [],
+                    textWasTruncated: false,
+                };
+            }
+        } catch (error) {
+            return {
+                snapshot: `# Invalid selector: ${selector}`,
+                omittedTags: [],
+                omittedAttributes: [],
+                textWasTruncated: false,
+            };
+        }
+    } else {
+        startElement = document.body || document.documentElement;
+        if (!startElement) {
+            return {
+                snapshot: "# No elements found",
+                omittedTags: [],
+                omittedAttributes: [],
+                textWasTruncated: false,
+            };
+        }
     }
 
     const rootNode = buildElementNode(startElement);
@@ -430,8 +480,23 @@ export default (browser: Browser): void => {
 
     session.addCommand(
         "unstable_captureDomSnapshot",
-        async function (options: Partial<CaptureSnapshotOptions> = {}): Promise<CaptureSnapshotResult> {
-            return session.execute(captureDomSnapshotInBrowser, options);
+        async function (
+            this: WebdriverIO.Browser,
+            selectorOrOptions?: string | Partial<CaptureSnapshotOptions>,
+            maybeOptions?: Partial<CaptureSnapshotOptions>,
+        ): Promise<CaptureSnapshotResult> {
+            return session.execute(captureDomSnapshotInBrowser, selectorOrOptions, maybeOptions);
         },
+    );
+
+    session.addCommand(
+        "unstable_captureDomSnapshot",
+        async function (
+            this: WebdriverIO.Element,
+            options: Partial<CaptureSnapshotOptions> = {},
+        ): Promise<CaptureSnapshotResult> {
+            return this.execute(captureDomSnapshotInBrowser, options);
+        },
+        true,
     );
 };

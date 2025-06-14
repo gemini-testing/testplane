@@ -689,4 +689,97 @@ describe('"captureDomSnapshot" command', () => {
             assert.deepEqual(result.snapshot.split("\n"), expected.split("\n"));
         });
     });
+
+    describe("selector-based capture", () => {
+        beforeEach(() => {
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>Header</h1>
+                    <div class="content">
+                        <p>Paragraph content</p>
+                        <button id="test-button">Click me</button>
+                    </div>
+                    <footer class="footer">Footer content</footer>
+                </div>
+            `;
+        });
+
+        it("should capture snapshot of specific element by selector", () => {
+            const result = captureDomSnapshotInBrowser(".content");
+
+            assert.match(result.snapshot, /div\.content.*@hidden.*:/);
+            assert.match(result.snapshot, /p.*@hidden.*"Paragraph content"/);
+            assert.match(result.snapshot, /button#test-button.*@hidden.*"Click me"/);
+            assert.notMatch(result.snapshot, /h1.*"Header"/);
+            assert.notMatch(result.snapshot, /footer.*"Footer content"/);
+        });
+
+        it("should return error message for non-existent selector", () => {
+            const result = captureDomSnapshotInBrowser(".non-existent");
+
+            assert.equal(result.snapshot, "# Element not found: .non-existent");
+            assert.deepEqual(result.omittedTags, []);
+            assert.deepEqual(result.omittedAttributes, []);
+            assert.equal(result.textWasTruncated, false);
+        });
+
+        it("should return error message for invalid selector", () => {
+            const result = captureDomSnapshotInBrowser("[invalid selector");
+
+            assert.equal(result.snapshot, "# Invalid selector: [invalid selector");
+            assert.deepEqual(result.omittedTags, []);
+            assert.deepEqual(result.omittedAttributes, []);
+            assert.equal(result.textWasTruncated, false);
+        });
+
+        it("should support options with selector", () => {
+            const result = captureDomSnapshotInBrowser(".content", {
+                truncateText: false,
+                maxTextLength: 5,
+            });
+
+            assert.match(result.snapshot, /div\.content.*@hidden.*:/);
+            assert.match(result.snapshot, /p.*@hidden.*"Paragraph content"/);
+            assert.equal(result.textWasTruncated, false);
+        });
+    });
+
+    describe("element-based capture", () => {
+        let testElement: Element;
+
+        beforeEach(() => {
+            document.body.innerHTML = `
+                <div class="container">
+                    <h1>Header</h1>
+                    <div class="content" id="target-content">
+                        <p>Paragraph content</p>
+                        <button id="test-button">Click me</button>
+                    </div>
+                    <footer class="footer">Footer content</footer>
+                </div>
+            `;
+            testElement = document.querySelector(".content") as Element;
+        });
+
+        it("should capture snapshot of specific element passed directly", () => {
+            const result = captureDomSnapshotInBrowser(testElement as any);
+
+            assert.match(result.snapshot, /div\.content#target-content.*@hidden.*:/);
+            assert.match(result.snapshot, /p.*@hidden.*"Paragraph content"/);
+            assert.match(result.snapshot, /button#test-button.*@hidden.*"Click me"/);
+            assert.notMatch(result.snapshot, /h1.*"Header"/);
+            assert.notMatch(result.snapshot, /footer.*"Footer content"/);
+        });
+
+        it("should support options with element", () => {
+            const result = captureDomSnapshotInBrowser(testElement as any, {
+                maxTextLength: 5,
+                truncateText: true,
+            });
+
+            assert.match(result.snapshot, /div\.content#target-content.*@hidden.*:/);
+            assert.match(result.snapshot, /p.*@hidden.*"Parag\.\.\."/);
+            assert.equal(result.textWasTruncated, true);
+        });
+    });
 });
