@@ -339,7 +339,7 @@ export const captureDomSnapshotInBrowser = ({
             attributes.push("@hidden");
         }
 
-        let elementLine = indent + selector;
+        let elementLine = selector;
 
         if (attributes.length > 0) {
             elementLine += `[${attributes.join(" ")}]`;
@@ -351,12 +351,14 @@ export const captureDomSnapshotInBrowser = ({
         }
 
         if (children.length > 0) {
-            elementLine += " {";
             const childLines = children.join("\n");
-            const closingBrace = indent + "}";
-            return `${elementLine}\n${childLines}\n${closingBrace}`;
+            // If a line contains ": " string, we should place it in quotes and escape to be parsed correctly
+            const escapedElementLine = elementLine.includes(": ")
+                ? `"${elementLine.replace(/"/g, '\\"')}"`
+                : elementLine;
+            return `${indent}- ${escapedElementLine}:\n${childLines}`;
         } else {
-            return elementLine;
+            return indent + "- " + elementLine;
         }
     }
 

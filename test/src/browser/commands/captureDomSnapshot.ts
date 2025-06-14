@@ -61,8 +61,8 @@ describe('"captureDomSnapshot" command', () => {
 
             const result = captureDomSnapshotInBrowser();
 
-            assert.match(result.snapshot, /body.*{/);
-            assert.match(result.snapshot, /div\.container#test.*"Hello World"/);
+            assert.match(result.snapshot, /- body.*:/);
+            assert.match(result.snapshot, /- div\.container#test.*"Hello World"/);
             assert.equal(result.textWasTruncated, false);
         });
 
@@ -76,9 +76,9 @@ describe('"captureDomSnapshot" command', () => {
 
             const result = captureDomSnapshotInBrowser();
 
-            assert.match(result.snapshot, /div\.parent.*{/);
-            assert.match(result.snapshot, /span\.child.*"Child text"/);
-            assert.match(result.snapshot, /p.*"Paragraph text"/);
+            assert.match(result.snapshot, /- div\.parent.*:/);
+            assert.match(result.snapshot, /- span\.child.*"Child text"/);
+            assert.match(result.snapshot, /- p.*"Paragraph text"/);
         });
 
         it("should exclude default excluded tags", () => {
@@ -681,21 +681,16 @@ describe('"captureDomSnapshot" command', () => {
             const result = captureDomSnapshotInBrowser();
 
             // Eveverything is @hidden, because jsdom doesn't have offsetWidth/offsetHeight
-            const expected = `body[@hidden] {
- div.app[@hidden] {
-  h1[@hidden] "Todo App"
-  form[data-testid=todo-form @hidden] {
-   input[type=text placeholder="Add todo..." name=todo @focused @value="Walk the dog" @hidden]
-   button[type=submit @hidden] "Add"
-  }
-  ul.todo-list[@hidden] {
-   li.todo-item[@hidden] {
-    input[type=checkbox @hidden]
-    span[@hidden] "Buy groceries"
-   }
-  }
- }
-}`;
+            const expected = `- body[@hidden]:
+ - div.app[@hidden]:
+  - h1[@hidden] "Todo App"
+  - form[data-testid=todo-form @hidden]:
+   - input[type=text placeholder="Add todo..." name=todo @focused @value="Walk the dog" @hidden]
+   - button[type=submit @hidden] "Add"
+  - ul.todo-list[@hidden]:
+   - li.todo-item[@hidden]:
+    - input[type=checkbox @hidden]
+    - span[@hidden] "Buy groceries"`;
 
             assert.deepEqual(result.snapshot.split("\n"), expected.split("\n"));
         });
