@@ -1,7 +1,7 @@
 {
     "include": ["src"],
     "compilerOptions": {
-        "lib": ["DOM", "es2021"],
+        "lib": ["DOM", "DOM.Iterable", "es2021"],
         "allowJs": true,
         "declaration": true,
         "declarationMap": false,
