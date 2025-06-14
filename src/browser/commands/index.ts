@@ -8,4 +8,5 @@ export const customCommandFileNames = [
     "openAndWait",
     "switchToRepl",
     "moveCursorTo",
+    "captureDomSnapshot",
 ];
