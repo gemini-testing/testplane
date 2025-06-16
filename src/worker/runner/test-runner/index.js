@@ -93,6 +93,10 @@ module.exports = class TestRunner extends Runner {
                 break;
         }
 
+        if (error && this._browser.state) {
+            this._browser.state.isLastTestFailed = true;
+        }
+
         this._browserAgent.freeBrowser(this._browser);
 
         if (error) {
