@@ -67,7 +67,6 @@ describe("NewBrowser", () => {
                 waitforTimeout: 100,
                 waitforInterval: 50,
                 connectionRetryTimeout: 3000,
-                connectionRetryCount: 0,
                 baseUrl: "http://base_url",
                 transformRequest: sinon.match.func,
             });
