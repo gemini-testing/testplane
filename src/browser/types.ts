@@ -7,6 +7,7 @@ import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
+import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 
 export const BrowserName = {
     CHROME: PuppeteerBrowser.CHROME,
@@ -151,6 +152,11 @@ declare global {
             switchToRepl: (this: WebdriverIO.Browser, ctx?: Record<string, unknown>) => Promise<void>;
 
             clearSession: (this: WebdriverIO.Browser) => Promise<void>;
+
+            unstable_captureDomSnapshot: (
+                this: WebdriverIO.Browser,
+                options: CaptureSnapshotOptions,
+            ) => Promise<CaptureSnapshotResult>;
         }
 
         interface Element {
