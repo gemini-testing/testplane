@@ -153,10 +153,15 @@ declare global {
 
             clearSession: (this: WebdriverIO.Browser) => Promise<void>;
 
-            unstable_captureDomSnapshot: (
+            unstable_captureDomSnapshot(
                 this: WebdriverIO.Browser,
-                options: CaptureSnapshotOptions,
-            ) => Promise<CaptureSnapshotResult>;
+                options?: Partial<CaptureSnapshotOptions>,
+            ): Promise<CaptureSnapshotResult>;
+            unstable_captureDomSnapshot(
+                this: WebdriverIO.Browser,
+                selector: string,
+                options?: Partial<CaptureSnapshotOptions>,
+            ): Promise<CaptureSnapshotResult>;
         }
 
         interface Element {
@@ -193,6 +198,11 @@ declare global {
             assertView: AssertViewElementCommand;
 
             moveCursorTo: MoveCursorToCommand;
+
+            unstable_captureDomSnapshot(
+                this: WebdriverIO.Element,
+                options?: Partial<CaptureSnapshotOptions>,
+            ): Promise<CaptureSnapshotResult>;
         }
     }
 }
