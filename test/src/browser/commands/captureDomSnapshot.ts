@@ -242,9 +242,7 @@ describe('"captureDomSnapshot" command', () => {
 
             const result = captureDomSnapshotInBrowser();
 
-            if (result.snapshot.includes("Hidden content")) {
-                assert.match(result.snapshot, /@hidden/);
-            }
+            assert.match(result.snapshot, /@hidden/);
         });
 
         it("should mark hidden elements with visibility hidden", () => {
@@ -252,9 +250,7 @@ describe('"captureDomSnapshot" command', () => {
 
             const result = captureDomSnapshotInBrowser();
 
-            if (result.snapshot.includes("Hidden content")) {
-                assert.match(result.snapshot, /@hidden/);
-            }
+            assert.match(result.snapshot, /@hidden/);
         });
 
         it("should mark hidden elements with opacity 0", () => {
@@ -262,9 +258,7 @@ describe('"captureDomSnapshot" command', () => {
 
             const result = captureDomSnapshotInBrowser();
 
-            if (result.snapshot.includes("Hidden content")) {
-                assert.match(result.snapshot, /@hidden/);
-            }
+            assert.match(result.snapshot, /@hidden/);
         });
     });
 

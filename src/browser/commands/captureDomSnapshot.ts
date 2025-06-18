@@ -25,15 +25,15 @@ export const captureDomSnapshotInBrowser = ({
     maxTextLength = 100,
 }: CaptureSnapshotOptions = {}): CaptureSnapshotResult => {
     const BASE_EXCLUDED_TAGS = new Set([
-        "SCRIPT",
-        "STYLE",
-        "META",
-        "LINK",
-        "TITLE",
         "HEAD",
+        "LINK",
+        "META",
         "NOSCRIPT",
-        "TEMPLATE",
+        "SCRIPT",
         "SLOT",
+        "STYLE",
+        "TEMPLATE",
+        "TITLE",
     ]);
 
     const EXCLUDED_TAGS = new Set(BASE_EXCLUDED_TAGS);
@@ -45,36 +45,36 @@ export const captureDomSnapshotInBrowser = ({
     }
 
     const BASE_USEFUL_ATTRIBUTES = new Set([
-        "id",
-        "class",
-        "name",
-        "type",
-        "value",
-        "placeholder",
-        "title",
+        "action",
+        "alt",
+        "aria-describedby",
         "aria-label",
         "aria-labelledby",
-        "aria-describedby",
-        "role",
-        "data-testid",
+        "checked",
+        "class",
+        "data-automation",
+        "data-qa",
         "data-test",
         "data-test-id",
-        "data-qa",
-        "data-automation",
-        "href",
-        "src",
-        "alt",
-        "for",
-        "action",
-        "method",
+        "data-testid",
         "disabled",
-        "checked",
-        "selected",
-        "required",
-        "readonly",
+        "for",
         "hidden",
-        "tabindex",
+        "href",
+        "id",
+        "method",
+        "name",
         "open",
+        "placeholder",
+        "readonly",
+        "required",
+        "role",
+        "selected",
+        "src",
+        "tabindex",
+        "title",
+        "type",
+        "value",
     ]);
 
     const USEFUL_ATTRIBUTES = new Set(BASE_USEFUL_ATTRIBUTES);
@@ -88,6 +88,37 @@ export const captureDomSnapshotInBrowser = ({
     const omittedTags = new Set<string>();
     const omittedAttributes = new Set<string>();
     let textWasTruncated = false;
+
+    const INTERACTIVE_TAGS = new Set(["BUTTON", "INPUT", "SELECT", "TEXTAREA", "A"]);
+
+    const INTERACTIVE_ROLES = new Set([
+        "button",
+        "checkbox",
+        "combobox",
+        "link",
+        "listbox",
+        "menu",
+        "menubar",
+        "menuitem",
+        "menuitemcheckbox",
+        "menuitemradio",
+        "option",
+        "radio",
+        "radiogroup",
+        "searchbox",
+        "slider",
+        "spinbutton",
+        "switch",
+        "tab",
+        "tablist",
+        "textbox",
+        "tree",
+        "treeitem",
+    ]);
+
+    const escapeQuotesAndNewlines = (value: string): string => {
+        return value.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+    };
 
     function isElementVisible(element: Element): boolean {
         const style = window.getComputedStyle(element);
@@ -108,16 +139,14 @@ export const captureDomSnapshotInBrowser = ({
     }
 
     function hasInteractiveContent(element: Element): boolean {
-        const interactiveTags = new Set(["BUTTON", "INPUT", "SELECT", "TEXTAREA", "A"]);
-
-        if (interactiveTags.has(element.tagName)) {
+        if (INTERACTIVE_TAGS.has(element.tagName)) {
             return true;
         }
 
         if (
             element.hasAttribute("onclick") ||
             element.hasAttribute("tabindex") ||
-            element.getAttribute("role") === "button"
+            INTERACTIVE_ROLES.has(element.getAttribute("role") || "")
         ) {
             return true;
         }
@@ -173,47 +202,56 @@ export const captureDomSnapshotInBrowser = ({
         }
 
         try {
-            if (tagName === "input") {
-                const inputEl = element as HTMLInputElement;
-                const inputType = inputEl.type.toLowerCase();
+            switch (tagName) {
+                case "input": {
+                    const inputEl = element as HTMLInputElement;
+                    const inputType = inputEl.type.toLowerCase();
 
-                if (inputType === "checkbox" || inputType === "radio") {
-                    if (inputEl.checked) {
-                        state.checked = true;
+                    if (inputType === "checkbox" || inputType === "radio") {
+                        if (inputEl.checked) {
+                            state.checked = true;
+                        }
+                    } else if (inputEl.value) {
+                        state.value = inputEl.value;
                     }
-                } else if (inputEl.value) {
-                    state.value = inputEl.value;
-                }
 
-                if (inputEl.checkValidity && !inputEl.checkValidity()) {
-                    state.invalid = true;
-                }
-            } else if (tagName === "textarea") {
-                const textareaEl = element as HTMLTextAreaElement;
-
-                if (textareaEl.value) {
-                    state.value = textareaEl.value;
-                }
-
-                if (textareaEl.checkValidity && !textareaEl.checkValidity()) {
-                    state.invalid = true;
-                }
-            } else if (tagName === "select") {
-                const selectEl = element as HTMLSelectElement;
-                const selectedOption = selectEl.options[selectEl.selectedIndex];
-
-                if (selectedOption) {
-                    state.selected = selectedOption.value;
-
-                    if (selectedOption.text !== selectedOption.value) {
-                        state.selectedText = selectedOption.text;
+                    if (inputEl.checkValidity && !inputEl.checkValidity()) {
+                        state.invalid = true;
                     }
+                    break;
                 }
-            } else if (tagName === "option") {
-                const optionEl = element as HTMLOptionElement;
+                case "textarea": {
+                    const textareaEl = element as HTMLTextAreaElement;
 
-                if (optionEl.selected) {
-                    state.selected = true;
+                    if (textareaEl.value) {
+                        state.value = textareaEl.value;
+                    }
+
+                    if (textareaEl.checkValidity && !textareaEl.checkValidity()) {
+                        state.invalid = true;
+                    }
+                    break;
+                }
+                case "select": {
+                    const selectEl = element as HTMLSelectElement;
+                    const selectedOption = selectEl.options[selectEl.selectedIndex];
+
+                    if (selectedOption) {
+                        state.selected = selectedOption.value;
+
+                        if (selectedOption.text !== selectedOption.value) {
+                            state.selectedText = selectedOption.text;
+                        }
+                    }
+                    break;
+                }
+                case "option": {
+                    const optionEl = element as HTMLOptionElement;
+
+                    if (optionEl.selected) {
+                        state.selected = true;
+                    }
+                    break;
                 }
             }
         } catch {
@@ -252,9 +290,11 @@ export const captureDomSnapshotInBrowser = ({
 
         // Hide empty elements that doesn't have anything interesting
         if (children.length === 0 && !directText && !selfClosingTags.has(tagName)) {
+            const hasInterestingContent = hasInteractiveContent(element) || hasTestAttrs;
             // SVGs need special handling, because we omit their children during filtering on our end
+            // For SVGs, children.length is always zero, and we need to check real DOM (element.children)
             if (tagName === "svg") {
-                if (element.children.length === 0 && !hasInteractiveContent(element) && !hasTestAttrs) {
+                if (element.children.length === 0 && !hasInterestingContent) {
                     return null;
                 }
             } else if (!hasInteractiveContent(element) && !hasTestAttrs && !tagName.includes("-")) {
@@ -286,7 +326,7 @@ export const captureDomSnapshotInBrowser = ({
             }
         }
 
-        const id = element.getAttribute("id");
+        const id = element.id;
         if (id && USEFUL_ATTRIBUTES.has("id")) {
             selector += "#" + id;
         }
@@ -304,12 +344,13 @@ export const captureDomSnapshotInBrowser = ({
             if (USEFUL_ATTRIBUTES.has(attrName)) {
                 let value = attr.value;
                 if (value.length > maxTextLength) {
+                    textWasTruncated = true;
                     value = value.substring(0, maxTextLength) + "...";
                 }
 
-                if (value.includes(" ") || value.includes('"') || value.includes("=")) {
-                    value = `"${value.replace(/"/g, '\\"')}"`;
-                    attributes.push(`${attrName}=${value}`);
+                if ([" ", '"', "="].some(char => value.includes(char))) {
+                    value = escapeQuotesAndNewlines(value);
+                    attributes.push(`${attrName}="${value}"`);
                 } else if (value === "") {
                     // Boolean attributes like 'required', 'disabled'
                     attributes.push(attrName);
@@ -327,7 +368,7 @@ export const captureDomSnapshotInBrowser = ({
                 attributes.push(`@${key}`);
             } else {
                 if (value.includes(" ") || value.includes('"')) {
-                    const escapedValue = value.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+                    const escapedValue = escapeQuotesAndNewlines(value);
                     attributes.push(`@${key}="${escapedValue}"`);
                 } else {
                     attributes.push(`@${key}=${value}`);
@@ -346,7 +387,7 @@ export const captureDomSnapshotInBrowser = ({
         }
 
         if (text) {
-            const escapedText = text.replace(/"/g, '\\"').replace(/\n/g, "\\n");
+            const escapedText = escapeQuotesAndNewlines(text);
             elementLine += ` "${escapedText}"`;
         }
 

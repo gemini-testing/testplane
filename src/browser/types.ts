@@ -7,8 +7,7 @@ import { MoveCursorToCommand } from "./commands/moveCursorTo";
 import { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
-import { CaptureSnapshotOptions } from "./commands/captureDomSnapshot";
-import { CaptureSnapshotResult } from "./commands/captureDomSnapshot";
+import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 
 export const BrowserName = {
     CHROME: PuppeteerBrowser.CHROME,
