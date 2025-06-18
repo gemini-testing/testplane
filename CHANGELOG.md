@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.3](https://github.com/gemini-testing/testplane/compare/v8.29.2...v8.29.3) (2025-06-18)
+
+
+### Features
+
+* add ability to capture DOM snapshots of specific elements ([#1098](https://github.com/gemini-testing/testplane/issues/1098)) ([8836a50](https://github.com/gemini-testing/testplane/commit/8836a503c8ae9b49e20ba5d0b18c83e806c5eb68))
+* implement captureDomSnapshot command ([#1097](https://github.com/gemini-testing/testplane/issues/1097)) ([3a1b1da](https://github.com/gemini-testing/testplane/commit/3a1b1da10f844597912b2b0db96c881bd5a6879c))
+
 ### [8.29.2](https://github.com/gemini-testing/testplane/compare/v8.29.1...v8.29.2) (2025-05-20)
 
 
