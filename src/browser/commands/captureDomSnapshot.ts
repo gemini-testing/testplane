@@ -20,8 +20,8 @@ export const captureDomSnapshotInBrowser = (
     selectorOrElementOrOptions?: string | WebdriverIO.Element | CaptureSnapshotOptions,
     maybeOptions?: CaptureSnapshotOptions,
 ): CaptureSnapshotResult => {
-    let selector: string | undefined;
-    let element: globalThis.Element | undefined;
+    let selector: string | null = null;
+    let element: Element | null = null;
     let options: CaptureSnapshotOptions;
 
     if (typeof selectorOrElementOrOptions === "string") {
@@ -32,11 +32,9 @@ export const captureDomSnapshotInBrowser = (
         typeof selectorOrElementOrOptions === "object" &&
         "tagName" in selectorOrElementOrOptions
     ) {
-        element = selectorOrElementOrOptions as globalThis.Element;
+        element = selectorOrElementOrOptions as Element;
         options = maybeOptions || {};
     } else {
-        selector = undefined;
-        element = undefined;
         options = (selectorOrElementOrOptions as CaptureSnapshotOptions) || {};
     }
 
@@ -428,7 +426,7 @@ export const captureDomSnapshotInBrowser = (
         }
     }
 
-    let startElement: globalThis.Element | null;
+    let startElement: Element | null;
 
     if (element) {
         startElement = element;
