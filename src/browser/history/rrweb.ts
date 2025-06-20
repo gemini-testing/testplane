@@ -14,57 +14,91 @@ export async function installRrwebAndCollectEvents(
 ): Promise<eventWithTime[]> {
     /* eslint-disable @typescript-eslint/ban-ts-comment */
     return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, () =>
-        session.execute(rrwebRecordFnCode => {
-            try {
+        session.execute(
+            (rrwebRecordFnCode, serverTime) => {
                 // @ts-expect-error
-                if (!window.rrweb) {
-                    window.eval(rrwebRecordFnCode);
+                if (!window.__testplaneTiming) {
                     // @ts-expect-error
-                    window.lastProcessedRrwebEvent = -1;
-                    // @ts-expect-error
-                    window.rrwebEvents = [];
+                    window.__testplaneTiming = {
+                        serverTime: serverTime,
+                        baseRaf: null,
+                        initialized: true,
+                    };
 
-                    // @ts-expect-error
-                    window.rrweb.record({
+                    requestAnimationFrame(timestamp => {
                         // @ts-expect-error
-                        emit(event) {
-                            // @ts-expect-error
-                            window.rrwebEvents.push(event);
-                        },
+                        window.__testplaneTiming.baseRaf = timestamp;
                     });
-
-                    // @ts-expect-error
-                    window.rrweb.record.addCustomEvent("color-scheme-change", {
-                        colorScheme:
-                            window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-                                ? "dark"
-                                : "light",
-                    });
-
-                    window.matchMedia &&
-                        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
-                            // @ts-expect-error
-                            window.rrweb.record.addCustomEvent("color-scheme-change", {
-                                colorScheme: event.matches ? "dark" : "light",
-                            });
-                        });
                 }
-            } catch (e) {
-                /**/
-            }
 
-            let result;
-            try {
-                // @ts-expect-error
-                result = window.rrwebEvents.slice(window.lastProcessedRrwebEvent + 1);
-                // @ts-expect-error
-                window.lastProcessedRrwebEvent = window.rrwebEvents.length - 1;
-            } catch {
-                result = [];
-            }
+                try {
+                    // @ts-expect-error
+                    if (!window.rrweb) {
+                        window.eval(rrwebRecordFnCode);
+                        // @ts-expect-error
+                        window.lastProcessedRrwebEvent = -1;
+                        // @ts-expect-error
+                        window.rrwebEvents = [];
 
-            return result;
-        }, rrwebCode),
+                        // @ts-expect-error
+                        window.rrweb.record({
+                            // @ts-expect-error
+                            emit(event) {
+                                // We use this complex RAF-based timing, because users might have Date.now() stubbed
+                                requestAnimationFrame(currentRaf => {
+                                    // @ts-expect-error
+                                    const baseRaf = window.__testplaneTiming.baseRaf;
+                                    // @ts-expect-error
+                                    const serverTime = window.__testplaneTiming.serverTime;
+
+                                    if (baseRaf !== null) {
+                                        event.timestamp = Math.floor(serverTime + (currentRaf - baseRaf));
+                                    } else {
+                                        // RAF not ready, use server time
+                                        event.timestamp = serverTime;
+                                    }
+
+                                    // @ts-expect-error
+                                    window.rrwebEvents.push(event);
+                                });
+                            },
+                        });
+
+                        // @ts-expect-error
+                        window.rrweb.record.addCustomEvent("color-scheme-change", {
+                            colorScheme:
+                                window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                                    ? "dark"
+                                    : "light",
+                        });
+
+                        window.matchMedia &&
+                            window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
+                                // @ts-expect-error
+                                window.rrweb.record.addCustomEvent("color-scheme-change", {
+                                    colorScheme: event.matches ? "dark" : "light",
+                                });
+                            });
+                    }
+                } catch (e) {
+                    /**/
+                }
+
+                let result;
+                try {
+                    // @ts-expect-error
+                    result = window.rrwebEvents.slice(window.lastProcessedRrwebEvent + 1);
+                    // @ts-expect-error
+                    window.lastProcessedRrwebEvent = window.rrwebEvents.length - 1;
+                } catch {
+                    result = [];
+                }
+
+                return result;
+            },
+            rrwebCode,
+            Date.now(),
+        ),
     );
     /* eslint-enable @typescript-eslint/ban-ts-comment */
 }
