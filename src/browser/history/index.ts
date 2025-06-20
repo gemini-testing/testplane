@@ -1,4 +1,4 @@
-import { eventWithTime } from "@rrweb/types";
+import { isPromise } from "util/types";
 import { Callstack } from "./callstack";
 import * as cmds from "./commands";
 import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } from "./utils";
@@ -70,27 +70,40 @@ const runWithHistoryHooks = <T>({ session, callstack, nodeData, fn, config }: Ru
         return fn();
     }
 
+    let rrwebPromise: Promise<void> | null = null;
+
+    try {
+        const timeTravelMode = config.timeTravel.mode;
+        const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
+        const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
+
+        if (shouldRecord && process.send && session.executionContext?.ctx?.currentTest) {
+            rrwebPromise = installRrwebAndCollectEvents(session, callstack)
+                .then(rrwebEvents => {
+                    const rrwebEventsFiltered = filterEvents(rrwebEvents);
+                    sendFilteredEvents(session, rrwebEventsFiltered);
+                })
+                .catch(e => {
+                    console.warn("An error occurred during capturing snapshots in browser.", e);
+                });
+        }
+    } catch (e) {
+        console.warn("An error occurred during capturing snapshots in browser.", e);
+    }
+
     return runWithHooks({
-        before: async () => {
-            try {
-                const timeTravelMode = config.timeTravel.mode;
-                const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
-                const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
-
-                let rrwebEvents: eventWithTime[] = [];
-                if (shouldRecord && process.send && session.executionContext?.ctx?.currentTest) {
-                    rrwebEvents = await installRrwebAndCollectEvents(session, callstack);
-                }
-
-                const rrwebEventsFiltered = filterEvents(rrwebEvents);
-                sendFilteredEvents(session, rrwebEventsFiltered);
-            } catch (e) {
-                console.warn("An error occurred during capturing snapshots in browser.", e);
-            }
-
+        before: () => {
             callstack.enter(mkHistoryNode(nodeData));
         },
-        fn,
+        fn: () => {
+            const result = fn();
+
+            if (rrwebPromise && isPromise(result)) {
+                return Promise.all([result, rrwebPromise]).then(([fnResult]) => fnResult) as T;
+            }
+
+            return result;
+        },
         after: () => callstack.leave(nodeData.key!),
         error: () => callstack.markError(shouldPropagateFn),
     });
