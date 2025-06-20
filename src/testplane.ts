@@ -37,6 +37,10 @@ interface RunOpts {
     };
     devtools: boolean;
     local: boolean;
+    keepBrowserMode: {
+        enabled: boolean;
+        onFail: boolean;
+    };
 }
 
 export type FailedListItem = {
@@ -49,7 +53,7 @@ interface RunnableOpts {
     saveLocations?: boolean;
 }
 
-export interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode"> {
+export interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];
@@ -101,12 +105,21 @@ export class Testplane extends BaseTestplane {
             replMode,
             devtools,
             local,
+            keepBrowserMode,
             reporters = [],
         }: Partial<RunOpts> = {},
     ): Promise<boolean> {
         validateUnknownBrowsers(browsers!, _.keys(this._config.browsers));
 
-        RuntimeConfig.getInstance().extend({ updateRefs, requireModules, inspectMode, replMode, devtools, local });
+        RuntimeConfig.getInstance().extend({
+            updateRefs,
+            requireModules,
+            inspectMode,
+            replMode,
+            devtools,
+            local,
+            keepBrowserMode,
+        });
 
         if (replMode?.enabled) {
             this._config.system.mochaOpts.timeout = 0;
@@ -135,7 +148,7 @@ export class Testplane extends BaseTestplane {
         await this._init();
         runner.init();
         await runner.run(
-            await this._readTests(testPaths, { browsers, sets, grep, replMode }),
+            await this._readTests(testPaths, { browsers, sets, grep, replMode, keepBrowserMode }),
             RunnerStats.create(this),
         );
 
@@ -159,7 +172,7 @@ export class Testplane extends BaseTestplane {
 
     async readTests(
         testPaths: string[],
-        { browsers, sets, grep, silent, ignore, replMode, runnableOpts }: Partial<ReadTestsOpts> = {},
+        { browsers, sets, grep, silent, ignore, replMode, keepBrowserMode, runnableOpts }: Partial<ReadTestsOpts> = {},
     ): Promise<TestCollection> {
         const testReader = TestReader.create(this._config);
 
@@ -172,7 +185,16 @@ export class Testplane extends BaseTestplane {
             ]);
         }
 
-        const specs = await testReader.read({ paths: testPaths, browsers, ignore, sets, grep, replMode, runnableOpts });
+        const specs = await testReader.read({
+            paths: testPaths,
+            browsers,
+            ignore,
+            sets,
+            grep,
+            replMode,
+            keepBrowserMode,
+            runnableOpts,
+        });
         const collection = TestCollection.create(specs);
 
         collection.getBrowsers().forEach(bro => {
