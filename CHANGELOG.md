@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.4](https://github.com/gemini-testing/testplane/compare/v8.29.3...v8.29.4) (2025-06-23)
+
+
+### Bug Fixes
+
+* fix missing steps when time travel is on ([#1102](https://github.com/gemini-testing/testplane/issues/1102)) ([ec5e174](https://github.com/gemini-testing/testplane/commit/ec5e17463a1b660e46beb16c9b4ac200a8f4e872))
+* use RAF timing in rrweb snapshots ([#1103](https://github.com/gemini-testing/testplane/issues/1103)) ([804a131](https://github.com/gemini-testing/testplane/commit/804a1318358508a6b10468375fc6ea11e5c2d2fe))
+
 ### [8.29.3](https://github.com/gemini-testing/testplane/compare/v8.29.2...v8.29.3) (2025-06-18)
 
 
