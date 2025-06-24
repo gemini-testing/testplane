@@ -315,6 +315,41 @@ describe("cli", () => {
         });
     });
 
+    describe("keep browser mode", () => {
+        it("should be disabled by default", async () => {
+            await run_();
+
+            assert.calledWithMatch(Testplane.prototype.run, any, {
+                keepBrowserMode: {
+                    enabled: false,
+                    onFail: false,
+                },
+            });
+        });
+
+        it('should be enabled when specify "keep-browser" flag', async () => {
+            await run_("--keep-browser");
+
+            assert.calledWithMatch(Testplane.prototype.run, any, {
+                keepBrowserMode: {
+                    enabled: true,
+                    onFail: false,
+                },
+            });
+        });
+
+        it('should be enabled when specify "keep-browser-on-fail" flag', async () => {
+            await run_("--keep-browser-on-fail");
+
+            assert.calledWithMatch(Testplane.prototype.run, any, {
+                keepBrowserMode: {
+                    enabled: true,
+                    onFail: true,
+                },
+            });
+        });
+    });
+
     it("should turn on devtools mode from cli", async () => {
         await run_("--devtools");
 
