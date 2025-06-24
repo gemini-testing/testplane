@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.5](https://github.com/gemini-testing/testplane/compare/v8.29.4...v8.29.5) (2025-06-24)
+
+
+### Bug Fixes
+
+* use webdriverio connection retries ([194d2f7](https://github.com/gemini-testing/testplane/commit/194d2f77a5bb2c7f2494b6d7605efc581971eb91))
+
 ### [8.29.4](https://github.com/gemini-testing/testplane/compare/v8.29.3...v8.29.4) (2025-06-23)
 
 
