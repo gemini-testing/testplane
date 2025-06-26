@@ -1,3 +1,4 @@
+import { isPromise } from "util/types";
 import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
 import { TimeTravelMode } from "../../config";
@@ -28,8 +29,6 @@ export const normalizeCommandArgs = (commandName: string, args: unknown[] = []):
         return String(arg);
     });
 };
-
-const isPromise = (val: unknown): val is Promise<unknown> => typeof _.get(val, "then") === "function";
 
 export const isGroup = (node: TestStep): boolean => Boolean(node && node[TestStepKey.IsGroup]);
 

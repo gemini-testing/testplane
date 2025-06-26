@@ -177,7 +177,7 @@ export class NewBrowser extends Browser {
             capabilities,
             automationProtocol: devtools ? DEVTOOLS_PROTOCOL : config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
-            connectionRetryCount: 0, // testplane has its own advanced retries
+            connectionRetryCount: 3,
             baseUrl: config.baseUrl,
             waitforTimeout: config.waitTimeout,
             waitforInterval: config.waitInterval,
