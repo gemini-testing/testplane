@@ -13,6 +13,9 @@ import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
+import { configure, setupBrowser } from "./queries";
+import { getFirefoxCSPAddOn } from "./queries/firefoxCSPAddOn";
+import { getNormalizedBrowserName } from "../utils/browser";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -100,6 +103,17 @@ export class Browser {
 
     protected _addCommands(): void {
         this._addExtendOptionsMethod(this._session!);
+    }
+
+    protected async _installFirefoxCSPAddOn(): Promise<string> {
+        if (getNormalizedBrowserName(this._session!.capabilities.browserName) !== "firefox") return Promise.resolve("");
+        const firefoxCSPAddOn = await getFirefoxCSPAddOn();
+        return this._session!.installAddOn(firefoxCSPAddOn, false);
+    }
+
+    protected _addQueries(): void {
+        configure({ testIdAttribute: this._config.testIdAttribute, asyncUtilTimeout: this._config.waitTimeout });
+        setupBrowser(this._session!);
     }
 
     protected _addSteps(): void {
