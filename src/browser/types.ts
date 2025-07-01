@@ -8,6 +8,7 @@ import { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
 import { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
+import { TestplaneQueries, TestplaneQueriesChainable } from "./queries";
 
 export const BrowserName = {
     CHROME: PuppeteerBrowser.CHROME,
@@ -58,7 +59,7 @@ declare global {
             ...args: Parameters<Fn>
         ) => ReturnType<Fn>;
 
-        interface Browser extends TestplaneQueries, TestplaneQueriesSync, TestplaneQueriesChainable {
+        interface Browser extends TestplaneQueries, TestplaneQueriesChainable {
             getMeta(this: WebdriverIO.Browser): Promise<BrowserMeta>;
 
             getMeta(this: WebdriverIO.Browser, key: string): Promise<unknown>;

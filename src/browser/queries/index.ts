@@ -60,6 +60,14 @@ function findContainerWithExecute(container: ElementBase): WebdriverIO.Browser {
     return curContainer;
 }
 
+const findBrowser = (container: ElementBase): WebdriverIO.Browser => {
+    let browser: ElementBase | WebdriverIO.Browser = container;
+    while ((browser as ElementBase).parent && browser.capabilities === undefined) {
+        browser = (browser as ElementBase).parent;
+    }
+    return browser as WebdriverIO.Browser;
+};
+
 async function injectDOMTestingLibrary(container: ElementBase) {
     const browser = findContainerWithExecute(container);
     const shouldInjectDTL = await browser.execute(function () {
@@ -126,6 +134,12 @@ async function executeQuery(query: QueryName, container: HTMLElement, ...args: S
         }
 
         function deserializeArg(arg: SerializedArg): QueryArg {
+            if (typeof arg === "object" && arg === null) {
+                return undefined;
+            }
+            if (typeof arg === "object" && (arg as { nodeType?: string }).nodeType !== undefined) {
+                return arg as QueryArg;
+            }
             if (typeof arg === "object" && arg.serialized === "RegExp") {
                 return eval(arg.RegExp);
             }
@@ -187,7 +201,8 @@ function createQuery(container: ElementBase & SelectorsBase, queryName: QueryNam
     return async (...args: QueryArg[]) => {
         await injectDOMTestingLibrary(container);
 
-        const result: SerializedQueryResult = await findContainerWithExecute(container).execute(
+        const browser = findBrowser(container);
+        const result: SerializedQueryResult = await browser.execute(
             executeQuery,
             queryName,
             container as unknown as HTMLElement,

@@ -45,10 +45,6 @@ export type TestplaneQueries = {
     [P in keyof Queries]: BoundFunction<WebdriverIO.Element, WebdriverIO.Element[], Queries[P]>;
 };
 
-export type TestplaneQueriesSync = {
-    [P in keyof Queries]: BoundFunctionSync<WebdriverIO.Element, WebdriverIO.Element[], Queries[P]>;
-};
-
 export type TestplaneQueriesChainable<Container extends SelectorsBase | undefined = SelectorsBase> = {
     [P in keyof Queries as `${string & P}$`]: Container extends SelectorsBase
         ? BoundFunctionSync<ReturnType<Container["$"]>, ReturnType<Container["$$"]>, Queries[P]>
@@ -68,3 +64,10 @@ export type SerializedRegExp = { serialized: "RegExp"; RegExp: string };
 export type SerializedUndefined = { serialized: "Undefined"; Undefined: true };
 
 export type SerializedArg = SerializedObject | SerializedRegExp | SerializedUndefined | number | string;
+
+declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
+    namespace WebdriverIO {
+        interface Element extends TestplaneQueries {}
+    }
+}
