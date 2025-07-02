@@ -1,3 +1,4 @@
+import { inspect } from "util";
 import { isPromise } from "util/types";
 import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
@@ -28,10 +29,13 @@ export const normalizeCommandArgs = (commandName: string, args: unknown[] = []):
             }
 
             if (_.isPlainObject(arg)) {
-                return "obj";
+                return _.truncate(
+                    inspect(arg, { depth: 0, compact: true, breakLength: Infinity, maxArrayLength: 10 }),
+                    { length: MAX_STRING_LENGTH },
+                );
             }
 
-            return String(arg);
+            return _.truncate(String(arg), { length: MAX_STRING_LENGTH });
         } catch (err) {
             return "unknown";
         }

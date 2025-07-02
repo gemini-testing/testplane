@@ -7,7 +7,24 @@ describe("commands-history", () => {
     describe("utils", () => {
         describe("normalizeCommandArgs", () => {
             it("should return representation for an object", () => {
-                assert.deepEqual(normalizeCommandArgs("click", [{ some: "data" }]), ["obj"]);
+                assert.deepEqual(normalizeCommandArgs("click", [{ some: "data" }]), ["{ some: 'data' }"]);
+            });
+
+            it("should handle large objects", () => {
+                const largeObject = {
+                    some: {
+                        nested: {
+                            data: "data",
+                        },
+                    },
+                    field: "value",
+                    array: [1, 2, 3, 4, { some: "data" }],
+                    longString: "abc".repeat(100),
+                };
+
+                assert.deepEqual(normalizeCommandArgs("click", [largeObject]), [
+                    "{ some: [Object], field: 'value', array: [Array...",
+                ]);
             });
 
             it('should return truncated representation for the "execute" command', () => {
