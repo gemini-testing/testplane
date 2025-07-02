@@ -25,6 +25,22 @@ describe("commands-history", () => {
             it("should convert argument to string if it is not string or object", () => {
                 assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), ["false", "null", "100"]);
             });
+
+            it("should return 'promise' for promise arguments", () => {
+                const promiseArg = Promise.resolve("test");
+
+                assert.deepEqual(normalizeCommandArgs("click", [promiseArg]), ["promise"]);
+            });
+
+            it("should return 'unknown' if error occurs during argument normalization", () => {
+                const problematicArg = Object.create({
+                    toString: () => {
+                        throw new Error("Cannot convert to string");
+                    },
+                });
+
+                assert.deepEqual(normalizeCommandArgs("click", [problematicArg]), ["unknown"]);
+            });
         });
 
         describe("runWithHooks", () => {

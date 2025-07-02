@@ -18,15 +18,23 @@ export const normalizeCommandArgs = (commandName: string, args: unknown[] = []):
     }
 
     return args.map(arg => {
-        if (typeof arg === "string") {
-            return _.truncate(arg, { length: MAX_STRING_LENGTH });
-        }
+        try {
+            if (typeof arg === "string") {
+                return _.truncate(arg, { length: MAX_STRING_LENGTH });
+            }
 
-        if (_.isPlainObject(arg)) {
-            return "obj";
-        }
+            if (isPromise(arg)) {
+                return "promise";
+            }
 
-        return String(arg);
+            if (_.isPlainObject(arg)) {
+                return "obj";
+            }
+
+            return String(arg);
+        } catch (err) {
+            return "unknown";
+        }
     });
 };
 
