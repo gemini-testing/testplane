@@ -6,6 +6,7 @@ const { Runner } = require("../runner");
 const logger = require("../../utils/logger");
 const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
+const RuntimeConfig = require("../../config/runtime-config");
 
 module.exports = class RegularTestRunner extends Runner {
     constructor(test, browserAgent) {
@@ -121,6 +122,19 @@ module.exports = class RegularTestRunner extends Runner {
             return;
         }
 
+        const runtimeConfig = RuntimeConfig.getInstance();
+        const keepBrowserMode = runtimeConfig.keepBrowserMode;
+
+        if (keepBrowserMode?.enabled) {
+            const hasError = !!this._test.err || !!browserState?.isLastTestFailed;
+            const shouldKeep = keepBrowserMode.onFail ? hasError : true;
+
+            if (shouldKeep) {
+                this._logKeepBrowserInfo();
+                return;
+            }
+        }
+
         const browser = this._browser;
         this._browser = null;
 
@@ -131,5 +145,27 @@ module.exports = class RegularTestRunner extends Runner {
         } catch (error) {
             logger.warn(`WARNING: can not release browser: ${error}`);
         }
+    }
+
+    _logKeepBrowserInfo() {
+        if (!this._browser) {
+            return;
+        }
+
+        logger.log(
+            "Testplane run has finished, but the browser won't be closed, because you passed the --keep-browser argument.",
+        );
+        logger.log("You may attach to this browser using the following capabilities:");
+        logger.log(
+            JSON.stringify(
+                {
+                    sessionId: this._browser.sessionId,
+                    capabilities: this._browser.capabilities,
+                    sessionOptions: this._browser.publicAPI.options,
+                },
+                null,
+                2,
+            ),
+        );
     }
 };
