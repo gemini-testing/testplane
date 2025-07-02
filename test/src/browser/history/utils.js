@@ -7,7 +7,24 @@ describe("commands-history", () => {
     describe("utils", () => {
         describe("normalizeCommandArgs", () => {
             it("should return representation for an object", () => {
-                assert.deepEqual(normalizeCommandArgs("click", [{ some: "data" }]), ["obj"]);
+                assert.deepEqual(normalizeCommandArgs("click", [{ some: "data" }]), ["{ some: 'data' }"]);
+            });
+
+            it("should handle large objects", () => {
+                const largeObject = {
+                    some: {
+                        nested: {
+                            data: "data",
+                        },
+                    },
+                    field: "value",
+                    array: [1, 2, 3, 4, { some: "data" }],
+                    longString: "abc".repeat(100),
+                };
+
+                assert.deepEqual(normalizeCommandArgs("click", [largeObject]), [
+                    "{ some: [Object], field: 'value', array: [Array...",
+                ]);
             });
 
             it('should return truncated representation for the "execute" command', () => {
@@ -24,6 +41,22 @@ describe("commands-history", () => {
 
             it("should convert argument to string if it is not string or object", () => {
                 assert.deepEqual(normalizeCommandArgs("click", [false, null, 100]), ["false", "null", "100"]);
+            });
+
+            it("should return 'promise' for promise arguments", () => {
+                const promiseArg = Promise.resolve("test");
+
+                assert.deepEqual(normalizeCommandArgs("click", [promiseArg]), ["promise"]);
+            });
+
+            it("should return 'unknown' if error occurs during argument normalization", () => {
+                const problematicArg = Object.create({
+                    toString: () => {
+                        throw new Error("Cannot convert to string");
+                    },
+                });
+
+                assert.deepEqual(normalizeCommandArgs("click", [problematicArg]), ["unknown"]);
             });
         });
 
