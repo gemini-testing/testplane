@@ -6,6 +6,7 @@ import { fetchBrowsersMilestones } from "./browser-versions/index";
 import { downloadBrowserVersions } from "./browser-downloader";
 import { getUbuntuMilestone, writeUbuntuPackageDependencies } from "..";
 import * as logger from "../../../utils/logger";
+import { resolveTransitiveDependencies } from "../apt";
 
 const createResolveSharedObjectToPackageName =
     (cache: Cache) =>
@@ -55,13 +56,17 @@ async function main(): Promise<void> {
 
     logger.log(`Resolved ${uniqSharedObjects.length} shared objects to ${uniqUbuntuPackages.length} packages`);
 
+    const withRecursiveDependencies = await resolveTransitiveDependencies(uniqUbuntuPackages);
+
+    logger.log(`Resolved direct packages to ${withRecursiveDependencies.length} dependencies`);
+
     cache.saveProcessedBrowsers(browsersToDownload);
 
     await cache.write();
 
     logger.log("Saved cache to file system");
 
-    await writeUbuntuPackageDependencies(ubuntuMilestone, uniqUbuntuPackages);
+    await writeUbuntuPackageDependencies(ubuntuMilestone, withRecursiveDependencies);
 
     logger.log(`Saved ubuntu package direct dependencies for Ubuntu@${ubuntuMilestone}`);
 }

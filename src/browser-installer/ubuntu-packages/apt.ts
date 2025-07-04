@@ -8,7 +8,7 @@ import { browserInstallerDebug, type DownloadProgressCallback } from "../utils";
 import { MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED } from "../constants";
 
 /** @link https://manpages.org/apt-cache/8 */
-const resolveTransitiveDependencies = async (directDependencies: string[]): Promise<string[]> => {
+export const resolveTransitiveDependencies = async (directDependencies: string[]): Promise<string[]> => {
     await Promise.all(["apt-cache", "grep", "sort"].map(ensureUnixBinaryExists));
 
     const aptDependsArgs = [
@@ -120,13 +120,7 @@ export const installUbuntuPackages = async (
         return;
     }
 
-    const withRecursiveDependencies = await resolveTransitiveDependencies(packages);
-
-    downloadProgressCallback(40);
-
-    browserInstallerDebug(`Resolved direct packages to ${withRecursiveDependencies.length} dependencies`);
-
-    const dependenciesToDownload = await filterNotExistingDependencies(withRecursiveDependencies);
+    const dependenciesToDownload = await filterNotExistingDependencies(packages);
 
     downloadProgressCallback(70);
 
