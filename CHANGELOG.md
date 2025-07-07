@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [9.0.0-rc.2](https://github.com/gemini-testing/testplane/compare/v8.29.5...v9.0.0-rc.2) (2025-07-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* taken screenshots will differ by several pixels
+if the viewport has fractional values
+* node versions less than 18.17.0 are no longer supported
+
+### Bug Fixes
+
+* correctly serialize promise objects in history steps ([#1105](https://github.com/gemini-testing/testplane/issues/1105)) ([e405e74](https://github.com/gemini-testing/testplane/commit/e405e74af16433ad94ba07317a7ececed223d7e7))
+* round viewport coords with fractional values ([7818d77](https://github.com/gemini-testing/testplane/commit/7818d7772b097f16ae9fffd6694f8b35ac9d8680))
+
+
+* drop node versions less than 18.17.0 ([97eb57f](https://github.com/gemini-testing/testplane/commit/97eb57f897b133ac01f8c1835fb91fc7efe5d041))
+
 ## [9.0.0-rc.1](https://github.com/gemini-testing/hermione/compare/v9.0.0-rc.0...v9.0.0-rc.1) (2024-03-07)
 
 ## [9.0.0-rc.0](https://github.com/gemini-testing/hermione/compare/v8.2.0...v9.0.0-rc.0) (2024-03-07)
