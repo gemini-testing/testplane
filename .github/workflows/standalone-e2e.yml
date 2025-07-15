@@ -6,8 +6,6 @@ on:
 
 jobs:
     integration-test:
-        env:
-            DEBUG: testplane:browser-installer
         runs-on: self-hosted-arc
         strategy:
             matrix:
