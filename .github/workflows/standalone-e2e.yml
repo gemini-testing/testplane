@@ -38,6 +38,10 @@ jobs:
             - name: Build project
               run: npm run build
 
+            - name: Sleep for 20 minutes
+              run: sleep 1200s
+              shell: bash
+
             - name: Run integration tests for ${{ matrix.browser }}
               env:
                   BROWSER: ${{ matrix.browser }}
