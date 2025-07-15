@@ -11,7 +11,7 @@ on:
 
 jobs:
     build:
-        runs-on: self-hosted
+        runs-on: self-hosted-arc
 
         strategy:
             matrix:
