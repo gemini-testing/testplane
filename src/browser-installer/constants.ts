@@ -23,4 +23,4 @@ export const MIN_EDGEDRIVER_VERSION = 94;
 export const DRIVER_WAIT_TIMEOUT = 10 * 1000; // 10s
 export const LINUX_UBUNTU_RELEASE_ID = "ubuntu";
 export const LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME = "LD_LIBRARY_PATH";
-export const MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED = ["fontconfig"];
+export const MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED = ["fontconfig", "bzip2", "xz-utils"];
