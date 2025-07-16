@@ -13,7 +13,7 @@ import {
     BRO_INIT_TIMEOUT_ON_RECONNECT,
     BRO_INIT_INTERVAL_ON_RECONNECT,
 } from "./constants";
-import { VITE_RUN_UUID_ROUTE } from "../../../../runner/browser-env/vite/constants";
+import { SOCKET_MAX_TIMEOUT, VITE_RUN_UUID_ROUTE } from "../../../../runner/browser-env/vite/constants";
 import * as logger from "../../../../utils/logger";
 import RuntimeConfig from "../../../../config/runtime-config";
 import { AbortOnReconnectError } from "../../../../errors/abort-on-reconnect-error";
@@ -191,7 +191,7 @@ export class TestRunner extends NodejsEnvTestRunner {
                     this._handleRunExpectMatcher(browser, expectMatchers),
                 );
 
-                this._socket.emit(WorkerEventNames.initialize, {
+                const err = (await this._socket.timeout(SOCKET_MAX_TIMEOUT).emitWithAck(WorkerEventNames.initialize, {
                     file: this._file,
                     sessionId: this._runOpts.sessionId,
                     capabilities: this._runOpts.sessionCaps,
@@ -201,7 +201,11 @@ export class TestRunner extends NodejsEnvTestRunner {
                     customCommands: browser.customCommands,
                     config: this._config as BrowserConfig,
                     expectMatchers: Object.getOwnPropertyNames(expectMatchers),
-                });
+                })) as null | Error;
+
+                if (err) {
+                    throw err;
+                }
 
                 await history.runGroup(
                     {

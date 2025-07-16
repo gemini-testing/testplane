@@ -80,10 +80,11 @@ export interface WorkerRunRunnablePayload {
     fullTitle: string;
 }
 
+export type WorkerInitializeCb = (err: null | Error) => void;
 export type WorkerRunRunnableCb = (...args: [null | ViteError[]]) => void;
 
 export interface WorkerViteEvents {
-    [WorkerEventNames.initialize]: (payload: WorkerInitializePayload) => void;
+    [WorkerEventNames.initialize]: (payload: WorkerInitializePayload, cb: WorkerInitializeCb) => void;
     [WorkerEventNames.finalize]: () => void;
     [WorkerEventNames.runRunnable]: (payload: WorkerRunRunnablePayload, cb: WorkerRunRunnableCb) => void;
 }
