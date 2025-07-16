@@ -11,9 +11,9 @@ Fast, scalable and robust testing solution for the ever-evolving web landscape.
 </p>
 
 <p align="center">
-    <a href="https://www.npmjs.com/package/testplane"><img src="https://img.shields.io/npm/dt/hermione.svg" alt="Total Downloads"></a>
+    <a href="https://www.npmjs.com/package/testplane"><img src="https://img.shields.io/npm/dt/testplane.svg" alt="Total Downloads"></a>
     <a href="https://github.com/gemini-testing/testplane/releases"><img src="https://img.shields.io/npm/v/testplane.svg" alt="Latest Release"></a>
-    <a href="https://github.com/gemini-testing/testplane/blob/master/LICENSE"><img src="https://img.shields.io/npm/l/hermione.svg" alt="License"></a>
+    <a href="https://github.com/gemini-testing/testplane/blob/master/LICENSE"><img src="https://img.shields.io/npm/l/testplane.svg" alt="License"></a>
     <a href="https://t.me/testplane"><img src="https://img.shields.io/badge/community-chat-blue?logo=telegram" alt="Community Chat"></a>
 </p>
 
