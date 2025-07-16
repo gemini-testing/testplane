@@ -152,7 +152,8 @@ describe("worker/browser-env/runner/test-runner", () => {
 
     const mkSocket_ = (): WorkerViteSocket => {
         const socket = new EventEmitter() as unknown as WorkerViteSocket;
-        socket.emitWithAck = sandbox.stub().resolves([null]);
+        socket.emitWithAck = sandbox.stub().onFirstCall().resolves(null).onSecondCall().resolves([null]);
+
         socket.timeout = sandbox.stub().returnsThis();
 
         sinon.spy(socket, "on");
@@ -362,7 +363,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                     ...runOpts,
                 });
 
-                assert.calledWith(socket.emit as SinonStub, WorkerEventNames.initialize, {
+                assert.calledWith(socket.emitWithAck as SinonStub, WorkerEventNames.initialize, {
                     file,
                     sessionId: runOpts.sessionId,
                     capabilities: runOpts.sessionCaps,
@@ -371,6 +372,19 @@ describe("worker/browser-env/runner/test-runner", () => {
                     config,
                     expectMatchers: ["foo", "bar"],
                 });
+            });
+
+            it("should throw if master return error", async () => {
+                const socket = mkSocket_();
+                const err = new Error("o.O");
+                (socket.emitWithAck as SinonStub).onFirstCall().resolves(err);
+                socketClientStub.returns(socket);
+
+                const runner = mkRunner_({ file: "/some/file" });
+                const browser = mkBrowser_();
+                (BrowserAgent.prototype.getBrowser as SinonStub).resolves(browser);
+
+                await assert.isRejected(run_({ runner }), /o.O/);
             });
 
             it(`should emit before open url`, async () => {
@@ -386,7 +400,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                 await runWithEmitBrowserInit(socket, { runner });
 
                 assert.callOrder(
-                    (socket.emit as SinonStub).withArgs(WorkerEventNames.initialize, sinon.match.any),
+                    (socket.emitWithAck as SinonStub).withArgs(WorkerEventNames.initialize, sinon.match.any),
                     browser.publicAPI.url as SinonStub,
                 );
             });
@@ -425,8 +439,6 @@ describe("worker/browser-env/runner/test-runner", () => {
                     const promise = run_();
                     await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.initialize, []);
-
-                    await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.reconnect);
 
                     await clock.runToLastAsync();
@@ -447,8 +459,6 @@ describe("worker/browser-env/runner/test-runner", () => {
                     const promise = run_();
                     await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.initialize, []);
-
-                    await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.reconnect);
                     socket.emit(BrowserEventNames.initialize, [error]);
 

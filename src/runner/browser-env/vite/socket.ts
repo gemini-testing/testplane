@@ -66,11 +66,17 @@ function handleWorkerEvents(
     socket: Socket<ClientViteEvents, ViteClientEvents>,
     io: Server<ClientViteEvents, ViteClientEvents>,
 ): void {
-    socket.on(WorkerEventNames.initialize, payload => {
-        const { runUuid } = socket.handshake.auth;
-        socket.join(runUuid);
+    socket.on(WorkerEventNames.initialize, (payload, cb) => {
+        try {
+            const { runUuid } = socket.handshake.auth;
+            socket.join(runUuid);
 
-        WORKER_ENV_BY_RUN_UUID.set(runUuid, payload);
+            WORKER_ENV_BY_RUN_UUID.set(runUuid, payload);
+
+            cb(null);
+        } catch (err) {
+            cb(prepareError(err as Error));
+        }
     });
 
     socket.on(WorkerEventNames.finalize, () => {
