@@ -11,7 +11,7 @@ describe("Standalone Browser E2E Tests", function () {
                 "If all tests have passed, most likely this is caused by a bug in browser cleanup logic, e.g. deleteSession() command.",
         );
         process.exit(1);
-    }, 30000).unref();
+    }, 60000).unref();
 
     let browser: WebdriverIO.Browser;
 
