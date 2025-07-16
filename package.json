@@ -32,7 +32,7 @@
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
     "test-unit": "_mocha \"test/!(integration)/**/*.js\"",
     "test": "npm run test-unit && npm run check-types && npm run lint",
-    "test-integration": "mocha -r ts-node/register test/integration/standalone/standalone.test.ts",
+    "test-integration": "mocha -r ts-node/register -r test/integration/standalone/preload-browser.fixture.ts test/integration/standalone/standalone.test.ts",
     "toc": "doctoc docs --title '### Contents'",
     "precommit": "npm run lint",
     "prepack": "npm run clean && npm run build",
