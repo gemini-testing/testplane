@@ -6,7 +6,7 @@ on:
 
 jobs:
     integration-test:
-        runs-on: ubuntu-latest
+        runs-on: self-hosted-arc
         strategy:
             matrix:
                 node-version: [20.18.1]

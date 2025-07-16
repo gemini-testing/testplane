@@ -1,7 +1,6 @@
 import { strict as assert } from "assert";
-import _ from "lodash";
 import { launchBrowser } from "../../../src/browser/standalone";
-import { BrowserName } from "../../../src/browser/types";
+import { BROWSER_CONFIG } from "./constants";
 
 describe("Standalone Browser E2E Tests", function () {
     this.timeout(25000);
@@ -16,8 +15,6 @@ describe("Standalone Browser E2E Tests", function () {
 
     let browser: WebdriverIO.Browser;
 
-    const browserName = (process.env.BROWSER || "chrome").toLowerCase() as keyof typeof BrowserName;
-
     after(async function () {
         if (browser) {
             await browser.deleteSession();
@@ -25,23 +22,7 @@ describe("Standalone Browser E2E Tests", function () {
     });
 
     it("should launch browser and access a website", async function () {
-        const browserConfig = {
-            desiredCapabilities: {
-                browserName,
-            },
-            headless: true,
-            system: {
-                debug: Boolean(process.env.DEBUG) || false,
-            },
-        };
-
-        if (/chrome/i.test(browserName)) {
-            _.set(browserConfig.desiredCapabilities, "goog:chromeOptions", {
-                args: ["--no-sandbox", "--disable-dev-shm-usage"],
-            });
-        }
-
-        browser = await launchBrowser(browserConfig);
+        browser = await launchBrowser(BROWSER_CONFIG);
 
         assert.ok(browser, "Browser should be initialized");
         assert.ok(browser.sessionId, "Browser should have a valid session ID");
