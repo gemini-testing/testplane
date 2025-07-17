@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.29.6](https://github.com/gemini-testing/testplane/compare/v8.29.5...v8.29.6) (2025-07-17)
+
+
+### Bug Fixes
+
+* correctly serialize promise objects in history steps ([#1105](https://github.com/gemini-testing/testplane/issues/1105)) ([e405e74](https://github.com/gemini-testing/testplane/commit/e405e74af16433ad94ba07317a7ececed223d7e7))
+* **ct:** correctly work in headless mode ([1d593d9](https://github.com/gemini-testing/testplane/commit/1d593d9506efdf17c2b43b93ccf380111275fec3))
+
 ### [8.29.5](https://github.com/gemini-testing/testplane/compare/v8.29.4...v8.29.5) (2025-06-24)
 
 
