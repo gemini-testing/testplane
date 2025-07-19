@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 
-const CoordValidator = require("./coord-validator");
+const { CoordValidator } = require("./coord-validator");
 
 module.exports = class Viewport {
     static create(...args) {
