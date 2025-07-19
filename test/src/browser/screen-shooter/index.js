@@ -1,7 +1,7 @@
 "use strict";
 
 const { Image } = require("src/image");
-const ScreenShooter = require("src/browser/screen-shooter");
+const { ScreenShooter } = require("src/browser/screen-shooter");
 const { Viewport } = require("src/browser/screen-shooter/viewport");
 
 describe("screen-shooter", () => {
@@ -129,7 +129,11 @@ describe("screen-shooter", () => {
 
                 describe('option "compositeImage" is switched on', () => {
                     beforeEach(() => {
-                        Viewport.prototype.validate.onFirstCall().returns(true).onSecondCall().returns(false);
+                        Viewport.prototype.validate
+                            .onFirstCall()
+                            .throws("HeightViewportError")
+                            .onSecondCall()
+                            .returns();
                     });
 
                     it("should scroll vertically if capture area is higher than viewport", async () => {
@@ -152,11 +156,11 @@ describe("screen-shooter", () => {
                         const page = { captureArea: { top: 0, height: 11 }, viewport: { top: 0, height: 5 } };
                         Viewport.prototype.validate
                             .onFirstCall()
-                            .returns(true)
+                            .throws("HeightViewportError")
                             .onSecondCall()
-                            .returns(true)
+                            .throws("HeightViewportError")
                             .onThirdCall()
-                            .returns(false);
+                            .returns();
                         sandbox
                             .stub(Viewport.prototype, "getVerticalOverflow")
                             .onFirstCall()
@@ -214,7 +218,7 @@ describe("screen-shooter", () => {
                     it("should return composed image", () => {
                         Viewport.prototype.composite.resolves("foo bar");
 
-                        return assert.becomes(capture(), "foo bar");
+                        return assert.becomes(capture({}, { compositeImage: true }), "foo bar");
                     });
                 });
             });
