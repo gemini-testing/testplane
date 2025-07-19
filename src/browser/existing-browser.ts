@@ -18,6 +18,7 @@ import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
+import { PrepareScreenshotResult } from "./screen-shooter/types";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -131,7 +132,10 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async prepareScreenshot(selectors: string[] | Rect[], opts: PrepareScreenshotOpts = {}): Promise<unknown> {
+    async prepareScreenshot(
+        selectors: string[] | Rect[],
+        opts: PrepareScreenshotOpts = {},
+    ): Promise<PrepareScreenshotResult> {
         // Running this fragment with history causes rrweb snapshots to break on pages with iframes
         return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
             opts = _.extend(opts, {
@@ -139,7 +143,10 @@ export class ExistingBrowser extends Browser {
             });
 
             ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-            const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
+            const result = await this._clientBridge.call<PrepareScreenshotResult | ClientBridgeErrorData>(
+                "prepareScreenshot",
+                [selectors, opts],
+            );
             if (isClientBridgeErrorData(result)) {
                 throw new Error(
                     `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,

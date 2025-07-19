@@ -2,7 +2,7 @@
 
 const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
-const Viewport = require("src/browser/screen-shooter/viewport");
+const { Viewport } = require("src/browser/screen-shooter/viewport");
 
 describe("screen-shooter", () => {
     const sandbox = sinon.createSandbox();

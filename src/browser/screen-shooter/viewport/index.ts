@@ -1,15 +1,40 @@
-"use strict";
+import _ from "lodash";
+import { CoordValidator } from "./coord-validator";
+import { Image, Rect } from "../../../image";
+import { PrepareScreenshotResult } from "../types";
+import { ExistingBrowser } from "../../existing-browser";
 
-const _ = require("lodash");
+interface ViewportOpts {
+    allowViewportOverflow?: boolean;
+    compositeImage?: boolean;
+}
 
-const { CoordValidator } = require("./coord-validator");
+interface ShiftParams {
+    left?: number;
+    top?: number;
+}
 
-module.exports = class Viewport {
-    static create(...args) {
+function getAreaBottom(area: Rect): number {
+    return area.top + area.height;
+}
+
+function getAreaRight(area: Rect): number {
+    return area.left + area.width;
+}
+
+export class Viewport {
+    private _viewport: Rect;
+    private _captureArea: Rect;
+    private _ignoreAreas: Rect[];
+    private _image: Image;
+    private _opts: ViewportOpts;
+    private _summaryHeight: number;
+
+    static create(...args: ConstructorParameters<typeof Viewport>): Viewport {
         return new this(...args);
     }
 
-    constructor(page, image, opts) {
+    constructor(page: PrepareScreenshotResult, image: Image, opts: ViewportOpts) {
         this._viewport = _.clone(page.viewport);
         this._captureArea = this._sanitize(page.captureArea);
         this._ignoreAreas = page.ignoreAreas;
@@ -18,13 +43,13 @@ module.exports = class Viewport {
         this._summaryHeight = 0;
     }
 
-    validate(browser) {
+    validate(browser: ExistingBrowser): void {
         const coordValidator = CoordValidator.create(browser, this._opts);
 
         return coordValidator.validate(this._viewport, this._captureArea);
     }
 
-    async ignoreAreas(image, imageArea) {
+    async ignoreAreas(image: Image, imageArea: Rect): Promise<void> {
         for (const area of this._ignoreAreas) {
             const imageClearArea = this._getIntersection(area, imageArea);
 
@@ -36,28 +61,28 @@ module.exports = class Viewport {
         image.applyClear();
     }
 
-    async handleImage(image, area = {}) {
+    async handleImage(image: Image, area: Partial<Rect> = {}): Promise<void> {
         const { width, height } = await image.getSize();
         _.defaults(area, { left: 0, top: 0, width, height });
-        const capturedArea = this._transformToCaptureArea(area);
+        const capturedArea = this._transformToCaptureArea(area as Rect);
 
-        await this.ignoreAreas(image, this._shiftArea(capturedArea, { left: -area.left, top: -area.top }));
+        await this.ignoreAreas(image, this._shiftArea(capturedArea, { left: -area.left!, top: -area.top! }));
         await image.crop(this._sanitize(this._transformToViewportOrigin(capturedArea)));
 
         this._summaryHeight += capturedArea.height;
     }
 
-    async composite() {
+    async composite(): Promise<Image> {
         await this._image.applyJoin();
 
         return this._image;
     }
 
-    async save(path) {
+    async save(path: string): Promise<void> {
         return this._image.save(path);
     }
 
-    async extendBy(physicalScrollHeight, newImage) {
+    async extendBy(physicalScrollHeight: number, newImage: Image): Promise<void> {
         this._viewport.height += physicalScrollHeight;
         const { width, height } = await newImage.getSize();
 
@@ -68,14 +93,14 @@ module.exports = class Viewport {
             height: physicalScrollHeight,
         });
 
-        this._image.addJoin(newImage);
+        this._image.addJoin([newImage]);
     }
 
-    getVerticalOverflow() {
+    getVerticalOverflow(): number {
         return getAreaBottom(this._captureArea) - getAreaBottom(this._viewport);
     }
 
-    _sanitize(area) {
+    private _sanitize(area: Rect): Rect {
         return {
             left: Math.max(area.left, 0),
             top: Math.max(area.top, 0),
@@ -84,7 +109,7 @@ module.exports = class Viewport {
         };
     }
 
-    _getIntersection(...areas) {
+    private _getIntersection(...areas: Rect[]): Rect | null {
         const top = Math.max(...areas.map(area => area.top));
         const bottom = Math.min(...areas.map(getAreaBottom));
         const left = Math.max(...areas.map(area => area.left));
@@ -97,19 +122,19 @@ module.exports = class Viewport {
         return { left, top, width: right - left, height: bottom - top };
     }
 
-    _shiftArea(area, { left, top } = {}) {
-        left = left || 0;
-        top = top || 0;
+    private _shiftArea(area: Rect, { left, top }: ShiftParams = {}): Rect {
+        const shiftLeft = left || 0;
+        const shiftTop = top || 0;
 
         return {
-            left: area.left + left,
-            top: area.top + top,
+            left: area.left + shiftLeft,
+            top: area.top + shiftTop,
             width: area.width,
             height: area.height,
         };
     }
 
-    _transformToCaptureArea(area) {
+    private _transformToCaptureArea(area: Rect): Rect {
         const shiftX = area.left - this._viewport.left;
         const shiftY = area.top - this._viewport.top;
         const shiftedImageArea = this._shiftArea(area, { top: this._summaryHeight });
@@ -119,15 +144,7 @@ module.exports = class Viewport {
         return this._shiftArea(intersectingArea, { left: this._viewport.left, top: this._viewport.top });
     }
 
-    _transformToViewportOrigin(area) {
+    private _transformToViewportOrigin(area: Rect): Rect {
         return this._shiftArea(area, { left: -this._viewport.left, top: -this._viewport.top - this._summaryHeight });
     }
-};
-
-function getAreaBottom(area) {
-    return area.top + area.height;
-}
-
-function getAreaRight(area) {
-    return area.left + area.width;
 }

@@ -1,24 +1,8 @@
 import debug from "debug";
 import { HeightViewportError } from "./errors/height-viewport-error";
 import { OffsetViewportError } from "./errors/offset-viewport-error";
-
-interface Viewport {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-}
-
-interface CropArea {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-}
-
-interface Browser {
-    id: string;
-}
+import { ExistingBrowser } from "../../../existing-browser";
+import { Rect } from "../../../../image";
 
 interface CoordValidatorOpts {
     // Ignore OffsetViewportError
@@ -27,7 +11,7 @@ interface CoordValidatorOpts {
     compositeImage?: boolean;
 }
 
-const isOutsideOfViewport = (viewport: Viewport, cropArea: CropArea): boolean =>
+const isOutsideOfViewport = (viewport: Rect, cropArea: Rect): boolean =>
     cropArea.top < 0 || cropArea.left < 0 || cropArea.left + cropArea.width > viewport.width;
 
 export class CoordValidator {
@@ -38,7 +22,7 @@ export class CoordValidator {
         return new CoordValidator(...args);
     }
 
-    constructor(browser: Browser, opts: CoordValidatorOpts = {}) {
+    constructor(browser: ExistingBrowser, opts: CoordValidatorOpts = {}) {
         this._log = debug("coord-validator:" + browser.id);
         this._opts = opts;
     }
@@ -46,7 +30,7 @@ export class CoordValidator {
     /**
      * Asserts compatibility of viewport and crop area coordinates
      */
-    validate(viewport: Viewport, cropArea: CropArea): void {
+    validate(viewport: Rect, cropArea: Rect): void {
         this._log("viewport size", viewport);
         this._log("crop area", cropArea);
 
@@ -90,7 +74,7 @@ export class CoordValidator {
      * Problem, described in error message occurs there much more often then
      * for other browsers and has different workaround
      */
-    private _reportHeightViewportError(viewport: Viewport, cropArea: CropArea): never {
+    private _reportHeightViewportError(viewport: Rect, cropArea: Rect): never {
         this._log("crop area bottom bound is outside of the viewport height");
 
         const message = `Can not capture the specified region of the viewport.
