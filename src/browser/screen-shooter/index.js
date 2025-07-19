@@ -1,6 +1,6 @@
 "use strict";
 
-const Viewport = require("./viewport");
+const { Viewport } = require("./viewport");
 
 module.exports = class ScreenShooter {
     static create(browser) {

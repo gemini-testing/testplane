@@ -3,7 +3,7 @@
 const _ = require("lodash");
 
 const { Image } = require("src/image");
-const Viewport = require("src/browser/screen-shooter/viewport");
+const { Viewport } = require("src/browser/screen-shooter/viewport");
 const { CoordValidator } = require("src/browser/screen-shooter/viewport/coord-validator");
 
 describe("Viewport", () => {
@@ -307,7 +307,7 @@ describe("Viewport", () => {
             await viewport.extendBy(null, newImage);
 
             assert.calledOnce(newImage.crop);
-            assert.calledWith(image.addJoin, newImage);
+            assert.calledWith(image.addJoin, [newImage]);
         });
     });
 
