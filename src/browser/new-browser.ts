@@ -73,6 +73,8 @@ export class NewBrowser extends Browser {
 
         this._extendStacktrace();
         this._addSteps();
+        await this._installFirefoxCSPAddOn();
+        this._addQueries();
         this._addHistory();
 
         await runGroup(
