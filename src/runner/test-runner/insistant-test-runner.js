@@ -2,14 +2,14 @@
 
 const _ = require("lodash");
 
-const { Runner } = require("../runner");
+const { RunnableEmitter } = require("../types");
 const RegularTestRunner = require("./regular-test-runner");
 const HighPriorityBrowserAgent = require("./high-priority-browser-agent");
 const { MasterEvents } = require("../../events");
 const { passthroughEvent } = require("../../events/utils");
 const { NoRefImageError } = require("../../browser/commands/assert-view/errors/no-ref-image-error");
 
-module.exports = class InsistantTestRunner extends Runner {
+module.exports = class InsistantTestRunner extends RunnableEmitter {
     constructor(test, config, browserAgent) {
         super();
 

@@ -130,6 +130,7 @@ describe("runner/browser-runner", () => {
 
             await run_({ runner });
 
+            assert.calledTwice(TestRunner.prototype.run);
             assert.calledOnce(addedTestRunner);
         });
     });
