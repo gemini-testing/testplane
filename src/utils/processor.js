@@ -22,9 +22,17 @@ process.on("unhandledRejection", (reason, p) => {
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
 });
 
-module.exports = async (module, methodName, args, cb) => {
+exports.loadModule = (moduleName, cb) => {
     try {
-        const result = await require(module)[methodName](...args);
+        require(moduleName);
+    } catch {} // eslint-disable-line no-empty
+
+    cb(null);
+};
+
+exports.execute = async (moduleName, methodName, args, cb) => {
+    try {
+        const result = await require(moduleName)[methodName](...args);
         cb(null, result);
     } catch (err) {
         sendError(err, cb);
