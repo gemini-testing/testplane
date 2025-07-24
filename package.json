@@ -88,6 +88,7 @@
     "gemini-configparser": "1.4.1",
     "get-port": "5.1.1",
     "import-meta-resolve": "4.0.0",
+    "load-esm": "1.0.2",
     "local-pkg": "0.4.3",
     "lodash": "4.17.21",
     "looks-same": "9.0.1",
