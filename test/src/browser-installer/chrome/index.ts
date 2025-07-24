@@ -64,7 +64,7 @@ describe("browser-installer/chrome", () => {
 
         await runChromeDriver("130");
 
-        assert.calledOnceWith(waitPortStub, { port: 10050, output: "silent", timeout: 10000 });
+        assert.calledOnceWith(waitPortStub, { port: 10050, output: "silent", timeout: 10000, interval: 25 });
     });
 
     it("should be executed in right order", async () => {

@@ -5,7 +5,7 @@ import waitPort from "wait-port";
 import { installFirefox, resolveLatestFirefoxVersion } from "./browser";
 import { installLatestGeckoDriver } from "./driver";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
-import { DRIVER_WAIT_TIMEOUT } from "../constants";
+import { DRIVER_WAIT_INTERVAL, DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getUbuntuLinkerEnv, isUbuntu } from "../ubuntu-packages";
 
 export { installFirefox, resolveLatestFirefoxVersion, installLatestGeckoDriver };
@@ -41,7 +41,12 @@ export const runGeckoDriver = async (
 
     process.once("exit", () => geckoDriver.kill());
 
-    await waitPort({ port: randomPort, output: "silent", timeout: DRIVER_WAIT_TIMEOUT });
+    await waitPort({
+        port: randomPort,
+        output: "silent",
+        timeout: DRIVER_WAIT_TIMEOUT,
+        interval: DRIVER_WAIT_INTERVAL,
+    });
 
     return { gridUrl, process: geckoDriver, port: randomPort };
 };

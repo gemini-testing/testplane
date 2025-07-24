@@ -20,6 +20,7 @@ export const MIN_CHROMIUM_MAC_ARM_VERSION = 93;
 export const MIN_CHROMIUM_VERSION = 73;
 export const MIN_FIREFOX_VERSION = 60;
 export const MIN_EDGEDRIVER_VERSION = 94;
+export const DRIVER_WAIT_INTERVAL = 25; // 20ms
 export const DRIVER_WAIT_TIMEOUT = 10 * 1000; // 10s
 export const LINUX_UBUNTU_RELEASE_ID = "ubuntu";
 export const LINUX_RUNTIME_LIBRARIES_PATH_ENV_NAME = "LD_LIBRARY_PATH";
