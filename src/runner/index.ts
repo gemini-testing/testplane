@@ -11,7 +11,7 @@ import {
     Interceptor,
     InterceptData,
 } from "../events";
-import { Runner } from "./runner";
+import { RunnableEmitter } from "./types";
 import RuntimeConfig from "../config/runtime-config";
 import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
@@ -36,7 +36,11 @@ type MapOfMethods<T extends ReadonlyArray<string>> = {
 
 type RegisterWorkers<T extends ReadonlyArray<string>> = EventEmitter & MapOfMethods<T>;
 
-export class MainRunner extends Runner {
+/**
+ * Part of Public API:
+ * @link https://testplane.io/docs/v8/reference/testplane-events/#runner_start
+ */
+export class MainRunner extends RunnableEmitter {
     protected config: Config;
     protected interceptors: Interceptor[];
     protected browserPool: pool.BrowserPool | null;
@@ -78,7 +82,7 @@ export class MainRunner extends Runner {
         }
 
         this.workersRegistry.init();
-        this.workers = this.workersRegistry.register(require.resolve("../worker"), ["runTest", "cancel"]) as Workers;
+        this.workers = this.registerWorkers(require.resolve("../worker"), ["runTest", "cancel"] as const) as Workers;
         this.browserPool = pool.create(this.config, this);
     }
 

@@ -2,12 +2,12 @@
 
 const crypto = require("crypto");
 const _ = require("lodash");
-const { Runner } = require("../runner");
+const { RunnableEmitter } = require("../types");
 const logger = require("../../utils/logger");
 const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
 
-module.exports = class RegularTestRunner extends Runner {
+module.exports = class RegularTestRunner extends RunnableEmitter {
     constructor(test, browserAgent) {
         super();
 

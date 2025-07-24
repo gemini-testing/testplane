@@ -1,9 +1,9 @@
 "use strict";
 
-const { Runner } = require("../runner");
+const { RunnableEmitter } = require("../types");
 const { MasterEvents } = require("../../events");
 
-module.exports = class SkippedTestRunner extends Runner {
+module.exports = class SkippedTestRunner extends RunnableEmitter {
     constructor(test) {
         super();
 

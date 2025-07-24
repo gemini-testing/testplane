@@ -1,6 +1,6 @@
 import { EventEmitter } from "events";
 import _ from "lodash";
-import { Runner } from "./runner";
+import { CancelableEmitter } from "./types";
 import * as TestRunner from "./test-runner";
 import { InterceptedEvent, MasterEvents } from "../events";
 import SuiteMonitor from "./suite-monitor";
@@ -10,13 +10,12 @@ import { Config } from "../config";
 import { BrowserPool } from "../browser-pool";
 import { Workers } from "./index";
 import type { Test } from "../types";
-import { TestCollection } from "../test-collection";
 
 export interface BrowserRunner {
     on(event: InterceptedEvent, handler: (test: Test) => void): this;
 }
 
-export class BrowserRunner extends Runner {
+export class BrowserRunner extends CancelableEmitter {
     private _browserId: string;
     private config: Config;
     private browserPool: BrowserPool;
@@ -39,14 +38,6 @@ export class BrowserRunner extends Runner {
 
     get browserId(): string {
         return this._browserId;
-    }
-
-    async run(testCollection: TestCollection): Promise<void> {
-        testCollection.eachTestByVersions(this._browserId, (test: Test) => {
-            this.running.add(this._runTest(test));
-        });
-
-        await this.running.done();
     }
 
     addTestToRun(test: Test): boolean {
