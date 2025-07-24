@@ -2,7 +2,7 @@ import { spawn, type ChildProcess } from "child_process";
 import getPort from "get-port";
 import waitPort from "wait-port";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
-import { DRIVER_WAIT_TIMEOUT } from "../constants";
+import { DRIVER_WAIT_INTERVAL, DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getMilestone } from "../utils";
 import { installChrome, resolveLatestChromeVersion } from "./browser";
 import { installChromeDriver } from "./driver";
@@ -36,7 +36,12 @@ export const runChromeDriver = async (
 
     process.once("exit", () => chromeDriver.kill());
 
-    await waitPort({ port: randomPort, output: "silent", timeout: DRIVER_WAIT_TIMEOUT });
+    await waitPort({
+        port: randomPort,
+        output: "silent",
+        timeout: DRIVER_WAIT_TIMEOUT,
+        interval: DRIVER_WAIT_INTERVAL,
+    });
 
     return { gridUrl, process: chromeDriver, port: randomPort };
 };

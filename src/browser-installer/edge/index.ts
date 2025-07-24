@@ -3,7 +3,7 @@ import { spawn, type ChildProcess } from "child_process";
 import getPort from "get-port";
 import waitPort from "wait-port";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
-import { DRIVER_WAIT_TIMEOUT } from "../constants";
+import { DRIVER_WAIT_INTERVAL, DRIVER_WAIT_TIMEOUT } from "../constants";
 
 export { resolveEdgeVersion } from "./browser";
 export { installEdgeDriver };
@@ -27,7 +27,12 @@ export const runEdgeDriver = async (
 
     process.once("exit", () => edgeDriver.kill());
 
-    await waitPort({ port: randomPort, output: "silent", timeout: DRIVER_WAIT_TIMEOUT });
+    await waitPort({
+        port: randomPort,
+        output: "silent",
+        timeout: DRIVER_WAIT_TIMEOUT,
+        interval: DRIVER_WAIT_INTERVAL,
+    });
 
     return { gridUrl, process: edgeDriver, port: randomPort };
 };
