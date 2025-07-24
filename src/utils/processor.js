@@ -6,6 +6,7 @@ const logger = require("./logger");
 const ipc = require("./ipc");
 const { shouldIgnoreUnhandledRejection } = require("./errors");
 const { utilInspectSafe } = require("./secret-replacer");
+const { preloadWebdriverIO } = require("./preload-utils.js");
 
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {
@@ -21,6 +22,8 @@ process.on("unhandledRejection", (reason, p) => {
 
     ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
 });
+
+preloadWebdriverIO();
 
 exports.loadModule = (moduleName, cb) => {
     try {
