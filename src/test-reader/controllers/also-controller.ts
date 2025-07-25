@@ -1,5 +1,5 @@
-import { EventEmitter } from "events";
 import { TestReaderEvents as ReadEvents } from "../../events";
+import type { EventEmitter } from "events";
 import type { Test } from "../../types";
 
 interface TreeBuilder {

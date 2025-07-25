@@ -2,8 +2,8 @@ import _ from "lodash";
 import mm from "micromatch";
 import path from "path";
 import fs from "fs/promises";
-import * as globExtra from "../../bundle/glob-extra";
-import { SetsConfigParsed } from "../../config/types";
+import type * as globExtra from "../../bundle/glob-extra";
+import type { SetsConfigParsed } from "../../config/types";
 
 export type TestSetData = {
     files: Array<string>;
@@ -29,12 +29,14 @@ export class TestSet {
             .concat(globOpts.ignore || [], ignoreFiles)
             .map(p => path.resolve(expandOpts.root, p));
 
-        return globExtra
-            .expandPaths(files, expandOpts, globOpts)
+        return import("../../bundle/glob-extra")
+            .then(globExtra => globExtra.expandPaths(files, expandOpts, globOpts))
             .then(expandedFiles => (this.#set = _.extend(this.#set, { files: expandedFiles })));
     }
 
     async transformDirsToMasks(): Promise<string[]> {
+        const globExtra = await import("../../bundle/glob-extra");
+
         return Promise.all(
             this.#set.files.map(file => {
                 if (globExtra.isMask(file)) {

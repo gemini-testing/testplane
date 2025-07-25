@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { TestSet } from "./test-set";
+import type { TestSet } from "./test-set";
 
 export class SetCollection {
     #sets: Record<string, TestSet>;

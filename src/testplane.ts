@@ -120,6 +120,10 @@ export class Testplane extends BaseTestplane {
         const runner = RunnerClass.create(this._config, this._interceptors);
         this.runner = runner;
 
+        eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
+        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
+        eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
+
         this.on(MasterEvents.TEST_FAIL, res => {
             this._fail();
             this._addFailedTest(res);
@@ -130,15 +134,12 @@ export class Testplane extends BaseTestplane {
 
         await initReporters(reporters, this);
 
-        eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
-        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
-        eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
-
-        preloadWebdriver().then(preloadWebdriverIO);
-
         await this._init();
 
         runner.init();
+
+        preloadWebdriver().then(preloadWebdriverIO);
+
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode }),
             RunnerStats.create(this),

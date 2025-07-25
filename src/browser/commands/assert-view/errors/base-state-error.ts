@@ -1,4 +1,4 @@
-import { ImageInfo, RefImageInfo } from "../../../../types";
+import type { ImageInfo, RefImageInfo } from "../../../../types";
 
 export class BaseStateError extends Error {
     constructor(public stateName: string, public currImg: ImageInfo, public refImg: RefImageInfo) {

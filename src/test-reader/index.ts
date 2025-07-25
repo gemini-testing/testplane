@@ -5,9 +5,9 @@ import { SetsBuilder } from "./sets-builder";
 import { TestParser } from "./test-parser";
 import { MasterEvents } from "../events";
 import env from "../utils/env";
-import { Config } from "../config";
-import { Test } from "./test-object";
-import { ReadTestsOpts } from "../testplane";
+import type { Config } from "../config";
+import type { Test } from "./test-object";
+import type { ReadTestsOpts } from "../testplane";
 
 export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
 
