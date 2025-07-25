@@ -134,11 +134,12 @@ export class Testplane extends BaseTestplane {
         eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
 
-        preloadWebdriverIO();
-
         await this._init();
 
         runner.init();
+
+        preloadWebdriverIO();
+
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode }),
             RunnerStats.create(this),

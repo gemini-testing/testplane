@@ -6,10 +6,8 @@ import { AlsoController } from "./controllers/also-controller";
 import { ConfigController } from "./controllers/config-controller";
 import { mkProvider } from "./controllers/browser-version-controller";
 import { TreeBuilder } from "./tree-builder";
-import { readFiles } from "./mocha-reader";
 import { TestReaderEvents } from "../events";
 import { Context, TestParserAPI } from "./test-parser-api";
-import { setupTransformHook } from "../bundle/test-transformer";
 import { MasterEvents } from "../events";
 import _ from "lodash";
 import clearRequire from "clear-require";
@@ -82,6 +80,11 @@ export class TestParser extends EventEmitter {
         this.#passthroughFileEvents(eventBus, toolGlobals as unknown as Context);
 
         this.#clearRequireCache(files);
+
+        const [{ setupTransformHook }, { readFiles }] = await Promise.all([
+            import("../bundle/test-transformer"),
+            import("./mocha-reader"),
+        ]);
 
         const revertTransformHook = setupTransformHook({ removeNonJsImports: this.#opts.testRunEnv === "browser" });
 

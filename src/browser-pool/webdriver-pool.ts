@@ -1,5 +1,4 @@
 import type { ChildProcess } from "child_process";
-import { resolveBrowserVersion, runBrowserDriver } from "../browser-installer";
 import { getNormalizedBrowserName } from "../utils/browser";
 import type { SupportedBrowser } from "../browser-installer";
 
@@ -33,6 +32,7 @@ export class WebdriverPool {
             );
         }
 
+        const { resolveBrowserVersion } = await import("../browser-installer");
         const browserVersionNormalized = browserVersion || (await resolveBrowserVersion(browserNameNormalized));
 
         const wdProcesses = this.driverProcess.get(browserNameNormalized)?.get(browserVersionNormalized) ?? {};
@@ -76,6 +76,7 @@ export class WebdriverPool {
         browserVersion: string,
         { debug = false } = {},
     ): Promise<WdProcess> {
+        const { runBrowserDriver } = await import("../browser-installer");
         const driver = await runBrowserDriver(browserName, browserVersion, { debug });
 
         if (!this.driverProcess.has(browserName)) {

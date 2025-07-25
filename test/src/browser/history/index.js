@@ -1,5 +1,6 @@
 "use strict";
 
+const webdriver = require("@testplane/webdriver");
 const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
@@ -203,6 +204,8 @@ describe("commands-history", () => {
 
             beforeEach(async () => {
                 sandbox.stub(webdriverio, "remote").resolves(mkSessionStub_());
+                sandbox.stub(webdriverio, "attach").resolves(mkSessionStub_());
+                sandbox.stub(webdriver.WebDriver, "newSession").resolves(mkSessionStub_());
                 browser = mkNewBrowser_({ saveHistory: true });
 
                 await browser.init();

@@ -1,24 +1,24 @@
-import { Browser as PuppeteerBrowser } from "@puppeteer/browsers";
+import type { Browser as PuppeteerBrowser } from "@puppeteer/browsers";
 import type { EventEmitter } from "events";
 import type { AssertViewCommand, AssertViewElementCommand } from "./commands/types";
 import type { BrowserConfig } from "./../config/browser-config";
 import type { ExecutionThreadCtx, ExecutionThreadToolCtx } from "../types";
-import { MoveCursorToCommand } from "./commands/moveCursorTo";
-import { OpenAndWaitCommand } from "./commands/openAndWait";
+import type { MoveCursorToCommand } from "./commands/moveCursorTo";
+import type { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
-import { Test, Hook } from "../test-reader/test-object";
+import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 
 export const BrowserName = {
-    CHROME: PuppeteerBrowser.CHROME,
-    CHROMIUM: PuppeteerBrowser.CHROMIUM,
-    CHROMEHEADLESSSHELL: PuppeteerBrowser.CHROMEHEADLESSSHELL,
-    FIREFOX: PuppeteerBrowser.FIREFOX,
+    CHROME: "chrome" as PuppeteerBrowser.CHROME,
+    CHROMIUM: "chromium" as PuppeteerBrowser.CHROMIUM,
+    CHROMEHEADLESSSHELL: "chrome-headless-shell" as PuppeteerBrowser.CHROMEHEADLESSSHELL,
+    FIREFOX: "firefox" as PuppeteerBrowser.FIREFOX,
     SAFARI: "safari",
     EDGE: "MicrosoftEdge",
 } as const;
 
-export type W3CBrowserName = Exclude<(typeof BrowserName)[keyof typeof BrowserName], PuppeteerBrowser.CHROMIUM>;
+export type W3CBrowserName = Exclude<(typeof BrowserName)[keyof typeof BrowserName], typeof BrowserName.CHROMIUM>;
 
 export interface BrowserMeta {
     pid: number;
