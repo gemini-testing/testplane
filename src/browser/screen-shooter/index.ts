@@ -1,13 +1,17 @@
-import { Viewport } from "./viewport";
-import { Image } from "../../image";
+import makeDebug from "debug";
+import { CompositeImage } from "./composite-image";
+import { Image, Rect } from "../../image";
 import { PrepareScreenshotResult } from "./types";
 import { ExistingBrowser } from "../existing-browser";
+
+const debug = makeDebug("testplane:screenshots:screen-shooter");
 
 interface ScreenShooterOpts {
     allowViewportOverflow?: boolean;
     compositeImage?: boolean;
     screenshotDelay?: number;
     selectorToScroll?: string;
+    debugId?: string;
 }
 
 interface CropImageOpts {
@@ -28,66 +32,50 @@ export class ScreenShooter {
     }
 
     async capture(page: PrepareScreenshotResult, opts: ScreenShooterOpts = {}): Promise<Image> {
-        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll } = opts;
-        const viewportOpts = { allowViewportOverflow, compositeImage };
+        const { compositeImage, screenshotDelay, selectorToScroll } = opts;
         const cropImageOpts: CropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
-        const capturedImage = await this._browser.captureViewportImage(page, screenshotDelay);
-        const viewport = Viewport.create(page, capturedImage, viewportOpts);
-        await viewport.handleImage(capturedImage);
+        const viewportImage = await this._browser.captureViewportImage(page, screenshotDelay);
+        const image = CompositeImage.create(page.captureArea, page.safeArea, page.ignoreAreas);
+        await image.registerViewportImageAtOffset(viewportImage, { top: page.containerScrollY, left: page.containerScrollX }, page.windowScrollY, page.windowScrollX);
 
-        return this._extendScreenshot(viewport, page, cropImageOpts);
+        // await new Promise(resolve => setTimeout(resolve, 100000));
+
+        await this._captureOverflowingAreaIfNeeded(image, page, cropImageOpts);
+
+        return image.render();
     }
 
-    private async _extendScreenshot(
-        viewport: Viewport,
+    private async _captureOverflowingAreaIfNeeded(
+        image: CompositeImage,
         page: PrepareScreenshotResult,
         opts: CropImageOpts,
-    ): Promise<Image> {
-        let shouldExtend: boolean;
+    ): Promise<void> {
+        const COMPOSITE_ITERATIONS_LIMIT = 25;
+        let iterations = 0;
 
-        try {
-            viewport.validate(this._browser);
-            shouldExtend = false;
-        } catch (error) {
-            // Check if this is a HeightViewportError with compositeImage enabled
-            shouldExtend =
-                error instanceof Error && error.name === "HeightViewportError" && opts.compositeImage === true;
-            if (!shouldExtend) {
-                console.log("rethrowing error");
-                throw error; // Re-throw if not a handleable validation error
-            }
+        while (opts.compositeImage && image.hasNotCapturedArea() && iterations < COMPOSITE_ITERATIONS_LIMIT) {
+            await this._scrollOnceAndExtendImage(image, page, opts);
+            iterations++;
         }
-
-        while (shouldExtend) {
-            await this._extendImage(viewport, page, opts);
-
-            try {
-                viewport.validate(this._browser);
-                shouldExtend = false;
-            } catch (error) {
-                shouldExtend =
-                    error instanceof Error && error.name === "HeightViewportError" && opts.compositeImage === true;
-                if (!shouldExtend) {
-                    console.log("rethrowing error");
-                    throw error; // Re-throw if not a handleable validation error
-                }
-            }
-        }
-
-        return viewport.composite();
     }
 
-    private async _extendImage(viewport: Viewport, page: PrepareScreenshotResult, opts: CropImageOpts): Promise<void> {
-        const physicalScrollHeight = Math.min(viewport.getVerticalOverflow(), page.viewport.height);
+    private async _scrollOnceAndExtendImage(image: CompositeImage, page: PrepareScreenshotResult, opts: CropImageOpts): Promise<void> {
+        const nextNotCapturedArea = image.getNextNotCapturedArea() as Rect;
+        const physicalScrollHeight = Math.min(nextNotCapturedArea.height, page.safeArea.height);
         const logicalScrollHeight = Math.ceil(physicalScrollHeight / page.pixelRatio);
+        // debugger;
 
-        await this._browser.scrollBy({ x: 0, y: logicalScrollHeight, selector: opts.selectorToScroll });
+        const logicalScrollOffset = await this._browser.scrollBy({ x: 0, y: logicalScrollHeight, selector: opts.selectorToScroll });
+        const physicalScrollOffset = {
+            top: logicalScrollOffset.top * page.pixelRatio,
+            left: logicalScrollOffset.left * page.pixelRatio,
+        };
 
-        page.viewport.top += physicalScrollHeight;
+        debug('Scrolled by %dpx to extend image.\n  nextNotCapturedArea was: %O\n  current scrollOffset: %O', logicalScrollHeight, nextNotCapturedArea, physicalScrollOffset);
 
         const newImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
 
-        await viewport.extendBy(physicalScrollHeight, newImage);
+        await image.registerViewportImageAtOffset(newImage, physicalScrollOffset, page.windowScrollY, page.windowScrollX);
     }
 }

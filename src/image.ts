@@ -1,6 +1,9 @@
 import sharp from "sharp";
 import looksSame from "looks-same";
 import { DiffOptions, ImageSize } from "./types";
+import makeDebug from "debug";
+
+const debug = makeDebug("testplane:screenshots:image");
 
 interface SharpImageData {
     data: Buffer;
@@ -12,12 +15,17 @@ interface PngImageData {
     size: ImageSize;
 }
 
-export interface Rect {
-    width: number;
-    height: number;
+export interface Point {
     top: number;
     left: number;
 }
+
+export interface Size {
+    width: number;
+    height: number;
+}
+
+export type Rect = Point & Size;
 
 export interface RGBA {
     r: number;
@@ -81,7 +89,8 @@ export class Image {
     }
 
     async applyJoin(): Promise<void> {
-        if (!this._composeImages.length) return;
+        debug('Applying join. composeImages length: %d, ignoreData length: %d', this._composeImages.length, this._ignoreData.length);
+        if (!this._composeImages.length && !this._ignoreData.length) return;
 
         const { height, width } = await this._img.metadata();
         const imagesData = await Promise.all(this._composeImages.map(img => img._getImageData()));
@@ -110,6 +119,10 @@ export class Image {
             fit: "contain",
             position: "top",
         });
+
+        debug('Performing applyJoin. image size: %O, compositeData: %O', { width, height: newHeight }, compositeData);
+
+        compositeData.push(...this._ignoreData);
 
         this._img.composite(compositeData);
     }

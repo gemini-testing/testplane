@@ -168,8 +168,10 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
 function getNestedBoundingClientRect(node, boundaryWindow) {
     var ownerIframe = util.getOwnerIframe(node);
     if (ownerIframe === null || util.getOwnerWindow(ownerIframe) === boundaryWindow) {
+        console.log("getNestedBoundingClientRect, early return", node.getBoundingClientRect());
         return node.getBoundingClientRect();
     }
+    console.log("getNestedBoundingClientRect, continuing to compute...");
 
     var rects = [node.getBoundingClientRect()];
     var currentIframe = ownerIframe;
