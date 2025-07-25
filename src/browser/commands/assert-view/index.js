@@ -12,6 +12,9 @@ const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
 const { AssertViewError } = require("./errors/assert-view-error");
+const { assertCorrectCaptureAreaBounds } = require("../../screen-shooter/validation");
+
+const debug = require("debug")("testplane:screenshots:assert-view");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -52,7 +55,13 @@ module.exports.default = browser => {
         });
 
         const { testplaneCtx } = session.executionContext;
+        const test = session.executionContext.ctx.currentTest;
         testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
+
+        let debugId = 'debugId';
+        try { debugId = `${test.fullTitle()}.${browser.id}.${state}`; } catch { /**/ }
+        debug(`[${debugId}] assertView selectors: %O`, selectors);
+        debug(`[${debugId}] assertView opts: %O`, opts);
 
         if (testplaneCtx.assertViewResults.hasState(state)) {
             return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
@@ -69,22 +78,28 @@ module.exports.default = browser => {
             disableAnimation: opts.disableAnimation,
         });
 
+        assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.captureArea, opts);
+
+        debug(`[${debugId}] prepareScreenshot result: %O`, page);
+
         const { tempOpts } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const screenshoterOpts = _.pick(opts, [
-            "allowViewportOverflow",
-            "compositeImage",
-            "screenshotDelay",
-            "selectorToScroll",
-        ]);
+        const screenshoterOpts = {
+            ..._.pick(opts, [
+                "allowViewportOverflow",
+                "compositeImage",
+                "screenshotDelay",
+                "selectorToScroll",
+            ]),
+            debugId,
+        };
         const currImgInst = await screenShooter
             .capture(page, screenshoterOpts)
             .finally(() => browser.cleanupScreenshot(opts));
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
-        const test = session.executionContext.ctx.currentTest;
         const refImgAbsolutePath = config.getScreenshotPath(test, state);
         const refImgRelativePath = refImgAbsolutePath && path.relative(process.cwd(), refImgAbsolutePath);
         const refImg = { path: refImgAbsolutePath, relativePath: refImgRelativePath, size: null };
