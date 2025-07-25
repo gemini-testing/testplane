@@ -108,7 +108,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             ..._.omit(opts, "runner", "executionContext"),
         };
 
-        return runner.run(opts as WorkerTestRunnerRunOpts);
+        return runner.run();
     };
 
     const runWithEmitBrowserInit = async (
