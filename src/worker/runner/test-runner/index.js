@@ -2,7 +2,6 @@
 "use strict";
 
 const _ = require("lodash");
-const { Runner } = require("./runner");
 const HookRunner = require("./hook-runner");
 const ExecutionThread = require("./execution-thread");
 const OneTimeScreenshooter = require("./one-time-screenshooter");
@@ -13,14 +12,12 @@ const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { TestplaneInternalError } = require("../../../errors");
 
-module.exports = class TestRunner extends Runner {
+module.exports = class TestRunner {
     static create(...args) {
         return new this(...args);
     }
 
     constructor({ test, file, config, browserAgent, attempt }) {
-        super();
-
         this._test = test.clone();
         this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
 

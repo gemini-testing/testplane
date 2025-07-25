@@ -39,15 +39,17 @@ describe("runner/browser-runner", () => {
         const specs = { defaultBro: [] };
         const testCollection = opts.testCollection || TestCollection.create(specs, config);
 
-        return runner.run(testCollection);
+        testCollection.eachTest(test => runner.addTestToRun(test));
+
+        return runner.waitTestsCompletion();
     };
 
     const stubTestCollection_ = (tests = [], browserVersion = "1.0") => {
-        TestCollection.prototype.eachTestByVersions.callsFake((browserId, cb) =>
+        TestCollection.prototype.eachTest.callsFake(cb =>
             tests.forEach(test => {
                 test.browserVersion = browserVersion;
 
-                cb(test, browserId, browserVersion);
+                cb(test);
             }),
         );
     };
@@ -57,7 +59,7 @@ describe("runner/browser-runner", () => {
         sandbox.stub(TestRunner.prototype, "run").resolves();
         sandbox.stub(TestRunner.prototype, "cancel");
 
-        sandbox.stub(TestCollection.prototype, "eachTestByVersions");
+        sandbox.stub(TestCollection.prototype, "eachTest");
 
         sandbox.spy(SuiteMonitor, "create");
         sandbox.stub(SuiteMonitor.prototype, "testBegin");
@@ -148,136 +150,6 @@ describe("runner/browser-runner", () => {
             await runner.waitTestsCompletion().then(afterWait);
 
             assert.callOrder(afterFirstTest, afterSecondTest, afterWait);
-        });
-    });
-
-    describe("run", () => {
-        it("should process only tests for specified browser", async () => {
-            const runner = mkRunner_({ browserId: "bro" });
-
-            await run_({ runner });
-
-            assert.calledOnceWith(TestCollection.prototype.eachTestByVersions, "bro");
-        });
-
-        it("should create browser agent for each test in collection", async () => {
-            const test1 = Test.create({ title: "foo" });
-            const test2 = Test.create({ title: "bar" });
-
-            stubTestCollection_([test1, test2], "1.0");
-
-            const pool = BrowserPool.create(makeConfigStub());
-            const runner = mkRunner_({ browserId: "bro", browserPool: pool });
-
-            await run_({ runner });
-
-            assert.calledTwice(BrowserAgent.create);
-            assert.calledWith(BrowserAgent.create.firstCall, { id: "bro", version: "1.0", pool });
-            assert.calledWith(BrowserAgent.create.secondCall, { id: "bro", version: "1.0", pool });
-        });
-
-        it("should create test runner for each test in collection", async () => {
-            const test1 = Test.create({ title: "foo" });
-            const test2 = Test.create({ title: "bar" });
-
-            stubTestCollection_([test1, test2]);
-
-            await run_();
-
-            assert.calledTwice(TestRunnerFabric.create);
-            assert.calledWith(TestRunnerFabric.create, test1);
-            assert.calledWith(TestRunnerFabric.create, test2);
-        });
-
-        it("should pass config and browser agent to test runner", async () => {
-            const config = makeConfigStub();
-            const browserAgent = BrowserAgent.create();
-            BrowserAgent.create.returns(browserAgent);
-
-            const runner = mkRunner_({ config });
-
-            await run_({ runner });
-
-            assert.calledOnceWith(TestRunnerFabric.create, sinon.match.any, config, browserAgent);
-        });
-
-        it("should wait for all test runners", async () => {
-            stubTestCollection_([Test.create({ title: "foo" }), Test.create({ title: "bar" })]);
-            const afterFirstTest = sinon.stub().named("afterFirstTest");
-            const afterSecondTest = sinon.stub().named("afterSecondTest");
-            const afterRun = sinon.stub().named("afterRun");
-
-            TestRunner.prototype.run.onFirstCall().callsFake(() => promiseDelay(1).then(afterFirstTest));
-            TestRunner.prototype.run.onSecondCall().callsFake(() => promiseDelay(10).then(afterSecondTest));
-
-            await run_();
-            afterRun();
-
-            assert.callOrder(afterFirstTest, afterSecondTest, afterRun);
-        });
-
-        ["TEST_BEGIN", "TEST_END", "TEST_PASS", "TEST_FAIL", "TEST_PENDING", "RETRY"].forEach(event => {
-            it(`should passthrough ${event} from test runner`, async () => {
-                TestRunner.prototype.run.callsFake(function () {
-                    this.emit(Events[event], { foo: "bar" });
-                    return Promise.resolve();
-                });
-
-                const onEvent = sinon.stub().named(`on${event}`);
-                const runner = mkRunner_({ browserId: "bro" }).on(Events[event], onEvent);
-
-                await run_({ runner });
-
-                assert.calledOnceWith(onEvent, { foo: "bar", browserId: "bro" });
-            });
-        });
-
-        it("should passthrough SUITE_BEGIN from suite monitor before TEST_BEGIN from test runner", async () => {
-            const onTestBegin = sinon.stub().named("onTestBegin");
-            const onSuiteBegin = sinon.stub().named("onSuiteBegin");
-
-            SuiteMonitor.prototype.testBegin.callsFake(function () {
-                this.emit(Events.SUITE_BEGIN);
-            });
-            TestRunner.prototype.run.callsFake(function () {
-                this.emit(Events.TEST_BEGIN);
-                return Promise.resolve();
-            });
-
-            const runner = mkRunner_().on(Events.TEST_BEGIN, onTestBegin).on(Events.SUITE_BEGIN, onSuiteBegin);
-
-            await run_({ runner });
-
-            assert.callOrder(onSuiteBegin, onTestBegin);
-        });
-
-        it("should passthrough SUITE_END from suite monitor after TEST_END from test runner", async () => {
-            const onTestEnd = sinon.stub().named("onTestEnd");
-            const onSuiteEnd = sinon.stub().named("onSuiteEnd");
-
-            SuiteMonitor.prototype.testEnd.callsFake(function () {
-                this.emit(Events.SUITE_END);
-            });
-            TestRunner.prototype.run.callsFake(function () {
-                this.emit(Events.TEST_END);
-                return Promise.resolve();
-            });
-
-            const runner = mkRunner_().on(Events.TEST_END, onTestEnd).on(Events.SUITE_END, onSuiteEnd);
-
-            await run_({ runner });
-
-            assert.callOrder(onTestEnd, onSuiteEnd);
-        });
-
-        it("should subscribe suite monitor to RETRY event", async () => {
-            TestRunner.prototype.run.callsFake(function () {
-                this.emit(Events.RETRY, { foo: "bar" });
-            });
-
-            await run_();
-
-            assert.calledOnceWith(SuiteMonitor.prototype.testRetry, sinon.match({ foo: "bar" }));
         });
     });
 
