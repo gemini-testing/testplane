@@ -3,8 +3,8 @@ import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
 import { BaseTestplane } from "./base-testplane";
-import { MainRunner as NodejsEnvRunner } from "./runner";
-import { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
+import type { MainRunner as NodejsEnvRunner } from "./runner";
+import type { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
 import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
@@ -112,10 +112,11 @@ export class Testplane extends BaseTestplane {
             this._config.system.mochaOpts.timeout = 0;
         }
 
-        const runner = (isRunInNodeJsEnv(this._config) ? NodejsEnvRunner : BrowserEnvRunner).create(
-            this._config,
-            this._interceptors,
-        );
+        const RunnerClass = isRunInNodeJsEnv(this._config)
+            ? await import("./runner").then(m => m.MainRunner)
+            : await import("./runner/browser-env").then(m => m.MainRunner);
+
+        const runner = RunnerClass.create(this._config, this._interceptors);
         this.runner = runner;
 
         this.on(MasterEvents.TEST_FAIL, res => {
@@ -133,6 +134,7 @@ export class Testplane extends BaseTestplane {
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
 
         await this._init();
+
         runner.init();
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode }),
