@@ -18,6 +18,7 @@ import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
+import { preloadWebdriverIO } from "./utils/preload-utils";
 
 interface RunOpts {
     browsers: string[];
@@ -132,6 +133,8 @@ export class Testplane extends BaseTestplane {
         eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
         eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
+
+        preloadWebdriverIO();
 
         await this._init();
 
