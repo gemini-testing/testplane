@@ -13,11 +13,12 @@ import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
 import { Config } from "../config";
-import { Image, Rect } from "../image";
+import { Image, Point, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
+import { PrepareScreenshotResult } from "./screen-shooter/types";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -126,7 +127,10 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async prepareScreenshot(selectors: string[] | Rect[], opts: PrepareScreenshotOpts = {}): Promise<unknown> {
+    async prepareScreenshot(
+        selectors: string[] | Rect[],
+        opts: PrepareScreenshotOpts = {},
+    ): Promise<PrepareScreenshotResult> {
         // Running this fragment with history causes rrweb snapshots to break on pages with iframes
         return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
             opts = _.extend(opts, {
@@ -134,7 +138,10 @@ export class ExistingBrowser extends Browser {
             });
 
             ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-            const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
+            const result = await this._clientBridge.call<PrepareScreenshotResult | ClientBridgeErrorData>(
+                "prepareScreenshot",
+                [selectors, opts],
+            );
             if (isClientBridgeErrorData(result)) {
                 throw new Error(
                     `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
@@ -184,12 +191,12 @@ export class ExistingBrowser extends Browser {
         return this._camera.captureViewportImage(page);
     }
 
-    scrollBy(params: ScrollByParams): Promise<void> {
+    scrollBy(params: ScrollByParams): Promise<Point> {
         ensure(this._session, BROWSER_SESSION_HINT);
 
         return this._session.execute(function (params) {
             // eslint-disable-next-line no-var
-            var elem, xVal, yVal;
+            var elem, xVal, yVal, originalScrollLeft, originalScrollTop, iterations;
 
             if (params.selector) {
                 elem = document.querySelector(params.selector);
@@ -202,15 +209,41 @@ export class ExistingBrowser extends Browser {
                     );
                 }
 
+                originalScrollLeft = elem.scrollLeft;
+                originalScrollTop = elem.scrollTop;
                 xVal = elem.scrollLeft + params.x;
                 yVal = elem.scrollTop + params.y;
+
+                elem.scrollTo(xVal, yVal);
+
+                // Wait for scroll to happen
+                iterations = 0;
+                while (elem.scrollLeft === originalScrollLeft && elem.scrollTop === originalScrollTop) {
+                    if (iterations++ > 100000) {
+                        return { top: yVal, left: xVal };
+                    }
+                }
+
+                return { top: elem.scrollTop, left: elem.scrollLeft };
             } else {
                 elem = window;
+                originalScrollLeft = window.pageXOffset;
+                originalScrollTop = window.pageYOffset;
                 xVal = window.pageXOffset + params.x;
                 yVal = window.pageYOffset + params.y;
-            }
 
-            return elem.scrollTo(xVal, yVal);
+                elem.scrollTo(xVal, yVal);
+
+                // Wait for scroll to happen
+                iterations = 0;
+                while (window.pageXOffset === originalScrollLeft && window.pageYOffset === originalScrollTop) {
+                    if (iterations++ > 100000) {
+                        return { top: yVal, left: xVal };
+                    }
+                }
+
+                return { top: window.pageYOffset, left: window.pageXOffset };
+            }
         }, params);
     }
 

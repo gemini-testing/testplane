@@ -1,6 +1,10 @@
 import sharp from "sharp";
 import looksSame from "looks-same";
 import { DiffOptions, ImageSize } from "./types";
+import debug from "debug";
+import fs from "fs-extra";
+import os from "os";
+import path from "path";
 
 interface SharpImageData {
     data: Buffer;
@@ -12,12 +16,17 @@ interface PngImageData {
     size: ImageSize;
 }
 
-export interface Rect {
-    width: number;
-    height: number;
+export interface Point {
     top: number;
     left: number;
 }
+
+export interface Size {
+    width: number;
+    height: number;
+}
+
+export type Rect = Point & Size;
 
 export interface RGBA {
     r: number;
@@ -84,12 +93,51 @@ export class Image {
         if (!this._composeImages.length) return;
 
         const { height, width } = await this._img.metadata();
+
+        const log = debug("image:applyJoin");
+
+        // Helper to persist debug images in the OS tmp dir
+        const saveDebugImage = async (buffer: Buffer, label: string): Promise<void> => {
+            try {
+                const filePath = path.join(os.tmpdir(), `testplane_compose_${Date.now()}_${label}.png`);
+                await fs.outputFile(filePath, buffer);
+                log(`saved ${label} to ${filePath}`);
+            } catch (e) {
+                // non-fatal: keep going even if we can’t write the debug file
+                log(`failed to save ${label} image: ${(e as Error).message}`);
+            }
+        };
+
+        // Log base image info and save a copy
+        log(`base image: ${width}x${height}; overlays: ${this._composeImages.length}`);
+        try {
+            await saveDebugImage(await this.toPngBuffer({ resolveWithObject: false }) as Buffer, "base");
+        } catch {/* ignore */}
+
         const imagesData = await Promise.all(this._composeImages.map(img => img._getImageData()));
         const compositeData = [];
 
         let newHeight = height!;
 
-        for (const { data, info } of imagesData) {
+        for (let idx = 0; idx < imagesData.length; idx++) {
+            const { data, info } = imagesData[idx];
+
+            log(`overlay #${idx}: ${info.width}x${info.height} placed at top=${newHeight}`);
+
+            // Persist overlay image for troubleshooting
+            try {
+                const overlayPng = await sharp(data, {
+                    raw: {
+                        width: info.width,
+                        height: info.height,
+                        channels: info.channels,
+                    },
+                })
+                    .png()
+                    .toBuffer();
+                await saveDebugImage(overlayPng, `overlay_${idx}`);
+            } catch {/* ignore */}
+
             compositeData.push({
                 input: data,
                 left: 0,
@@ -110,6 +158,8 @@ export class Image {
             fit: "contain",
             position: "top",
         });
+
+        compositeData.push(...this._ignoreData);
 
         this._img.composite(compositeData);
     }
