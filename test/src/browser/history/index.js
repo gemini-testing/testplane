@@ -1,6 +1,5 @@
 "use strict";
 
-const webdriver = require("@testplane/webdriver");
 const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
@@ -199,21 +198,19 @@ describe("commands-history", () => {
             });
         };
 
-        describe("Browser", () => {
+        describe("ExistingBrowser", () => {
             let browser;
 
             beforeEach(async () => {
-                sandbox.stub(webdriverio, "remote").resolves(mkSessionStub_());
                 sandbox.stub(webdriverio, "attach").resolves(mkSessionStub_());
-                sandbox.stub(webdriver.WebDriver, "newSession").resolves(mkSessionStub_());
                 const ExistingBrowser = proxyquire("src/browser/existing-browser", {
                     "./client-bridge": {
                         build: sandbox.stub().resolves(),
                     },
                 }).ExistingBrowser;
-                browser = mkExistingBrowser_({ saveHistory: true }, void 0, ExistingBrowser);
+                browser = mkExistingBrowser_({ saveHistory: true }, undefined, ExistingBrowser);
 
-                await browser.init({ sessionId: "session-id", sessionCaps: {}, sessionOpts: { capabilities: {} } });
+                await browser.init({ sessionOpts: {}, sessionCaps: {} });
             });
 
             mkTestsSet(() => browser, "addCommand");

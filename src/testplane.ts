@@ -18,7 +18,7 @@ import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
-import { preloadWebdriverIO } from "./utils/preload-utils";
+import { preloadWebdriver, preloadWebdriverIO } from "./utils/preload-utils";
 
 interface RunOpts {
     browsers: string[];
@@ -138,7 +138,7 @@ export class Testplane extends BaseTestplane {
 
         runner.init();
 
-        preloadWebdriverIO();
+        preloadWebdriver().then(preloadWebdriverIO);
 
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode }),

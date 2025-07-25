@@ -1,8 +1,10 @@
 import { URLSearchParams } from "url";
 import URI from "urijs";
 import { isBoolean, assign, isEmpty, set } from "lodash";
-import { remote } from "@testplane/webdriverio";
-import type { Capabilities } from "@testplane/wdio-types";
+import { WebDriver } from "@testplane/webdriver";
+import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
+import { attach, remote } from "@testplane/webdriverio";
+import type { Capabilities, Options } from "@testplane/wdio-types";
 
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
@@ -104,9 +106,60 @@ export class NewBrowser extends Browser {
     }
 
     protected async _createSession(): Promise<WebdriverIO.Browser> {
-        const sessionOpts = await this._getSessionOpts();
+        if (this._isDevtools()) {
+            return this._getSessionOpts().then(remote);
+        }
 
-        return remote(sessionOpts);
+        let sessionOptsException = null;
+        const sessionOptsPromise = this._getSessionOpts() // starts installing browsers + launching driver process...
+            .catch(exception => {
+                sessionOptsException = exception;
+            });
+
+        const isUsingThirtPartyGrid = typeof this._config.user === "string" && typeof this._config.key === "string";
+        let thirdPartyGridCustomOptions = {};
+
+        if (isUsingThirtPartyGrid && !this._isLocalGridUrl()) {
+            const gridUri = new URI(this._config.gridUrl);
+
+            thirdPartyGridCustomOptions = await import("./third-party-grid").then(m =>
+                m.detectBackend({
+                    port: gridUri.port() ? parseInt(gridUri.port(), 10) : DEFAULT_PORT,
+                    hostname: this._getGridHost(gridUri),
+                    user: this._config.user,
+                    key: this._config.key,
+                    protocol: gridUri.protocol(),
+                    region: this._config.region as Options.SauceRegions | undefined,
+                    path: gridUri.path(),
+                    capabilities: this._config.desiredCapabilities, // we dont need exact caps here
+                }),
+            );
+        }
+
+        const sessionOpts = await sessionOptsPromise;
+
+        if (sessionOptsException) {
+            throw sessionOptsException;
+        }
+
+        const fullSessionOpts = Object.assign(sessionOpts!, thirdPartyGridCustomOptions);
+        const session = await WebDriver.newSession(fullSessionOpts);
+
+        const detectedSessionEnvFlags = sessionEnvironmentDetector({
+            capabilities: session.capabilities,
+            requestedCapabilities: fullSessionOpts.capabilities,
+        });
+
+        return attach({
+            sessionId: session.sessionId,
+            ...session.options,
+            ...this._getSessionOptsFromConfig(["transformRequest", "transformResponse"]),
+            ...detectedSessionEnvFlags,
+            ...this._config.sessionEnvFlags,
+            options: session.options,
+            capabilities: session.capabilities,
+            requestedCapabilities: fullSessionOpts.capabilities as WebdriverIO.Capabilities,
+        });
     }
 
     protected async _setPageLoadTimeout(): Promise<void> {
@@ -133,6 +186,10 @@ export class NewBrowser extends Browser {
         return this._config.gridUrl === LOCAL_GRID_URL || getInstance().local;
     }
 
+    protected _isDevtools(): boolean {
+        return this._config.automationProtocol === DEVTOOLS_PROTOCOL || getInstance().devtools;
+    }
+
     protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
         const config = this._config;
 
@@ -150,8 +207,6 @@ export class NewBrowser extends Browser {
 
         const capabilities = await this._extendCapabilities(config);
 
-        const { devtools } = getInstance();
-
         const options = {
             protocol: gridUri.protocol(),
             hostname: this._getGridHost(gridUri),
@@ -159,7 +214,7 @@ export class NewBrowser extends Browser {
             path: gridUri.path(),
             queryParams: this._getQueryParams(gridUri.query()),
             capabilities,
-            automationProtocol: devtools ? DEVTOOLS_PROTOCOL : config.automationProtocol,
+            automationProtocol: this._isDevtools() ? DEVTOOLS_PROTOCOL : config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
             connectionRetryCount: 3,
             baseUrl: config.baseUrl,

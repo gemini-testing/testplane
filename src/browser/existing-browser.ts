@@ -19,8 +19,6 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
 
-const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
-
 interface SessionOptions {
     sessionId: string;
     sessionCaps?: WebdriverIO.Capabilities;
@@ -232,7 +230,7 @@ export class ExistingBrowser extends Browser {
         const opts: AttachOptions = {
             sessionId,
             ...sessionOpts,
-            ...this._getSessionOptsFromConfig(OPTIONAL_SESSION_OPTS),
+            ...this._getSessionOptsFromConfig(["transformRequest", "transformResponse"]),
             ...detectedSessionEnvFlags,
             ...this._config.sessionEnvFlags,
             options: sessionOpts,
