@@ -1,5 +1,5 @@
-import { AssertViewOpts } from "../../config/types";
-import { ChainablePromiseElement } from "@testplane/webdriverio";
+import type { AssertViewOpts } from "../../config/types";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 
 export type AssertViewCommandWithSelector = (
     this: WebdriverIO.Browser,
