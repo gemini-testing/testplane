@@ -65,11 +65,15 @@ export class Callstack {
         }
     }
 
+    clear(): void {
+        this._stack = [];
+        this._history = [];
+    }
+
     release(): TestStep[] {
         const history = this._history;
 
-        this._stack = [];
-        this._history = [];
+        this.clear();
 
         return history;
     }
