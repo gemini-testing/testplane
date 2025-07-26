@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Browser } from "../browser";
+import type { Browser } from "../browser";
 
 const addRunStepCommand = (browser: Browser): void => {
     const { publicAPI: session } = browser;
