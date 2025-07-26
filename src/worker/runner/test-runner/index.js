@@ -18,8 +18,10 @@ module.exports = class TestRunner {
     }
 
     constructor({ test, file, config, browserAgent, attempt }) {
-        this._test = test.clone();
-        this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
+        if (test) {
+            this._test = test.clone();
+            this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
+        }
 
         this._file = file;
         this._config = config;
@@ -27,8 +29,27 @@ module.exports = class TestRunner {
         this._attempt = attempt;
     }
 
-    async run({ sessionId, sessionCaps, sessionOpts, state }) {
-        await this.prepareToRun({ sessionId, sessionCaps, sessionOpts, state });
+    assignTest(test) {
+        this._test = test.clone();
+        this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
+    }
+
+    async prepareBrowser({ sessionId, sessionCaps, sessionOpts, state }) {
+        this._browserIsSettled = new Promise(resolve => {
+            this._browserAgent
+                .getBrowser({ sessionId, sessionCaps, sessionOpts, state })
+                .then(browser => {
+                    this._browser = browser;
+                })
+                .catch(err => {
+                    this._getBrowserException = err;
+                })
+                .finally(resolve);
+        });
+    }
+
+    async run() {
+        await this.prepareToRun();
 
         const error = await this.runRunnables(ExecutionThread);
 
@@ -36,13 +57,16 @@ module.exports = class TestRunner {
     }
 
     // TODO: make it protected
-    async prepareToRun({ sessionId, sessionCaps, sessionOpts, state }) {
-        const testplaneCtx = this._test.testplaneCtx;
+    async prepareToRun() {
+        await this._browserIsSettled;
 
-        try {
-            this._browser = await this._browserAgent.getBrowser({ sessionId, sessionCaps, sessionOpts, state });
-        } catch (e) {
-            throw Object.assign(e, { testplaneCtx, hermioneCtx: testplaneCtx });
+        if (!this._test) {
+            throw new Error("Test is not assigned");
+        }
+
+        if (this._getBrowserException) {
+            const testplaneCtx = this._test.testplaneCtx;
+            throw Object.assign(this._getBrowserException, { testplaneCtx, hermioneCtx: testplaneCtx });
         }
     }
 

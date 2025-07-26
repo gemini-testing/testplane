@@ -25,7 +25,7 @@ const CUSTOM_SESSION_OPTS = [
     "user",
     "key",
     "region",
-];
+] as const;
 
 export type BrowserOpts = {
     id: string;
@@ -122,7 +122,9 @@ export class Browser {
         });
     }
 
-    protected _getSessionOptsFromConfig(optNames = CUSTOM_SESSION_OPTS): Record<string, unknown> {
+    protected _getSessionOptsFromConfig(
+        optNames: ReadonlyArray<(typeof CUSTOM_SESSION_OPTS)[number]> = CUSTOM_SESSION_OPTS,
+    ): Record<string, unknown> {
         return optNames.reduce((options: Record<string, unknown>, optName) => {
             if (optName === "transformRequest") {
                 options[optName] = (req: RequestOptions): RequestOptions => {

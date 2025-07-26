@@ -1,7 +1,6 @@
-import { Testplane } from "../../../testplane";
+import type { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
 import * as logger from "../../../utils/logger";
-import { installBrowsersWithDrivers, BrowserInstallStatus } from "../../../browser-installer";
 
 const { INSTALL_DEPS: commandName } = CliCommands;
 
@@ -11,7 +10,7 @@ type BrowsersInstallPerStatus = {
     error: Array<{ tag: string; reason: string }>;
 };
 
-const logResult = <T extends (typeof BrowserInstallStatus)[keyof typeof BrowserInstallStatus]>(
+const logResult = <T extends keyof BrowsersInstallPerStatus>(
     browsersInstallPerStatus: BrowsersInstallPerStatus,
     logType: "log" | "warn" | "error",
     status: T,
@@ -32,6 +31,8 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
         .option("-c, --config <path>", "path to configuration file")
         .arguments("[browsers...]")
         .action(async (browsers: string[]) => {
+            const { installBrowsersWithDrivers, BrowserInstallStatus } = await import("../../../browser-installer");
+
             try {
                 if (!browsers.length) {
                     browsers = Object.keys(testplane.config.browsers);

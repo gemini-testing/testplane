@@ -111,14 +111,16 @@ describe("worker/runner/test-runner", () => {
     describe("run", () => {
         let callstackHistoryStub;
 
-        const run_ = (opts = {}) => {
+        const run_ = async (opts = {}) => {
             const test = opts.test || mkTest_();
             const runner = opts.runner || mkRunner_({ test });
             const sessionId = opts.sessionId || "default-sessionId";
             const sessionCaps = opts.sessionCaps || "default-session-caps";
             const sessionOpts = opts.sessionOpts || "default-session-opts";
+            const state = opts.state || {};
 
-            return runner.run({ sessionId, sessionCaps, sessionOpts });
+            await runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
+            return runner.run();
         };
 
         beforeEach(() => {
@@ -139,7 +141,7 @@ describe("worker/runner/test-runner", () => {
                 state: {},
             };
 
-            await runner.run(opts);
+            await run_({ runner, ...opts });
 
             assert.calledOnceWithExactly(BrowserAgent.prototype.getBrowser, opts);
         });

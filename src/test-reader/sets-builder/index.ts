@@ -1,9 +1,9 @@
-import path from "path";
 import _ from "lodash";
-import * as globExtra from "../../bundle/glob-extra";
+import path from "path";
 import { SetCollection } from "./set-collection";
 import { TestSet, TestSetData } from "./test-set";
-import { SetsConfigParsed } from "../../config/types";
+import type * as globExtra from "../../bundle/glob-extra";
+import type { SetsConfigParsed } from "../../config/types";
 
 export type SetsBuilderOpts = {
     defaultPaths: string[];
@@ -78,9 +78,12 @@ export class SetsBuilder {
                 .map(ignorePattern => path.resolve(projectRoot, ignorePattern));
         }
 
-        return this.#transformDirsToMasks()
-            .then(() => this.#resolvePaths(projectRoot))
-            .then(() => globExtra.expandPaths(this.#filesToUse, expandOpts, globOpts as { ignore: string[] }))
+        const resolvePathsPromise = this.#transformDirsToMasks().then(() => this.#resolvePaths(projectRoot));
+        const globExtraPromise = import("../../bundle/glob-extra");
+
+        return resolvePathsPromise
+            .then(() => globExtraPromise)
+            .then(globExtra => globExtra.expandPaths(this.#filesToUse, expandOpts, globOpts as { ignore: string[] }))
             .then(expandedFiles => {
                 this.#validateFoundFiles(expandedFiles);
                 this.#useFiles(expandedFiles);

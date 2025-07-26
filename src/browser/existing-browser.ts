@@ -19,8 +19,6 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
 
-const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
-
 interface SessionOptions {
     sessionId: string;
     sessionCaps?: WebdriverIO.Capabilities;
@@ -82,6 +80,8 @@ export class ExistingBrowser extends Browser {
             this._startCollectingCustomCommands();
         }
 
+        const isolationPromise = this._performIsolation({ sessionCaps, sessionOpts });
+
         this._extendStacktrace();
         this._addSteps();
         this._addHistory();
@@ -95,7 +95,10 @@ export class ExistingBrowser extends Browser {
             "testplane: init browser",
             async () => {
                 this._addCommands();
-                await this._performIsolation({ sessionCaps, sessionOpts });
+
+                await isolationPromise;
+
+                this._callstackHistory?.clear();
 
                 try {
                     this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
@@ -227,7 +230,7 @@ export class ExistingBrowser extends Browser {
         const opts: AttachOptions = {
             sessionId,
             ...sessionOpts,
-            ...this._getSessionOptsFromConfig(OPTIONAL_SESSION_OPTS),
+            ...this._getSessionOptsFromConfig(["transformRequest", "transformResponse"]),
             ...detectedSessionEnvFlags,
             ...this._config.sessionEnvFlags,
             options: sessionOpts,

@@ -48,7 +48,10 @@ describe("WorkersRegistry", () => {
     };
 
     beforeEach(() => {
-        workersImpl = sandbox.stub().yieldsRight();
+        workersImpl = {
+            loadModule: sandbox.stub(),
+            execute: sandbox.stub().yieldsRight(),
+        };
         workerFarm = sandbox.stub().returns(workersImpl);
 
         workerFarm.end = sandbox.stub().yieldsRight();
@@ -203,7 +206,9 @@ describe("WorkersRegistry", () => {
 
             return workers
                 .runTest("foo", { bar: "baz" })
-                .then(() => assert.calledOnceWith(workersImpl, "worker.js", "runTest", ["foo", { bar: "baz" }]));
+                .then(() =>
+                    assert.calledOnceWith(workersImpl.execute, "worker.js", "runTest", ["foo", { bar: "baz" }]),
+                );
         });
     });
 

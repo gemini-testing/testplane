@@ -1,4 +1,4 @@
-import { ChainablePromiseElement } from "@testplane/webdriverio";
+import type { ChainablePromiseElement } from "@testplane/webdriverio";
 import type { Browser } from "../types";
 
 type MoveToOptions = {

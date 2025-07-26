@@ -1,6 +1,6 @@
-import { Test } from "../../types";
 import { TestReaderEvents as ReadEvents } from "../../events";
-import { EventEmitter } from "events";
+import type { Test } from "../../types";
+import type { EventEmitter } from "events";
 
 interface TreeBuilder {
     addTrap: (trap: (test: Test) => void) => void;

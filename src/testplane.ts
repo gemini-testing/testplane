@@ -3,8 +3,8 @@ import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
 import { BaseTestplane } from "./base-testplane";
-import { MainRunner as NodejsEnvRunner } from "./runner";
-import { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
+import type { MainRunner as NodejsEnvRunner } from "./runner";
+import type { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
 import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
@@ -18,6 +18,7 @@ import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
+import { preloadWebdriver, preloadWebdriverIO } from "./utils/preload-utils";
 
 interface RunOpts {
     browsers: string[];
@@ -112,11 +113,16 @@ export class Testplane extends BaseTestplane {
             this._config.system.mochaOpts.timeout = 0;
         }
 
-        const runner = (isRunInNodeJsEnv(this._config) ? NodejsEnvRunner : BrowserEnvRunner).create(
-            this._config,
-            this._interceptors,
-        );
+        const RunnerClass = isRunInNodeJsEnv(this._config)
+            ? await import("./runner").then(m => m.MainRunner)
+            : await import("./runner/browser-env").then(m => m.MainRunner);
+
+        const runner = RunnerClass.create(this._config, this._interceptors);
         this.runner = runner;
+
+        eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
+        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
+        eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
 
         this.on(MasterEvents.TEST_FAIL, res => {
             this._fail();
@@ -128,12 +134,12 @@ export class Testplane extends BaseTestplane {
 
         await initReporters(reporters, this);
 
-        eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
-        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
-        eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
-
         await this._init();
+
         runner.init();
+
+        preloadWebdriver().then(preloadWebdriverIO);
+
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode }),
             RunnerStats.create(this),

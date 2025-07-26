@@ -1,8 +1,7 @@
 import _ from "lodash";
-import { Matches } from "@testplane/webdriverio";
-import PageLoader from "../../utils/page-loader";
+import type { Matches } from "@testplane/webdriverio";
 import type { Browser } from "../types";
-import { BrowserConfig } from "../../config/browser-config";
+import type { BrowserConfig } from "../../config/browser-config";
 
 interface WaitOpts {
     selector?: string | string[];
@@ -25,7 +24,7 @@ const is: Record<string, (match: Matches) => boolean> = {
 };
 
 const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Browser) =>
-    function openAndWait(
+    async function openAndWait(
         this: WebdriverIO.Browser,
         uri: string,
         {
@@ -39,6 +38,7 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             timeout = config.openAndWaitOpts?.timeout || config?.pageLoadTimeout || 0,
         }: WaitOpts = {},
     ): Promise<string | void> {
+        const PageLoader = await import("../../utils/page-loader").then(m => m.default);
         const isChrome = config.desiredCapabilities?.browserName === "chrome";
         const isCDP = config.automationProtocol === "devtools";
 

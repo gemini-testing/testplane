@@ -2,7 +2,7 @@ import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
 import type { Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
-import { RequestOptions } from "https";
+import type { RequestOptions } from "https";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;

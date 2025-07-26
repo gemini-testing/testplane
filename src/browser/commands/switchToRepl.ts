@@ -1,5 +1,5 @@
-import repl from "node:repl";
 import path from "node:path";
+import type repl from "node:repl";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
 import RuntimeConfig from "../../config/runtime-config";
@@ -60,7 +60,8 @@ export default (browser: Browser): void => {
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
         process.chdir(testCwd);
 
-        const replServer = repl.start({ prompt: "> " });
+        const replServer = await import("node:repl").then(m => m.start({ prompt: "> " }));
+
         browser.applyState({ onReplMode: true });
 
         runtimeCfg.extend({ replServer });
