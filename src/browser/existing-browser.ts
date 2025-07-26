@@ -80,6 +80,8 @@ export class ExistingBrowser extends Browser {
             this._startCollectingCustomCommands();
         }
 
+        const isolationPromise = this._performIsolation({ sessionCaps, sessionOpts });
+
         this._extendStacktrace();
         this._addSteps();
         this._addHistory();
@@ -93,7 +95,10 @@ export class ExistingBrowser extends Browser {
             "testplane: init browser",
             async () => {
                 this._addCommands();
-                await this._performIsolation({ sessionCaps, sessionOpts });
+
+                await isolationPromise;
+
+                this._callstackHistory?.clear();
 
                 try {
                     this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
