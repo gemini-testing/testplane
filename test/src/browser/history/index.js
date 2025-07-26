@@ -4,7 +4,7 @@ const webdriver = require("@testplane/webdriver");
 const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
-const { mkNewBrowser_, mkExistingBrowser_, mkSessionStub_, createBrowserConfig_ } = require("../utils");
+const { mkExistingBrowser_, mkSessionStub_, createBrowserConfig_ } = require("../utils");
 
 describe("commands-history", () => {
     const sandbox = sinon.createSandbox();
@@ -206,28 +206,14 @@ describe("commands-history", () => {
                 sandbox.stub(webdriverio, "remote").resolves(mkSessionStub_());
                 sandbox.stub(webdriverio, "attach").resolves(mkSessionStub_());
                 sandbox.stub(webdriver.WebDriver, "newSession").resolves(mkSessionStub_());
-                browser = mkNewBrowser_({ saveHistory: true });
-
-                await browser.init();
-            });
-
-            mkTestsSet(() => browser, "addCommand");
-            mkTestsSet(() => browser, "overwriteCommand");
-        });
-
-        describe("ExistingBrowser", () => {
-            let browser;
-
-            beforeEach(async () => {
-                sandbox.stub(webdriverio, "attach").resolves(mkSessionStub_());
                 const ExistingBrowser = proxyquire("src/browser/existing-browser", {
                     "./client-bridge": {
                         build: sandbox.stub().resolves(),
                     },
                 }).ExistingBrowser;
-                browser = mkExistingBrowser_({ saveHistory: true }, undefined, ExistingBrowser);
+                browser = mkExistingBrowser_({ saveHistory: true }, void 0, ExistingBrowser);
 
-                await browser.init({ sessionOpts: {}, sessionCaps: {} });
+                await browser.init({ sessionId: "session-id", sessionCaps: {}, sessionOpts: { capabilities: {} } });
             });
 
             mkTestsSet(() => browser, "addCommand");
