@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const proxyquire = require("proxyquire");
 const signalHandler = require("src/signal-handler");
 const history = require("src/browser/history");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
+const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } = require("src/constants/config");
 const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
 const RuntimeConfig = require("src/config/runtime-config");
 const { mkNewBrowser_, mkSessionStub_, mkWdPool_ } = require("./utils");
@@ -336,39 +336,6 @@ describe("NewBrowser", () => {
                 transformResponse(response);
 
                 assert.calledOnceWith(transformResponseStub, response);
-            });
-        });
-
-        describe("commands-history", () => {
-            it("should NOT init commands-history if it is off", async () => {
-                await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.NONE }).init();
-
-                assert.notCalled(initCommandHistoryStub);
-            });
-
-            it("should save history of executed commands if it is enabled", async () => {
-                await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL }).init();
-
-                assert.calledOnceWith(initCommandHistoryStub, session);
-            });
-
-            it("should save history of executed commands if it is enabled on fails", async () => {
-                await mkBrowser_({ saveHistoryMode: "onlyFailed" }).init();
-
-                assert.calledOnceWith(initCommandHistoryStub, session);
-            });
-
-            it("should init commands-history before any commands have added", async () => {
-                await mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL }).init();
-
-                assert.callOrder(initCommandHistoryStub, session.addCommand);
-            });
-
-            it('should log "init" to history if "saveHistoryMode" and "pageLoadTimeout" are set', async () => {
-                const browser = mkBrowser_({ saveHistoryMode: SAVE_HISTORY_MODE.ALL, pageLoadTimeout: 500100 });
-                await browser.init();
-
-                assert.calledOnceWith(runGroupStub, sinon.match.any, "testplane: init browser", sinon.match.func);
             });
         });
 

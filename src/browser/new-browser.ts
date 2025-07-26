@@ -6,7 +6,6 @@ import type { Capabilities } from "@testplane/wdio-types";
 
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
-import { runGroup } from "./history";
 import { warn } from "../utils/logger";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { getInstance } from "../config/runtime-config";
@@ -71,23 +70,9 @@ export class NewBrowser extends Browser {
     async init(): Promise<NewBrowser> {
         this._session = await this._createSession();
 
-        this._extendStacktrace();
-        this._addSteps();
-        this._addHistory();
-
-        await runGroup(
-            {
-                session: this._session,
-                callstack: this._callstackHistory!,
-                config: this._config,
-            },
-            "testplane: init browser",
-            async () => {
-                this._addCommands();
-                this.restoreHttpTimeout();
-                await this._setPageLoadTimeout();
-            },
-        );
+        this._addCommands();
+        this.restoreHttpTimeout();
+        await this._setPageLoadTimeout();
 
         return this;
     }
