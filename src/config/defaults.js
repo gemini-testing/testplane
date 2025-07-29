@@ -106,6 +106,7 @@ module.exports = {
         env: {},
         args: [],
         logs: true,
+        reuseExisting: false,
         readinessProbe: {
             url: null,
             isReady: null,

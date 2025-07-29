@@ -21,7 +21,8 @@ describe("dev-server", () => {
     let childProcessStub: EventEmitter & { kill: SinonStub };
     let pipeLogsWithPrefixStub: SinonStub;
     let waitDevServerReadyStub: SinonStub;
-    let loggerStub: { log: SinonStub };
+    let probeServerStub: SinonStub;
+    let loggerStub: { log: SinonStub; warn: SinonStub };
     let debugLog: SinonStub;
     let testplaneStub: Testplane & { halt: SinonStub };
     let findCwdStub: SinonStub;
@@ -49,9 +50,10 @@ describe("dev-server", () => {
         spawnStub = sandbox.stub().returns(childProcessStub);
         pipeLogsWithPrefixStub = sandbox.stub();
         waitDevServerReadyStub = sandbox.stub();
+        probeServerStub = sandbox.stub();
         findCwdStub = sandbox.stub();
 
-        loggerStub = { log: sandbox.stub() };
+        loggerStub = { log: sandbox.stub(), warn: sandbox.stub() };
         debugLog = sandbox.stub();
 
         devServer = proxyquire("src/dev-server", {
@@ -61,6 +63,7 @@ describe("dev-server", () => {
             "./utils": {
                 pipeLogsWithPrefix: pipeLogsWithPrefixStub,
                 waitDevServerReady: waitDevServerReadyStub,
+                probeServer: probeServerStub,
                 findCwd: findCwdStub,
             },
         });
@@ -167,6 +170,136 @@ describe("dev-server", () => {
             });
 
             assert.calledWith(debugLog, "Dev server env:", JSON.stringify({ bar: "baz" }, null, 4));
+        });
+    });
+
+    describe("reuseExisting", () => {
+        const defaultReadinessProbe = {
+            url: "http://localhost:3000",
+            isReady: null,
+            timeouts: {
+                waitServerTimeout: 30000,
+                probeRequestTimeout: 1000,
+                probeRequestInterval: 500,
+            },
+        };
+
+        it("should throw error when reuseExisting is true but readinessProbe is a function", async () => {
+            const readinessProbe = sandbox.stub();
+
+            try {
+                await initDevServer_({
+                    command: "foo",
+                    reuseExisting: true,
+                    readinessProbe,
+                });
+                assert.fail("Expected error to be thrown");
+            } catch (error) {
+                assert.match(
+                    (error as Error).message,
+                    /When 'reuseExisting' is set to 'true' in 'devServer' config, it is required to set 'devServer.readinessProbe.url'/,
+                );
+            }
+
+            assert.notCalled(spawnStub);
+            assert.notCalled(probeServerStub);
+        });
+
+        it("should throw error when reuseExisting is true but readinessProbe.url is not set", async () => {
+            try {
+                await initDevServer_({
+                    command: "foo",
+                    reuseExisting: true,
+                    readinessProbe: {
+                        ...defaultReadinessProbe,
+                        url: null,
+                    },
+                });
+                assert.fail("Expected error to be thrown");
+            } catch (error) {
+                assert.match(
+                    (error as Error).message,
+                    /When 'reuseExisting' is set to 'true' in 'devServer' config, it is required to set 'devServer.readinessProbe.url'/,
+                );
+            }
+
+            assert.notCalled(spawnStub);
+            assert.notCalled(probeServerStub);
+        });
+
+        it("should reuse existing server when reuseExisting is true and server is ready", async () => {
+            probeServerStub.resolves(true);
+
+            await initDevServer_({
+                command: "foo",
+                reuseExisting: true,
+                readinessProbe: defaultReadinessProbe,
+            });
+
+            assert.calledOnceWith(probeServerStub, defaultReadinessProbe);
+            assert.calledWith(loggerStub.log, "Reusing existing dev server");
+            assert.notCalled(spawnStub);
+            assert.notCalled(waitDevServerReadyStub);
+        });
+
+        it("should start new server when reuseExisting is true but server is not ready", async () => {
+            probeServerStub.resolves(false);
+
+            await initDevServer_({
+                command: "foo",
+                reuseExisting: true,
+                readinessProbe: defaultReadinessProbe,
+            });
+
+            assert.calledOnceWith(probeServerStub, defaultReadinessProbe);
+            assert.calledWith(loggerStub.log, "Starting dev server with command", '"foo"');
+            assert.calledOnceWith(spawnStub, "foo");
+            assert.calledOnce(waitDevServerReadyStub);
+        });
+
+        it("should work with custom isReady function when reusing existing server", async () => {
+            probeServerStub.resolves(true);
+            const customIsReady = sandbox.stub();
+
+            const customReadinessProbe = {
+                ...defaultReadinessProbe,
+                isReady: customIsReady,
+            };
+
+            await initDevServer_({
+                command: "foo",
+                reuseExisting: true,
+                readinessProbe: customReadinessProbe,
+            });
+
+            assert.calledOnceWith(probeServerStub, customReadinessProbe);
+            assert.calledWith(loggerStub.log, "Reusing existing dev server");
+            assert.notCalled(spawnStub);
+        });
+
+        it("should not probe server when reuseExisting is false", async () => {
+            await initDevServer_({
+                command: "foo",
+                reuseExisting: false,
+                readinessProbe: defaultReadinessProbe,
+            });
+
+            assert.notCalled(probeServerStub);
+            assert.calledWith(loggerStub.log, "Starting dev server with command", '"foo"');
+            assert.calledOnceWith(spawnStub, "foo");
+            assert.calledOnce(waitDevServerReadyStub);
+        });
+
+        it("should not probe server when reuseExisting is not set (default false)", async () => {
+            await initDevServer_({
+                command: "foo",
+                readinessProbe: defaultReadinessProbe,
+            });
+
+            assert.notCalled(probeServerStub);
+            assert.calledWith(loggerStub.log, "Starting dev server with command", '"foo"');
+            assert.calledOnceWith(spawnStub, "foo");
+            assert.calledOnce(waitDevServerReadyStub);
         });
     });
 });

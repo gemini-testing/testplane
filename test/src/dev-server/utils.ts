@@ -3,16 +3,19 @@ import proxyquire from "proxyquire";
 import sinon, { type SinonSpy, type SinonStub } from "sinon";
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { PartialDeep } from "type-fest";
-import { waitDevServerReady, findCwd } from "../../../src/dev-server/utils";
+import { waitDevServerReady, findCwd, probeServer } from "../../../src/dev-server/utils";
 import defaultConfig from "../../../src/config/defaults";
 import type { Config } from "../../../src/config";
 
 type WaitDevServerReady = typeof waitDevServerReady;
 type FindCwd = typeof findCwd;
+type ProbeServer = typeof probeServer;
 
 type ReadinessProbeConfig = Config["devServer"]["readinessProbe"];
+// eslint-disable-next-line @typescript-eslint/ban-types
+type ReadinessProbeConfigObject = Exclude<ReadinessProbeConfig, Function>;
 
-type UtilsModule = { waitDevServerReady: WaitDevServerReady; findCwd: FindCwd };
+type UtilsModule = { waitDevServerReady: WaitDevServerReady; findCwd: FindCwd; probeServer: ProbeServer };
 
 describe("dev-server/utlls", () => {
     const sandbox = sinon.createSandbox();
@@ -222,6 +225,130 @@ describe("dev-server/utlls", () => {
                     .catch(_.noop);
 
                 assert.calledWith(loggerStub.warn, "Dev server ready probe failed:", "some error");
+            });
+        });
+
+        describe("probeServer", () => {
+            const createReadinessProbe_ = (
+                opts: PartialDeep<ReadinessProbeConfig> = {},
+            ): ReadinessProbeConfigObject => {
+                return _.defaultsDeep(opts, defaultConfig.devServer.readinessProbe);
+            };
+
+            it("should throw error when url is not a string", async () => {
+                const readinessProbe = createReadinessProbe_({ url: null });
+
+                try {
+                    await utils.probeServer(readinessProbe);
+                    assert.fail("Expected error to be thrown");
+                } catch (error) {
+                    assert.match((error as Error).message, /devServer.readinessProbe.url should be set to url/);
+                }
+
+                assert.notCalled(fetchStub);
+            });
+
+            it("should return true when server responds with success status", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.resolves({ status: 200 });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isTrue(result);
+                assert.calledOnceWith(fetchStub, "http://localhost:3000", { signal: sinon.match.any });
+            });
+
+            it("should return false when server responds with error status", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.resolves({ status: 500 });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.calledOnceWith(fetchStub, "http://localhost:3000", { signal: sinon.match.any });
+            });
+
+            it("should use custom isReady function", async () => {
+                const customIsReady = sandbox.stub().resolves(true);
+                const readinessProbe = createReadinessProbe_({
+                    url: "http://localhost:3000",
+                    isReady: customIsReady,
+                });
+                const mockResponse = { status: 500 };
+                fetchStub.resolves(mockResponse);
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isTrue(result);
+                assert.calledOnceWith(customIsReady, mockResponse);
+            });
+
+            it("should return false when custom isReady function returns false", async () => {
+                const customIsReady = sandbox.stub().resolves(false);
+                const readinessProbe = createReadinessProbe_({
+                    url: "http://localhost:3000",
+                    isReady: customIsReady,
+                });
+                fetchStub.resolves({ status: 200 });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.calledOnce(customIsReady);
+            });
+
+            it("should return false when fetch throws ECONNREFUSED error", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.rejects({ cause: { code: "ECONNREFUSED" } });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.notCalled(loggerStub.warn);
+            });
+
+            it("should return false and log warning when fetch throws other errors", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.rejects({ cause: { code: "ETIMEDOUT" } });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.calledWith(loggerStub.warn, "Dev server ready probe failed:", "ETIMEDOUT");
+            });
+
+            it("should return false and log warning when fetch throws error with cause string", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.rejects({ cause: "Network error" });
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.calledWith(loggerStub.warn, "Dev server ready probe failed:", "Network error");
+            });
+
+            it("should return false when fetch throws error without cause", async () => {
+                const readinessProbe = createReadinessProbe_({ url: "http://localhost:3000" });
+                fetchStub.rejects(new Error("Generic error"));
+
+                const result = await utils.probeServer(readinessProbe);
+
+                assert.isFalse(result);
+                assert.notCalled(loggerStub.warn);
+            });
+
+            it("should use AbortSignal with timeout from readinessProbe", async () => {
+                const readinessProbe = createReadinessProbe_({
+                    url: "http://localhost:3000",
+                    timeouts: { probeRequestTimeout: 5000 },
+                });
+                fetchStub.resolves({ status: 200 });
+
+                await utils.probeServer(readinessProbe);
+
+                assert.calledOnceWith(fetchStub, "http://localhost:3000", {
+                    signal: sinon.match.instanceOf(AbortSignal),
+                });
             });
         });
     });
