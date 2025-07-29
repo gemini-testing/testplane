@@ -2,7 +2,7 @@ import _ from "lodash";
 import { spawn } from "child_process";
 import debug from "debug";
 import { Config } from "../config";
-import { findCwd, pipeLogsWithPrefix, waitDevServerReady } from "./utils";
+import { findCwd, pipeLogsWithPrefix, probeServer, waitDevServerReady } from "./utils";
 import * as logger from "../utils/logger";
 import type { Testplane } from "../testplane";
 
@@ -13,6 +13,22 @@ export type InitDevServer = (opts: DevServerOpts) => Promise<void>;
 export const initDevServer: InitDevServer = async ({ testplane, devServerConfig, configPath }) => {
     if (!devServerConfig || !devServerConfig.command) {
         return;
+    }
+
+    if (devServerConfig.reuseExisting) {
+        if (typeof devServerConfig.readinessProbe === "function" || !devServerConfig.readinessProbe.url) {
+            throw new Error(
+                "When 'reuseExisting' option is set in 'devServer' config, it is required to set 'devServer.readinessProbe.url' option",
+            );
+        }
+
+        const isReady = await probeServer(devServerConfig.readinessProbe);
+
+        if (isReady) {
+            logger.log("Reusing existing dev server");
+
+            return;
+        }
     }
 
     logger.log("Starting dev server with command", `"${devServerConfig.command}"`);
@@ -38,7 +54,15 @@ export const initDevServer: InitDevServer = async ({ testplane, devServerConfig,
         pipeLogsWithPrefix(devServer, "[dev server] ");
     }
 
+    const killDevServerOnProcessExitCb = (): void => {
+        devServer.kill("SIGINT");
+    };
+
+    process.on("exit", killDevServerOnProcessExitCb);
+
     devServer.once("exit", (code, signal) => {
+        process.removeListener("exit", killDevServerOnProcessExitCb);
+
         if (signal !== "SIGINT") {
             const errorMessage = [
                 "An error occured while launching dev server",
@@ -46,10 +70,6 @@ export const initDevServer: InitDevServer = async ({ testplane, devServerConfig,
             ].join("\n");
             testplane.halt(new Error(errorMessage), 5000);
         }
-    });
-
-    process.once("exit", () => {
-        devServer.kill("SIGINT");
     });
 
     await waitDevServerReady(devServer, devServerConfig.readinessProbe);

@@ -347,6 +347,7 @@ export interface CommonConfig {
         args: Array<string>;
         logs: boolean;
         readinessProbe: ReadinessProbe;
+        reuseExisting: boolean;
     };
 
     timeTravel: TimeTravelConfig;

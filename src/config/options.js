@@ -183,6 +183,7 @@ const rootSection = section(
             args: options.optionalArray("devServer.args"),
             cwd: options.optionalString("devServer.cwd"),
             logs: options.optionalBoolean("devServer.logs"),
+            reuseExisting: options.optionalBoolean("devServer.reuseExisting"),
             readinessProbe: option({
                 defaultValue: defaults.devServer.readinessProbe,
                 validate: value => {

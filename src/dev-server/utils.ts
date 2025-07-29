@@ -79,6 +79,38 @@ const defaultIsReadyFn = (response: Awaited<ReturnType<typeof globalThis.fetch>>
     return response.status >= 200 && response.status < 300;
 };
 
+export const probeServer = async (
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    readinessProbe: Exclude<Config["devServer"]["readinessProbe"], Function>,
+): Promise<boolean> => {
+    if (typeof readinessProbe.url !== "string") {
+        throw new Error("devServer.readinessProbe.url should be set to url");
+    }
+
+    const isReadyFn = readinessProbe.isReady || defaultIsReadyFn;
+
+    try {
+        const signal = AbortSignal.timeout(readinessProbe.timeouts.probeRequestTimeout);
+        const response = await fetch(readinessProbe.url!, { signal });
+        const isReady = await isReadyFn(response);
+
+        if (!isReady) {
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        const err = error as { cause?: { code?: string } };
+        const errorMessage = err && err.cause && (err.cause.code || err.cause);
+
+        if (errorMessage && errorMessage !== "ECONNREFUSED") {
+            logger.warn("Dev server ready probe failed:", errorMessage);
+        }
+
+        return false;
+    }
+};
+
 export const waitDevServerReady = async (
     devServer: ChildProcessWithoutNullStreams,
     readinessProbe: Config["devServer"]["readinessProbe"],
@@ -99,8 +131,6 @@ export const waitDevServerReady = async (
             });
     }
 
-    const isReadyFn = readinessProbe.isReady || defaultIsReadyFn;
-
     let isSuccess = false;
     let isError = false;
 
@@ -115,33 +145,18 @@ export const waitDevServerReady = async (
 
     const readyPromise = new Promise<void>(resolve => {
         const tryToFetch = async (): Promise<void> => {
-            const signal = AbortSignal.timeout(readinessProbe.timeouts.probeRequestTimeout);
+            const isReady = await probeServer(readinessProbe);
 
-            try {
-                const response = await fetch(readinessProbe.url!, { signal });
-                const isReady = await isReadyFn(response);
+            if (isError || isSuccess) {
+                return;
+            }
 
-                if (!isReady) {
-                    throw new Error("Dev server is not ready yet");
-                }
-
-                if (!isError && !isSuccess) {
-                    isSuccess = true;
-                    logger.log("Dev server is ready");
-                    resolve();
-                }
-            } catch (error) {
-                const err = error as { cause?: { code?: string } };
-
-                if (!isError && !isSuccess) {
-                    setTimeout(tryToFetch, readinessProbe.timeouts.probeRequestInterval).unref();
-
-                    const errorMessage = err && err.cause && (err.cause.code || err.cause);
-
-                    if (errorMessage && errorMessage !== "ECONNREFUSED") {
-                        logger.warn("Dev server ready probe failed:", errorMessage);
-                    }
-                }
+            if (isReady) {
+                isSuccess = true;
+                logger.log("Dev server is ready");
+                resolve();
+            } else {
+                setTimeout(tryToFetch, readinessProbe.timeouts.probeRequestInterval).unref();
             }
         };
 
