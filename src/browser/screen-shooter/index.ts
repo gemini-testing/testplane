@@ -67,15 +67,17 @@ export class ScreenShooter {
         // debugger;
 
         const logicalScrollOffset = await this._browser.scrollBy({ x: 0, y: logicalScrollHeight, selector: opts.selectorToScroll });
-        const physicalScrollOffset = {
+        const containerScrollOffset = opts.selectorToScroll ? {
             top: logicalScrollOffset.top * page.pixelRatio,
             left: logicalScrollOffset.left * page.pixelRatio,
-        };
+        } : { top: 0, left: 0 };
+        const windowScrollY = opts.selectorToScroll ? page.windowScrollY : logicalScrollOffset.top * page.pixelRatio;
+        const windowScrollX = opts.selectorToScroll ? page.windowScrollX : logicalScrollOffset.left * page.pixelRatio;
 
-        debug('Scrolled by %dpx to extend image.\n  nextNotCapturedArea was: %O\n  current scrollOffset: %O', logicalScrollHeight, nextNotCapturedArea, physicalScrollOffset);
+        debug('Scrolled by %dpx to extend image.\n  nextNotCapturedArea was: %O\n  current container scroll offset: %O\n  current window scroll offset: %O', logicalScrollHeight, nextNotCapturedArea, containerScrollOffset, { windowScrollY, windowScrollX });
 
         const newImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
 
-        await image.registerViewportImageAtOffset(newImage, physicalScrollOffset, page.windowScrollY, page.windowScrollX);
+        await image.registerViewportImageAtOffset(newImage, containerScrollOffset, windowScrollY, windowScrollX);
     }
 }

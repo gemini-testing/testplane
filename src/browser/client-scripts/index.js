@@ -50,7 +50,28 @@ exports.cleanupFrameAnimations = function cleanupFrameAnimations() {
     }
 };
 
+function createDebugLogger(opts) {
+    var log = "";
+    if (opts.debug) {
+        return function () {
+            for (var i = 0; i < arguments.length; i++) {
+                if (typeof arguments[i] === "object") {
+                    log += JSON.stringify(arguments[i], null, 2) + "\n";
+                } else {
+                    log += arguments[i] + "\n";
+                }
+            }
+
+            return log;
+        }
+    }
+
+    return function () {};
+}
+
 function prepareScreenshotUnsafe(areas, opts) {
+    var logger = createDebugLogger(opts);
+
     var allowViewportOverflow = opts.allowViewportOverflow;
     var captureElementFromTop = opts.captureElementFromTop;
     var disableAnimation = opts.disableAnimation;
@@ -87,6 +108,8 @@ function prepareScreenshotUnsafe(areas, opts) {
         rect,
         selectors = [];
 
+    logger("prepareScreenshotUnsafe, viewport at the start:", viewPort);
+
     areas.forEach(function (area) {
         if (Rect.isRect(area)) {
             rect = rect ? rect.merge(new Rect(area)) : new Rect(area);
@@ -104,7 +127,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         viewportWidth: viewportWidth,
         documentHeight: documentHeight
     });
-    console.log("getCaptureRect, rect:", rect);
+    logger("getCaptureRect, rect:", rect);
 
     if (!rect) {
         return {
@@ -129,30 +152,42 @@ function prepareScreenshotUnsafe(areas, opts) {
         scrollElem: scrollElem,
         viewportWidth: viewportWidth,
         viewportHeight: viewportHeight
-    });
+    }, logger);
 
     if (captureElementFromTop && !viewPort.rectInside(rect)) {
+        logger("captureElementFromTop=true and rect is outside of viewport, performing scroll");
         if (opts.selectorToScroll && captureElementFromTop) {
             var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
             window.scrollTo(window.scrollX, scrollElemBoundingRect.top); // TODO: scroll not to the top of the scroll element, but to the top of the safe area
 
-            // Transform capture area to scroll element coordinates
-            // rect.top = rect.top - window.scrollY;
-            // rect.bottom = rect.bottom - window.scrollY;
-            // rect.left = rect.left - window.scrollX;
-            // rect.right = rect.right - window.scrollX;
+            rect = getCaptureRect(captureElements, {
+                initialRect: rect,
+                allowViewportOverflow: allowViewportOverflow,
+                scrollElem: scrollElem,
+                viewportWidth: viewportWidth,
+                documentHeight: documentHeight
+            }).translate(0, window.scrollY);
+
+            ignoreAreas = findIgnoreAreas(opts.ignoreSelectors, {
+                scrollElem: scrollElem,
+                pixelRatio: pixelRatio,
+                viewportWidth: viewportWidth,
+                documentHeight: documentHeight
+            }, { x: 0, y: window.scrollY });
 
             safeArea = getSafeAreaRect(rect, captureElements, {
                 scrollElem: scrollElem,
                 viewportWidth: viewportWidth,
                 viewportHeight: viewportHeight
-            })
+            }, logger);
         }
         // Scroll so that capture area aligns with the top border of safeArea
-        var targetScrollY = Math.max(rect.top - (scrollElemBoundingRect || {}).top - safeArea.top, 0); // TODO: this is most likely wrong, because rect is in global coordinates, but safeArea is in viewport coordinates
+        var targetScrollY = Math.max(rect.top - (scrollElemBoundingRect || {top: 0}).top - safeArea.top, 0); // TODO: this is most likely wrong, because rect is in global coordinates, but safeArea is in viewport coordinates
         // By how much should we scroll inside container so that target element is aligned with the top border of safeArea?
         // - How do we compute 
         var targetScrollX = scrollElem.offsetLeft;
+
+        logger("captureElementFromTop=true, performing scroll. targetScrollY:", targetScrollY, "targetScrollX:", targetScrollX);
 
         if (util.isSafariMobile()) {
             scrollToCaptureAreaInSafari(viewPort, new Rect({ left: rect.left, top: targetScrollY, width: rect.width, height: rect.height }), scrollElem);
@@ -160,7 +195,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             scrollElem.scrollTo(targetScrollX, targetScrollY);
         }
 
-        console.log("scrollToCaptureAreaInSafari, rect:", rect);
+        logger("scrollToCaptureAreaInSafari, rect:", rect);
     } else if (allowViewportOverflow && viewPort.rectIntersects(rect)) {
         rect.overflowsTopBound(viewPort) && rect.recalculateHeight(viewPort);
         rect.overflowsLeftBound(viewPort) && rect.recalculateWidth(viewPort);
@@ -178,8 +213,8 @@ function prepareScreenshotUnsafe(areas, opts) {
         disableFrameAnimationsUnsafe();
     }
 
-    console.log("prepareScreenshotUnsafe, rect:", rect);
-    console.log("prepareScreenshotUnsafe, pixelRatio:", pixelRatio);
+    logger("prepareScreenshotUnsafe, rect:", rect);
+    logger("prepareScreenshotUnsafe, pixelRatio:", pixelRatio);
 
     return {
         captureArea: rect.scale(pixelRatio).serialize(),
@@ -201,7 +236,8 @@ function prepareScreenshotUnsafe(areas, opts) {
         containerScrollY: scrollElem === window ? 0 : Math.floor(util.getScrollTop(scrollElem) * pixelRatio),
         containerScrollX: scrollElem === window ? 0 : Math.floor(util.getScrollLeft(scrollElem) * pixelRatio),
         windowScrollY: Math.floor(window.scrollY) * pixelRatio,
-        windowScrollX: Math.floor(window.scrollX) * pixelRatio
+        windowScrollX: Math.floor(window.scrollX) * pixelRatio,
+        debugLog: logger()
     };
 }
 
@@ -294,7 +330,7 @@ function getBoundingClientContentRect(element) {
     });
 }
 
-function getSafeAreaRect(captureArea, captureElements, opts) {
+function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     /**
      * What is safe area?
      *  - It's dimensions of current scrollable container minus vertical space of sticky elements that interfere with our target element.
@@ -343,118 +379,142 @@ function getSafeAreaRect(captureArea, captureElements, opts) {
         height: captureArea.height
     });
 
-    // 2. Detect sticky elements dynamically by comparing their positions before and after scroll
-    var root = document.documentElement; // scrollElem === window ? document.documentElement : scrollElem;
+    // 2. Detect interfering elements heuristically
+    var root = document.documentElement;
     var allElements = root.querySelectorAll ? root.querySelectorAll("*") : [];
 
-    // a) snapshot initial positions of candidate elements (visible, horizontally intersecting capture area, not inside capture elements)
-    var candidates = [];
+    var interferingRects = [];
+    
     allElements.forEach(function (el) {
-        if (util.some(captureElements, function (capEl) { return capEl.contains(el) || el.contains(capEl); })) {
+        // Skip elements that are part of capture elements
+        if (util.some(captureElements, function (capEl) {
+            // if (typeof capEl.contains !== "function" || typeof el.contains !== "function") {
+            //     console.log("WARNING!!!! getSafeAreaRect, capEl.contains or el.contains is not a function");
+            //     console.log("capEl:", capEl);
+            //     console.log("el:", el);
+            //     return true;
+            // }
+            return capEl.contains(el) || el.contains(capEl);
+        })) {
             return;
         }
 
-        var br0 = el.getBoundingClientRect();
-        if (br0.width < 1 || br0.height < 1) {
+        var computedStyle = lib.getComputedStyle(el);
+        var position = computedStyle.position;
+        var br = el.getBoundingClientRect();
+
+        // Skip invisible elements
+        if (br.width < 1 || br.height < 1) {
             return;
         }
 
-        if (br0.right <= captureAreaInViewportCoords.left || br0.left >= captureAreaInViewportCoords.right) {
+        // Skip elements that don't horizontally intersect with capture area
+        if (br.right <= captureAreaInViewportCoords.left || br.left >= captureAreaInViewportCoords.right) {
             return;
         }
 
-        candidates.push({ el: el, top0: br0.top, rect0: br0 });
-    });
+        var shouldInterfere = false;
 
-    // b) try scrolling the container by 50px
-    var initialScrollTop = util.getScrollTop(scrollElem);
-    var scrollStep = 50;
-
-    if (scrollElem === window) {
-        scrollElem.scrollTo(util.getScrollLeft(scrollElem), initialScrollTop + scrollStep);
-    } else {
-        scrollElem.scrollTop = initialScrollTop + scrollStep;
-    }
-
-    var newScrollTop = util.getScrollTop(scrollElem);
-
-    // If container did not scroll – abort and return original safe area
-    if (newScrollTop === initialScrollTop) {
-        return originalSafeArea;
-    }
-
-    console.log("getSafeAreaRect, candidates:", candidates);
-
-    // c) detect sticky elements – those whose top didn't change after scroll
-    var stickyRects = [];
-    candidates.forEach(function (item) {
-        var br1 = item.el.getBoundingClientRect();
-        if (Math.abs(br1.top - item.top0) < 1) { // consider unchanged
-            stickyRects.push(br1);
-        }
-    });
-
-    console.log("getSafeAreaRect, stickyRects:", stickyRects);
-
-    // d) restore scroll position
-    if (scrollElem === window) {
-        scrollElem.scrollTo(util.getScrollLeft(scrollElem), initialScrollTop);
-    } else {
-        scrollElem.scrollTop = initialScrollTop;
-    }
-
-    // e) shrink safe area according to sticky elements
-    stickyRects.forEach(function (br) {
-        console.log("getSafeAreaRect, stickyRects, br:", br);
-        var safeAreaBottom = safeArea.top + safeArea.height;
-        var captureBottom = captureAreaInViewportCoords.top + captureAreaInViewportCoords.height;
-
-        // if (br.bottom <= captureAreaInViewportCoords.top) {
-        //     console.log("getSafeAreaRect, stickyRects, br.bottom <= captureAreaInViewportCoords.top");
-
-        //     // Sticky element is above capture area – shrink from top only
-        //     safeArea.top = Math.max(safeArea.top, br.bottom);
-        //     safeArea.height = safeAreaBottom - safeArea.top;
-        //     safeArea.bottom = safeArea.top + safeArea.height;
-
-        //     console.log("getSafeAreaRect, safeArea.top:", safeArea.top);
-        //     console.log("getSafeAreaRect, safeArea.height:", safeArea.height);
-        //     console.log("getSafeAreaRect, safeArea.bottom:", safeArea.bottom);
-        // } else if (br.top >= captureBottom) {
-        //     console.log("getSafeAreaRect, stickyRects, br.top >= captureBottom");
-            
-        //     // Sticky element is below capture area – shrink from bottom only
-        //     safeArea.height = Math.min(safeArea.height, br.top - safeArea.top);
-        //     safeArea.bottom = safeArea.top + safeArea.height;
-        // } else {
-            console.log("getSafeAreaRect, stickyRects, else");
-            
-            // Sticky element overlaps capture area vertically – choose side with smaller shrink
-            var shrinkTop = br.bottom - safeArea.top;
-            var shrinkBottom = safeAreaBottom - br.top;
-
-            console.log("getSafeAreaRect, shrinkTop:", shrinkTop);
-            console.log("getSafeAreaRect, shrinkBottom:", shrinkBottom);
-
-            if (shrinkTop < shrinkBottom) {
-                safeArea.top = Math.max(safeArea.top, br.bottom);
-                safeArea.height = safeAreaBottom - safeArea.top;
-                safeArea.bottom = safeArea.top + safeArea.height;
-            } else {
-                safeArea.height = Math.min(safeArea.height, br.top - safeArea.top);
-                safeArea.bottom = safeArea.top + safeArea.height;
+        if (position === "fixed") {
+            // Fixed elements always interfere
+            shouldInterfere = true;
+        } else if (position === "absolute") {
+            // Absolute elements interfere only if positioned relative to ancestor outside scroll container
+            var containingBlock = findContainingBlock(el);
+            // scrollElem may be window, in which case it doesn't have a contains method
+            if (containingBlock && scrollElem && typeof scrollElem.contains === "function" && !scrollElem.contains(containingBlock)) {
+                shouldInterfere = true;
             }
-        // }
+        } else if (position === "sticky") {
+            // Sticky elements interfere based on their top/bottom values
+            var topValue = parseFloat(computedStyle.top);
+            var bottomValue = parseFloat(computedStyle.bottom);
+
+            // TODO: determine which element this element sticks to
+            
+            // Create interference rect based on sticky positioning
+            if (!isNaN(topValue)) {
+                // Sticky to top - interferes from viewport top + topValue
+                br = {
+                    left: br.left,
+                    top: topValue,
+                    right: br.right,
+                    bottom: topValue + br.height,
+                    width: br.width,
+                    height: br.height
+                };
+                shouldInterfere = true;
+            } else if (!isNaN(bottomValue)) {
+                // Sticky to bottom - interferes from viewport bottom - bottomValue - height
+                var viewportBottom = (scrollElem === window) ? viewportHeight : safeArea.top + safeArea.height;
+                br = {
+                    left: br.left,
+                    top: viewportBottom - bottomValue - br.height,
+                    right: br.right,
+                    bottom: viewportBottom - bottomValue,
+                    width: br.width,
+                    height: br.height
+                };
+                shouldInterfere = true;
+            }
+        }
+
+        if (shouldInterfere) {
+            interferingRects.push({x: br.left, y: br.top, width: br.width, height: br.height});
+        }
     });
 
-    console.log("getSafeAreaRect, result safeArea:", safeArea);
-    console.log("getSafeAreaRect, result originalSafeArea:", originalSafeArea);
+    logger("getSafeAreaRect, safeArea before shrinking:", safeArea);
+    logger("getSafeAreaRect, interferingRects:", interferingRects);
 
-    // 5. Ensure we didn't shrink more than 50 % of original height
+    // 3. Shrink safe area according to interfering elements
+    interferingRects.forEach(function (br) {
+        logger("getSafeAreaRect, interferingRects, br:", br);
+        var safeAreaBottom = safeArea.top + safeArea.height;
+
+        logger("getSafeAreaRect, interferingRects, processing interference");
+        
+        // Determine how to shrink safe area
+        var shrinkTop = br.y + br.height - safeArea.top;
+        var shrinkBottom = safeAreaBottom - br.y;
+
+        logger("getSafeAreaRect, shrinkTop:", shrinkTop);
+        logger("getSafeAreaRect, shrinkBottom:", shrinkBottom);
+
+        if (shrinkTop < shrinkBottom) {
+            safeArea.top = Math.max(safeArea.top, br.y + br.height);
+            safeArea.height = safeAreaBottom - safeArea.top;
+        } else {
+            safeArea.height = Math.min(safeArea.height, br.y - safeArea.top);
+        }
+
+        logger("getSafeAreaRect, safeArea after shrinking:", safeArea);
+    });
+
+    logger("getSafeAreaRect, final safeArea after shrinking:", safeArea);
+    logger("getSafeAreaRect, final originalSafeArea:", originalSafeArea);
+
+    // 4. Ensure we didn't shrink more than 50% of original height
     if (safeArea.height < originalSafeArea.height / 2) {
         safeArea.top = originalSafeArea.top;
         safeArea.height = originalSafeArea.height;
     }
+
+    // 5. Ensure target element can still be fully captured in safe area
+    // If shrinking cut off part of the capture area, expand safe area back
+    // if (captureAreaInViewportCoords.top < safeArea.top) {
+    //     safeArea.top = originalSafeArea.top;
+    //     safeArea.height = originalSafeArea.height;
+    // }
+    
+    // var captureBottomInViewport = captureAreaInViewportCoords.top + captureAreaInViewportCoords.height;
+    // var safeAreaBottom = safeArea.top + safeArea.height;
+    // if (captureBottomInViewport > safeAreaBottom) {
+    //     // Target extends below safe area - expand safe area downward
+    //     safeArea.height = captureBottomInViewport - safeArea.top;
+    // }
+
+    logger("getSafeAreaRect, final safeArea:", safeArea);
 
     return new Rect({
         left: Math.floor(safeArea.left),
@@ -525,13 +585,13 @@ function configurePixelRatio(usePixelRatio) {
     return window.screen.deviceXDPI / window.screen.logicalXDPI || 1;
 }
 
-function findIgnoreAreas(selectors, opts) {
+function findIgnoreAreas(selectors, opts, offset) {
     var result = [];
     util.each(selectors, function (selector) {
         var elements = queryIgnoreAreas(selector);
 
         util.each(elements, function (elem) {
-            return addIgnoreArea.call(result, elem, opts);
+            return addIgnoreArea.call(result, elem, opts).translate(0, offset.y);
         });
     });
 
@@ -688,4 +748,16 @@ function scrollToCaptureAreaInSafari(viewportCurr, captureArea, scrollElem) {
         scrollElem.scrollTo(captureArea.left, captureArea.top);
     }
     */
+}
+
+function findContainingBlock(element) {
+    var parent = element.parentElement;
+    while (parent) {
+        var style = lib.getComputedStyle(parent);
+        if (["relative", "absolute", "fixed", "sticky"].includes(style.position) || style.transform !== "none" || style.perspective !== "none") {
+            return parent;
+        }
+        parent = parent.parentElement;
+    }
+    return document.documentElement;
 }

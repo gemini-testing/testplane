@@ -14,7 +14,8 @@ const { BaseStateError } = require("./errors/base-state-error");
 const { AssertViewError } = require("./errors/assert-view-error");
 const { assertCorrectCaptureAreaBounds } = require("../../screen-shooter/validation");
 
-const debug = require("debug")("testplane:screenshots:assert-view");
+const makeDebug = require("debug");
+const debug = makeDebug("testplane:screenshots:assert-view");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -70,13 +71,19 @@ module.exports.default = browser => {
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
+        const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
+
         const page = await browser.prepareScreenshot([].concat(selectors), {
             ignoreSelectors: [].concat(opts.ignoreElements),
             allowViewportOverflow: opts.allowViewportOverflow,
             captureElementFromTop: opts.captureElementFromTop,
             selectorToScroll: opts.selectorToScroll,
             disableAnimation: opts.disableAnimation,
+            debug: browserPrepareScreenshotDebug.enabled,
         });
+
+        browserPrepareScreenshotDebug(`[${debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`);
+        delete page.debugLog;
 
         assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.captureArea, opts);
 
