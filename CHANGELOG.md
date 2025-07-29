@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.30.0](https://github.com/gemini-testing/testplane/compare/v8.29.6...v8.30.0) (2025-07-29)
+
+
+### Features
+
+* implement devServer reuseExisting option ([1dbd6f2](https://github.com/gemini-testing/testplane/commit/1dbd6f244c0c65f51aea544362d8d2dbdf220fcf))
+* **save-history-mode:** fix save history mode ([5bcf704](https://github.com/gemini-testing/testplane/commit/5bcf704491b23553fccf49d01637b02521d9f4e0))
+
 ### [8.29.6](https://github.com/gemini-testing/testplane/compare/v8.29.5...v8.29.6) (2025-07-17)
 
 
