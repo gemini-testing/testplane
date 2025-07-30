@@ -15,6 +15,7 @@ const {
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
 } = require("../constants/process-messages");
+const { isRunInNodeJsEnv } = require("./config");
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -47,7 +48,10 @@ module.exports = class WorkersRegistry extends EventEmitter {
     }
 
     register(workerFilepath, exportedMethods) {
-        this._workerFarm.loadModule(workerFilepath, _.noop);
+        // For some reason, preloading modules causes running tests to hang up in browser env
+        if (isRunInNodeJsEnv(this._config)) {
+            this._workerFarm.loadModule(workerFilepath, _.noop);
+        }
 
         const workers = new EventEmitter();
         this._registeredWorkers.push(workers);
