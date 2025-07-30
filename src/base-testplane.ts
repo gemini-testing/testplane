@@ -11,7 +11,7 @@ import {
     Interceptor,
 } from "./events";
 import Errors from "./errors";
-import { tryToRegisterTsNode } from "./utils/typescript";
+import { registerTransformHook } from "./utils/typescript";
 import { ConfigInput } from "./config/types";
 
 export abstract class BaseTestplane extends AsyncEmitter {
@@ -30,7 +30,7 @@ export abstract class BaseTestplane extends AsyncEmitter {
 
         this._interceptors = [];
 
-        tryToRegisterTsNode(this.isWorker());
+        registerTransformHook(this.isWorker());
 
         this._config = Config.create(config);
         this._setLogLevel();

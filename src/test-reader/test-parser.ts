@@ -20,10 +20,6 @@ import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
 
-export type TestParserOpts = {
-    testRunEnv?: "nodejs" | "browser";
-};
-
 export type TestParserParseOpts = {
     browserId: string;
     grep?: RegExp;
@@ -39,14 +35,12 @@ const getFailedTestId = (test: { fullTitle: string; browserId: string; browserVe
     getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
 
 export class TestParser extends EventEmitter {
-    #opts: TestParserOpts;
     #failedTests: Set<string>;
     #buildInstructions: InstructionsList;
 
-    constructor(opts: TestParserOpts = {}) {
+    constructor() {
         super();
 
-        this.#opts = opts;
         this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
     }
@@ -81,12 +75,7 @@ export class TestParser extends EventEmitter {
 
         this.#clearRequireCache(files);
 
-        const [{ setupTransformHook }, { readFiles }] = await Promise.all([
-            import("../bundle/test-transformer"),
-            import("./mocha-reader"),
-        ]);
-
-        const revertTransformHook = setupTransformHook({ removeNonJsImports: this.#opts.testRunEnv === "browser" });
+        const { readFiles } = await import("./mocha-reader");
 
         const rand = Math.random();
         const esmDecorator = (f: string): string => f + `?rand=${rand}`;
@@ -109,8 +98,6 @@ export class TestParser extends EventEmitter {
                 );
             }
         }
-
-        revertTransformHook();
     }
 
     #applyInstructionsEvents(eventBus: EventEmitter): void {

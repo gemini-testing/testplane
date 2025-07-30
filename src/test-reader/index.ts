@@ -39,11 +39,7 @@ export class TestReader extends EventEmitter {
             .useBrowsers(browsers!)
             .build(process.cwd(), { ignore }, fileExtensions);
 
-        const testRunEnv = _.isArray(this.#config.system.testRunEnv)
-            ? this.#config.system.testRunEnv[0]
-            : this.#config.system.testRunEnv;
-
-        const parser = new TestParser({ testRunEnv });
+        const parser = new TestParser();
         passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
 
         await parser.loadFiles(setCollection.getAllFiles(), { config: this.#config, runnableOpts });

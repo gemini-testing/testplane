@@ -7,7 +7,3 @@ export const preloadWebdriverIO = async (): Promise<void> => {
 export const preloadMochaReader = async (): Promise<void> => {
     await loadEsm(require.resolve("../test-reader/mocha-reader")).catch(() => {});
 };
-
-export const preloadTestTransformer = async (): Promise<void> => {
-    await loadEsm(require.resolve("../bundle/test-transformer")).catch(() => {});
-};
