@@ -77,6 +77,8 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
         .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
         .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
+        .option("--keep-browser", "do not close browser session after test completion")
+        .option("--keep-browser-on-fail", "do not close browser session when test fails")
         .arguments("[paths...]")
         .action(async (paths: string[]) => {
             try {
@@ -93,6 +95,8 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     replOnFail,
                     devtools,
                     local,
+                    keepBrowser,
+                    keepBrowserOnFail,
                 } = program;
 
                 const isTestsSuccess = await testplane.run(paths, {
@@ -110,6 +114,10 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     },
                     devtools: devtools || false,
                     local: local || false,
+                    keepBrowserMode: {
+                        enabled: keepBrowser || keepBrowserOnFail || false,
+                        onFail: keepBrowserOnFail || false,
+                    },
                 });
 
                 process.exit(isTestsSuccess ? 0 : 1);
