@@ -1,7 +1,7 @@
 import debug from "debug";
 import _ from "lodash";
 
-import { NewBrowser } from "../browser/new-browser";
+import type { NewBrowser } from "../browser/new-browser";
 import { CancelledError } from "./cancelled-error";
 import { AsyncEmitter, MasterEvents } from "../events";
 import { BrowserOpts, Pool } from "./types";
@@ -32,6 +32,7 @@ export class BasicPool implements Pool {
     }
 
     async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
+        const { NewBrowser } = await import("../browser/new-browser");
         const browser = NewBrowser.create(this._config, { ...opts, id, wdPool: this._wdPool, emitter: this._emitter });
 
         try {

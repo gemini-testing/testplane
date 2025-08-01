@@ -1,90 +1,119 @@
-import _ from "lodash";
-import debug from "debug";
+import path from "node:path";
+import { addHook } from "pirates";
 import * as logger from "./logger";
 
-const swcDebugNamespace = "testplane:swc";
-const swcDebugLog = debug(swcDebugNamespace);
+const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
 
-export const tryToRegisterTsNode = (isSilent: boolean = false): void => {
-    if (process.env.TS_ENABLE === "false") {
+const TRANSFORM_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
+const ASSET_EXTENSIONS = [
+    ".css",
+    ".scss",
+    ".sass",
+    ".less",
+    ".styl",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".woff",
+    ".woff2",
+];
+
+let transformFunc: null | ((code: string, sourceFile: string, sourceMaps: boolean) => string) = null;
+
+export const transformCode = (
+    code: string,
+    { sourceFile, sourceMaps, isSilent = true }: { sourceFile: string; sourceMaps: boolean; isSilent?: boolean },
+): string => {
+    if (transformFunc === null) {
+        const envVar = process.env.TS_NODE_SWC === "false" ? false : true;
+        const hasSwcCore = (): boolean => {
+            try {
+                require.resolve("@swc/core");
+                return true;
+            } catch {
+                if (!isSilent) {
+                    logger.warn(
+                        `testplane: you may install @swc/core for significantly faster reading of typescript tests.`,
+                    );
+                }
+                return false;
+            }
+        };
+
+        if (envVar && hasSwcCore()) {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { transformSync }: typeof import("@swc/core") = require("@swc/core");
+            transformFunc = (code, sourceFile, sourceMaps): string =>
+                transformSync(code, {
+                    sourceFileName: sourceFile,
+                    sourceMaps: sourceMaps ? "inline" : false,
+                    configFile: false,
+                    swcrc: false,
+                    minify: false,
+                    module: {
+                        type: "commonjs",
+                    },
+                    jsc: {
+                        target: "esnext",
+                        parser: {
+                            syntax: "typescript",
+                            tsx: true,
+                        },
+                    },
+                }).code;
+        } else {
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const { transformSync }: typeof import("esbuild") = require("esbuild");
+            transformFunc = (code, sourceFile, sourceMaps): string =>
+                transformSync(code, {
+                    sourcefile: sourceFile,
+                    sourcemap: sourceMaps ? "inline" : false,
+                    minify: false,
+                    loader: path.extname(sourceFile).includes("j") ? "jsx" : "tsx",
+                    format: "cjs",
+                    target: "esnext",
+                    jsx: "automatic",
+                }).code;
+        }
+    }
+
+    return transformFunc(code, sourceFile, sourceMaps);
+};
+
+export const registerTransformHook = (isSilent: boolean = false): void => {
+    const processWithEsbuildSymbol = process as typeof process & {
+        [TESTPLANE_TRANSFORM_HOOK]?: { revert: () => void };
+    };
+
+    if (processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK] || process.env.TS_ENABLE === "false") {
         return;
     }
+
     try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { REGISTER_INSTANCE } = require("ts-node");
+        const revertTransformHook = addHook(
+            (code, filename) => transformCode(code, { sourceFile: filename, sourceMaps: false, isSilent }),
+            {
+                exts: TRANSFORM_EXTENSIONS,
+                matcher: filename => !filename.includes("node_modules"),
+                ignoreNodeModules: false,
+            },
+        );
 
-        if (_.get(process, REGISTER_INSTANCE)) {
-            return;
-        }
+        const revertAssetHook = addHook(() => "module.exports = {};", {
+            exts: ASSET_EXTENSIONS,
+            ignoreNodeModules: false,
+        });
 
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { register }: typeof import("ts-node") = require("ts-node");
+        const revertAll = (): void => {
+            revertTransformHook();
+            revertAssetHook();
+            delete processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK];
+        };
 
-        const skipProjectRaw = process.env.TS_NODE_SKIP_PROJECT ?? "true";
-        const transpileOnlyRaw = process.env.TS_NODE_TRANSPILE_ONLY ?? "true";
-        const swcRaw = process.env.TS_NODE_SWC ?? "true";
-
-        if (JSON.parse(swcRaw)) {
-            try {
-                require("@swc/core");
-                register({
-                    skipProject: JSON.parse(skipProjectRaw),
-                    transpileOnly: JSON.parse(transpileOnlyRaw),
-                    swc: true,
-                });
-                return;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            } catch (err: any) {
-                if (!isSilent) {
-                    if (err.code === "MODULE_NOT_FOUND") {
-                        logger.warn(
-                            `testplane: you may install @swc/core for significantly faster reading of typescript tests.`,
-                        );
-                    } else {
-                        const isSwcDebugLogEnabled = debug.enabled(swcDebugNamespace);
-
-                        if (isSwcDebugLogEnabled) {
-                            swcDebugLog(err);
-                        } else {
-                            logger.warn(
-                                `testplane: could not load @swc/core. Run Testplane with "DEBUG=testplane:swc" to see details.`,
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        try {
-            register({
-                skipProject: JSON.parse(skipProjectRaw),
-                transpileOnly: JSON.parse(transpileOnlyRaw),
-                swc: false,
-                compilerOptions: {
-                    module: "nodenext",
-                    moduleResolution: "nodenext",
-                },
-            });
-            return;
-            // eslint-disable-next-line no-empty
-        } catch (err) {}
-
-        try {
-            register({
-                skipProject: JSON.parse(skipProjectRaw),
-                transpileOnly: JSON.parse(transpileOnlyRaw),
-                swc: false,
-            });
-            return;
-            // eslint-disable-next-line no-empty
-        } catch (err) {
-            if (!isSilent) {
-                const params = `swc: "false", transpileOnly: "${transpileOnlyRaw}", skipProject: "${skipProjectRaw}"`;
-                logger.warn(
-                    `testplane: an error occured while trying to register ts-node (${params}). TypeScript tests won't be read:`,
-                    err,
-                );
-            }
-        }
-    } catch {} // eslint-disable-line no-empty
+        processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK] = { revert: revertAll };
+    } catch (err) {
+        logger.warn(`testplane: an error occurred while trying to register transform hook.`, err);
+    }
 };

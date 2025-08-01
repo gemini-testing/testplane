@@ -3,12 +3,17 @@ import url from "url";
 import { SOURCE_MAP_URL_COMMENT } from "./constants";
 import { getSourceCodeFile } from "./utils";
 import { softFileURLToPath } from "../utils/fs";
+import { transformCode } from "../utils/typescript";
 import type { SufficientStackFrame, ResolvedFrame } from "./types";
 
 export const extractSourceMaps = async (
     fileContents: string,
     fileName: string,
 ): Promise<BasicSourceMapConsumer | null> => {
+    if (fileContents.indexOf(SOURCE_MAP_URL_COMMENT) === -1) {
+        fileContents = transformCode(fileContents, { sourceFile: fileName, sourceMaps: true });
+    }
+
     const sourceMapsStartIndex = fileContents.indexOf(SOURCE_MAP_URL_COMMENT);
     const sourceMapsEndIndex = fileContents.indexOf("\n", sourceMapsStartIndex);
 
@@ -22,8 +27,11 @@ export const extractSourceMaps = async (
             : fileContents.slice(sourceMapsStartIndex + SOURCE_MAP_URL_COMMENT.length, sourceMapsEndIndex);
 
     const sourceMaps = await getSourceCodeFile(url.resolve(fileName, sourceMapUrl));
+    const consumer = (await new SourceMapConsumer(sourceMaps)) as BasicSourceMapConsumer;
 
-    return new SourceMapConsumer(sourceMaps) as Promise<BasicSourceMapConsumer>;
+    consumer.file = consumer.file || fileName;
+
+    return consumer;
 };
 
 export const resolveLocationWithSourceMap = (

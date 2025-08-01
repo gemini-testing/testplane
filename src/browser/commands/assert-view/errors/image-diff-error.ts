@@ -1,8 +1,6 @@
-import { ImageInfo, RefImageInfo } from "../../../../types";
-
-import { Image } from "../../../../image";
 import { BaseStateError } from "./base-state-error";
 
+import type { ImageInfo, RefImageInfo } from "../../../../types";
 import type { LooksSameOptions, LooksSameResult } from "looks-same";
 
 interface DiffOptions extends LooksSameOptions {
@@ -110,6 +108,6 @@ export class ImageDiffError extends BaseStateError {
     }
 
     saveDiffTo(diffPath: string): Promise<null> {
-        return Image.buildDiff({ diff: diffPath, ...this.diffOpts });
+        return import("../../../../image").then(m => m.Image.buildDiff({ diff: diffPath, ...this.diffOpts }));
     }
 }

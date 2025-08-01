@@ -15,6 +15,7 @@ const {
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
 } = require("../constants/process-messages");
+const { isRunInNodeJsEnv } = require("./config");
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -47,6 +48,11 @@ module.exports = class WorkersRegistry extends EventEmitter {
     }
 
     register(workerFilepath, exportedMethods) {
+        // For some reason, preloading modules causes running tests to hang up in browser env
+        if (isRunInNodeJsEnv(this._config)) {
+            this._workerFarm.loadModule(workerFilepath, _.noop);
+        }
+
         const workers = new EventEmitter();
         this._registeredWorkers.push(workers);
 
@@ -55,7 +61,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
                 if (this._ended) {
                     return Promise.reject(new Error(`Can't execute method '${methodName}' because worker farm ended.`));
                 }
-                return promisify(this._workerFarm)(workerFilepath, methodName, args);
+                return promisify(this._workerFarm.execute)(workerFilepath, methodName, args);
             };
         }
 
@@ -75,7 +81,7 @@ module.exports = class WorkersRegistry extends EventEmitter {
             ...this._inspectParams(),
         };
 
-        return workerFarm(params, workerFilepath);
+        return workerFarm(params, workerFilepath, ["loadModule", "execute"]);
     }
 
     _inspectParams() {

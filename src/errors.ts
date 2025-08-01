@@ -8,7 +8,7 @@ import { ImageDiffError } from "./browser/commands/assert-view/errors/image-diff
 import { NoRefImageError } from "./browser/commands/assert-view/errors/no-ref-image-error";
 import { TestplaneInternalError } from "./errors/testplane-internal-error";
 import { AbortOnReconnectError } from "./errors/abort-on-reconnect-error";
-import { Constructor } from "type-fest";
+import type { Constructor } from "type-fest";
 
 const Errors = {
     CoreError,

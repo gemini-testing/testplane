@@ -64,12 +64,17 @@ export class TestRunner extends NodejsEnvTestRunner {
         });
     }
 
-    async run(opts: WorkerTestRunnerRunOpts): Promise<WorkerRunTestResult> {
+    async prepareBrowser(opts: WorkerTestRunnerRunOpts): Promise<void> {
         this._runOpts = opts;
+
+        return super.prepareBrowser(opts);
+    }
+
+    async run(): Promise<WorkerRunTestResult> {
         let error: Error | undefined | null;
 
         try {
-            await super.prepareToRun(this._runOpts);
+            await super.prepareToRun();
 
             error = await this._runWithAbort<Error | undefined>(throwIfAborted => {
                 const ExecutionThreadCls = wrapExecutionThread(this._socket, throwIfAborted);

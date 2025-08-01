@@ -446,38 +446,6 @@ describe("test-reader/test-parser", () => {
                     assert.notEqual(firstCallModuleName, lastCallModuleName);
                 });
             });
-
-            describe("transform hook", () => {
-                describe("removeNonJsImports", () => {
-                    [
-                        { removeNonJsImports: true, testRunEnv: "browser" },
-                        { removeNonJsImports: false, testRunEnv: "nodejs" },
-                    ].forEach(({ removeNonJsImports, testRunEnv }) => {
-                        it(`should be "${removeNonJsImports}" if testRunEnv is "${testRunEnv}"`, async () => {
-                            const parser = new TestParser({ testRunEnv });
-
-                            await loadFiles_({ parser, files: ["foo/bar", "baz/qux"] });
-
-                            assert.calledOnceWith(setupTransformHook, { removeNonJsImports });
-                        });
-                    });
-                });
-
-                it("should setup hook before read files", async () => {
-                    await loadFiles_({ files: ["foo/bar", "baz/qux"] });
-
-                    assert.callOrder(setupTransformHook, readFiles);
-                });
-
-                it("should call revert transformation after read files", async () => {
-                    const revertFn = sinon.stub();
-                    setupTransformHook.returns(revertFn);
-
-                    await loadFiles_({ files: ["foo/bar", "baz/qux"] });
-
-                    assert.callOrder(readFiles, revertFn);
-                });
-            });
         });
 
         describe("root suite decorators", () => {

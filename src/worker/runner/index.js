@@ -5,8 +5,6 @@ const { passthroughEvent } = require("../../events/utils");
 const { WorkerEvents } = require("../../events");
 const BrowserPool = require("./browser-pool");
 const { BrowserAgent } = require("./browser-agent");
-const NodejsEnvTestRunner = require("./test-runner");
-const { TestRunner: BrowserEnvTestRunner } = require("../browser-env/runner/test-runner");
 const { CachingTestParser } = require("./caching-test-parser");
 const { isRunInNodeJsEnv } = require("../../utils/config");
 
@@ -30,17 +28,25 @@ module.exports = class Runner extends AsyncEmitter {
     }
 
     async runTest(fullTitle, { browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts, state, attempt }) {
-        const tests = await this._testParser.parse({ file, browserId });
-        const test = tests.find(t => t.fullTitle() === fullTitle);
         const browserAgent = BrowserAgent.create({ id: browserId, version: browserVersion, pool: this._browserPool });
-        const runner = (isRunInNodeJsEnv(this._config) ? NodejsEnvTestRunner : BrowserEnvTestRunner).create({
-            test,
+        const RunnerClass = isRunInNodeJsEnv(this._config)
+            ? await import("./test-runner").then(m => m.default)
+            : await import("../browser-env/runner/test-runner").then(m => m.TestRunner);
+
+        const runner = RunnerClass.create({
             file,
             config: this._config.forBrowser(browserId),
             browserAgent,
             attempt,
         });
 
-        return runner.run({ sessionId, sessionCaps, sessionOpts, state });
+        runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
+
+        const tests = await this._testParser.parse({ file, browserId });
+        const test = tests.find(t => t.fullTitle() === fullTitle);
+
+        runner.assignTest(test);
+
+        return runner.run();
     }
 };

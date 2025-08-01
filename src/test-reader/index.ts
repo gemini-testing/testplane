@@ -5,9 +5,9 @@ import { SetsBuilder } from "./sets-builder";
 import { TestParser } from "./test-parser";
 import { MasterEvents } from "../events";
 import env from "../utils/env";
-import { Config } from "../config";
-import { Test } from "./test-object";
-import { ReadTestsOpts } from "../testplane";
+import type { Config } from "../config";
+import type { Test } from "./test-object";
+import type { ReadTestsOpts } from "../testplane";
 
 export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
 
@@ -39,11 +39,7 @@ export class TestReader extends EventEmitter {
             .useBrowsers(browsers!)
             .build(process.cwd(), { ignore }, fileExtensions);
 
-        const testRunEnv = _.isArray(this.#config.system.testRunEnv)
-            ? this.#config.system.testRunEnv[0]
-            : this.#config.system.testRunEnv;
-
-        const parser = new TestParser({ testRunEnv });
+        const parser = new TestParser();
         passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
 
         await parser.loadFiles(setCollection.getAllFiles(), { config: this.#config, runnableOpts });

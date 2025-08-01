@@ -6,10 +6,8 @@ import { AlsoController } from "./controllers/also-controller";
 import { ConfigController } from "./controllers/config-controller";
 import { mkProvider } from "./controllers/browser-version-controller";
 import { TreeBuilder } from "./tree-builder";
-import { readFiles } from "./mocha-reader";
 import { TestReaderEvents } from "../events";
 import { Context, TestParserAPI } from "./test-parser-api";
-import { setupTransformHook } from "../bundle/test-transformer";
 import { MasterEvents } from "../events";
 import _ from "lodash";
 import clearRequire from "clear-require";
@@ -21,10 +19,6 @@ import { Test } from "./test-object";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
-
-export type TestParserOpts = {
-    testRunEnv?: "nodejs" | "browser";
-};
 
 export type TestParserParseOpts = {
     browserId: string;
@@ -41,14 +35,12 @@ const getFailedTestId = (test: { fullTitle: string; browserId: string; browserVe
     getShortMD5(`${test.fullTitle}${test.browserId}${test.browserVersion}`);
 
 export class TestParser extends EventEmitter {
-    #opts: TestParserOpts;
     #failedTests: Set<string>;
     #buildInstructions: InstructionsList;
 
-    constructor(opts: TestParserOpts = {}) {
+    constructor() {
         super();
 
-        this.#opts = opts;
         this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
     }
@@ -83,7 +75,7 @@ export class TestParser extends EventEmitter {
 
         this.#clearRequireCache(files);
 
-        const revertTransformHook = setupTransformHook({ removeNonJsImports: this.#opts.testRunEnv === "browser" });
+        const { readFiles } = await import("./mocha-reader");
 
         const rand = Math.random();
         const esmDecorator = (f: string): string => f + `?rand=${rand}`;
@@ -106,8 +98,6 @@ export class TestParser extends EventEmitter {
                 );
             }
         }
-
-        revertTransformHook();
     }
 
     #applyInstructionsEvents(eventBus: EventEmitter): void {
