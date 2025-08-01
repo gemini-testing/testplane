@@ -277,7 +277,9 @@ export interface CommonConfig {
     sessionsPerBrowser: number;
     testsPerSession: number;
     retry: number;
+
     shouldRetry(testInfo: { ctx: Test; retriesLeft: number }): boolean | null;
+
     httpTimeout: number;
     urlHttpTimeout: number | null;
     pageLoadTimeout: number | null;
@@ -293,9 +295,13 @@ export interface CommonConfig {
     };
     takeScreenshotOnFailsTimeout: number | null;
     takeScreenshotOnFailsMode: "fullpage" | "viewport";
+
     prepareBrowser(browser: WebdriverIO.Browser): void | null;
+
     screenshotPath: string | null;
+
     screenshotsDir(test: Test): string;
+
     calibrate: boolean;
     compositeImage: boolean;
     strictTestsOrder: boolean;
@@ -351,6 +357,8 @@ export interface CommonConfig {
     };
 
     timeTravel: TimeTravelConfig;
+
+    testIdAttribute?: string;
 }
 
 export interface SetsConfig {
@@ -387,6 +395,7 @@ export interface ConfigParsed extends CommonConfig {
 
 export interface RuntimeConfig {
     extend: (data: unknown) => this;
+
     [key: string]: unknown;
 }
 

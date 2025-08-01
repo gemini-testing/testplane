@@ -119,6 +119,7 @@ module.exports = {
     },
     passive: false,
     timeTravel: TimeTravelMode.Off,
+    testIdAttribute: "data-testid",
 };
 
 module.exports.configPaths = [
