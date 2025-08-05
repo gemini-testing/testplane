@@ -58,13 +58,18 @@ export class TestReader extends EventEmitter {
 function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOpts): void {
     const tests = _.flatten(Object.values(testsByBro));
 
-    if (options.replMode?.enabled) {
+    const singleTestModes = [
+        { condition: options.replMode?.enabled, name: "repl mode" },
+        { condition: options.keepBrowserMode?.enabled, name: "keep-browser mode" },
+    ].filter(mode => mode.condition);
+
+    for (const mode of singleTestModes) {
         const testsToRun = tests.filter(test => !test.disabled && !test.pending);
         const browsersToRun = _.uniq(testsToRun.map(test => test.browserId));
 
         if (testsToRun.length !== 1) {
             throw new Error(
-                `In repl mode only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
+                `In ${mode.name} only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
                     `${testsToRun.length === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
                     `Try to specify cli-options: "--grep" and "--browser" or use "testplane.only.in" in the test file.`,
             );
@@ -75,7 +80,7 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
         return;
     }
 
-    const stringifiedOpts = convertOptions(_.omit(options, "replMode"));
+    const stringifiedOpts = convertOptions(_.omit(options, "replMode", "replMode"));
     if (_.isEmpty(stringifiedOpts)) {
         throw new Error(`There are no tests found. Try to specify [${Object.keys(options).join(", ")}] options`);
     } else {

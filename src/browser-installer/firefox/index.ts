@@ -7,13 +7,14 @@ import { installLatestGeckoDriver } from "./driver";
 import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_INTERVAL, DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getUbuntuLinkerEnv, isUbuntu } from "../ubuntu-packages";
+import RuntimeConfig from "../../config/runtime-config";
 
 export { installFirefox, resolveLatestFirefoxVersion, installLatestGeckoDriver };
 
 export const runGeckoDriver = async (
     firefoxVersion: string,
     { debug = false } = {},
-): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
+): Promise<{ gridUrl: string; process: ChildProcess; port: number; kill: () => void }> => {
     const [geckoDriverPath, randomPort, geckoDriverEnv] = await Promise.all([
         installLatestGeckoDriver(firefoxVersion),
         getPort(),
@@ -22,13 +23,16 @@ export const runGeckoDriver = async (
             .then(extraEnv => (extraEnv ? { ...process.env, ...extraEnv } : process.env)),
     ]);
 
+    const runtimeConfig = RuntimeConfig.getInstance();
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode.enabled;
+
     const geckoDriver = await startGeckoDriver({
         customGeckoDriverPath: geckoDriverPath,
         port: randomPort,
         log: debug ? "debug" : "fatal",
         spawnOpts: {
             windowsHide: true,
-            detached: false,
+            detached: keepBrowserModeEnabled || false,
             env: geckoDriverEnv,
         },
     });
@@ -39,7 +43,9 @@ export const runGeckoDriver = async (
 
     const gridUrl = `http://127.0.0.1:${randomPort}`;
 
-    process.once("exit", () => geckoDriver.kill());
+    if (!keepBrowserModeEnabled) {
+        process.once("exit", () => geckoDriver.kill());
+    }
 
     await waitPort({
         port: randomPort,
@@ -48,5 +54,5 @@ export const runGeckoDriver = async (
         interval: DRIVER_WAIT_INTERVAL,
     });
 
-    return { gridUrl, process: geckoDriver, port: randomPort };
+    return { gridUrl, process: geckoDriver, port: randomPort, kill: () => geckoDriver.kill() };
 };

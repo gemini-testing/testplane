@@ -39,6 +39,7 @@ export type BrowserState = {
     testXReqId?: string;
     traceparent?: string;
     isBroken?: boolean;
+    isLastTestFailed?: boolean;
 };
 
 export type CustomCommand = { name: string; elementScope: boolean };
@@ -76,6 +77,7 @@ export class Browser {
         this._state = {
             ...opts.state,
             isBroken: false,
+            isLastTestFailed: false,
         };
         this._customCommands = new Set();
         this._wdPool = opts.wdPool;

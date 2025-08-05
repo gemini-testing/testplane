@@ -216,6 +216,10 @@ describe("testplane", () => {
                 },
                 devtools: true,
                 local: false,
+                keepBrowserMode: {
+                    enabled: false,
+                    onFail: false,
+                },
             });
 
             assert.calledOnce(RuntimeConfig.getInstance);
@@ -226,6 +230,7 @@ describe("testplane", () => {
                 replMode: { enabled: true },
                 devtools: true,
                 local: false,
+                keepBrowserMode: { enabled: false, onFail: false },
             });
             assert.callOrder(RuntimeConfig.getInstance, NodejsEnvRunner.create);
         });
@@ -335,16 +340,24 @@ describe("testplane", () => {
                 const grep = "baz.*";
                 const sets = ["set1", "set2"];
                 const replMode = { enabled: false };
+                const keepBrowserMode = { enabled: false };
 
                 sandbox.spy(Testplane.prototype, "readTests");
 
-                await runTestplane(testPaths, { browsers, grep, sets, replMode });
+                await runTestplane(testPaths, {
+                    browsers,
+                    grep,
+                    sets,
+                    replMode,
+                    keepBrowserMode,
+                });
 
                 assert.calledOnceWith(Testplane.prototype.readTests, testPaths, {
                     browsers,
                     grep,
                     sets,
                     replMode,
+                    keepBrowserMode,
                 });
             });
 
@@ -652,6 +665,7 @@ describe("testplane", () => {
                 sets: ["s1", "s2"],
                 grep: "grep",
                 replMode: { enabled: false },
+                keepBrowserMode: { enabled: false, onFail: false },
                 runnableOpts: {
                     saveLocations: true,
                 },
@@ -664,6 +678,7 @@ describe("testplane", () => {
                 sets: ["s1", "s2"],
                 grep: "grep",
                 replMode: { enabled: false },
+                keepBrowserMode: { enabled: false, onFail: false },
                 runnableOpts: {
                     saveLocations: true,
                 },
