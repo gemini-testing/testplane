@@ -71,38 +71,11 @@ module.exports.default = browser => {
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
-        const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
-
-        const page = await browser.prepareScreenshot([].concat(selectors), {
-            ignoreSelectors: [].concat(opts.ignoreElements),
-            allowViewportOverflow: opts.allowViewportOverflow,
-            captureElementFromTop: opts.captureElementFromTop,
-            selectorToScroll: opts.selectorToScroll,
-            disableAnimation: opts.disableAnimation,
-            debug: browserPrepareScreenshotDebug.enabled,
-        });
-
-        browserPrepareScreenshotDebug(`[${debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`);
-        delete page.debugLog;
-
-        assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.captureArea, opts);
-
-        debug(`[${debugId}] prepareScreenshot result: %O`, page);
-
         const { tempOpts } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const screenshoterOpts = {
-            ..._.pick(opts, [
-                "allowViewportOverflow",
-                "compositeImage",
-                "screenshotDelay",
-                "selectorToScroll",
-            ]),
-            debugId,
-        };
-        const currImgInst = await screenShooter
-            .capture(page, screenshoterOpts)
+        const {image: currImgInst, meta: currImgMeta} = await screenShooter
+            .capture(selectors, opts)
             .finally(() => browser.cleanupScreenshot(opts));
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
@@ -118,7 +91,7 @@ module.exports.default = browser => {
             return handleNoRefImage(currImg, refImg, state, { emitter }).catch(e => handleCaptureProcessorError(e));
         }
 
-        const { canHaveCaret, pixelRatio } = page;
+        const { canHaveCaret, pixelRatio } = currImgMeta;
         const imageCompareOpts = {
             tolerance: opts.tolerance,
             antialiasingTolerance: opts.antialiasingTolerance,

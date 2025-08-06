@@ -29,8 +29,12 @@ interface SessionOptions {
 }
 
 interface PrepareScreenshotOpts {
+    ignoreSelectors?: string[];
+    allowViewportOverflow?: boolean;
+    captureElementFromTop?: boolean;
+    selectorToScroll?: string;
     disableAnimation?: boolean;
-    // TODO: specify the rest of the options
+    debug?: boolean;
 }
 
 interface ClientBridgeErrorData {
@@ -203,6 +207,8 @@ export class ExistingBrowser extends Browser {
             // eslint-disable-next-line no-var
             var elem, xVal, yVal, originalScrollLeft, originalScrollTop, iterations;
 
+            console.log('scrollBy, params:', params);
+
             if (params.selector) {
                 elem = document.querySelector(params.selector);
 
@@ -220,14 +226,20 @@ export class ExistingBrowser extends Browser {
                 yVal = elem.scrollTop + params.y;
 
                 elem.scrollTo(xVal, yVal);
+                console.log('scrollTo elem, xVal:', xVal, 'yVal:', yVal);
 
                 // Wait for scroll to happen
                 iterations = 0;
-                while (elem.scrollLeft === originalScrollLeft && elem.scrollTop === originalScrollTop) {
+                const reachedVerticalScrollLimit = params.y === 0 || (elem.scrollTop + elem.clientHeight >= elem.scrollHeight);
+                const reachedHorizontalScrollLimit = params.x === 0 || (elem.scrollLeft + elem.clientWidth >= elem.scrollWidth);
+                console.log('scrollTo elem, reachedVerticalScrollLimit:', reachedVerticalScrollLimit, 'reachedHorizontalScrollLimit:', reachedHorizontalScrollLimit);
+                while (elem.scrollLeft === originalScrollLeft && elem.scrollTop === originalScrollTop && !(reachedVerticalScrollLimit && reachedHorizontalScrollLimit)) {
                     if (iterations++ > 100000) {
-                        return { top: yVal, left: xVal };
+                        console.log('scrollTo elem, reached scroll limit, returning:', elem.scrollTop, elem.scrollLeft);
+                        return { top: elem.scrollTop, left: elem.scrollLeft };
                     }
                 }
+                console.log('scrollTo elem, waited for scroll to happen and got:', elem.scrollLeft, elem.scrollTop);
 
                 return { top: elem.scrollTop, left: elem.scrollLeft };
             } else {

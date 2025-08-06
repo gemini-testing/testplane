@@ -75,18 +75,22 @@ export class CompositeImage {
         debug('Image size: %O', size);
 
         for (const area of this._ignoreAreas) {
-            debug('Adding ignore area: %O', {
+            const ignoreAreaInImageCoords = getIntersection({
                 width: area.width,
                 height: area.height,
                 left: area.left - this._captureArea.left,
                 top: area.top - this._captureArea.top,
+            }, {
+                width: size.width,
+                height: size.height,
+                left: 0,
+                top: 0,
             });
-            await image.addClear({
-                width: area.width,
-                height: area.height,
-                left: area.left - this._captureArea.left,
-                top: area.top - this._captureArea.top,
-            });
+
+            if (ignoreAreaInImageCoords) {
+                debug('Adding ignore area: %O', ignoreAreaInImageCoords);
+                await image.addClear(ignoreAreaInImageCoords);
+            }
         }
         //     const imageClearArea = this._getIntersection(area, imageArea);
 
