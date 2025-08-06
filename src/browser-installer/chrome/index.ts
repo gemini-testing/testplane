@@ -24,7 +24,7 @@ export const runChromeDriver = async (
     ]);
 
     const runtimeConfig = RuntimeConfig.getInstance();
-    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode.enabled;
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode?.enabled;
 
     const chromeDriver = spawn(chromeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,

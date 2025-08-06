@@ -16,7 +16,7 @@ export const runSafariDriver = async ({ debug = false }: { debug?: boolean } = {
     const randomPort = await getPort();
 
     const runtimeConfig = RuntimeConfig.getInstance();
-    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode.enabled;
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode?.enabled;
 
     const safariDriver = spawn(SAFARIDRIVER_PATH, [`--port=${randomPort}`], {
         windowsHide: true,

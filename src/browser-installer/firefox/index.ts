@@ -24,7 +24,7 @@ export const runGeckoDriver = async (
     ]);
 
     const runtimeConfig = RuntimeConfig.getInstance();
-    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode.enabled;
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode?.enabled;
 
     const geckoDriver = await startGeckoDriver({
         customGeckoDriverPath: geckoDriverPath,

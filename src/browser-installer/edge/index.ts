@@ -16,7 +16,7 @@ export const runEdgeDriver = async (
     const [edgeDriverPath, randomPort] = await Promise.all([installEdgeDriver(edgeVersion), getPort()]);
 
     const runtimeConfig = RuntimeConfig.getInstance();
-    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode.enabled;
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode?.enabled;
 
     const edgeDriver = spawn(edgeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,

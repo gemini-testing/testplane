@@ -124,3 +124,83 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
 
     return existingBrowser.publicAPI;
 }
+
+export async function attachToBrowser(
+    options: StandaloneBrowserOptionsInput = {},
+    session: WebdriverIO.Browser,
+): Promise<WebdriverIO.Browser> {
+    const desiredCapabilities = options.desiredCapabilities || {};
+
+    const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
+    const normalizedBrowserName = getNormalizedBrowserName(browserName) as W3CBrowserName;
+
+    if (!normalizedBrowserName) {
+        throw new Error(
+            [
+                `Running browser "${browserName}" is unsupported`,
+                `Supported browsers: "chrome", "firefox", "safari", "edge"`,
+            ].join("\n"),
+        );
+    }
+
+    const browserConfig = {
+        desiredCapabilities: {
+            browserName,
+            ...desiredCapabilities,
+        },
+        gridUrl: options.gridUrl || LOCAL_GRID_URL,
+        baseUrl: options.baseUrl,
+        headless: options.headless !== undefined ? options.headless : true,
+        pageLoadTimeout: options.pageLoadTimeout,
+        httpTimeout: options.httpTimeout,
+        waitTimeout: options.waitTimeout,
+        waitInterval: options.waitInterval,
+        automationProtocol: options.automationProtocol,
+        windowSize: options.windowSize,
+        orientation: options.orientation,
+        headers: options.headers,
+        strictSSL: options.strictSSL,
+        user: options.user,
+        key: options.key,
+        prepareBrowser: options.prepareBrowser,
+    };
+
+    const config = new Config({
+        browsers: {
+            [browserName]: browserConfig,
+        },
+    });
+
+    if (!process.env.WDIO_LOG_LEVEL) {
+        process.env.WDIO_LOG_LEVEL = config.system.debug ? "trace" : "error";
+    }
+
+    const emitter = new AsyncEmitter();
+
+    const existingBrowser = new ExistingBrowser(config, {
+        id: browserName,
+        version: desiredCapabilities.browserVersion,
+        emitter,
+        state: {},
+    });
+
+    const calibrator = new Calibrator();
+
+    await existingBrowser.init(
+        {
+            sessionId: session.sessionId,
+            sessionCaps: session.capabilities,
+            sessionOpts: {
+                capabilities: session.capabilities,
+                ...session.options,
+            },
+        },
+        calibrator,
+    );
+
+    existingBrowser.publicAPI.overwriteCommand("deleteSession", async function () {
+        await existingBrowser.quit();
+    });
+
+    return existingBrowser.publicAPI;
+}
