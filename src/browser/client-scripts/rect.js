@@ -81,8 +81,8 @@ Rect.prototype = {
         return new Rect({
             top: Math.round(this.top),
             left: Math.round(this.left),
-            width: Math.round(this.width),
-            height: Math.round(this.height)
+            bottom: Math.round(this.top + this.height),
+            right: Math.round(this.left + this.width)
         });
     },
 
@@ -151,7 +151,7 @@ Rect.prototype = {
 exports.Rect = Rect;
 exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, logger) {
     var coords = getNestedBoundingClientRect(element, window);
-    logger('getAbsoluteClientRect, computing capture area coords:', coords);
+    // logger('getAbsoluteClientRect, computing capture area coords:', coords);
     var widthRatio = coords.width % opts.viewportWidth;
     var heightRatio = coords.height % opts.documentHeight;
 
@@ -162,8 +162,13 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, lo
         width: widthRatio > 0 && widthRatio < 1 ? opts.viewportWidth : coords.width,
         height: heightRatio > 0 && heightRatio < 1 ? opts.documentHeight : coords.height
     });
-    var scrollLeft = opts.scrollElem === window ? util.getScrollLeft(window) : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
-    var scrollTop = opts.scrollElem === window ? util.getScrollTop(window) : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
+    logger('getAbsoluteClientRect, client rect: ', clientRect);
+    
+    var scrollLeft = opts.scrollElem === window || opts.scrollElem.parentElement === null ? util.getScrollLeft(window) : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
+    var scrollTop = opts.scrollElem === window || opts.scrollElem.parentElement === null ? util.getScrollTop(window) : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
+    
+    logger('getAbsoluteClientRect, is scroll element window? : ', opts.scrollElem === window || opts.scrollElem.parentElement === null);
+    logger('getAbsoluteClientRect, scrollTop: ', scrollTop);
 
     return clientRect.translate(scrollLeft, scrollTop);
 };

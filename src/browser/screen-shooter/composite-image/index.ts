@@ -45,6 +45,10 @@ export class CompositeImage {
     private _ignoreAreas: Rect[];
     // Relative to global page
     private _compositeChunks: { image: Image, imageSize: Size }[];
+
+    private _lastViewportImageBuffer: Buffer | null = null;
+    private _lastContainerOffset: Point | null = null;
+    private _lastWindowOffset: Point | null = null;
     // private _image: Image | null;
     // private _opts: ViewportOpts;
     // private _summaryHeight: number;
@@ -130,21 +134,61 @@ export class CompositeImage {
      * @param offset - Scroll offset at the time of capturing viewportImage.
      *                 Measured relative to the scroll element (or whole page, if selectorToScroll not specified)
      */
-    async registerViewportImageAtOffset(viewportImage: Image, offset: Point, windowScrollY: number, windowScrollX: number): Promise<void> {
+    async registerViewportImageAtOffset(viewportImage: Image, offset: Point, windowOffset: Point): Promise<void> {
         // await this._applyIgnoreAreas(viewportImage, offset);
 
         const notCapturedArea = this.getNextNotCapturedArea() as Rect;
-        const notCapturedAreaInViewportCoords = this._fromPageCoordsToViewportCoords(offset, windowScrollY, windowScrollX, notCapturedArea);
+        const notCapturedAreaInViewportCoords = this._fromPageCoordsToViewportCoords(offset, windowOffset.top, windowOffset.left, notCapturedArea);
         const cropAreaInViewportCoords = this._sanitize(getIntersection(this._safeArea, notCapturedAreaInViewportCoords));
 
-        debug('Captured the next chunk at offset %O.\n  notCapturedArea before capture: %O\n  notCapturedAreaInViewportCoords: %O\n  cropArea: %O\n  windowScrollY: %d\n  windowScrollX: %d', offset, notCapturedArea, notCapturedAreaInViewportCoords, cropAreaInViewportCoords, windowScrollY, windowScrollX);
+        // If safe area is preventing us from capturing head of the element at the beginning,
+        // we should just ignore it and expand current crop area
+        if (this._compositeChunks.length === 0 && cropAreaInViewportCoords.top > notCapturedAreaInViewportCoords.top) {
+            debug('Safe area prevented us from capturing head of the element at the beginning, expanding crop area.');
+            debug('  crop area top before: %O', cropAreaInViewportCoords.top);
+            cropAreaInViewportCoords.height = cropAreaInViewportCoords.height + (cropAreaInViewportCoords.top - notCapturedAreaInViewportCoords.top);
+            cropAreaInViewportCoords.top = Math.max(0, notCapturedAreaInViewportCoords.top);
+            debug('  crop area top after: %O', cropAreaInViewportCoords.top);
+        }
+
+        this._lastViewportImageBuffer = await viewportImage.toPngBuffer({ resolveWithObject: false });
+        this._lastContainerOffset = offset;
+        this._lastWindowOffset = windowOffset;
+
+        debug('Captured the next chunk at offset %O.\n  notCapturedArea before capture: %O\n  notCapturedAreaInViewportCoords: %O\n  cropArea: %O\n  windowOffset: %O', offset, notCapturedArea, notCapturedAreaInViewportCoords, cropAreaInViewportCoords, windowOffset);
         await viewportImage.crop(cropAreaInViewportCoords);
 
         this._compositeChunks.push({ image: viewportImage, imageSize: await viewportImage.getSize() });
-
     }
 
     async render(): Promise<Image> {
+        if (!this._lastViewportImageBuffer || !this._lastContainerOffset || !this._lastWindowOffset) {
+            throw new Error('Cannot render composite image: last viewport image buffer, container offset or window offset is not set. This means that screenshot was not captured even once and we have no image to render.');
+        }
+
+        // If safe area prevented us from capturing the tail of the element in the end,
+        // we should just ignore it
+        if (this.hasNotCapturedArea()) {
+            debug('Safe area prevented us from capturing tail of the element in the end, adding it to the composite image.');
+
+            const captureAreaTail = new Image(this._lastViewportImageBuffer);
+            
+            const notCapturedArea = this.getNextNotCapturedArea() as Rect;
+            const notCapturedAreaInViewportCoords = this._fromPageCoordsToViewportCoords(this._lastContainerOffset, this._lastWindowOffset.top, this._lastWindowOffset.left, notCapturedArea);
+            const viewportSize = await captureAreaTail.getSize();
+            const cropAreaInViewportCoords = this._sanitize(getIntersection({top: 0, left: 0, width: viewportSize.width, height: viewportSize.height}, notCapturedAreaInViewportCoords));
+
+            if (cropAreaInViewportCoords.height > 0) {
+                captureAreaTail.crop(cropAreaInViewportCoords);
+
+                debug('  crop area coordinates: %O', cropAreaInViewportCoords);
+
+                this._compositeChunks.push({ image: captureAreaTail, imageSize: await captureAreaTail.getSize() });
+            } else {
+                debug('  crop area is empty, skipping');
+            }
+        }
+
         debug('Rendering composite image.');
 
         const image = new Image(await this._compositeChunks[0].image.toPngBuffer({ resolveWithObject: false }));
