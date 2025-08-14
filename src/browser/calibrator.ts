@@ -3,7 +3,7 @@ import path from "path";
 import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
-import { RGBA } from "../image";
+import type { Image } from "../image";
 
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" } as const;
 
@@ -27,11 +27,6 @@ interface ViewportStart {
 interface ImageAnalysisResult {
     viewportStart: ViewportStart;
     colorLength?: number;
-}
-
-interface Image {
-    getSize(): Promise<{ width: number; height: number }>;
-    getRGBA(x: number, y: number): Promise<{ r: number; g: number; b: number; a: number }>;
 }
 
 export class Calibrator {
@@ -142,12 +137,7 @@ async function findMarkerInRow(row: number, image: Image, searchDirection: "forw
     }
 
     async function compare_(x: number): Promise<boolean> {
-        const pixel = await image.getRGBA(x, row);
-        const color = pickRGB(pixel);
+        const color = await image.getRGB(x, row);
         return looksSame.colors(color, searchColor);
     }
-}
-
-function pickRGB(rgba: RGBA): { R: number; G: number; B: number } {
-    return { R: rgba.r, G: rgba.g, B: rgba.b };
 }
