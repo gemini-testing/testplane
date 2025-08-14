@@ -160,8 +160,8 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             JSON.stringify(
                 {
                     sessionId: this._browser.sessionId,
-                    capabilities: this._browser.capabilities,
-                    options: this._browser.publicAPI.options,
+                    sessionCaps: this._browser.capabilities,
+                    sessionOpts: this._browser.publicAPI.options,
                 },
                 null,
                 2,
