@@ -214,7 +214,15 @@ function prepareScreenshotUnsafe(areas, opts) {
         viewportHeight: viewportHeight
     }, logger);
 
-    if (captureElementFromTop && !viewPort.rectInside(rect)) {
+    var topmostCaptureElementTop = captureElements.reduce(function (top, currentElement) {
+        var currentElementTop = currentElement.getBoundingClientRect().top;
+        if (currentElementTop < top) {
+            return currentElementTop;
+        }
+        return top;
+    }, 9999999);
+
+    if (captureElementFromTop && (topmostCaptureElementTop < 0 || topmostCaptureElementTop >= viewportHeight)) {
         logger("captureElementFromTop=true and rect is outside of viewport, performing scroll");
         if (scrollElem !== window && scrollElem.parentElement !== null && captureElementFromTop) {
             var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
@@ -252,11 +260,23 @@ function prepareScreenshotUnsafe(areas, opts) {
         //      and safeArea and pick smaller one.
         // 2. Convert that point back to absolute coords.
         // 3. rect.top minus that point is delta that we are looking for.
-        var safeAreaTopInPageCoords = safeArea.top + window.scrollY;
-        logger('current window.scrollY: ' + window.scrollY + '; current safeAreaTopInPageCoords: ' + safeAreaTopInPageCoords);
+        var isScrollElemWindow = scrollElem === window || scrollElem.parentElement === null;
+
+        // var safeAreaTopInPageCoords = safeArea.top + window.scrollY; // this is not the way.
+        // logger('current window.scrollY: ' + window.scrollY + '; current safeAreaTopInPageCoords: ' + safeAreaTopInPageCoords);
         logger('current rect:', rect);
-        var targetScrollY = Math.max(Math.floor(rect.top - safeAreaTopInPageCoords), 0);
-        var targetScrollX = scrollElem.scrollLeft;
+
+        // If we are scrolling window, we just need to scroll to element, taking safeArea into account.
+        // If we are scrolling inside some container, we should take both safe area and existing window scroll offset into account.
+        // Example: We have container at 1000px and target block inside it at 2000px (measured in global page coords).
+        //          In the code above we scrolled window by 1000px to container.
+        //          So now we only need to scroll by 1000px inside that container to our block, not by 2000px, because we already scrolled window by 1000px.
+        var targetScrollY = Math.max(Math.floor(rect.top - (isScrollElemWindow ? safeArea.top : safeArea.top + window.scrollY)), 0); // This is the way.
+        // var targetScrollY = Math.max(Math.floor(rect.top - safeAreaTopInPageCoords), 0);
+
+        // var targetScrollX = scrollElem.scrollLeft;
+        // var targetScrollY = (isScrollElemWindow ? window.scrollY : scrollElem.scrollTop) + Math.max(Math.floor(rect.top - safeAreaTopInPageCoords), 0);
+        var targetScrollX = isScrollElemWindow ? window.scrollX : scrollElem.scrollLeft;
 
         logger("captureElementFromTop=true, performing scroll to capture area, coords: " + targetScrollY + ", " + targetScrollX);
 
