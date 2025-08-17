@@ -125,34 +125,6 @@ function prepareScreenshotUnsafe(areas, opts) {
     var disableAnimation = opts.disableAnimation;
     var scrollElem = window;
 
-    if (opts.selectorToScroll) {
-        scrollElem = document.querySelector(opts.selectorToScroll);
-
-        if (!scrollElem) {
-            return {
-                error: "NOTFOUND",
-                message:
-                    'Could not find element with css selector specified in "selectorToScroll" option: ' +
-                    opts.selectorToScroll,
-                selector: opts.selectorToScroll
-            };
-        }
-
-        // TODO: validate that scrollElem is parent of all areas.
-    } else {
-        // Try to determine it automatically or fallback to window
-        var scrollParents = areas.map(function (selector) { return getScrollParent(document.querySelector(selector), logger)});
-        // console.log('scroll parents:', scrollParents);
-        if (scrollParents[0] !== null && scrollParents.every(function (element) { return scrollParents[0] === element })) {
-            scrollElem = scrollParents[0];
-            // console.log('Successfully determined scroll element!');
-            // console.log(elementToScroll);
-        // } else {
-            // elementToScroll = window;
-            // console.log('falling back to window.')
-        }
-    }
-
     var mainDocumentElem = util.getMainDocumentElem(),
         viewportWidth = mainDocumentElem.clientWidth,
         viewportHeight = mainDocumentElem.clientHeight,
@@ -179,6 +151,34 @@ function prepareScreenshotUnsafe(areas, opts) {
     });
 
     var captureElements = getCaptureElements(selectors);
+
+    if (opts.selectorToScroll) {
+        scrollElem = document.querySelector(opts.selectorToScroll);
+
+        if (!scrollElem) {
+            return {
+                error: "NOTFOUND",
+                message:
+                    'Could not find element with css selector specified in "selectorToScroll" option: ' +
+                    opts.selectorToScroll,
+                selector: opts.selectorToScroll
+            };
+        }
+
+        // TODO: validate that scrollElem is parent of all areas.
+    } else {
+        // Try to determine it automatically or fallback to window
+        var scrollParents = captureElements.map(function (element) { return getScrollParent(element, logger)});
+        // console.log('scroll parents:', scrollParents);
+        if (scrollParents[0] && scrollParents.every(function (element) { return scrollParents[0] === element })) {
+            scrollElem = scrollParents[0];
+            // console.log('Successfully determined scroll element!');
+            // console.log(elementToScroll);
+        // } else {
+            // elementToScroll = window;
+            // console.log('falling back to window.')
+        }
+    }
 
     rect = getCaptureRect(captureElements, {
         // initialRect: rect,
@@ -508,7 +508,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     
     allElements.forEach(function (el) {
         logger('getSafeAreaRect(), processing potentially interfering element: ' + el.classList.toString());
-        // Skip elements that are part of capture elements
+        // Skip elements contain capture elements
         if (util.some(captureElements, function (capEl) {
             // if (typeof capEl.contains !== "function" || typeof el.contains !== "function") {
             //     console.log("WARNING!!!! getSafeAreaRect, capEl.contains or el.contains is not a function");
@@ -516,7 +516,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             //     console.log("el:", el);
             //     return true;
             // }
-            return capEl.contains(el) || el.contains(capEl);
+            return el.contains(capEl);
         })) {
             return;
         }
@@ -541,6 +541,10 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             // Fixed elements always interfere
             shouldInterfere = true;
         } else if (position === "absolute") {
+            // Skip absolutely positioned elements that are inside capture elements
+            if (captureElements.some(function (captureEl) { return captureEl.contains(el); })) {
+                return;
+            }
             // Absolute elements interfere only if positioned relative to ancestor outside scroll container
             var containingBlock = findContainingBlock(el);
             // scrollElem may be window, in which case it doesn't have a contains method
@@ -586,6 +590,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                     height: br.height
                 };
                 shouldInterfere = true;
+                logger('  it is sticky to bottom! bounding rect: ' + JSON.stringify(br));
             }
         }
         

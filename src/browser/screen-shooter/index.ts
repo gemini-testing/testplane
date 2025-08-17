@@ -17,23 +17,32 @@ interface ExtendImageResult {
     hasReachedScrollLimit: boolean;
 }
 
-async function getBoundingRect(browser: WdioBrowser, selector: string): Promise<Rect> {
-    return browser.execute((selector: string) => {
-        const element = document.querySelector(selector);
+async function getBoundingRect(browser: WdioBrowser, selectors: string[]): Promise<Rect[]> {
+    return browser.execute((selectors: string[]) => {
+        /* eslint-disable no-var */
+        // @ts-expect-error Can't use TypeScript in browser-side code
+        var boundingRects = [];
 
-        if (!element) {
-            throw new Error(`Element with selector ${selector} not found`);
-        }
+        selectors.forEach(function (selector) {
+            var element = document.querySelector(selector);
 
-        const rect = element.getBoundingClientRect();
+            if (!element) {
+                throw new Error(`Element with selector ${selector} not found`);
+            }
 
-        return {
-            top: rect.top,
-            left: rect.left,
-            width: rect.width,
-            height: rect.height,
-        };
-    }, selector);
+            var rect = element.getBoundingClientRect();
+            boundingRects.push({
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+            });
+        })
+
+        // @ts-expect-error Can't use TypeScript in browser-side code
+        return boundingRects;
+        /* eslint-enable no-var */
+    }, selectors);
 }
 
 interface ScrollByParams {
@@ -293,9 +302,9 @@ export class ScreenShooter {
     private async _scrollOnceAndExtendImage(image: CompositeImage, page: PrepareScreenshotResult, opts: ScreenShooterOpts): Promise<ExtendImageResult> {
         const nextNotCapturedArea = image.getNextNotCapturedArea() as Rect;
 
-        const boundingRectBeforeScroll = await getBoundingRect(this._browser.publicAPI, this._selectorsToCapture[0]).catch(() => null);
+        const boundingRectsBeforeScroll = await getBoundingRect(this._browser.publicAPI, this._selectorsToCapture).catch(() => null);
 
-        debug('boundingRectBeforeScroll: %O', boundingRectBeforeScroll);
+        debug('boundingRectBeforeScroll: %O', boundingRectsBeforeScroll);
 
         const physicalScrollHeight = Math.max(Math.min(nextNotCapturedArea.height, page.safeArea.height), 2 * page.pixelRatio);
         const logicalScrollHeight = Math.ceil(physicalScrollHeight / page.pixelRatio) - 1;
@@ -314,14 +323,18 @@ export class ScreenShooter {
         const containerOffset = {top: logicalContainerOffset.top * page.pixelRatio, left: logicalContainerOffset.left * page.pixelRatio};
         // await this._browser.publicAPI.pause(200000);
 
-        const boundingRectAfterScroll = await getBoundingRect(this._browser.publicAPI, this._selectorsToCapture[0]).catch(() => null);
+        const boundingRectsAfterScroll = await getBoundingRect(this._browser.publicAPI, this._selectorsToCapture).catch(() => null);
 
-        debug('boundingRectAfterScroll: %O', boundingRectAfterScroll);
-        debug('are bounding rects top values equal: %O', boundingRectBeforeScroll?.top === boundingRectAfterScroll?.top);
+        debug('boundingRectAfterScroll: %O', boundingRectsAfterScroll);
+        const hasReachedScrollLimit = boundingRectsBeforeScroll &&
+            boundingRectsAfterScroll &&
+            boundingRectsBeforeScroll.length === boundingRectsAfterScroll.length &&
+            boundingRectsBeforeScroll.every((rectBeforeScroll, index) => rectBeforeScroll.top === boundingRectsAfterScroll[index].top);
+        debug('have we reached scroll limit? (all bounding rects have the same top values) : %O', hasReachedScrollLimit);
 
         // So, here's we just check that this scroll has worked. We do that by checking if target area client bounding rect has changed.
         // If it didn't, it means that we either reached scroll limit or using wrong selector to scroll altogether.
-        if (boundingRectBeforeScroll && boundingRectAfterScroll && boundingRectBeforeScroll.top === boundingRectAfterScroll.top) {
+        if (hasReachedScrollLimit) {
             if (opts.allowViewportOverflow) {
                 return { hasReachedScrollLimit: true }; // TODO give this param a better name
             } else {
