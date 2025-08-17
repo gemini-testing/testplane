@@ -2,13 +2,9 @@
 
 const _ = require("lodash");
 
-const { CoordValidator } = require("src/browser/screen-shooter/viewport/coord-validator");
-const {
-    HeightViewportError,
-} = require("src/browser/screen-shooter/viewport/coord-validator/errors/height-viewport-error");
-const {
-    OffsetViewportError,
-} = require("src/browser/screen-shooter/viewport/coord-validator/errors/offset-viewport-error");
+const { CoordValidator } = require("src/browser/screen-shooter/validation");
+const { VerticalOverflowError } = require("src/browser/screen-shooter/errors/vertical-overflow-error");
+const { HorizontalOverflowError } = require("src/browser/screen-shooter/errors/horizontal-overflow-error");
 
 describe("CoordValidator", () => {
     let coordValidator;
@@ -44,19 +40,19 @@ describe("CoordValidator", () => {
 
     describe("validation failed", () => {
         it("if crop area left boundary is outside of viewport", () => {
-            assert.throws(() => validate_({ left: -1 }), OffsetViewportError);
+            assert.throws(() => validate_({ left: -1 }), HorizontalOverflowError);
         });
 
         it("if crop area top boundary is outside of viewport", () => {
-            assert.throws(() => validate_({ top: -1 }), OffsetViewportError);
+            assert.throws(() => validate_({ top: -1 }), VerticalOverflowError);
         });
 
         it("if crop area right boundary is outside of viewport", () => {
-            assert.throws(() => validate_({ width: +1 }), OffsetViewportError);
+            assert.throws(() => validate_({ width: +1 }), HorizontalOverflowError);
         });
 
         it("if crop area height bigger than viewport height", () => {
-            assert.throws(() => validate_({ height: +1 }), HeightViewportError);
+            assert.throws(() => validate_({ height: +1 }), VerticalOverflowError);
         });
     });
 

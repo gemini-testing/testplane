@@ -58,8 +58,8 @@ export async function findScrollParentAndScrollBy(
             var log = "";
             if (opts.debug) {
                 // @ts-expect-error Can't use TypeScript in browser-side code
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 return function (...args) {
-                    // eslint-disable-line @typescript-eslint/no-unused-vars
                     for (var i = 0; i < arguments.length; i++) {
                         if (typeof arguments[i] === "object") {
                             try {
