@@ -199,7 +199,6 @@ export const runGroup = <T>({ session, callstack, config }: HooksData, name: str
         return fn();
     }
 
-
     return runWithHistoryHooks({
         session,
         callstack,
