@@ -1,25 +1,23 @@
-import { Rect } from "../../image";
+import { Point, Rect } from "../../image";
 
 export interface PrepareScreenshotResult {
     // Element boundaries in global page coordinates. May overflow viewport
     captureArea: Rect;
-    // Area free of sticky elements, inside which it's safe to capture element that's interesting to us.
-    // Measured relative to viewport (not the whole page!)
+    // Area free of sticky elements, inside which it's safe to capture element that's interesting to us
+    // Measured relative to browser viewport (not the whole page!)
     safeArea: Rect;
-    // Area of the scroll element in global page coordinates
-    // scrollElementArea: Rect;
-    // Current scroll position of the window
-    windowScrollY: number;
-    windowScrollX: number;
-    // Current scroll position of the container
-    containerScrollY: number;
-    containerScrollX: number;
+    // Current scroll position of the scroll element, if window is being used, this will always be 0
+    scrollElementOffset: Point;
     // Boundaries of elements that we should ignore when comparing screenshots (these areas will be painted in black)
     ignoreAreas: Rect[];
-    // Current viewport state: height and width. Top (and left correspondingly) represents scroll position:
-    // window.pageYOffset or element.scrollTop if selectorToScroll was specified
+    // Viewport size
+    // TODO: rename to viewportSize in the future. Right now there are way too many places that are using this field
+    // Do not rely on top/left values of this field, they are deprecated!
     viewport: Rect;
+    // Viewport scroll offsets, window.scrollX / window.scrollY respectively
+    viewportOffset: Point;
     // Total height of the document, may be larger than viewport
+    // TODO: merge these into documentSize. Right now there are way too many places that depend on this
     documentHeight: number;
     // Total width of the document, may be larger than viewport
     documentWidth: number;

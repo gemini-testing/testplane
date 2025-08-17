@@ -266,13 +266,13 @@ export class ScreenShooter {
         browserPrepareScreenshotDebug(`[${opts.debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`);
         delete page.debugLog;
 
-        assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.captureArea, opts);
+        assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.viewportOffset, page.captureArea, opts);
 
         debug(`[${opts.debugId}] prepareScreenshot result: %O`, page);
 
         const viewportImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
         const image = CompositeImage.create(page.captureArea, page.safeArea, page.ignoreAreas);
-        await image.registerViewportImageAtOffset(viewportImage, { top: page.containerScrollY, left: page.containerScrollX }, { top: page.windowScrollY, left: page.windowScrollX });
+        await image.registerViewportImageAtOffset(viewportImage, page.scrollElementOffset, page.viewportOffset);
 
         await this._captureOverflowingAreaIfNeeded(image, page, opts);
 

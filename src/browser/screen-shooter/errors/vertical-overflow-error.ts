@@ -1,12 +1,9 @@
+import { Size } from "@testplane/webdriverio/build/commands/element";
 import { Rect } from "../../../image";
 
-/**
- * Height of the element is larger than viewport
- * @category Errors
- */
-export class HeightViewportError extends Error {
-    constructor(readableCaptureAreaDescr: string, captureArea: Rect, viewport: Rect) {
-        const message = `Could not capture ${readableCaptureAreaDescr}, because its bottom bound is outside of the viewport height.
+export class VerticalOverflowError extends Error {
+    constructor(readableCaptureAreaDescr: string, captureArea: Rect, viewport: Size) {
+        const message = `Could not capture ${readableCaptureAreaDescr}, because it is larger than viewport height.
 
             Tried to capture region: left=${captureArea.left}, top=${captureArea.top}, width=${captureArea.width}, height=${captureArea.height}
             Viewport size: ${viewport.width}, ${viewport.height}
