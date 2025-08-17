@@ -151,7 +151,6 @@ Rect.prototype = {
 exports.Rect = Rect;
 exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, logger) {
     var coords = getNestedBoundingClientRect(element, window);
-    // logger('getAbsoluteClientRect, computing capture area coords:', coords);
     var widthRatio = coords.width % opts.viewportWidth;
     var heightRatio = coords.height % opts.documentHeight;
 
@@ -162,12 +161,13 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, lo
         width: widthRatio > 0 && widthRatio < 1 ? opts.viewportWidth : coords.width,
         height: heightRatio > 0 && heightRatio < 1 ? opts.documentHeight : coords.height
     });
+
     logger('getAbsoluteClientRect, client rect: ', clientRect);
-    
-    var scrollLeft = opts.scrollElem === window || opts.scrollElem.parentElement === null ? util.getScrollLeft(window) : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
-    var scrollTop = opts.scrollElem === window || opts.scrollElem.parentElement === null ? util.getScrollTop(window) : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
-    
-    logger('getAbsoluteClientRect, is scroll element window? : ', opts.scrollElem === window || opts.scrollElem.parentElement === null);
+
+    var scrollLeft = util.isRootElement(opts.scrollElem) ? util.getScrollLeft(window) : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
+    var scrollTop = util.isRootElement(opts.scrollElem) ? util.getScrollTop(window) : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
+
+    logger('getAbsoluteClientRect, is scroll element window? : ', util.isRootElement(opts.scrollElem));
     logger('getAbsoluteClientRect, scrollTop: ', scrollTop);
 
     return clientRect.translate(scrollLeft, scrollTop);
@@ -176,10 +176,8 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, lo
 function getNestedBoundingClientRect(node, boundaryWindow) {
     var ownerIframe = util.getOwnerIframe(node);
     if (ownerIframe === null || util.getOwnerWindow(ownerIframe) === boundaryWindow) {
-        console.log("getNestedBoundingClientRect, early return", node.getBoundingClientRect());
         return node.getBoundingClientRect();
     }
-    console.log("getNestedBoundingClientRect, continuing to compute...");
 
     var rects = [node.getBoundingClientRect()];
     var currentIframe = ownerIframe;
