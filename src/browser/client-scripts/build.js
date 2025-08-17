@@ -21,7 +21,7 @@ const bundleScript = async opts => {
         {
             sourcemap: false,
             global: true,
-            compress: false,// { screw_ie8: false }, // eslint-disable-line camelcase
+            compress: false, // { screw_ie8: false }, // eslint-disable-line camelcase
             mangle: false, // { screw_ie8: false }, // eslint-disable-line camelcase
             output: { screw_ie8: false } // eslint-disable-line camelcase
         },

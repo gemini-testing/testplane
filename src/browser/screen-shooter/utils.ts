@@ -45,7 +45,10 @@ interface ScrollByResult {
     debugLog?: string;
 }
 
-export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: ScrollByParams): Promise<ScrollByResult> {
+export async function findScrollParentAndScrollBy(
+    browser: WdioBrowser,
+    params: ScrollByParams,
+): Promise<ScrollByResult> {
     return browser.execute(function (params) {
         /* eslint-disable no-var */
         /* eslint-disable @typescript-eslint/explicit-function-return-type */
@@ -55,24 +58,27 @@ export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: 
             var log = "";
             if (opts.debug) {
                 // @ts-expect-error Can't use TypeScript in browser-side code
-                return function (...args) { // eslint-disable-line @typescript-eslint/no-unused-vars
+                return function (...args) {
+                    // eslint-disable-line @typescript-eslint/no-unused-vars
                     for (var i = 0; i < arguments.length; i++) {
                         if (typeof arguments[i] === "object") {
                             try {
                                 log += JSON.stringify(arguments[i], null, 2) + "\n";
                             } catch (e) {
-                                log += '<failed log message due to an error: ' + e;
+                                log += "<failed log message due to an error: " + e;
                             }
                         } else {
                             log += arguments[i] + "\n";
                         }
                     }
-        
+
                     return log;
-                }
+                };
             }
-        
-            return function () { return ""; };
+
+            return function () {
+                return "";
+            };
         }
         // @ts-expect-error Can't use TypeScript in browser-side code
         function getScrollOffset(element) {
@@ -109,18 +115,18 @@ export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: 
                 return node.parentElement || (root instanceof ShadowRoot ? root.host : null);
             }
             return node.parentNode; // for Text/Comment nodes
-        };
+        }
 
         // @ts-expect-error Can't use TypeScript in browser-side code
         function getScrollParent(element) {
             if (element === null) {
                 return null;
             }
-        
+
             if (element === window) {
                 return window;
             }
-        
+
             var hasOverflow = element.scrollHeight > element.clientHeight;
             if (element instanceof Element) {
                 var computedStyleOverflowY = window.getComputedStyle(element).overflowY;
@@ -128,10 +134,13 @@ export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: 
                 return getScrollParent(getParentNode(element));
             }
 
-            var canBeScrolled = computedStyleOverflowY === 'auto' || computedStyleOverflowY === 'scroll' || computedStyleOverflowY === 'overlay';
+            var canBeScrolled =
+                computedStyleOverflowY === "auto" ||
+                computedStyleOverflowY === "scroll" ||
+                computedStyleOverflowY === "overlay";
 
             if (hasOverflow && canBeScrolled) {
-                if (element.tagName === 'BODY') {
+                if (element.tagName === "BODY") {
                     return window;
                 }
 
@@ -143,28 +152,36 @@ export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: 
 
         // @ts-expect-error Can't use TypeScript in browser-side code
         function getResultScrollOffsets(element) {
-            logger('getting result scroll offsets. element: ', element);
-            if (element === window || element.tagName === 'HTML') {
-                logger('element is window. resulting window scroll offsets: ', { top: window.pageYOffset, left: window.pageXOffset });
+            logger("getting result scroll offsets. element: ", element);
+            if (element === window || element.tagName === "HTML") {
+                logger("element is window. resulting window scroll offsets: ", {
+                    top: window.pageYOffset,
+                    left: window.pageXOffset,
+                });
 
                 return {
-                    readableSelectorToScrollDescr: 'window',
+                    readableSelectorToScrollDescr: "window",
                     viewportOffset: { top: window.pageYOffset, left: window.pageXOffset },
                     scrollElementOffset: { top: 0, left: 0 },
-                    debugLog: logger()
+                    debugLog: logger(),
                 };
             }
 
             var viewportOffset = { top: window.pageYOffset, left: window.pageXOffset };
             var scrollElementOffset = { top: element.scrollTop, left: element.scrollLeft };
 
-            logger('element is not window. returning combo of window and container: ', { viewportOffset, scrollElementOffset });
-
-            return {
-                readableSelectorToScrollDescr: `<${element.tagName.toLowerCase()} class="${element.classList.toString()} ${element.id ? `id="${element.id}"` : ""}>...`,
+            logger("element is not window. returning combo of window and container: ", {
                 viewportOffset,
                 scrollElementOffset,
-                debugLog: logger()
+            });
+
+            return {
+                readableSelectorToScrollDescr: `<${element.tagName.toLowerCase()} class="${element.classList.toString()} ${
+                    element.id ? `id="${element.id}"` : ""
+                }>...`,
+                viewportOffset,
+                scrollElementOffset,
+                debugLog: logger(),
             };
         }
 
@@ -181,33 +198,50 @@ export async function findScrollParentAndScrollBy(browser: WdioBrowser, params: 
                 );
             }
         } else {
-            var scrollParents = params.selectorsToCapture.map(function (selector) { return getScrollParent(document.querySelector(selector)); });
+            var scrollParents = params.selectorsToCapture.map(function (selector) {
+                return getScrollParent(document.querySelector(selector));
+            });
 
-            if (scrollParents[0] !== null && scrollParents.every(function (element) { return scrollParents[0] === element; } )) {
+            if (
+                scrollParents[0] !== null &&
+                scrollParents.every(function (element) {
+                    return scrollParents[0] === element;
+                })
+            ) {
                 elementToScroll = scrollParents[0];
             } else {
                 elementToScroll = window;
             }
         }
 
-
         originalScrollOffset = getScrollOffset(elementToScroll);
         targetScrollOffset = { top: originalScrollOffset.top + params.y, left: originalScrollOffset.left + params.x };
 
-        logger('original scroll offset:', originalScrollOffset);
-        logger('performing scroll in element to coords:', elementToScroll, targetScrollOffset.top, targetScrollOffset.left);
+        logger("original scroll offset:", originalScrollOffset);
+        logger(
+            "performing scroll in element to coords:",
+            elementToScroll,
+            targetScrollOffset.top,
+            targetScrollOffset.left,
+        );
 
         elementToScroll.scrollTo(targetScrollOffset.left, targetScrollOffset.top);
-        
+
         // Wait for scroll to happen
         iterations = 0;
         var resultScrollOffset = getScrollOffset(elementToScroll),
             clientSize = getClientSize(elementToScroll),
             scrollSize = getScrollSize(elementToScroll);
-        const reachedVerticalScrollLimit = params.y === 0 || (resultScrollOffset.top + clientSize.height >= scrollSize.height);
-        const reachedHorizontalScrollLimit = params.x === 0 || (resultScrollOffset.left + clientSize.width >= scrollSize.width);
+        const reachedVerticalScrollLimit =
+            params.y === 0 || resultScrollOffset.top + clientSize.height >= scrollSize.height;
+        const reachedHorizontalScrollLimit =
+            params.x === 0 || resultScrollOffset.left + clientSize.width >= scrollSize.width;
 
-        while (resultScrollOffset.left === originalScrollOffset.left && resultScrollOffset.top === originalScrollOffset.top && !(reachedVerticalScrollLimit && reachedHorizontalScrollLimit)) {
+        while (
+            resultScrollOffset.left === originalScrollOffset.left &&
+            resultScrollOffset.top === originalScrollOffset.top &&
+            !(reachedVerticalScrollLimit && reachedHorizontalScrollLimit)
+        ) {
             if (iterations++ > 100000) {
                 return getResultScrollOffsets(elementToScroll);
             }

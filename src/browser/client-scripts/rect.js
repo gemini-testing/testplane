@@ -162,13 +162,17 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, lo
         height: heightRatio > 0 && heightRatio < 1 ? opts.documentHeight : coords.height
     });
 
-    logger('getAbsoluteClientRect, client rect: ', clientRect);
+    logger("getAbsoluteClientRect, client rect: ", clientRect);
 
-    var scrollLeft = util.isRootElement(opts.scrollElem) ? util.getScrollLeft(window) : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
-    var scrollTop = util.isRootElement(opts.scrollElem) ? util.getScrollTop(window) : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
+    var scrollLeft = util.isRootElement(opts.scrollElem)
+        ? util.getScrollLeft(window)
+        : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
+    var scrollTop = util.isRootElement(opts.scrollElem)
+        ? util.getScrollTop(window)
+        : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
 
-    logger('getAbsoluteClientRect, is scroll element window? : ', util.isRootElement(opts.scrollElem));
-    logger('getAbsoluteClientRect, scrollTop: ', scrollTop);
+    logger("getAbsoluteClientRect, is scroll element window? : ", util.isRootElement(opts.scrollElem));
+    logger("getAbsoluteClientRect, scrollTop: ", scrollTop);
 
     return clientRect.translate(scrollLeft, scrollTop);
 };

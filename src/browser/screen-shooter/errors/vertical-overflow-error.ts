@@ -9,7 +9,7 @@ export class VerticalOverflowError extends Error {
             Viewport size: ${viewport.width}, ${viewport.height}
 
             If you want to capture the entire area, set "compositeImage" option to true in the config file or assertView command options.
-            If you want to capture only the visible part and crop the rest, set "compositeImage" option to false and "allowViewportOverflow" to true.`
+            If you want to capture only the visible part and crop the rest, set "compositeImage" option to false and "allowViewportOverflow" to true.`;
 
         super(message);
 

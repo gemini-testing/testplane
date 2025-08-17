@@ -89,7 +89,11 @@ export class Image {
     }
 
     async applyJoin(): Promise<void> {
-        debug('Applying join. composeImages length: %d, ignoreData length: %d', this._composeImages.length, this._ignoreData.length);
+        debug(
+            "Applying join. composeImages length: %d, ignoreData length: %d",
+            this._composeImages.length,
+            this._ignoreData.length,
+        );
         if (!this._composeImages.length && !this._ignoreData.length) return;
 
         const { height, width } = await this._img.metadata();
@@ -120,7 +124,7 @@ export class Image {
             position: "top",
         });
 
-        debug('Performing applyJoin. image size: %O, compositeData: %O', { width, height: newHeight }, compositeData);
+        debug("Performing applyJoin. image size: %O, compositeData: %O", { width, height: newHeight }, compositeData);
 
         compositeData.push(...this._ignoreData);
 

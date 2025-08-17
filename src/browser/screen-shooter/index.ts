@@ -35,7 +35,10 @@ export class ScreenShooter {
         this._browser = browser;
     }
 
-    async capture(selectorOrSectorsArray: string | string[], opts: ScreenShooterOpts = {}): Promise<CaptureImageResult> {
+    async capture(
+        selectorOrSectorsArray: string | string[],
+        opts: ScreenShooterOpts = {},
+    ): Promise<CaptureImageResult> {
         const selectors = ([] as string[]).concat(selectorOrSectorsArray);
         this._selectorsToCapture = selectors;
 
@@ -50,10 +53,18 @@ export class ScreenShooter {
             debug: browserPrepareScreenshotDebug.enabled,
         });
 
-        browserPrepareScreenshotDebug(`[${opts.debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`);
+        browserPrepareScreenshotDebug(
+            `[${opts.debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`,
+        );
         delete page.debugLog;
 
-        assertCorrectCaptureAreaBounds(JSON.stringify(selectors), page.viewport, page.viewportOffset, page.captureArea, opts);
+        assertCorrectCaptureAreaBounds(
+            JSON.stringify(selectors),
+            page.viewport,
+            page.viewportOffset,
+            page.captureArea,
+            opts,
+        );
 
         debug(`[${opts.debugId}] prepareScreenshot result: %O`, page);
 
@@ -78,7 +89,12 @@ export class ScreenShooter {
         let iterations = 0;
         let hasReachedScrollLimit = false;
 
-        while (opts.compositeImage && image.hasNotCapturedArea() && iterations < COMPOSITING_ITERATIONS_LIMIT && !hasReachedScrollLimit) {
+        while (
+            opts.compositeImage &&
+            image.hasNotCapturedArea() &&
+            iterations < COMPOSITING_ITERATIONS_LIMIT &&
+            !hasReachedScrollLimit
+        ) {
             const result = await this._scrollOnceAndExtendImage(image, page, opts);
             hasReachedScrollLimit = result.hasReachedScrollLimit;
 
@@ -86,14 +102,24 @@ export class ScreenShooter {
         }
     }
 
-    private async _scrollOnceAndExtendImage(image: CompositeImage, page: PrepareScreenshotResult, opts: ScreenShooterOpts): Promise<ExtendImageResult> {
+    private async _scrollOnceAndExtendImage(
+        image: CompositeImage,
+        page: PrepareScreenshotResult,
+        opts: ScreenShooterOpts,
+    ): Promise<ExtendImageResult> {
         const nextNotCapturedArea = image.getNextNotCapturedArea() as Rect;
 
-        const boundingRectsBeforeScroll = await getBoundingRects(this._browser.publicAPI, this._selectorsToCapture).catch(() => null);
+        const boundingRectsBeforeScroll = await getBoundingRects(
+            this._browser.publicAPI,
+            this._selectorsToCapture,
+        ).catch(() => null);
 
-        debug('boundingRectBeforeScroll: %O', boundingRectsBeforeScroll);
+        debug("boundingRectBeforeScroll: %O", boundingRectsBeforeScroll);
 
-        const physicalScrollHeight = Math.max(Math.min(nextNotCapturedArea.height, page.safeArea.height), 2 * page.pixelRatio);
+        const physicalScrollHeight = Math.max(
+            Math.min(nextNotCapturedArea.height, page.safeArea.height),
+            2 * page.pixelRatio,
+        );
         const logicalScrollHeight = Math.ceil(physicalScrollHeight / page.pixelRatio) - 1;
 
         const browserScrollByDebug = makeDebug("testplane:screenshots:browser:scrollBy");
@@ -102,43 +128,72 @@ export class ScreenShooter {
             y: logicalScrollHeight,
             selectorToScroll: opts.selectorToScroll,
             selectorsToCapture: this._selectorsToCapture,
-            debug: browserScrollByDebug.enabled
+            debug: browserScrollByDebug.enabled,
         });
-        const {viewportOffset: logicalViewportOffset, scrollElementOffset: logicalScrollElementOffset, readableSelectorToScrollDescr, debugLog} = scrollResult;
+        const {
+            viewportOffset: logicalViewportOffset,
+            scrollElementOffset: logicalScrollElementOffset,
+            readableSelectorToScrollDescr,
+            debugLog,
+        } = scrollResult;
         browserScrollByDebug(debugLog);
 
-        const windowOffset = {top: logicalViewportOffset.top * page.pixelRatio, left: logicalViewportOffset.left * page.pixelRatio};
-        const containerOffset = {top: logicalScrollElementOffset.top * page.pixelRatio, left: logicalScrollElementOffset.left * page.pixelRatio};
+        const windowOffset = {
+            top: logicalViewportOffset.top * page.pixelRatio,
+            left: logicalViewportOffset.left * page.pixelRatio,
+        };
+        const containerOffset = {
+            top: logicalScrollElementOffset.top * page.pixelRatio,
+            left: logicalScrollElementOffset.left * page.pixelRatio,
+        };
 
-        const boundingRectsAfterScroll = await getBoundingRects(this._browser.publicAPI, this._selectorsToCapture).catch(() => null);
+        const boundingRectsAfterScroll = await getBoundingRects(
+            this._browser.publicAPI,
+            this._selectorsToCapture,
+        ).catch(() => null);
 
-        debug('boundingRectAfterScroll: %O', boundingRectsAfterScroll);
-        const hasReachedScrollLimit = (boundingRectsBeforeScroll &&
-            boundingRectsAfterScroll &&
-            boundingRectsBeforeScroll.length === boundingRectsAfterScroll.length &&
-            boundingRectsBeforeScroll.every((rectBeforeScroll, index) => rectBeforeScroll.top === boundingRectsAfterScroll[index].top)) ||
+        debug("boundingRectAfterScroll: %O", boundingRectsAfterScroll);
+        const hasReachedScrollLimit =
+            (boundingRectsBeforeScroll &&
+                boundingRectsAfterScroll &&
+                boundingRectsBeforeScroll.length === boundingRectsAfterScroll.length &&
+                boundingRectsBeforeScroll.every(
+                    (rectBeforeScroll, index) => rectBeforeScroll.top === boundingRectsAfterScroll[index].top,
+                )) ||
             this._lastVerticalScrollOffset === windowOffset.top + containerOffset.top;
-        debug('have we reached scroll limit? (all bounding rects have the same top values) : %O', hasReachedScrollLimit);
+        debug(
+            "have we reached scroll limit? (all bounding rects have the same top values) : %O",
+            hasReachedScrollLimit,
+        );
 
         if (hasReachedScrollLimit) {
             if (opts.allowViewportOverflow) {
                 return { hasReachedScrollLimit: true };
             } else {
-                console.warn(`Warning: when capturing the ${opts.debugId} screenshot, we failed to capture the whole area.\n` +
-                    `Here's what happened:\n` +
-                    `- you requested to capture the following selectors: ${this._selectorsToCapture.join('; ')}\n` +
-                    (opts.selectorToScroll ? `- you requested to scroll the following selector: ${opts.selectorToScroll}` : `- we auto-detected element to scroll ${readableSelectorToScrollDescr} and tried scrolling it\n`) +
-                    `- we reached the scroll limit, but weren't able to capture the whole area\n\n` +
-                    `Here's what you can do:\n` +
-                    `- set allowViewportOverflow to true in assertView options to silence this warning\n` +
-                    `- check and adjust selectors that you want to capture or selectorToScroll`
+                console.warn(
+                    `Warning: when capturing the ${opts.debugId} screenshot, we failed to capture the whole area.\n` +
+                        `Here's what happened:\n` +
+                        `- you requested to capture the following selectors: ${this._selectorsToCapture.join("; ")}\n` +
+                        (opts.selectorToScroll
+                            ? `- you requested to scroll the following selector: ${opts.selectorToScroll}`
+                            : `- we auto-detected element to scroll ${readableSelectorToScrollDescr} and tried scrolling it\n`) +
+                        `- we reached the scroll limit, but weren't able to capture the whole area\n\n` +
+                        `Here's what you can do:\n` +
+                        `- set allowViewportOverflow to true in assertView options to silence this warning\n` +
+                        `- check and adjust selectors that you want to capture or selectorToScroll`,
                 );
 
                 return { hasReachedScrollLimit: true };
             }
         }
 
-        debug('Scrolled by %dpx to extend image.\n  nextNotCapturedArea was: %O\n  current container scroll offset: %O\n  current window scroll offset: %O', logicalScrollHeight, nextNotCapturedArea, containerOffset, windowOffset);
+        debug(
+            "Scrolled by %dpx to extend image.\n  nextNotCapturedArea was: %O\n  current container scroll offset: %O\n  current window scroll offset: %O",
+            logicalScrollHeight,
+            nextNotCapturedArea,
+            containerOffset,
+            windowOffset,
+        );
 
         const newImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
 

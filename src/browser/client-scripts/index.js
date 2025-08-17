@@ -93,19 +93,30 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     } else {
         // Try to determine scroll element automatically or fallback to window
-        var scrollParents = captureElements.map(function (element) { return util.getScrollParent(element, logger)});
+        var scrollParents = captureElements.map(function (element) {
+            return util.getScrollParent(element, logger);
+        });
 
-        if (scrollParents[0] && scrollParents.every(function (element) { return scrollParents[0] === element })) {
+        if (
+            scrollParents[0] &&
+            scrollParents.every(function (element) {
+                return scrollParents[0] === element;
+            })
+        ) {
             scrollElem = scrollParents[0];
         }
     }
 
-    rect = getCaptureRect(captureElements, {
-        allowViewportOverflow: allowViewportOverflow,
-        scrollElem: scrollElem,
-        viewportWidth: viewportWidth,
-        documentHeight: documentHeight
-    }, logger);
+    rect = getCaptureRect(
+        captureElements,
+        {
+            allowViewportOverflow: allowViewportOverflow,
+            scrollElem: scrollElem,
+            viewportWidth: viewportWidth,
+            documentHeight: documentHeight
+        },
+        logger
+    );
     logger("getCaptureRect, resulting rect:", rect);
 
     if (!rect) {
@@ -113,25 +124,34 @@ function prepareScreenshotUnsafe(areas, opts) {
             error: "HIDDEN",
             message: "Area with css selector : " + selectors + " is hidden",
             selector: selectors
-        }
+        };
     }
 
     if (rect.error) {
         return rect;
     }
 
-    var ignoreAreas = findIgnoreAreas(opts.ignoreSelectors, {
-        scrollElem: scrollElem,
-        pixelRatio: pixelRatio,
-        viewportWidth: viewportWidth,
-        documentHeight: documentHeight
-    }, logger)
+    var ignoreAreas = findIgnoreAreas(
+        opts.ignoreSelectors,
+        {
+            scrollElem: scrollElem,
+            pixelRatio: pixelRatio,
+            viewportWidth: viewportWidth,
+            documentHeight: documentHeight
+        },
+        logger
+    );
 
-    var safeArea = getSafeAreaRect(rect, captureElements, {
-        scrollElem: scrollElem,
-        viewportWidth: viewportWidth,
-        viewportHeight: viewportHeight
-    }, logger);
+    var safeArea = getSafeAreaRect(
+        rect,
+        captureElements,
+        {
+            scrollElem: scrollElem,
+            viewportWidth: viewportWidth,
+            viewportHeight: viewportHeight
+        },
+        logger
+    );
 
     var topmostCaptureElementTop = captureElements.reduce(function (top, currentElement) {
         var currentElementTop = currentElement.getBoundingClientRect().top;
@@ -148,66 +168,104 @@ function prepareScreenshotUnsafe(areas, opts) {
             var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
             var targetWindowScrollY = Math.floor(scrollElemBoundingRect.top - safeArea.top);
 
-            logger('  performing window.scrollTo to scroll to scrollElement, coords: ' + window.scrollX + ', ' + targetWindowScrollY)
+            logger(
+                "  performing window.scrollTo to scroll to scrollElement, coords: " +
+                    window.scrollX +
+                    ", " +
+                    targetWindowScrollY
+            );
             window.scrollTo(window.scrollX, targetWindowScrollY);
 
-            rect = getCaptureRect(captureElements, {
-                allowViewportOverflow: allowViewportOverflow,
-                scrollElem: scrollElem,
-                viewportWidth: viewportWidth,
-                documentHeight: documentHeight
-            }, logger);
+            rect = getCaptureRect(
+                captureElements,
+                {
+                    allowViewportOverflow: allowViewportOverflow,
+                    scrollElem: scrollElem,
+                    viewportWidth: viewportWidth,
+                    documentHeight: documentHeight
+                },
+                logger
+            );
 
-            ignoreAreas = findIgnoreAreas(opts.ignoreSelectors, {
-                scrollElem: scrollElem,
-                pixelRatio: pixelRatio,
-                viewportWidth: viewportWidth,
-                documentHeight: documentHeight
-            }, logger);
+            ignoreAreas = findIgnoreAreas(
+                opts.ignoreSelectors,
+                {
+                    scrollElem: scrollElem,
+                    pixelRatio: pixelRatio,
+                    viewportWidth: viewportWidth,
+                    documentHeight: documentHeight
+                },
+                logger
+            );
 
-            safeArea = getSafeAreaRect(rect, captureElements, {
-                scrollElem: scrollElem,
-                viewportWidth: viewportWidth,
-                viewportHeight: viewportHeight
-            }, logger);
+            safeArea = getSafeAreaRect(
+                rect,
+                captureElements,
+                {
+                    scrollElem: scrollElem,
+                    viewportWidth: viewportWidth,
+                    viewportHeight: viewportHeight
+                },
+                logger
+            );
         }
-        logger('  capture rect before scrolling to capture area:', rect);
+        logger("  capture rect before scrolling to capture area:", rect);
 
         // If we are scrolling window, we just need to scroll to element, taking safeArea into account.
         // If we are scrolling inside some container, we should take both safe area and existing window scroll offset into account.
         // Example: We have container at 1000px and target block inside it at 2000px (measured in global page coords).
         //          In the code above we scrolled window by 1000px to container.
         //          So now we only need to scroll by 1000px inside that container to our block, not by 2000px, because we already scrolled window by 1000px.
-        var targetScrollY = Math.max(Math.floor(rect.top - (util.isRootElement(scrollElem) ? safeArea.top : safeArea.top + window.scrollY)), 0);
+        var targetScrollY = Math.max(
+            Math.floor(rect.top - (util.isRootElement(scrollElem) ? safeArea.top : safeArea.top + window.scrollY)),
+            0
+        );
         var targetScrollX = util.isRootElement(scrollElem) ? window.scrollX : scrollElem.scrollLeft;
 
         logger("  performing scroll to capture area, coords: " + targetScrollY + ", " + targetScrollX);
 
         if (util.isSafariMobile()) {
-            scrollToCaptureAreaInSafari(viewPort, new Rect({ left: rect.left, top: targetScrollY, width: rect.width, height: rect.height }), scrollElem);
+            scrollToCaptureAreaInSafari(
+                viewPort,
+                new Rect({ left: rect.left, top: targetScrollY, width: rect.width, height: rect.height }),
+                scrollElem
+            );
         } else {
             scrollElem.scrollTo(targetScrollX, targetScrollY);
         }
 
-        rect = getCaptureRect(captureElements, {
-            allowViewportOverflow: allowViewportOverflow,
-            scrollElem: scrollElem,
-            viewportWidth: viewportWidth,
-            documentHeight: documentHeight
-        }, logger);
+        rect = getCaptureRect(
+            captureElements,
+            {
+                allowViewportOverflow: allowViewportOverflow,
+                scrollElem: scrollElem,
+                viewportWidth: viewportWidth,
+                documentHeight: documentHeight
+            },
+            logger
+        );
 
-        ignoreAreas = findIgnoreAreas(opts.ignoreSelectors, {
-            scrollElem: scrollElem,
-            pixelRatio: pixelRatio,
-            viewportWidth: viewportWidth,
-            documentHeight: documentHeight
-        }, logger);
+        ignoreAreas = findIgnoreAreas(
+            opts.ignoreSelectors,
+            {
+                scrollElem: scrollElem,
+                pixelRatio: pixelRatio,
+                viewportWidth: viewportWidth,
+                documentHeight: documentHeight
+            },
+            logger
+        );
 
-        safeArea = getSafeAreaRect(rect, captureElements, {
-            scrollElem: scrollElem,
-            viewportWidth: viewportWidth,
-            viewportHeight: viewportHeight
-        }, logger);
+        safeArea = getSafeAreaRect(
+            rect,
+            captureElements,
+            {
+                scrollElem: scrollElem,
+                viewportWidth: viewportWidth,
+                viewportHeight: viewportHeight
+            },
+            logger
+        );
 
         logger("  capture rect after scrolling to capture area:", rect);
     } else if (allowViewportOverflow && viewPort.rectIntersects(rect)) {
@@ -251,8 +309,14 @@ function prepareScreenshotUnsafe(areas, opts) {
         canHaveCaret: isEditable(document.activeElement),
         pixelRatio: pixelRatio,
         scrollElementOffset: {
-            top: scrollElem === window || scrollElem.parentElement === null ? 0 : Math.floor(util.getScrollTop(scrollElem) * pixelRatio),
-            left: scrollElem === window || scrollElem.parentElement === null ? 0 : Math.floor(util.getScrollLeft(scrollElem) * pixelRatio),
+            top:
+                scrollElem === window || scrollElem.parentElement === null
+                    ? 0
+                    : Math.floor(util.getScrollTop(scrollElem) * pixelRatio),
+            left:
+                scrollElem === window || scrollElem.parentElement === null
+                    ? 0
+                    : Math.floor(util.getScrollLeft(scrollElem) * pixelRatio)
         },
         debugLog: logger()
     };
@@ -334,10 +398,10 @@ exports.resetZoom = function () {
 
 function getBoundingClientContentRect(element) {
     var elemStyle = lib.getComputedStyle(element);
-        var borderLeft = parseFloat(elemStyle.borderLeftWidth) || 0;
-        var borderTop = parseFloat(elemStyle.borderTopWidth) || 0;
-        var borderRight = parseFloat(elemStyle.borderRightWidth) || 0;
-        var borderBottom = parseFloat(elemStyle.borderBottomWidth) || 0;
+    var borderLeft = parseFloat(elemStyle.borderLeftWidth) || 0;
+    var borderTop = parseFloat(elemStyle.borderTopWidth) || 0;
+    var borderRight = parseFloat(elemStyle.borderRightWidth) || 0;
+    var borderBottom = parseFloat(elemStyle.borderBottomWidth) || 0;
 
     return new Rect({
         left: element.getBoundingClientRect().left + borderLeft,
@@ -350,7 +414,12 @@ function getBoundingClientContentRect(element) {
 function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     // Safe area is the dimensions of current scrollable container minus vertical space of sticky elements that may interfere with our target elements.
     if (!captureArea || !opts) {
-        return new Rect({ left: 0, top: 0, width: (opts || {}).viewportWidth || 0, height: (opts || {}).viewportHeight || 0 });
+        return new Rect({
+            left: 0,
+            top: 0,
+            width: (opts || {}).viewportWidth || 0,
+            height: (opts || {}).viewportHeight || 0
+        });
     }
 
     var scrollElem = opts.scrollElem;
@@ -361,7 +430,12 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     var safeArea, originalSafeArea;
     if (scrollElem === window) {
         safeArea = new Rect({ left: 0, top: 0, width: viewportWidth, height: viewportHeight });
-        originalSafeArea = new Rect({ left: safeArea.left, top: safeArea.top, width: safeArea.width, height: safeArea.height });
+        originalSafeArea = new Rect({
+            left: safeArea.left,
+            top: safeArea.top,
+            width: safeArea.width,
+            height: safeArea.height
+        });
     } else {
         var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
 
@@ -370,7 +444,12 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         var scrollElemInsideViewport = _getIntersectionRect(scrollElemBoundingRect, viewportRect);
 
         safeArea = scrollElemInsideViewport || viewportRect;
-        originalSafeArea = new Rect({ left: safeArea.left, top: safeArea.top, width: safeArea.width, height: safeArea.height });
+        originalSafeArea = new Rect({
+            left: safeArea.left,
+            top: safeArea.top,
+            width: safeArea.width,
+            height: safeArea.height
+        });
     }
 
     var captureAreaInViewportCoords = new Rect({
@@ -394,9 +473,13 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     var interferingRects = [];
 
     allElements.forEach(function (el) {
-        logger('getSafeAreaRect(), processing potentially interfering element: ' + el.classList.toString());
+        logger("getSafeAreaRect(), processing potentially interfering element: " + el.classList.toString());
         // Skip elements that contain capture elements
-        if (util.some(captureElements, function (capEl) { return el.contains(capEl); })) {
+        if (
+            util.some(captureElements, function (capEl) {
+                return el.contains(capEl);
+            })
+        ) {
             return;
         }
 
@@ -419,13 +502,22 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             likelyInterferes = true;
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
-            if (captureElements.some(function (captureEl) { return captureEl.contains(el); })) {
+            if (
+                captureElements.some(function (captureEl) {
+                    return captureEl.contains(el);
+                })
+            ) {
                 return;
             }
             // Absolute elements interfere only if positioned relative to ancestor outside scroll container
             var containingBlock = util.findContainingBlock(el);
             // scrollElem may be window, in which case it doesn't have a contains method
-            if (containingBlock && scrollElem && typeof scrollElem.contains === "function" && !scrollElem.contains(containingBlock)) {
+            if (
+                containingBlock &&
+                scrollElem &&
+                typeof scrollElem.contains === "function" &&
+                !scrollElem.contains(containingBlock)
+            ) {
                 likelyInterferes = true;
             }
         } else if (position === "sticky") {
@@ -434,7 +526,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             var bottomValue = parseFloat(computedStyle.bottom);
 
             var scrollParent = util.getScrollParent(el, logger);
-            if (scrollParent && typeof scrollParent.getBoundingClientRect === 'function') {
+            if (scrollParent && typeof scrollParent.getBoundingClientRect === "function") {
                 var scrollParentBr = scrollParent.getBoundingClientRect();
                 topValue += scrollParentBr.top;
                 bottomValue += scrollParentBr.bottom;
@@ -448,7 +540,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                     height: br.height
                 };
                 likelyInterferes = true;
-                logger('  it is sticky to top! bounding rect: ' + JSON.stringify(br));
+                logger("  it is sticky to top! bounding rect: " + JSON.stringify(br));
             } else if (!isNaN(bottomValue)) {
                 var viewportBottom = util.isRootElement(scrollElem) ? viewportHeight : safeArea.top + safeArea.height;
                 br = {
@@ -458,11 +550,11 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                     height: br.height
                 };
                 likelyInterferes = true;
-                logger('  it is sticky to bottom! bounding rect: ' + JSON.stringify(br));
+                logger("  it is sticky to bottom! bounding rect: " + JSON.stringify(br));
             }
         }
 
-        logger('  likely interferes: ' + likelyInterferes);
+        logger("  likely interferes: " + likelyInterferes);
 
         if (likelyInterferes) {
             var candChain = util.buildZChain(el);
@@ -471,7 +563,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                 return util.isChainBehind(candChain, tChain);
             });
 
-            logger('  is candidate z chain behind all target chains? : ' + behindAll);
+            logger("  is candidate z chain behind all target chains? : " + behindAll);
 
             if (!behindAll) {
                 interferingRects.push({ x: br.left, y: br.top, width: br.width, height: br.height });
@@ -504,7 +596,6 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         logger("  getSafeAreaRect, safeArea after shrinking:", safeArea);
     });
 
-    
     // 5. Ensure we didn't shrink more than 50% of original height
     if (safeArea.height < originalSafeArea.height / 2) {
         safeArea.top = originalSafeArea.top;
@@ -561,7 +652,7 @@ function getCaptureRect(captureElements, opts, logger) {
 
         elementRect = getElementCaptureRect(element, opts, logger);
 
-        logger('getElementCaptureRect resulting elementRect:', elementRect);
+        logger("getElementCaptureRect resulting elementRect:", elementRect);
 
         if (elementRect) {
             rect = rect ? rect.merge(elementRect) : elementRect;
@@ -631,7 +722,7 @@ function getElementCaptureRect(element, opts, logger) {
     var pseudo = [":before", ":after"],
         css = lib.getComputedStyle(element),
         clientRect = rect.getAbsoluteClientRect(element, opts, logger);
-    logger('getAbsoluteClientRect result: ', clientRect);
+    logger("getAbsoluteClientRect result: ", clientRect);
 
     if (isHidden(css, clientRect)) {
         return null;

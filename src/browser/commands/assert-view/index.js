@@ -12,7 +12,6 @@ const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
 const { AssertViewError } = require("./errors/assert-view-error");
-const { assertCorrectCaptureAreaBounds } = require("../../screen-shooter/validation");
 
 const makeDebug = require("debug");
 const debug = makeDebug("testplane:screenshots:assert-view");
@@ -59,8 +58,12 @@ module.exports.default = browser => {
         const test = session.executionContext.ctx.currentTest;
         testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
 
-        let debugId = 'debugId';
-        try { debugId = `${test.fullTitle()}.${browser.id}.${state}`; } catch { /**/ }
+        let debugId = "debugId";
+        try {
+            debugId = `${test.fullTitle()}.${browser.id}.${state}`;
+        } catch {
+            /**/
+        }
         debug(`[${debugId}] assertView selectors: %O`, selectors);
         debug(`[${debugId}] assertView opts: %O`, opts);
 
@@ -74,7 +77,7 @@ module.exports.default = browser => {
         const { tempOpts } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const {image: currImgInst, meta: currImgMeta} = await screenShooter
+        const { image: currImgInst, meta: currImgMeta } = await screenShooter
             .capture(selectors, opts)
             .finally(() => browser.cleanupScreenshot(opts));
         const currSize = await currImgInst.getSize();

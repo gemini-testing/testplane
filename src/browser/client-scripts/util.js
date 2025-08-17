@@ -1,6 +1,6 @@
 "use strict";
 
-var lib = require("./lib")
+var lib = require("./lib");
 
 var SCROLL_DIR_NAME = {
     top: "scrollTop",
@@ -152,7 +152,7 @@ exports.createDebugLogger = function createDebugLogger(opts) {
                     try {
                         log += JSON.stringify(arguments[i], null, 2) + "\n";
                     } catch (e) {
-                        log += 'failed to log message due to an error: ' + e;
+                        log += "failed to log message due to an error: " + e;
                     }
                 } else {
                     log += arguments[i] + "\n";
@@ -160,11 +160,11 @@ exports.createDebugLogger = function createDebugLogger(opts) {
             }
 
             return log;
-        }
+        };
     }
 
     return function () {};
-}
+};
 
 function getParentNode(node) {
     if (!node) return null;
@@ -174,7 +174,7 @@ function getParentNode(node) {
         return node.parentElement || (root instanceof ShadowRoot ? root.host : null);
     }
     return node.parentNode; // for Text/Comment nodes
-};
+}
 
 exports.getScrollParent = function getScrollParent(element, logger) {
     if (element === null) {
@@ -192,46 +192,55 @@ exports.getScrollParent = function getScrollParent(element, logger) {
         return getScrollParent(getParentNode(element), logger);
     }
 
-    var canBeScrolled = computedStyleOverflowY === 'auto' || computedStyleOverflowY === 'scroll' || computedStyleOverflowY === 'overlay';
+    var canBeScrolled =
+        computedStyleOverflowY === "auto" ||
+        computedStyleOverflowY === "scroll" ||
+        computedStyleOverflowY === "overlay";
 
     if (hasOverflow && canBeScrolled) {
-        if (element.tagName === 'BODY') {
+        if (element.tagName === "BODY") {
             return window;
         }
         return element;
     } else {
         return getScrollParent(getParentNode(element), logger);
     }
-}
+};
 
 exports.isRootElement = function (element) {
     return element === window || element.parentElement === null;
-}
+};
 
 /* Returns an element relative to which given absolutely positioned element is positioned */
 exports.findContainingBlock = function findContainingBlock(element) {
     var parent = element.parentElement;
     while (parent) {
         var style = lib.getComputedStyle(parent);
-        if (["relative", "absolute", "fixed", "sticky"].includes(style.position) || style.transform !== "none" || style.perspective !== "none") {
+        if (
+            ["relative", "absolute", "fixed", "sticky"].includes(style.position) ||
+            style.transform !== "none" ||
+            style.perspective !== "none"
+        ) {
             return parent;
         }
         parent = parent.parentElement;
     }
     return document.documentElement;
-}
+};
 
 function _isCreatingStackingContext(computedStyle) {
     var position = computedStyle.position;
     var zIndexStr = computedStyle.zIndex;
 
-    return (position !== 'static' && zIndexStr !== 'auto') ||
+    return (
+        (position !== "static" && zIndexStr !== "auto") ||
         parseFloat(computedStyle.opacity) < 1 ||
-        computedStyle.transform !== 'none' ||
-        computedStyle.filter !== 'none' ||
-        computedStyle.perspective !== 'none' ||
-        position === 'fixed' ||
-        position === 'sticky';
+        computedStyle.transform !== "none" ||
+        computedStyle.filter !== "none" ||
+        computedStyle.perspective !== "none" ||
+        position === "fixed" ||
+        position === "sticky"
+    );
 }
 
 function _getStackingContextRoot(element) {
@@ -257,7 +266,7 @@ function _getEffectiveZIndex(element) {
         var zIndexStr = style.zIndex;
         var createsStackingContext = _isCreatingStackingContext(style);
 
-        if (zIndexStr !== 'auto') {
+        if (zIndexStr !== "auto") {
             var num = parseFloat(zIndexStr);
 
             return isNaN(num) ? 0 : num;
@@ -291,7 +300,7 @@ exports.buildZChain = function buildZChain(element) {
     }
 
     return chain;
-}
+};
 
 exports.isChainBehind = function isChainBehind(candChain, targetChain) {
     // Algorithm:
@@ -307,4 +316,4 @@ exports.isChainBehind = function isChainBehind(candChain, targetChain) {
     }
 
     return false;
-}
+};
