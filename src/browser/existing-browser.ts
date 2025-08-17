@@ -13,7 +13,7 @@ import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
 import { Config } from "../config";
-import { Image, Point, Rect } from "../image";
+import { Image, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import type { Options } from "@testplane/wdio-types";
@@ -200,14 +200,12 @@ export class ExistingBrowser extends Browser {
         return this._camera.captureViewportImage(page);
     }
 
-    scrollBy(params: ScrollByParams): Promise<Point> {
+    scrollBy(params: ScrollByParams): Promise<void> {
         ensure(this._session, BROWSER_SESSION_HINT);
 
         return this._session.execute(function (params) {
             // eslint-disable-next-line no-var
-            var elem, xVal, yVal, originalScrollLeft, originalScrollTop, iterations;
-
-            console.log('scrollBy, params:', params);
+            var elem, xVal, yVal;
 
             if (params.selector) {
                 elem = document.querySelector(params.selector);
@@ -220,47 +218,15 @@ export class ExistingBrowser extends Browser {
                     );
                 }
 
-                originalScrollLeft = elem.scrollLeft;
-                originalScrollTop = elem.scrollTop;
                 xVal = elem.scrollLeft + params.x;
                 yVal = elem.scrollTop + params.y;
-
-                elem.scrollTo(xVal, yVal);
-                console.log('scrollTo elem, xVal:', xVal, 'yVal:', yVal);
-
-                // Wait for scroll to happen
-                iterations = 0;
-                const reachedVerticalScrollLimit = params.y === 0 || (elem.scrollTop + elem.clientHeight >= elem.scrollHeight);
-                const reachedHorizontalScrollLimit = params.x === 0 || (elem.scrollLeft + elem.clientWidth >= elem.scrollWidth);
-                console.log('scrollTo elem, reachedVerticalScrollLimit:', reachedVerticalScrollLimit, 'reachedHorizontalScrollLimit:', reachedHorizontalScrollLimit);
-                while (elem.scrollLeft === originalScrollLeft && elem.scrollTop === originalScrollTop && !(reachedVerticalScrollLimit && reachedHorizontalScrollLimit)) {
-                    if (iterations++ > 100000) {
-                        console.log('scrollTo elem, reached scroll limit, returning:', elem.scrollTop, elem.scrollLeft);
-                        return { top: elem.scrollTop, left: elem.scrollLeft };
-                    }
-                }
-                console.log('scrollTo elem, waited for scroll to happen and got:', elem.scrollLeft, elem.scrollTop);
-
-                return { top: elem.scrollTop, left: elem.scrollLeft };
             } else {
                 elem = window;
-                originalScrollLeft = window.pageXOffset;
-                originalScrollTop = window.pageYOffset;
                 xVal = window.pageXOffset + params.x;
                 yVal = window.pageYOffset + params.y;
-
-                elem.scrollTo(xVal, yVal);
-
-                // Wait for scroll to happen
-                iterations = 0;
-                while (window.pageXOffset === originalScrollLeft && window.pageYOffset === originalScrollTop) {
-                    if (iterations++ > 100000) {
-                        return { top: yVal, left: xVal };
-                    }
-                }
-
-                return { top: window.pageYOffset, left: window.pageXOffset };
             }
+
+            return elem.scrollTo(xVal, yVal);
         }, params);
     }
 
