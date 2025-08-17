@@ -144,10 +144,6 @@ export class Image {
         });
     }
 
-    applyClear(): void {
-        this._img.composite(this._ignoreData);
-    }
-
     private async _getImageData(): Promise<SharpImageData> {
         if (!this._imageData) {
             this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
