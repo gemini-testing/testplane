@@ -94,7 +94,7 @@
     "load-esm": "1.0.2",
     "local-pkg": "0.4.3",
     "lodash": "4.17.21",
-    "looks-same": "10.0.0",
+    "looks-same": "10.0.1",
     "micromatch": "4.0.5",
     "mocha": "10.2.0",
     "pirates": "4.0.7",
