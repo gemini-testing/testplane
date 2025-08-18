@@ -82,8 +82,7 @@ describe("Viewport", () => {
 
             await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
 
-            assert.calledOnceWith(image.addClear, { left: 1, top: 1, width: 10, height: 10 });
-            assert.calledOnceWith(image.applyClear);
+            assert.calledOnceWith(image.clearArea, { left: 1, top: 1, width: 10, height: 10 });
         });
 
         it("should ignore multiple areas", async () => {
@@ -93,9 +92,8 @@ describe("Viewport", () => {
 
             await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
 
-            assert.calledWith(image.addClear.firstCall, firstArea);
-            assert.calledWith(image.addClear.secondCall, secondArea);
-            assert.calledOnceWith(image.applyClear);
+            assert.calledWith(image.clearArea.firstCall, firstArea);
+            assert.calledWith(image.clearArea.secondCall, secondArea);
         });
 
         describe("should crop ignore area to image area", () => {
@@ -104,23 +102,20 @@ describe("Viewport", () => {
 
                 await viewport.ignoreAreas(image, { left: 10, top: 10, width: 100, height: 100 });
 
-                assert.calledOnceWith(image.addClear, { left: 0, top: 0, width: 100, height: 100 });
+                assert.calledOnceWith(image.clearArea, { left: 0, top: 0, width: 100, height: 100 });
             });
 
             it("top left", async () => {
                 const viewport = createViewport({ ignoreAreas: [{ left: 10, top: 10, width: 1000, height: 1000 }] });
-
                 await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 10, top: 10, width: 90, height: 90 });
+                assert.calledOnceWith(image.clearArea, { left: 10, top: 10, width: 90, height: 90 });
             });
-
             it("top right", async () => {
                 const viewport = createViewport({ ignoreAreas: [{ left: 0, top: 10, width: 100, height: 100 }] });
 
                 await viewport.ignoreAreas(image, { left: 50, top: 0, width: 100, height: 100 });
 
-                assert.calledOnceWith(image.addClear, { left: 0, top: 10, width: 50, height: 90 });
+                assert.calledOnceWith(image.clearArea, { left: 0, top: 10, width: 50, height: 90 });
             });
 
             it("bottom left", async () => {
@@ -128,7 +123,7 @@ describe("Viewport", () => {
 
                 await viewport.ignoreAreas(image, { left: 0, top: 50, width: 100, height: 100 });
 
-                assert.calledOnceWith(image.addClear, { left: 10, top: 0, width: 90, height: 60 });
+                assert.calledOnceWith(image.clearArea, { left: 10, top: 0, width: 90, height: 60 });
             });
 
             it("bottom right", async () => {
@@ -138,7 +133,7 @@ describe("Viewport", () => {
 
                 await viewport.ignoreAreas(image, { left: 50, top: 50, width: 100, height: 100 });
 
-                assert.calledOnceWith(image.addClear, { left: 0, top: 0, width: 60, height: 60 });
+                assert.calledOnceWith(image.clearArea, { left: 0, top: 0, width: 60, height: 60 });
             });
         });
 
@@ -148,7 +143,7 @@ describe("Viewport", () => {
 
                 await viewport.ignoreAreas(image, { left: 50, top: 50, width: 100, height: 100 });
 
-                assert.notCalled(image.addClear);
+                assert.notCalled(image.clearArea);
             });
 
             it("top left", async () => {
@@ -156,7 +151,7 @@ describe("Viewport", () => {
 
                 await viewport.ignoreAreas(image, { left: 0, top: 0, width: 40, height: 40 });
 
-                assert.notCalled(image.addClear);
+                assert.notCalled(image.clearArea);
             });
         });
     });
@@ -171,13 +166,13 @@ describe("Viewport", () => {
             assert.calledOnceWith(vieport.ignoreAreas, image);
         });
 
-        it('should call apply "ignoreAreas" before crop', async () => {
+        it('should call apply "crop" before "ignoreAreas"', async () => {
             const vieport = createViewport();
             sandbox.stub(vieport, "ignoreAreas");
 
             await vieport.handleImage(image);
 
-            assert.callOrder(vieport.ignoreAreas, image.crop);
+            assert.callOrder(image.crop, vieport.ignoreAreas);
         });
 
         describe("should crop to captureArea", () => {

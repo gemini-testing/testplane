@@ -1,11 +1,9 @@
-import sharp from "sharp";
+import fs from "fs";
 import looksSame from "looks-same";
+import { loadEsm } from "load-esm";
 import { DiffOptions, ImageSize } from "./types";
-
-interface SharpImageData {
-    data: Buffer;
-    info: sharp.OutputInfo;
-}
+import { convertRgbaToPng } from "./utils/eight-bit-rgba-to-png";
+import { BITS_IN_BYTE, PNG_HEIGHT_OFFSET, PNG_WIDTH_OFFSET, RGBA_CHANNELS } from "./constants/png";
 
 interface PngImageData {
     data: Buffer;
@@ -19,11 +17,10 @@ export interface Rect {
     left: number;
 }
 
-export interface RGBA {
-    r: number;
-    g: number;
-    b: number;
-    a: number;
+export interface RGB {
+    R: number;
+    G: number;
+    B: number;
 }
 
 interface CompareOptions {
@@ -34,142 +31,143 @@ interface CompareOptions {
     antialiasingTolerance?: number;
 }
 
+const initJsquashPromise = new Promise<unknown>(resolve => {
+    const wasmLocation = require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
+
+    Promise.all([loadEsm("@jsquash/png/decode.js"), fs.promises.readFile(wasmLocation)])
+        .then(([mod, wasmBytes]) => mod.init(wasmBytes))
+        .then(resolve);
+});
+
+const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
+    return Promise.all([loadEsm("@jsquash/png/decode.js"), initJsquashPromise]).then(([mod]) =>
+        mod.decode(buffer, { bitDepth: BITS_IN_BYTE }),
+    );
+};
+
 export class Image {
-    private _img: sharp.Sharp;
-    private _imageData: SharpImageData | null = null;
-    private _ignoreData: sharp.OverlayOptions[] = [];
-    // eslint-disable-next-line no-use-before-define
-    private _composeImages: Image[] = [];
+    private _imgDataPromise: Promise<Buffer>;
+    private _imgData: Buffer | null = null;
+    private _width: number;
+    private _height: number;
+    private _composeImages: this[] = [];
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
     }
 
     constructor(buffer: Buffer) {
-        this._img = sharp(buffer);
+        this._width = buffer.readUInt32BE(PNG_WIDTH_OFFSET);
+        this._height = buffer.readUInt32BE(PNG_HEIGHT_OFFSET);
+        this._imgDataPromise = jsquashDecode(buffer).then(({ data }) => {
+            return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+        });
+    }
+
+    async _getImgData(): Promise<Buffer> {
+        if (this._imgData) {
+            return this._imgData;
+        }
+
+        return (this._imgData = await this._imgDataPromise);
+    }
+
+    _ensureImagesHaveSameWidth(): void {
+        for (const image of this._composeImages) {
+            if (image._width !== this._width) {
+                throw new Error(
+                    [
+                        `It looks like viewport width changed while performing long page screenshot (${this._width}px -> ${image._width}px)`,
+                        "Please make sure page is fully loaded before making screenshot",
+                    ].join("\n"),
+                );
+            }
+        }
     }
 
     async getSize(): Promise<ImageSize> {
-        const imgSizes = await Promise.all([this, ...this._composeImages].map(img => img._img.metadata()));
+        this._ensureImagesHaveSameWidth();
 
-        return imgSizes.reduce(
-            (totalSize, img) => {
-                return {
-                    width: Math.max(totalSize.width, img.width!),
-                    height: totalSize.height + img.height!,
-                };
-            },
-            { width: 0, height: 0 },
-        );
+        const height = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
+
+        return { height, width: this._width };
     }
 
     async crop(rect: Rect): Promise<void> {
-        const { height, width } = await this._img.metadata();
+        const imgData = await this._getImgData();
 
-        this._img.extract({
-            left: rect.left,
-            top: rect.top,
-            width: Math.min(width!, rect.left + rect.width) - rect.left,
-            height: Math.min(height!, rect.top + rect.height) - rect.top,
-        });
+        let bufferPointer = 0;
+        let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
 
-        await this._forceRefreshImageData();
+        const bytesToCopy = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const bytesToIterate = this._width * RGBA_CHANNELS;
+
+        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+            imgData.copy(imgData, bufferPointer, sourceOffset, sourceOffset + bytesToCopy);
+
+            bufferPointer += bytesToCopy;
+            sourceOffset += bytesToIterate;
+        }
+
+        this._imgData = Buffer.from(imgData.buffer, 0, bufferPointer);
+        this._width = rect.width;
+        this._height = rect.height;
     }
 
-    addJoin(attachedImages: Image[]): void {
+    addJoin(attachedImages: this[]): void {
         this._composeImages = this._composeImages.concat(attachedImages);
     }
 
     async applyJoin(): Promise<void> {
         if (!this._composeImages.length) return;
 
-        const { height, width } = await this._img.metadata();
-        const imagesData = await Promise.all(this._composeImages.map(img => img._getImageData()));
-        const compositeData = [];
+        this._ensureImagesHaveSameWidth();
 
-        let newHeight = height!;
+        const resultHeight = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
+        const imageBuffers = await Promise.all([this, ...this._composeImages].map(img => img._getImgData()));
 
-        for (const { data, info } of imagesData) {
-            compositeData.push({
-                input: data,
-                left: 0,
-                top: newHeight,
-                raw: {
-                    width: info.width,
-                    height: info.height,
-                    channels: info.channels,
-                },
-            });
-
-            newHeight += info.height;
-        }
-
-        this._img.resize({
-            width,
-            height: newHeight,
-            fit: "contain",
-            position: "top",
-        });
-
-        this._img.composite(compositeData);
-    }
-
-    async addClear({ width, height, left, top }: Rect): Promise<void> {
-        const { channels } = await this._img.metadata();
-
-        this._ignoreData.push({
-            input: {
-                create: {
-                    channels: channels!,
-                    background: { r: 0, g: 0, b: 0, alpha: 1 },
-                    width,
-                    height,
-                },
-            },
-            left,
-            top,
-        });
-    }
-
-    applyClear(): void {
-        this._img.composite(this._ignoreData);
-    }
-
-    private async _getImageData(): Promise<SharpImageData> {
-        if (!this._imageData) {
-            this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
-        }
-        return this._imageData;
-    }
-
-    private async _forceRefreshImageData(): Promise<void> {
-        this._imageData = await this._img.raw().toBuffer({ resolveWithObject: true });
-        this._img = sharp(this._imageData.data, {
-            raw: {
-                width: this._imageData.info.width,
-                height: this._imageData.info.height,
-                channels: this._imageData.info.channels,
-            },
-        });
-
+        this._imgData = Buffer.concat(imageBuffers);
+        this._height = resultHeight;
         this._composeImages = [];
-        this._ignoreData = [];
     }
 
-    async getRGBA(x: number, y: number): Promise<RGBA> {
-        const { data, info } = await this._getImageData();
-        const idx = (info.width * y + x) * info.channels;
+    async clearArea(rect: Rect): Promise<void> {
+        const imgData = await this._getImgData();
+
+        let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
+
+        const bytesToCopyAmount = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const bytesToIterate = this._width * RGBA_CHANNELS;
+        const bytesToFill = Buffer.from([0, 0, 0, 255]); // black RGBA
+
+        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+            imgData.fill(bytesToFill, sourceOffset, sourceOffset + bytesToCopyAmount);
+
+            sourceOffset += bytesToIterate;
+        }
+    }
+
+    async getRGB(x: number, y: number): Promise<RGB> {
+        const imgData = await this._getImgData();
+        const idx = (this._width * y + x) * RGBA_CHANNELS;
 
         return {
-            r: data[idx],
-            g: data[idx + 1],
-            b: data[idx + 2],
-            a: info.channels === 4 ? data[idx + 3] : 1,
+            R: imgData[idx],
+            G: imgData[idx + 1],
+            B: imgData[idx + 2],
         };
     }
 
+    async _getPngBuffer(): Promise<Buffer> {
+        const imageData = await this._getImgData();
+
+        return convertRgbaToPng(imageData, this._width, this._height);
+    }
+
     async save(file: string): Promise<void> {
-        await this._img.png().toFile(file);
+        const data = await this._getPngBuffer();
+
+        await fs.promises.writeFile(file, data);
     }
 
     static fromBase64(base64: string): Image {
@@ -181,13 +179,9 @@ export class Image {
     async toPngBuffer(
         opts: { resolveWithObject?: boolean } = { resolveWithObject: true },
     ): Promise<PngImageData | Buffer> {
-        if (opts.resolveWithObject) {
-            const imgData = await this._img.png().toBuffer({ resolveWithObject: true });
+        const data = await this._getPngBuffer();
 
-            return { data: imgData.data, size: { height: imgData.info.height, width: imgData.info.width } };
-        }
-
-        return await this._img.png().toBuffer({ resolveWithObject: false });
+        return opts.resolveWithObject ? { data, size: { width: this._width, height: this._height } } : data;
     }
 
     static compare(path1: string, path2: string, opts: CompareOptions = {}): Promise<looksSame.LooksSameResult> {

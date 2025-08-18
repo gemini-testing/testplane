@@ -29,11 +29,9 @@ module.exports = class Viewport {
             const imageClearArea = this._getIntersection(area, imageArea);
 
             if (imageClearArea !== null) {
-                await image.addClear(this._shiftArea(imageClearArea, { left: -imageArea.left, top: -imageArea.top }));
+                await image.clearArea(this._shiftArea(imageClearArea, { left: -imageArea.left, top: -imageArea.top }));
             }
         }
-
-        image.applyClear();
     }
 
     async handleImage(image, area = {}) {
@@ -41,8 +39,8 @@ module.exports = class Viewport {
         _.defaults(area, { left: 0, top: 0, width, height });
         const capturedArea = this._transformToCaptureArea(area);
 
-        await this.ignoreAreas(image, this._shiftArea(capturedArea, { left: -area.left, top: -area.top }));
         await image.crop(this._sanitize(this._transformToViewportOrigin(capturedArea)));
+        await this.ignoreAreas(image, this._shiftArea(capturedArea, { left: -area.left, top: -area.top }));
 
         this._summaryHeight += capturedArea.height;
     }
