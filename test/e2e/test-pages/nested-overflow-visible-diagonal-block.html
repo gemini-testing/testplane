@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nested Overflow Visible Diagonal Block</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f5f5f5;
+      font-family: Arial, sans-serif;
+    }
+
+    .container-a {
+      width: 420px;
+      height: 500px; /* Smaller than inner block height */
+      border: 2px dashed #888;
+      background: #ffffff;
+      overflow: visible; /* Important: show overflow from child */
+      position: relative;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    .label {
+      position: absolute;
+      top: -28px;
+      left: 0;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .diagonal-block {
+      position: relative;
+      width: 400px;
+      height: 1500px; /* Larger than container-a height */
+      border: 3px solid #000;
+      background: #fff;
+    }
+
+    .diagonal-lines {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-a" data-testid="container-a">
+    <div class="label">Container A (overflow: visible)</div>
+    <div class="diagonal-block" data-testid="test-block">
+      <svg class="diagonal-lines" viewBox="0 0 400 300" preserveAspectRatio="none">
+        <line x1="0" y1="0" x2="400" y2="300" stroke="black" stroke-width="2" />
+        <line x1="400" y1="0" x2="0" y2="300" stroke="black" stroke-width="2" />
+      </svg>
+    </div>
+  </div>
+</body>
+</html> 

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modal Window Playground</title>
+    <style>
+        /* Make page taller than viewport */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 2500px; /* taller than viewport */
+            background: #f3f3f3;
+            position: relative; /* so absolute modal is relative to body */
+        }
+
+        /* Fixed elements (visible on first viewport) */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #1e88e5;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        /* Additional fixed elements overlapping modal */
+        .notification-bar {
+            position: fixed;
+            top: 80px; /* below header */
+            right: 20%;
+            background: #673ab7;
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 12;
+        }
+
+        .chat-widget {
+            position: fixed;
+            top: 70px;
+            left: 20%;
+            width: 220px;
+            height: 140px;
+            background: #03a9f4;
+            color: #fff;
+            padding: 12px 14px;
+            box-sizing: border-box;
+            border-radius: 8px 8px 0 0;
+            font-size: 14px;
+            z-index: 12;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+
+        /* Dummy scrollable content */
+        .content {
+            padding: 100px 100px 2000px; /* add bottom space to demonstrate scroll */
+            box-sizing: border-box;
+        }
+
+        .content p {
+            max-width: 800px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        /* Modal overlay */
+        .modal-overlay {
+            position: absolute; /* relative to body */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.45); /* semi-transparent */
+            z-index: 9999;
+            display: flex;
+            align-items: flex-start; /* start so modal overlaps header */
+            justify-content: center;
+            padding-top: 40px; /* overlap header */
+        }
+
+        .modal-window {
+            width: 600px;
+            max-width: 90%;
+            background: rgba(255, 255, 255, 0.8); /* slightly transparent modal itself */
+            border: 2px solid #1e88e5;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-text {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #555;
+            margin-bottom: 25px;
+        }
+
+        .close-btn {
+            background: #1e88e5;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed UI elements -->
+    <header class="header" data-testid="header">Fixed Header</header>
+    <div class="notification-bar" data-testid="notification-bar">🔔 New update available</div>
+    <div class="chat-widget" data-testid="chat-widget">💬 Chat Support</div>
+
+    <!-- Scrollable page content behind fixed elements -->
+    <div class="content" data-testid="page-content">
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec cursus dictum metus, a rutrum eros faucibus non. Integer vestibulum est ut erat faucibus, at volutpat libero feugiat. In sit amet massa nec erat tristique euismod. Donec a suscipit nibh.</p>
+        <p>Ut rhoncus lectus vitae magna efficitur, sed lobortis lacus aliquam. Etiam bibendum diam sit amet justo mattis luctus. Curabitur ornare nisl eget sapien malesuada, at ultricies quam interdum.</p>
+        <p>Praesent tincidunt sapien in quam egestas, quis vestibulum leo consequat. Aliquam erat volutpat. Integer tincidunt dictum interdum. Quisque nec turpis quis justo convallis fermentum. Vivamus ultricies vitae lorem id tempus.</p>
+    </div>
+
+    <!-- Modal overlay at top of everything -->
+    <div class="modal-overlay" data-testid="modal-overlay">
+        <div class="modal-window" data-testid="modal-window">
+            <div class="modal-title">Modal Window</div>
+            <div class="modal-text">This modal is absolutely positioned with a very high z-index and slight transparency, allowing underlying fixed elements to be seen.</div>
+            <button class="close-btn" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function closeModal() {
+            document.querySelector('.modal-overlay').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 
