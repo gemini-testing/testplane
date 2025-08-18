@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.30.3](https://github.com/gemini-testing/testplane/compare/v8.30.2...v8.30.3) (2025-08-18)
+
+
+### Bug Fixes
+
+* invalid reference png ([#1120](https://github.com/gemini-testing/testplane/issues/1120)) ([9a1718e](https://github.com/gemini-testing/testplane/commit/9a1718e43394d8fac54f8b198a16d588f5d0063e))
+
 ### [8.30.2](https://github.com/gemini-testing/testplane/compare/v8.30.1...v8.30.2) (2025-08-18)
 
 ### [8.30.1](https://github.com/gemini-testing/testplane/compare/v8.30.0...v8.30.1) (2025-08-01)
