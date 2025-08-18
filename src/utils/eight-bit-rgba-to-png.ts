@@ -53,20 +53,20 @@ export const convertRgbaToPng = (rgba: Buffer, width: number, height: number, co
     pointer = resultBuffer.writeUInt8(PNG_COMPRESSION_DEFLATE, pointer);
     pointer = resultBuffer.writeUInt8(PNG_FILTER_NO_FILTER, pointer);
     pointer = resultBuffer.writeUInt8(PNG_INTERLACE_NO_INTERLACE, pointer);
-    const ihdrCrc = crc32(Buffer.from(resultBuffer.buffer, ihdrPointer, pointer - ihdrPointer));
+    const ihdrCrc = crc32(resultBuffer.subarray(ihdrPointer, pointer));
     pointer = resultBuffer.writeUInt32BE(ihdrCrc, pointer);
 
     // IDAT
     const idatPointer = (pointer = resultBuffer.writeUInt32BE(compressedData.length, pointer));
     pointer += resultBuffer.write("IDAT", idatPointer, "ascii");
     pointer += compressedData.copy(resultBuffer, pointer);
-    const idatCrc = crc32(Buffer.from(resultBuffer.buffer, idatPointer, pointer - idatPointer));
+    const idatCrc = crc32(resultBuffer.subarray(idatPointer, pointer));
     pointer = resultBuffer.writeUInt32BE(idatCrc, pointer);
 
     // IEND (empty)
     const iendPointer = (pointer = resultBuffer.writeUInt32BE(0, pointer));
     pointer += resultBuffer.write("IEND", pointer, "ascii");
-    const iendCrc = crc32(Buffer.from(resultBuffer.buffer, iendPointer, pointer - iendPointer));
+    const iendCrc = crc32(resultBuffer.subarray(iendPointer, pointer));
     pointer = resultBuffer.writeUInt32BE(iendCrc, pointer);
 
     if (pointer !== resultBuffer.byteLength) {

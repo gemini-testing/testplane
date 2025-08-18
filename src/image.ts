@@ -109,7 +109,7 @@ export class Image {
             sourceOffset += bytesToIterate;
         }
 
-        this._imgData = Buffer.from(imgData.buffer, 0, bufferPointer);
+        this._imgData = imgData.subarray(0, bufferPointer);
         this._width = rect.width;
         this._height = rect.height;
     }
