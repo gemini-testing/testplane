@@ -162,6 +162,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                     sessionId: this._browser.sessionId,
                     sessionCaps: this._browser.capabilities,
                     sessionOpts: this._browser.publicAPI.options,
+                    pid: this._browser.getPid(),
                 },
                 null,
                 2,

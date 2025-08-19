@@ -80,7 +80,7 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
         return;
     }
 
-    const stringifiedOpts = convertOptions(_.omit(options, "replMode", "replMode"));
+    const stringifiedOpts = convertOptions(_.omit(options, "replMode"));
     if (_.isEmpty(stringifiedOpts)) {
         throw new Error(`There are no tests found. Try to specify [${Object.keys(options).join(", ")}] options`);
     } else {
