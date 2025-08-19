@@ -23,7 +23,7 @@ files.forEach(file => {
 
         console.log(`Created symlink: ${srcPath} -> ${relativePath}`);
     } catch (error) {
-        if (error.code !== 'EEXIST') {
+        if (error.code !== "EEXIST") {
             console.warn(`Failed to create symlink for ${file}: ${error.message}`);
         }
     }
@@ -35,7 +35,7 @@ try {
     const libPath = path.join(srcDir, "lib.js");
     fs.symlinkSync(libNativePath, libPath);
 } catch (e) {
-    if (e.code !== 'EEXIST') {
+    if (e.code !== "EEXIST") {
         console.warn(`Failed to create symlink for lib: ${e.message}`);
     }
 }

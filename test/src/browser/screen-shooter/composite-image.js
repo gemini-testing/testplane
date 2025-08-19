@@ -1,324 +1,283 @@
 "use strict";
 
-const _ = require("lodash");
-
 const { Image } = require("src/image");
-const { Viewport } = require("src/browser/screen-shooter/composite-image");
-const { CoordValidator } = require("src/browser/screen-shooter/validation");
+const { CompositeImage } = require("src/browser/screen-shooter/composite-image");
 
-describe("Viewport", () => {
+describe("CompositeImage", () => {
     const sandbox = sinon.createSandbox();
     let image;
 
-    const createViewport = (opts = {}) =>
-        new Viewport(
-            {
-                captureArea: opts.captureArea || {},
-                viewport: opts.viewport || {},
-                ignoreAreas: opts.ignoreAreas || [],
-            },
-            opts.image || image,
-            { allowViewportOverflow: opts.allowViewportOverflow, compositeImage: opts.compositeImage },
-        );
+    const createCompositeImage = (opts = {}) => {
+        const captureArea = opts.captureArea || { left: 0, top: 0, width: 100, height: 100 };
+        const safeArea = opts.safeArea || { left: 0, top: 0, width: 100, height: 100 };
+        const ignoreAreas = opts.ignoreAreas || [];
+
+        return CompositeImage.create(captureArea, safeArea, ignoreAreas);
+    };
+
+    const createMockImage = (overrides = {}) => {
+        const mockImage = sandbox.createStubInstance(Image);
+        mockImage.getSize.resolves({ width: 100, height: 100 });
+        mockImage.toPngBuffer.resolves(Buffer.from("mock-buffer"));
+        mockImage.crop.resolves();
+        mockImage.addClear.resolves();
+        mockImage.addJoin.returns();
+        mockImage.applyJoin.resolves();
+
+        Object.keys(overrides).forEach(key => {
+            if (typeof overrides[key] === "function") {
+                mockImage[key] = overrides[key];
+            } else {
+                mockImage[key].resolves(overrides[key]);
+            }
+        });
+
+        return mockImage;
+    };
 
     beforeEach(() => {
-        image = sandbox.createStubInstance(Image);
-        image.getSize.resolves({ width: 100500, height: 500100 });
+        image = createMockImage();
     });
 
     afterEach(() => sandbox.restore());
 
-    describe("validate", () => {
-        const validate = opts => {
-            opts = _.defaults(opts || {}, {
-                captureArea: opts.captureArea,
-                viewport: opts.viewport,
-                allowViewportOverflow: opts.allowViewportOverflow,
-                compositeImage: opts.compositeImage,
-                browser: "default-bro",
+    describe("hasNotCapturedArea", () => {
+        it("should return true when no images have been registered", () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 200 },
             });
 
-            const viewport = createViewport(opts);
+            assert.isTrue(compositeImage.hasNotCapturedArea());
+        });
 
-            return viewport.validate(opts.browser);
-        };
+        it("should return true when captured height is less than capture area height", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 200 },
+            });
 
+            image.getSize.resolves({ width: 100, height: 50 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.isTrue(compositeImage.hasNotCapturedArea());
+        });
+
+        it("should return false when captured height equals capture area height", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 100 },
+            });
+
+            image.getSize.resolves({ width: 100, height: 100 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.isFalse(compositeImage.hasNotCapturedArea());
+        });
+
+        it("should return false when captured height exceeds capture area height", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 100 },
+            });
+
+            image.getSize.resolves({ width: 100, height: 150 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.isFalse(compositeImage.hasNotCapturedArea());
+        });
+
+        it("should handle multiple chunks correctly", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 200 },
+            });
+
+            image.getSize.resolves({ width: 100, height: 80 });
+
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            const secondImage = createMockImage({ getSize: { width: 100, height: 80 } });
+            await compositeImage.registerViewportImageAtOffset(secondImage, { left: 0, top: 80 }, { left: 0, top: 0 });
+
+            const thirdImage = createMockImage({ getSize: { width: 100, height: 80 } });
+            await compositeImage.registerViewportImageAtOffset(thirdImage, { left: 0, top: 160 }, { left: 0, top: 0 });
+
+            assert.isFalse(compositeImage.hasNotCapturedArea());
+        });
+    });
+
+    describe("getNextNotCapturedArea", () => {
+        it("should return the full capture area when no images registered", () => {
+            const captureArea = { left: 10, top: 20, width: 100, height: 200 };
+            const compositeImage = createCompositeImage({ captureArea });
+
+            const nextArea = compositeImage.getNextNotCapturedArea();
+
+            assert.deepEqual(nextArea, captureArea);
+        });
+
+        it("should return remaining area after partial capture", async () => {
+            const captureArea = { left: 10, top: 20, width: 100, height: 200 };
+            const compositeImage = createCompositeImage({ captureArea });
+
+            image.getSize.resolves({ width: 100, height: 80 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            const nextArea = compositeImage.getNextNotCapturedArea();
+
+            assert.deepEqual(nextArea, {
+                left: 10,
+                top: 100, // 20 + 80
+                width: 100,
+                height: 120, // 200 - 80
+            });
+        });
+
+        it("should return null when fully captured", async () => {
+            const captureArea = { left: 10, top: 20, width: 100, height: 200 };
+            const compositeImage = createCompositeImage({ captureArea });
+
+            image.getSize.resolves({ width: 100, height: 200 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            const nextArea = compositeImage.getNextNotCapturedArea();
+
+            assert.isNull(nextArea);
+        });
+
+        it("should return null when over-captured", async () => {
+            const captureArea = { left: 10, top: 20, width: 100, height: 200 };
+            const compositeImage = createCompositeImage({ captureArea });
+
+            image.getSize.resolves({ width: 100, height: 250 });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            const nextArea = compositeImage.getNextNotCapturedArea();
+
+            assert.isNull(nextArea);
+        });
+    });
+
+    describe("registerViewportImageAtOffset", () => {
         beforeEach(() => {
-            sandbox.spy(CoordValidator, "create");
-            sandbox.stub(CoordValidator.prototype, "validate");
+            image.getSize.resolves({ width: 100, height: 100 });
+            image.toPngBuffer.resolves(Buffer.from("test-buffer"));
         });
 
-        it("should create coordinates validator with passed browser", () => {
-            validate({ browser: "some-browser" });
-
-            assert.calledWith(CoordValidator.create, "some-browser");
-        });
-
-        ["allowViewportOverflow", "compositeImage"].forEach(option => {
-            it(`should create coordinates validator with passed "${option}" option`, () => {
-                validate({ browser: "some-browser", [option]: true });
-
-                assert.calledWith(CoordValidator.create, "some-browser", sinon.match({ [option]: true }));
+        it("should register viewport image with basic parameters", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 100 },
+                safeArea: { left: 0, top: 0, width: 100, height: 100 },
             });
+
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.calledOnce(image.toPngBuffer);
+            assert.calledWith(image.toPngBuffer, { resolveWithObject: false });
+            assert.calledOnce(image.crop);
+            assert.calledOnce(image.getSize);
         });
 
-        it("should validate passed capture area", () => {
-            const viewport = { left: 0, top: 0, width: 2, height: 2 };
-            const captureArea = { left: 1, top: 1, width: 1, height: 1 };
+        it("should handle scroll and viewport offsets correctly", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 50, top: 100, width: 200, height: 150 },
+                safeArea: { left: 10, top: 20, width: 180, height: 120 },
+            });
 
-            validate({ viewport, captureArea });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 30, top: 40 }, { left: 10, top: 20 });
 
-            assert.calledWith(CoordValidator.prototype.validate, viewport, captureArea);
+            assert.calledOnce(image.crop);
+            const cropArgs = image.crop.getCall(0).args[0];
+            assert.isObject(cropArgs);
+            assert.hasAllKeys(cropArgs, ["left", "top", "width", "height"]);
+        });
+
+        it("should expand crop area at the beginning when safe area cuts off the head", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 200 },
+                safeArea: { left: 0, top: 50, width: 100, height: 100 },
+            });
+
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.calledOnce(image.crop);
+            const cropArgs = image.crop.getCall(0).args[0];
+            assert.equal(cropArgs.top, 0);
+        });
+
+        it("should handle edge case where safe area and not captured area don't intersect", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 100 },
+                safeArea: { left: 200, top: 200, width: 50, height: 50 },
+            });
+
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.calledOnce(image.crop);
+            const cropArgs = image.crop.getCall(0).args[0];
+            assert.equal(cropArgs.width, 0);
+            assert.equal(cropArgs.height, 0);
+        });
+
+        it("should store image chunk with correct size after cropping", async () => {
+            const compositeImage = createCompositeImage();
+            image.getSize.resolves({ width: 80, height: 60 });
+
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
+
+            assert.isTrue(compositeImage.hasNotCapturedArea()); // Since 60 < 100 height
         });
     });
 
-    describe("ignoreAreas", () => {
-        let image;
+    describe("render", () => {
+        it("should throw error when no images have been registered", async () => {
+            const compositeImage = createCompositeImage();
 
-        beforeEach(() => (image = sinon.createStubInstance(Image)));
-
-        it("should ignore passed area", async () => {
-            const viewport = createViewport({ ignoreAreas: [{ left: 1, top: 1, width: 10, height: 10 }] });
-
-            await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
-
-            assert.calledOnceWith(image.addClear, { left: 1, top: 1, width: 10, height: 10 });
-            assert.calledOnceWith(image.applyClear);
-        });
-
-        it("should ignore multiple areas", async () => {
-            const firstArea = { left: 20, top: 12, width: 12, height: 13 };
-            const secondArea = { left: 12, top: 42, width: 30, height: 23 };
-            const viewport = createViewport({ ignoreAreas: [firstArea, secondArea] });
-
-            await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
-
-            assert.calledWith(image.addClear.firstCall, firstArea);
-            assert.calledWith(image.addClear.secondCall, secondArea);
-            assert.calledOnceWith(image.applyClear);
-        });
-
-        describe("should crop ignore area to image area", () => {
-            it("inside", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 0, top: 0, width: 1000, height: 1000 }] });
-
-                await viewport.ignoreAreas(image, { left: 10, top: 10, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 0, top: 0, width: 100, height: 100 });
-            });
-
-            it("top left", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 10, top: 10, width: 1000, height: 1000 }] });
-
-                await viewport.ignoreAreas(image, { left: 0, top: 0, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 10, top: 10, width: 90, height: 90 });
-            });
-
-            it("top right", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 0, top: 10, width: 100, height: 100 }] });
-
-                await viewport.ignoreAreas(image, { left: 50, top: 0, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 0, top: 10, width: 50, height: 90 });
-            });
-
-            it("bottom left", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 10, top: 10, width: 100, height: 100 }] });
-
-                await viewport.ignoreAreas(image, { left: 0, top: 50, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 10, top: 0, width: 90, height: 60 });
-            });
-
-            it("bottom right", async () => {
-                const viewport = createViewport({
-                    ignoreAreas: [{ left: 10, top: 10, width: 100, height: 100 }],
-                });
-
-                await viewport.ignoreAreas(image, { left: 50, top: 50, width: 100, height: 100 });
-
-                assert.calledOnceWith(image.addClear, { left: 0, top: 0, width: 60, height: 60 });
-            });
-        });
-
-        describe("should not clear area if area is outside of image area", () => {
-            it("bottom right", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 0, top: 0, width: 30, height: 30 }] });
-
-                await viewport.ignoreAreas(image, { left: 50, top: 50, width: 100, height: 100 });
-
-                assert.notCalled(image.addClear);
-            });
-
-            it("top left", async () => {
-                const viewport = createViewport({ ignoreAreas: [{ left: 50, top: 50, width: 100, height: 100 }] });
-
-                await viewport.ignoreAreas(image, { left: 0, top: 0, width: 40, height: 40 });
-
-                assert.notCalled(image.addClear);
-            });
+            await assert.isRejected(
+                compositeImage.render(),
+                /Cannot render composite image: last viewport image buffer, container offset or window offset is not set/,
+            );
         });
     });
 
-    describe("handleImage", () => {
-        it('should apply "ignoreAreas" to the image', async () => {
-            const vieport = createViewport();
-            sandbox.stub(vieport, "ignoreAreas");
-
-            await vieport.handleImage(image);
-
-            assert.calledOnceWith(vieport.ignoreAreas, image);
-        });
-
-        it('should call apply "ignoreAreas" before crop', async () => {
-            const vieport = createViewport();
-            sandbox.stub(vieport, "ignoreAreas");
-
-            await vieport.handleImage(image);
-
-            assert.callOrder(vieport.ignoreAreas, image.crop);
-        });
-
-        describe("should crop to captureArea", () => {
-            beforeEach(() => image.getSize.resolves({ width: 7, height: 10 }));
-
-            it("with default area", async () => {
-                const vieport = createViewport({
-                    captureArea: { left: 1, top: 2, width: 3, height: 4 },
-                    viewport: { left: 0, top: 0, width: 10, height: 10 },
-                });
-
-                await vieport.handleImage(image);
-
-                assert.calledOnceWith(image.crop, { left: 1, top: 2, width: 3, height: 4 });
+    describe("integration scenarios", () => {
+        it("should handle complete workflow from registration to capture state", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 100, height: 200 },
+                safeArea: { left: 0, top: 0, width: 100, height: 100 },
+                ignoreAreas: [{ left: 20, top: 30, width: 40, height: 50 }],
             });
 
-            it("with given area", async () => {
-                const vieport = createViewport({
-                    captureArea: { left: 1, top: 2, width: 3, height: 4 },
-                    viewport: { left: 0, top: 0, width: 10, height: 10 },
-                });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
 
-                await vieport.handleImage(image, { left: 0, top: 0, width: 7, height: 10 });
+            assert.isTrue(compositeImage.hasNotCapturedArea());
 
-                assert.calledOnceWith(image.crop, { left: 1, top: 2, width: 3, height: 4 });
+            const secondImage = createMockImage({
+                getSize: () => Promise.resolve({ width: 100, height: 100 }),
+            });
+            await compositeImage.registerViewportImageAtOffset(secondImage, { left: 0, top: 100 }, { left: 0, top: 0 });
+
+            assert.isFalse(compositeImage.hasNotCapturedArea());
+        });
+
+        it("should handle edge case with zero-sized areas", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 0, height: 0 },
+                safeArea: { left: 0, top: 0, width: 0, height: 0 },
             });
 
-            it("with top offset", async () => {
-                const vieport = createViewport({
-                    captureArea: { left: 1, top: 2, width: 3, height: 4 },
-                    viewport: { left: 0, top: 0, width: 10, height: 10 },
-                });
+            assert.isFalse(compositeImage.hasNotCapturedArea());
+            assert.isNull(compositeImage.getNextNotCapturedArea());
+        });
 
-                await vieport.handleImage(image, { left: 0, top: 7, width: 7, height: 3 });
-
-                assert.calledOnceWith(image.crop, { left: 1, top: 9, width: 3, height: 1 });
+        it("should handle very large capture areas", async () => {
+            const compositeImage = createCompositeImage({
+                captureArea: { left: 0, top: 0, width: 10000, height: 10000 },
+                safeArea: { left: 0, top: 0, width: 1000, height: 1000 },
             });
 
-            it("with negative offsets in captureAreas", async () => {
-                const vieport = createViewport({
-                    captureArea: { left: -1, top: -2, width: 7, height: 8 },
-                    viewport: { left: 4, top: 3, width: 10, height: 10 },
-                });
+            await compositeImage.registerViewportImageAtOffset(image, { left: 0, top: 0 }, { left: 0, top: 0 });
 
-                await vieport.handleImage(image);
+            assert.isTrue(compositeImage.hasNotCapturedArea());
 
-                assert.calledOnceWith(image.crop, { left: 0, top: 0, width: 7, height: 8 });
-            });
-
-            it("with viewport is lower than captureArea without intersection", async () => {
-                const vieport = createViewport({
-                    captureArea: { left: 0, top: 0, width: 10, height: 10 },
-                    viewport: { left: 0, top: 100, width: 10, height: 10 },
-                });
-
-                await vieport.handleImage(image);
-
-                assert.calledOnceWith(image.crop, { left: 0, top: 0, width: 7, height: 10 });
-            });
-        });
-    });
-
-    describe("composite", () => {
-        it('should call "applyJoin"', async () => {
-            const viewport = createViewport();
-
-            await viewport.composite();
-
-            assert.calledOnce(image.applyJoin);
-        });
-
-        it("should return composed image", async () => {
-            const viewport = createViewport();
-
-            const newImage = await viewport.composite();
-
-            assert.match(image, newImage);
-        });
-    });
-
-    describe("save", () => {
-        it("should save viewport image", async () => {
-            const viewport = createViewport();
-
-            await viewport.save("path/to/img");
-
-            assert.calledWith(image.save, "path/to/img");
-        });
-    });
-
-    describe("extendBy", () => {
-        let newImage;
-
-        beforeEach(() => {
-            newImage = sinon.createStubInstance(Image);
-
-            newImage.crop.resolves();
-            newImage.getSize.resolves({});
-        });
-
-        it("should increase viewport height value by scroll height", async () => {
-            const viewport = createViewport({
-                captureArea: { top: 0, height: 7 },
-                viewport: { top: 0, height: 5 },
-            });
-
-            await viewport.extendBy(2, newImage);
-
-            assert.equal(viewport.getVerticalOverflow(), 0);
-        });
-
-        it("should crop new image by passed scroll height", async () => {
-            newImage.getSize.resolves({ height: 4, width: 2 });
-            const viewport = createViewport({
-                captureArea: { left: 0, top: 0, width: 4, height: 20 },
-                viewport: { left: 0, top: 0, width: 4, height: 8 },
-            });
-
-            await viewport.extendBy(2, newImage);
-
-            assert.calledWith(newImage.crop, { left: 0, top: 2, width: 2, height: 2 });
-        });
-
-        it("should join original image with cropped image", async () => {
-            const viewport = createViewport();
-
-            await viewport.extendBy(null, newImage);
-
-            assert.calledOnce(newImage.crop);
-            assert.calledWith(image.addJoin, [newImage]);
-        });
-    });
-
-    describe("getVerticalOverflow", () => {
-        it("should get outside height", () => {
-            const viewport = createViewport({
-                captureArea: { top: 0, height: 15 },
-                viewport: { top: 0, height: 5 },
-            });
-
-            assert.equal(viewport.getVerticalOverflow(), 10);
+            const nextArea = compositeImage.getNextNotCapturedArea();
+            assert.equal(nextArea.height, 9900); // 10000 - 100
         });
     });
 });

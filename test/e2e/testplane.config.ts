@@ -7,15 +7,15 @@ export default {
 
     baseUrl: `http://host.docker.internal:${SERVER_PORT}/`,
 
-    timeTravel: 'off',
-    saveHistoryMode: 'all',
+    timeTravel: "off",
+    saveHistoryMode: "all",
 
     screenshotsDir: "test/e2e/screens",
 
     sets: {
         assertView: {
             files: path.join(__dirname, "tests/assert-view.testplane.js"),
-        }
+        },
     },
 
     takeScreenshotOnFails: {
@@ -26,18 +26,18 @@ export default {
     browsers: {
         chrome: {
             assertViewOpts: {
-                ignoreDiffPixelCount: 4
+                ignoreDiffPixelCount: 4,
             },
-            windowSize: '1280x1024',
+            windowSize: "1280x1024",
             desiredCapabilities: {
-                browserName: 'chrome',
-                'goog:chromeOptions': {
-                    args: ['headless', 'no-sandbox', 'hide-scrollbars', 'disable-dev-shm-usage'],
-                    binary: '/usr/bin/chromium'
-                }
+                browserName: "chrome",
+                "goog:chromeOptions": {
+                    args: ["headless", "no-sandbox", "hide-scrollbars", "disable-dev-shm-usage"],
+                    binary: "/usr/bin/chromium",
+                },
             },
-            waitTimeout: 3000
-        }
+            waitTimeout: 3000,
+        },
     },
 
     devServer: {
@@ -51,9 +51,9 @@ export default {
     },
 
     plugins: {
-        'html-reporter/testplane': {
+        "html-reporter/testplane": {
             enabled: true,
             path: "test/e2e/report",
-        }
-    }
+        },
+    },
 };

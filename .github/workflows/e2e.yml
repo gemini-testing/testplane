@@ -1,104 +1,104 @@
 name: Testplane E2E
 
 on:
-  pull_request:
-    branches: [testplane@9]
+    pull_request:
+        branches: [testplane@9]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  testplane-e2e:
-    runs-on: self-hosted-arc
+    testplane-e2e:
+        runs-on: self-hosted-arc
 
-    permissions:
-      contents: write
-      pull-requests: write
+        permissions:
+            contents: write
+            pull-requests: write
 
-    env:
-      DOCKER_IMAGE_NAME: html-reporter-browsers
+        env:
+            DOCKER_IMAGE_NAME: html-reporter-browsers
 
-    steps:
-    - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-    - name: Use Node.js 20
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'npm'
+            - name: Use Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "npm"
 
-    - name: Install dependencies
-      run: npm ci
+            - name: Install dependencies
+              run: npm ci
 
-    - name: Build the package
-      run: npm run build
+            - name: Build the package
+              run: npm run build
 
-    - name: 'Prepare e2e tests: Cache browser docker image'
-      uses: actions/cache@v3
-      with:
-        path: ~/.docker/cache
-        key: docker-browser-image-testplane
+            - name: "Prepare e2e tests: Cache browser docker image"
+              uses: actions/cache@v3
+              with:
+                  path: ~/.docker/cache
+                  key: docker-browser-image-testplane
 
-    - name: 'Prepare e2e tests: Pull browser docker image'
-      run: |
-        mkdir -p ~/.docker/cache
-        if [ -f ~/.docker/cache/image.tar ]; then
-          docker load -i ~/.docker/cache/image.tar
-        else
-          docker pull yinfra/html-reporter-browsers
-          docker save yinfra/html-reporter-browsers -o ~/.docker/cache/image.tar
-        fi
+            - name: "Prepare e2e tests: Pull browser docker image"
+              run: |
+                  mkdir -p ~/.docker/cache
+                  if [ -f ~/.docker/cache/image.tar ]; then
+                    docker load -i ~/.docker/cache/image.tar
+                  else
+                    docker pull yinfra/html-reporter-browsers
+                    docker save yinfra/html-reporter-browsers -o ~/.docker/cache/image.tar
+                  fi
 
-    - name: 'Prepare e2e tests: Run browser docker image'
-      run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) yinfra/html-reporter-browsers
+            - name: "Prepare e2e tests: Run browser docker image"
+              run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) yinfra/html-reporter-browsers
 
-    # - name: 'Prepare e2e tests: Setup env'
-    #   run: |
-    #     REPORT_PREFIX=testplane-reports
-    #     REPORT_DATE=$(date '+%Y-%m-%d')
-    #     echo "DEST_REPORTS_DIR=$REPORT_PREFIX/$REPORT_DATE/${{ github.run_id }}/${{ github.run_attempt }}" >> $GITHUB_ENV
+            # - name: 'Prepare e2e tests: Setup env'
+            #   run: |
+            #     REPORT_PREFIX=testplane-reports
+            #     REPORT_DATE=$(date '+%Y-%m-%d')
+            #     echo "DEST_REPORTS_DIR=$REPORT_PREFIX/$REPORT_DATE/${{ github.run_id }}/${{ github.run_attempt }}" >> $GITHUB_ENV
 
-    - name: 'e2e: Run Testplane'
-      id: 'testplane'
-      continue-on-error: true
-      run: npm run test-e2e
+            - name: "e2e: Run Testplane"
+              id: "testplane"
+              continue-on-error: true
+              run: npm run test-e2e
 
-    - name: 'e2e: Stop browser docker image'
-      run: |
-        docker kill ${{ env.DOCKER_IMAGE_NAME }} || true
-        docker rm ${{ env.DOCKER_IMAGE_NAME }} || true
+            - name: "e2e: Stop browser docker image"
+              run: |
+                  docker kill ${{ env.DOCKER_IMAGE_NAME }} || true
+                  docker rm ${{ env.DOCKER_IMAGE_NAME }} || true
 
-    - name: Deploy Testplane html-reporter reports
-      uses: jakejarvis/s3-sync-action@v0.5.1
-      with:
-          args: --acl public-read --follow-symlinks
-      env:
-          AWS_S3_BUCKET: gh-testplane-ci
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3_ENDPOINT: https://s3.yandexcloud.net/
-          SOURCE_DIR: "test/e2e/report"
-          DEST_DIR: "testplane-ci/e2e-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/"
+            - name: Deploy Testplane html-reporter reports
+              uses: jakejarvis/s3-sync-action@v0.5.1
+              with:
+                  args: --acl public-read --follow-symlinks
+              env:
+                  AWS_S3_BUCKET: gh-testplane-ci
+                  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  AWS_S3_ENDPOINT: https://s3.yandexcloud.net/
+                  SOURCE_DIR: "test/e2e/report"
+                  DEST_DIR: "testplane-ci/e2e-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/"
 
-    - name: Construct PR comment
-      run: |
-        link="https://storage.yandexcloud.net/gh-testplane-ci/testplane-ci/e2e-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/index.html"
-        if [ "${{ steps.testplane.outcome }}" != "success" ]; then
-          comment="### ❌ Testplane run failed<br><br>[Report](${link})"
-          echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
-        else
-          comment="### ✅ Testplane run succeed<br><br>[Report](${link})"
-          echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
-        fi
+            - name: Construct PR comment
+              run: |
+                  link="https://storage.yandexcloud.net/gh-testplane-ci/testplane-ci/e2e-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/index.html"
+                  if [ "${{ steps.testplane.outcome }}" != "success" ]; then
+                    comment="### ❌ Testplane run failed<br><br>[Report](${link})"
+                    echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
+                  else
+                    comment="### ✅ Testplane run succeed<br><br>[Report](${link})"
+                    echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
+                  fi
 
-    - name: Leave comment to PR with link to Testplane HTML reports
-      if: github.event.pull_request
-      uses: thollander/actions-comment-pull-request@v3
-      with:
-          message: ${{ env.PR_COMMENT }}
-          comment-tag: testplane_results
+            - name: Leave comment to PR with link to Testplane HTML reports
+              if: github.event.pull_request
+              uses: thollander/actions-comment-pull-request@v3
+              with:
+                  message: ${{ env.PR_COMMENT }}
+                  comment-tag: testplane_results
 
-    - name: Fail the job if any Testplane job is failed
-      if: ${{ steps.testplane.outcome != 'success' }}
-      run: exit 1
+            - name: Fail the job if any Testplane job is failed
+              if: ${{ steps.testplane.outcome != 'success' }}
+              run: exit 1

@@ -1,226 +1,501 @@
 "use strict";
 
 const { Image } = require("src/image");
-const { ScreenShooter } = require("src/browser/screen-shooter");
-const { Viewport } = require("src/browser/screen-shooter/composite-image");
 
-describe("screen-shooter", () => {
+const validationStubs = {
+    assertCorrectCaptureAreaBounds: sinon.stub(),
+};
+
+const utilsStubs = {
+    findScrollParentAndScrollBy: sinon.stub().resolves({
+        viewportOffset: { left: 0, top: 0 },
+        scrollElementOffset: { left: 0, top: 0 },
+        readableSelectorToScrollDescr: "window",
+        debugLog: "debug info",
+    }),
+    getBoundingRects: sinon.stub().resolves([]),
+};
+
+const proxyquire = require("proxyquire");
+const { ScreenShooter } = proxyquire("src/browser/screen-shooter", {
+    "./validation": validationStubs,
+    "./utils": utilsStubs,
+});
+const { CompositeImage } = require("src/browser/screen-shooter/composite-image");
+
+describe("ScreenShooter", () => {
     const sandbox = sinon.createSandbox();
+    let browser;
+    let imageStub;
+    let compositeImageStub;
+    let renderedImageStub;
+
+    const createMockPage = (overrides = {}) => ({
+        captureArea: { left: 0, top: 0, width: 100, height: 200 },
+        safeArea: { left: 0, top: 0, width: 100, height: 100 },
+        ignoreAreas: [],
+        viewport: { left: 0, top: 0, width: 100, height: 100 },
+        viewportOffset: { left: 0, top: 0 },
+        scrollElementOffset: { left: 0, top: 0 },
+        documentHeight: 1000,
+        documentWidth: 100,
+        canHaveCaret: false,
+        pixelRatio: 1,
+        debugLog: "debug info",
+        ...overrides,
+    });
+
+    const createDefaultOpts = (overrides = {}) => ({
+        ignoreElements: [],
+        allowViewportOverflow: false,
+        captureElementFromTop: true,
+        compositeImage: true,
+        screenshotDelay: 0,
+        debugId: "test-screenshot",
+        ...overrides,
+    });
 
     beforeEach(() => {
-        sandbox.spy(Viewport, "create");
-        sandbox.stub(Viewport.prototype, "ignoreAreas");
-        sandbox.stub(Viewport.prototype, "composite");
-        sandbox.stub(Viewport.prototype, "handleImage");
-        sandbox.stub(Viewport.prototype, "extendBy");
-        sandbox.stub(Viewport.prototype, "validate");
+        imageStub = sandbox.createStubInstance(Image);
+        renderedImageStub = sandbox.createStubInstance(Image);
+
+        compositeImageStub = {
+            registerViewportImageAtOffset: sandbox.stub().resolves(),
+            render: sandbox.stub().resolves(renderedImageStub),
+            hasNotCapturedArea: sandbox.stub().returns(false),
+            getNextNotCapturedArea: sandbox.stub().returns(null),
+        };
+
+        sandbox.stub(CompositeImage, "create").returns(compositeImageStub);
+
+        validationStubs.assertCorrectCaptureAreaBounds.reset();
+        utilsStubs.findScrollParentAndScrollBy.reset();
+        utilsStubs.getBoundingRects.reset();
+
+        utilsStubs.findScrollParentAndScrollBy.resolves({
+            viewportOffset: { left: 0, top: 0 },
+            scrollElementOffset: { left: 0, top: 0 },
+            readableSelectorToScrollDescr: "window",
+            debugLog: "debug info",
+        });
+        utilsStubs.getBoundingRects.resolves([]);
+
+        browser = {
+            config: {},
+            publicAPI: {
+                execute: sandbox.stub(),
+            },
+            prepareScreenshot: sandbox.stub().resolves(createMockPage()),
+            captureViewportImage: sandbox.stub().resolves(imageStub),
+            cleanupScreenshot: sandbox.stub().resolves(),
+        };
     });
 
     afterEach(() => sandbox.restore());
 
-    describe("capture", () => {
-        let browser;
-        const imageStub = sinon.createStubInstance(Image);
+    describe("create", () => {
+        it("should create new ScreenShooter instance", () => {
+            const screenShooter = ScreenShooter.create(browser);
 
-        const stubPage = page => Object.assign({ viewport: {}, captureArea: {}, ignoreAreas: [], pixelRatio: 1 }, page);
-        const capture = (page, opts) => ScreenShooter.create(browser).capture(stubPage(page), opts);
+            assert.instanceOf(screenShooter, ScreenShooter);
+        });
+    });
+
+    describe("capture", () => {
+        let screenShooter;
 
         beforeEach(() => {
-            browser = {
-                config: {},
-                captureViewportImage: sandbox.stub().resolves(imageStub),
-                scrollBy: sandbox.stub().resolves(),
-            };
+            screenShooter = ScreenShooter.create(browser);
         });
 
-        it("should take vieport image", async () => {
-            await capture({ viewport: "foo", captureArea: "bar" });
+        describe("basic functionality", () => {
+            it("should accept single selector as string", async () => {
+                const selector = ".element";
 
-            assert.calledOnceWith(browser.captureViewportImage, sinon.match({ viewport: "foo", captureArea: "bar" }));
-        });
+                await screenShooter.capture(selector);
 
-        it("should process image with Viewport.handleImage", async () => {
-            await capture({ viewport: "foo", captureArea: "bar" });
+                assert.calledOnceWith(browser.prepareScreenshot, [selector], sinon.match.object);
+            });
 
-            assert.calledOnceWith(Viewport.prototype.handleImage, imageStub);
-        });
+            it("should accept multiple selectors as array", async () => {
+                const selectors = [".element1", ".element2"];
 
-        describe("should create Viewport instance", () => {
-            it("with viewport page", async () => {
-                await capture({ viewport: "foo" });
+                await screenShooter.capture(selectors);
 
-                assert.calledOnceWith(Viewport.create, {
-                    captureArea: {},
-                    ignoreAreas: [],
-                    pixelRatio: 1,
-                    viewport: "foo",
+                assert.calledOnceWith(browser.prepareScreenshot, selectors, sinon.match.object);
+            });
+
+            it("should pass options to prepareScreenshot", async () => {
+                const opts = createDefaultOpts({
+                    ignoreElements: [".ignore1", ".ignore2"],
+                    allowViewportOverflow: true,
+                    captureElementFromTop: false,
+                    selectorToScroll: ".scrollable",
+                    disableAnimation: true,
+                });
+
+                await screenShooter.capture(".element", opts);
+
+                assert.calledOnceWith(browser.prepareScreenshot, [".element"], {
+                    ignoreSelectors: [".ignore1", ".ignore2"],
+                    allowViewportOverflow: true,
+                    captureElementFromTop: false,
+                    selectorToScroll: ".scrollable",
+                    disableAnimation: true,
+                    debug: false,
                 });
             });
 
-            it("with viewport image", async () => {
-                await capture();
+            it("should handle single ignoreElement as string", async () => {
+                const opts = { ignoreElements: ".single-ignore" };
 
-                assert.calledOnceWith(Viewport.create, sinon.match.any, imageStub);
+                await screenShooter.capture(".element", opts);
+
+                assert.calledWith(
+                    browser.prepareScreenshot,
+                    [".element"],
+                    sinon.match({ ignoreSelectors: [".single-ignore"] }),
+                );
             });
 
-            it("with pixelRatio data", async () => {
-                await capture({ pixelRatio: 100500 });
+            it("should remove debugLog from page result", async () => {
+                const pageWithDebugLog = createMockPage({ debugLog: "some debug info" });
+                browser.prepareScreenshot.resolves(pageWithDebugLog);
 
-                assert.calledOnceWith(Viewport.create, {
-                    captureArea: {},
-                    ignoreAreas: [],
-                    pixelRatio: 100500,
-                    viewport: {},
+                await screenShooter.capture(".element");
+
+                assert.isUndefined(pageWithDebugLog.debugLog);
+            });
+        });
+
+        describe("validation", () => {
+            it("should call assertCorrectCaptureAreaBounds with correct parameters", async () => {
+                const selectors = [".element1", ".element2"];
+                const page = createMockPage();
+                const opts = createDefaultOpts();
+                browser.prepareScreenshot.resolves(page);
+
+                await screenShooter.capture(selectors, opts);
+
+                assert.calledOnceWith(
+                    validationStubs.assertCorrectCaptureAreaBounds,
+                    JSON.stringify(selectors),
+                    page.viewport,
+                    page.viewportOffset,
+                    page.captureArea,
+                    opts,
+                );
+            });
+        });
+
+        describe("image capture and composition", () => {
+            it("should capture viewport image with page and screenshotDelay", async () => {
+                const page = createMockPage();
+                const opts = createDefaultOpts({ screenshotDelay: 500 });
+                browser.prepareScreenshot.resolves(page);
+
+                await screenShooter.capture(".element", opts);
+
+                assert.calledOnceWith(browser.captureViewportImage, page, 500);
+            });
+
+            it("should create CompositeImage with page data", async () => {
+                const page = createMockPage({
+                    captureArea: { left: 10, top: 20, width: 300, height: 400 },
+                    safeArea: { left: 0, top: 0, width: 100, height: 150 },
+                    ignoreAreas: [{ left: 50, top: 50, width: 20, height: 20 }],
                 });
+                browser.prepareScreenshot.resolves(page);
+
+                await screenShooter.capture(".element");
+
+                assert.calledOnceWith(CompositeImage.create, page.captureArea, page.safeArea, page.ignoreAreas);
             });
 
-            ["allowViewportOverflow", "compositeImage"].forEach(option => {
-                it(`with passed "${option}" option`, async () => {
-                    await capture({}, { [option]: true });
+            it("should register viewport image at offset", async () => {
+                const page = createMockPage({
+                    scrollElementOffset: { left: 10, top: 20 },
+                    viewportOffset: { left: 5, top: 15 },
+                });
+                browser.prepareScreenshot.resolves(page);
 
-                    assert.calledOnceWith(
-                        Viewport.create,
-                        sinon.match.any,
-                        sinon.match.any,
-                        sinon.match({ [option]: true }),
-                    );
+                await screenShooter.capture(".element");
+
+                assert.calledOnceWith(
+                    compositeImageStub.registerViewportImageAtOffset,
+                    imageStub,
+                    page.scrollElementOffset,
+                    page.viewportOffset,
+                );
+            });
+
+            it("should render composite image and return result", async () => {
+                const page = createMockPage();
+                browser.prepareScreenshot.resolves(page);
+
+                const result = await screenShooter.capture(".element");
+
+                assert.calledOnce(compositeImageStub.render);
+                assert.deepEqual(result, {
+                    image: renderedImageStub,
+                    meta: page,
                 });
             });
         });
 
-        it("should pass screenshotDelay from options to captureViewportImage", async () => {
-            await capture(stubPage(), { screenshotDelay: 2000 });
+        describe("scrolling and composite image extension", () => {
+            beforeEach(() => {
+                compositeImageStub.hasNotCapturedArea.returns(true);
+                compositeImageStub.getNextNotCapturedArea.returns({
+                    left: 0,
+                    top: 100,
+                    width: 100,
+                    height: 100,
+                });
 
-            assert.calledWithMatch(browser.captureViewportImage, sinon.match.any, 2000);
-        });
+                utilsStubs.getBoundingRects
+                    .onCall(0)
+                    .resolves([{ top: 100, left: 0, width: 100, height: 100 }])
+                    .onCall(1)
+                    .resolves([{ top: 50, left: 0, width: 100, height: 100 }]);
 
-        it("should extract image of passed size", async () => {
-            await capture({ captureArea: { foo: "bar" } });
-
-            assert.calledOnceWith(Viewport.prototype.composite);
-        });
-
-        it("should return composited image", () => {
-            Viewport.prototype.composite.resolves({ foo: "bar" });
-
-            return assert.becomes(capture(), { foo: "bar" });
-        });
-
-        describe("if validation fails", () => {
-            describe("with NOT `HeightViewportError`", () => {
-                it("should not extract image", () => {
-                    return capture({ captureArea: { top: -1 } }).catch(() =>
-                        assert.notCalled(Viewport.prototype.extract),
-                    );
+                utilsStubs.findScrollParentAndScrollBy.resolves({
+                    viewportOffset: { left: 0, top: 0 },
+                    scrollElementOffset: { left: 0, top: 50 },
+                    readableSelectorToScrollDescr: "window",
+                    debugLog: "scroll debug info",
                 });
             });
 
-            describe("with `HeightViewportError`", () => {
-                it('should not crop image if "compositeImage" is switched off', async () => {
-                    try {
-                        await capture(
-                            { captureArea: { height: 7 }, viewport: { top: 0, height: 5 } },
-                            { compositeImage: false },
-                        );
-                    } catch (err) {
-                        assert.notCalled(Viewport.prototype.crop);
-                    }
+            it("should not scroll when compositeImage is disabled", async () => {
+                const opts = createDefaultOpts({ compositeImage: false });
+
+                await screenShooter.capture(".element", opts);
+
+                assert.notCalled(utilsStubs.findScrollParentAndScrollBy);
+                assert.notCalled(utilsStubs.getBoundingRects);
+            });
+
+            it("should not scroll when hasNotCapturedArea returns false", async () => {
+                compositeImageStub.hasNotCapturedArea.returns(false);
+
+                await screenShooter.capture(".element");
+
+                assert.notCalled(utilsStubs.findScrollParentAndScrollBy);
+            });
+
+            it("should scroll once when there is uncaptured area", async () => {
+                compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
+
+                const opts = createDefaultOpts();
+                await screenShooter.capture(".element", opts);
+
+                assert.calledOnce(utilsStubs.findScrollParentAndScrollBy);
+                assert.calledTwice(utilsStubs.getBoundingRects);
+            });
+
+            it("should capture new image after scrolling", async () => {
+                const page = createMockPage();
+                browser.prepareScreenshot.resolves(page);
+
+                compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
+
+                const opts = createDefaultOpts();
+                await screenShooter.capture(".element", opts);
+
+                assert.calledTwice(browser.captureViewportImage);
+                assert.calledTwice(compositeImageStub.registerViewportImageAtOffset);
+            });
+
+            it("should calculate correct scroll height based on pixelRatio", async () => {
+                const page = createMockPage({ pixelRatio: 2 });
+                browser.prepareScreenshot.resolves(page);
+
+                compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
+                compositeImageStub.getNextNotCapturedArea.returns({
+                    left: 0,
+                    top: 100,
+                    width: 100,
+                    height: 200,
                 });
 
-                describe('option "compositeImage" is switched on', () => {
-                    beforeEach(() => {
-                        Viewport.prototype.validate
-                            .onFirstCall()
-                            .throws("HeightViewportError")
-                            .onSecondCall()
-                            .returns();
-                    });
+                const opts = createDefaultOpts();
+                await screenShooter.capture(".element", opts);
 
-                    it("should scroll vertically if capture area is higher than viewport", async () => {
-                        const page = { captureArea: { top: 0, height: 7 }, viewport: { top: 0, height: 5 } };
+                const scrollCall = utilsStubs.findScrollParentAndScrollBy.getCall(0);
+                const scrollParams = scrollCall.args[1];
 
-                        await capture(page, { compositeImage: true });
+                // Physical scroll height should be min(200, 100) = 100
+                // Logical scroll height should be ceil(100 / 2) - 1 = 49
+                assert.equal(scrollParams.y, 49);
+            });
 
-                        assert.calledOnceWith(browser.scrollBy, { x: 0, y: 2, selector: undefined });
-                    });
+            it("should pass correct selectors to scroll functions", async () => {
+                const selectors = [".element1", ".element2"];
+                const opts = createDefaultOpts({ selectorToScroll: ".scrollable" });
 
-                    it('should scroll vertically relative to the passed "selectorToScroll" option', async () => {
-                        const page = { captureArea: { top: 0, height: 7 }, viewport: { top: 0, height: 5 } };
+                compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
 
-                        await capture(page, { compositeImage: true, selectorToScroll: ".some-elem" });
+                await screenShooter.capture(selectors, opts);
 
-                        assert.calledOnceWith(browser.scrollBy, { x: 0, y: 2, selector: ".some-elem" });
-                    });
+                assert.calledWith(utilsStubs.getBoundingRects, browser.publicAPI, selectors);
+                assert.calledWith(
+                    utilsStubs.findScrollParentAndScrollBy,
+                    browser.publicAPI,
+                    sinon.match({
+                        selectorToScroll: ".scrollable",
+                        selectorsToCapture: selectors,
+                    }),
+                );
+            });
 
-                    it("should scroll vertically until the end of capture area", async () => {
-                        const page = { captureArea: { top: 0, height: 11 }, viewport: { top: 0, height: 5 } };
-                        Viewport.prototype.validate
-                            .onFirstCall()
-                            .throws("HeightViewportError")
-                            .onSecondCall()
-                            .throws("HeightViewportError")
-                            .onThirdCall()
-                            .returns();
-                        sandbox
-                            .stub(Viewport.prototype, "getVerticalOverflow")
-                            .onFirstCall()
-                            .returns(6)
-                            .onSecondCall()
-                            .returns(1);
+            it("should stop scrolling when reaching scroll limit (same bounding rects)", async () => {
+                compositeImageStub.hasNotCapturedArea.returns(true);
 
-                        await capture(page, { compositeImage: true });
+                utilsStubs.getBoundingRects
+                    .onCall(0)
+                    .resolves([{ top: 100, left: 0, width: 100, height: 100 }])
+                    .onCall(1)
+                    .resolves([{ top: 100, left: 0, width: 100, height: 100 }]);
 
-                        assert.calledTwice(browser.scrollBy);
-                        assert.calledWith(browser.scrollBy, { x: 0, y: 5, selector: undefined });
-                        assert.calledWith(browser.scrollBy, { x: 0, y: 1, selector: undefined });
-                    });
+                const opts = createDefaultOpts();
+                await screenShooter.capture(".element", opts);
 
-                    it("should capture scrolled viewport image", async () => {
-                        const page = { captureArea: { top: 0, height: 7 }, viewport: { top: 0, height: 5 } };
+                assert.calledOnce(utilsStubs.findScrollParentAndScrollBy);
+                assert.calledTwice(utilsStubs.getBoundingRects);
+            });
 
-                        await capture(page, { compositeImage: true });
+            it("should limit scrolling iterations to 50", async () => {
+                compositeImageStub.hasNotCapturedArea.returns(true);
+                compositeImageStub.getNextNotCapturedArea.returns({
+                    left: 0,
+                    top: 100,
+                    width: 100,
+                    height: 100,
+                });
 
-                        assert.calledWithMatch(browser.captureViewportImage, { viewport: { top: 2 } });
-                    });
+                let callCount = 0;
+                utilsStubs.getBoundingRects.callsFake(() => {
+                    return Promise.resolve([{ top: callCount++, left: 0, width: 100, height: 100 }]);
+                });
 
-                    // Test does not fairly check that `captureViewportImage` was called after resolving of `scrollBy`
-                    it("should capture viewport image after scroll", async () => {
-                        const page = { captureArea: { top: 0, height: 7 }, viewport: { top: 0, height: 5 } };
-                        const scrolledPage = {
-                            captureArea: { top: 0, height: 7 },
-                            viewport: { top: 2, height: 5 },
-                            ignoreAreas: [],
-                            pixelRatio: 1,
-                        };
-                        const captureViewportImage = browser.captureViewportImage
-                            .withArgs(scrolledPage)
-                            .named("captureViewportImage");
-                        const scroll = browser.scrollBy.withArgs({ x: 0, y: 2, selector: undefined }).named("scroll");
-
-                        await capture(page, { compositeImage: true });
-
-                        assert.callOrder(scroll, captureViewportImage);
-                    });
-
-                    it("should extend original image by scrolled viewport image", async () => {
-                        const page = { captureArea: { top: 0, height: 7 }, viewport: { top: 0, height: 5 } };
-                        const scrolledPage = { captureArea: { top: 0, height: 7 }, viewport: { top: 2, height: 5 } };
-                        const scrolledViewportScreenshot = imageStub;
-                        browser.captureViewportImage
-                            .withArgs(scrolledPage)
-                            .returns(Promise.resolve(scrolledViewportScreenshot));
-
-                        await capture(page, { compositeImage: true });
-
-                        assert.calledOnceWith(Viewport.prototype.extendBy, 2, scrolledViewportScreenshot);
-                    });
-
-                    it("should return composed image", () => {
-                        Viewport.prototype.composite.resolves("foo bar");
-
-                        return assert.becomes(capture({}, { compositeImage: true }), "foo bar");
+                let scrollCallCount = 0;
+                utilsStubs.findScrollParentAndScrollBy.callsFake(() => {
+                    return Promise.resolve({
+                        viewportOffset: { left: 0, top: scrollCallCount },
+                        scrollElementOffset: { left: 0, top: scrollCallCount++ },
+                        readableSelectorToScrollDescr: "window",
+                        debugLog: "scroll debug info",
                     });
                 });
+
+                const opts = createDefaultOpts();
+                await screenShooter.capture(".element", opts);
+
+                assert.equal(utilsStubs.findScrollParentAndScrollBy.callCount, 50);
+            });
+
+            it("should show warning when reaching scroll limit without allowViewportOverflow", async () => {
+                const consoleWarnStub = sandbox.stub(console, "warn");
+                const opts = createDefaultOpts({
+                    allowViewportOverflow: false,
+                    debugId: "test-screenshot",
+                    selectorToScroll: ".custom-scroll",
+                });
+
+                compositeImageStub.hasNotCapturedArea.returns(true);
+                utilsStubs.getBoundingRects.resolves([{ top: 100, left: 0, width: 100, height: 100 }]);
+                utilsStubs.findScrollParentAndScrollBy.resolves({
+                    viewportOffset: { left: 0, top: 0 },
+                    scrollElementOffset: { left: 0, top: 0 },
+                    readableSelectorToScrollDescr: ".custom-scroll",
+                    debugLog: "debug",
+                });
+
+                await screenShooter.capture([".element1", ".element2"], opts);
+
+                assert.calledOnce(consoleWarnStub);
+                const warningMessage = consoleWarnStub.getCall(0).args[0];
+                assert.include(warningMessage, "test-screenshot");
+                assert.include(warningMessage, ".element1; .element2");
+                assert.include(warningMessage, ".custom-scroll");
+                assert.include(warningMessage, "allowViewportOverflow");
+            });
+
+            it("should not show warning when reaching scroll limit with allowViewportOverflow", async () => {
+                const consoleWarnStub = sandbox.stub(console, "warn");
+                const opts = createDefaultOpts({ allowViewportOverflow: true });
+
+                compositeImageStub.hasNotCapturedArea.returns(true);
+                utilsStubs.getBoundingRects.resolves([{ top: 100, left: 0, width: 100, height: 100 }]);
+
+                await screenShooter.capture(".element", opts);
+
+                assert.notCalled(consoleWarnStub);
+            });
+
+            it("should show auto-detected scroll element in warning when selectorToScroll not provided", async () => {
+                const consoleWarnStub = sandbox.stub(console, "warn");
+                const opts = createDefaultOpts({ allowViewportOverflow: false });
+
+                compositeImageStub.hasNotCapturedArea.returns(true);
+                utilsStubs.getBoundingRects.resolves([{ top: 100, left: 0, width: 100, height: 100 }]);
+                utilsStubs.findScrollParentAndScrollBy.resolves({
+                    viewportOffset: { left: 0, top: 0 },
+                    scrollElementOffset: { left: 0, top: 0 },
+                    readableSelectorToScrollDescr: "auto-detected .scrollable-parent",
+                    debugLog: "debug",
+                });
+
+                await screenShooter.capture(".element", opts);
+
+                const warningMessage = consoleWarnStub.getCall(0).args[0];
+                assert.include(warningMessage, "auto-detected .scrollable-parent");
+                assert.notInclude(warningMessage, "you requested to scroll the following selector:");
+            });
+        });
+
+        describe("error handling", () => {
+            it("should handle getBoundingRects errors gracefully", async () => {
+                compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
+                compositeImageStub.getNextNotCapturedArea.returns({
+                    left: 0,
+                    top: 100,
+                    width: 100,
+                    height: 100,
+                });
+
+                utilsStubs.getBoundingRects
+                    .onCall(0)
+                    .rejects(new Error("Element not found"))
+                    .onCall(1)
+                    .rejects(new Error("Element not found"));
+
+                const opts = createDefaultOpts();
+                await assert.isFulfilled(screenShooter.capture(".element", opts));
+
+                assert.calledOnce(utilsStubs.findScrollParentAndScrollBy);
+            });
+
+            it("should propagate prepareScreenshot errors", async () => {
+                const error = new Error("Prepare screenshot failed");
+                browser.prepareScreenshot.rejects(error);
+
+                await assert.isRejected(screenShooter.capture(".element"), error);
+            });
+
+            it("should propagate captureViewportImage errors", async () => {
+                const error = new Error("Capture failed");
+                browser.captureViewportImage.rejects(error);
+
+                await assert.isRejected(screenShooter.capture(".element"), error);
+            });
+
+            it("should propagate CompositeImage errors", async () => {
+                const error = new Error("Composite failed");
+                compositeImageStub.render.rejects(error);
+
+                await assert.isRejected(screenShooter.capture(".element"), error);
             });
         });
     });

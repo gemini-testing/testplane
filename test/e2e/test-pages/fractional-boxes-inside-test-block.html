@@ -1,51 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fractional Boxes Inside Test Block</title>
-  <style>
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f5f5f5;
-      font-family: Arial, sans-serif;
-    }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fractional Boxes Inside Test Block</title>
+        <style>
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: #f5f5f5;
+                font-family: Arial, sans-serif;
+            }
 
-    .test-block {
-      position: relative;
-      width: 720px;
-      height: 460px;
-      background: #fff;
-      border: 3px solid #000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
-    }
+            .test-block {
+                position: relative;
+                width: 720px;
+                height: 460px;
+                background: #fff;
+                border: 3px solid #000;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            }
 
-    .box {
-      position: absolute;
-      background: red;
-    }
+            .box {
+                position: absolute;
+                background: red;
+            }
 
-    /* Absolute positions and sizes in pixels */
-    .box-1 { top: 39.4px; left: 45.2px; width: 135.2px; height: 67px; }
-    .box-2 { top: 102px; left: 306px; width: 176.1px; height: 84px; }
-    .box-3 { top: 192px; left: 155.1px; width: 240.6px; height: 94px; }
-    .box-4 { bottom: 58px; right: 74px; width: 155px; height: 123px; }
-    .box-5 { top: 315px; left: 40.9px; width: 90px; height: 84px; }
-    .box-6 { top: 75px; right: 40px; width: 113px; height: 56px; }
-  </style>
-</head>
-<body>
-  <div class="test-block" data-testid="test-block">
-    <div class="box box-1" data-testid="box-1"></div>
-    <div class="box box-2" data-testid="box-2"></div>
-    <div class="box box-3" data-testid="box-3"></div>
-    <div class="box box-4" data-testid="box-4"></div>
-    <div class="box box-5" data-testid="box-5"></div>
-    <div class="box box-6" data-testid="box-6"></div>
-  </div>
-</body>
-</html> 
+            /* Absolute positions and sizes in pixels */
+            .box-1 {
+                top: 39.4px;
+                left: 45.2px;
+                width: 135.2px;
+                height: 67px;
+            }
+            .box-2 {
+                top: 102px;
+                left: 306px;
+                width: 176.1px;
+                height: 84px;
+            }
+            .box-3 {
+                top: 192px;
+                left: 155.1px;
+                width: 240.6px;
+                height: 94px;
+            }
+            .box-4 {
+                bottom: 58px;
+                right: 74px;
+                width: 155px;
+                height: 123px;
+            }
+            .box-5 {
+                top: 315px;
+                left: 40.9px;
+                width: 90px;
+                height: 84px;
+            }
+            .box-6 {
+                top: 75px;
+                right: 40px;
+                width: 113px;
+                height: 56px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="test-block" data-testid="test-block">
+            <div class="box box-1" data-testid="box-1"></div>
+            <div class="box box-2" data-testid="box-2"></div>
+            <div class="box box-3" data-testid="box-3"></div>
+            <div class="box box-4" data-testid="box-4"></div>
+            <div class="box box-5" data-testid="box-5"></div>
+            <div class="box box-6" data-testid="box-6"></div>
+        </div>
+    </body>
+</html>
