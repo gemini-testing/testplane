@@ -31,7 +31,7 @@
     "lint": "eslint --cache . && prettier --check .",
     "reformat": "eslint --fix . && prettier --write .",
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
-    "test-unit": "_mocha \"test/!(integration)/**/*.js\"",
+    "test-unit": "_mocha \"test/!(integration|e2e)/**/*.js\"",
     "test": "npm run test-unit && npm run check-types && npm run lint",
     "test-integration": "mocha -r ts-node/register -r test/integration/standalone/preload-browser.fixture.ts test/integration/standalone/standalone.test.ts",
     "test-e2e": "node bin/testplane --config test/e2e/testplane.config.ts",
