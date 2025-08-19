@@ -62,6 +62,7 @@ describe("runner/test-runner/regular-test-runner", () => {
             publicAPI: {
                 options: { default: "options" },
             },
+            getPid: () => undefined,
         });
     };
 
