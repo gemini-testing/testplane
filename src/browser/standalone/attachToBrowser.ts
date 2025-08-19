@@ -4,6 +4,7 @@ import { Calibrator } from "./../calibrator";
 import { AsyncEmitter } from "../../events";
 import { BrowserName, type W3CBrowserName, type SessionOptions } from "./../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
+import { exec } from "child_process";
 
 export async function attachToBrowser(session: SessionOptions): Promise<WebdriverIO.Browser> {
     const browserName = session.sessionCaps?.browserName || BrowserName.CHROME;
@@ -46,6 +47,17 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
     const calibrator = new Calibrator();
 
     await existingBrowser.init(session, calibrator);
+
+    existingBrowser.publicAPI.overwriteCommand("deleteSession", async originalCommand => {
+        await originalCommand({ shutdownDriver: true });
+
+        // force delete driver process by port, because { shutdownDriver: true } in prev command doesn't work :(
+        exec(
+            process.platform === "win32"
+                ? `Stop-Process -Id (Get-NetTCPConnection -LocalPort ${session.sessionOpts?.port}).OwningProcess -Force`
+                : `kill -9 $(lsof -t -i :${session.sessionOpts?.port})`,
+        );
+    });
 
     return existingBrowser.publicAPI;
 }
