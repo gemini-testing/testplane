@@ -11,7 +11,9 @@ import type { StandaloneBrowserOptionsInput } from "./types";
 
 const webdriverPool = new WebdriverPool();
 
-export async function launchBrowser(options: StandaloneBrowserOptionsInput = {}): Promise<WebdriverIO.Browser> {
+export async function launchBrowser(
+    options: StandaloneBrowserOptionsInput = {},
+): Promise<WebdriverIO.Browser & { getPid?: () => number | undefined }> {
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
@@ -96,6 +98,8 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
         await existingBrowser.quit();
         await newBrowser.kill();
     });
+
+    existingBrowser.publicAPI.addCommand("getPid", () => newBrowser.getPid());
 
     return existingBrowser.publicAPI;
 }
