@@ -22,7 +22,7 @@ describe("Standalone Browser E2E Tests", function () {
         process.exit(1);
     }, 120000).unref();
 
-    let browser: WebdriverIO.Browser & { getPid?: () => number | undefined };
+    let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
 
     after(async function () {
         await browser.deleteSession();
@@ -72,7 +72,7 @@ describe("Standalone Browser E2E Tests", function () {
     it("attach to browser works", async function () {
         browser = await launchBrowser(BROWSER_CONFIG);
         await browser.url("https://example.com");
-        const pid = (await browser.getPid!()) as number;
+        const driverPid = (await browser.getDriverPid!()) as number;
 
         const attachedBrowser = await attachToBrowser({
             sessionId: browser.sessionId,
@@ -81,7 +81,7 @@ describe("Standalone Browser E2E Tests", function () {
                 capabilities: browser.capabilities,
                 ...browser.options,
             },
-            pid,
+            driverPid,
         });
 
         await attachedBrowser.url("https://yandex.com/");
@@ -92,7 +92,7 @@ describe("Standalone Browser E2E Tests", function () {
         assert.strictEqual(url, "https://yandex.com/");
 
         // Check that browser process exist
-        assert.strictEqual(checkProcessExists(pid), true);
+        assert.strictEqual(checkProcessExists(driverPid), true);
 
         // Delete session should kill process
         await attachedBrowser.deleteSession();
@@ -100,6 +100,6 @@ describe("Standalone Browser E2E Tests", function () {
         await browser.pause(100);
 
         // Check that browser process doesn't exist
-        assert.strictEqual(checkProcessExists(pid), false);
+        assert.strictEqual(checkProcessExists(driverPid), false);
     });
 });

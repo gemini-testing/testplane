@@ -13,7 +13,7 @@ const webdriverPool = new WebdriverPool();
 
 export async function launchBrowser(
     options: StandaloneBrowserOptionsInput = {},
-): Promise<WebdriverIO.Browser & { getPid?: () => number | undefined }> {
+): Promise<WebdriverIO.Browser & { getDriverPid?: () => number | undefined }> {
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
@@ -99,7 +99,7 @@ export async function launchBrowser(
         await newBrowser.kill();
     });
 
-    existingBrowser.publicAPI.addCommand("getPid", () => newBrowser.getPid());
+    existingBrowser.publicAPI.addCommand("getDriverPid", () => newBrowser.getDriverPid());
 
     return existingBrowser.publicAPI;
 }

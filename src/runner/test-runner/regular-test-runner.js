@@ -135,7 +135,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             }
         }
 
-        const pid = this._browser.getPid();
+        const pid = this._browser.getDriverPid();
         const browser = this._browser;
         this._browser = null;
 
@@ -167,7 +167,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
                     sessionId: this._browser.sessionId,
                     sessionCaps: this._browser.capabilities,
                     sessionOpts: this._browser.publicAPI.options,
-                    pid: this._browser.getPid(),
+                    driverPid: this._browser.getDriverPid(),
                 },
                 null,
                 2,

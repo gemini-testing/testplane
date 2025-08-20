@@ -40,7 +40,7 @@ export interface SessionOptions {
     sessionId: string;
     sessionCaps?: WebdriverIO.Capabilities;
     sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
-    pid?: number;
+    driverPid?: number;
 }
 
 type FunctionProperties<T> = Exclude<

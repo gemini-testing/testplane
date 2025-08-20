@@ -51,8 +51,8 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
         await originalCommand({ shutdownDriver: true });
 
         // force kill driver process by pid, because { shutdownDriver: true } in prev command doesn't work :(
-        if (session.pid) {
-            process.kill(session.pid, 9);
+        if (session.driverPid) {
+            process.kill(session.driverPid, 9);
         }
     });
 

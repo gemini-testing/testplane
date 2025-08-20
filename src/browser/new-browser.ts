@@ -103,7 +103,7 @@ export class NewBrowser extends Browser {
         }
     }
 
-    getPid(): number | undefined {
+    getDriverPid(): number | undefined {
         if (this._wdProcess) {
             return this._wdProcess.getPid();
         }
