@@ -1,7 +1,7 @@
 blank_issues_enabled: false
 contact_links:
     - name: Question 🤷
-      url: https://github.com/gemini-testing/hermione/discussions
+      url: https://github.com/gemini-testing/testplane/discussions
       about: Ask questions and discuss with other community members
-    - name: My company is migrating to Hermione and we have several issues/feature requests
-      url: https://github.com/gemini-testing/hermione/discussions/838
+    - name: My company is migrating to Testplane and we have several issues/feature requests
+      url: https://github.com/gemini-testing/testplane/discussions/838

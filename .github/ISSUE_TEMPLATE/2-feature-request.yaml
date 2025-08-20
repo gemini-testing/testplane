@@ -1,17 +1,17 @@
 name: Feature Request
-description: Suggest a new feature for Hermione
+description: Suggest a new feature for Testplane
 labels: ["type: feature"]
 body:
     - type: markdown
       attributes:
           value: |
               These issues are for **concrete and actionable proposals**. If you just have
-              a general problem that you would like to brainstorm, open a Discussion instead [here](https://github.com/gemini-testing/hermione/discussions).
+              a general problem that you would like to brainstorm, open a Discussion instead [here](https://github.com/gemini-testing/testplane/discussions).
     - type: markdown
       attributes:
           value: |
               If this feature affects many people in a company/big team, create a post for your company in the following discussion:
-              [https://github.com/gemini-testing/hermione/discussions/838](https://github.com/gemini-testing/hermione/discussions/838)
+              [https://github.com/gemini-testing/testplane/discussions/838](https://github.com/gemini-testing/testplane/discussions/838)
               and link the issue in your post.
 
               This will help us prioritize issues that affect more people.
@@ -19,7 +19,7 @@ body:
       attributes:
           label: Contribution
           options:
-              - label: I'd be willing to implement this feature ([contributing guide](https://github.com/gemini-testing/hermione/blob/master/CONTRIBUTING.md))
+              - label: I'd be willing to implement this feature ([contributing guide](https://github.com/gemini-testing/testplane/blob/master/CONTRIBUTING.md))
     - type: textarea
       id: user-story
       attributes:
@@ -30,7 +30,7 @@ body:
       id: solution
       attributes:
           label: Describe the solution you'd like
-          description: A clear and concise description of what you want to happen. Consider that Hermione is used by many people, and your particular use case might not make sense to implement in the core.
+          description: A clear and concise description of what you want to happen. Consider that Testplane is used by many people, and your particular use case might not make sense to implement in the core.
       validations:
           required: true
     - type: textarea
