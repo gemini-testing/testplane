@@ -2,7 +2,7 @@ name: Standalone Browser Integration Tests
 
 on:
     pull_request:
-        branches: [master]
+        branches: [master, testplane@9]
 
 jobs:
     integration-test:

@@ -113,7 +113,7 @@ describe("Image", () => {
             const clearArea = { left: 20, top: 10, width: 40, height: 30 };
 
             await image.addClear(clearArea);
-            image.applyClear();
+            await image.applyJoin();
 
             assert.calledOnceWith(sharpStub.composite, [transformAreaToClearData_({ ...clearArea, channels: 4 })]);
         });
@@ -125,7 +125,7 @@ describe("Image", () => {
 
             await image.addClear(firstArea);
             await image.addClear(secondArea);
-            image.applyClear();
+            await image.applyJoin();
 
             assert.calledOnceWith(sharpStub.composite, [
                 transformAreaToClearData_({ ...firstArea, channels: 3 }),
