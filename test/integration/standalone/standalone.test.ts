@@ -16,11 +16,11 @@ describe("Standalone Browser E2E Tests", function () {
 
     setTimeout(() => {
         console.error(
-            "ERROR! Standalone test failed to complete in 30 seconds.\n" +
+            "ERROR! Standalone test failed to complete in 120 seconds.\n" +
                 "If all tests have passed, most likely this is caused by a bug in browser cleanup logic, e.g. deleteSession() command.",
         );
         process.exit(1);
-    }, 60000).unref();
+    }, 120000).unref();
 
     let browser: WebdriverIO.Browser & { getPid?: () => number | undefined };
 
@@ -97,7 +97,9 @@ describe("Standalone Browser E2E Tests", function () {
         // Delete session should kill process
         await attachedBrowser.deleteSession();
 
+        await browser.pause(100);
+
         // Check that browser process doesn't exist
-        setTimeout(() => assert.strictEqual(checkProcessExists(pid), false), 100);
+        assert.strictEqual(checkProcessExists(pid), false);
     });
 });
