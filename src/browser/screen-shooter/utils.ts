@@ -242,7 +242,7 @@ export async function findScrollParentAndScrollBy(
             resultScrollOffset.top === originalScrollOffset.top &&
             !(reachedVerticalScrollLimit && reachedHorizontalScrollLimit)
         ) {
-            if (iterations++ > 100000) {
+            if (iterations++ > 10000) {
                 return getResultScrollOffsets(elementToScroll);
             }
             resultScrollOffset = getScrollOffset(elementToScroll);

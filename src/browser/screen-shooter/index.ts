@@ -120,6 +120,9 @@ export class ScreenShooter {
             Math.min(nextNotCapturedArea.height, page.safeArea.height),
             2 * page.pixelRatio,
         );
+        // Subtract 1px to avoid rounding artifacts. Without this, when top edge of scroll container is at fractional
+        // position and if it gets rounded to the next integer, we'd get 1px lines of that edge. Scrolling 1px less means
+        // that we'll have 1px reserve at the top and that fractional border won't be visible.
         const logicalScrollHeight = Math.ceil(physicalScrollHeight / page.pixelRatio) - 1;
 
         const browserScrollByDebug = makeDebug("testplane:screenshots:browser:scrollBy");
