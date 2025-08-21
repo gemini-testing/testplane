@@ -917,4 +917,22 @@ describe("worker/runner/test-runner", () => {
             });
         });
     });
+
+    describe("isLastTestFailed flag initialization", () => {
+        it("should automatically reset isLastTestFailed flag when creating browser", async () => {
+            const browser = mkBrowser_();
+            browser.state.isLastTestFailed = false;
+            BrowserAgent.prototype.getBrowser.resolves(browser);
+
+            const runner = mkRunner_();
+            await runner.prepareToRun({
+                sessionId: "session-id",
+                sessionCaps: {},
+                sessionOpts: {},
+                state: { isLastTestFailed: true },
+            });
+
+            assert.strictEqual(browser.state.isLastTestFailed, false);
+        });
+    });
 });

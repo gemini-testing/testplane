@@ -8,6 +8,7 @@ import type { OpenAndWaitCommand } from "./commands/openAndWait";
 import type { Callstack } from "./history/callstack";
 import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
+import type { Options } from "@testplane/wdio-types";
 
 export const BrowserName = {
     CHROME: "chrome" as PuppeteerBrowser.CHROME,
@@ -33,6 +34,13 @@ export interface Browser {
     applyState: (state: Record<string, unknown>) => void;
     callstackHistory: Callstack;
     customCommands: { name: string; elementScope: boolean }[];
+}
+
+export interface SessionOptions {
+    sessionId: string;
+    sessionCaps?: WebdriverIO.Capabilities;
+    sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
+    driverPid?: number;
 }
 
 type FunctionProperties<T> = Exclude<

@@ -6,6 +6,7 @@ const { RunnableEmitter } = require("../types");
 const logger = require("../../utils/logger");
 const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
+const RuntimeConfig = require("../../config/runtime-config");
 
 module.exports = class RegularTestRunner extends RunnableEmitter {
     constructor(test, browserAgent) {
@@ -121,6 +122,20 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             return;
         }
 
+        const runtimeConfig = RuntimeConfig.getInstance();
+        const keepBrowserMode = runtimeConfig.keepBrowserMode;
+
+        if (keepBrowserMode?.enabled) {
+            const hasError = !!this._test.err || !!browserState?.isLastTestFailed;
+            const shouldKeep = keepBrowserMode.onFail ? hasError : true;
+
+            if (shouldKeep) {
+                this._logKeepBrowserInfo();
+                return;
+            }
+        }
+
+        const pid = this._browser.getDriverPid();
         const browser = this._browser;
         this._browser = null;
 
@@ -128,8 +143,35 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
         try {
             await this._browserAgent.freeBrowser(browser);
+
+            if (pid) {
+                process.kill(pid, 9);
+            }
         } catch (error) {
             logger.warn(`WARNING: can not release browser: ${error}`);
         }
+    }
+
+    _logKeepBrowserInfo() {
+        if (!this._browser) {
+            return;
+        }
+
+        logger.log(
+            "Testplane run has finished, but the browser won't be closed, because you passed the --keep-browser argument.",
+        );
+        logger.log("You may attach to this browser using the following capabilities:");
+        logger.log(
+            JSON.stringify(
+                {
+                    sessionId: this._browser.sessionId,
+                    sessionCaps: this._browser.capabilities,
+                    sessionOpts: this._browser.publicAPI.options,
+                    driverPid: this._browser.getDriverPid(),
+                },
+                null,
+                2,
+            ),
+        );
     }
 };

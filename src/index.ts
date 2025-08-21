@@ -14,6 +14,8 @@ export * from "./mock";
 
 export * as unstable from "./unstable";
 
+export type { SessionOptions } from "./browser/types";
+
 export type {
     WdioBrowser,
     TestResult,

@@ -11,6 +11,7 @@ const { Test } = require("src/test-reader/test-object");
 const { promiseDelay } = require("../../../../src/utils/promise");
 const { EventEmitter } = require("events");
 const proxyquire = require("proxyquire");
+const RuntimeConfig = require("src/config/runtime-config");
 
 describe("runner/test-runner/regular-test-runner", () => {
     const sandbox = sinon.createSandbox();
@@ -61,6 +62,7 @@ describe("runner/test-runner/regular-test-runner", () => {
             publicAPI: {
                 options: { default: "options" },
             },
+            getDriverPid: () => undefined,
         });
     };
 
@@ -68,6 +70,7 @@ describe("runner/test-runner/regular-test-runner", () => {
         RegularTestRunner = proxyquire("src/runner/test-runner/regular-test-runner", {
             "../../utils/logger": {
                 warn: sandbox.stub(),
+                log: sandbox.stub(),
             },
         });
 
@@ -83,6 +86,8 @@ describe("runner/test-runner/regular-test-runner", () => {
         sandbox.stub(crypto, "randomBytes").callsFake(size => {
             return Buffer.from("11".repeat(size), "hex");
         });
+
+        sandbox.stub(RuntimeConfig, "getInstance").returns({});
     });
 
     afterEach(() => sandbox.restore());
@@ -643,6 +648,78 @@ describe("runner/test-runner/regular-test-runner", () => {
                 delayedEmit();
 
                 assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+            });
+
+            describe("keep-browser mode", () => {
+                it("should not release browser when --keep-browser is enabled", async () => {
+                    RuntimeConfig.getInstance.returns({
+                        keepBrowserMode: { enabled: true, onFail: false },
+                    });
+
+                    const browser = stubBrowser_({ sessionId: "100500" });
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await runTest_({
+                        onRun: ({ workers }) => {
+                            workers.emit(`worker.${browser.sessionId}.freeBrowser`);
+                        },
+                    });
+
+                    assert.notCalled(BrowserAgent.prototype.freeBrowser);
+                });
+
+                it("should not release browser when --keep-browser-on-fail is enabled and test fails", async () => {
+                    RuntimeConfig.getInstance.returns({
+                        keepBrowserMode: { enabled: true, onFail: true },
+                    });
+
+                    const browser = stubBrowser_({ sessionId: "100500" });
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    const workers = mkWorkers_();
+                    workers.runTest.callsFake(() => {
+                        workers.emit(`worker.${browser.sessionId}.freeBrowser`, { isLastTestFailed: true });
+                        return Promise.reject(new Error("Test failed"));
+                    });
+
+                    await run_({ workers });
+
+                    assert.notCalled(BrowserAgent.prototype.freeBrowser);
+                });
+
+                it("should release browser when --keep-browser-on-fail is enabled and test passes", async () => {
+                    RuntimeConfig.getInstance.returns({
+                        keepBrowserMode: { enabled: true, onFail: true },
+                    });
+
+                    const browser = stubBrowser_({ sessionId: "100500" });
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await runTest_({
+                        onRun: ({ workers }) => {
+                            workers.emit(`worker.${browser.sessionId}.freeBrowser`);
+                        },
+                    });
+
+                    assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+                });
+
+                it("should release browser when keep-browser mode is disabled", async () => {
+                    RuntimeConfig.getInstance.returns({
+                        keepBrowserMode: { enabled: false, onFail: false },
+                    });
+
+                    const browser = stubBrowser_({ sessionId: "100500" });
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await runTest_({
+                        onRun: ({ workers }) => {
+                            workers.emit(`worker.${browser.sessionId}.freeBrowser`);
+                        },
+                    });
+
+                    assert.calledOnce(BrowserAgent.prototype.freeBrowser);
+                });
             });
         });
     });

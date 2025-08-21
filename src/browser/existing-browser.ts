@@ -16,16 +16,10 @@ import { Config } from "../config";
 import { Image, Rect } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
-import type { Options } from "@testplane/wdio-types";
 import { runWithoutHistory } from "./history";
+import type { SessionOptions } from "./types";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
-
-interface SessionOptions {
-    sessionId: string;
-    sessionCaps?: WebdriverIO.Capabilities;
-    sessionOpts?: Options.WebdriverIO & { capabilities: WebdriverIO.Capabilities };
-}
 
 interface PrepareScreenshotOpts {
     disableAnimation?: boolean;

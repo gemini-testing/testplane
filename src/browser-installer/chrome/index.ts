@@ -7,13 +7,14 @@ import { getMilestone } from "../utils";
 import { installChrome, resolveLatestChromeVersion } from "./browser";
 import { installChromeDriver } from "./driver";
 import { isUbuntu, getUbuntuLinkerEnv } from "../ubuntu-packages";
+import RuntimeConfig from "../../config/runtime-config";
 
 export { installChrome, resolveLatestChromeVersion, installChromeDriver };
 
 export const runChromeDriver = async (
     chromeVersion: string,
     { debug = false } = {},
-): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
+): Promise<{ gridUrl: string; process: ChildProcess; port: number; kill: () => void }> => {
     const [chromeDriverPath, randomPort, chromeDriverEnv] = await Promise.all([
         installChromeDriver(chromeVersion),
         getPort(),
@@ -22,9 +23,12 @@ export const runChromeDriver = async (
             .then(extraEnv => (extraEnv ? { ...process.env, ...extraEnv } : process.env)),
     ]);
 
+    const runtimeConfig = RuntimeConfig.getInstance();
+    const keepBrowserModeEnabled = runtimeConfig.keepBrowserMode?.enabled;
+
     const chromeDriver = spawn(chromeDriverPath, [`--port=${randomPort}`, debug ? `--verbose` : "--silent"], {
         windowsHide: true,
-        detached: false,
+        detached: keepBrowserModeEnabled || false,
         env: chromeDriverEnv,
     });
 
@@ -34,7 +38,9 @@ export const runChromeDriver = async (
 
     const gridUrl = `http://127.0.0.1:${randomPort}`;
 
-    process.once("exit", () => chromeDriver.kill());
+    if (!keepBrowserModeEnabled) {
+        process.once("exit", () => chromeDriver.kill());
+    }
 
     await waitPort({
         port: randomPort,
@@ -43,5 +49,10 @@ export const runChromeDriver = async (
         interval: DRIVER_WAIT_INTERVAL,
     });
 
-    return { gridUrl, process: chromeDriver, port: randomPort };
+    return {
+        gridUrl,
+        process: chromeDriver,
+        port: randomPort,
+        kill: () => chromeDriver.kill(),
+    };
 };

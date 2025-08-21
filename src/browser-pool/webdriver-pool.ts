@@ -5,7 +5,7 @@ import type { SupportedBrowser } from "../browser-installer";
 type BrowserVersion = string;
 type Port = string;
 type ChildProcessWithStatus = { process: ChildProcess; gridUrl: string; isBusy: boolean };
-export type WdProcess = { gridUrl: string; free: () => void; kill: () => void };
+export type WdProcess = { gridUrl: string; free: () => void; kill: () => void; getPid: () => number | undefined };
 
 export class WebdriverPool {
     private driverProcess: Map<SupportedBrowser, Map<BrowserVersion, Record<Port, ChildProcessWithStatus>>>;
@@ -45,6 +45,7 @@ export class WebdriverPool {
                     gridUrl: wdProcesses[port].gridUrl,
                     free: () => this.freeWebdriver(port),
                     kill: () => this.killWebdriver(browserNameNormalized, browserVersionNormalized, port),
+                    getPid: () => wdProcesses[port].process.pid,
                 };
             }
         }
@@ -98,6 +99,7 @@ export class WebdriverPool {
             gridUrl: driver.gridUrl,
             free: () => this.freeWebdriver(String(driver.port)),
             kill: () => this.killWebdriver(browserName, browserVersion, String(driver.port)),
+            getPid: () => driver.process.pid,
         };
     }
 }

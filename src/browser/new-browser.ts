@@ -103,6 +103,14 @@ export class NewBrowser extends Browser {
         }
     }
 
+    getDriverPid(): number | undefined {
+        if (this._wdProcess) {
+            return this._wdProcess.getPid();
+        }
+
+        return undefined;
+    }
+
     protected async _createSession(): Promise<WebdriverIO.Browser> {
         const sessionOpts = await this._getSessionOpts();
 

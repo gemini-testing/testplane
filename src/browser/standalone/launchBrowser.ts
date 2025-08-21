@@ -1,42 +1,19 @@
-import { Config } from "../config";
-import { NewBrowser } from "./new-browser";
-import { ExistingBrowser } from "./existing-browser";
-import { Calibrator } from "./calibrator";
-import { AsyncEmitter } from "../events";
-import { BrowserName, type W3CBrowserName } from "./types";
-import { getNormalizedBrowserName } from "../utils/browser";
-import { LOCAL_GRID_URL } from "../constants/config";
-import { WebdriverPool } from "../browser-pool/webdriver-pool";
-import type { CommonConfig, SystemConfig } from "../config/types";
-
-export type StandaloneBrowserOptions = Pick<
-    CommonConfig,
-    | "automationProtocol"
-    | "desiredCapabilities"
-    | "gridUrl"
-    | "baseUrl"
-    | "httpTimeout"
-    | "pageLoadTimeout"
-    | "waitTimeout"
-    | "waitInterval"
-    | "headless"
-    | "prepareBrowser"
-    | "windowSize"
-    | "orientation"
-    | "headers"
-    | "strictSSL"
-    | "user"
-    | "key"
-    | "system"
->;
-
-export type StandaloneBrowserOptionsInput = Partial<Omit<StandaloneBrowserOptions, "system">> & {
-    system?: Partial<SystemConfig>;
-};
+import { Config } from "../../config";
+import { NewBrowser } from "./../new-browser";
+import { ExistingBrowser } from "./../existing-browser";
+import { Calibrator } from "./../calibrator";
+import { AsyncEmitter } from "../../events";
+import { BrowserName, type W3CBrowserName } from "./../types";
+import { getNormalizedBrowserName } from "../../utils/browser";
+import { LOCAL_GRID_URL } from "../../constants/config";
+import { WebdriverPool } from "../../browser-pool/webdriver-pool";
+import type { StandaloneBrowserOptionsInput } from "./types";
 
 const webdriverPool = new WebdriverPool();
 
-export async function launchBrowser(options: StandaloneBrowserOptionsInput = {}): Promise<WebdriverIO.Browser> {
+export async function launchBrowser(
+    options: StandaloneBrowserOptionsInput = {},
+): Promise<WebdriverIO.Browser & { getDriverPid?: () => number | undefined }> {
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
@@ -121,6 +98,8 @@ export async function launchBrowser(options: StandaloneBrowserOptionsInput = {})
         await existingBrowser.quit();
         await newBrowser.kill();
     });
+
+    existingBrowser.publicAPI.addCommand("getDriverPid", () => newBrowser.getDriverPid());
 
     return existingBrowser.publicAPI;
 }
