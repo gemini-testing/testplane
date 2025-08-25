@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.31.0](https://github.com/gemini-testing/testplane/compare/v8.30.3...v8.31.0) (2025-08-25)
+
+
+### Features
+
+* **keep-browser:** keep browser alive after end of tests ([7bdb274](https://github.com/gemini-testing/testplane/commit/7bdb27407245d7bda8af0de3cfc91b1f1bc3283e)), closes [#1](https://github.com/gemini-testing/testplane/issues/1)
+
 ### [8.30.3](https://github.com/gemini-testing/testplane/compare/v8.30.2...v8.30.3) (2025-08-18)
 
 
