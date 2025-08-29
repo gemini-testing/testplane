@@ -113,3 +113,5 @@ Visit our [contributing guide](CONTRIBUTING.md) to understand more about our dev
 
 ## License
 Testplane is [MIT licensed](LICENSE).
+
+#e9131b5e2fad3afb3ab51510598e7c8f0bea12f3
