@@ -15,21 +15,14 @@ const {
     BROWSER_TEST_RUN_ENV,
 } = require("src/constants/config");
 const { MIN_CHROME_VERSION_SUPPORT_ISOLATION, X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
-const {
-    mkExistingBrowser_,
-    mkSessionStub_,
-    mkCDPStub_,
-    mkCDPBrowserCtx_,
-    mkCDPPage_,
-    mkCDPTarget_,
-} = require("./utils");
+const { mkExistingBrowser_, mkSessionStub_ } = require("./utils");
 const proxyquire = require("proxyquire");
 
 describe("ExistingBrowser", () => {
     const sandbox = sinon.createSandbox();
     let session;
     let ExistingBrowser;
-    let webdriverioAttachStub, clientBridgeBuildStub, loggerWarnStub, initCommandHistoryStub, runGroupStub;
+    let webdriverioAttachStub, clientBridgeBuildStub, loggerWarnStub, initCommandHistoryStub, runGroupStub, CDPStub;
 
     const mkBrowser_ = (configOpts, opts) => {
         return mkExistingBrowser_(configOpts, opts, ExistingBrowser);
@@ -60,6 +53,20 @@ describe("ExistingBrowser", () => {
         initCommandHistoryStub = sandbox.stub();
         runGroupStub = sandbox.stub();
 
+        CDPStub = {
+            target: {
+                getBrowserContexts: sandbox.stub().resolves({ browserContextIds: [] }),
+                createBrowserContext: sandbox.stub().resolves({ browserContextId: "some-browser-context" }),
+                disposeBrowserContext: sandbox.stub().resolves(),
+                createTarget: sandbox.stub().resolves({ targetId: "some-target-id" }),
+                closeTarget: sandbox.stub().resolves(),
+                activateTarget: sandbox.stub().resolves(),
+                attachToTarget: sandbox.stub().resolves("some-target-id"),
+                getTargets: sandbox.stub().resolves({ targetInfos: [] }),
+            },
+            close: sandbox.stub(),
+        };
+
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
             "@testplane/webdriverio": {
                 attach: webdriverioAttachStub,
@@ -78,6 +85,11 @@ describe("ExistingBrowser", () => {
             }),
             "./history": {
                 runGroup: runGroupStub.callsFake(history.runGroup),
+            },
+            "./cdp": {
+                CDP: {
+                    create: sandbox.stub().resolves(CDPStub),
+                },
             },
         }).ExistingBrowser;
     });
@@ -514,23 +526,6 @@ describe("ExistingBrowser", () => {
         });
 
         describe("perform isolation", () => {
-            let cdp, incognitoBrowserCtx, incognitoPage, incognitoTarget;
-
-            beforeEach(() => {
-                incognitoTarget = mkCDPTarget_();
-                incognitoPage = mkCDPPage_();
-                incognitoPage.target.returns(incognitoTarget);
-
-                incognitoBrowserCtx = mkCDPBrowserCtx_();
-                incognitoBrowserCtx.newPage.resolves(incognitoPage);
-                incognitoBrowserCtx.isIncognito.returns(true);
-
-                cdp = mkCDPStub_();
-                cdp.createIncognitoBrowserContext.resolves(incognitoBrowserCtx);
-
-                session.getPuppeteer.resolves(cdp);
-            });
-
             describe("should do nothing if", () => {
                 it("'isolation' option is not specified", async () => {
                     await initBrowser_(mkBrowser_({ isolation: false }));
@@ -558,14 +553,14 @@ describe("ExistingBrowser", () => {
 
             describe("should warn that isolation doesn't work in", () => {
                 it("chrome browser (w3c)", async () => {
-                    const sessionCaps = { browserName: "chrome", browserVersion: "90.0" };
+                    const sessionCaps = { browserName: "chrome", browserVersion: "60.0" };
 
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
                     assert.calledOnceWith(
                         loggerWarnStub,
                         `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
-                            "but got chrome@90.0",
+                            "but got chrome@60.0",
                     );
                 });
 
@@ -582,12 +577,12 @@ describe("ExistingBrowser", () => {
                 });
             });
 
-            it("should create incognito browser context", async () => {
+            it("should create browser context", async () => {
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.calledOnceWithExactly(cdp.createIncognitoBrowserContext);
+                assert.calledOnceWithExactly(CDPStub.target.createBrowserContext);
             });
 
             it("should get current browser contexts before create incognito", async () => {
@@ -595,15 +590,16 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.callOrder(cdp.browserContexts, cdp.createIncognitoBrowserContext);
+                assert.callOrder(CDPStub.target.getBrowserContexts, CDPStub.target.createBrowserContext);
             });
 
-            it("should create new page inside incognito browser context", async () => {
+            it("should create new page inside new browser context", async () => {
+                CDPStub.target.createBrowserContext.resolves({ browserContextId: "new-browser-context" });
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.calledOnceWithExactly(incognitoBrowserCtx.newPage);
+                assert.calledOnceWithExactly(CDPStub.target.createTarget, { browserContextId: "new-browser-context" });
             });
 
             it("should work with chrome-headless-shell", async () => {
@@ -611,12 +607,16 @@ describe("ExistingBrowser", () => {
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.callOrder(cdp.browserContexts, cdp.createIncognitoBrowserContext, incognitoBrowserCtx.newPage);
+                assert.callOrder(
+                    CDPStub.target.getBrowserContexts,
+                    CDPStub.target.createBrowserContext,
+                    CDPStub.target.createTarget,
+                );
             });
 
             describe(`in "${WEBDRIVER_PROTOCOL}" protocol`, () => {
                 it("should switch to incognito window", async () => {
-                    incognitoTarget._targetId = "456";
+                    CDPStub.target.createTarget.resolves({ targetId: "456" });
                     session.getWindowHandles.resolves(["window_123", "window_456", "window_789"]);
 
                     const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
@@ -625,7 +625,7 @@ describe("ExistingBrowser", () => {
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
 
                     assert.calledOnceWith(session.switchToWindow, "window_456");
-                    assert.callOrder(incognitoBrowserCtx.newPage, session.getWindowHandles);
+                    assert.callOrder(CDPStub.target.createTarget, session.getWindowHandles);
                 });
             });
 
@@ -636,56 +636,40 @@ describe("ExistingBrowser", () => {
 
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
 
-                    assert.notCalled(session.getWindowHandles);
                     assert.notCalled(session.switchToWindow);
                 });
             });
 
             it("should close pages in default browser context", async () => {
-                const defaultBrowserCtx = mkCDPBrowserCtx_();
-                const page1 = mkCDPPage_();
-                const page2 = mkCDPPage_();
-                defaultBrowserCtx.pages.resolves([page1, page2]);
-
-                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-id"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.calledOnceWithExactly(page1.close);
-                assert.calledOnceWithExactly(page2.close);
-                assert.notCalled(incognitoPage.close);
+                assert.calledOnceWithExactly(CDPStub.target.disposeBrowserContext, "other-browser-id");
             });
 
             it("should close incognito browser context", async () => {
-                const defaultBrowserCtx = mkCDPBrowserCtx_();
-                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-id"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.calledOnceWithExactly(incognitoBrowserCtx.close);
-                assert.notCalled(defaultBrowserCtx.close);
+                assert.calledOnceWith(CDPStub.target.disposeBrowserContext, "other-browser-id");
             });
 
             it("should not close pages in BiDi protocol", async () => {
                 webdriverioAttachStub.resolves({ ...mkSessionStub_(), isBidi: true });
 
-                const defaultBrowserCtx = mkCDPBrowserCtx_();
-                const page1 = mkCDPPage_();
-                const page2 = mkCDPPage_();
-                defaultBrowserCtx.pages.resolves([page1, page2]);
-                cdp.browserContexts.returns([defaultBrowserCtx, incognitoBrowserCtx]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-context"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0", webSocketUrl: true };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
-                assert.notCalled(page1.close);
-                assert.notCalled(page2.close);
-                assert.notCalled(incognitoPage.close);
+                assert.notCalled(CDPStub.target.disposeBrowserContext);
             });
         });
 
@@ -1163,6 +1147,14 @@ describe("ExistingBrowser", () => {
             browser.quit();
 
             assert.equal(browser.meta.pid, pid);
+        });
+
+        it("should close opened CDP connection", async () => {
+            const browser = await initBrowser_();
+
+            browser.quit();
+
+            assert.calledOnceWith(CDPStub.close);
         });
     });
 });
