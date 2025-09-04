@@ -8,7 +8,6 @@ const { Image } = require("src/image");
 const ScreenShooter = require("src/browser/screen-shooter");
 const temp = require("src/temp");
 const validator = require("png-validator");
-const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
 const { ImageDiffError } = require("src/browser/commands/assert-view/errors/image-diff-error");
 const { NoRefImageError } = require("src/browser/commands/assert-view/errors/no-ref-image-error");
 const RuntimeConfig = require("src/config/runtime-config");
@@ -149,7 +148,7 @@ describe("assertView command", () => {
             const elem = await browser.publicAPI.$(".selector");
             await elem.assertView("plain");
         } catch (e) {
-            assert.instanceOf(e, AssertViewError);
+            assert.instanceOf(e, Error);
             assert.equal(e.message, 'duplicate name for "plain" state');
         }
     });
@@ -210,7 +209,7 @@ describe("assertView command", () => {
                         const elem = await browser.publicAPI.$(".selector");
                         await elem.assertView("plain");
                     } catch (e) {
-                        assert.instanceOf(e, AssertViewError);
+                        assert.instanceOf(e, Error);
                         assert.equal(e.message, 'duplicate name for "plain" state');
                     }
                 });

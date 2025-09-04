@@ -11,7 +11,6 @@ const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
-const { AssertViewError } = require("./errors/assert-view-error");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -55,7 +54,7 @@ module.exports.default = browser => {
         testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
 
         if (testplaneCtx.assertViewResults.hasState(state)) {
-            return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
+            return Promise.reject(new Error(`duplicate name for "${state}" state`));
         }
 
         const handleCaptureProcessorError = e =>
