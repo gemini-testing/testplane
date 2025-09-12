@@ -1969,6 +1969,20 @@ describe("config browser-options", () => {
             assert.isFalse(config.browsers.b1.headless);
             assert.isTrue(config.browsers.b2.headless);
         });
+
+        it("should override 'headless' option with stringified false", () => {
+            const readConfig = {
+                headless: "false",
+                browsers: {
+                    b1: mkBrowser_(),
+                },
+            };
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.strictEqual(config.browsers.b1.headless, false);
+        });
     });
 
     describe("timeTravel", () => {

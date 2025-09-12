@@ -352,6 +352,9 @@ function buildBrowserOptions(defaultFactory, extra) {
         region: options.optionalString("region"),
         headless: option({
             defaultValue: defaultFactory("headless"),
+            parseCli: value => {
+                return _.isString(value) ? utils.parseBoolean(value) : value;
+            },
             validate: value => {
                 if (_.isNull(value) || _.isBoolean(value)) {
                     return;
@@ -359,6 +362,14 @@ function buildBrowserOptions(defaultFactory, extra) {
 
                 if (typeof value !== "string") {
                     throw new Error('"headless" option should be boolean or string with "new" or "old" values');
+                }
+
+                try {
+                    if (!utils.parseBoolean(value)) {
+                        return;
+                    }
+                } catch (e) {
+                    // TODO
                 }
 
                 if (value !== "old" && value !== "new") {
