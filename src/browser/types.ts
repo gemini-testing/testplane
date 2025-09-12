@@ -9,6 +9,9 @@ import type { Callstack } from "./history/callstack";
 import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 import type { Options } from "@testplane/wdio-types";
+import type { SaveStateData, SaveStateOptions } from "./commands/saveState";
+import type { Cookie } from "@testplane/wdio-protocols";
+import type { RestoreStateOptions } from "./commands/restoreState";
 import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
 
 export const BrowserName = {
@@ -75,6 +78,10 @@ declare global {
             extendOptions(this: WebdriverIO.Browser, opts: { [name: string]: unknown }): Promise<void>;
 
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
+
+            getAllRequestsCookies(): Promise<Array<Cookie>>;
+            saveState(options?: SaveStateOptions): Promise<SaveStateData>;
+            restoreState(options: RestoreStateOptions): Promise<void>;
 
             overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,
