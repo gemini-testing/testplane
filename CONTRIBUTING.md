@@ -1,5 +1,7 @@
-## Notice to external contributors
-### General info
+# Contribution guide
+
+### Legal info
+
 Hello! In order for us (YANDEX LLC) to accept patches and other contributions from you, you will have to adopt our Contributor License Agreement (the “CLA”). The current version of the CLA you may find here:
 
 * https://yandex.ru/legal/cla/?lang=en (in English)
