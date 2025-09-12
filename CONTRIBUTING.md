@@ -1,5 +1,7 @@
-## Notice to external contributors
-### General info
+# Contribution guide
+
+### Legal info
+
 Hello! In order for us (YANDEX LLC) to accept patches and other contributions from you, you will have to adopt our Contributor License Agreement (the “CLA”). The current version of the CLA you may find here:
 
 * https://yandex.ru/legal/cla/?lang=en (in English)
@@ -39,16 +41,57 @@ If you have any questions, please write us at opensource@yandex-team.ru .
 * if an issue describes a problem which we are unable to reproduce and issue reporter does not answer our questions for 1 week, then this issue may be closed without further investigation.
 
 ## How to develop
-### Create your own copy
-```
-git clone https://github.com/gemini-testing/testplane.git
+
+### Create your own copy of Testplane repo
+
+**Note.** If you are not a member of gemini-testing and going to submit a PR, you should first create a fork of Testplane repo.
+
+```bash
+git clone https://github.com/gemini-testing/testplane.git # Replace with your fork URL
 cd testplane
 npm install
 ```
 
-**Note.** It's better to create a fork, if you plan to make a pull request.
+### Create a test project
 
-### Run tests
+When working with testplane, you'd want to test your changes on a real project as if you were a user.
+
+To create a test project, use our CLI wizard:
+
 ```
+npm init testplane@latest testplane-test-project
+```
+
+This will create a project in `testplane-test-project` directory.
+
+### Link your local Testplane repo to your test project
+
+Go to Testplane repo directory and run:
+
+```shell
+cd testplane
+npm link
+```
+
+Then go to your test project's directory and run:
+
+```shell
+cd testplane-test-project
+npm link testplane
+```
+
+### Build testplane
+
+To build testplane, you may use `npm run build` command or `npm run watch` to watch for changes.
+
+Great! Now you have everything set up. You can now make some tweaks in testplane and run `npx testplane` in your test project to see how it works with your changes!
+
+### Run checks locally
+
+You may run all linters and tests locally using the command below.
+
+```shell
 npm test
 ```
+
+For a more granular checks, see scripts section in `package.json`.
