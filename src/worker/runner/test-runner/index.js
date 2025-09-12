@@ -118,6 +118,15 @@ module.exports = class TestRunner {
             this._browser.state.isLastTestFailed = true;
         }
 
+        const currentWindowSize = this._browser.state?.currentWindowSize;
+        const configSetWindowSize = this._browser.config.windowSize;
+
+        if (currentWindowSize) {
+            if (!_.isEqual(currentWindowSize, configSetWindowSize)) {
+                this._browser.publicAPI.setWindowSize(configSetWindowSize);
+            }
+        }
+
         this._browserAgent.freeBrowser(this._browser);
 
         if (error) {

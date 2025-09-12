@@ -64,6 +64,7 @@ describe("worker/runner/test-runner", () => {
             moveToElement: sandbox.stub().named("moveToElement").resolves(),
             action: sandbox.stub().named("getSize").returns(mkActionAPI_()),
             isW3C: true,
+            setWindowSize: sandbox.stub().named("setWindowSize").resolves({ x: 0, y: 0, width: 1024, height: 768 }),
         });
         config = _.defaults(config, { resetCursor: true });
 
@@ -913,6 +914,51 @@ describe("worker/runner/test-runner", () => {
 
                 await run_().catch(err => {
                     assert.isUndefined(err.history);
+                });
+            });
+
+            describe("setWindowSize override", () => {
+                it("should automatically reset currentSetWindowSize flag when creating browser", async () => {
+                    const browser = mkBrowser_({ config: { windowSize: { width: 10, height: 10 } } });
+                    browser.state.currentWindowSize = { width: 20, height: 20 };
+
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.calledWith(browser.publicAPI.setWindowSize, { width: 10, height: 10 });
+                });
+
+                it("should not reset currentSetWindowSize flag when creating browser with same value as in config", async () => {
+                    const browser = mkBrowser_({ config: { windowSize: { width: 10, height: 10 } } });
+                    browser.state.currentWindowSize = { width: 10, height: 10 };
+
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.notCalled(browser.publicAPI.setWindowSize);
+                });
+
+                it("should automatically reset currentSetWindowSize flag when creating browser without config", async () => {
+                    const browser = mkBrowser_();
+                    browser.state.currentWindowSize = { width: 20, height: 20 };
+
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.calledWith(browser.publicAPI.setWindowSize, undefined);
+                });
+
+                it("should not set currentSetWindowSize when setWindowSize not called", async () => {
+                    const browser = mkBrowser_({ config: { windowSize: { width: 10, height: 10 } } });
+
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    await run_();
+
+                    assert.notCalled(browser.publicAPI.setWindowSize);
                 });
             });
         });
