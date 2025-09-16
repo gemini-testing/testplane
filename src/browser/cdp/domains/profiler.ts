@@ -1,6 +1,6 @@
-import { CDPConnection } from "./connection";
-import { CDPEventEmitter } from "./emitter";
-import type { CDPDebuggerLocation, CDPSessionId, CDPScriptCoverage, CDPProfile } from "./types";
+import { CDPConnection } from "../connection";
+import { CDPEventEmitter } from "../emitter";
+import type { CDPDebuggerLocation, CDPSessionId, CDPScriptCoverage, CDPProfile } from "../types";
 
 interface StartPreciseCoverageRequest {
     /** Collect accurate call counts beyond simple 'covered' or 'not covered'. */
@@ -52,28 +52,34 @@ export class CDPProfiler extends CDPEventEmitter<ProfilerEvents> {
     }
 
     /** @param sessionId result of "Target.attachToTarget" */
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-disable */
     async disable(sessionId: CDPSessionId): Promise<void> {
         return this._connection.request("Profiler.disable", { sessionId });
     }
 
     /** @param sessionId result of "Target.attachToTarget" */
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-enable */
     async enable(sessionId: CDPSessionId): Promise<void> {
         return this._connection.request("Profiler.enable", { sessionId });
     }
 
-    async startPreciseCoverage(sessionId: CDPSessionId, params: StartPreciseCoverageRequest): Promise<number> {
-        const res = await this._connection.request<StartPreciseCoverageResponse>("Profiler.startPreciseCoverage", {
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-startPreciseCoverage */
+    async startPreciseCoverage(
+        sessionId: CDPSessionId,
+        params: StartPreciseCoverageRequest,
+    ): Promise<{ timestamp: number }> {
+        return this._connection.request<StartPreciseCoverageResponse>("Profiler.startPreciseCoverage", {
             sessionId,
             params,
         });
-
-        return res.timestamp;
     }
 
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-stopPreciseCoverage */
     async stopPreciseCoverage(sessionId: CDPSessionId): Promise<number> {
         return this._connection.request("Profiler.stopPreciseCoverage", { sessionId });
     }
 
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-takePreciseCoverage */
     async takePreciseCoverage(sessionId: CDPSessionId): Promise<TakePreciseCoverageResponse> {
         return this._connection.request("Profiler.takePreciseCoverage", { sessionId });
     }

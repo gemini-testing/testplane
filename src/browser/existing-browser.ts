@@ -359,9 +359,9 @@ export class ExistingBrowser extends Browser {
         }
 
         const cdpTarget = this._cdp.target;
-        const browserContextIds = await cdpTarget.getBrowserContexts();
-        const browserContextId = await cdpTarget.createBrowserContext();
-        const incognitoWindowId = await cdpTarget.createTarget({ browserContextId });
+        const { browserContextIds } = await cdpTarget.getBrowserContexts();
+        const { browserContextId } = await cdpTarget.createBrowserContext();
+        const { targetId: incognitoWindowId } = await cdpTarget.createTarget({ browserContextId });
 
         if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
             const windowIds = await this._session.getWindowHandles();
@@ -484,5 +484,9 @@ export class ExistingBrowser extends Browser {
 
     get meta(): Record<string, unknown> {
         return this._meta;
+    }
+
+    get cdp(): CDP | null {
+        return this._cdp;
     }
 }

@@ -55,13 +55,13 @@ describe("ExistingBrowser", () => {
 
         CDPStub = {
             target: {
-                getBrowserContexts: sandbox.stub().resolves([]),
-                createBrowserContext: sandbox.stub().resolves("some-browser-context"),
+                getBrowserContexts: sandbox.stub().resolves({ browserContextIds: [] }),
+                createBrowserContext: sandbox.stub().resolves({ browserContextId: "some-browser-context" }),
                 disposeBrowserContext: sandbox.stub().resolves(),
-                createTarget: sandbox.stub().resolves("some-target-id"),
+                createTarget: sandbox.stub().resolves({ targetId: "some-target-id" }),
                 activateTarget: sandbox.stub().resolves(),
                 attachToTarget: sandbox.stub().resolves("some-target-id"),
-                getTargets: sandbox.stub().resolves([]),
+                getTargets: sandbox.stub().resolves({ targetInfos: [] }),
             },
             close: sandbox.stub(),
         };
@@ -593,7 +593,7 @@ describe("ExistingBrowser", () => {
             });
 
             it("should create new page inside new browser context", async () => {
-                CDPStub.target.createBrowserContext.resolves("new-browser-context");
+                CDPStub.target.createBrowserContext.resolves({ browserContextId: "new-browser-context" });
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
@@ -615,7 +615,7 @@ describe("ExistingBrowser", () => {
 
             describe(`in "${WEBDRIVER_PROTOCOL}" protocol`, () => {
                 it("should switch to incognito window", async () => {
-                    CDPStub.target.createTarget.resolves("456");
+                    CDPStub.target.createTarget.resolves({ targetId: "456" });
                     session.getWindowHandles.resolves(["window_123", "window_456", "window_789"]);
 
                     const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
@@ -640,7 +640,7 @@ describe("ExistingBrowser", () => {
             });
 
             it("should close pages in default browser context", async () => {
-                CDPStub.target.getBrowserContexts.resolves(["other-browser-id"]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-id"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
@@ -650,7 +650,7 @@ describe("ExistingBrowser", () => {
             });
 
             it("should close incognito browser context", async () => {
-                CDPStub.target.getBrowserContexts.resolves(["other-browser-id"]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-id"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
 
@@ -662,7 +662,7 @@ describe("ExistingBrowser", () => {
             it("should not close pages in BiDi protocol", async () => {
                 webdriverioAttachStub.resolves({ ...mkSessionStub_(), isBidi: true });
 
-                CDPStub.target.getBrowserContexts.resolves(["other-browser-context"]);
+                CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-context"] });
 
                 const sessionCaps = { browserName: "chrome", browserVersion: "100.0", webSocketUrl: true };
 

@@ -388,7 +388,7 @@ export class CDPConnection {
     }
 
     /** @description Performs high-level CDP request with retries and timeouts */
-    async request<T>(
+    async request<T = void>(
         method: CDPRequest["method"],
         { params, sessionId }: Omit<CDPRequest, "id" | "method"> = {},
     ): Promise<T> {
