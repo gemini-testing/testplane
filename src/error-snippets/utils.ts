@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs-extra";
 import { codeFrameColumns } from "@babel/code-frame";
 import { getErrorTitle } from "../browser/stacktrace/utils";
-import { SNIPPET_LINES_ABOVE, SNIPPET_LINES_BELOW, SOURCE_MAP_URL_COMMENT } from "./constants";
+import { SNIPPET_LINES_ABOVE, SNIPPET_LINES_BELOW, JS_SOURCE_MAP_URL_COMMENT } from "./constants";
 import { AssertViewError } from "../browser/commands/assert-view/errors/assert-view-error";
 import { BaseStateError } from "../browser/commands/assert-view/errors/base-state-error";
 import { softFileURLToPath } from "../utils/fs";
@@ -80,11 +80,11 @@ export const getSourceCodeFile = async (fileName: string): Promise<string> => {
     const response = await fetch(filePath);
     const responseText = await response.text();
 
-    if (responseText.includes(SOURCE_MAP_URL_COMMENT) || !response.headers.has("SourceMap")) {
+    if (responseText.includes(JS_SOURCE_MAP_URL_COMMENT) || !response.headers.has("SourceMap")) {
         return responseText;
     }
 
     const sourceMapUrl = response.headers.get("SourceMap");
 
-    return responseText + "\n" + SOURCE_MAP_URL_COMMENT + sourceMapUrl;
+    return responseText + "\n" + JS_SOURCE_MAP_URL_COMMENT + sourceMapUrl;
 };

@@ -1,6 +1,6 @@
-import { CDPEventEmitter } from "./emitter";
-import { CDPConnection } from "./connection";
-import type { CDPBrowserContextId, CDPSessionId, CDPTargetId, CDPTargetInfo } from "./types";
+import { CDPEventEmitter } from "../emitter";
+import { CDPConnection } from "../connection";
+import type { CDPBrowserContextId, CDPSessionId, CDPTargetId, CDPTargetInfo } from "../types";
 
 interface GetBrowserContextsResponse {
     browserContextIds: CDPBrowserContextId[];
@@ -67,12 +67,12 @@ export class CDPTarget extends CDPEventEmitter<TargetEvents> {
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-getBrowserContexts */
     async getBrowserContexts(): Promise<GetBrowserContextsResponse> {
-        return this._connection.request<GetBrowserContextsResponse>("Target.getBrowserContexts");
+        return this._connection.request("Target.getBrowserContexts");
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-createBrowserContext */
     async createBrowserContext(): Promise<CreateBrowserContextResponse> {
-        return this._connection.request<CreateBrowserContextResponse>("Target.createBrowserContext");
+        return this._connection.request("Target.createBrowserContext");
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-disposeBrowserContext */
@@ -88,9 +88,7 @@ export class CDPTarget extends CDPEventEmitter<TargetEvents> {
         url?: string;
         browserContextId?: CDPBrowserContextId;
     }): Promise<CreateTargetResponse> {
-        const params = { url, browserContextId };
-
-        return this._connection.request<CreateTargetResponse>("Target.createTarget", { params });
+        return this._connection.request("Target.createTarget", { params: { url, browserContextId } });
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-closeTarget */
@@ -105,14 +103,17 @@ export class CDPTarget extends CDPEventEmitter<TargetEvents> {
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-attachToTarget */
     async attachToTarget(targetId: CDPTargetId): Promise<AttachToTargetResponse> {
-        const params = { targetId, flatten: true };
+        return this._connection.request("Target.attachToTarget", { params: { targetId, flatten: true } });
+    }
 
-        return this._connection.request<AttachToTargetResponse>("Target.attachToTarget", { params });
+    /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-detachFromTarget */
+    async detachFromTarget(sessionId: CDPSessionId): Promise<AttachToTargetResponse["sessionId"]> {
+        return this._connection.request("Target.detachFromTarget", { params: { sessionId } });
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-getTargets */
     async getTargets(): Promise<GetTargetsResponse> {
-        return this._connection.request<GetTargetsResponse>("Target.getTargets");
+        return this._connection.request("Target.getTargets");
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-setAutoAttach */
