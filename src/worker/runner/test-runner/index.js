@@ -11,6 +11,7 @@ const { SAVE_HISTORY_MODE } = require("../../../constants/config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { TestplaneInternalError } = require("../../../errors");
+const { startSelectivity } = require("../../../browser/cdp/selectivity");
 
 module.exports = class TestRunner {
     static create(...args) {
@@ -51,7 +52,11 @@ module.exports = class TestRunner {
     async run() {
         await this.prepareToRun();
 
+        const stopSelectivity = await startSelectivity(this._browser);
+
         const error = await this.runRunnables(ExecutionThread);
+
+        await stopSelectivity(this._test, Boolean(error));
 
         return this.finishRun(error);
     }

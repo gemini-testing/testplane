@@ -1,6 +1,6 @@
-import { CDPConnection } from "./connection";
-import { CDPEventEmitter } from "./emitter";
-import type { CDPDebuggerLocation, CDPSessionId, CDPScriptCoverage, CDPProfile } from "./types";
+import { CDPConnection } from "../connection";
+import { CDPEventEmitter } from "../emitter";
+import type { CDPDebuggerLocation, CDPSessionId, CDPScriptCoverage, CDPProfile } from "../types";
 
 interface StartPreciseCoverageRequest {
     /** Collect accurate call counts beyond simple 'covered' or 'not covered'. */
@@ -72,10 +72,7 @@ export class CDPProfiler extends CDPEventEmitter<ProfilerEvents> {
         sessionId: CDPSessionId,
         params: StartPreciseCoverageRequest,
     ): Promise<StartPreciseCoverageResponse> {
-        return this._connection.request<StartPreciseCoverageResponse>("Profiler.startPreciseCoverage", {
-            sessionId,
-            params,
-        });
+        return this._connection.request("Profiler.startPreciseCoverage", { sessionId, params });
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-stopPreciseCoverage */
@@ -85,6 +82,6 @@ export class CDPProfiler extends CDPEventEmitter<ProfilerEvents> {
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Profiler/#method-takePreciseCoverage */
     async takePreciseCoverage(sessionId: CDPSessionId): Promise<TakePreciseCoverageResponse> {
-        return this._connection.request<TakePreciseCoverageResponse>("Profiler.takePreciseCoverage", { sessionId });
+        return this._connection.request("Profiler.takePreciseCoverage", { sessionId });
     }
 }

@@ -86,9 +86,13 @@ describe("worker/runner/test-runner", () => {
 
     beforeEach(() => {
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
+
         TestRunner = proxyquire("src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
+            },
+            "../../../browser/cdp/selectivity": {
+                startSelectivity: sandbox.stub().resolves(() => Promise.resolve()),
             },
         });
 
@@ -915,6 +919,61 @@ describe("worker/runner/test-runner", () => {
                 await run_().catch(err => {
                     assert.isUndefined(err.history);
                 });
+            });
+        });
+
+        describe("selectivity integration", () => {
+            let startSelectivityStub, stopSelectivityStub;
+
+            beforeEach(() => {
+                stopSelectivityStub = sandbox.stub().resolves();
+                startSelectivityStub = sandbox.stub().resolves(stopSelectivityStub);
+
+                TestRunner = proxyquire("src/worker/runner/test-runner", {
+                    "../../../browser/history": {
+                        runGroup: historyRunGroupStub,
+                    },
+                    "../../../browser/cdp/selectivity": {
+                        startSelectivity: startSelectivityStub,
+                    },
+                });
+            });
+
+            it("should call startSelectivity with browser", async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_();
+
+                assert.calledOnceWith(startSelectivityStub, browser);
+            });
+
+            it("should call stopSelectivity with test and no error flag when no error", async () => {
+                const test = mkTest_();
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_({ test });
+
+                assert.calledOnce(stopSelectivityStub);
+                assert.calledWith(stopSelectivityStub, sinon.match.object, false);
+            });
+
+            it("should call stopSelectivity with test and failure flag when error occurs", async () => {
+                const test = mkTest_({ fn: sinon.stub().rejects(new Error("test error")) });
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                await run_({ test }).catch(() => {});
+
+                assert.calledOnce(stopSelectivityStub);
+                assert.calledWith(stopSelectivityStub, sinon.match.object, true);
+            });
+
+            it("should propagate stopSelectivity errors", async () => {
+                stopSelectivityStub.rejects(new Error("stop selectivity error"));
+
+                await assert.isRejected(run_(), /stop selectivity error/);
             });
         });
     });

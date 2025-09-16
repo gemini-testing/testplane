@@ -122,6 +122,11 @@ module.exports = {
     },
     passive: false,
     timeTravel: TimeTravelMode.Off,
+    selectivity: {
+        enabled: false,
+        sourceRoot: "",
+        testDependenciesPath: ".testplane/selectivity",
+    },
 };
 
 module.exports.configPaths = [
