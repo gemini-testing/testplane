@@ -18,8 +18,8 @@ export default (browser: Browser): void => {
         "saveState",
         async (options: SaveStateOptions) => {
             const cookies = await session.getAllCookies();
-
-            // browser.getA
+            // @ts-ignore
+            const requestsCookies = await session.getAllRequestsCookies();
 
             const localStorage: unknown = await session.execute(() => (
                 JSON.parse(JSON.stringify(localStorage))
@@ -29,12 +29,27 @@ export default (browser: Browser): void => {
             ));
             const indexDB: unknown = await session.execute(dumpIndexedDB);
 
-            const puppeteer = await session.getPuppeteer();
-            const pages = await puppeteer.pages();
+            // const cookies = await session.send({
+            //     method: "storage.getCookies",
+            //     // method: "Network.getAllCookies",
+            //     params: {
+            //
+            //     }
+            // });
+
+            // const puppeteer = await session.getPuppeteer();
+            // const client = await puppeteer.target().createCDPSession();
+            // const cookies = await client.send("Network.getAllCookies");
+            // const pages = await puppeteer.pages()
 
 
-            // @ts-ignore
-            const ppp = await puppeteer.pages();
+            // const pages = await puppeteer.pages();
+            // const page = await puppeteer.target().page();
+            // const cookies = page._client.send('Network.getAllCookies');
+            // page?.mainFrame().origin();
+            // const client = await puppeteer.target().page();
+
+            // const ppp = await puppeteer.pages();
 
             // browser.publicAPI.ori
 
@@ -44,17 +59,18 @@ export default (browser: Browser): void => {
             // }> = {};
 
             const data = {
-                cookies,
+                cookies: [
+                    ...cookies,
+                    '------------------------------------',
+                    ...requestsCookies,
+                ],
                 localStorage,
                 sessionStorage,
                 indexDB,
-                // pages: pages.map((page) => page.frames()),
-                frames: pages[0].frames().map((f) => f.url()),
-                ppp,
             };
 
             if (options && options.path) {
-                await fs.writeJson(options.path, data);
+                await fs.writeJson(options.path, data, {spaces: 2});
             }
         }
     );

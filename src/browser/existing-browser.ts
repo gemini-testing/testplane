@@ -1,5 +1,7 @@
 import url from "url";
 import _ from "lodash";
+// @ts-ignore
+import { parse as parseCookiesString } from "set-cookie-parser";
 import { attach, type AttachOptions, type ElementArray } from "@testplane/webdriverio";
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
@@ -60,6 +62,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
+    private allCookies: Array<Record<string, unknown>> = [];
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -94,6 +97,8 @@ export class ExistingBrowser extends Browser {
 
                 await isolationPromise;
 
+                await this.startCollectCookies();
+
                 this._callstackHistory?.clear();
 
                 try {
@@ -109,6 +114,31 @@ export class ExistingBrowser extends Browser {
         );
 
         return this;
+    }
+
+    async startCollectCookies(): Promise<void> {
+        if (!this._session) {
+            return;
+        }
+
+        this.publicAPI.addCommand("getAllRequestsCookies", () => this.allCookies);
+
+        const puppeteer = await this._session.getPuppeteer();
+        const pages = await puppeteer.pages();
+
+        pages[0].on('response', async (res) => {
+            try {
+                const headers = res.headers();
+
+                if (headers['set-cookie']) {
+                    const cookies = parseCookiesString(headers['set-cookie'], { map: false });
+
+                    this.allCookies.push(...cookies);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
     }
 
     markAsBroken(): void {
