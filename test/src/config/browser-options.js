@@ -1342,7 +1342,7 @@ describe("config browser-options", () => {
                     b1: mkBrowser_({
                         desiredCapabilities: {
                             browserName: "chrome",
-                            browserVersion: "90.0",
+                            browserVersion: "60.0",
                         },
                     }),
                 },
