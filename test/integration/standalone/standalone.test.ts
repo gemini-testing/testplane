@@ -24,10 +24,6 @@ describe("Standalone Browser E2E Tests", function () {
 
     let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
 
-    after(async function () {
-        await browser.deleteSession();
-    });
-
     it("should launch browser and access a website", async function () {
         browser = await launchBrowser(BROWSER_CONFIG);
 
@@ -67,6 +63,8 @@ describe("Standalone Browser E2E Tests", function () {
         const screenshotBuffer = await browser.takeScreenshot();
         assert.ok(screenshotBuffer, "Should be able to take a screenshot");
         assert.ok(screenshotBuffer.length > 1000, "Screenshot should have reasonable size");
+
+        await browser.deleteSession();
     });
 
     it("attach to browser works", async function () {
