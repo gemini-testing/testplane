@@ -1,43 +1,21 @@
-import type { Browser } from "../../types";
-import { dumpIndexedDB } from "./dumpIndexedDB";
 import fs from "fs-extra";
 
-interface SaveStateOptions {
-    path?: string;
+import type { Browser } from "../../types";
+import { dumpIndexedDB } from "./dumpIndexedDB";
+import { dumpStorage, StorageData } from "./dumpStorage";
 
-    cookies?: boolean;
-    localStorage?: boolean;
-    sessionStorage?: boolean;
-    indexDb?: boolean;
+type SaveStateOptions = {
+    path?: string,
+
+    cookies?: boolean,
+    localStorage?: boolean,
+    sessionStorage?: boolean,
+    indexDb?: boolean,
 }
 
-const getLocalStorage = (): Record<string, unknown> => {
-    const storage: Storage = window.localStorage;
-    const data: Record<string, string> = {};
-
-    for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
-
-        if (key) {
-            data[key] = storage.getItem(key) as string;
-        }
-    }
-    return data;
-}
-
-const getSessionStorage = (): Record<string, unknown> => {
-    const storage: Storage = window.sessionStorage;
-    const data: Record<string, string> = {};
-
-    for (let i = 0; i < storage.length; i++) {
-        const key = storage.key(i);
-
-        if (key) {
-            data[key] = storage.getItem(key) as string;
-        }
-    }
-    return data;
-}
+type FrameData = StorageData & {
+    indexDB?: Record<string, unknown>,
+};
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
@@ -53,28 +31,30 @@ export default (browser: Browser): void => {
             const pages = await puppeteer.pages();
             const frames = pages[0].frames();
 
-            const framesData: Record<string, {
-                localStorage: Record<string, unknown>,
-                sessionStorage: Record<string, unknown>,
-                indexDB: Record<string, unknown>,
-            }> = {};
+            const framesData: Record<string, FrameData> = {};
 
             for (const frame of frames) {
-                const localStorage: Record<string, unknown> = await session.execute(getLocalStorage);
-                const sessionStorage: Record<string, unknown> = await session.execute(getSessionStorage);
-                const indexDB: Record<string, unknown> = await session.execute(dumpIndexedDB);
+                const origin = new URL(frame.url()).origin;
 
-                framesData[frame.url()] = {
-                    localStorage,
-                    sessionStorage,
-                    indexDB,
-                };
+                if (origin === "null" || framesData[origin]) {
+                    continue;
+                }
+
+                const { localStorage, sessionStorage }: StorageData = await frame.evaluate(dumpStorage);
+                const indexDB: Record<string, unknown> | undefined = await frame.evaluate(dumpIndexedDB);
+
+                if (localStorage || sessionStorage || indexDB) {
+                    framesData[origin] = {
+                        localStorage,
+                        sessionStorage,
+                        indexDB,
+                    };
+                }
             }
 
             const data = {
                 cookies: [
                     ...cookies,
-                    '------------------------------------',
                     ...requestsCookies,
                 ],
                 framesData,
