@@ -62,7 +62,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
-    private allCookies: Array<Record<string, unknown>> = [];
+    private allCookies: Map<string, Record<string, unknown>> = new Map();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -121,7 +121,7 @@ export class ExistingBrowser extends Browser {
             return;
         }
 
-        this.publicAPI.addCommand("getAllRequestsCookies", () => this.allCookies);
+        this.publicAPI.addCommand("getAllRequestsCookies", () => this.allCookies.values());
 
         const puppeteer = await this._session.getPuppeteer();
         const pages = await puppeteer.pages();
@@ -131,9 +131,21 @@ export class ExistingBrowser extends Browser {
                 const headers = res.headers();
 
                 if (headers['set-cookie']) {
-                    const cookies = parseCookiesString(headers['set-cookie'], { map: false });
+                    parseCookiesString(headers['set-cookie'], { map: false }).forEach((cookie: Record<string, unknown>) => {
+                        const index = [
+                            cookie.name,
+                            cookie.domain,
+                            cookie.path,
+                        ].join('-');
 
-                    this.allCookies.push(...cookies);
+                        this.allCookies.set(
+                            index,
+                            {
+                                ...cookie,
+                                domain: cookie.domain ?? new URL(res.url()).hostname,
+                            }
+                        )
+                    })
                 }
             } catch (err) {
                 console.error(err);

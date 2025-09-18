@@ -11,4 +11,5 @@ export const customCommandFileNames = [
     "captureDomSnapshot",
     "waitForStaticToLoad",
     "saveState",
+    "restoreState",
 ];
