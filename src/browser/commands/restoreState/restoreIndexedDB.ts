@@ -1,7 +1,6 @@
-import { DumpIndexDB, DumpStoreIndexDB } from "./dumpIndexedDB";
+import { DumpIndexDB, DumpStoreIndexDB } from "../saveState/dumpIndexedDB";
 
 import { clearAllIndexedDB } from "./clearAllIndexedDB";
-
 
 export async function restoreIndexedDB(dump: Record<string, DumpIndexDB>): Promise<void> {
     await clearAllIndexedDB();
