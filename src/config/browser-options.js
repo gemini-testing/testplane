@@ -352,6 +352,20 @@ function buildBrowserOptions(defaultFactory, extra) {
         region: options.optionalString("region"),
         headless: option({
             defaultValue: defaultFactory("headless"),
+            parseCli: value => {
+                try {
+                    return utils.parseBoolean(value);
+                } catch (_) {
+                    return value;
+                }
+            },
+            parseEnv: value => {
+                try {
+                    return utils.parseBoolean(value);
+                } catch (_) {
+                    return value;
+                }
+            },
             validate: value => {
                 if (_.isNull(value) || _.isBoolean(value)) {
                     return;
