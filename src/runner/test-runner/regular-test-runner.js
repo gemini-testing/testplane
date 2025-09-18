@@ -135,7 +135,6 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             }
         }
 
-        const pid = this._browser.getDriverPid();
         const browser = this._browser;
         this._browser = null;
 
@@ -143,10 +142,6 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
         try {
             await this._browserAgent.freeBrowser(browser);
-
-            if (pid) {
-                process.kill(pid, 9);
-            }
         } catch (error) {
             logger.warn(`WARNING: can not release browser: ${error}`);
         }
