@@ -11,6 +11,34 @@ interface SaveStateOptions {
     indexDb?: boolean;
 }
 
+const getLocalStorage = (): Record<string, unknown> => {
+    const storage: Storage = window.localStorage;
+    const data: Record<string, string> = {};
+
+    for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+
+        if (key) {
+            data[key] = storage.getItem(key) as string;
+        }
+    }
+    return data;
+}
+
+const getSessionStorage = (): Record<string, unknown> => {
+    const storage: Storage = window.sessionStorage;
+    const data: Record<string, string> = {};
+
+    for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+
+        if (key) {
+            data[key] = storage.getItem(key) as string;
+        }
+    }
+    return data;
+}
+
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
@@ -21,42 +49,27 @@ export default (browser: Browser): void => {
             // @ts-ignore
             const requestsCookies = await session.getAllRequestsCookies();
 
-            const localStorage: unknown = await session.execute(() => (
-                JSON.parse(JSON.stringify(localStorage))
-            ));
-            const sessionStorage: unknown = await session.execute(() => (
-                JSON.parse(JSON.stringify(sessionStorage))
-            ));
-            const indexDB: unknown = await session.execute(dumpIndexedDB);
+            const puppeteer = await session.getPuppeteer();
+            const pages = await puppeteer.pages();
+            const frames = pages[0].frames();
 
-            // const cookies = await session.send({
-            //     method: "storage.getCookies",
-            //     // method: "Network.getAllCookies",
-            //     params: {
-            //
-            //     }
-            // });
+            const framesData: Record<string, {
+                localStorage: Record<string, unknown>,
+                sessionStorage: Record<string, unknown>,
+                indexDB: Record<string, unknown>,
+            }> = {};
 
-            // const puppeteer = await session.getPuppeteer();
-            // const client = await puppeteer.target().createCDPSession();
-            // const cookies = await client.send("Network.getAllCookies");
-            // const pages = await puppeteer.pages()
+            for (const frame of frames) {
+                const localStorage: Record<string, unknown> = await session.execute(getLocalStorage);
+                const sessionStorage: Record<string, unknown> = await session.execute(getSessionStorage);
+                const indexDB: Record<string, unknown> = await session.execute(dumpIndexedDB);
 
-
-            // const pages = await puppeteer.pages();
-            // const page = await puppeteer.target().page();
-            // const cookies = page._client.send('Network.getAllCookies');
-            // page?.mainFrame().origin();
-            // const client = await puppeteer.target().page();
-
-            // const ppp = await puppeteer.pages();
-
-            // browser.publicAPI.ori
-
-            // const urls: Record<string, {
-            //     sessionStorage: Record<string, unknown>;
-            //     localStorage: Record<string, unknown>;
-            // }> = {};
+                framesData[frame.url()] = {
+                    localStorage,
+                    sessionStorage,
+                    indexDB,
+                };
+            }
 
             const data = {
                 cookies: [
@@ -64,9 +77,7 @@ export default (browser: Browser): void => {
                     '------------------------------------',
                     ...requestsCookies,
                 ],
-                localStorage,
-                sessionStorage,
-                indexDB,
+                framesData,
             };
 
             if (options && options.path) {
