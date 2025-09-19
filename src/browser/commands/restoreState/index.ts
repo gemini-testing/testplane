@@ -1,6 +1,6 @@
 import fs from "fs-extra";
 
-// import { clearAllIndexedDB } from "./clearAllIndexedDB";
+import { clearAllIndexedDB } from "./clearAllIndexedDB";
 import { restoreIndexedDB } from "./restoreIndexedDB";
 import { restoreStorage } from "./restoreStorage";
 import * as logger from "../../../utils/logger";
