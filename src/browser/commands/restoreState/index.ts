@@ -1,24 +1,25 @@
 import fs from "fs-extra";
+import _ from "lodash";
 
 import { clearAllIndexedDB } from "./clearAllIndexedDB";
 import { restoreIndexedDB } from "./restoreIndexedDB";
 import { restoreStorage } from "./restoreStorage";
 
-import _ from "lodash";
+import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { defaultOptions, getWebdriverFrames, SaveStateData, SaveStateOptions } from "../saveState";
 import { Protocol } from "devtools-protocol";
 
-type RestoreStateOptions = SaveStateOptions;
-
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
+    session.addCommand("restoreState", async (_options: SaveStateOptions) => {
         const options = { ...defaultOptions, ..._options };
 
         const restoreState: SaveStateData = await fs.readJson(options.path);
+
+        logger.log("Restore state", options);
 
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
@@ -126,5 +127,7 @@ export default (browser: Browser): void => {
                 break;
             }
         }
+
+        logger.log("State restored");
     });
 };

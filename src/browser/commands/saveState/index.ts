@@ -1,5 +1,6 @@
 import fs from "fs-extra";
 
+import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DumpIndexDB, dumpIndexedDB } from "./dumpIndexedDB";
 import { dumpStorage, StorageData } from "./dumpStorage";
@@ -47,6 +48,8 @@ export default (browser: Browser): void => {
         const data: SaveStateData = {
             framesData: {},
         };
+
+        logger.log("Save state", options);
 
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
@@ -165,6 +168,7 @@ export default (browser: Browser): void => {
         }
 
         if (options && options.path) {
+            logger.log("State saved");
             await fs.writeJson(options.path, data, { spaces: 2 });
         }
     });
