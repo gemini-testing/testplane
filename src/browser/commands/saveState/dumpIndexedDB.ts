@@ -7,15 +7,15 @@ export interface DumpStoreIndexDB {
     keyPath: string | string[];
     autoIncrement: boolean;
     indexes: {
-        name: string,
+        name: string;
         keyPath: string | string[];
-        unique: boolean,
-        multiEntry: boolean,
-    }[]
+        unique: boolean;
+        multiEntry: boolean;
+    }[];
     records: {
         key: unknown;
         value: unknown;
-    }[]
+    }[];
 }
 
 export async function dumpIndexedDB(): Promise<Record<string, unknown> | undefined> {
@@ -67,7 +67,6 @@ export async function dumpIndexedDB(): Promise<Record<string, unknown> | undefin
                                 multiEntry: index.multiEntry,
                             });
                         }
-
 
                         // Get keys and values
                         const getAllReq = store.getAll();

@@ -14,11 +14,10 @@ export async function clearAllIndexedDB(): Promise<void> {
 
                 return new Promise<void>((resolve, reject) => {
                     const deleteReq = indexedDB.deleteDatabase(dbInfo.name as string);
-                    deleteReq.onsuccess = (): void => resolve();
-                    deleteReq.onerror = (): void => reject(deleteReq.error);
-                    deleteReq.onblocked = (): void => {
-                        resolve();
-                    };
+
+                    deleteReq.addEventListener("success", () => resolve());
+                    deleteReq.addEventListener("error", () => reject(deleteReq.error));
+                    deleteReq.addEventListener("blocked", () => resolve());
                 });
             }),
         );
