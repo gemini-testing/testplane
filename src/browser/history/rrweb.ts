@@ -6,6 +6,9 @@ import { SnapshotsData, TestContext } from "../../types";
 import { runWithoutHistory } from "./index";
 import path from "path";
 
+// Built from branch https://github.com/gemini-testing/rrweb/tree/TESTPLANE-712.syntax_err
+// PR: https://github.com/rrweb-io/rrweb/pull/1735
+// Issue: https://github.com/rrweb-io/rrweb/issues/1734
 const rrwebCode = fs.readFileSync(path.join(__dirname, "../client-scripts/rrweb-record.min.js"), "utf-8");
 
 export async function installRrwebAndCollectEvents(
