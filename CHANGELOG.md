@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.31.2](https://github.com/gemini-testing/testplane/compare/v8.31.1...v8.31.2) (2025-09-22)
+
+
+### Bug Fixes
+
+* 'CssSyntaxError: Unclosed string' while using timeTravell ([4cdaec4](https://github.com/gemini-testing/testplane/commit/4cdaec4a1fbf4b27c5c36f721e03a6217379c503))
+* **testplane:** don't kill driver for regular runner ([6fd3ea5](https://github.com/gemini-testing/testplane/commit/6fd3ea5490e6d7e2ebfa3b668d0bd8bb951c0c32))
+* **testplane:** fix tests ([eaa69c2](https://github.com/gemini-testing/testplane/commit/eaa69c24b96e1a8d5d0fe4a2f002a0632e9919bd))
+
 ### [8.31.1](https://github.com/gemini-testing/testplane/compare/v8.31.0...v8.31.1) (2025-09-10)
 
 
