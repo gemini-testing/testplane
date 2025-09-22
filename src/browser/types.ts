@@ -11,7 +11,7 @@ import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/c
 import type { Options } from "@testplane/wdio-types";
 import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
 import { SaveStateOptions } from "./commands/saveState";
-import { Protocol } from "devtools-protocol";
+import { Cookie } from "@testplane/wdio-protocols";
 
 export const BrowserName = {
     CHROME: "chrome" as PuppeteerBrowser.CHROME,
@@ -78,7 +78,7 @@ declare global {
 
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
-            getAllRequestsCookies(): Promise<Array<Protocol.Network.CookieParam>>;
+            getAllRequestsCookies(): Promise<Array<Cookie>>;
             saveState(options: SaveStateOptions): Promise<void>;
             restoreState(options: SaveStateOptions): Promise<void>;
 

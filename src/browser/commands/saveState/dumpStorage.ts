@@ -1,10 +1,10 @@
 export type StorageData = {
-    localStorage?: Record<string, unknown>;
-    sessionStorage?: Record<string, unknown>;
+    localStorage?: Record<string, string>;
+    sessionStorage?: Record<string, string>;
 };
 
 export const dumpStorage = (): StorageData => {
-    const getData = (storage: Storage): Record<string, unknown> | undefined => {
+    const getData = (storage: Storage): Record<string, string> | undefined => {
         const data: Record<string, string> = {};
 
         for (let i = 0; i < storage.length; i++) {

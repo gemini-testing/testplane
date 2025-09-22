@@ -134,7 +134,16 @@ export class ExistingBrowser extends Browser {
                 });
             }
 
-            return [...this.allCookies.values()];
+            return [...this.allCookies.values()].map(cookie => ({
+                name: cookie.name,
+                value: cookie.value,
+                domain: cookie.domain,
+                path: cookie.path,
+                expires: cookie.expires ? cookie.expires : undefined,
+                httpOnly: cookie.httpOnly,
+                secure: cookie.secure,
+                sameSite: cookie.sameSite?.toLowerCase(),
+            }));
         });
 
         const puppeteer = await this._session.getPuppeteer();
@@ -148,10 +157,15 @@ export class ExistingBrowser extends Browser {
                     parseCookiesString(headers["set-cookie"], { map: false }).forEach(
                         (cookie: Record<string, unknown>) => {
                             const index = [cookie.name, cookie.domain, cookie.path].join("-");
+                            const expires =
+                                typeof cookie.expires === "string"
+                                    ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                    : Math.floor(cookie.expires as number);
 
                             this.allCookies.set(index, {
                                 ...cookie,
                                 domain: cookie.domain ?? new URL(res.url()).hostname,
+                                expires,
                             } as Protocol.Network.CookieParam);
                         },
                     );
