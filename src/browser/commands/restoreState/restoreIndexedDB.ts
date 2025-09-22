@@ -9,7 +9,7 @@ export async function restoreIndexedDB(dump: Record<string, DumpIndexDB>): Promi
             await new Promise<void>((resolve, reject) => {
                 const openReq = indexedDB.open(dbName, version);
 
-                openReq.onupgradeneeded = (): void => {
+                openReq.addEventListener("upgradeneeded", (): void => {
                     const db = openReq.result;
 
                     // Restore stores
@@ -27,9 +27,9 @@ export async function restoreIndexedDB(dump: Record<string, DumpIndexDB>): Promi
                             });
                         }
                     }
-                };
+                });
 
-                openReq.onsuccess = (): void => {
+                openReq.addEventListener("success", (): void => {
                     const db = openReq.result;
                     const tx = db.transaction(Object.keys(stores), "readwrite");
 
@@ -50,14 +50,15 @@ export async function restoreIndexedDB(dump: Record<string, DumpIndexDB>): Promi
                         }
                     }
 
-                    tx.oncomplete = (): void => {
+                    tx.addEventListener("success", (): void => {
                         db.close();
                         resolve();
-                    };
-                    tx.onerror = (): void => reject(tx.error);
-                };
+                    });
 
-                openReq.onerror = (): void => reject(openReq.error);
+                    tx.addEventListener("error", (): void => reject(tx.error));
+                });
+
+                openReq.addEventListener("error", (): void => reject(openReq.error));
             });
         }
     } catch (error) {
