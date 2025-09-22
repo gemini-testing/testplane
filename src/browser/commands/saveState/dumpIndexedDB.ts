@@ -18,14 +18,14 @@ export interface DumpStoreIndexDB {
     }[];
 }
 
-export async function dumpIndexedDB(): Promise<Record<string, unknown> | undefined> {
+export async function dumpIndexedDB(): Promise<Record<string, DumpIndexDB> | undefined> {
     try {
         if (!("databases" in indexedDB)) {
             throw new Error("Your browser don't indexedDB.databases()");
         }
 
         const dbList = await indexedDB.databases(); // список баз
-        const result: Record<string, unknown> = {};
+        const result: Record<string, DumpIndexDB> = {};
 
         for (const dbInfo of dbList) {
             const name = dbInfo.name;
