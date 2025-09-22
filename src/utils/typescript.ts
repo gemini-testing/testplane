@@ -4,7 +4,7 @@ import * as logger from "./logger";
 
 const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
 
-const TRANSFORM_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
+const TRANSFORM_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
 const ASSET_EXTENSIONS = [
     ".css",
     ".scss",
@@ -19,6 +19,10 @@ const ASSET_EXTENSIONS = [
     ".woff",
     ".woff2",
 ];
+
+type ProcessWithTransformHook = typeof process & {
+    [TESTPLANE_TRANSFORM_HOOK]?: { revert: () => void; enableSourceMaps: () => void };
+};
 
 let transformFunc: null | ((code: string, sourceFile: string, sourceMaps: boolean) => string) = null;
 
@@ -83,37 +87,62 @@ export const transformCode = (
 };
 
 export const registerTransformHook = (isSilent: boolean = false): void => {
-    const processWithEsbuildSymbol = process as typeof process & {
-        [TESTPLANE_TRANSFORM_HOOK]?: { revert: () => void };
-    };
+    const processWithTranspileSymbol = process as ProcessWithTransformHook;
 
-    if (processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK] || process.env.TS_ENABLE === "false") {
+    if (processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK] || process.env.TS_ENABLE === "false") {
         return;
     }
 
     try {
-        const revertTransformHook = addHook(
-            (code, filename) => transformCode(code, { sourceFile: filename, sourceMaps: false, isSilent }),
-            {
-                exts: TRANSFORM_EXTENSIONS,
-                matcher: filename => !filename.includes("node_modules"),
-                ignoreNodeModules: false,
-            },
-        );
+        const mkTransformCodeHook =
+            (sourceMaps = false): Parameters<typeof addHook>[0] =>
+            (code, sourceFile) =>
+                transformCode(code, { sourceFile, sourceMaps, isSilent });
+
+        const transformCodeOptions: Parameters<typeof addHook>[1] = {
+            exts: TRANSFORM_CODE_EXTENSIONS,
+            ignoreNodeModules: true,
+        };
+
+        let areSourceMapsEnabled = false;
+
+        let revertTransformHook = addHook(mkTransformCodeHook(), transformCodeOptions);
 
         const revertAssetHook = addHook(() => "module.exports = {};", {
             exts: ASSET_EXTENSIONS,
             ignoreNodeModules: false,
         });
 
+        const enableSourceMaps = (): void => {
+            if (areSourceMapsEnabled) {
+                return;
+            }
+
+            areSourceMapsEnabled = true;
+
+            revertTransformHook();
+
+            revertTransformHook = addHook(mkTransformCodeHook(true), transformCodeOptions);
+        };
+
         const revertAll = (): void => {
             revertTransformHook();
             revertAssetHook();
-            delete processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK];
+            delete processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK];
         };
 
-        processWithEsbuildSymbol[TESTPLANE_TRANSFORM_HOOK] = { revert: revertAll };
+        processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK] = { revert: revertAll, enableSourceMaps };
     } catch (err) {
         logger.warn(`testplane: an error occurred while trying to register transform hook.`, err);
     }
+};
+
+export const enableSourceMaps = (): void => {
+    const processWithTranspileSymbol = process as ProcessWithTransformHook;
+
+    if (!processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK]) {
+        return;
+    }
+
+    processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK].enableSourceMaps();
 };
