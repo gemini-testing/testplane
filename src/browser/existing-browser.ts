@@ -10,7 +10,7 @@ import { Camera, PageMeta } from "./camera";
 import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
-import { WEBDRIVER_PROTOCOL } from "../constants/config";
+import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../constants/config";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
@@ -98,7 +98,9 @@ export class ExistingBrowser extends Browser {
 
                 await isolationPromise;
 
-                await this.startCollectCookies();
+                if (this.config.automationProtocol === DEVTOOLS_PROTOCOL) {
+                    await this.startCollectCookies();
+                }
 
                 this._callstackHistory?.clear();
 
