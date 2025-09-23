@@ -11,15 +11,28 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config
 import { defaultOptions, getWebdriverFrames, SaveStateData, SaveStateOptions } from "../saveState";
 import { Protocol } from "devtools-protocol";
 
+export type RestoreStateOptions = SaveStateOptions & {
+    data?: SaveStateData;
+};
+
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("restoreState", async (_options: SaveStateOptions) => {
+    session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
         const options = { ...defaultOptions, ..._options };
 
-        const restoreState: SaveStateData = await fs.readJson(options.path);
+        let restoreState: SaveStateData | undefined = options.data;
 
-        logger.log("Restore state", options);
+        if (options.path) {
+            restoreState = await fs.readJson(options.path);
+        }
+
+        if (!restoreState) {
+            logger.error("Can't restore state: please provide a path to file or data");
+            return;
+        }
+
+        logger.log("Restore state");
 
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {

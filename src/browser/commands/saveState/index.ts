@@ -8,7 +8,7 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config
 import { Cookie } from "@testplane/wdio-protocols";
 
 export type SaveStateOptions = {
-    path: string;
+    path?: string;
 
     cookies?: boolean;
     localStorage?: boolean;
@@ -42,14 +42,14 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("saveState", async (_options: SaveStateOptions) => {
+    session.addCommand("saveState", async (_options: SaveStateOptions): Promise<SaveStateData> => {
         const options = { ...defaultOptions, ..._options };
 
         const data: SaveStateData = {
             framesData: {},
         };
 
-        logger.log("Save state", options);
+        logger.log("Save state");
 
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
@@ -168,8 +168,11 @@ export default (browser: Browser): void => {
         }
 
         if (options && options.path) {
-            logger.log("State saved");
             await fs.writeJson(options.path, data, { spaces: 2 });
         }
+
+        logger.log("State saved");
+
+        return data;
     });
 };
