@@ -1,7 +1,6 @@
 import url from "url";
 import _ from "lodash";
-// @ts-expect-error no typings for "set-cookie-parser"
-import { parse as parseCookiesString } from "set-cookie-parser";
+import { parse as parseCookiesString, Cookie } from "set-cookie-parser";
 import { attach, type AttachOptions, type ElementArray } from "@testplane/webdriverio";
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
@@ -150,6 +149,8 @@ export class ExistingBrowser extends Browser {
 
         const puppeteer = await this._session.getPuppeteer();
 
+        console.log("getPuppeteer", puppeteer);
+
         if (puppeteer) {
             const pages = await puppeteer.pages();
 
@@ -159,21 +160,18 @@ export class ExistingBrowser extends Browser {
                         const headers = res.headers();
 
                         if (headers["set-cookie"]) {
-                            parseCookiesString(headers["set-cookie"], { map: false }).forEach(
-                                (cookie: Record<string, unknown>) => {
-                                    const index = [cookie.name, cookie.domain, cookie.path].join("-");
-                                    const expires =
-                                        typeof cookie.expires === "string"
-                                            ? Math.floor(new Date(cookie.expires).getTime() / 1000)
-                                            : Math.floor(cookie.expires as number);
+                            parseCookiesString(headers["set-cookie"], { map: false }).forEach((cookie: Cookie) => {
+                                const index = [cookie.name, cookie.domain, cookie.path].join("-");
+                                const expires = cookie.expires
+                                    ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                    : undefined;
 
-                                    this.allCookies.set(index, {
-                                        ...cookie,
-                                        domain: cookie.domain ?? new URL(res.url()).hostname,
-                                        expires,
-                                    } as Protocol.Network.CookieParam);
-                                },
-                            );
+                                this.allCookies.set(index, {
+                                    ...cookie,
+                                    domain: cookie.domain ?? new URL(res.url()).hostname,
+                                    expires,
+                                } as Protocol.Network.CookieParam);
+                            });
                         }
                     } catch (err) {
                         console.error(err);

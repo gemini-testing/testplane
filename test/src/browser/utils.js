@@ -113,6 +113,7 @@ export const mkCDPBrowserCtx_ = () => ({
 export const mkCDPStub_ = () => ({
     browserContexts: sinon.stub().named("browserContexts").returns([]),
     createIncognitoBrowserContext: sinon.stub().named("createIncognitoBrowserContext").resolves(mkCDPBrowserCtx_()),
+    pages: () => [],
 });
 
 export const mkSessionStub_ = () => {
