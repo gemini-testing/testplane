@@ -149,33 +149,38 @@ export class ExistingBrowser extends Browser {
         });
 
         const puppeteer = await this._session.getPuppeteer();
-        const pages = await puppeteer.pages();
 
-        pages[0].on("response", async res => {
-            try {
-                const headers = res.headers();
+        if (puppeteer) {
+            const pages = await puppeteer.pages();
 
-                if (headers["set-cookie"]) {
-                    parseCookiesString(headers["set-cookie"], { map: false }).forEach(
-                        (cookie: Record<string, unknown>) => {
-                            const index = [cookie.name, cookie.domain, cookie.path].join("-");
-                            const expires =
-                                typeof cookie.expires === "string"
-                                    ? Math.floor(new Date(cookie.expires).getTime() / 1000)
-                                    : Math.floor(cookie.expires as number);
+            if (pages.length) {
+                pages[0].on("response", async res => {
+                    try {
+                        const headers = res.headers();
 
-                            this.allCookies.set(index, {
-                                ...cookie,
-                                domain: cookie.domain ?? new URL(res.url()).hostname,
-                                expires,
-                            } as Protocol.Network.CookieParam);
-                        },
-                    );
-                }
-            } catch (err) {
-                console.error(err);
+                        if (headers["set-cookie"]) {
+                            parseCookiesString(headers["set-cookie"], { map: false }).forEach(
+                                (cookie: Record<string, unknown>) => {
+                                    const index = [cookie.name, cookie.domain, cookie.path].join("-");
+                                    const expires =
+                                        typeof cookie.expires === "string"
+                                            ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                            : Math.floor(cookie.expires as number);
+
+                                    this.allCookies.set(index, {
+                                        ...cookie,
+                                        domain: cookie.domain ?? new URL(res.url()).hostname,
+                                        expires,
+                                    } as Protocol.Network.CookieParam);
+                                },
+                            );
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
             }
-        });
+        }
     }
 
     markAsBroken(): void {
