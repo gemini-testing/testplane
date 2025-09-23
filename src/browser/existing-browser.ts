@@ -149,8 +149,6 @@ export class ExistingBrowser extends Browser {
 
         const puppeteer = await this._session.getPuppeteer();
 
-        console.log("getPuppeteer", puppeteer);
-
         if (puppeteer) {
             const pages = await puppeteer.pages();
 

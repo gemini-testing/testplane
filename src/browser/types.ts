@@ -9,8 +9,9 @@ import type { Callstack } from "./history/callstack";
 import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 import type { Options } from "@testplane/wdio-types";
-import { SaveStateOptions } from "./commands/saveState";
+import { SaveStateData, SaveStateOptions } from "./commands/saveState";
 import { Cookie } from "@testplane/wdio-protocols";
+import { RestoreStateOptions } from "./commands/restoreState";
 
 export const BrowserName = {
     CHROME: "chrome" as PuppeteerBrowser.CHROME,
@@ -78,8 +79,8 @@ declare global {
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
             getAllRequestsCookies(): Promise<Array<Cookie>>;
-            saveState(options: SaveStateOptions): Promise<void>;
-            restoreState(options: SaveStateOptions): Promise<void>;
+            saveState(options: SaveStateOptions): Promise<SaveStateData>;
+            restoreState(options: RestoreStateOptions): Promise<void>;
 
             overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,
