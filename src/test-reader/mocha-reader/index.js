@@ -8,6 +8,7 @@ const { TreeBuilderDecorator } = require("./tree-builder-decorator");
 const { TestReaderEvents } = require("../../events");
 const { MasterEvents } = require("../../events");
 const { getMethodsByInterface } = require("./utils");
+const { enableSourceMaps } = require("../../utils/typescript");
 
 async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }) {
     const mocha = new Mocha(config);
@@ -103,6 +104,8 @@ function addLocationToRunnables(inBus, config, runnableOpts) {
     if (!runnableOpts || !runnableOpts.saveLocations) {
         return;
     }
+
+    enableSourceMaps();
 
     const sourceMapSupport = tryToRequireSourceMapSupport();
     const { suiteMethods, testMethods } = getMethodsByInterface(config.ui);

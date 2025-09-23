@@ -17,6 +17,7 @@ describe("test-reader/mocha-reader", () => {
     let MochaConstructorStub;
     let SourceMapSupportStub;
     let getMethodsByInterfaceStub;
+    let enableSourceMapsStub;
     let readFiles;
 
     const mkMochaSuiteStub_ = () => {
@@ -47,11 +48,13 @@ describe("test-reader/mocha-reader", () => {
             install: sinon.stub(),
         };
         getMethodsByInterfaceStub = sinon.stub().returns({ suiteMethods: [], testMethods: [] });
+        enableSourceMapsStub = sinon.stub();
 
         readFiles = proxyquire("src/test-reader/mocha-reader", {
             mocha: MochaConstructorStub,
             "@cspotcode/source-map-support": SourceMapSupportStub,
             "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
+            "../../utils/typescript": { enableSourceMaps: enableSourceMapsStub },
         }).readFiles;
 
         sandbox.stub(MochaEventBus, "create").returns(Object.create(MochaEventBus.prototype));
@@ -260,6 +263,13 @@ describe("test-reader/mocha-reader", () => {
                 await readFiles_({ runnableOpts: { saveLocations: true } });
 
                 assert.doesNotThrow(() => globalCtx.describe());
+            });
+
+            it("should enable testplane source maps before installing 'source-map-support'", async () => {
+                await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveLocations: true } });
+
+                assert.calledOnce(enableSourceMapsStub);
+                assert.callOrder(enableSourceMapsStub, SourceMapSupportStub.install);
             });
 
             it("should set 'hookRequire' option on install source-map-support", async () => {
