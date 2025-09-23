@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.31.3](https://github.com/gemini-testing/testplane/compare/v8.31.2...v8.31.3) (2025-09-23)
+
+
+### Bug Fixes
+
+* tests location when calling list-tests cli command ([56a12cd](https://github.com/gemini-testing/testplane/commit/56a12cd9a1256790f8d42c21159baf80e9da3da0))
+
 ### [8.31.2](https://github.com/gemini-testing/testplane/compare/v8.31.1...v8.31.2) (2025-09-22)
 
 
