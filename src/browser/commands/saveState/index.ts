@@ -1,6 +1,5 @@
 import fs from "fs-extra";
 
-import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DumpIndexDB, dumpIndexedDB } from "./dumpIndexedDB";
 import { dumpStorage, StorageData } from "./dumpStorage";
@@ -42,14 +41,12 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("saveState", async (_options: SaveStateOptions): Promise<SaveStateData> => {
+    session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData> => {
         const options = { ...defaultOptions, ..._options };
 
         const data: SaveStateData = {
             framesData: {},
         };
-
-        logger.log("Save state");
 
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
@@ -64,7 +61,6 @@ export default (browser: Browser): void => {
                         expires: cookie.expiry,
                         httpOnly: cookie.httpOnly,
                         secure: cookie.secure,
-                        sameSite: cookie.sameSite,
                     }));
                 }
 
@@ -170,8 +166,6 @@ export default (browser: Browser): void => {
         if (options && options.path) {
             await fs.writeJson(options.path, data, { spaces: 2 });
         }
-
-        logger.log("State saved");
 
         return data;
     });

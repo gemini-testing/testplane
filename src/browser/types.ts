@@ -80,7 +80,7 @@ declare global {
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
             getAllRequestsCookies(): Promise<Array<Cookie>>;
-            saveState(options: SaveStateOptions): Promise<SaveStateData>;
+            saveState(options?: SaveStateOptions): Promise<SaveStateData>;
             restoreState(options: RestoreStateOptions): Promise<void>;
 
             overwriteCommand<CommandName extends BrowserCommand>(

@@ -32,8 +32,6 @@ export default (browser: Browser): void => {
             return;
         }
 
-        logger.log("Restore state");
-
         switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
                 if (restoreState.cookies && options.cookies) {
@@ -140,7 +138,5 @@ export default (browser: Browser): void => {
                 break;
             }
         }
-
-        logger.log("State restored");
     });
 };
