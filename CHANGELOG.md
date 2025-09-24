@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.31.4](https://github.com/gemini-testing/testplane/compare/v8.31.3...v8.31.4) (2025-09-24)
+
+
+### Bug Fixes
+
+* make deep config params partial ([453300f](https://github.com/gemini-testing/testplane/commit/453300fc19222abd30e0bc11ed1fc90b2056ab90))
+* **moveCursorTo:** make options optional ([46f91b0](https://github.com/gemini-testing/testplane/commit/46f91b047e248958f92113e9fc5d9f0f288bfcd3))
+
 ### [8.31.3](https://github.com/gemini-testing/testplane/compare/v8.31.2...v8.31.3) (2025-09-23)
 
 
