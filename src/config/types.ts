@@ -365,9 +365,18 @@ export interface SetsConfigParsed {
     browsers: Array<string>;
 }
 
-type PartialCommonConfig = Partial<Omit<CommonConfig, "system" | "timeTravel">> & {
+type PartialCommonConfig = Partial<
+    Omit<
+        CommonConfig,
+        "system" | "timeTravel" | "takeScreenshotOnFails" | "lastFailed" | "openAndWaitOpts" | "devServer"
+    >
+> & {
     system?: Partial<SystemConfig>;
     timeTravel?: TimeTravelMode | TimeTravelConfig;
+    takeScreenshotOnFails?: Partial<CommonConfig["takeScreenshotOnFails"]>;
+    lastFailed?: Partial<CommonConfig["lastFailed"]>;
+    openAndWaitOpts?: Partial<CommonConfig["openAndWaitOpts"]>;
+    devServer?: Partial<CommonConfig["devServer"]>;
 };
 
 // Only browsers desiredCapabilities are required in input config
