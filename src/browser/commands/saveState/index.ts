@@ -1,7 +1,7 @@
 import fs from "fs-extra";
 
 import type { Browser } from "../../types";
-import { DumpIndexDB, dumpIndexedDB } from "./dumpIndexedDB";
+// import { DumpIndexDB } from "./dumpIndexedDB";
 import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { Cookie } from "@testplane/wdio-protocols";
@@ -12,11 +12,11 @@ export type SaveStateOptions = {
     cookies?: boolean;
     localStorage?: boolean;
     sessionStorage?: boolean;
-    indexDB?: boolean;
+    // indexDB?: boolean;
 };
 
 export type FrameData = StorageData & {
-    indexDB?: Record<string, DumpIndexDB>;
+    // indexDB?: Record<string, DumpIndexDB>;
 };
 
 export type SaveStateData = {
@@ -28,7 +28,7 @@ export const defaultOptions = {
     cookies: true,
     localStorage: true,
     sessionStorage: true,
-    indexDB: false,
+    // indexDB: false,
 };
 
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
@@ -97,15 +97,16 @@ export default (browser: Browser): void => {
                         }
                     }
 
-                    if (options.indexDB) {
-                        const indexDB: Record<string, DumpIndexDB> | undefined = await session.execute(dumpIndexedDB);
+                    // @TODO: will make it later
+                    // if (options.indexDB) {
+                    //     const indexDB: Record<string, DumpIndexDB> | undefined = await session.execute(dumpIndexedDB);
+                    //
+                    //     if (indexDB) {
+                    //         frameData.indexDB = indexDB;
+                    //     }
+                    // }
 
-                        if (indexDB) {
-                            frameData.indexDB = indexDB;
-                        }
-                    }
-
-                    if (frameData.localStorage || frameData.sessionStorage || frameData.indexDB) {
+                    if (frameData.localStorage || frameData.sessionStorage) {
                         framesData[origin] = frameData;
                     }
                 }
@@ -145,15 +146,16 @@ export default (browser: Browser): void => {
                         }
                     }
 
-                    if (options.indexDB) {
-                        const indexDB: Record<string, DumpIndexDB> | undefined = await frame.evaluate(dumpIndexedDB);
+                    // @TODO: will make it later
+                    // if (options.indexDB) {
+                    //     const indexDB: Record<string, DumpIndexDB> | undefined = await frame.evaluate(dumpIndexedDB);
+                    //
+                    //     if (indexDB) {
+                    //         frameData.indexDB = indexDB;
+                    //     }
+                    // }
 
-                        if (indexDB) {
-                            frameData.indexDB = indexDB;
-                        }
-                    }
-
-                    if (frameData.localStorage || frameData.sessionStorage || frameData.indexDB) {
+                    if (frameData.localStorage || frameData.sessionStorage) {
                         framesData[origin] = frameData;
                     }
                 }
