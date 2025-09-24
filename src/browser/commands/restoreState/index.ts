@@ -1,8 +1,8 @@
 import fs from "fs-extra";
 import _ from "lodash";
 
-import { clearAllIndexedDB } from "./clearAllIndexedDB";
-import { restoreIndexedDB } from "./restoreIndexedDB";
+// import { clearAllIndexedDB } from "./clearAllIndexedDB";
+// import { restoreIndexedDB } from "./restoreIndexedDB";
 import { restoreStorage } from "./restoreStorage";
 
 import * as logger from "../../../utils/logger";
@@ -72,11 +72,12 @@ export default (browser: Browser): void => {
                                 );
                             }
 
-                            if (frameData.indexDB && options.indexDB) {
-                                // @todo: Doesn't work now
-                                await session.execute(clearAllIndexedDB);
-                                await session.execute(restoreIndexedDB, frameData.indexDB);
-                            }
+                            // @TODO: will make it later
+                            // if (frameData.indexDB && options.indexDB) {
+                            //     // @todo: Doesn't work now
+                            //     await session.execute(clearAllIndexedDB);
+                            //     await session.execute(restoreIndexedDB, frameData.indexDB);
+                            // }
                         }
                     }
 
@@ -129,11 +130,12 @@ export default (browser: Browser): void => {
                         );
                     }
 
-                    if (frameData.indexDB) {
-                        // @todo: Doesn't work now
-                        await frame.evaluate(clearAllIndexedDB);
-                        await frame.evaluate(restoreIndexedDB, frameData.indexDB);
-                    }
+                    // @TODO: will make it later
+                    // if (frameData.indexDB) {
+                    //     // @todo: Doesn't work now
+                    //     await frame.evaluate(clearAllIndexedDB);
+                    //     await frame.evaluate(restoreIndexedDB, frameData.indexDB);
+                    // }
                 }
                 break;
             }
