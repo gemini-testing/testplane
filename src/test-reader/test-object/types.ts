@@ -38,9 +38,9 @@ export interface TestHookDefinition {
 export interface TestDefinition {
     <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(title: string, fn?: TestFunction<T>): Test;
 
-    only: <T>(title: string, fn?: TestFunction<T>) => Test;
+    only: <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(title: string, fn?: TestFunction<T>) => Test;
 
-    skip: <T>(title: string, fn?: TestFunction<T>) => Test;
+    skip: <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(title: string, fn?: TestFunction<T>) => Test;
 }
 
 export interface SuiteDefinition {
