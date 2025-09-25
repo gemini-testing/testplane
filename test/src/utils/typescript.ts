@@ -7,10 +7,12 @@ describe("utils/typescript", () => {
 
     let ts: typeof import("src/utils/typescript");
     let addHookStub: SinonStub;
+    let revertHookStub: SinonStub;
     const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
 
     beforeEach(() => {
-        addHookStub = sinon.stub();
+        revertHookStub = sinon.stub();
+        addHookStub = sinon.stub().returns(revertHookStub);
         ts = proxyquire.noCallThru().load("src/utils/typescript", {
             pirates: {
                 addHook: addHookStub,
@@ -27,7 +29,7 @@ describe("utils/typescript", () => {
         it("should add pirates hook", () => {
             ts.registerTransformHook();
 
-            assert.calledOnce(addHookStub);
+            assert.calledTwice(addHookStub);
         });
 
         it("should not call register if typescript was already installed", () => {
@@ -46,6 +48,24 @@ describe("utils/typescript", () => {
             assert.notCalled(addHookStub);
 
             process.env.TS_ENABLE = "undefined";
+        });
+    });
+
+    describe("enableSourceMaps", () => {
+        it("should not do anything if transform hook is not registered", () => {
+            ts.enableSourceMaps();
+
+            assert.notCalled(addHookStub);
+        });
+
+        it("should re-register transform hook with source maps", () => {
+            ts.registerTransformHook();
+            const addHookPrevCallCount = addHookStub.callCount;
+
+            ts.enableSourceMaps();
+
+            assert.calledOnce(revertHookStub);
+            assert.equal(addHookStub.callCount, addHookPrevCallCount + 1);
         });
     });
 });
