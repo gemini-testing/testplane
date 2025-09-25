@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.31.5](https://github.com/gemini-testing/testplane/compare/v8.31.4...v8.31.5) (2025-09-25)
+
+
+### Bug Fixes
+
+* ability to disable "headless" option using cli or env ([40a2b00](https://github.com/gemini-testing/testplane/commit/40a2b00d7fd042aecf3d2af20130b51a17b8c82f))
+
 ### [8.31.4](https://github.com/gemini-testing/testplane/compare/v8.31.3...v8.31.4) (2025-09-24)
 
 
