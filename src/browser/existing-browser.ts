@@ -18,6 +18,7 @@ import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
+import { CDP } from "./cdp";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -60,6 +61,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
+    protected _cdp: CDP | null = null;
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -72,11 +74,15 @@ export class ExistingBrowser extends Browser {
     async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
 
+        const cdpPromise = CDP.create(this).then(cdp => {
+            this._cdp = cdp;
+        });
+
         if (!isRunInNodeJsEnv(this._config)) {
             this._startCollectingCustomCommands();
         }
 
-        const isolationPromise = this._performIsolation({ sessionCaps, sessionOpts });
+        const isolationPromise = cdpPromise.then(() => this._performIsolation({ sessionCaps, sessionOpts }));
 
         this._extendStacktrace();
         this._addSteps();
@@ -122,6 +128,7 @@ export class ExistingBrowser extends Browser {
     }
 
     quit(): void {
+        this._cdp?.close();
         this._meta = this._initMeta();
     }
 
@@ -346,35 +353,29 @@ export class ExistingBrowser extends Browser {
             return;
         }
 
-        const puppeteer = await this._session.getPuppeteer();
-        const browserCtxs = puppeteer.browserContexts();
+        if (!this._cdp) {
+            logger.warn("Unable to get CDP endpoint, skip performing isolation");
+            return;
+        }
 
-        const incognitoCtx = await puppeteer.createIncognitoBrowserContext();
-        const page = await incognitoCtx.newPage();
+        const cdpTarget = this._cdp.target;
+        const { browserContextIds } = await cdpTarget.getBrowserContexts();
+        const { browserContextId } = await cdpTarget.createBrowserContext();
+        const { targetId: incognitoWindowId } = await cdpTarget.createTarget({ browserContextId });
 
         if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
             const windowIds = await this._session.getWindowHandles();
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
-
-            await this._session.switchToWindow(incognitoWindowId!);
+            await this._session.switchToWindow(windowIds.find(id => id.includes(incognitoWindowId))!);
+        } else {
+            await cdpTarget.activateTarget(incognitoWindowId);
         }
 
         if (this._session.isBidi) {
             return;
         }
 
-        for (const ctx of browserCtxs) {
-            if (ctx.isIncognito()) {
-                await ctx.close();
-                continue;
-            }
-
-            for (const page of await ctx.pages()) {
-                await page.close();
-            }
-        }
+        await Promise.all(browserContextIds.map(contextId => cdpTarget.disposeBrowserContext(contextId)));
     }
 
     protected async _prepareSession(): Promise<void> {
@@ -483,5 +484,9 @@ export class ExistingBrowser extends Browser {
 
     get meta(): Record<string, unknown> {
         return this._meta;
+    }
+
+    get cdp(): CDP | null {
+        return this._cdp;
     }
 }
