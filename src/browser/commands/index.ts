@@ -9,4 +9,6 @@ export const customCommandFileNames = [
     "switchToRepl",
     "moveCursorTo",
     "captureDomSnapshot",
+    "saveState",
+    "restoreState",
 ];

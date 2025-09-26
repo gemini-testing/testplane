@@ -1,5 +1,6 @@
 import url from "url";
 import _ from "lodash";
+import { parse as parseCookiesString, Cookie } from "set-cookie-parser";
 import { attach, type AttachOptions, type ElementArray } from "@testplane/webdriverio";
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
@@ -8,7 +9,7 @@ import { Camera, PageMeta } from "./camera";
 import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
-import { WEBDRIVER_PROTOCOL } from "../constants/config";
+import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../constants/config";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
@@ -18,6 +19,7 @@ import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
+import { Protocol } from "devtools-protocol";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -60,6 +62,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
+    private allCookies: Map<string, Protocol.Network.CookieParam> = new Map();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -94,6 +97,10 @@ export class ExistingBrowser extends Browser {
 
                 await isolationPromise;
 
+                if (this.config.automationProtocol === DEVTOOLS_PROTOCOL) {
+                    await this.startCollectCookies();
+                }
+
                 this._callstackHistory?.clear();
 
                 try {
@@ -109,6 +116,67 @@ export class ExistingBrowser extends Browser {
         );
 
         return this;
+    }
+
+    async startCollectCookies(): Promise<void> {
+        if (!this._session) {
+            return;
+        }
+
+        this.allCookies = new Map();
+
+        this.publicAPI.addCommand("getAllRequestsCookies", async () => {
+            if (this._session) {
+                const cookies = await this._session.getAllCookies();
+                cookies.forEach(cookie => {
+                    const index = [cookie.name, cookie.domain, cookie.path].join("-");
+
+                    this.allCookies.set(index, cookie as Protocol.Network.CookieParam);
+                });
+            }
+
+            return [...this.allCookies.values()].map(cookie => ({
+                name: cookie.name,
+                value: cookie.value,
+                domain: cookie.domain,
+                path: cookie.path,
+                expires: cookie.expires ? cookie.expires : undefined,
+                httpOnly: cookie.httpOnly,
+                secure: cookie.secure,
+                sameSite: cookie.sameSite?.toLowerCase(),
+            }));
+        });
+
+        const puppeteer = await this._session.getPuppeteer();
+
+        if (puppeteer) {
+            const pages = await puppeteer.pages();
+
+            if (pages.length) {
+                pages[0].on("response", async res => {
+                    try {
+                        const headers = res.headers();
+
+                        if (headers["set-cookie"]) {
+                            parseCookiesString(headers["set-cookie"], { map: false }).forEach((cookie: Cookie) => {
+                                const index = [cookie.name, cookie.domain, cookie.path].join("-");
+                                const expires = cookie.expires
+                                    ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                    : undefined;
+
+                                this.allCookies.set(index, {
+                                    ...cookie,
+                                    domain: cookie.domain ?? new URL(res.url()).hostname,
+                                    expires,
+                                } as Protocol.Network.CookieParam);
+                            });
+                        }
+                    } catch (err) {
+                        console.error(err);
+                    }
+                });
+            }
+        }
     }
 
     markAsBroken(): void {
