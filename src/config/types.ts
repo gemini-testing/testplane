@@ -122,6 +122,22 @@ export interface AssertViewOpts {
      * @defaultValue `0`
      */
     ignoreDiffPixelCount?: `${number}%` | number;
+    /**
+     * Ability to wait for page to be fully ready before making screenshot.
+     * This ensures (in following order):
+     * - no script is running at the moment;
+     * - fonts are no longer loading
+     * - images are no longer loading
+     * - external styles are loaded
+     * - external scripts are no longer loading
+     *
+     * @remarks
+     * If page is still not ready after non-zero timeout, there would only be a warning about it, no error is thrown.
+     *
+     * @note
+     * Setting it to zero disables waiting for page to be ready.
+     */
+    waitForStaticToLoadTimeout?: number;
 }
 
 export interface ExpectOptsConfig {

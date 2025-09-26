@@ -57,6 +57,14 @@ module.exports.default = browser => {
             return Promise.reject(new Error(`duplicate name for "${state}" state`));
         }
 
+        if (opts.waitForStaticToLoadTimeout) {
+            // Interval between checks is "waitPageReadyTimeout / 10" ms, but at least 50ms and not more than 500ms
+            await session.waitForStaticToLoad({
+                timeout: opts.waitForStaticToLoadTimeout,
+                interval: Math.min(Math.max(50, opts.waitForStaticToLoadTimeout / 10), 500),
+            });
+        }
+
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 

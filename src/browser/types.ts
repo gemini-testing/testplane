@@ -9,6 +9,7 @@ import type { Callstack } from "./history/callstack";
 import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 import type { Options } from "@testplane/wdio-types";
+import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
 
 export const BrowserName = {
     CHROME: "chrome" as PuppeteerBrowser.CHROME,
@@ -160,6 +161,11 @@ declare global {
             switchToRepl: (this: WebdriverIO.Browser, ctx?: Record<string, unknown>) => Promise<void>;
 
             clearSession: (this: WebdriverIO.Browser) => Promise<void>;
+
+            waitForStaticToLoad: (
+                this: WebdriverIO.Browser,
+                opts?: { timeout?: number; interval?: number },
+            ) => Promise<WaitForStaticToLoadResult>;
 
             unstable_captureDomSnapshot(
                 this: WebdriverIO.Browser,
