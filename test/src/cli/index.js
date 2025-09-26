@@ -12,7 +12,7 @@ const any = sinon.match.any;
 describe("cli", () => {
     const sandbox = sinon.createSandbox();
     let testplaneCli;
-    let loggerLogStub, loggerWarnStub, loggerErrorStub;
+    let loggerLogStub, loggerWarnStub, loggerErrorStub, getPortStub;
 
     const run_ = async (argv = "", cli) => {
         process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];
@@ -27,6 +27,7 @@ describe("cli", () => {
         loggerLogStub = sandbox.stub();
         loggerWarnStub = sandbox.stub();
         loggerErrorStub = sandbox.stub();
+        getPortStub = sandbox.stub().resolves(12345);
 
         testplaneCli = proxyquire("src/cli", {
             "../utils/cli": proxyquire("src/utils/cli", {
@@ -41,6 +42,7 @@ describe("cli", () => {
                 warn: loggerWarnStub,
                 error: loggerErrorStub,
             },
+            "get-port": getPortStub,
         });
 
         sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
@@ -274,6 +276,7 @@ describe("cli", () => {
                     enabled: false,
                     beforeTest: false,
                     onFail: false,
+                    port: 0,
                 },
             });
         });
@@ -286,6 +289,7 @@ describe("cli", () => {
                     enabled: true,
                     beforeTest: false,
                     onFail: false,
+                    port: 12345,
                 },
             });
         });
@@ -298,6 +302,7 @@ describe("cli", () => {
                     enabled: true,
                     beforeTest: true,
                     onFail: false,
+                    port: 12345,
                 },
             });
         });
@@ -310,6 +315,32 @@ describe("cli", () => {
                     enabled: true,
                     beforeTest: false,
                     onFail: true,
+                    port: 12345,
+                },
+            });
+        });
+
+        it('should use passed port when specify "port" option', async () => {
+            await run_("--repl --repl-port 33333");
+
+            assert.notCalled(getPortStub);
+            assert.calledWithMatch(Testplane.prototype.run, any, {
+                replMode: {
+                    enabled: true,
+                    port: 33333,
+                },
+            });
+        });
+
+        it('should use random free port if "port" option is not specified', async () => {
+            getPortStub.resolves(44444);
+
+            await run_("--repl");
+
+            assert.calledWithMatch(Testplane.prototype.run, any, {
+                replMode: {
+                    enabled: true,
+                    port: 44444,
                 },
             });
         });
