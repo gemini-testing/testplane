@@ -1,5 +1,6 @@
 import path from "node:path";
 import { Command } from "@gemini-testing/commander";
+import getPort from "get-port";
 
 import defaults from "../config/defaults";
 import { configOverriding } from "./info";
@@ -75,6 +76,12 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
         )
         .option("--repl-before-test [type]", "open repl interface before test run", Boolean, false)
         .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
+        .option(
+            "--repl-port <number>",
+            "run net server on port to exchange messages with repl (used free random port by default)",
+            Number,
+            0,
+        )
         .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
         .option("--keep-browser", "do not close browser session after test completion")
@@ -91,7 +98,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     updateRefs,
                     inspect,
                     inspectBrk,
-                    repl,
                     replBeforeTest,
                     replOnFail,
                     devtools,
@@ -110,9 +116,10 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     requireModules,
                     inspectMode: (inspect || inspectBrk) && { inspect, inspectBrk },
                     replMode: {
-                        enabled: repl || replBeforeTest || replOnFail,
+                        enabled: isReplModeEnabled(program),
                         beforeTest: replBeforeTest,
                         onFail: replOnFail,
+                        port: await getReplPort(program),
                     },
                     devtools: devtools || false,
                     local: local || false,
@@ -149,4 +156,20 @@ function preparseOption(program: Command, option: string): unknown {
 
     configFileParser.parse(process.argv);
     return configFileParser[option];
+}
+
+function isReplModeEnabled(program: Command): boolean {
+    const { repl, replBeforeTest, replOnFail } = program;
+
+    return repl || replBeforeTest || replOnFail;
+}
+
+async function getReplPort(program: Command): Promise<number> {
+    let { replPort } = program;
+
+    if (isReplModeEnabled(program) && !replPort) {
+        replPort = await getPort();
+    }
+
+    return replPort;
 }

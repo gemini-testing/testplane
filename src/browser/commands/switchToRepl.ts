@@ -1,5 +1,7 @@
 import path from "node:path";
 import type repl from "node:repl";
+import net from "node:net";
+import { Writable, Readable } from "node:stream";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
 import RuntimeConfig from "../../config/runtime-config";
@@ -39,11 +41,17 @@ export default (browser: Browser): void => {
         });
     };
 
+    const broadcastMessage = (message: string, sockets: net.Socket[]): void => {
+        for (const s of sockets) {
+            s.write(message);
+        }
+    };
+
     session.addCommand("switchToRepl", async function (ctx: Record<string, unknown> = {}) {
         const runtimeCfg = RuntimeConfig.getInstance();
         const { onReplMode } = browser.state;
 
-        if (!runtimeCfg.replMode?.enabled) {
+        if (!runtimeCfg.replMode || !runtimeCfg.replMode.enabled) {
             throw new Error(
                 'Command "switchToRepl" available only in REPL mode, which can be started using cli option: "--repl", "--repl-before-test" or "--repl-on-fail"',
             );
@@ -54,16 +62,49 @@ export default (browser: Browser): void => {
             return;
         }
 
-        logger.log(chalk.yellow("You have entered to REPL mode via terminal (test execution timeout is disabled)."));
+        logger.log(
+            chalk.yellow(
+                `You have entered to REPL mode via terminal (test execution timeout is disabled). Port to connect to REPL from other terminals: ${runtimeCfg.replMode.port}`,
+            ),
+        );
 
         const currCwd = process.cwd();
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
         process.chdir(testCwd);
 
-        const replServer = await import("node:repl").then(m => m.start({ prompt: "> " }));
+        let allSockets: net.Socket[] = [];
+
+        const input = new Readable({ read(): void {} });
+        const output = new Writable({
+            write(chunk, _, callback): void {
+                broadcastMessage(chunk.toString(), [...allSockets, process.stdout]);
+                callback();
+            },
+        });
+
+        const replServer = await import("node:repl").then(repl => repl.start({ prompt: "> ", input, output }));
+
+        const netServer = net
+            .createServer(socket => {
+                allSockets.push(socket);
+
+                socket.on("data", data => {
+                    broadcastMessage(data.toString(), [...allSockets.filter(s => s !== socket), process.stdout]);
+                    input.push(data);
+                });
+
+                socket.on("close", () => {
+                    allSockets = allSockets.filter(s => s !== socket);
+                });
+            })
+            .listen(runtimeCfg.replMode.port);
+
+        process.stdin.on("data", data => {
+            broadcastMessage(data.toString(), allSockets);
+            input.push(data);
+        });
 
         browser.applyState({ onReplMode: true });
-
         runtimeCfg.extend({ replServer });
 
         applyContext(replServer, ctx);
@@ -71,6 +112,12 @@ export default (browser: Browser): void => {
 
         return new Promise<void>(resolve => {
             return replServer.on("exit", () => {
+                netServer.close();
+
+                for (const socket of allSockets) {
+                    socket.end("The server was closed after the REPL was exited");
+                }
+
                 process.chdir(currCwd);
                 browser.applyState({ onReplMode: false });
                 resolve();
