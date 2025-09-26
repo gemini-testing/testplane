@@ -1,3 +1,4 @@
+/* global document */
 "use strict";
 
 const fs = require("fs-extra");
@@ -11,6 +12,7 @@ const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
+const logger = require("../../../utils/logger");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -25,6 +27,55 @@ const getIgnoreDiffPixelCountRatio = value => {
 
     return percent / 100;
 };
+
+/**
+ * @note Should be executed in browser environment
+ * @returns {{ready: true} | {ready: false, reason: string}}
+ */
+function browserIsPageReady() {
+    const result = { ready: false };
+
+    if (document.readyState === "loading") {
+        result.reason = "Document is loading";
+        return result;
+    }
+
+    if (document.currentScript) {
+        result.reason = "JavaScript is running";
+        return result;
+    }
+
+    if (document.fonts && document.fonts.status === "loading") {
+        result.reason = "Fonts are loading";
+        return result;
+    }
+
+    const imagesCount = (document.images && document.images.length) || 0;
+
+    for (let i = 0; i < imagesCount; i++) {
+        const image = document.images.item(i);
+
+        if (!image.complete) {
+            result.reason = `Image from ${image.src} is loading`;
+            return result;
+        }
+    }
+
+    const externalStyles = document.querySelectorAll('link[rel="stylesheet"]');
+    const externalStylesCount = (externalStyles && externalStyles.length) || 0;
+
+    for (let i = 0; i < externalStylesCount; i++) {
+        const style = externalStyles.item(i);
+
+        if (!style.sheet) {
+            result.reason = `Styles from ${style.href} are loading`;
+            return result;
+        }
+    }
+
+    result.ready = true;
+    return result;
+}
 
 module.exports.default = browser => {
     const screenShooter = ScreenShooter.create(browser);
@@ -41,6 +92,34 @@ module.exports.default = browser => {
 
     const { handleNoRefImage, handleImageDiff, handleInvalidRefImage } = getCaptureProcessors();
 
+    const waitForResourcesToBeSettled = async (browser, selectors, waitPageReadyTimeout) => {
+        if (!waitPageReadyTimeout) {
+            return;
+        }
+
+        // Interval between checks is "waitPageReadyTimeout / 10" ms, but at least 50ms and not more than 500ms
+        const approxPageCheckInterval = Math.min(Math.max(50, waitPageReadyTimeout / 10), 500);
+
+        let pageNotLoadedReason;
+
+        await browser
+            .waitUntil(
+                async () => {
+                    const result = await browser.execute(browserIsPageReady);
+
+                    pageNotLoadedReason = result.reason;
+
+                    return result.ready;
+                },
+                { timeout: waitPageReadyTimeout, interval: approxPageCheckInterval },
+            )
+            .catch(() => {
+                logger.warn(
+                    `AssertView(${selectors}): Page is not fully loaded after ${waitPageReadyTimeout}ms: ${pageNotLoadedReason}`,
+                );
+            });
+    };
+
     const assertView = async (state, selectors, opts) => {
         opts = _.defaults(opts, assertViewOpts, {
             compositeImage,
@@ -56,6 +135,8 @@ module.exports.default = browser => {
         if (testplaneCtx.assertViewResults.hasState(state)) {
             return Promise.reject(new Error(`duplicate name for "${state}" state`));
         }
+
+        await waitForResourcesToBeSettled(browser, selectors, opts.waitPageReadyTimeout);
 
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);

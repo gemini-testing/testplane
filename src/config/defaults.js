@@ -29,6 +29,7 @@ module.exports = {
         captureElementFromTop: true,
         allowViewportOverflow: false,
         ignoreDiffPixelCount: 0,
+        waitPageReadyTimeout: 5000,
     },
     openAndWaitOpts: {
         waitNetworkIdle: true,
