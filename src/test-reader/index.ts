@@ -9,6 +9,20 @@ import type { Config } from "../config";
 import type { Test } from "./test-object";
 import type { ReadTestsOpts } from "../testplane";
 
+class SingleTestModeError extends Error {
+    constructor(modeName: string, testsCount: number, browsersToRun: string[]) {
+        const message =
+            `In ${modeName} only 1 test in 1 browser should be run, but found ${testsCount} tests` +
+            `${testsCount === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
+            `Try to specify cli-options: "--grep" and "--browser" or use "testplane.only.in" in the test file.`;
+
+        super(message);
+        this.name = "SingleTestModeError";
+        // Удаляем стектрейс про EPIPE, который не нужен пользователю
+        delete this.stack;
+    }
+}
+
 export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
 
 export class TestReader extends EventEmitter {
@@ -68,11 +82,7 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
         const browsersToRun = _.uniq(testsToRun.map(test => test.browserId));
 
         if (testsToRun.length !== 1) {
-            throw new Error(
-                `In ${mode.name} only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
-                    `${testsToRun.length === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
-                    `Try to specify cli-options: "--grep" and "--browser" or use "testplane.only.in" in the test file.`,
-            );
+            throw new SingleTestModeError(mode.name, testsToRun.length, browsersToRun);
         }
     }
 
