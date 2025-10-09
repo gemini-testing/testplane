@@ -1,25 +1,31 @@
 import fs from "fs-extra";
 import _ from "lodash";
 
-// import { clearAllIndexedDB } from "./clearAllIndexedDB";
-// import { restoreIndexedDB } from "./restoreIndexedDB";
 import { restoreStorage } from "./restoreStorage";
 
 import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { defaultOptions, getWebdriverFrames, SaveStateData, SaveStateOptions } from "../saveState";
-import { Protocol } from "devtools-protocol";
+import {
+    defaultOptions,
+    getCalculatedProtocol,
+    getWebdriverFrames,
+    SaveStateData,
+    SaveStateOptions,
+} from "../saveState";
 
 export type RestoreStateOptions = SaveStateOptions & {
     data?: SaveStateData;
+    refresh?: boolean;
 };
+
+export type CookiesSameSite = "Strict" | "Lax" | "None";
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
-        const options = { ...defaultOptions, ..._options };
+        const options = { ...defaultOptions, refresh: true, ..._options };
 
         let restoreState: SaveStateData | undefined = options.data;
 
@@ -32,8 +38,10 @@ export default (browser: Browser): void => {
             return;
         }
 
-        switch (browser.config.automationProtocol) {
+        switch (getCalculatedProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
+                await session.switchToParentFrame();
+
                 if (restoreState.cookies && options.cookies) {
                     await session.setCookies(restoreState.cookies);
                 }
@@ -43,11 +51,11 @@ export default (browser: Browser): void => {
 
                     const frames = await getWebdriverFrames(session);
 
-                    for (let i = -1; i < frames.length; i++) {
+                    for (let i = 0; i <= frames.length; i++) {
                         await session.switchToParentFrame();
 
-                        // start with -1 for get data from main page
-                        if (i > -1) {
+                        // after last element have to set data for parent frame
+                        if (i < frames.length) {
                             await session.switchFrame(frames[i]);
                         }
 
@@ -71,17 +79,14 @@ export default (browser: Browser): void => {
                                     "sessionStorage",
                                 );
                             }
-
-                            // @TODO: will make it later
-                            // if (frameData.indexDB && options.indexDB) {
-                            //     // @todo: Doesn't work now
-                            //     await session.execute(clearAllIndexedDB);
-                            //     await session.execute(restoreIndexedDB, frameData.indexDB);
-                            // }
                         }
                     }
 
                     await session.switchToParentFrame();
+                }
+
+                if (options.refresh) {
+                    await session.refresh();
                 }
 
                 break;
@@ -96,7 +101,7 @@ export default (browser: Browser): void => {
                     await page.setCookie(
                         ...restoreState.cookies.map(cookie => ({
                             ...cookie,
-                            sameSite: _.startCase(_.toLower(cookie.sameSite)) as Protocol.Network.CookieSameSite,
+                            sameSite: _.startCase(_.toLower(cookie.sameSite)) as CookiesSameSite,
                         })),
                     );
                 }
@@ -130,12 +135,9 @@ export default (browser: Browser): void => {
                         );
                     }
 
-                    // @TODO: will make it later
-                    // if (frameData.indexDB) {
-                    //     // @todo: Doesn't work now
-                    //     await frame.evaluate(clearAllIndexedDB);
-                    //     await frame.evaluate(restoreIndexedDB, frameData.indexDB);
-                    // }
+                    if (options.refresh) {
+                        await page.reload();
+                    }
                 }
                 break;
             }

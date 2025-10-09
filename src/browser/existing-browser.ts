@@ -20,6 +20,7 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Protocol } from "devtools-protocol";
+import { getCalculatedProtocol } from "./commands/saveState";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -62,7 +63,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
-    private allCookies: Map<string, Protocol.Network.CookieParam> = new Map();
+    private _allCookies: Map<string, Protocol.Network.CookieParam> = new Map();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -97,7 +98,7 @@ export class ExistingBrowser extends Browser {
 
                 await isolationPromise;
 
-                if (this.config.automationProtocol === DEVTOOLS_PROTOCOL) {
+                if (getCalculatedProtocol(this) === DEVTOOLS_PROTOCOL) {
                     await this.startCollectCookies();
                 }
 
@@ -123,7 +124,7 @@ export class ExistingBrowser extends Browser {
             return;
         }
 
-        this.allCookies = new Map();
+        this._allCookies = new Map();
 
         this.publicAPI.addCommand("getAllRequestsCookies", async () => {
             if (this._session) {
@@ -131,11 +132,11 @@ export class ExistingBrowser extends Browser {
                 cookies.forEach(cookie => {
                     const index = [cookie.name, cookie.domain, cookie.path].join("-");
 
-                    this.allCookies.set(index, cookie as Protocol.Network.CookieParam);
+                    this._allCookies.set(index, cookie as Protocol.Network.CookieParam);
                 });
             }
 
-            return [...this.allCookies.values()].map(cookie => ({
+            return [...this._allCookies.values()].map(cookie => ({
                 name: cookie.name,
                 value: cookie.value,
                 domain: cookie.domain,
@@ -164,7 +165,7 @@ export class ExistingBrowser extends Browser {
                                     ? Math.floor(new Date(cookie.expires).getTime() / 1000)
                                     : undefined;
 
-                                this.allCookies.set(index, {
+                                this._allCookies.set(index, {
                                     ...cookie,
                                     domain: cookie.domain ?? new URL(res.url()).hostname,
                                     expires,
@@ -425,6 +426,13 @@ export class ExistingBrowser extends Browser {
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
+
+            for (let i = 0; i < windowIds.length; i++) {
+                if (windowIds[i] !== incognitoWindowId) {
+                    await this._session.switchToWindow(windowIds[i]);
+                    await this._session.closeWindow();
+                }
+            }
 
             await this._session.switchToWindow(incognitoWindowId!);
         }

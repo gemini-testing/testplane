@@ -6,7 +6,7 @@ import { SaveStateData } from "../../../src";
 import { AuthServer } from "./mock-auth-page/server";
 import process from "node:process";
 
-describe("Standalone Browser E2E Tests", function () {
+describe("saveState and restoreState tests", function () {
     this.timeout(25000);
 
     setTimeout(() => {
@@ -70,9 +70,6 @@ describe("Standalone Browser E2E Tests", function () {
                 data: loginState,
             });
         }
-
-        // reload page
-        await browser.refresh();
 
         // check that now we logged in
         assert.strictEqual(await status.getText(), "You are logged in");

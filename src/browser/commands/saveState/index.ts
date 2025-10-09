@@ -1,10 +1,10 @@
 import fs from "fs-extra";
 
 import type { Browser } from "../../types";
-// import { DumpIndexDB } from "./dumpIndexedDB";
 import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { Cookie } from "@testplane/wdio-protocols";
+import { isSupportIsolation } from "../../../utils/browser";
 
 export type SaveStateOptions = {
     path?: string;
@@ -12,12 +12,9 @@ export type SaveStateOptions = {
     cookies?: boolean;
     localStorage?: boolean;
     sessionStorage?: boolean;
-    // indexDB?: boolean;
 };
 
-export type FrameData = StorageData & {
-    // indexDB?: Record<string, DumpIndexDB>;
-};
+export type FrameData = StorageData;
 
 export type SaveStateData = {
     cookies?: Array<Cookie>;
@@ -28,7 +25,24 @@ export const defaultOptions = {
     cookies: true,
     localStorage: true,
     sessionStorage: true,
-    // indexDB: false,
+};
+
+export const getCalculatedProtocol = (browser: Browser): typeof DEVTOOLS_PROTOCOL | typeof WEBDRIVER_PROTOCOL => {
+    const protocol = browser.config.automationProtocol;
+
+    if (protocol === DEVTOOLS_PROTOCOL) {
+        return DEVTOOLS_PROTOCOL;
+    }
+
+    if (
+        protocol === WEBDRIVER_PROTOCOL &&
+        browser.config.isolation &&
+        isSupportIsolation(browser.publicAPI.capabilities.browserName!, browser.publicAPI.capabilities.browserVersion!)
+    ) {
+        return DEVTOOLS_PROTOCOL;
+    }
+
+    return protocol;
 };
 
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
@@ -48,7 +62,7 @@ export default (browser: Browser): void => {
             framesData: {},
         };
 
-        switch (browser.config.automationProtocol) {
+        switch (getCalculatedProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
                     const storageCookies = await session.storageGetCookies({});
@@ -69,11 +83,11 @@ export default (browser: Browser): void => {
                 const frames = await getWebdriverFrames(session);
                 const framesData: Record<string, FrameData> = {};
 
-                for (let i = -1; i < frames.length; i++) {
+                for (let i = 0; i < frames.length; i++) {
                     await session.switchToParentFrame();
 
-                    // start with -1 for get data from main page
-                    if (i > -1) {
+                    // after last element have to get data from parent frame
+                    if (i < frames.length) {
                         await session.switchFrame(frames[i]);
                     }
 
@@ -96,15 +110,6 @@ export default (browser: Browser): void => {
                             frameData.sessionStorage = sessionStorage;
                         }
                     }
-
-                    // @TODO: will make it later
-                    // if (options.indexDB) {
-                    //     const indexDB: Record<string, DumpIndexDB> | undefined = await session.execute(dumpIndexedDB);
-                    //
-                    //     if (indexDB) {
-                    //         frameData.indexDB = indexDB;
-                    //     }
-                    // }
 
                     if (frameData.localStorage || frameData.sessionStorage) {
                         framesData[origin] = frameData;
@@ -145,15 +150,6 @@ export default (browser: Browser): void => {
                             frameData.sessionStorage = sessionStorage;
                         }
                     }
-
-                    // @TODO: will make it later
-                    // if (options.indexDB) {
-                    //     const indexDB: Record<string, DumpIndexDB> | undefined = await frame.evaluate(dumpIndexedDB);
-                    //
-                    //     if (indexDB) {
-                    //         frameData.indexDB = indexDB;
-                    //     }
-                    // }
 
                     if (frameData.localStorage || frameData.sessionStorage) {
                         framesData[origin] = frameData;
