@@ -13,6 +13,7 @@ import {
     SaveStateData,
     SaveStateOptions,
 } from "../saveState";
+import { getActivePuppeteerPage } from "../../existing-browser";
 
 export type RestoreStateOptions = SaveStateOptions & {
     data?: SaveStateData;
@@ -93,8 +94,12 @@ export default (browser: Browser): void => {
             }
             case DEVTOOLS_PROTOCOL: {
                 const puppeteer = await session.getPuppeteer();
-                const pages = await puppeteer.pages();
-                const page = pages[pages.length - 1];
+                const page = await getActivePuppeteerPage(puppeteer);
+
+                if (!page) {
+                    return;
+                }
+
                 const frames = page.frames();
 
                 if (restoreState.cookies && options.cookies) {

@@ -5,7 +5,7 @@ import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { Cookie } from "@testplane/wdio-protocols";
 import { isSupportIsolation } from "../../../utils/browser";
-import { ExistingBrowser } from "../../existing-browser";
+import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 
 export type SaveStateOptions = {
     path?: string;
@@ -126,8 +126,12 @@ export default (browser: ExistingBrowser): void => {
                 data.cookies = await browser.getAllRequestsCookies();
 
                 const puppeteer = await session.getPuppeteer();
-                const pages = await puppeteer.pages();
-                const page = pages[pages.length - 1];
+                const page = await getActivePuppeteerPage(puppeteer);
+
+                if (!page) {
+                    break;
+                }
+
                 const frames = page.frames();
 
                 const framesData: Record<string, FrameData> = {};

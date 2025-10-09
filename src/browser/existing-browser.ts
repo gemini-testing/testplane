@@ -22,6 +22,7 @@ import type { SessionOptions } from "./types";
 import { Protocol } from "devtools-protocol";
 import { getCalculatedProtocol } from "./commands/saveState";
 import { Cookie as WDIOCookie, SameSiteOptions } from "@testplane/wdio-protocols";
+import { Browser as PuppeteerBrowser, Page } from "puppeteer-core";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -57,6 +58,22 @@ function ensure<T>(value: T | undefined | null, hint?: string): asserts value is
 
 const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData => {
     return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
+};
+
+export const getActivePuppeteerPage = async (puppeteer: PuppeteerBrowser): Promise<Page | undefined> => {
+    const pages = await puppeteer.pages();
+
+    if (!pages.length) {
+        return;
+    }
+
+    for (let i = 0; i < pages.length; i++) {
+        if (await pages[i].evaluate(() => document.visibilityState === "visible")) {
+            return pages[i];
+        }
+    }
+
+    return;
 };
 
 export class ExistingBrowser extends Browser {
@@ -151,34 +168,38 @@ export class ExistingBrowser extends Browser {
 
         const puppeteer = await this._session.getPuppeteer();
 
-        if (puppeteer) {
-            const pages = await puppeteer.pages();
-
-            if (pages.length) {
-                pages[pages.length - 1].on("response", async res => {
-                    try {
-                        const headers = res.headers();
-
-                        if (headers["set-cookie"]) {
-                            parseCookiesString(headers["set-cookie"], { map: false }).forEach((cookie: Cookie) => {
-                                const index = [cookie.name, cookie.domain, cookie.path].join("-");
-                                const expires = cookie.expires
-                                    ? Math.floor(new Date(cookie.expires).getTime() / 1000)
-                                    : undefined;
-
-                                this._allCookies.set(index, {
-                                    ...cookie,
-                                    domain: cookie.domain ?? new URL(res.url()).hostname,
-                                    expires,
-                                } as Protocol.Network.CookieParam);
-                            });
-                        }
-                    } catch (err) {
-                        console.error(err);
-                    }
-                });
-            }
+        if (!puppeteer) {
+            return;
         }
+
+        const page = await getActivePuppeteerPage(puppeteer);
+
+        if (!page) {
+            return;
+        }
+
+        page.on("response", async res => {
+            try {
+                const headers = res.headers();
+
+                if (headers["set-cookie"]) {
+                    parseCookiesString(headers["set-cookie"], { map: false }).forEach((cookie: Cookie) => {
+                        const index = [cookie.name, cookie.domain, cookie.path].join("-");
+                        const expires = cookie.expires
+                            ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                            : undefined;
+
+                        this._allCookies.set(index, {
+                            ...cookie,
+                            domain: cookie.domain ?? new URL(res.url()).hostname,
+                            expires,
+                        } as Protocol.Network.CookieParam);
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
     }
 
     markAsBroken(): void {
