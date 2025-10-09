@@ -155,7 +155,7 @@ export class ExistingBrowser extends Browser {
             const pages = await puppeteer.pages();
 
             if (pages.length) {
-                pages[0].on("response", async res => {
+                pages[pages.length - 1].on("response", async res => {
                     try {
                         const headers = res.headers();
 

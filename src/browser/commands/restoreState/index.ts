@@ -94,7 +94,7 @@ export default (browser: Browser): void => {
             case DEVTOOLS_PROTOCOL: {
                 const puppeteer = await session.getPuppeteer();
                 const pages = await puppeteer.pages();
-                const page = pages[0];
+                const page = pages[pages.length - 1];
                 const frames = page.frames();
 
                 if (restoreState.cookies && options.cookies) {

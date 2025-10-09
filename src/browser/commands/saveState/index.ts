@@ -127,7 +127,8 @@ export default (browser: ExistingBrowser): void => {
 
                 const puppeteer = await session.getPuppeteer();
                 const pages = await puppeteer.pages();
-                const frames = pages[0].frames();
+                const page = pages[pages.length - 1];
+                const frames = page.frames();
 
                 const framesData: Record<string, FrameData> = {};
 
