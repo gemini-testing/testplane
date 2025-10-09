@@ -358,6 +358,13 @@ export class ExistingBrowser extends Browser {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
 
+            for (let i = 0; i < windowIds.length; i++) {
+                if (windowIds[i] !== incognitoWindowId) {
+                    await this._session.switchToWindow(windowIds[i]);
+                    await this._session.closeWindow();
+                }
+            }
+
             await this._session.switchToWindow(incognitoWindowId!);
         }
 
