@@ -21,6 +21,7 @@ import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Protocol } from "devtools-protocol";
 import { getCalculatedProtocol } from "./commands/saveState";
+import { Cookie as WDIOCookie, SameSiteOptions } from "@testplane/wdio-protocols";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -119,34 +120,34 @@ export class ExistingBrowser extends Browser {
         return this;
     }
 
+    async getAllRequestsCookies(): Promise<Array<WDIOCookie>> {
+        if (this._session) {
+            const cookies = await this._session.getAllCookies();
+            cookies.forEach(cookie => {
+                const index = [cookie.name, cookie.domain, cookie.path].join("-");
+
+                this._allCookies.set(index, cookie as Protocol.Network.CookieParam);
+            });
+        }
+
+        return [...this._allCookies.values()].map(cookie => ({
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path,
+            expires: cookie.expires ? cookie.expires : undefined,
+            httpOnly: cookie.httpOnly,
+            secure: cookie.secure,
+            sameSite: cookie.sameSite?.toLowerCase() as SameSiteOptions,
+        }));
+    }
+
     async startCollectCookies(): Promise<void> {
         if (!this._session) {
             return;
         }
 
         this._allCookies = new Map();
-
-        this.publicAPI.addCommand("getAllRequestsCookies", async () => {
-            if (this._session) {
-                const cookies = await this._session.getAllCookies();
-                cookies.forEach(cookie => {
-                    const index = [cookie.name, cookie.domain, cookie.path].join("-");
-
-                    this._allCookies.set(index, cookie as Protocol.Network.CookieParam);
-                });
-            }
-
-            return [...this._allCookies.values()].map(cookie => ({
-                name: cookie.name,
-                value: cookie.value,
-                domain: cookie.domain,
-                path: cookie.path,
-                expires: cookie.expires ? cookie.expires : undefined,
-                httpOnly: cookie.httpOnly,
-                secure: cookie.secure,
-                sameSite: cookie.sameSite?.toLowerCase(),
-            }));
-        });
 
         const puppeteer = await this._session.getPuppeteer();
 

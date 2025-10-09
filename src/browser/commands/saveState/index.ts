@@ -5,6 +5,7 @@ import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { Cookie } from "@testplane/wdio-protocols";
 import { isSupportIsolation } from "../../../utils/browser";
+import { ExistingBrowser } from "../../existing-browser";
 
 export type SaveStateOptions = {
     path?: string;
@@ -52,7 +53,7 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
             .filter(src => src !== null && src !== "about:blank"),
     );
 
-export default (browser: Browser): void => {
+export default (browser: ExistingBrowser): void => {
     const { publicAPI: session } = browser;
 
     session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData> => {
@@ -122,7 +123,7 @@ export default (browser: Browser): void => {
                 break;
             }
             case DEVTOOLS_PROTOCOL: {
-                data.cookies = await session.getAllRequestsCookies();
+                data.cookies = await browser.getAllRequestsCookies();
 
                 const puppeteer = await session.getPuppeteer();
                 const pages = await puppeteer.pages();
