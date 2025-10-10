@@ -50,7 +50,7 @@ describe("Standalone Browser E2E Tests", function () {
         });
 
         assert.ok(
-            result?.includes("This domain is for use in illustrative examples"),
+            result?.includes("This domain is for use in documentation examples without needing permission."),
             "Should execute JavaScript and return the expected result",
         );
     });
