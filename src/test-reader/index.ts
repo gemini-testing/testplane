@@ -49,13 +49,13 @@ export class TestReader extends EventEmitter {
             parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep }),
         );
 
-        validateTests(testsByBro, options);
+        validateTests(testsByBro, options, this.#config);
 
         return testsByBro;
     }
 }
 
-function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOpts): void {
+function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOpts, config: Config): void {
     const tests = _.flatten(Object.values(testsByBro));
 
     const singleTestModes = [
@@ -76,7 +76,7 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
         }
     }
 
-    if (!_.isEmpty(tests) && tests.some(test => !test.silentSkip)) {
+    if ((!_.isEmpty(tests) && tests.some(test => !test.silentSkip)) || (_.isEmpty(tests) && config.lastFailed.only)) {
         return;
     }
 

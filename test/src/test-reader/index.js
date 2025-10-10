@@ -287,6 +287,21 @@ describe("test-reader", () => {
                     assert.equal(e.message, "There are no tests found by the specified options:\n" + "- grep: foo\n");
                 }
             });
+
+            it("should resolve successfully when last failed mode is enabled", async () => {
+                const config = makeConfigStub({
+                    browsers: ["bro"],
+                    lastFailed: {
+                        only: true,
+                        input: "last-failed.json",
+                        output: "last-failed-out.json",
+                    },
+                });
+
+                const testsByBrowser = await readTests_({ config });
+
+                assert.deepEqual(testsByBrowser, { bro: [] });
+            });
         });
 
         describe("repl mode", () => {
