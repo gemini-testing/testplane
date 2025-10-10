@@ -84,7 +84,7 @@ const runWithHistoryHooks = <T>({
         fn: () => {
             const result = fn();
 
-            if (typeof (result as Promise<unknown>).then === "function") {
+            if (typeof (result as Promise<unknown> | undefined)?.then === "function") {
                 try {
                     const timeTravelMode = config.timeTravel.mode;
                     const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;

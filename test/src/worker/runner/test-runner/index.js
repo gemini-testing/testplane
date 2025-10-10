@@ -75,6 +75,7 @@ describe("worker/runner/test-runner", () => {
             state: {
                 isBroken: false,
             },
+            snapshotsPromiseRef: { current: Promise.resolve() },
             markAsBroken: sandbox.stub().callsFake(() => {
                 this.state.isBroken = true;
 

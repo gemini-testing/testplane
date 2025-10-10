@@ -32,20 +32,20 @@ describe("commands-history", () => {
 
         it("should return an instance of callstack", () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session, browserConfig);
+            const { callstack } = initCommandHistory(session, browserConfig);
 
-            assert.instanceOf(stack, Callstack);
+            assert.instanceOf(callstack, Callstack);
         });
 
         it('should wrap "addCommand" command', async () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session, browserConfig);
+            const { callstack } = initCommandHistory(session, browserConfig);
 
             session.addCommand("foo", (a1, a2) => Promise.resolve(a1, a2));
 
             await session.foo("arg1", "arg2");
 
-            const [node] = stack.release();
+            const [node] = callstack.release();
 
             assert.propertyVal(node, "n", "foo");
             assert.propertyVal(node, "s", "b");
@@ -55,13 +55,13 @@ describe("commands-history", () => {
 
         it('should wrap "overwriteCommand" command', async () => {
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session, browserConfig);
+            const { callstack } = initCommandHistory(session, browserConfig);
 
             session.overwriteCommand("url", (a1, a2) => Promise.resolve(a1, a2));
 
             await session.url("site.com");
 
-            const [node] = stack.release();
+            const [node] = callstack.release();
 
             assert.propertyVal(node, "n", "url");
             assert.propertyVal(node, "s", "b");
@@ -123,12 +123,12 @@ describe("commands-history", () => {
             getBrowserCommands.returns(["url"]);
 
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session, browserConfig);
+            const { callstack } = initCommandHistory(session, browserConfig);
 
             await session.url("site.com");
             await session.execute();
 
-            const [urlNode] = stack.release();
+            const [urlNode] = callstack.release();
 
             assert.propertyVal(urlNode, "n", "url");
             assert.propertyVal(urlNode, "s", "b");
@@ -141,13 +141,13 @@ describe("commands-history", () => {
             getElementCommands.returns(["click"]);
 
             const session = mkSessionStub_();
-            const stack = initCommandHistory(session, browserConfig);
+            const { callstack } = initCommandHistory(session, browserConfig);
 
             const element = await session.$();
 
             await element.click("arg1");
 
-            const [clickNode] = stack.release();
+            const [clickNode] = callstack.release();
 
             assert.propertyVal(clickNode, "n", "click");
             assert.propertyVal(clickNode, "s", "e");
@@ -165,17 +165,27 @@ describe("commands-history", () => {
             callstackStub = {
                 enter: sandbox.stub(),
                 leave: sandbox.stub(),
+                markError: sandbox.stub(),
             };
         });
 
         it("should execute function, if callstack is not inited", () => {
-            runGroup({ callstack: null }, "foo", fnStub);
+            runGroup({ callstack: null, snapshotsPromiseRef: { current: Promise.resolve() } }, "foo", fnStub);
 
             assert.calledOnce(fnStub);
         });
 
         it("should execute function with callstack", () => {
-            runGroup({ callstack: callstackStub, config: { record: {} }, session: {} }, "foo", fnStub);
+            runGroup(
+                {
+                    callstack: callstackStub,
+                    config: { record: {} },
+                    session: {},
+                    snapshotsPromiseRef: { current: Promise.resolve() },
+                },
+                "foo",
+                fnStub,
+            );
 
             assert.callOrder(callstackStub.enter, fnStub, callstackStub.leave);
         });
