@@ -627,6 +627,58 @@ describe("config options", () => {
         });
     });
 
+    describe("hooks beforeAll/afterAll", () => {
+        it("should throw error if beforeAll is not a null or function", () => {
+            const readConfig = { beforeAll: "String" };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"beforeAll" must be a function');
+        });
+
+        it("should set default beforeAll option if it does not set in config file", () => {
+            const config = createConfig();
+
+            assert.equal(config.beforeAll, defaults.beforeAll);
+        });
+
+        it("should override beforeAll option", () => {
+            const newFunc = () => {};
+            const readConfig = { beforeAll: newFunc };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.beforeAll, newFunc);
+        });
+
+        it("should throw error if afterAll is not a null or function", () => {
+            const readConfig = { afterAll: "String" };
+
+            Config.read.returns(readConfig);
+
+            assert.throws(() => createConfig(), Error, '"afterAll" must be a function');
+        });
+
+        it("should set default afterAll option if it does not set in config file", () => {
+            const config = createConfig();
+
+            assert.equal(config.afterAll, defaults.afterAll);
+        });
+
+        it("should override afterAll option", () => {
+            const newFunc = () => {};
+            const readConfig = { afterAll: newFunc };
+
+            Config.read.returns(readConfig);
+
+            const config = createConfig();
+
+            assert.deepEqual(config.afterAll, newFunc);
+        });
+    });
+
     describe("plugins", () => {
         it("should parse boolean value from environment", () => {
             const result = parse_({

@@ -42,6 +42,8 @@ module.exports = {
     compositeImage: true,
     prepareBrowser: null,
     prepareEnvironment: null,
+    beforeAll: null,
+    afterAll: null,
     waitTimeout: 3000,
     waitInterval: 500,
     httpTimeout: 30000,

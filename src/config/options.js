@@ -16,6 +16,8 @@ const rootSection = section(
         browsers: map(section(browserOptions.getPerBrowser())),
 
         prepareEnvironment: options.optionalFunction("prepareEnvironment"),
+        beforeAll: options.optionalFunction("beforeAll"),
+        afterAll: options.optionalFunction("afterAll"),
 
         system: section({
             debug: options.boolean("debug"),

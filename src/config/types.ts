@@ -3,6 +3,7 @@ import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types"
 import type { Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
+import { Config } from "./index";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -379,12 +380,16 @@ type PartialCommonConfig = Partial<
     devServer?: Partial<CommonConfig["devServer"]>;
 };
 
+export type HookType = (config: Config) => Promise<void> | undefined;
+
 // Only browsers desiredCapabilities are required in input config
 export type ConfigInput = Partial<PartialCommonConfig> & {
     browsers: Record<string, PartialCommonConfig & { desiredCapabilities: WebdriverIO.Capabilities }>;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
     prepareEnvironment?: () => void | null;
+    beforeAll?: HookType;
+    afterAll?: HookType;
 };
 
 export interface ConfigParsed extends CommonConfig {
@@ -392,6 +397,8 @@ export interface ConfigParsed extends CommonConfig {
     plugins: Record<string, Record<string, unknown>>;
     sets: Record<string, SetsConfigParsed>;
     prepareEnvironment?: () => void | null;
+    beforeAll?: HookType;
+    afterAll?: HookType;
 }
 
 export interface RuntimeConfig {
