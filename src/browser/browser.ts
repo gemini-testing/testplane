@@ -56,7 +56,7 @@ export class Browser {
     protected _wdProcess: WdProcess | null;
     /** This Promise is awaited after test is finished. Can be used for cleanup.
        Right now is used to wait for time travel snapshots to finish collecting */
-    protected _trailingPromise: history.TrailingPromise;
+    protected _snapshotsPromiseRef: history.PromiseRef;
     id: string;
     version?: string;
 
@@ -76,7 +76,7 @@ export class Browser {
         this._debug = config.system.debug;
         this._session = null;
         this._callstackHistory = null;
-        this._trailingPromise = {current: Promise.resolve()};
+        this._snapshotsPromiseRef = { current: Promise.resolve() };
         this._wdProcess = null;
         this._state = {
             ...opts.state,
@@ -120,7 +120,7 @@ export class Browser {
         if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
             const initHistoryResult = history.initCommandHistory(this._session as WebdriverIO.Browser, this._config);
             this._callstackHistory = initHistoryResult.callstack;
-            this._trailingPromise = initHistoryResult.trailingPromise;
+            this._snapshotsPromiseRef = initHistoryResult.snapshotsPromiseRef;
         }
     }
 
@@ -200,8 +200,8 @@ export class Browser {
         return this._callstackHistory!;
     }
 
-    get trailingPromise(): history.TrailingPromise {
-        return this._trailingPromise;
+    get snapshotsPromiseRef(): history.PromiseRef {
+        return this._snapshotsPromiseRef;
     }
 
     get customCommands(): CustomCommand[] {

@@ -92,7 +92,7 @@ export class ExistingBrowser extends Browser {
         await history.runGroup(
             {
                 session: this._session,
-                trailingPromise: this._trailingPromise,
+                snapshotsPromiseRef: this._snapshotsPromiseRef,
                 callstack: this._callstackHistory!,
                 config: this._config,
             },

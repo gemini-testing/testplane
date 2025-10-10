@@ -1,5 +1,4 @@
-// import { isPromise } from "util/types";
-import makeDebug from 'debug';
+import makeDebug from "debug";
 import { Callstack } from "./callstack";
 import * as cmds from "./commands";
 import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } from "./utils";
@@ -8,7 +7,7 @@ import { TestStep, TestStepKey } from "../../types";
 import { filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
 import { getContext, runWithContext } from "./async-local-storage";
 
-const debug = makeDebug('testplane:browser:history');
+const debug = makeDebug("testplane:browser:history");
 
 interface NodeData {
     name: string;
@@ -19,8 +18,8 @@ interface NodeData {
     overwrite?: boolean;
 }
 
-export interface TrailingPromise {
-    current: Promise<unknown>;
+export interface PromiseRef<T = unknown> {
+    current: Promise<T>;
 }
 
 const shouldNotWrapCommand = (commandName: string): boolean =>
@@ -50,7 +49,7 @@ const mkHistoryNode = ({ name, args, elementScope, key, overwrite, isGroup }: No
 
 interface HooksData {
     session: WebdriverIO.Browser;
-    trailingPromise: TrailingPromise;
+    snapshotsPromiseRef: PromiseRef;
     callstack: Callstack;
     config: BrowserConfig;
 }
@@ -60,14 +59,18 @@ interface RunWithHistoryHooksData<T> extends HooksData {
     fn: () => T;
 }
 
-export const runWithoutHistory = async <T>(
-    _: unknown,
-    fn: () => T,
-): Promise<T> => {
-    return runWithContext({shouldBypassHistory: true}, fn) as T;
+export const runWithoutHistory = async <T>(_: unknown, fn: () => T): Promise<T> => {
+    return runWithContext({ shouldBypassHistory: true }, fn) as T;
 };
 
-const runWithHistoryHooks = <T>({ session, callstack, trailingPromise, nodeData, fn, config }: RunWithHistoryHooksData<T>): T => {
+const runWithHistoryHooks = <T>({
+    session,
+    callstack,
+    snapshotsPromiseRef,
+    nodeData,
+    fn,
+    config,
+}: RunWithHistoryHooksData<T>): T => {
     nodeData.key = nodeData.key ?? Symbol();
 
     if (getContext()?.shouldBypassHistory) {
@@ -81,23 +84,32 @@ const runWithHistoryHooks = <T>({ session, callstack, trailingPromise, nodeData,
         fn: () => {
             const result = fn();
 
-            if (typeof ((result as Promise<unknown>).then) === 'function') {
+            if (typeof (result as Promise<unknown>).then === "function") {
                 try {
                     const timeTravelMode = config.timeTravel.mode;
                     const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
                     const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
-                    const isInterestingStep = !nodeData.name.startsWith('is') && !nodeData.name.startsWith('get') && !nodeData.name.startsWith('$') && !nodeData.name.startsWith('wait');
-            
-                    if (shouldRecord && process.send && session.executionContext?.ctx?.currentTest && isInterestingStep) {
+                    const isInterestingStep =
+                        !nodeData.name.startsWith("is") &&
+                        !nodeData.name.startsWith("get") &&
+                        !nodeData.name.startsWith("$") &&
+                        !nodeData.name.startsWith("wait");
+
+                    if (
+                        shouldRecord &&
+                        process.send &&
+                        session.executionContext?.ctx?.currentTest &&
+                        isInterestingStep
+                    ) {
                         const rrwebPromise = installRrwebAndCollectEvents(session, callstack)
                             ?.then(rrwebEvents => {
                                 const rrwebEventsFiltered = filterEvents(rrwebEvents);
                                 sendFilteredEvents(session, rrwebEventsFiltered);
                             })
-                            .catch((e) => {
+                            .catch(e => {
                                 debug("An error occurred during capturing snapshots in browser: %O", e);
-                            })
-                        trailingPromise.current = trailingPromise.current.then(() => rrwebPromise);
+                            });
+                        snapshotsPromiseRef.current = snapshotsPromiseRef.current.then(() => rrwebPromise);
                     }
                 } catch (e) {
                     debug("An error occurred during capturing snapshots in browser: %O", e);
@@ -107,13 +119,18 @@ const runWithHistoryHooks = <T>({ session, callstack, trailingPromise, nodeData,
             return result;
         },
         after: () => {
-            return callstack.leave(nodeData.key!)
+            return callstack.leave(nodeData.key!);
         },
         error: () => callstack.markError(shouldPropagateFn),
     });
 };
 
-const overwriteAddCommand = (session: WebdriverIO.Browser, callstack: Callstack, trailingPromise: TrailingPromise, config: BrowserConfig): void => {
+const overwriteAddCommand = (
+    session: WebdriverIO.Browser,
+    callstack: Callstack,
+    snapshotsPromiseRef: PromiseRef,
+    config: BrowserConfig,
+): void => {
     session.overwriteCommand("addCommand", (origCommand, name, wrapper, elementScope) => {
         if (shouldNotWrapCommand(name)) {
             return origCommand(name, wrapper, elementScope);
@@ -123,7 +140,7 @@ const overwriteAddCommand = (session: WebdriverIO.Browser, callstack: Callstack,
             return runWithHistoryHooks({
                 session,
                 callstack,
-                trailingPromise,
+                snapshotsPromiseRef,
                 nodeData: { name, args, elementScope, overwrite: false },
                 fn: () => wrapper.apply(this, args),
                 config,
@@ -134,7 +151,12 @@ const overwriteAddCommand = (session: WebdriverIO.Browser, callstack: Callstack,
     });
 };
 
-const overwriteOverwriteCommand = (session: WebdriverIO.Browser, callstack: Callstack, trailingPromise: TrailingPromise, config: BrowserConfig): void => {
+const overwriteOverwriteCommand = (
+    session: WebdriverIO.Browser,
+    callstack: Callstack,
+    snapshotsPromiseRef: PromiseRef,
+    config: BrowserConfig,
+): void => {
     session.overwriteCommand("overwriteCommand", (origCommand, name, wrapper, elementScope) => {
         if (shouldNotWrapCommand(name)) {
             return origCommand(name, wrapper, elementScope);
@@ -147,7 +169,7 @@ const overwriteOverwriteCommand = (session: WebdriverIO.Browser, callstack: Call
         ): unknown {
             return runWithHistoryHooks({
                 session,
-                trailingPromise,
+                snapshotsPromiseRef,
                 callstack,
                 nodeData: { name, args, elementScope, overwrite: true },
                 fn: () => (wrapper as (...args: unknown[]) => unknown).apply(this, [origFn, ...args]),
@@ -165,12 +187,19 @@ interface OverwriteCommandsData extends HooksData {
     elementScope: boolean;
 }
 
-const overwriteCommands = ({ session, trailingPromise, callstack, commands, elementScope, config }: OverwriteCommandsData): void => {
+const overwriteCommands = ({
+    session,
+    snapshotsPromiseRef,
+    callstack,
+    commands,
+    elementScope,
+    config,
+}: OverwriteCommandsData): void => {
     commands.forEach(name => {
         function decoratedWrapper(origFn: (...args: unknown[]) => unknown, ...args: unknown[]): unknown {
             return runWithHistoryHooks({
                 session,
-                trailingPromise,
+                snapshotsPromiseRef,
                 callstack,
                 nodeData: { name, args, elementScope, overwrite: false },
                 fn: () => origFn(...args),
@@ -183,27 +212,41 @@ const overwriteCommands = ({ session, trailingPromise, callstack, commands, elem
     });
 };
 
-const overwriteBrowserCommands = (session: WebdriverIO.Browser, callstack: Callstack, trailingPromise: TrailingPromise, config: BrowserConfig): void =>
+const overwriteBrowserCommands = (
+    session: WebdriverIO.Browser,
+    callstack: Callstack,
+    snapshotsPromiseRef: PromiseRef,
+    config: BrowserConfig,
+): void =>
     overwriteCommands({
         session,
         callstack,
-        trailingPromise,
+        snapshotsPromiseRef,
         commands: cmds.getBrowserCommands().filter(cmd => !shouldNotWrapCommand(cmd)),
         elementScope: false,
         config,
     });
 
-const overwriteElementCommands = (session: WebdriverIO.Browser, callstack: Callstack, trailingPromise: TrailingPromise, config: BrowserConfig): void =>
+const overwriteElementCommands = (
+    session: WebdriverIO.Browser,
+    callstack: Callstack,
+    snapshotsPromiseRef: PromiseRef,
+    config: BrowserConfig,
+): void =>
     overwriteCommands({
         session,
         callstack,
-        trailingPromise,
+        snapshotsPromiseRef,
         commands: cmds.getElementCommands(),
         elementScope: true,
         config,
     });
 
-export const runGroup = <T>({ session, callstack, trailingPromise, config }: HooksData, name: string, fn: () => T): T => {
+export const runGroup = <T>(
+    { session, callstack, snapshotsPromiseRef, config }: HooksData,
+    name: string,
+    fn: () => T,
+): T => {
     if (!callstack) {
         return fn();
     }
@@ -211,33 +254,40 @@ export const runGroup = <T>({ session, callstack, trailingPromise, config }: Hoo
     return runWithHistoryHooks({
         session,
         callstack,
-        trailingPromise,
+        snapshotsPromiseRef,
         nodeData: { name, args: [], isGroup: true },
         fn,
         config,
     });
 };
 
-const overwriteRunStepCommand = (session: WebdriverIO.Browser, callstack: Callstack, trailingPromise: TrailingPromise, config: BrowserConfig): void => {
+const overwriteRunStepCommand = (
+    session: WebdriverIO.Browser,
+    callstack: Callstack,
+    snapshotsPromiseRef: PromiseRef,
+    config: BrowserConfig,
+): void => {
     session.overwriteCommand("runStep", (origCommand, stepName: string, stepCb) => {
-        return runGroup({ session, trailingPromise, callstack, config }, stepName, () => origCommand(stepName, stepCb));
+        return runGroup({ session, snapshotsPromiseRef, callstack, config }, stepName, () =>
+            origCommand(stepName, stepCb),
+        );
     });
 };
 
 interface InitHistoryResult {
     callstack: Callstack;
-    trailingPromise: {current: Promise<unknown>};
+    snapshotsPromiseRef: PromiseRef;
 }
 
 export const initCommandHistory = (session: WebdriverIO.Browser, config: BrowserConfig): InitHistoryResult => {
     const callstack = new Callstack();
-    const trailingPromise = { current: Promise.resolve() };
+    const snapshotsPromiseRef: PromiseRef = { current: Promise.resolve() };
 
-    overwriteAddCommand(session, callstack, trailingPromise, config);
-    overwriteBrowserCommands(session, callstack, trailingPromise, config);
-    overwriteElementCommands(session, callstack, trailingPromise, config);
-    overwriteOverwriteCommand(session, callstack, trailingPromise, config);
-    overwriteRunStepCommand(session, callstack,trailingPromise, config);
+    overwriteAddCommand(session, callstack, snapshotsPromiseRef, config);
+    overwriteBrowserCommands(session, callstack, snapshotsPromiseRef, config);
+    overwriteElementCommands(session, callstack, snapshotsPromiseRef, config);
+    overwriteOverwriteCommand(session, callstack, snapshotsPromiseRef, config);
+    overwriteRunStepCommand(session, callstack, snapshotsPromiseRef, config);
 
-    return { callstack, trailingPromise };
+    return { callstack, snapshotsPromiseRef };
 };
