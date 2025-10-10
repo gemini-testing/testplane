@@ -197,6 +197,13 @@ module.exports = class TestRunner {
             }
         } catch (e) {
             error = error || e;
+        } finally {
+            // If collecting time travel snapshots takes a lot of time, make it obvious by writing a message
+            const collectingSnapshotsMessageTimeout = setTimeout(() => {
+                console.log('Collecting Time Travel snapshots takes longer than expected. Waiting...');
+            }, 2000);
+            await this._browser.timeTravelSnapshotsPromise.current;
+            clearTimeout(collectingSnapshotsMessageTimeout);
         }
 
         return error;

@@ -54,6 +54,9 @@ export class Browser {
     protected _customCommands: Set<CustomCommand>;
     protected _wdPool?: WebdriverPool;
     protected _wdProcess: WdProcess | null;
+    /** This Promise is awaited after test is finished. Can be used for cleanup.
+       Right now is used to wait for time travel snapshots to finish collecting */
+    protected _trailingPromise: history.TrailingPromise;
     id: string;
     version?: string;
 
@@ -73,6 +76,7 @@ export class Browser {
         this._debug = config.system.debug;
         this._session = null;
         this._callstackHistory = null;
+        this._trailingPromise = {current: Promise.resolve()};
         this._wdProcess = null;
         this._state = {
             ...opts.state,
@@ -114,7 +118,9 @@ export class Browser {
 
     protected _addHistory(): void {
         if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
-            this._callstackHistory = history.initCommandHistory(this._session as WebdriverIO.Browser, this._config);
+            const initHistoryResult = history.initCommandHistory(this._session as WebdriverIO.Browser, this._config);
+            this._callstackHistory = initHistoryResult.callstack;
+            this._trailingPromise = initHistoryResult.trailingPromise;
         }
     }
 
@@ -192,6 +198,10 @@ export class Browser {
 
     get callstackHistory(): Callstack {
         return this._callstackHistory!;
+    }
+
+    get trailingPromise(): history.TrailingPromise {
+        return this._trailingPromise;
     }
 
     get customCommands(): CustomCommand[] {
