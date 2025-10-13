@@ -41,11 +41,14 @@ export class AuthServer {
         const parsedUrl = url.parse(req.url || "", true);
         const pathname = parsedUrl.pathname;
 
-        // CORS headers
         res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
         res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type");
         res.setHeader("Access-Control-Allow-Credentials", "true");
+
+        const anotherCookieOptions = ["someCookie=someName", "HttpOnly", "sameSite=Lax", "Path=/"].join("; ");
+
+        res.setHeader("Set-Cookie", anotherCookieOptions);
 
         if (req.method === "OPTIONS") {
             res.writeHead(200);
@@ -72,7 +75,6 @@ export class AuthServer {
             parsedUrl.pathname === "/" ? "index.html" : parsedUrl.pathname || "",
         );
 
-        // Security: prevent directory traversal
         pathname = path.normalize(pathname);
         if (!pathname.startsWith(path.join(__dirname, "public"))) {
             res.writeHead(403);
@@ -83,7 +85,6 @@ export class AuthServer {
         fs.readFile(pathname, (err, data) => {
             if (err) {
                 if (err.code === "ENOENT") {
-                    // If file not found, serve index.html for SPA routing
                     fs.readFile(path.join(__dirname, "public", "index.html"), (err, data) => {
                         if (err) {
                             res.writeHead(404);
@@ -135,18 +136,15 @@ export class AuthServer {
                         timestamp: Date.now(),
                     });
 
-                    // Set session cookie
-                    const cookieOptions = [
+                    const sessionCookieOptions = [
                         `sessionId=${sessionId}`,
                         "HttpOnly",
                         "sameSite=Lax",
                         "Path=/",
-                        rememberMe ? `Max-Age=${60 * 60 * 24 * 7}` : "", // 1 week if remember me
-                    ]
-                        .filter(opt => opt)
-                        .join("; ");
+                        rememberMe ? `Max-Age=${60 * 60 * 24 * 7}` : "",
+                    ].join("; ");
 
-                    res.setHeader("Set-Cookie", cookieOptions);
+                    res.setHeader("Set-Cookie", sessionCookieOptions);
                     res.writeHead(200, { "Content-Type": "application/json" });
                     res.end(
                         JSON.stringify({
@@ -184,7 +182,6 @@ export class AuthServer {
             this.sessions.delete(sessionId);
         }
 
-        // Clear session cookie
         res.setHeader("Set-Cookie", "sessionId=; HttpOnly; Path=/; Max-Age=0");
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(
