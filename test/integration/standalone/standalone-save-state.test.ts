@@ -71,8 +71,31 @@ describe("saveState and restoreState tests", function () {
             });
         }
 
+        // check that still we are not logged in
+        assert.ok(browser, "Browser should be initialized");
+        assert.ok(browser.sessionId, "Browser should have a valid session ID");
+    });
+
+    it("cookieFilter: restoreState", async function () {
+        // restore state
+        if (loginState) {
+            await browser.restoreState({
+                data: loginState,
+                cookieFilter: ({ name }) => name !== "sessionId",
+            });
+        }
+
         // check that now we logged in
-        assert.strictEqual(await status.getText(), "You are logged in");
+        assert.strictEqual(await status.getText(), "You are not logged in");
+    });
+
+    it("cookieFilter: saveState", async function () {
+        const state = await browser.saveState({
+            cookieFilter: () => false,
+        });
+
+        // now we don't have cookie in save data object
+        assert.ok(state.cookies?.length === 0);
     });
 
     afterEach(async () => {

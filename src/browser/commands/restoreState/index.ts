@@ -39,6 +39,10 @@ export default (browser: Browser): void => {
             return;
         }
 
+        if (restoreState?.cookies && options.cookieFilter) {
+            restoreState.cookies = restoreState?.cookies.filter(options.cookieFilter);
+        }
+
         switch (getCalculatedProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 await session.switchToParentFrame();

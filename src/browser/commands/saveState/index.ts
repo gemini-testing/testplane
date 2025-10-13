@@ -13,6 +13,8 @@ export type SaveStateOptions = {
     cookies?: boolean;
     localStorage?: boolean;
     sessionStorage?: boolean;
+
+    cookieFilter?: (cookie: Cookie) => boolean;
 };
 
 export type FrameData = StorageData;
@@ -165,6 +167,10 @@ export default (browser: ExistingBrowser): void => {
                 data.framesData = framesData;
                 break;
             }
+        }
+
+        if (options && options.cookieFilter && data.cookies) {
+            data.cookies = data.cookies.filter(options.cookieFilter);
         }
 
         if (options && options.path) {
