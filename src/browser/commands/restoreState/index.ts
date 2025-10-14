@@ -15,17 +15,12 @@ import {
 } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
 
-import type { SameSiteOptions } from "@testplane/wdio-protocols";
-
 export type RestoreStateOptions = SaveStateOptions & {
     data?: SaveStateData;
     refresh?: boolean;
 };
 
 export type CookiesSameSite = "Strict" | "Lax" | "None";
-
-const filterSameSite = (str?: string): SameSiteOptions =>
-    (str && ["strict", "lax", "none"].includes(str.toLowerCase()) ? str : "none") as SameSiteOptions;
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
@@ -49,12 +44,7 @@ export default (browser: Browser): void => {
                 await session.switchToParentFrame();
 
                 if (restoreState.cookies && options.cookies) {
-                    await session.setCookies(
-                        restoreState.cookies.map(cookie => ({
-                            ...cookie,
-                            sameSite: cookie.sameSite ? filterSameSite(cookie.sameSite) : undefined,
-                        })),
-                    );
+                    await session.setCookies(restoreState.cookies);
                 }
 
                 if (restoreState.framesData) {
@@ -116,7 +106,7 @@ export default (browser: Browser): void => {
                     await page.setCookie(
                         ...restoreState.cookies.map(cookie => ({
                             ...cookie,
-                            sameSite: _.startCase(filterSameSite(cookie.sameSite)) as CookiesSameSite,
+                            sameSite: _.startCase(_.toLower(cookie.sameSite)) as CookiesSameSite,
                         })),
                     );
                 }

@@ -137,13 +137,15 @@ export class ExistingBrowser extends Browser {
         return this;
     }
 
+    getCookieIndex(cookie: Cookie): string {
+        return [cookie.name, cookie.domain, cookie.path].join("-");
+    }
+
     async getAllRequestsCookies(): Promise<Array<WDIOCookie>> {
         if (this._session) {
             const cookies = await this._session.getAllCookies();
             cookies.forEach(cookie => {
-                const index = [cookie.name, cookie.domain, cookie.path].join("-");
-
-                this._allCookies.set(index, cookie as Protocol.Network.CookieParam);
+                this._allCookies.set(this.getCookieIndex(cookie), cookie as Protocol.Network.CookieParam);
             });
         }
 
@@ -183,17 +185,19 @@ export class ExistingBrowser extends Browser {
                 const headers = res.headers();
 
                 if (headers["set-cookie"]) {
-                    parseCookiesString(headers["set-cookie"], { map: false }).forEach((cookie: Cookie) => {
-                        const index = [cookie.name, cookie.domain, cookie.path].join("-");
-                        const expires = cookie.expires
-                            ? Math.floor(new Date(cookie.expires).getTime() / 1000)
-                            : undefined;
+                    headers["set-cookie"].split("\n").forEach(str => {
+                        parseCookiesString(str, { map: false }).forEach((cookie: Cookie) => {
+                            const index = this.getCookieIndex(cookie);
+                            const expires = cookie.expires
+                                ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                : undefined;
 
-                        this._allCookies.set(index, {
-                            ...cookie,
-                            domain: cookie.domain ?? new URL(res.url()).hostname,
-                            expires,
-                        } as Protocol.Network.CookieParam);
+                            this._allCookies.set(index, {
+                                ...cookie,
+                                domain: cookie.domain ?? new URL(res.url()).hostname,
+                                expires,
+                            } as Protocol.Network.CookieParam);
+                        });
                     });
                 }
             } catch (err) {
