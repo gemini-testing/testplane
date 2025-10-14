@@ -153,10 +153,18 @@ export class Testplane extends BaseTestplane {
 
         preloadWebdriverIO();
 
+        if (this.config.beforeAll) {
+            await this.config.beforeAll.call({ config: this.config }, { config: this.config });
+        }
+
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode, keepBrowserMode }),
             RunnerStats.create(this),
         );
+
+        if (this.config.afterAll) {
+            await this.config.afterAll.call({ config: this.config }, { config: this.config });
+        }
 
         return !this.isFailed();
     }
