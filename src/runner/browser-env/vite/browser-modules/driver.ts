@@ -19,6 +19,21 @@ type PropertiesObject = Record<string, PropertyDescriptor>;
 
 const SERVER_HANDLED_COMMANDS = ["debug", "saveScreenshot", "savePDF"];
 
+type ElementRef = Record<`element-${string}`, string>;
+
+const isElementRef = (data: unknown): data is ElementRef => {
+    return (
+        data !== null &&
+        typeof data === "object" &&
+        Object.keys(data).length === 1 &&
+        Object.keys(data)[0].startsWith("element-")
+    );
+};
+
+const isProtocolCommand = (commandName: string): boolean => {
+    return getAllProtocolCommands().includes(commandName) || SERVER_HANDLED_COMMANDS.includes(commandName);
+};
+
 export default class ProxyDriver {
     static newSession(
         params: Record<string, unknown>,
@@ -98,6 +113,18 @@ function mockCommand(commandName: string): ProtocolCommandFn {
                 throw error;
             }
 
+            if (!isProtocolCommand(commandName)) {
+                if (isElementRef(result)) {
+                    const browser = getBrowserInstance(this);
+                    return browser.$(result as unknown as WebdriverIO.Element);
+                }
+
+                if (Array.isArray(result) && result.length > 0 && result.every(isElementRef)) {
+                    const browser = getBrowserInstance(this);
+                    return Promise.all(result.map(item => browser.$(item as unknown as WebdriverIO.Element)));
+                }
+            }
+
             return result;
         } catch (err) {
             let error = err as Error;
@@ -174,4 +201,8 @@ function truncate(value: string, maxLen: number): string {
 
 function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
     return Boolean((ctx as WebdriverIO.Element).elementId);
+}
+
+function getBrowserInstance(ctx: WebdriverIO.Browser | WebdriverIO.Element): WebdriverIO.Browser {
+    return isWdioElement(ctx) && ctx.parent ? getBrowserInstance(ctx.parent) : (ctx as WebdriverIO.Browser);
 }
