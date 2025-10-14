@@ -154,7 +154,7 @@ export class Testplane extends BaseTestplane {
         preloadWebdriverIO();
 
         if (this.config.beforeAll) {
-            await this.config.beforeAll(this.config);
+            await this.config.beforeAll.call({ config: this.config }, { config: this.config });
         }
 
         await runner.run(
@@ -163,7 +163,7 @@ export class Testplane extends BaseTestplane {
         );
 
         if (this.config.afterAll) {
-            await this.config.afterAll(this.config);
+            await this.config.afterAll.call({ config: this.config }, { config: this.config });
         }
 
         return !this.isFailed();
