@@ -396,10 +396,18 @@ export class ExistingBrowser extends Browser {
         }
     }
 
-    protected async _setWindowSize(size: { width: number; height: number } | null): Promise<void> {
+    protected async _setWindowSize(
+        size: { width: number; height: number } | `${number}x${number}` | null,
+    ): Promise<void> {
         if (size) {
             ensure(this._session, BROWSER_SESSION_HINT);
-            await this._session.setWindowSize(size.width, size.height);
+
+            if (typeof size === "string") {
+                const [width, height] = size.split("x").map(v => parseInt(v, 10));
+                await this._session.setWindowSize(width, height);
+            } else {
+                await this._session.setWindowSize(size.width, size.height);
+            }
         }
     }
 
