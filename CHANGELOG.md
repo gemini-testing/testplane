@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.31.7](https://github.com/gemini-testing/testplane/compare/v8.31.6...v8.31.7) (2025-10-14)
+
+
+### Features
+
+* **testplane:** add beforeAll/afterAll hooks ([6d77ddd](https://github.com/gemini-testing/testplane/commit/6d77ddde637c2befa9c9cefbcd05a29f6513553a))
+* **testplane:** Fix tests ([ed599ca](https://github.com/gemini-testing/testplane/commit/ed599ca2df6acc3e8323f6c99774e568b6a13d39))
+
+
+### Bug Fixes
+
+* **config:** add correct types for windowSize option ([69ac23d](https://github.com/gemini-testing/testplane/commit/69ac23d2556d39e93c287eba5e5d957ecdce541d))
+* do not override base url if it was set explicitly ([#1153](https://github.com/gemini-testing/testplane/issues/1153)) ([c04d4af](https://github.com/gemini-testing/testplane/commit/c04d4af5ed976cd39404bb5331aa3ce52cb0573a))
+* restore element objects in testing library queries ([#1152](https://github.com/gemini-testing/testplane/issues/1152)) ([d29d47f](https://github.com/gemini-testing/testplane/commit/d29d47f24398128897efaf38f6b401f43e7b2425))
+* **testplane:** fix unnecessary window in isolation ([69836ca](https://github.com/gemini-testing/testplane/commit/69836cabdde6004a976bf2834176790798852946))
+
 ### [8.31.6](https://github.com/gemini-testing/testplane/compare/v8.31.5...v8.31.6) (2025-09-25)
 
 
