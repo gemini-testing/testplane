@@ -155,7 +155,6 @@ export const mkSessionStub_ = () => {
     session.mock = sinon.stub().named("mock").resolves(mkMockStub_());
     session.getWindowHandles = sinon.stub().named("getWindowHandles").resolves([]);
     session.switchToWindow = sinon.stub().named("switchToWindow").resolves();
-    session.closeWindow = sinon.stub().named("closeWindow").resolves();
     session.findElements = sinon.stub().named("findElements").resolves([]);
     session.switchToFrame = sinon.stub().named("switchToFrame").resolves();
     session.switchToParentFrame = sinon.stub().named("switchToParentFrame").resolves();

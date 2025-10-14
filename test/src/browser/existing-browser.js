@@ -624,7 +624,7 @@ describe("ExistingBrowser", () => {
 
                     await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
 
-                    assert.calledWith(session.switchToWindow, "window_456");
+                    assert.calledOnceWith(session.switchToWindow, "window_456");
                     assert.callOrder(incognitoBrowserCtx.newPage, session.getWindowHandles);
                 });
             });
