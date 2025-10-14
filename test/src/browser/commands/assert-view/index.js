@@ -194,6 +194,24 @@ describe("assertView command", () => {
         );
     });
 
+    it("should not call 'waitForStaticToLoad'", async () => {
+        const browser = await initBrowser_();
+        browser.publicAPI.waitForStaticToLoad = sandbox.stub().resolves();
+
+        await browser.publicAPI.assertView("plain", { waitForStaticToLoadTimeout: 0 });
+
+        assert.notCalled(browser.publicAPI.waitForStaticToLoad);
+    });
+
+    it("should call 'waitForStaticToLoad'", async () => {
+        const browser = await initBrowser_();
+        browser.publicAPI.waitForStaticToLoad = sandbox.stub().resolves();
+
+        await browser.publicAPI.assertView("plain", { waitForStaticToLoadTimeout: 3000 });
+
+        assert.calledOnceWith(browser.publicAPI.waitForStaticToLoad, { timeout: 3000, interval: 300 });
+    });
+
     [
         { scope: "browser", fn: assertViewBrowser },
         { scope: "element", fn: assertViewElement },
