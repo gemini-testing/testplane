@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.32.0](https://github.com/gemini-testing/testplane/compare/v8.31.7...v8.32.0) (2025-10-14)
+
+
+### Features
+
+* wait for resources to be settled before making screenshot ([4e34834](https://github.com/gemini-testing/testplane/commit/4e348342f4ebf8f82c0e45100348a71b6ca2f038))
+
 ### [8.31.7](https://github.com/gemini-testing/testplane/compare/v8.31.6...v8.31.7) (2025-10-14)
 
 
