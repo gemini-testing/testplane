@@ -115,12 +115,12 @@ function mockCommand(commandName: string): ProtocolCommandFn {
 
             if (!isProtocolCommand(commandName)) {
                 if (isElementRef(result)) {
-                    const browser = (this as WebdriverIO.Element).parent || (this as WebdriverIO.Browser);
+                    const browser = getBrowserInstance(this);
                     return browser.$(result as unknown as WebdriverIO.Element);
                 }
 
                 if (Array.isArray(result) && result.length > 0 && result.every(isElementRef)) {
-                    const browser = (this as WebdriverIO.Element).parent || (this as WebdriverIO.Browser);
+                    const browser = getBrowserInstance(this);
                     return Promise.all(result.map(item => browser.$(item as unknown as WebdriverIO.Element)));
                 }
             }
@@ -201,4 +201,8 @@ function truncate(value: string, maxLen: number): string {
 
 function isWdioElement(ctx: WebdriverIO.Browser | WebdriverIO.Element): ctx is WebdriverIO.Element {
     return Boolean((ctx as WebdriverIO.Element).elementId);
+}
+
+function getBrowserInstance(ctx: WebdriverIO.Browser | WebdriverIO.Element): WebdriverIO.Browser {
+    return isWdioElement(ctx) && ctx.parent ? getBrowserInstance(ctx.parent) : (ctx as WebdriverIO.Browser);
 }
