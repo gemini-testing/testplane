@@ -361,10 +361,6 @@ export class ExistingBrowser extends Browser {
             await this._session.switchToWindow(incognitoWindowId!);
         }
 
-        if (this._session.isBidi) {
-            return;
-        }
-
         for (const ctx of browserCtxs) {
             if (ctx.isIncognito()) {
                 await ctx.close();
