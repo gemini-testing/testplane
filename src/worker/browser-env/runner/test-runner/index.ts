@@ -36,6 +36,25 @@ const prepareData = <T>(data: T): T => {
     return JSON.parse(JSON.stringify(data, Object.getOwnPropertyNames(data)));
 };
 
+/** Web element reference object (https://w3c.github.io/webdriver/#dfn-web-element-reference-object)
+ *
+ * Example:
+ * {
+ *   "element-6066-11e4-a52e-4f735466cecf": "f.88A9F262D769BCB2E8A1C6EF648909CB.d.A02BC79542F98A98FC355F5367316C83.e.2"
+ * }
+ */
+interface ElementRef {
+    [key: `element-${string}`]: string;
+}
+
+const hasElementRef = (data: unknown): data is ElementRef => {
+    return _.isObject(data) && Object.keys(data).some(key => key.startsWith("element-"));
+};
+
+const getElementRef = (elementRefWithExtraProps: ElementRef): ElementRef => {
+    return _.pickBy(elementRefWithExtraProps, (_v, key) => key.startsWith("element-")) as ElementRef;
+};
+
 export class TestRunner extends NodejsEnvTestRunner {
     private _socket: WorkerViteSocket;
     private _runUuid: string = crypto.randomUUID();
@@ -254,8 +273,18 @@ export class TestRunner extends NodejsEnvTestRunner {
                     return cb([prepareData<Error>(result)]);
                 }
 
+                // Testing Library queries return large objects, containing many additional props. Here, we strip everything but element ref
                 if (_.isArray(result)) {
+                    if (result.every((item: unknown) => hasElementRef(item))) {
+                        const elementRefs = result.map((item: unknown) => getElementRef(item as ElementRef));
+                        return cb([null, elementRefs.map(prepareData)]);
+                    }
                     return cb([null, result.map(prepareData)]);
+                }
+
+                if (hasElementRef(result)) {
+                    const elementRef = getElementRef(result);
+                    return cb([null, prepareData(elementRef)]);
                 }
 
                 cb([null, _.isObject(result) ? prepareData(result) : result]);
