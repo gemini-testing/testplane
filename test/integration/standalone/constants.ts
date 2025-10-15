@@ -6,7 +6,6 @@ export const BROWSER_NAME = (process.env.BROWSER || "chrome").toLowerCase() as k
 export const BROWSER_CONFIG = {
     desiredCapabilities: {
         browserName: BROWSER_NAME,
-        webSocketUrl: true,
     },
     headless: true,
     system: {
