@@ -144,7 +144,11 @@ export class TestParser extends EventEmitter {
             treeBuilder.addTestFilter((test: Test) => grep.test(test.fullTitle()));
         }
 
-        if (config.lastFailed && config.lastFailed.only && this.#failedTests.size) {
+        if (config.lastFailed?.only) {
+            if (!this.#failedTests.size) {
+                return [];
+            }
+
             treeBuilder.addTestFilter(test => {
                 return this.#failedTests.has(
                     getFailedTestId({
