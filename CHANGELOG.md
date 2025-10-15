@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.32.2](https://github.com/gemini-testing/testplane/compare/v8.32.1...v8.32.2) (2025-10-15)
+
+
+### Bug Fixes
+
+* exit successfully if last failed only is on and there are no failed tests ([#1150](https://github.com/gemini-testing/testplane/issues/1150)) ([5e548f7](https://github.com/gemini-testing/testplane/commit/5e548f7e297bc225f69ea3e5c538c8c08fc2f8c6))
+* reduce time travel snapshots collecting overhead ([#1148](https://github.com/gemini-testing/testplane/issues/1148)) ([2c17240](https://github.com/gemini-testing/testplane/commit/2c172404e9fcf795b537924f2f4d147bb11747d3))
+
 ### [8.32.1](https://github.com/gemini-testing/testplane/compare/v8.32.0...v8.32.1) (2025-10-15)
 
 
