@@ -138,7 +138,7 @@ describe("runner/test-runner/insistant-test-runner", () => {
                 });
             };
 
-            it("should not retry successfull test", async () => {
+            it("should not retry successful test", async () => {
                 onFirstTestRun_(innerRunner => innerRunner.emit(Events.TEST_PASS));
 
                 await run_({ runner: mkRunnerWithRetries_() });

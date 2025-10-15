@@ -18,6 +18,7 @@ import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
+import { CDP } from "./cdp";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -38,6 +39,7 @@ interface ScrollByParams {
 }
 
 const BROWSER_SESSION_HINT = "browser session";
+const CDP_CONNECTION_HINT = "cdp connection";
 const CLIENT_BRIDGE_HINT = "client bridge";
 
 function ensure<T>(value: T | undefined | null, hint?: string): asserts value is T {
@@ -60,6 +62,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
+    protected _cdp: CDP | null = null;
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -72,11 +75,15 @@ export class ExistingBrowser extends Browser {
     async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
 
+        const cdpPromise = CDP.create(this).then(cdp => {
+            this._cdp = cdp;
+        });
+
         if (!isRunInNodeJsEnv(this._config)) {
             this._startCollectingCustomCommands();
         }
 
-        const isolationPromise = this._performIsolation({ sessionCaps, sessionOpts });
+        const isolationPromise = cdpPromise.then(() => this._performIsolation({ sessionCaps, sessionOpts }));
 
         this._extendStacktrace();
         this._addSteps();
@@ -122,6 +129,7 @@ export class ExistingBrowser extends Browser {
     }
 
     quit(): void {
+        this._cdp?.close();
         this._meta = this._initMeta();
     }
 
@@ -324,27 +332,8 @@ export class ExistingBrowser extends Browser {
         return this._config.baseUrl ? url.resolve(this._config.baseUrl, uri) : uri;
     }
 
-    protected async _performIsolation({
-        sessionCaps,
-        sessionOpts,
-    }: Pick<SessionOptions, "sessionCaps" | "sessionOpts">): Promise<void> {
+    protected async _performBidiIsolation(sessionOpts: SessionOptions["sessionOpts"]): Promise<void> {
         ensure(this._session, BROWSER_SESSION_HINT);
-        if (!this._config.isolation) {
-            return;
-        }
-
-        const {
-            browserName,
-            browserVersion = "",
-            version = "",
-        } = (sessionCaps as SessionOptions["sessionCaps"] & { version?: string }) || {};
-        if (!isSupportIsolation(browserName!, browserVersion)) {
-            logger.warn(
-                `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
-                    `but got ${browserName}@${browserVersion || version}`,
-            );
-            return;
-        }
 
         const puppeteer = await this._session.getPuppeteer();
         const browserCtxs = puppeteer.browserContexts();
@@ -370,6 +359,62 @@ export class ExistingBrowser extends Browser {
             for (const page of await ctx.pages()) {
                 await page.close();
             }
+        }
+    }
+
+    protected async _performCdpIsolation(sessionOpts: SessionOptions["sessionOpts"]): Promise<void> {
+        ensure(this._session, BROWSER_SESSION_HINT);
+        ensure(this._cdp, CDP_CONNECTION_HINT);
+
+        const cdpTarget = this._cdp.target;
+        const [browserContextIds, currentTargets] = await Promise.all([
+            cdpTarget.getBrowserContexts().then(res => res.browserContextIds),
+            cdpTarget.getTargets().then(res => res.targetInfos),
+        ]);
+        const browserContextId = await cdpTarget.createBrowserContext().then(res => res.browserContextId);
+        const incognitoWindowId = await cdpTarget.createTarget({ browserContextId }).then(res => res.targetId);
+
+        if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
+            const windowIds = await this._session.getWindowHandles();
+
+            await this._session.switchToWindow(windowIds.find(id => id.includes(incognitoWindowId))!);
+        }
+
+        await Promise.all([
+            cdpTarget.activateTarget(incognitoWindowId),
+            ...browserContextIds.map(contextId => cdpTarget.disposeBrowserContext(contextId)),
+            ...currentTargets.map(target => cdpTarget.closeTarget(target.targetId).catch(() => {})),
+        ]);
+    }
+
+    protected async _performIsolation({
+        sessionCaps,
+        sessionOpts,
+    }: Pick<SessionOptions, "sessionCaps" | "sessionOpts">): Promise<void> {
+        ensure(this._session, BROWSER_SESSION_HINT);
+        if (!this._config.isolation) {
+            return;
+        }
+
+        const {
+            browserName,
+            browserVersion = "",
+            version = "",
+        } = (sessionCaps as SessionOptions["sessionCaps"] & { version?: string }) || {};
+        if (!isSupportIsolation(browserName!, browserVersion)) {
+            logger.warn(
+                `WARN: test isolation works only with chrome@${MIN_CHROME_VERSION_SUPPORT_ISOLATION} and higher, ` +
+                    `but got ${browserName}@${browserVersion || version}`,
+            );
+            return;
+        }
+
+        if (this._session.isBidi) {
+            return this._performBidiIsolation(sessionOpts);
+        } else if (this._cdp) {
+            return this._performCdpIsolation(sessionOpts);
+        } else {
+            logger.warn("Unable to get CDP endpoint, skip performing isolation");
         }
     }
 
