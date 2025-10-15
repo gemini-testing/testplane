@@ -1117,7 +1117,7 @@ describe("ExistingBrowser", () => {
 
         it("should stub session commands", async () => {
             session.commandList = ["foo"];
-            session.foo = () => "foo";
+            session.foo = sandbox.stub().resolves("foo");
             const browser = await initBrowser_();
 
             browser.markAsBroken();

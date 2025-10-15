@@ -234,6 +234,7 @@ export class TestRunner extends NodejsEnvTestRunner {
                 await history.runGroup(
                     {
                         callstack: browser.callstackHistory,
+                        snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
                         session: this._browser.publicAPI,
                         config: this._config,
                     },

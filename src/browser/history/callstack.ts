@@ -4,20 +4,10 @@ import { TestStepKey, TestStep } from "../../types";
 export class Callstack {
     private _history: TestStep[];
     private _stack: TestStep[];
-    private _isInBypassMode: boolean = false;
 
     constructor() {
         this._history = [];
         this._stack = [];
-    }
-
-    /** Bypass mode indicates that no hooks should be invoked (e.g. `before()` / `after()`). Useful for system commands that should be run bypassing hooks. */
-    get isInBypassMode(): boolean {
-        return this._isInBypassMode;
-    }
-
-    setIsInBypassMode(flag: boolean): void {
-        this._isInBypassMode = flag;
     }
 
     enter(data: Omit<TestStep, TestStepKey.TimeStart | TestStepKey.Children>): void {

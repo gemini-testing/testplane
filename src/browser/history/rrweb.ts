@@ -16,7 +16,7 @@ export async function installRrwebAndCollectEvents(
     callstack: Callstack,
 ): Promise<eventWithTime[]> {
     /* eslint-disable @typescript-eslint/ban-ts-comment */
-    const resultPromise = runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, () =>
+    return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, () =>
         session.execute(
             (rrwebRecordFnCode, serverTime) => {
                 // @ts-expect-error
@@ -104,9 +104,6 @@ export async function installRrwebAndCollectEvents(
         ),
     );
     /* eslint-enable @typescript-eslint/ban-ts-comment */
-
-    callstack.setIsInBypassMode(false);
-    return resultPromise;
 }
 
 export function filterEvents(rrwebEvents: eventWithTime[]): eventWithTime[] {

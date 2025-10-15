@@ -10,13 +10,24 @@ describe('"runStep" command', () => {
     beforeEach(() => {
         webdriverioAttachStub = sandbox.stub();
 
+        const initCommandHistoryStub = sandbox.stub().returns({
+            callstack: {
+                enter: sandbox.stub(),
+                leave: sandbox.stub(),
+                markError: sandbox.stub(),
+                release: sandbox.stub(),
+                clear: sandbox.stub(),
+            },
+            snapshotsPromiseRef: { current: Promise.resolve() },
+        });
+
         ExistingBrowser = proxyquire("src/browser/existing-browser", {
             "@testplane/webdriverio": {
                 attach: webdriverioAttachStub,
             },
             "./browser": proxyquire("src/browser/browser", {
                 "./history": {
-                    initCommandHistory: sandbox.stub().returns(null),
+                    initCommandHistory: initCommandHistoryStub,
                 },
             }),
             "./client-bridge": {

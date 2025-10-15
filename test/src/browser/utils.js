@@ -6,7 +6,7 @@ const { NewBrowser } = require("src/browser/new-browser");
 const { ExistingBrowser } = require("src/browser/existing-browser");
 const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 
-export function createBrowserConfig_(opts = {}) {
+function createBrowserConfig_(opts = {}) {
     const browser = _.defaults(opts, {
         desiredCapabilities: { browserName: "browser", version: "1.0" },
         baseUrl: "http://base_url",
@@ -52,7 +52,7 @@ export function createBrowserConfig_(opts = {}) {
     };
 }
 
-export const mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
+const mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) => ({
     getWebdriver: sinon
         .stub()
         .named("getWebdriver")
@@ -63,7 +63,7 @@ export const mkWdPool_ = ({ gridUrl = "http://localhost:12345/wd/local" } = {}) 
         }),
 });
 
-export const mkNewBrowser_ = (
+const mkNewBrowser_ = (
     configOpts,
     opts = {
         id: "browser",
@@ -76,7 +76,7 @@ export const mkNewBrowser_ = (
     return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 
-export const mkExistingBrowser_ = (
+const mkExistingBrowser_ = (
     configOpts,
     opts = { id: "browser", version: "1.0", state: {}, emitter: "emitter" },
     BrowserClass = ExistingBrowser,
@@ -84,7 +84,7 @@ export const mkExistingBrowser_ = (
     return BrowserClass.create(createBrowserConfig_(configOpts), opts);
 };
 
-export const mkMockStub_ = () => {
+const mkMockStub_ = () => {
     const eventEmitter = new EventEmitter();
 
     return {
@@ -94,28 +94,28 @@ export const mkMockStub_ = () => {
     };
 };
 
-export const mkCDPTarget_ = () => ({
+const mkCDPTarget_ = () => ({
     _targetId: "12345",
 });
 
-export const mkCDPPage_ = () => ({
+const mkCDPPage_ = () => ({
     target: sinon.stub().named("target").returns(mkCDPTarget_()),
     close: sinon.stub().named("close").resolves(),
 });
 
-export const mkCDPBrowserCtx_ = () => ({
+const mkCDPBrowserCtx_ = () => ({
     newPage: sinon.stub().named("newPage").resolves(mkCDPPage_()),
     isIncognito: sinon.stub().named("isIncognito").returns(false),
     pages: sinon.stub().named("pages").resolves([]),
     close: sinon.stub().named("close").resolves(),
 });
 
-export const mkCDPStub_ = () => ({
+const mkCDPStub_ = () => ({
     browserContexts: sinon.stub().named("browserContexts").returns([]),
     createIncognitoBrowserContext: sinon.stub().named("createIncognitoBrowserContext").resolves(mkCDPBrowserCtx_()),
 });
 
-export const mkSessionStub_ = () => {
+const mkSessionStub_ = () => {
     const session = {};
     const wdioElement = {
         selector: ".selector",
@@ -176,4 +176,17 @@ export const mkSessionStub_ = () => {
     });
 
     return session;
+};
+
+module.exports = {
+    createBrowserConfig_,
+    mkWdPool_,
+    mkNewBrowser_,
+    mkExistingBrowser_,
+    mkMockStub_,
+    mkCDPTarget_,
+    mkCDPPage_,
+    mkCDPBrowserCtx_,
+    mkCDPStub_,
+    mkSessionStub_,
 };

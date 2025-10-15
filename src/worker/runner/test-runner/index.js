@@ -158,6 +158,7 @@ module.exports = class TestRunner {
                 await history.runGroup(
                     {
                         callstack: callstackHistory,
+                        snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
                         config: this._config,
                         session: this._browser.publicAPI,
                     },
@@ -188,6 +189,7 @@ module.exports = class TestRunner {
                 await history.runGroup(
                     {
                         callstack: callstackHistory,
+                        snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
                         config: this._config,
                         session: this._browser.publicAPI,
                     },
@@ -197,6 +199,13 @@ module.exports = class TestRunner {
             }
         } catch (e) {
             error = error || e;
+        } finally {
+            // If collecting time travel snapshots takes a lot of time, make it obvious by writing a message
+            const collectingSnapshotsMessageTimeout = setTimeout(() => {
+                console.log("Collecting Time Travel snapshots takes longer than expected. Waiting...");
+            }, 2000);
+            await this._browser.snapshotsPromiseRef.current;
+            clearTimeout(collectingSnapshotsMessageTimeout);
         }
 
         return error;
@@ -212,6 +221,7 @@ module.exports = class TestRunner {
             await history.runGroup(
                 {
                     callstack: browser.callstackHistory,
+                    snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
                     config: this._config,
                     session: this._browser.publicAPI,
                 },
