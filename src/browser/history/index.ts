@@ -5,7 +5,7 @@ import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } fr
 import { BrowserConfig } from "../../config/browser-config";
 import { TestStep, TestStepKey } from "../../types";
 import { filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
-import { getContext, runWithContext } from "./async-local-storage";
+import { getHistoryContext, runWithHistoryContext } from "./async-local-storage";
 
 const debug = makeDebug("testplane:browser:history");
 
@@ -60,7 +60,7 @@ interface RunWithHistoryHooksData<T> extends HooksData {
 }
 
 export const runWithoutHistory = async <T>(_: unknown, fn: () => T): Promise<T> => {
-    return runWithContext({ shouldBypassHistory: true }, fn) as T;
+    return runWithHistoryContext({ shouldBypassHistory: true }, fn) as T;
 };
 
 const runWithHistoryHooks = <T>({
@@ -73,7 +73,7 @@ const runWithHistoryHooks = <T>({
 }: RunWithHistoryHooksData<T>): T => {
     nodeData.key = nodeData.key ?? Symbol();
 
-    if (getContext()?.shouldBypassHistory) {
+    if (getHistoryContext()?.shouldBypassHistory) {
         return fn();
     }
 

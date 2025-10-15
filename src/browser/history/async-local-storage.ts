@@ -1,15 +1,15 @@
 import { AsyncLocalStorage } from "async_hooks";
 
-interface ContextData {
+export interface HistoryContext {
     shouldBypassHistory: boolean;
 }
 
-const context = new AsyncLocalStorage<ContextData>();
+const historyContext = new AsyncLocalStorage<HistoryContext>();
 
-export const runWithContext = (contextData: ContextData, fn: () => unknown): unknown => {
-    return context.run(contextData, fn);
+export const runWithHistoryContext = (contextData: HistoryContext, fn: () => unknown): unknown => {
+    return historyContext.run(contextData, fn);
 };
 
-export const getContext = (): ContextData | undefined => {
-    return context.getStore();
+export const getHistoryContext = (): HistoryContext | undefined => {
+    return historyContext.getStore();
 };
