@@ -139,6 +139,7 @@ export class AuthServer {
                     const cookieOptions = [
                         `sessionId=${sessionId}`,
                         "HttpOnly",
+                        "sameSite=Lax",
                         "Path=/",
                         rememberMe ? `Max-Age=${60 * 60 * 24 * 7}` : "", // 1 week if remember me
                     ]

@@ -21,8 +21,7 @@ import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Protocol } from "devtools-protocol";
 import { getCalculatedProtocol } from "./commands/saveState";
-import { Cookie as WDIOCookie, SameSiteOptions } from "@testplane/wdio-protocols";
-import { Browser as PuppeteerBrowser, Page } from "puppeteer-core";
+import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
@@ -62,20 +61,30 @@ const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData =
     return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
 };
 
-export const getActivePuppeteerPage = async (puppeteer: PuppeteerBrowser): Promise<Page | undefined> => {
+export const getActivePuppeteerPage = async (session: WebdriverIO.Browser): Promise<Page | undefined> => {
+    const puppeteer = await session.getPuppeteer();
+
+    if (!puppeteer) {
+        return;
+    }
+
     const pages = await puppeteer.pages();
 
     if (!pages.length) {
         return;
     }
 
-    for (let i = 0; i < pages.length; i++) {
-        if (await pages[i].evaluate(() => document.visibilityState === "visible")) {
-            return pages[i];
+    const active = await session.getWindowHandle();
+
+    for (const page of pages) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error need private _targetId
+        if (page.target()._targetId === active) {
+            return page;
         }
     }
 
-    return;
+    return pages[pages.length - 1];
 };
 
 export class ExistingBrowser extends Browser {
@@ -149,12 +158,15 @@ export class ExistingBrowser extends Browser {
         return [cookie.name, cookie.domain, cookie.path].join("-");
     }
 
-    async getAllRequestsCookies(): Promise<Array<WDIOCookie>> {
+    async getAllRequestsCookies(): Promise<Array<Protocol.Network.CookieParam>> {
         if (this._session) {
             const cookies = await this._session.getAllCookies();
-            cookies.forEach(cookie => {
-                this._allCookies.set(this.getCookieIndex(cookie), cookie as Protocol.Network.CookieParam);
-            });
+
+            if (cookies) {
+                cookies.forEach(cookie => {
+                    this._allCookies.set(this.getCookieIndex(cookie), cookie as Protocol.Network.CookieParam);
+                });
+            }
         }
 
         return [...this._allCookies.values()].map(cookie => ({
@@ -165,7 +177,7 @@ export class ExistingBrowser extends Browser {
             expires: cookie.expires ? cookie.expires : undefined,
             httpOnly: cookie.httpOnly,
             secure: cookie.secure,
-            sameSite: cookie.sameSite?.toLowerCase() as SameSiteOptions,
+            sameSite: cookie.sameSite,
         }));
     }
 
@@ -176,13 +188,7 @@ export class ExistingBrowser extends Browser {
 
         this._allCookies = new Map();
 
-        const puppeteer = await this._session.getPuppeteer();
-
-        if (!puppeteer) {
-            return;
-        }
-
-        const page = await getActivePuppeteerPage(puppeteer);
+        const page = await getActivePuppeteerPage(this._session);
 
         if (!page) {
             return;

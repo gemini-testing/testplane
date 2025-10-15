@@ -1,11 +1,12 @@
 import fs from "fs-extra";
 
+import _ from "lodash";
 import type { Browser } from "../../types";
 import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { Cookie } from "@testplane/wdio-protocols";
 import { isSupportIsolation } from "../../../utils/browser";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
+import { Protocol } from "devtools-protocol";
 
 export type SaveStateOptions = {
     path?: string;
@@ -18,7 +19,7 @@ export type SaveStateOptions = {
 export type FrameData = StorageData;
 
 export type SaveStateData = {
-    cookies?: Array<Cookie>;
+    cookies?: Array<Protocol.Network.CookieParam>;
     framesData: Record<string, FrameData>;
 };
 
@@ -66,17 +67,15 @@ export default (browser: ExistingBrowser): void => {
         switch (getCalculatedProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
-                    const storageCookies = await session.storageGetCookies({});
+                    const cookies = await session.getCookies();
 
-                    data.cookies = storageCookies.cookies.map(cookie => ({
-                        name: cookie.name,
-                        value: cookie.value.value,
-                        domain: cookie.domain,
-                        path: cookie.path,
-                        expires: cookie.expiry,
-                        httpOnly: cookie.httpOnly,
-                        secure: cookie.secure,
-                    }));
+                    data.cookies = cookies.map(
+                        cookie =>
+                            ({
+                                ...cookie,
+                                sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
+                            } as Protocol.Network.CookieParam),
+                    );
                 }
 
                 await session.switchToParentFrame();
@@ -84,12 +83,12 @@ export default (browser: ExistingBrowser): void => {
                 const frames = await getWebdriverFrames(session);
                 const framesData: Record<string, FrameData> = {};
 
-                for (let i = 0; i < frames.length; i++) {
+                for (let i = 0; i <= frames.length; i++) {
                     await session.switchToParentFrame();
 
                     // after last element have to get data from parent frame
                     if (i < frames.length) {
-                        await session.switchFrame(frames[i]);
+                        await session.switchFrame(await session.$(`iframe[src="${frames[i]}"]`));
                     }
 
                     const origin = await session.execute<string, []>(() => window.location.origin);
@@ -123,10 +122,19 @@ export default (browser: ExistingBrowser): void => {
                 break;
             }
             case DEVTOOLS_PROTOCOL: {
-                data.cookies = await browser.getAllRequestsCookies();
+                if (options.cookies) {
+                    const cookies = await browser.getAllRequestsCookies();
 
-                const puppeteer = await session.getPuppeteer();
-                const page = await getActivePuppeteerPage(puppeteer);
+                    data.cookies = cookies.map(
+                        cookie =>
+                            ({
+                                ...cookie,
+                                sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
+                            } as Protocol.Network.CookieParam),
+                    );
+                }
+
+                const page = await getActivePuppeteerPage(session);
 
                 if (!page) {
                     break;

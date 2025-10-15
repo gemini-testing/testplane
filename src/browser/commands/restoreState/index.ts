@@ -1,5 +1,4 @@
 import fs from "fs-extra";
-import _ from "lodash";
 
 import { restoreStorage } from "./restoreStorage";
 
@@ -14,13 +13,12 @@ import {
     SaveStateOptions,
 } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
+import { Cookie } from "@testplane/wdio-protocols";
 
 export type RestoreStateOptions = SaveStateOptions & {
     data?: SaveStateData;
     refresh?: boolean;
 };
-
-export type CookiesSameSite = "Strict" | "Lax" | "None";
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
@@ -44,7 +42,19 @@ export default (browser: Browser): void => {
                 await session.switchToParentFrame();
 
                 if (restoreState.cookies && options.cookies) {
-                    await session.setCookies(restoreState.cookies);
+                    await session.setCookies(
+                        restoreState.cookies.map(
+                            cookie =>
+                                ({
+                                    ...cookie,
+                                    secure: cookie.secure || cookie.sameSite === "None", // fix for ff
+                                    sameSite:
+                                        cookie.sameSite && session.isBidi
+                                            ? cookie.sameSite.toLowerCase()
+                                            : cookie.sameSite,
+                                } as Cookie),
+                        ),
+                    );
                 }
 
                 if (restoreState.framesData) {
@@ -57,7 +67,7 @@ export default (browser: Browser): void => {
 
                         // after last element have to set data for parent frame
                         if (i < frames.length) {
-                            await session.switchFrame(frames[i]);
+                            await session.switchFrame(await session.$(`iframe[src="${frames[i]}"]`));
                         }
 
                         const origin = await session.execute<string, []>(() => window.location.origin);
@@ -93,8 +103,7 @@ export default (browser: Browser): void => {
                 break;
             }
             case DEVTOOLS_PROTOCOL: {
-                const puppeteer = await session.getPuppeteer();
-                const page = await getActivePuppeteerPage(puppeteer);
+                const page = await getActivePuppeteerPage(session);
 
                 if (!page) {
                     return;
@@ -103,12 +112,7 @@ export default (browser: Browser): void => {
                 const frames = page.frames();
 
                 if (restoreState.cookies && options.cookies) {
-                    await page.setCookie(
-                        ...restoreState.cookies.map(cookie => ({
-                            ...cookie,
-                            sameSite: _.startCase(_.toLower(cookie.sameSite)) as CookiesSameSite,
-                        })),
-                    );
+                    await page.setCookie(...restoreState.cookies);
                 }
 
                 for (const frame of frames) {

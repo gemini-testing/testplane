@@ -64,8 +64,12 @@ describe("saveState and restoreState tests", function () {
     });
 
     it("restoreState", async function () {
-        // restore state
         if (loginState) {
+            // fix for ff, he doesn't like localhost in domain
+            if (loginState.cookies && loginState.cookies.length > 0) {
+                delete loginState.cookies[0].domain;
+            }
+
             await browser.restoreState({
                 data: loginState,
             });
