@@ -1,5 +1,6 @@
 import url from "url";
 import _ from "lodash";
+import { parse as parseCookiesString, Cookie } from "set-cookie-parser";
 import { attach, type AttachOptions, type ElementArray } from "@testplane/webdriverio";
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
@@ -8,7 +9,7 @@ import { Camera, PageMeta } from "./camera";
 import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
-import { WEBDRIVER_PROTOCOL } from "../constants/config";
+import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../constants/config";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
@@ -18,6 +19,9 @@ import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
+import { Protocol } from "devtools-protocol";
+import { getCalculatedProtocol } from "./commands/saveState";
+import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
@@ -57,12 +61,39 @@ const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData =
     return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
 };
 
+export const getActivePuppeteerPage = async (session: WebdriverIO.Browser): Promise<Page | undefined> => {
+    const puppeteer = await session.getPuppeteer();
+
+    if (!puppeteer) {
+        return;
+    }
+
+    const pages = await puppeteer.pages();
+
+    if (!pages.length) {
+        return;
+    }
+
+    const active = await session.getWindowHandle();
+
+    for (const page of pages) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error need private _targetId
+        if (page.target()._targetId === active) {
+            return page;
+        }
+    }
+
+    return pages[pages.length - 1];
+};
+
 export class ExistingBrowser extends Browser {
     protected _camera: Camera;
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
     protected _cdp: CDP | null = null;
+    private _allCookies: Map<string, Protocol.Network.CookieParam> = new Map();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -102,6 +133,10 @@ export class ExistingBrowser extends Browser {
 
                 await isolationPromise;
 
+                if (getCalculatedProtocol(this) === DEVTOOLS_PROTOCOL) {
+                    await this.startCollectCookies();
+                }
+
                 this._callstackHistory?.clear();
 
                 try {
@@ -117,6 +152,72 @@ export class ExistingBrowser extends Browser {
         );
 
         return this;
+    }
+
+    getCookieIndex(cookie: Cookie): string {
+        return [cookie.name, cookie.domain, cookie.path].join("-");
+    }
+
+    async getAllRequestsCookies(): Promise<Array<Protocol.Network.CookieParam>> {
+        if (this._session) {
+            const cookies = await this._session.getAllCookies();
+
+            if (cookies) {
+                cookies.forEach(cookie => {
+                    this._allCookies.set(this.getCookieIndex(cookie), cookie as Protocol.Network.CookieParam);
+                });
+            }
+        }
+
+        return [...this._allCookies.values()].map(cookie => ({
+            name: cookie.name,
+            value: cookie.value,
+            domain: cookie.domain,
+            path: cookie.path,
+            expires: cookie.expires ? cookie.expires : undefined,
+            httpOnly: cookie.httpOnly,
+            secure: cookie.secure,
+            sameSite: cookie.sameSite,
+        }));
+    }
+
+    async startCollectCookies(): Promise<void> {
+        if (!this._session) {
+            return;
+        }
+
+        this._allCookies = new Map();
+
+        const page = await getActivePuppeteerPage(this._session);
+
+        if (!page) {
+            return;
+        }
+
+        page.on("response", async res => {
+            try {
+                const headers = res.headers();
+
+                if (headers["set-cookie"]) {
+                    headers["set-cookie"].split("\n").forEach(str => {
+                        parseCookiesString(str, { map: false }).forEach((cookie: Cookie) => {
+                            const index = this.getCookieIndex(cookie);
+                            const expires = cookie.expires
+                                ? Math.floor(new Date(cookie.expires).getTime() / 1000)
+                                : undefined;
+
+                            this._allCookies.set(index, {
+                                ...cookie,
+                                domain: cookie.domain ?? new URL(res.url()).hostname,
+                                expires,
+                            } as Protocol.Network.CookieParam);
+                        });
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
     }
 
     markAsBroken(): void {

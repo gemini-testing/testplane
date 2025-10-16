@@ -10,4 +10,6 @@ export const customCommandFileNames = [
     "moveCursorTo",
     "captureDomSnapshot",
     "waitForStaticToLoad",
+    "saveState",
+    "restoreState",
 ];
