@@ -178,7 +178,7 @@ export class CDPConnection {
                         this._pingHealthCheckStart();
 
                         const onPing = (): void => result.pong();
-                        const _onMessage = (data: RawData): void => this._onMessage(data);
+                        const onMessage = (data: RawData): void => this._onMessage(data);
                         const onError = (err: Error): void => {
                             if (result === this._wsConnection) {
                                 this._closeWsConnection(
@@ -190,11 +190,11 @@ export class CDPConnection {
                         };
 
                         result.on("ping", onPing);
-                        result.on("message", _onMessage);
+                        result.on("message", onMessage);
                         result.on("error", onError);
                         result.once("close", () => {
                             result.off("ping", onPing);
-                            result.off("message", _onMessage);
+                            result.off("message", onMessage);
                             result.off("error", onError);
                             if (result === this._wsConnection) {
                                 this._closeWsConnection(
@@ -388,7 +388,7 @@ export class CDPConnection {
     }
 
     /** @description Performs high-level CDP request with retries and timeouts */
-    async request<T>(
+    async request<T = void>(
         method: CDPRequest["method"],
         { params, sessionId }: Omit<CDPRequest, "id" | "method"> = {},
     ): Promise<T> {

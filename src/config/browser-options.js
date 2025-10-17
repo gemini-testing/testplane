@@ -430,5 +430,13 @@ function buildBrowserOptions(defaultFactory, extra) {
                 return value;
             },
         }),
+
+        selectivity: option({
+            defaultValue: defaultFactory("selectivity"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "selectivity"),
+            map: value => ({ ...defaults.selectivity, ...value }),
+        }),
     });
 }

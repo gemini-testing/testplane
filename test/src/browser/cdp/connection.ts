@@ -169,7 +169,7 @@ describe('"CDPConnection"', () => {
         });
 
         it("should send request and receive successful response", async () => {
-            const response = await connection.request("Successful.Method", { params: { test: "value" } });
+            const response = await connection.request<unknown>("Successful.Method", { params: { test: "value" } });
 
             assert.deepEqual(response, { id: 1, params: { test: "value" } });
         });
@@ -183,8 +183,8 @@ describe('"CDPConnection"', () => {
         });
 
         it("should generate unique request IDs", async () => {
-            const promise1 = connection.request("Successful.Method", { params: { test: "1" } });
-            const promise2 = connection.request("Successful.Method", { params: { test: "2" } });
+            const promise1 = connection.request<unknown>("Successful.Method", { params: { test: "1" } });
+            const promise2 = connection.request<unknown>("Successful.Method", { params: { test: "2" } });
 
             const [result1, result2] = await Promise.all([promise1, promise2]);
 
@@ -197,8 +197,8 @@ describe('"CDPConnection"', () => {
             // Set the connection's request ID to near maximum
             Object.defineProperty(connection, "requestId", { value: CDP_MAX_REQUEST_ID - 1 });
 
-            const promise1 = connection.request("Successful.Method", { params: { test: "1" } });
-            const promise2 = connection.request("Successful.Method", { params: { test: "2" } });
+            const promise1 = connection.request<unknown>("Successful.Method", { params: { test: "1" } });
+            const promise2 = connection.request<unknown>("Successful.Method", { params: { test: "2" } });
 
             const [result1, result2] = await Promise.all([promise1, promise2]);
 
@@ -208,7 +208,7 @@ describe('"CDPConnection"', () => {
         });
 
         it("should handle request with sessionId", async () => {
-            const result = await connection.request("Successful.Method", {
+            const result = await connection.request<unknown>("Successful.Method", {
                 sessionId: "custom-session-id",
                 params: { test: "value" },
             });
@@ -235,7 +235,7 @@ describe('"CDPConnection"', () => {
         });
 
         it("should retry requests on retryable errors", async () => {
-            const response = await connection.request("Flaky.Method", {
+            const response = await connection.request<unknown>("Flaky.Method", {
                 params: { respondAfter: 3, errorCode: -1000 },
             });
 
@@ -278,7 +278,7 @@ describe('"CDPConnection"', () => {
 
         it("should establish connection successfully", async () => {
             // Make a request to verify connection is established
-            const result = await connection.request("Successful.Method", { params: { test: "value" } });
+            const result = await connection.request<unknown>("Successful.Method", { params: { test: "value" } });
 
             assert.deepEqual(result, { id: 1, params: { test: "value" } });
             assert.calledWith(getWsEndpointStub, mockBrowser);
@@ -300,9 +300,9 @@ describe('"CDPConnection"', () => {
 
         it("should connect once on multiple requests", async () => {
             const [r1, r2, r3] = await Promise.all([
-                connection.request("Successful.Method"),
-                connection.request("Successful.Method"),
-                connection.request("Successful.Method"),
+                connection.request<unknown>("Successful.Method"),
+                connection.request<unknown>("Successful.Method"),
+                connection.request<unknown>("Successful.Method"),
             ]);
 
             assert.deepEqual(r1, { id: 1 });
@@ -362,7 +362,7 @@ describe('"CDPConnection"', () => {
             getWsServerConnection().send("invalid json");
 
             // Make a request to ensure connection is still working
-            const result = await connection.request("Successful.Method", { params: {} });
+            const result = await connection.request<unknown>("Successful.Method", { params: {} });
 
             // Should handle malformed JSON gracefully and still process valid requests
             assert.deepEqual(result, { id: 1, params: {} });
@@ -397,7 +397,7 @@ describe('"CDPConnection"', () => {
             serverWs.send(JSON.stringify({ id: 999, result: {} }));
 
             // Make a normal request - should work despite the unknown response
-            const result = await connection.request("Successful.Method", { params: { test: "value" } });
+            const result = await connection.request<unknown>("Successful.Method", { params: { test: "value" } });
             assert.deepEqual(result, { id: 1, params: { test: "value" } });
         });
     });
@@ -437,8 +437,8 @@ describe('"CDPConnection"', () => {
         });
 
         it("should reuse existing connection for multiple requests", async () => {
-            const promise1 = connection.request("Successful.Method");
-            const promise2 = connection.request("Successful.Method");
+            const promise1 = connection.request<unknown>("Successful.Method");
+            const promise2 = connection.request<unknown>("Successful.Method");
 
             const [result1, result2] = await Promise.all([promise1, promise2]);
 
@@ -447,19 +447,19 @@ describe('"CDPConnection"', () => {
         });
 
         it("should handle connection drop and reconnect", async () => {
-            const result1 = await connection.request("Successful.Method");
+            const result1 = await connection.request<unknown>("Successful.Method");
             assert.deepEqual(result1, { id: 1 });
 
             // Simulate connection drop
             getWsServerConnection().close();
 
             // Make second request (should trigger reconnection)
-            const result2 = await connection.request("Successful.Method");
+            const result2 = await connection.request<unknown>("Successful.Method");
             assert.deepEqual(result2, { id: 3 });
         });
 
         it("should handle connection termination and reconnect", async () => {
-            const result1 = await connection.request("Successful.Method");
+            const result1 = await connection.request<unknown>("Successful.Method");
             assert.deepEqual(result1, { id: 1 });
 
             // Simulate connection error
@@ -467,7 +467,7 @@ describe('"CDPConnection"', () => {
 
             // Make request (should trigger reconnection)
             // Request is retried because of termination
-            const result2 = await connection.request("Successful.Method");
+            const result2 = await connection.request<unknown>("Successful.Method");
             assert.deepEqual(result2, { id: 3 });
             assert.calledOnce(exponentiallyWaitStub);
         });

@@ -367,6 +367,12 @@ export interface CommonConfig {
         reuseExisting: boolean;
     };
 
+    selectivity: {
+        enabled: boolean;
+        sourceRoot: string;
+        testDependenciesPath: string;
+    };
+
     timeTravel: TimeTravelConfig;
 }
 

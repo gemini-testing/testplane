@@ -538,4 +538,8 @@ export class ExistingBrowser extends Browser {
     get meta(): Record<string, unknown> {
         return this._meta;
     }
+
+    get cdp(): CDP | null {
+        return this._cdp;
+    }
 }
