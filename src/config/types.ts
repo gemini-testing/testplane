@@ -367,6 +367,12 @@ export interface CommonConfig {
         reuseExisting: boolean;
     };
 
+    selectivity: {
+        enabled: boolean;
+        sourceRoot: string;
+        testDependenciesPath: string;
+    };
+
     timeTravel: TimeTravelConfig;
 }
 
@@ -385,7 +391,13 @@ export interface SetsConfigParsed {
 type PartialCommonConfig = Partial<
     Omit<
         CommonConfig,
-        "system" | "timeTravel" | "takeScreenshotOnFails" | "lastFailed" | "openAndWaitOpts" | "devServer"
+        | "system"
+        | "timeTravel"
+        | "takeScreenshotOnFails"
+        | "lastFailed"
+        | "openAndWaitOpts"
+        | "devServer"
+        | "selectivity"
     >
 > & {
     system?: Partial<SystemConfig>;
@@ -394,6 +406,7 @@ type PartialCommonConfig = Partial<
     lastFailed?: Partial<CommonConfig["lastFailed"]>;
     openAndWaitOpts?: Partial<CommonConfig["openAndWaitOpts"]>;
     devServer?: Partial<CommonConfig["devServer"]>;
+    selectivity?: Partial<CommonConfig["selectivity"]>;
 };
 
 export type HookType = (params: { config: Config }) => Promise<void> | undefined;

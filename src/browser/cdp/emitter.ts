@@ -20,4 +20,8 @@ export class CDPEventEmitter<Events extends { [key in keyof Events]: unknown }> 
 
         return super.on(event, eventListenerWithErrorBoundary);
     }
+
+    off<U extends string & keyof Events>(event: U, listener: (params: Events[U]) => void | Promise<void>): this {
+        return super.off(event, listener);
+    }
 }
