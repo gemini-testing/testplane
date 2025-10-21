@@ -40,6 +40,7 @@ export type {
     FormatterListTest,
 } from "./test-collection";
 export type { StatsResult } from "./stats";
+export type { SaveStateData } from "./browser/commands/saveState";
 
 import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
 export type { TestDefinition, SuiteDefinition, TestHookDefinition };
