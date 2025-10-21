@@ -131,7 +131,7 @@ describe("CDP/Selectivity/Utils", () => {
         it("should patch webpack protocol sources", () => {
             const sourceMap = {
                 version: 3,
-                sources: ["webpack:///src/app.js", "webpack:///src/utils.js", "regular/file.js"],
+                sources: ["webpack://src/app.js", "webpack://src/utils.js", "regular/file.js"],
                 sourceRoot: "",
                 names: [],
                 mappings: "",
@@ -294,7 +294,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.throws(() => {
                 utils.transformSourceDependencies(cssDeps, jsDeps);
-            }, /Selectivity: Couldn;t find/);
+            }, /Selectivity: Couldn't find/);
         });
 
         it("should decode URI components", () => {

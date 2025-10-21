@@ -5,12 +5,19 @@ import { getTestDependenciesWriter } from "./test-dependencies-writer";
 import type { Test } from "../../../types";
 import { transformSourceDependencies } from "./utils";
 import { getFileHashWriter } from "./file-hash-writer";
+import { Compression } from "./types";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
     if (!browser.config.selectivity.enabled || !browser.publicAPI.isChromium) {
         return () => Promise.resolve();
+    }
+
+    if (browser.config.selectivity.compression === Compression.ZSTD && !process.versions.zstd) {
+        throw new Error(
+            "Selectivity: Compression 'zstd' is not supported in your node version. Please, upgrade the node version to 22",
+        );
     }
 
     if (!browser.cdp) {
@@ -52,8 +59,10 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             return;
         }
 
-        const testDependencyWriter = getTestDependenciesWriter(browser.config.selectivity.testDependenciesPath);
-        const hashWriter = getFileHashWriter(browser.config.selectivity.testDependenciesPath);
+        const testDependenciesPath = browser.config.selectivity.testDependenciesPath;
+        const compression = browser.config.selectivity.compression;
+        const testDependencyWriter = getTestDependenciesWriter(testDependenciesPath, compression);
+        const hashWriter = getFileHashWriter(testDependenciesPath, compression);
         const dependencies = transformSourceDependencies(cssDependencies, jsDependencies);
 
         hashWriter.add(dependencies);

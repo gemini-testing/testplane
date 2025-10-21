@@ -114,7 +114,7 @@ describe('"CDPConnection"', () => {
 
     beforeEach(() => {
         wsServer = createWsServer();
-        clock = sinon.useFakeTimers();
+        clock = sinon.useFakeTimers({ shouldClearNativeTimers: true });
         getWsEndpointStub = sandbox.stub().resolves(mockEndpoint);
         exponentiallyWaitStub = sandbox.stub().resolves();
         extractRequestIdFromBrokenResponseStub = sandbox.stub().returns(null);
@@ -195,7 +195,7 @@ describe('"CDPConnection"', () => {
 
         it("should wrap request ID at maximum value", async () => {
             // Set the connection's request ID to near maximum
-            Object.defineProperty(connection, "requestId", { value: CDP_MAX_REQUEST_ID - 1 });
+            Object.defineProperty(connection, "_requestId", { value: CDP_MAX_REQUEST_ID - 1 });
 
             const promise1 = connection.request<unknown>("Successful.Method", { params: { test: "1" } });
             const promise2 = connection.request<unknown>("Successful.Method", { params: { test: "2" } });
@@ -320,7 +320,7 @@ describe('"CDPConnection"', () => {
 
             await connection.request("Successful.Method"); // Establishes connection
 
-            Object.defineProperty(connection, "requestId", { value: 0 });
+            Object.defineProperty(connection, "_requestId", { value: 0 });
         });
 
         afterEach(async () => {
@@ -410,7 +410,7 @@ describe('"CDPConnection"', () => {
 
             await connection.request("Successful.Method"); // Establishes connection
 
-            Object.defineProperty(connection, "requestId", { value: 0 });
+            Object.defineProperty(connection, "_requestId", { value: 0 });
         });
 
         afterEach(async () => {

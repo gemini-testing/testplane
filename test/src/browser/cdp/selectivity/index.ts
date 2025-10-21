@@ -21,6 +21,7 @@ describe("CDP/Selectivity", () => {
                 enabled: boolean;
                 sourceRoot: string;
                 testDependenciesPath: string;
+                compression: "none";
             };
         };
         publicAPI: { isChromium: boolean; getWindowHandle: SinonStub };
@@ -62,6 +63,7 @@ describe("CDP/Selectivity", () => {
                     enabled: true,
                     sourceRoot: "/test/source-root",
                     testDependenciesPath: "/test/dependencies",
+                    compression: "none",
                 },
             },
             publicAPI: {
@@ -173,8 +175,8 @@ describe("CDP/Selectivity", () => {
             stopFn = await startSelectivity(browserMock as unknown as ExistingBrowser);
         });
 
-        it("should stop selectivity and not save when shouldWrite is false", async () => {
-            await stopFn(mockTest, false);
+        it("should stop selectivity and not save when drop is true", async () => {
+            await stopFn(mockTest, true);
 
             assert.calledWith(cssSelectivityMock.stop, true);
             assert.calledWith(jsSelectivityMock.stop, true);
@@ -184,8 +186,8 @@ describe("CDP/Selectivity", () => {
             assert.notCalled(fileHashWriterMock.commit);
         });
 
-        it("should stop selectivity and save dependencies when shouldWrite is true", async () => {
-            await stopFn(mockTest, true);
+        it("should stop selectivity and save dependencies when drop is false", async () => {
+            await stopFn(mockTest, false);
 
             assert.calledWith(cssSelectivityMock.stop, false);
             assert.calledWith(jsSelectivityMock.stop, false);
@@ -209,7 +211,7 @@ describe("CDP/Selectivity", () => {
             cssSelectivityMock.stop.resolves([]);
             jsSelectivityMock.stop.resolves([]);
 
-            await stopFn(mockTest, true);
+            await stopFn(mockTest, false);
 
             assert.notCalled(testDependenciesWriterMock.saveFor);
             assert.notCalled(fileHashWriterMock.add);
@@ -227,31 +229,31 @@ describe("CDP/Selectivity", () => {
         it("should handle CSS selectivity errors", async () => {
             cssSelectivityMock.stop.rejects(new Error("CSS error"));
 
-            await assert.isRejected(stopFn(mockTest, true), "CSS error");
+            await assert.isRejected(stopFn(mockTest, false), "CSS error");
         });
 
         it("should handle JS selectivity errors", async () => {
             jsSelectivityMock.stop.rejects(new Error("JS error"));
 
-            await assert.isRejected(stopFn(mockTest, true), "JS error");
+            await assert.isRejected(stopFn(mockTest, false), "JS error");
         });
 
         it("should handle test dependencies writer errors", async () => {
             testDependenciesWriterMock.saveFor.rejects(new Error("Save error"));
 
-            await assert.isRejected(stopFn(mockTest, true), "Save error");
+            await assert.isRejected(stopFn(mockTest, false), "Save error");
         });
 
         it("should handle file hash writer errors", async () => {
             fileHashWriterMock.commit.rejects(new Error("Commit error"));
 
-            await assert.isRejected(stopFn(mockTest, true), "Commit error");
+            await assert.isRejected(stopFn(mockTest, false), "Commit error");
         });
 
         it("should save dependencies when only CSS dependencies exist", async () => {
             jsSelectivityMock.stop.resolves([]);
 
-            await stopFn(mockTest, true);
+            await stopFn(mockTest, false);
 
             assert.calledWith(transformSourceDependenciesStub, ["src/styles.css"], []);
             assert.calledOnce(testDependenciesWriterMock.saveFor);
@@ -262,7 +264,7 @@ describe("CDP/Selectivity", () => {
         it("should save dependencies when only JS dependencies exist", async () => {
             cssSelectivityMock.stop.resolves([]);
 
-            await stopFn(mockTest, true);
+            await stopFn(mockTest, false);
 
             assert.calledWith(transformSourceDependenciesStub, [], ["src/app.js"]);
             assert.calledOnce(testDependenciesWriterMock.saveFor);
