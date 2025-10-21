@@ -16,6 +16,7 @@ import type { BaseTestplane } from "../base-testplane";
 import type { CoordBounds, LooksSameOptions } from "looks-same";
 import type { eventWithTime as RrwebEvent } from "@rrweb/types";
 import type { runGroup } from "../browser/history";
+import type { Protocol } from "devtools-protocol";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
@@ -259,3 +260,5 @@ export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
+
+export type Cookie = Protocol.Network.CookieParam;

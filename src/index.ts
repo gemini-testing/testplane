@@ -28,6 +28,7 @@ export type {
     TestFunction,
     TestFunctionCtx,
     ExecutionThreadCtx,
+    Cookie,
 } from "./types";
 export type { Config } from "./config";
 export { TimeTravelMode } from "./config";
