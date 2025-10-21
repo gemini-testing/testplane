@@ -24,6 +24,13 @@ export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
     session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
+        const currentUrl = new URL(await session.getUrl());
+
+        if (!currentUrl.origin || currentUrl.origin === "null") {
+            logger.error("Before restoreState first open page using url command");
+            process.exit(1);
+        }
+
         const options = { ...defaultOptions, refresh: true, ..._options };
 
         let restoreState: SaveStateData | undefined = options.data;
@@ -34,7 +41,7 @@ export default (browser: Browser): void => {
 
         if (!restoreState) {
             logger.error("Can't restore state: please provide a path to file or data");
-            return;
+            process.exit(1);
         }
 
         switch (getCalculatedProtocol(browser)) {

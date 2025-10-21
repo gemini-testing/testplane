@@ -7,6 +7,7 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config
 import { isSupportIsolation } from "../../../utils/browser";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 import { Protocol } from "devtools-protocol";
+import * as logger from "../../../utils/logger";
 
 export type SaveStateOptions = {
     path?: string;
@@ -57,7 +58,14 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
 export default (browser: ExistingBrowser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData> => {
+    session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData | undefined> => {
+        const currentUrl = new URL(await session.getUrl());
+
+        if (!currentUrl.origin || currentUrl.origin === "null") {
+            logger.error("Before saveState first open page using url command");
+            process.exit(1);
+        }
+
         const options = { ...defaultOptions, ..._options };
 
         const data: SaveStateData = {
