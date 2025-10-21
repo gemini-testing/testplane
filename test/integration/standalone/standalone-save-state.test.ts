@@ -8,6 +8,15 @@ import process from "node:process";
 
 const TIMEOUT = 180000;
 
+// fix for ff, he doesn't like localhost in domain
+const removeDomainFromCookies = (loginState: SaveStateData): void => {
+    if (loginState.cookies && loginState.cookies.length > 0) {
+        for (const cookie of loginState.cookies) {
+            delete cookie.domain;
+        }
+    }
+};
+
 describe("saveState and restoreState tests", function () {
     this.timeout(TIMEOUT);
 
@@ -67,12 +76,7 @@ describe("saveState and restoreState tests", function () {
 
     it("restoreState", async function () {
         if (loginState) {
-            // fix for ff, he doesn't like localhost in domain
-            if (loginState.cookies && loginState.cookies.length > 0) {
-                for (const cookie of loginState.cookies) {
-                    delete cookie.domain;
-                }
-            }
+            removeDomainFromCookies(loginState);
 
             await browser.restoreState({
                 data: loginState,
@@ -86,12 +90,7 @@ describe("saveState and restoreState tests", function () {
     it("cookieFilter: restoreState", async function () {
         // restore state
         if (loginState) {
-            // fix for ff, he doesn't like localhost in domain
-            if (loginState.cookies && loginState.cookies.length > 0) {
-                for (const cookie of loginState.cookies) {
-                    delete cookie.domain;
-                }
-            }
+            removeDomainFromCookies(loginState);
 
             await browser.restoreState({
                 data: loginState,
