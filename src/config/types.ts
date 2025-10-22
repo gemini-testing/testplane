@@ -4,6 +4,7 @@ import type { Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
+import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -371,6 +372,7 @@ export interface CommonConfig {
         enabled: boolean;
         sourceRoot: string;
         testDependenciesPath: string;
+        compression: SelectivityCompressionType;
     };
 
     timeTravel: TimeTravelConfig;

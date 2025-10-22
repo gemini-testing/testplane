@@ -472,23 +472,28 @@ export class ExistingBrowser extends Browser {
         ensure(this._session, BROWSER_SESSION_HINT);
         ensure(this._cdp, CDP_CONNECTION_HINT);
 
+        const session = this._session;
         const cdpTarget = this._cdp.target;
-        const [browserContextIds, currentTargets] = await Promise.all([
+        const [browserContextIds, currentTargets, browserContextId] = await Promise.all([
             cdpTarget.getBrowserContexts().then(res => res.browserContextIds),
             cdpTarget.getTargets().then(res => res.targetInfos),
+            cdpTarget.createBrowserContext().then(res => res.browserContextId),
         ]);
-        const browserContextId = await cdpTarget.createBrowserContext().then(res => res.browserContextId);
         const incognitoWindowId = await cdpTarget.createTarget({ browserContextId }).then(res => res.targetId);
 
-        if (sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL) {
-            const windowIds = await this._session.getWindowHandles();
+        const switchWindowPromise =
+            sessionOpts?.automationProtocol === WEBDRIVER_PROTOCOL
+                ? session
+                      .getWindowHandles()
+                      .then(ids => session.switchToWindow(ids.find(id => id.includes(incognitoWindowId)) as string))
+                : null;
 
-            await this._session.switchToWindow(windowIds.find(id => id.includes(incognitoWindowId))!);
-        }
+        const browserContextIdsToClose = browserContextIds.filter(id => id !== browserContextId);
 
         await Promise.all([
+            switchWindowPromise,
             cdpTarget.activateTarget(incognitoWindowId),
-            ...browserContextIds.map(contextId => cdpTarget.disposeBrowserContext(contextId)),
+            ...browserContextIdsToClose.map(contextId => cdpTarget.disposeBrowserContext(contextId)),
             ...currentTargets.map(target => cdpTarget.closeTarget(target.targetId).catch(() => {})),
         ]);
     }

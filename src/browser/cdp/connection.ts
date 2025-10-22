@@ -52,7 +52,7 @@ export class CDPConnection {
         const sessionId = browser.publicAPI.sessionId;
 
         const cdpWsEndpoint = await getWsEndpoint(browser);
-        const headers = browser.publicAPI.options.headers;
+        const headers = browser.publicAPI.options?.headers ?? {};
 
         if (!cdpWsEndpoint) {
             throw new CDPError({ message: `Couldn't determine CDP endpoint for session ${sessionId}` });

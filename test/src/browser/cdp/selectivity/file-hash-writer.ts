@@ -6,29 +6,27 @@ describe("CDP/Selectivity/FileHashWriter", () => {
     let FileHashWriter: any;
     let getFileHashWriter: typeof import("src/browser/cdp/selectivity/file-hash-writer").getFileHashWriter;
     let FileHashProviderStub: SinonStub;
-    let fsExtraStub: { exists: SinonStub; readFile: SinonStub; outputJSON: SinonStub };
     let pathStub: { join: SinonStub };
     let shallowSortObjectStub: SinonStub;
     let fileHashProviderMock: { calculateFor: SinonStub };
+    let readJsonWithCompression: SinonStub;
+    let writeJsonWithCompression: SinonStub;
 
     beforeEach(() => {
         fileHashProviderMock = { calculateFor: sandbox.stub() };
         FileHashProviderStub = sandbox.stub().returns(fileHashProviderMock);
-        fsExtraStub = {
-            exists: sandbox.stub().resolves(false),
-            readFile: sandbox.stub().resolves("{}"),
-            outputJSON: sandbox.stub().resolves(),
-        };
         pathStub = {
             join: sandbox.stub().callsFake((...args) => args.join("/")),
         };
         shallowSortObjectStub = sandbox.stub();
+        readJsonWithCompression = sandbox.stub().resolves({});
+        writeJsonWithCompression = sandbox.stub().resolves();
 
         const proxyquiredModule = proxyquire("src/browser/cdp/selectivity/file-hash-writer", {
             "node:path": pathStub,
-            "fs-extra": fsExtraStub,
             "./file-hash-provider": { FileHashProvider: FileHashProviderStub },
             "./utils": { shallowSortObject: shallowSortObjectStub },
+            "./json-utils": { readJsonWithCompression, writeJsonWithCompression },
         });
 
         FileHashWriter = proxyquiredModule.FileHashWriter || proxyquiredModule.default;
@@ -42,7 +40,7 @@ describe("CDP/Selectivity/FileHashWriter", () => {
     describe("constructor", () => {
         it("should initialize with correct paths", () => {
             const selectivityRootPath = "/test/selectivity";
-            new FileHashWriter(selectivityRootPath);
+            new FileHashWriter(selectivityRootPath, "none");
 
             assert.calledWith(pathStub.join, selectivityRootPath, "hashes.json");
         });
@@ -50,7 +48,7 @@ describe("CDP/Selectivity/FileHashWriter", () => {
 
     describe("add", () => {
         it("should add file and module dependencies", () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css", "src/theme.css"],
                 js: ["src/app.js", "src/utils.js"],
@@ -70,7 +68,7 @@ describe("CDP/Selectivity/FileHashWriter", () => {
         });
 
         it("should not add duplicate dependencies", () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
@@ -88,7 +86,7 @@ describe("CDP/Selectivity/FileHashWriter", () => {
         });
 
         it("should handle empty dependencies", () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: [],
                 js: [],
@@ -105,33 +103,39 @@ describe("CDP/Selectivity/FileHashWriter", () => {
 
     describe("commit", () => {
         it("should not commit if not initialized", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
 
             await writer.commit();
 
-            assert.notCalled(fsExtraStub.outputJSON);
+            assert.notCalled(writeJsonWithCompression);
         });
 
         it("should not commit if no staged dependencies", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const defaultValue = { files: {}, modules: {} };
+            const writer = new FileHashWriter("/test/selectivity", "none");
 
-            fsExtraStub.exists.resolves(false);
+            readJsonWithCompression
+                .withArgs(sinon.match.string, sinon.match.string, { defaultValue })
+                .resolves(defaultValue);
             writer.add({ css: [], js: [], modules: [] });
 
             await writer.commit();
 
-            assert.notCalled(fsExtraStub.outputJSON);
+            assert.notCalled(writeJsonWithCompression);
         });
 
         it("should create new hash file if it doesn't exist", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const defaultValue = { files: {}, modules: {} };
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
             };
 
-            fsExtraStub.exists.resolves(false);
+            readJsonWithCompression
+                .withArgs(sinon.match.string, sinon.match.string, { defaultValue })
+                .resolves(defaultValue);
             fileHashProviderMock.calculateFor
                 .withArgs("src/styles.css")
                 .resolves("css-hash")
@@ -143,37 +147,31 @@ describe("CDP/Selectivity/FileHashWriter", () => {
             writer.add(dependencies);
             await writer.commit();
 
-            assert.calledWith(
-                fsExtraStub.outputJSON,
-                "/test/selectivity/hashes.json",
-                {
-                    files: {
-                        "src/styles.css": "css-hash",
-                        "src/app.js": "js-hash",
-                    },
-                    modules: {
-                        "node_modules/react": "module-hash",
-                    },
+            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
+                files: {
+                    "src/styles.css": "css-hash",
+                    "src/app.js": "js-hash",
                 },
-                { spaces: 2 },
-            );
+                modules: {
+                    "node_modules/react": "module-hash",
+                },
+            });
         });
 
         it("should update existing hash file", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/new-styles.css"],
                 js: ["src/new-app.js"],
                 modules: ["node_modules/new-lib"],
             };
 
-            const existingContent = JSON.stringify({
+            const existingContent = {
                 files: { "src/old-file.js": "old-hash" },
                 modules: { "node_modules/old-lib": "old-module-hash" },
-            });
+            };
 
-            fsExtraStub.exists.resolves(true);
-            fsExtraStub.readFile.resolves(existingContent);
+            readJsonWithCompression.resolves(existingContent);
             fileHashProviderMock.calculateFor
                 .withArgs("src/new-styles.css")
                 .resolves("new-css-hash")
@@ -185,50 +183,45 @@ describe("CDP/Selectivity/FileHashWriter", () => {
             writer.add(dependencies);
             await writer.commit();
 
-            assert.calledWith(
-                fsExtraStub.outputJSON,
-                "/test/selectivity/hashes.json",
-                {
-                    files: {
-                        "src/old-file.js": "old-hash",
-                        "src/new-styles.css": "new-css-hash",
-                        "src/new-app.js": "new-js-hash",
-                    },
-                    modules: {
-                        "node_modules/old-lib": "old-module-hash",
-                        "node_modules/new-lib": "new-module-hash",
-                    },
+            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
+                files: {
+                    "src/old-file.js": "old-hash",
+                    "src/new-styles.css": "new-css-hash",
+                    "src/new-app.js": "new-js-hash",
                 },
-                { spaces: 2 },
-            );
+                modules: {
+                    "node_modules/old-lib": "old-module-hash",
+                    "node_modules/new-lib": "new-module-hash",
+                },
+            });
         });
 
         it("should not update files with same hash", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: [],
                 modules: [],
             };
 
-            const existingContent = JSON.stringify({
+            const existingContent = {
                 files: { "src/styles.css": "same-hash" },
                 modules: {},
-            });
+            };
 
-            fsExtraStub.exists.resolves(true);
-            fsExtraStub.readFile.resolves(existingContent);
+            readJsonWithCompression.resolves(existingContent);
             fileHashProviderMock.calculateFor.withArgs("src/styles.css").resolves("same-hash");
 
             writer.add(dependencies);
             await writer.commit();
 
             // Should not write to file since hash is the same
-            assert.notCalled(fsExtraStub.outputJSON);
+            assert.notCalled(writeJsonWithCompression);
         });
 
         it("should handle hash calculation errors", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const defaultValue = { files: {}, modules: {} };
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: [],
@@ -236,7 +229,9 @@ describe("CDP/Selectivity/FileHashWriter", () => {
             };
 
             const error = new Error("File not found");
-            fsExtraStub.exists.resolves(false);
+            readJsonWithCompression
+                .withArgs(sinon.match.string, sinon.match.string, { defaultValue })
+                .resolves(defaultValue);
             fileHashProviderMock.calculateFor.withArgs("src/styles.css").rejects(error);
 
             writer.add(dependencies);
@@ -245,41 +240,38 @@ describe("CDP/Selectivity/FileHashWriter", () => {
         });
 
         it("should handle corrupted hash file", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: [],
                 modules: [],
             };
 
-            fsExtraStub.exists.resolves(true);
-            fsExtraStub.readFile.resolves("invalid json");
+            readJsonWithCompression.rejects(new Error("invalid json"));
             fileHashProviderMock.calculateFor.withArgs("src/styles.css").resolves("new-hash");
 
             writer.add(dependencies);
             await writer.commit();
 
             // Should create new file structure when JSON parsing fails
-            assert.calledWith(
-                fsExtraStub.outputJSON,
-                "/test/selectivity/hashes.json",
-                {
-                    files: { "src/styles.css": "new-hash" },
-                    modules: {},
-                },
-                { spaces: 2 },
-            );
+            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
+                files: { "src/styles.css": "new-hash" },
+                modules: {},
+            });
         });
 
         it("should sort objects after updating", async () => {
-            const writer = new FileHashWriter("/test/selectivity");
+            const defaultValue = { files: {}, modules: {} };
+            const writer = new FileHashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: [],
                 modules: ["node_modules/react"],
             };
 
-            fsExtraStub.exists.resolves(false);
+            readJsonWithCompression
+                .withArgs(sinon.match.string, sinon.match.string, { defaultValue })
+                .resolves(defaultValue);
             fileHashProviderMock.calculateFor
                 .withArgs("src/styles.css")
                 .resolves("css-hash")
@@ -298,9 +290,9 @@ describe("CDP/Selectivity/FileHashWriter", () => {
             const path1 = "/test/path1";
             const path2 = "/test/path2";
 
-            const writer1a = getFileHashWriter(path1);
-            const writer1b = getFileHashWriter(path1);
-            const writer2 = getFileHashWriter(path2);
+            const writer1a = getFileHashWriter(path1, "none");
+            const writer1b = getFileHashWriter(path1, "none");
+            const writer2 = getFileHashWriter(path2, "none");
 
             assert.equal(writer1a, writer1b);
             assert.notEqual(writer1a, writer2);

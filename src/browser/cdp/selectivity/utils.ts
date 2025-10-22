@@ -136,7 +136,13 @@ const ensurePosixRelativeDependencyPathExists = memoize((posixRelativePath: stri
         return;
     }
 
-    throw new Error(`Selectivity: Couldn;t find "${relativePath}", which is test's dependency`);
+    throw new Error(
+        [
+            `Selectivity: Couldn't find "${relativePath}", which is test's dependency`,
+            "Please ensure 'sources' of generated source maps contain valid paths to existing files",
+            "Configuring 'sourceRoot' in Testplane selectivity config also might help",
+        ].join("\n"),
+    );
 });
 
 /**

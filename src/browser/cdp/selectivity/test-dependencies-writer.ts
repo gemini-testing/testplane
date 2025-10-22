@@ -3,7 +3,8 @@ import path from "node:path";
 import fs from "fs-extra";
 import { shallowSortObject } from "./utils";
 import type { Test } from "../../../types";
-import type { NormalizedDependencies } from "./types";
+import type { NormalizedDependencies, SelectivityCompressionType } from "./types";
+import { readJsonWithCompression, writeJsonWithCompression } from "./json-utils";
 
 const areDepsSame = (browserDepsA?: NormalizedDependencies, browserDepsB?: NormalizedDependencies): boolean => {
     const props: Array<keyof NormalizedDependencies> = ["js", "css", "modules"] as const;
@@ -32,10 +33,12 @@ const areDepsSame = (browserDepsA?: NormalizedDependencies, browserDepsB?: Norma
 
 export class TestDependenciesWriter {
     private readonly _selectivityTestsPath: string;
+    private readonly _compression: SelectivityCompressionType;
     private _directoryCreated = false;
 
-    constructor(selectivityRootPath: string) {
+    constructor(selectivityRootPath: string, compression: SelectivityCompressionType) {
         this._selectivityTestsPath = path.join(selectivityRootPath, "tests");
+        this._compression = compression;
     }
 
     async saveFor(test: Test, browserDependencies: NormalizedDependencies): Promise<void> {
@@ -45,14 +48,11 @@ export class TestDependenciesWriter {
         }
 
         const testDepsPath = path.join(this._selectivityTestsPath, `${test.id}.json`);
-        const testDepsContent = fs.existsSync(testDepsPath) ? await fs.readFile(testDepsPath, "utf8") : "";
-        let testDeps: Record<string, { browser: NormalizedDependencies }> = {};
-
-        try {
-            if (testDepsContent) {
-                testDeps = JSON.parse(testDepsContent);
-            }
-        } catch {} // eslint-disable-line no-empty
+        const testDeps: Record<string, { browser: NormalizedDependencies }> = await readJsonWithCompression(
+            testDepsPath,
+            this._compression,
+            { defaultValue: {} },
+        ).catch(() => ({}));
 
         if (areDepsSame(testDeps[test.browserId]?.browser, browserDependencies)) {
             return;
@@ -62,11 +62,12 @@ export class TestDependenciesWriter {
 
         shallowSortObject(testDeps);
 
-        // Writing pretty json to avoid vcs merge conflicts
-        await fs.writeFile(testDepsPath, JSON.stringify(testDeps, null, 2));
+        await writeJsonWithCompression(testDepsPath, testDeps, this._compression);
     }
 }
 
-export const getTestDependenciesWriter = memoize((selectivityRootPath: string): TestDependenciesWriter => {
-    return new TestDependenciesWriter(selectivityRootPath);
-});
+export const getTestDependenciesWriter = memoize(
+    (selectivityRootPath: string, compression: SelectivityCompressionType): TestDependenciesWriter => {
+        return new TestDependenciesWriter(selectivityRootPath, compression);
+    },
+);

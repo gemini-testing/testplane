@@ -18,7 +18,10 @@ export class CDP {
     public readonly css: CDPCss;
 
     static async create(browser: Browser): Promise<CDP | null> {
-        if (!browser.publicAPI.isChromium) {
+        // "isChrome" is "true" when automationProtocol is "devtools"
+        const isChromiumLike = browser.publicAPI.isChromium || (browser.publicAPI as { isChrome?: boolean }).isChrome;
+
+        if (!isChromiumLike) {
             return null;
         }
 

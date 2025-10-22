@@ -1,9 +1,9 @@
 import { memoize } from "lodash";
 import path from "node:path";
-import fs from "fs-extra";
 import { FileHashProvider } from "./file-hash-provider";
 import { shallowSortObject } from "./utils";
-import type { NormalizedDependencies } from "./types";
+import type { NormalizedDependencies, SelectivityCompressionType } from "./types";
+import { readJsonWithCompression, writeJsonWithCompression } from "./json-utils";
 
 export class FileHashWriter {
     private readonly _fileHashProvider = new FileHashProvider();
@@ -11,11 +11,13 @@ export class FileHashWriter {
     private readonly _stagedFileHashes = new Map<string, null | Promise<string | Error>>();
     private readonly _stagedModuleHashes = new Map<string, null | Promise<string | Error>>();
     private readonly _selectivityHashesPath: string;
+    private readonly _compresion: SelectivityCompressionType;
     private _hashFileContents: Promise<{ files: Record<string, string>; modules: Record<string, string> }> | null =
         null;
 
-    constructor(selectivityRootPath: string) {
+    constructor(selectivityRootPath: string, compression: SelectivityCompressionType) {
         this._selectivityHashesPath = path.join(selectivityRootPath, "hashes.json");
+        this._compresion = compression;
     }
 
     private _addFileDependency(filePath: string): void {
@@ -43,15 +45,10 @@ export class FileHashWriter {
             return this._hashFileContents;
         }
 
-        return (this._hashFileContents = fs
-            .exists(this._selectivityHashesPath)
-            .then(exists => {
-                return exists ? fs.readFile(this._selectivityHashesPath, "utf8") : "";
-            })
-            .then(contents => {
-                return contents ? JSON.parse(contents) : {};
-            })
-            .catch(() => ({}))
+        return (this._hashFileContents = readJsonWithCompression(this._selectivityHashesPath, this._compresion, {
+            defaultValue: { files: {}, modules: {} },
+        })
+            .catch(() => ({ files: {}, modules: {} }))
             .then(res => {
                 res.files ||= {};
                 res.modules ||= {};
@@ -152,14 +149,15 @@ export class FileHashWriter {
             writeTo(updatedFiles, this._stagedFileHashes, existingHashesContent.files),
         ]);
 
-        // Writing pretty json to avoid vcs merge conflicts
-        await fs.outputJSON(this._selectivityHashesPath, existingHashesContent, { spaces: 2 });
+        await writeJsonWithCompression(this._selectivityHashesPath, existingHashesContent, this._compresion);
 
         markAsCommited(updatedModules, this._stagedModuleHashes);
         markAsCommited(updatedFiles, this._stagedFileHashes);
     }
 }
 
-export const getFileHashWriter = memoize((selectivityRootPath: string): FileHashWriter => {
-    return new FileHashWriter(selectivityRootPath);
-});
+export const getFileHashWriter = memoize(
+    (selectivityRootPath: string, compression: SelectivityCompressionType): FileHashWriter => {
+        return new FileHashWriter(selectivityRootPath, compression);
+    },
+);
