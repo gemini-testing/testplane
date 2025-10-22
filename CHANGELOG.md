@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.32.3](https://github.com/gemini-testing/testplane/compare/v8.32.2...v8.32.3) (2025-10-22)
+
+
+### Features
+
+* **experimental:** implement ability to write test dependencies ([6a85f19](https://github.com/gemini-testing/testplane/commit/6a85f19439fbb552999b49336fddeba2d010adc7))
+* **selectivity:** selectivity compression ([576acb3](https://github.com/gemini-testing/testplane/commit/576acb3ee1530aa59ed010ad2871c2b4122cb2d9))
+* **testplane:** save and restore browser state ([6d15a7e](https://github.com/gemini-testing/testplane/commit/6d15a7eeaf957ba81b84c76209126c8b8a2fadc9))
+
 ### [8.32.2](https://github.com/gemini-testing/testplane/compare/v8.32.1...v8.32.2) (2025-10-15)
 
 
