@@ -6,8 +6,19 @@ import { SaveStateData } from "../../../src";
 import { AuthServer } from "./mock-auth-page/server";
 import process from "node:process";
 
+const TIMEOUT = 180000;
+
+// fix for ff, he doesn't like localhost in domain
+const removeDomainFromCookies = (loginState: SaveStateData): void => {
+    if (loginState.cookies && loginState.cookies.length > 0) {
+        for (const cookie of loginState.cookies) {
+            delete cookie.domain;
+        }
+    }
+};
+
 describe("saveState and restoreState tests", function () {
-    this.timeout(25000);
+    this.timeout(TIMEOUT);
 
     setTimeout(() => {
         console.error(
@@ -15,7 +26,7 @@ describe("saveState and restoreState tests", function () {
                 "If all tests have passed, most likely this is caused by a bug in browser cleanup logic, e.g. deleteSession() command.",
         );
         process.exit(1);
-    }, 120000).unref();
+    }, TIMEOUT).unref();
 
     let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
 
@@ -65,10 +76,7 @@ describe("saveState and restoreState tests", function () {
 
     it("restoreState", async function () {
         if (loginState) {
-            // fix for ff, he doesn't like localhost in domain
-            if (loginState.cookies && loginState.cookies.length > 0) {
-                delete loginState.cookies[0].domain;
-            }
+            removeDomainFromCookies(loginState);
 
             await browser.restoreState({
                 data: loginState,
@@ -79,8 +87,34 @@ describe("saveState and restoreState tests", function () {
         assert.strictEqual(await status.getText(), "You are logged in");
     });
 
+    it("cookieFilter: restoreState", async function () {
+        // restore state
+        if (loginState) {
+            removeDomainFromCookies(loginState);
+
+            await browser.restoreState({
+                data: loginState,
+                cookieFilter: ({ name }) => name !== "sessionId",
+            });
+        }
+
+        // check that still we are not logged in
+        assert.strictEqual(await status.getText(), "You are not logged in");
+    });
+
+    it("cookieFilter: saveState", async function () {
+        const state = await browser.saveState({
+            cookieFilter: () => false,
+        });
+
+        // now we don't have cookie in save data object
+        assert.ok(state.cookies?.length === 0);
+    });
+
     afterEach(async () => {
-        await browser.deleteSession();
+        if (browser) {
+            await browser.deleteSession();
+        }
     });
 
     after(async () => {

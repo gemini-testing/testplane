@@ -259,3 +259,25 @@ export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
+
+export type CookieSameSite = "Strict" | "Lax" | "None";
+export type CookiePriority = "Low" | "Medium" | "High";
+export type CookieSourceScheme = "Unset" | "NonSecure" | "Secure";
+
+// copy from devtools-protocol/Protocol.Network.CookieParam
+export type Cookie = {
+    name: string;
+    value: string;
+    url?: string;
+    domain?: string;
+    path?: string;
+    secure?: boolean;
+    httpOnly?: boolean;
+    sameSite?: CookieSameSite;
+    expires?: number;
+    priority?: CookiePriority;
+    sameParty?: boolean;
+    sourceScheme?: CookieSourceScheme;
+    sourcePort?: number;
+    partitionKey?: string;
+};

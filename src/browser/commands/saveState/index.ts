@@ -6,8 +6,8 @@ import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { isSupportIsolation } from "../../../utils/browser";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
-import { Protocol } from "devtools-protocol";
 import * as logger from "../../../utils/logger";
+import { Cookie } from "../../../types";
 
 export type SaveStateOptions = {
     path?: string;
@@ -15,12 +15,14 @@ export type SaveStateOptions = {
     cookies?: boolean;
     localStorage?: boolean;
     sessionStorage?: boolean;
+
+    cookieFilter?: (cookie: Cookie) => boolean;
 };
 
 export type FrameData = StorageData;
 
 export type SaveStateData = {
-    cookies?: Array<Protocol.Network.CookieParam>;
+    cookies?: Array<Cookie>;
     framesData: Record<string, FrameData>;
 };
 
@@ -82,7 +84,7 @@ export default (browser: ExistingBrowser): void => {
                             ({
                                 ...cookie,
                                 sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
-                            } as Protocol.Network.CookieParam),
+                            } as Cookie),
                     );
                 }
 
@@ -138,7 +140,7 @@ export default (browser: ExistingBrowser): void => {
                             ({
                                 ...cookie,
                                 sameSite: cookie.sameSite ? _.startCase(cookie.sameSite) : cookie.sameSite,
-                            } as Protocol.Network.CookieParam),
+                            } as Cookie),
                     );
                 }
 
@@ -181,6 +183,10 @@ export default (browser: ExistingBrowser): void => {
                 data.framesData = framesData;
                 break;
             }
+        }
+
+        if (options && options.cookieFilter && data.cookies) {
+            data.cookies = data.cookies.filter(options.cookieFilter);
         }
 
         if (options && options.path) {
