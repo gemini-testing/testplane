@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.33.0](https://github.com/gemini-testing/testplane/compare/v8.32.3...v8.33.0) (2025-10-23)
+
+
+### Features
+
+* **testplane:** save state filter cookie ([43165c0](https://github.com/gemini-testing/testplane/commit/43165c0f3463ff2dc8dfcfc251ecf17bc4b1d8e5))
+
 ### [8.32.3](https://github.com/gemini-testing/testplane/compare/v8.32.2...v8.32.3) (2025-10-22)
 
 
