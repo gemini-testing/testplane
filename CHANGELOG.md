@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.34.0](https://github.com/gemini-testing/testplane/compare/v8.33.0...v8.34.0) (2025-10-23)
+
+
+### Features
+
+* expose cdp API under the unstable_getCdp command ([#1156](https://github.com/gemini-testing/testplane/issues/1156)) ([5e595ac](https://github.com/gemini-testing/testplane/commit/5e595ac6d754879c5a15feb792140da372b9ce02))
+
 ## [8.33.0](https://github.com/gemini-testing/testplane/compare/v8.32.3...v8.33.0) (2025-10-23)
 
 
