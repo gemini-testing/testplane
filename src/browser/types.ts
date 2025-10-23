@@ -12,6 +12,7 @@ import type { Options } from "@testplane/wdio-types";
 import type { SaveStateData, SaveStateOptions } from "./commands/saveState";
 import type { RestoreStateOptions } from "./commands/restoreState";
 import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
+import type { CDP } from "./cdp";
 
 export const BrowserName = {
     CHROME: "chrome" as PuppeteerBrowser.CHROME,
@@ -181,6 +182,8 @@ declare global {
                 selector: string,
                 options?: Partial<CaptureSnapshotOptions>,
             ): Promise<CaptureSnapshotResult>;
+
+            unstable_getCdp(this: WebdriverIO.Browser): Promise<CDP | null>;
         }
 
         interface Element {

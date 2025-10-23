@@ -1,5 +1,5 @@
 import type { Browser } from "../types";
-import type { CDPEvent } from "./types";
+import type { CDPEvent, CDPRequest, CDPSessionId } from "./types";
 import { CDPConnection } from "./connection";
 import { CDPTarget } from "./domains/target";
 import { CDPProfiler } from "./domains/profiler";
@@ -39,6 +39,17 @@ export class CDP {
         this.dom = new CDPDom(connection);
         this.css = new CDPCss(connection);
         this._connection.onEventMessage = this._onEventMessage.bind(this);
+    }
+
+    async request<T = Record<string, unknown>>(
+        method: CDPRequest["method"],
+        params?: CDPRequest["params"] | null,
+        cdpSessionId?: CDPSessionId | null,
+    ): Promise<T> {
+        return this._connection.request<T>(method, {
+            params: params ?? undefined,
+            sessionId: cdpSessionId ?? undefined,
+        });
     }
 
     close(): void {
