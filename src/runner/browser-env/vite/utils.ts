@@ -45,8 +45,16 @@ export const getTestInfoFromViteRequest = (req: Connect.IncomingMessage): TestIn
         return null;
     }
 
+    if (req.originalUrl && req.originalUrl.endsWith("devtools.json")) {
+        return null;
+    }
+
     const parsedUrl = url.parse(req.originalUrl);
     const [routeName, runUuid] = _.compact(parsedUrl.pathname?.split("/"));
+
+    if (runUuid?.endsWith(".map")) {
+        return null;
+    }
 
     if (routeName !== VITE_RUN_UUID_ROUTE || !runUuid) {
         throw new Error(`Pathname must be in "/${VITE_RUN_UUID_ROUTE}/:uuid" format, but got: ${req.originalUrl}`);
