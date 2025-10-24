@@ -407,7 +407,9 @@ type PartialCommonConfig = Partial<
     takeScreenshotOnFails?: Partial<CommonConfig["takeScreenshotOnFails"]>;
     lastFailed?: Partial<CommonConfig["lastFailed"]>;
     openAndWaitOpts?: Partial<CommonConfig["openAndWaitOpts"]>;
-    devServer?: Partial<CommonConfig["devServer"]>;
+    devServer?: Omit<Partial<CommonConfig["devServer"]>, "readinessProbe"> & {
+        readinessProbe?: Partial<CommonConfig["devServer"]["readinessProbe"]>;
+    };
     selectivity?: Partial<CommonConfig["selectivity"]>;
 };
 
