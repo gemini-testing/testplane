@@ -28,6 +28,18 @@ enum WsConnectionStatus {
 
 type OnEventMessageFn = (cdpEventMessage: CDPEvent) => unknown;
 
+// Closing WS when its still not connected produces error:
+// https://github.com/websockets/ws/blob/86eac5b44ac2bff9087ec40c9bd06bc7b4f0da07/lib/websocket.js#L297-L301
+const closeWsConnection = (ws: WebSocket): void => {
+    if (ws.readyState !== ws.CONNECTING) {
+        ws.close();
+    } else {
+        ws.once("open", () => {
+            ws.close();
+        });
+    }
+};
+
 export class CDPConnection {
     public onEventMessage: OnEventMessageFn | null = null;
     private readonly _cdpWsEndpoint: string;
@@ -80,7 +92,7 @@ export class CDPConnection {
                 let isSettled = false;
 
                 const timeoutId = setTimeout(() => {
-                    ws.close();
+                    closeWsConnection(ws);
                     done(
                         new CDPTimeoutError({
                             message: `Couldn't establish CDP connection to "${endpoint}" in ${CDP_CONNECTION_TIMEOUT}ms`,
@@ -93,7 +105,7 @@ export class CDPConnection {
                 };
 
                 const onError = (error: unknown): void => {
-                    ws.close();
+                    closeWsConnection(ws);
                     done(
                         new CDPError({
                             message: `Couldn't establish CDP connection to "${endpoint}": ${error}`,
@@ -165,7 +177,7 @@ export class CDPConnection {
 
                     if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
                         if (result instanceof WebSocket) {
-                            result.close();
+                            closeWsConnection(result);
                         }
                         throw new CDPConnectionTerminatedError();
                     }
@@ -444,7 +456,7 @@ export class CDPConnection {
         this._abortPendingRequests(`Request was aborted because ${sessionAbortMessage}`);
         this._pingHealthCheckStop();
 
-        ws.close();
+        closeWsConnection(ws);
     }
 
     /**
