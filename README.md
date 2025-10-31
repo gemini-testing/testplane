@@ -1,7 +1,7 @@
 <p align="center">
   <a href="https://testplane.io/">
     <picture>
-      <img alt="Testplane" src="docs/images/testplane.svg" width="220" style="max-width: 100%;">
+      <img alt="Testplane" src="https://raw.githubusercontent.com/gemini-testing/testplane/refs/heads/master/docs/images/testplane.svg" width="220" style="max-width: 100%;">
     </picture>
   </a>
 </p>
