@@ -840,13 +840,16 @@ describe("ExistingBrowser", () => {
         });
 
         describe("'disableAnimation: true' and 'automationProtocol: webdriver'", () => {
-            it("should disable animations", async () => {
+            it("should disable animations on displayed iframes", async () => {
                 const clientBridge = stubClientBridge_();
                 const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
                 const iframeElement1 = { "element-12345": "67890_element_1" };
                 const iframeElement2 = { "element-54321": "09876_element_2" };
+                const elementStub = (browser.publicAPI.$ = sandbox.stub());
+                elementStub.withArgs(iframeElement1).returns({ isDisplayed: () => Promise.resolve(false) });
+                elementStub.withArgs(iframeElement2).returns({ isDisplayed: () => Promise.resolve(true) });
                 browser.publicAPI.findElements
-                    .withArgs("css selector", "iframe")
+                    .withArgs("css selector", "iframe[src]")
                     .resolves([iframeElement1, iframeElement2]);
 
                 await browser.prepareScreenshot(".selector", { disableAnimation: true });
@@ -856,15 +859,11 @@ describe("ExistingBrowser", () => {
                         ".selector",
                         sinon.match({ disableAnimation: true }),
                     ]),
-
-                    browser.publicAPI.switchToFrame.withArgs(iframeElement1),
-                    clientBridge.call.withArgs("disableFrameAnimations"),
-                    browser.publicAPI.switchToFrame.withArgs(null),
-
                     browser.publicAPI.switchToFrame.withArgs(iframeElement2),
                     clientBridge.call.withArgs("disableFrameAnimations"),
                     browser.publicAPI.switchToFrame.withArgs(null),
                 );
+                assert.neverCalledWithMatch(browser.publicAPI.switchToFrame, iframeElement1);
             });
         });
 
@@ -886,7 +885,11 @@ describe("ExistingBrowser", () => {
             const clientBridge = stubClientBridge_();
             const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
             const iframeElement = { "element-12345": "67890_element_1" };
-            browser.publicAPI.findElements.withArgs("css selector", "iframe").resolves([iframeElement]);
+            browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
+            browser.publicAPI.$ = sandbox
+                .stub()
+                .withArgs(iframeElement)
+                .returns({ isDisplayed: () => Promise.resolve(true) });
 
             await browser.prepareScreenshot(".selector", { disableAnimation: false });
 
@@ -932,7 +935,11 @@ describe("ExistingBrowser", () => {
                 const clientBridge = stubClientBridge_();
                 const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
                 const iframeElement = { "element-12345": "67890_element_1" };
-                browser.publicAPI.findElements.withArgs("css selector", "iframe").resolves([iframeElement]);
+                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
+                browser.publicAPI.$ = sandbox
+                    .stub()
+                    .withArgs(iframeElement)
+                    .returns({ isDisplayed: () => Promise.resolve(true) });
 
                 await browser.cleanupScreenshot({ disableAnimation: true });
 
@@ -945,7 +952,11 @@ describe("ExistingBrowser", () => {
                 stubClientBridge_();
                 const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
                 const iframeElement = { "element-12345": "67890_element_1" };
-                browser.publicAPI.findElements.withArgs("css selector", "iframe").resolves([iframeElement]);
+                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
+                browser.publicAPI.$ = sandbox
+                    .stub()
+                    .withArgs(iframeElement)
+                    .returns({ isDisplayed: () => Promise.resolve(true) });
 
                 await browser.cleanupScreenshot({ disableAnimation: true });
 
@@ -958,7 +969,7 @@ describe("ExistingBrowser", () => {
             it("should not switch to any frame if there are no iframes on the page ", async () => {
                 stubClientBridge_();
                 const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-                browser.publicAPI.findElements.withArgs("css selector", "iframe").resolves([]);
+                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([]);
 
                 await browser.cleanupScreenshot({ disableAnimation: true });
 

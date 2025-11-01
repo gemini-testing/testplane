@@ -23,6 +23,7 @@ import { Protocol } from "devtools-protocol";
 import { getCalculatedProtocol } from "./commands/saveState";
 import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
+import type { ElementReference } from "@testplane/wdio-protocols";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -573,19 +574,31 @@ export class ExistingBrowser extends Browser {
         );
     }
 
-    protected async _runInEachIframe(cb: (...args: unknown[]) => unknown): Promise<void> {
+    protected async _runInEachDisplayedIframe(cb: (...args: unknown[]) => unknown): Promise<void> {
         ensure(this._session, BROWSER_SESSION_HINT);
-        const iframes = await this._session.findElements("css selector", "iframe");
+        const session = this._session;
+        const iframes = await session.findElements("css selector", "iframe[src]");
+        const displayedIframes: ElementReference[] = [];
+
+        await Promise.all(
+            iframes.map(async iframe => {
+                const isIframeDisplayed = await session.$(iframe).isDisplayed();
+
+                if (isIframeDisplayed) {
+                    displayedIframes.push(iframe);
+                }
+            }),
+        );
 
         try {
-            for (const iframe of iframes) {
-                await this._session.switchToFrame(iframe);
+            for (const iframe of displayedIframes) {
+                await session.switchToFrame(iframe);
                 await cb();
                 // switchToParentFrame does not work in ios - https://github.com/appium/appium/issues/14882
-                await this._session.switchToFrame(null);
+                await session.switchToFrame(null);
             }
         } catch (e) {
-            await this._session.switchToFrame(null);
+            await session.switchToFrame(null);
             throw e;
         }
     }
@@ -604,7 +617,7 @@ export class ExistingBrowser extends Browser {
     }
 
     protected async _disableIframeAnimations(): Promise<void> {
-        await this._runInEachIframe(() => this._disableFrameAnimations());
+        await this._runInEachDisplayedIframe(() => this._disableFrameAnimations());
     }
 
     protected async _cleanupFrameAnimations(): Promise<void> {
@@ -614,7 +627,7 @@ export class ExistingBrowser extends Browser {
     }
 
     protected async _cleanupIframeAnimations(): Promise<void> {
-        await this._runInEachIframe(() => this._cleanupFrameAnimations());
+        await this._runInEachDisplayedIframe(() => this._cleanupFrameAnimations());
     }
 
     protected async _cleanupPageAnimations(): Promise<void> {
