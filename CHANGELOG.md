@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.34.3](https://github.com/gemini-testing/testplane/compare/v8.34.2...v8.34.3) (2025-11-01)
+
+
+### Bug Fixes
+
+* dont try to disable animation in non-displayed iframes ([023f820](https://github.com/gemini-testing/testplane/commit/023f82054dc36d02c5fa5c37fa9c76b0d5272daa))
+
 ### [8.34.2](https://github.com/gemini-testing/testplane/compare/v8.34.1...v8.34.2) (2025-10-24)
 
 
