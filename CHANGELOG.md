@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.34.4](https://github.com/gemini-testing/testplane/compare/v8.34.3...v8.34.4) (2025-11-05)
+
+
+### Bug Fixes
+
+* dont try to close not closed cdp ws ([ea0fcdc](https://github.com/gemini-testing/testplane/commit/ea0fcdcb655630cebe93b2226f01593c2ff2d84f))
+
 ### [8.34.3](https://github.com/gemini-testing/testplane/compare/v8.34.2...v8.34.3) (2025-11-01)
 
 
