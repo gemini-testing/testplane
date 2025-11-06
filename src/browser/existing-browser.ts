@@ -450,7 +450,7 @@ export class ExistingBrowser extends Browser {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const incognitoWindowId = windowIds.find(id => id.includes((page.target() as any)._targetId));
 
-            await this._session.switchToWindow(incognitoWindowId!);
+            await Promise.all([this._session.switchToWindow(incognitoWindowId!), page.bringToFront()]);
         }
 
         if (this._session.isBidi) {
