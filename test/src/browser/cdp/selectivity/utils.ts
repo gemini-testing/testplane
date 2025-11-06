@@ -312,6 +312,150 @@ describe("CDP/Selectivity/Utils", () => {
         });
     });
 
+    describe("mergeSourceDependencies", () => {
+        it("should merge two empty dependency objects", () => {
+            const a = { css: [], js: [], modules: [] };
+            const b = { css: [], js: [], modules: [] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, { css: [], js: [], modules: [] });
+        });
+
+        it("should merge when first object is empty", () => {
+            const a = { css: [], js: [], modules: [] };
+            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+        });
+
+        it("should merge when second object is empty", () => {
+            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+            const b = { css: [], js: [], modules: [] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+        });
+
+        it("should merge sorted arrays maintaining order", () => {
+            const a = { css: ["a.css", "c.css"], js: ["a.js", "c.js"], modules: ["lodash", "react"] };
+            const b = { css: ["b.css", "d.css"], js: ["b.js", "d.js"], modules: ["axios", "vue"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["a.css", "b.css", "c.css", "d.css"],
+                js: ["a.js", "b.js", "c.js", "d.js"],
+                modules: ["axios", "lodash", "react", "vue"],
+            });
+        });
+
+        it("should remove duplicates when merging", () => {
+            const a = {
+                css: ["common.css", "unique-a.css"],
+                js: ["common.js", "unique-a.js"],
+                modules: ["react", "unique-a"],
+            };
+            const b = {
+                css: ["common.css", "unique-b.css"],
+                js: ["common.js", "unique-b.js"],
+                modules: ["react", "unique-b"],
+            };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["common.css", "unique-a.css", "unique-b.css"],
+                js: ["common.js", "unique-a.js", "unique-b.js"],
+                modules: ["react", "unique-a", "unique-b"],
+            });
+        });
+
+        it("should handle arrays with consecutive duplicates", () => {
+            const a = { css: ["a.css", "a.css", "b.css"], js: ["a.js", "a.js"], modules: ["react", "react"] };
+            const b = { css: ["a.css", "c.css", "c.css"], js: ["b.js", "b.js"], modules: ["vue", "vue"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["a.css", "b.css", "c.css"],
+                js: ["a.js", "b.js"],
+                modules: ["react", "vue"],
+            });
+        });
+
+        it("should handle mixed case sorting correctly", () => {
+            const a = { css: ["A.css", "c.css"], js: ["A.js", "c.js"], modules: ["React", "lodash"] };
+            const b = { css: ["B.css", "a.css"], js: ["B.js", "a.js"], modules: ["axios", "Vue"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["A.css", "B.css", "a.css", "c.css"],
+                js: ["A.js", "B.js", "a.js", "c.js"],
+                modules: ["axios", "React", "lodash", "Vue"],
+            });
+        });
+
+        it("should handle arrays of different lengths", () => {
+            const a = { css: ["a.css"], js: ["a.js", "b.js", "c.js", "d.js"], modules: ["react"] };
+            const b = { css: ["b.css", "c.css", "d.css"], js: ["e.js"], modules: ["axios", "lodash", "vue"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["a.css", "b.css", "c.css", "d.css"],
+                js: ["a.js", "b.js", "c.js", "d.js", "e.js"],
+                modules: ["axios", "lodash", "react", "vue"],
+            });
+        });
+
+        it("should handle identical arrays", () => {
+            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+        });
+
+        it("should handle complex real-world scenario", () => {
+            const a = {
+                css: ["src/components/button.css", "src/styles/main.css"],
+                js: ["src/components/button.js", "src/utils/helpers.js"],
+                modules: ["@babel/core", "react", "webpack"],
+            };
+            const b = {
+                css: ["src/components/modal.css", "src/styles/main.css"],
+                js: ["src/components/modal.js", "src/utils/helpers.js"],
+                modules: ["lodash", "react", "vue"],
+            };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result, {
+                css: ["src/components/button.css", "src/components/modal.css", "src/styles/main.css"],
+                js: ["src/components/button.js", "src/components/modal.js", "src/utils/helpers.js"],
+                modules: ["@babel/core", "lodash", "react", "vue", "webpack"],
+            });
+        });
+
+        it("should preserve original objects without mutation", () => {
+            const a = { css: ["a.css"], js: ["a.js"], modules: ["react"] };
+            const b = { css: ["b.css"], js: ["b.js"], modules: ["vue"] };
+            const originalA = JSON.parse(JSON.stringify(a));
+            const originalB = JSON.parse(JSON.stringify(b));
+
+            utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(a, originalA);
+            assert.deepEqual(b, originalB);
+        });
+    });
+
     describe("shallowSortObject", () => {
         it("should make result json have ordered properties", () => {
             const obj = {

@@ -226,6 +226,57 @@ export const transformSourceDependencies = (
     return { css, js, modules };
 };
 
+/** Merges two sorted deps array into one with uniq values */
+export const mergeSourceDependencies = (
+    a: NormalizedDependencies,
+    b: NormalizedDependencies,
+): NormalizedDependencies => {
+    const result: NormalizedDependencies = { css: [], js: [], modules: [] };
+
+    for (const depType of Object.keys(result) as Array<keyof NormalizedDependencies>) {
+        let aInd = 0,
+            bInd = 0;
+
+        while (aInd < a[depType].length || bInd < b[depType].length) {
+            let compareResult;
+
+            if (bInd >= b[depType].length) {
+                compareResult = -1;
+            } else if (aInd >= a[depType].length) {
+                compareResult = 1;
+            } else {
+                compareResult = a[depType][aInd].localeCompare(b[depType][bInd]);
+            }
+
+            if (compareResult < 0) {
+                result[depType].push(a[depType][aInd]);
+
+                do {
+                    aInd++;
+                } while (a[depType][aInd] === a[depType][aInd - 1]);
+            } else if (compareResult > 0) {
+                result[depType].push(b[depType][bInd]);
+
+                do {
+                    bInd++;
+                } while (b[depType][bInd] === b[depType][bInd - 1]);
+            } else {
+                result[depType].push(a[depType][aInd]);
+
+                do {
+                    aInd++;
+                } while (a[depType][aInd] === a[depType][aInd - 1]);
+
+                do {
+                    bInd++;
+                } while (b[depType][bInd] === b[depType][bInd - 1]);
+            }
+        }
+    }
+
+    return result;
+};
+
 // Ensures file consistency
 export const shallowSortObject = (obj: Record<string, unknown>): void => {
     const testBrowsers = Object.keys(obj).sort();

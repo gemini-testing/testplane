@@ -57,6 +57,11 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             js: ["src/app.js"],
             modules: ["node_modules/react"],
         };
+        const mockEmptyDependencies = {
+            css: [],
+            js: [],
+            modules: [],
+        };
 
         it("should create directory on first save", async () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
@@ -79,10 +84,10 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             readJsonWithCompression.resolves({});
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
             const expectedPath = "/test/selectivity/tests/test-123.json";
-            const expectedContent = { chrome: { browser: mockDependencies } };
+            const expectedContent = { chrome: { browser: mockDependencies, testplane: mockEmptyDependencies } };
 
             assert.calledWith(pathStub.join, "/test/selectivity/tests", "test-123.json");
             assert.calledWith(writeJsonWithCompression, expectedPath, expectedContent);
@@ -97,11 +102,11 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
 
             readJsonWithCompression.resolves(existingContent);
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
             const expectedContent = {
                 firefox: { browser: { css: ["old.css"], js: [], modules: [] } },
-                chrome: { browser: mockDependencies },
+                chrome: { browser: mockDependencies, testplane: mockEmptyDependencies },
             };
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/tests/test-123.json", expectedContent);
@@ -110,12 +115,12 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
         it("should not save if dependencies are the same", async () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             const existingContent = {
-                chrome: { browser: mockDependencies },
+                chrome: { browser: mockDependencies, testplane: mockEmptyDependencies },
             };
 
             readJsonWithCompression.resolves(existingContent);
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
             assert.notCalled(writeJsonWithCompression);
         });
@@ -124,9 +129,9 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             readJsonWithCompression.rejects(new Error("invalid json"));
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
-            const expectedContent = { chrome: { browser: mockDependencies } };
+            const expectedContent = { chrome: { browser: mockDependencies, testplane: mockEmptyDependencies } };
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/tests/test-123.json", expectedContent);
         });
@@ -135,9 +140,9 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             readJsonWithCompression.resolves({});
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
-            const expectedContent = { chrome: { browser: mockDependencies } };
+            const expectedContent = { chrome: { browser: mockDependencies, testplane: mockEmptyDependencies } };
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/tests/test-123.json", expectedContent);
         });
@@ -145,14 +150,14 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
         it("should overwrite existing browser dependencies", async () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             const existingContent = {
-                chrome: { browser: { css: ["old.css"], js: [], modules: [] } },
+                chrome: { browser: { css: ["old.css"], js: [], modules: [] }, testplane: mockEmptyDependencies },
             };
 
             readJsonWithCompression.resolves(existingContent);
 
-            await writer.saveFor(mockTest, mockDependencies);
+            await writer.saveFor(mockTest, mockDependencies, mockEmptyDependencies);
 
-            const expectedContent = { chrome: { browser: mockDependencies } };
+            const expectedContent = { chrome: { browser: mockDependencies, testplane: mockEmptyDependencies } };
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/tests/test-123.json", expectedContent);
         });
@@ -172,11 +177,11 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             };
 
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
-            const existingContent = { chrome: { browser: deps1 } };
+            const existingContent = { chrome: { browser: deps1, testplane: deps1 } };
 
             readJsonWithCompression.resolves(existingContent);
 
-            return writer.saveFor({ id: "test", browserId: "chrome" }, deps2).then(() => {
+            return writer.saveFor({ id: "test", browserId: "chrome" }, deps2, deps2).then(() => {
                 assert.notCalled(writeJsonWithCompression);
             });
         });
@@ -194,11 +199,11 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             };
 
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
-            const existingContent = { chrome: { browser: deps1 } };
+            const existingContent = { chrome: { browser: deps1, testplane: deps2 } };
 
             readJsonWithCompression.resolves(existingContent);
 
-            await writer.saveFor({ id: "test", browserId: "chrome" }, deps2);
+            await writer.saveFor({ id: "test", browserId: "chrome" }, deps2, deps2);
 
             assert.calledOnce(writeJsonWithCompression);
         });
@@ -213,7 +218,7 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
             readJsonWithCompression.resolves({});
 
-            await writer.saveFor({ id: "test", browserId: "chrome" }, deps);
+            await writer.saveFor({ id: "test", browserId: "chrome" }, deps, deps);
 
             assert.calledOnce(writeJsonWithCompression);
         });
@@ -231,11 +236,11 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             };
 
             const writer = new TestDependenciesWriter("/test/selectivity", "none");
-            const existingContent = { chrome: { browser: deps1 } };
+            const existingContent = { chrome: { browser: deps1, testplane: deps1 } };
 
             readJsonWithCompression.resolves(existingContent);
 
-            await writer.saveFor({ id: "test", browserId: "chrome" }, deps2);
+            await writer.saveFor({ id: "test", browserId: "chrome" }, deps2, deps2);
 
             assert.calledOnce(writeJsonWithCompression);
         });

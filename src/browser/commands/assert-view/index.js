@@ -3,7 +3,6 @@
 const fs = require("fs-extra");
 const path = require("path");
 const _ = require("lodash");
-const { pngValidator: validatePng } = require("png-validator");
 const { Image } = require("../../../image");
 const ScreenShooter = require("../../screen-shooter");
 const temp = require("../../../temp");
@@ -115,7 +114,7 @@ module.exports.default = browser => {
         const refBuffer = await fs.readFile(refImg.path);
 
         try {
-            validatePng(refBuffer);
+            require("png-validator").pngValidator(refBuffer);
         } catch (err) {
             await currImgInst.save(currImg.path);
 
