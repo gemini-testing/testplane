@@ -209,6 +209,7 @@ export class Testplane extends BaseTestplane {
             keepBrowserMode,
             runnableOpts,
         });
+
         const collection = TestCollection.create(specs);
 
         collection.getBrowsers().forEach(bro => {

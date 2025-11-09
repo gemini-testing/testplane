@@ -1,10 +1,8 @@
 import fs from "fs-extra";
 
 import _ from "lodash";
-import type { Browser } from "../../types";
 import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { isSupportIsolation } from "../../../utils/browser";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
@@ -32,24 +30,6 @@ export const defaultOptions = {
     sessionStorage: true,
 };
 
-export const getCalculatedProtocol = (browser: Browser): typeof DEVTOOLS_PROTOCOL | typeof WEBDRIVER_PROTOCOL => {
-    const protocol = browser.config.automationProtocol;
-
-    if (protocol === DEVTOOLS_PROTOCOL) {
-        return DEVTOOLS_PROTOCOL;
-    }
-
-    if (
-        protocol === WEBDRIVER_PROTOCOL &&
-        browser.config.isolation &&
-        isSupportIsolation(browser.publicAPI.capabilities.browserName!, browser.publicAPI.capabilities.browserVersion!)
-    ) {
-        return DEVTOOLS_PROTOCOL;
-    }
-
-    return protocol;
-};
-
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
     session.execute<string[], []>(() =>
         Array.from(document.getElementsByTagName("iframe"))
@@ -74,10 +54,10 @@ export default (browser: ExistingBrowser): void => {
             framesData: {},
         };
 
-        switch (getCalculatedProtocol(browser)) {
+        switch (browser.config.automationProtocol) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
-                    const cookies = await session.getCookies();
+                    const cookies = await session.getAllCookies();
 
                     data.cookies = cookies.map(
                         cookie =>
@@ -133,7 +113,7 @@ export default (browser: ExistingBrowser): void => {
             }
             case DEVTOOLS_PROTOCOL: {
                 if (options.cookies) {
-                    const cookies = await browser.getAllRequestsCookies();
+                    const cookies = await session.getAllCookies();
 
                     data.cookies = cookies.map(
                         cookie =>
