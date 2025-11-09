@@ -6,6 +6,7 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
+import type { Browser } from "../../types";
 
 export type SaveStateOptions = {
     path?: string;
@@ -29,6 +30,11 @@ export const defaultOptions = {
     localStorage: true,
     sessionStorage: true,
 };
+
+export const getProtocol = (browser: Browser): typeof WEBDRIVER_PROTOCOL | typeof DEVTOOLS_PROTOCOL =>
+    browser.config.automationProtocol === WEBDRIVER_PROTOCOL && browser.publicAPI.isBidi && browser.config.isolation
+        ? DEVTOOLS_PROTOCOL
+        : browser.config.automationProtocol;
 
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
     session.execute<string[], []>(() =>
@@ -54,7 +60,7 @@ export default (browser: ExistingBrowser): void => {
             framesData: {},
         };
 
-        switch (browser.config.automationProtocol) {
+        switch (getProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
                     const cookies = await session.getAllCookies();
