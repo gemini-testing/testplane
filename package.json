@@ -1,6 +1,6 @@
 {
   "name": "testplane",
-  "version": "8.34.4",
+  "version": "8.34.5",
   "description": "Tests framework based on mocha and wdio",
   "main": "build/src/index.js",
   "files": [

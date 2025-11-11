@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.34.5](https://github.com/gemini-testing/testplane/compare/v8.34.4...v8.34.5) (2025-11-11)
+
+
+### Bug Fixes
+
+* activate bidi target after isolation ([1ceb3d6](https://github.com/gemini-testing/testplane/commit/1ceb3d67fb2224c06e8f4c607e2a80da84324679))
+* **testplane:** fix save/restore state ([37396e1](https://github.com/gemini-testing/testplane/commit/37396e12570a56e9fbfd87b60f5cdd41038fbd7e))
+
 ### [8.34.4](https://github.com/gemini-testing/testplane/compare/v8.34.3...v8.34.4) (2025-11-05)
 
 
