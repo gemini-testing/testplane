@@ -1,7 +1,6 @@
 import _ from "lodash";
-import { BrowserName } from "../../../src/browser/types";
 
-export const BROWSER_NAME = (process.env.BROWSER || "chrome").toLowerCase() as keyof typeof BrowserName;
+export const BROWSER_NAME = (process.env.BROWSER || "chrome").toLowerCase();
 
 export const BROWSER_CONFIG = {
     desiredCapabilities: {

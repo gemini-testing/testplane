@@ -5,7 +5,13 @@ import { restoreStorage } from "./restoreStorage";
 import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { defaultOptions, getProtocol, getWebdriverFrames, SaveStateData, SaveStateOptions } from "../saveState";
+import {
+    defaultOptions,
+    getOverridesProtocol,
+    getWebdriverFrames,
+    SaveStateData,
+    SaveStateOptions,
+} from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
 import { Cookie } from "@testplane/wdio-protocols";
 
@@ -42,7 +48,7 @@ export default (browser: Browser): void => {
             restoreState.cookies = restoreState?.cookies.filter(options.cookieFilter);
         }
 
-        switch (getProtocol(browser)) {
+        switch (getOverridesProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 await session.switchToParentFrame();
 

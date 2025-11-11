@@ -31,7 +31,10 @@ export const defaultOptions = {
     sessionStorage: true,
 };
 
-export const getProtocol = (browser: Browser): typeof WEBDRIVER_PROTOCOL | typeof DEVTOOLS_PROTOCOL =>
+// in case when we use webdriver protocol, bidi and isolation
+// we have to force change protocol to devtools, for use puppeteer,
+// because we use it for create incognito window
+export const getOverridesProtocol = (browser: Browser): typeof WEBDRIVER_PROTOCOL | typeof DEVTOOLS_PROTOCOL =>
     browser.config.automationProtocol === WEBDRIVER_PROTOCOL && browser.publicAPI.isBidi && browser.config.isolation
         ? DEVTOOLS_PROTOCOL
         : browser.config.automationProtocol;
@@ -60,7 +63,7 @@ export default (browser: ExistingBrowser): void => {
             framesData: {},
         };
 
-        switch (getProtocol(browser)) {
+        switch (getOverridesProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
                     const cookies = await session.getAllCookies();
