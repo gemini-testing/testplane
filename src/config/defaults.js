@@ -127,6 +127,7 @@ module.exports = {
         sourceRoot: "",
         testDependenciesPath: ".testplane/selectivity",
         compression: "gz",
+        disableSelectivityPatterns: [],
     },
 };
 

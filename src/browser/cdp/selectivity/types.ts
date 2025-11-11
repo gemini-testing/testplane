@@ -15,3 +15,9 @@ export const Compression = {
 } as const;
 
 export type SelectivityCompressionType = (typeof Compression)[keyof typeof Compression];
+
+export type HashFileContents = {
+    files: Record<string, string>;
+    modules: Record<string, string>;
+    patterns: Record<string, string>;
+};

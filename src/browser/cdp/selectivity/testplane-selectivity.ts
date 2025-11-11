@@ -7,6 +7,7 @@ const TypedModule = UntypedModule as unknown as {
     _resolveFilename: (...args: any) => string; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
 const testDependenciesStorage = new AsyncLocalStorage<{ jsTestplaneDeps?: Set<string> }>();
+const testFileDependenciesCache = new Map<string, string[]>();
 
 let disableCollectingDependenciesCb: (() => void) | null = null;
 
@@ -59,4 +60,29 @@ export const runWithTestplaneDependenciesCollecting = <T>(fn: () => Promise<T>):
     const store = { jsTestplaneDeps: new Set<string>() };
 
     return testDependenciesStorage.run(store, fn);
+};
+
+export const readTestFileWithTestplaneDependenciesCollecting = <T>(file: string, fn: () => Promise<T>): Promise<T> => {
+    if (!disableCollectingDependenciesCb) {
+        return fn();
+    }
+
+    const store = testDependenciesStorage.getStore();
+    const jsTestplaneDeps = store && store.jsTestplaneDeps;
+
+    if (!jsTestplaneDeps) {
+        return fn();
+    }
+
+    const cachedDependencies = testFileDependenciesCache.get(file);
+
+    if (cachedDependencies) {
+        cachedDependencies.forEach(dependency => jsTestplaneDeps.add(dependency));
+
+        return fn();
+    }
+
+    return fn().finally(() => {
+        testFileDependenciesCache.set(file, Array.from(jsTestplaneDeps).sort());
+    });
 };

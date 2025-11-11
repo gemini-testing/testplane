@@ -504,4 +504,207 @@ describe("CDP/Selectivity/Utils", () => {
             assert.deepEqual(obj, {});
         });
     });
+
+    describe("readHashFileContents", () => {
+        let readJsonWithCompressionStub: SinonStub;
+        let pathJoinStub: SinonStub;
+
+        beforeEach(() => {
+            readJsonWithCompressionStub = sandbox.stub();
+            pathJoinStub = sandbox.stub().callsFake((...args) => args.join("/"));
+
+            utils = proxyquire("src/browser/cdp/selectivity/utils", {
+                fs: fsStub,
+                path: { ...pathStub, join: pathJoinStub },
+                "source-map": {
+                    SourceMapConsumer: SourceMapConsumerStub,
+                },
+                "../../../utils/fs": {
+                    softFileURLToPath: softFileURLToPathStub,
+                },
+                "./json-utils": {
+                    readJsonWithCompression: readJsonWithCompressionStub,
+                },
+            });
+        });
+
+        it("should read hash file contents successfully", async () => {
+            const mockHashContents = {
+                files: { "src/app.js": "hash1" },
+                modules: { "node_modules/react": "hash2" },
+                patterns: { "src/**/*.js": "hash3" },
+            };
+            readJsonWithCompressionStub.resolves(mockHashContents);
+
+            const result = await utils.readHashFileContents("/test/selectivity/hashes.json", "none");
+
+            assert.deepEqual(result, mockHashContents);
+            assert.calledWith(readJsonWithCompressionStub, "/test/selectivity/hashes.json", "none", {
+                defaultValue: { files: {}, modules: {}, patterns: {} },
+            });
+        });
+
+        it("should return default value when file read fails", async () => {
+            readJsonWithCompressionStub.rejects(new Error("File not found"));
+
+            const result = await utils.readHashFileContents("/test/selectivity/hashes.json", "gz");
+
+            assert.deepEqual(result, { files: {}, modules: {}, patterns: {} });
+        });
+
+        it("should ensure all required properties exist", async () => {
+            const incompleteHashContents = {
+                files: { "src/app.js": "hash1" },
+                // missing modules and patterns
+            };
+            readJsonWithCompressionStub.resolves(incompleteHashContents);
+
+            const result = await utils.readHashFileContents("/test/selectivity/hashes.json", "br");
+
+            assert.deepEqual(result, {
+                files: { "src/app.js": "hash1" },
+                modules: {},
+                patterns: {},
+            });
+        });
+
+        it("should handle null/undefined properties", async () => {
+            const hashContentsWithNulls = {
+                files: null,
+                modules: undefined,
+                patterns: { "src/**/*.js": "hash3" },
+            };
+            readJsonWithCompressionStub.resolves(hashContentsWithNulls);
+
+            const result = await utils.readHashFileContents("/test/selectivity/hashes.json", "zstd");
+
+            assert.deepEqual(result, {
+                files: {},
+                modules: {},
+                patterns: { "src/**/*.js": "hash3" },
+            });
+        });
+    });
+
+    describe("readTestDependencies", () => {
+        let readJsonWithCompressionStub: SinonStub;
+        let pathJoinStub: SinonStub;
+
+        beforeEach(() => {
+            readJsonWithCompressionStub = sandbox.stub();
+            pathJoinStub = sandbox.stub().callsFake((...args) => args.join("/"));
+
+            utils = proxyquire("src/browser/cdp/selectivity/utils", {
+                fs: fsStub,
+                path: { ...pathStub, join: pathJoinStub },
+                "source-map": {
+                    SourceMapConsumer: SourceMapConsumerStub,
+                },
+                "../../../utils/fs": {
+                    softFileURLToPath: softFileURLToPathStub,
+                },
+                "./json-utils": {
+                    readJsonWithCompression: readJsonWithCompressionStub,
+                },
+            });
+        });
+
+        it("should read test dependencies successfully", async () => {
+            const mockTest = {
+                id: "test-123",
+                title: "Test case",
+                file: "test.js",
+                location: { line: 1, column: 1 },
+                fn: sandbox.stub(),
+                clone: sandbox.stub(),
+                assign: sandbox.stub(),
+            } as any;
+            const mockDependencies = {
+                chrome: {
+                    css: { css: ["src/styles.css"], js: [], modules: [] },
+                    js: { css: [], js: ["src/app.js"], modules: ["react"] },
+                },
+            };
+            readJsonWithCompressionStub.resolves(mockDependencies);
+
+            const result = await utils.readTestDependencies("/test/selectivity/tests", mockTest, "none");
+
+            assert.deepEqual(result, mockDependencies);
+            assert.calledWith(readJsonWithCompressionStub, "/test/selectivity/tests/test-123.json", "none", {
+                defaultValue: {},
+            });
+        });
+
+        it("should return empty object when file read fails", async () => {
+            const mockTest = {
+                id: "test-456",
+                title: "Another test",
+                file: "test.js",
+                location: { line: 1, column: 1 },
+                fn: sandbox.stub(),
+                clone: sandbox.stub(),
+                assign: sandbox.stub(),
+            } as any;
+            readJsonWithCompressionStub.rejects(new Error("File not found"));
+
+            const result = await utils.readTestDependencies("/test/selectivity/tests", mockTest, "gz");
+
+            assert.deepEqual(result, {});
+        });
+
+        it("should handle different compression types", async () => {
+            const mockTest = {
+                id: "test-789",
+                title: "Compressed test",
+                file: "test.js",
+                location: { line: 1, column: 1 },
+                fn: sandbox.stub(),
+                clone: sandbox.stub(),
+                assign: sandbox.stub(),
+            } as any;
+            const mockDependencies = {
+                firefox: {
+                    css: { css: ["src/theme.css"], js: [], modules: [] },
+                },
+            };
+            readJsonWithCompressionStub.resolves(mockDependencies);
+
+            const result = await utils.readTestDependencies("/test/selectivity/tests", mockTest, "br");
+
+            assert.deepEqual(result, mockDependencies);
+            assert.calledWith(readJsonWithCompressionStub, "/test/selectivity/tests/test-789.json", "br", {
+                defaultValue: {},
+            });
+        });
+
+        it("should work with complex test dependencies structure", async () => {
+            const mockTest = {
+                id: "complex-test",
+                title: "Complex test case",
+                file: "test.js",
+                location: { line: 1, column: 1 },
+                fn: sandbox.stub(),
+                clone: sandbox.stub(),
+                assign: sandbox.stub(),
+            } as any;
+            const mockDependencies = {
+                chrome: {
+                    css: { css: ["src/styles.css", "src/components.css"], js: [], modules: ["styled-components"] },
+                    js: { css: [], js: ["src/app.js", "src/utils.js"], modules: ["react", "lodash"] },
+                },
+                firefox: {
+                    css: { css: ["src/styles.css"], js: [], modules: [] },
+                    js: { css: [], js: ["src/app.js"], modules: ["react"] },
+                },
+            };
+            readJsonWithCompressionStub.resolves(mockDependencies);
+
+            const result = await utils.readTestDependencies("/test/selectivity/tests", mockTest, "zstd");
+
+            assert.deepEqual(result, mockDependencies);
+            assert.calledWith(readJsonWithCompressionStub, "/test/selectivity/tests/complex-test.json", "zstd", {
+                defaultValue: {},
+            });
+        });
+    });
 });
