@@ -36,6 +36,7 @@ function makeConfigStub(opts = {}) {
             output: "some-other-path",
         },
         timeTravel: { mode: "off" },
+        selectivity: { enabled: false },
     });
 
     const config = {
@@ -46,6 +47,7 @@ function makeConfigStub(opts = {}) {
         configPath: opts.configPath,
         lastFailed: opts.lastFailed,
         timeTravel: opts.timeTravel,
+        selectivity: opts.selectivity,
     };
 
     opts.browsers.forEach(browserId => {
@@ -77,6 +79,7 @@ function makeBrowserConfigStub(opts = {}, browserId) {
         urlHttpTimeout: opts.urlHttpTimeout,
         httpTimeout: opts.httpTimeout,
         timeTravel: { mode: "off" },
+        selectivity: opts.selectivity,
     };
 }
 

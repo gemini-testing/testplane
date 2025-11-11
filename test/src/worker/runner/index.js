@@ -12,7 +12,7 @@ const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner", () => {
     const sandbox = sinon.createSandbox();
-    let nodejsTestRunner, browserTestRunner, Runner;
+    let nodejsTestRunner, browserTestRunner, runWithTestplaneDependenciesCollecting, Runner;
 
     const mkRunner_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
@@ -34,6 +34,7 @@ describe("worker/runner", () => {
         browserTestRunner.assignTest = sandbox.stub();
         browserTestRunner.prepareBrowser = sandbox.stub().resolves();
         browserTestRunner.run = sandbox.stub().resolves();
+        runWithTestplaneDependenciesCollecting = sandbox.stub().callsFake(fn => fn());
 
         sandbox.stub(NodejsEnvTestRunner, "create").returns(nodejsTestRunner);
 
@@ -42,6 +43,7 @@ describe("worker/runner", () => {
         Runner = proxyquire("src/worker/runner", {
             "./test-runner": { default: { create: () => nodejsTestRunner } },
             "../browser-env/runner/test-runner": { TestRunner: { create: () => browserTestRunner } },
+            "../../browser/cdp/selectivity/testplane-selectivity": { runWithTestplaneDependenciesCollecting },
         });
     });
 
@@ -216,6 +218,24 @@ describe("worker/runner", () => {
                         });
                     }
                 });
+            });
+        });
+    });
+
+    describe("NodejsEnvTestRunner", () => {
+        it("should run with dependency collecting if selectivity is enabled", async () => {
+            const runner = mkRunner_({
+                config: makeConfigStub({
+                    system: { testRunEnv: NODEJS_TEST_RUN_ENV },
+                    selectivity: { enabled: true },
+                }),
+            });
+            await runner.runTest(null, { file: "some/file.js", browserId: "bro" });
+
+            assert.calledOnce(runWithTestplaneDependenciesCollecting);
+            assert.calledOnceWith(CachingTestParser.prototype.parse, {
+                file: "some/file.js",
+                browserId: "bro",
             });
         });
     });

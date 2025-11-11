@@ -41,24 +41,28 @@ export class TestDependenciesWriter {
         this._compression = compression;
     }
 
-    async saveFor(test: Test, browserDependencies: NormalizedDependencies): Promise<void> {
+    async saveFor(
+        test: Test,
+        browserDeps: NormalizedDependencies,
+        testplaneDeps: NormalizedDependencies,
+    ): Promise<void> {
         if (!this._directoryCreated) {
             await fs.ensureDir(this._selectivityTestsPath);
             this._directoryCreated = true;
         }
 
         const testDepsPath = path.join(this._selectivityTestsPath, `${test.id}.json`);
-        const testDeps: Record<string, { browser: NormalizedDependencies }> = await readJsonWithCompression(
-            testDepsPath,
-            this._compression,
-            { defaultValue: {} },
-        ).catch(() => ({}));
+        const testDeps: Record<string, { browser: NormalizedDependencies; testplane: NormalizedDependencies }> =
+            await readJsonWithCompression(testDepsPath, this._compression, { defaultValue: {} }).catch(() => ({}));
 
-        if (areDepsSame(testDeps[test.browserId]?.browser, browserDependencies)) {
+        if (
+            areDepsSame(testDeps[test.browserId]?.browser, browserDeps) &&
+            areDepsSame(testDeps[test.browserId]?.testplane, testplaneDeps)
+        ) {
             return;
         }
 
-        testDeps[test.browserId] = { browser: browserDependencies };
+        testDeps[test.browserId] = { browser: browserDeps, testplane: testplaneDeps };
 
         shallowSortObject(testDeps);
 

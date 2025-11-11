@@ -3,9 +3,10 @@ import { JSSelectivity } from "./js-selectivity";
 import type { ExistingBrowser } from "../../existing-browser";
 import { getTestDependenciesWriter } from "./test-dependencies-writer";
 import type { Test } from "../../../types";
-import { transformSourceDependencies } from "./utils";
+import { mergeSourceDependencies, transformSourceDependencies } from "./utils";
 import { getFileHashWriter } from "./file-hash-writer";
 import { Compression } from "./types";
+import { getCollectedTestplaneDependencies } from "./testplane-selectivity";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -63,10 +64,11 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         const compression = browser.config.selectivity.compression;
         const testDependencyWriter = getTestDependenciesWriter(testDependenciesPath, compression);
         const hashWriter = getFileHashWriter(testDependenciesPath, compression);
-        const dependencies = transformSourceDependencies(cssDependencies, jsDependencies);
+        const browserDeps = transformSourceDependencies(cssDependencies, jsDependencies);
+        const testplaneDeps = transformSourceDependencies([], getCollectedTestplaneDependencies());
 
-        hashWriter.add(dependencies);
+        hashWriter.add(mergeSourceDependencies(browserDeps, testplaneDeps));
 
-        await Promise.all([testDependencyWriter.saveFor(test, dependencies), hashWriter.commit()]);
+        await Promise.all([testDependencyWriter.saveFor(test, browserDeps, testplaneDeps), hashWriter.commit()]);
     };
 };
