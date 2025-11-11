@@ -7,7 +7,7 @@ import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import {
     defaultOptions,
-    getCalculatedProtocol,
+    getOverridesProtocol,
     getWebdriverFrames,
     SaveStateData,
     SaveStateOptions,
@@ -48,7 +48,7 @@ export default (browser: Browser): void => {
             restoreState.cookies = restoreState?.cookies.filter(options.cookieFilter);
         }
 
-        switch (getCalculatedProtocol(browser)) {
+        switch (getOverridesProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 await session.switchToParentFrame();
 

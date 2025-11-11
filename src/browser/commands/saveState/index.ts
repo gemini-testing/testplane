@@ -1,13 +1,12 @@
 import fs from "fs-extra";
 
 import _ from "lodash";
-import type { Browser } from "../../types";
 import { dumpStorage, StorageData } from "./dumpStorage";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { isSupportIsolation } from "../../../utils/browser";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
+import type { Browser } from "../../types";
 
 export type SaveStateOptions = {
     path?: string;
@@ -32,23 +31,13 @@ export const defaultOptions = {
     sessionStorage: true,
 };
 
-export const getCalculatedProtocol = (browser: Browser): typeof DEVTOOLS_PROTOCOL | typeof WEBDRIVER_PROTOCOL => {
-    const protocol = browser.config.automationProtocol;
-
-    if (protocol === DEVTOOLS_PROTOCOL) {
-        return DEVTOOLS_PROTOCOL;
-    }
-
-    if (
-        protocol === WEBDRIVER_PROTOCOL &&
-        browser.config.isolation &&
-        isSupportIsolation(browser.publicAPI.capabilities.browserName!, browser.publicAPI.capabilities.browserVersion!)
-    ) {
-        return DEVTOOLS_PROTOCOL;
-    }
-
-    return protocol;
-};
+// in case when we use webdriver protocol, bidi and isolation
+// we have to force change protocol to devtools, for use puppeteer,
+// because we use it for create incognito window
+export const getOverridesProtocol = (browser: Browser): typeof WEBDRIVER_PROTOCOL | typeof DEVTOOLS_PROTOCOL =>
+    browser.config.automationProtocol === WEBDRIVER_PROTOCOL && browser.publicAPI.isBidi && browser.config.isolation
+        ? DEVTOOLS_PROTOCOL
+        : browser.config.automationProtocol;
 
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
     session.execute<string[], []>(() =>
@@ -74,10 +63,10 @@ export default (browser: ExistingBrowser): void => {
             framesData: {},
         };
 
-        switch (getCalculatedProtocol(browser)) {
+        switch (getOverridesProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 if (options.cookies) {
-                    const cookies = await session.getCookies();
+                    const cookies = await session.getAllCookies();
 
                     data.cookies = cookies.map(
                         cookie =>
@@ -133,7 +122,7 @@ export default (browser: ExistingBrowser): void => {
             }
             case DEVTOOLS_PROTOCOL: {
                 if (options.cookies) {
-                    const cookies = await browser.getAllRequestsCookies();
+                    const cookies = await session.getAllCookies();
 
                     data.cookies = cookies.map(
                         cookie =>
