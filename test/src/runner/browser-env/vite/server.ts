@@ -7,10 +7,12 @@ import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
 import { ManualMock } from "../../../../../src/runner/browser-env/vite/manual-mock";
 import { makeConfigStub } from "../../../../utils";
 import { BROWSER_TEST_RUN_ENV } from "../../../../../src/constants/config";
+import defaults from "../../../../../src/config/defaults";
+import { promiseDelay } from "../../../../../src/utils/promise";
+import RuntimeConfig from "../../../../../src/config/runtime-config";
 
 import type { Config } from "../../../../../src/config";
 import type { BrowserTestRunEnvOptions } from "../../../../../src/runner/browser-env/vite/types";
-import { promiseDelay } from "../../../../../src/utils/promise";
 
 describe("runner/browser-env/vite/server", () => {
     const sandbox = sinon.createSandbox();
@@ -51,6 +53,8 @@ describe("runner/browser-env/vite/server", () => {
         generateIndexHtmlPlugin = sandbox.stub().returns([{ name: "default-plugin-1" }]);
         mockPlugin = sandbox.stub().returns([{ name: "default-plugin-2" }]);
         sandbox.stub(ManualMock, "create").resolves(sinon.stub() as unknown as ManualMock);
+
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
 
         ({ ViteServer: ViteServerStub } = proxyquire("../../../../../src/runner/browser-env/vite/server", {
             "get-port": getPortStub,
@@ -217,6 +221,45 @@ describe("runner/browser-env/vite/server", () => {
             await ViteServerStub.create(mkConfig_()).start();
 
             assert.callOrder(createSocketServer, viteServer.listen as SinonStub);
+        });
+
+        it("should save vite base url to runtime config", async () => {
+            const viteBaseUrl = "http://localhost:4444";
+            const viteServer = mkViteServer_({
+                resolvedUrls: {
+                    local: [viteBaseUrl],
+                    network: [],
+                },
+            });
+            (Vite.createServer as SinonStub).resolves(viteServer);
+
+            await ViteServerStub.create(mkConfig_()).start();
+
+            assert.calledWith((RuntimeConfig.getInstance as SinonStub).lastCall.returnValue.extend, {
+                viteBaseUrl,
+            });
+        });
+
+        it("should use base url from vite", async () => {
+            const viteBaseUrl = "http://localhost:4444";
+            const viteServer = mkViteServer_({
+                resolvedUrls: {
+                    local: [viteBaseUrl],
+                    network: [],
+                },
+            });
+            (Vite.createServer as SinonStub).resolves(viteServer);
+
+            const config = makeConfigStub({
+                baseUrl: defaults.baseUrl,
+                browsers: ["b1", "b2"],
+            }) as Config;
+
+            await ViteServerStub.create(config).start();
+
+            assert.equal(config.baseUrl, viteBaseUrl);
+            assert.equal(config.browsers.b1.baseUrl, viteBaseUrl);
+            assert.equal(config.browsers.b2.baseUrl, viteBaseUrl);
         });
 
         it("should inform on which address vite server started", async () => {

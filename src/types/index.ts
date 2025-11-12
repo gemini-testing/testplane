@@ -1,6 +1,5 @@
 import type { Events } from "../events";
-import type { MainRunner as NodejsEnvRunner } from "../runner";
-import type { MainRunner as BrowserEnvRunner } from "../runner/browser-env/index";
+import type { MainRunner } from "../runner";
 import type { TestCollection } from "../test-collection";
 import type { Test } from "../test-reader/test-object/test";
 import type { Suite } from "../test-reader/test-object/suite";
@@ -230,7 +229,7 @@ export interface TestDepsData extends NormalizedDependencies {}
 
 export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
-    (event: Events["RUNNER_START"], callback: (runner: NodejsEnvRunner | BrowserEnvRunner) => Promise<void> | void): T;
+    (event: Events["RUNNER_START"], callback: (runner: MainRunner) => Promise<void> | void): T;
     (event: Events["RUNNER_END"], callback: (result: StatsResult) => Promise<void> | void): T;
     (event: Events["SESSION_START"], callback: AsyncSessionEventCallback): T;
     (event: Events["SESSION_END"], callback: AsyncSessionEventCallback): T;

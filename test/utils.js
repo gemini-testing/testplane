@@ -40,6 +40,7 @@ function makeConfigStub(opts = {}) {
     });
 
     const config = {
+        baseUrl: opts.baseUrl,
         browsers: {},
         plugins: opts.plugins,
         system: opts.system,
