@@ -15,9 +15,10 @@ const { Stats: RunnerStats } = require("src/stats");
 const { TestReader } = require("src/test-reader");
 const { TestCollection } = require("src/test-collection");
 const { MasterEvents: RunnerEvents, CommonSyncEvents, MasterAsyncEvents, MasterSyncEvents } = require("src/events");
-const { MainRunner: NodejsEnvRunner } = require("src/runner");
-const { MainRunner: BrowserEnvRunner } = require("src/runner/browser-env");
+const { MainRunner } = require("src/runner");
+const { ViteServer } = require("src/runner/browser-env/vite/server");
 const { makeConfigStub } = require("../utils");
+const { BROWSER_TEST_RUN_ENV, NODEJS_TEST_RUN_ENV } = require("src/constants/config");
 const { promiseDelay } = require("../../src/utils/promise");
 
 describe("testplane", () => {
@@ -29,18 +30,16 @@ describe("testplane", () => {
         return Testplane.create();
     };
 
-    const mkRunnerStubHelper_ = (RunnerCls, runFn) => {
+    const mkRunner_ = runFn => {
         const runner = new AsyncEmitter();
 
-        runner.run = sandbox.stub(RunnerCls.prototype, "run").callsFake(runFn && runFn.bind(null, runner));
-        runner.addTestToRun = sandbox.stub(RunnerCls.prototype, "addTestToRun");
-        runner.init = sandbox.stub(RunnerCls.prototype, "init").named("RunnerInit");
+        runner.run = sandbox.stub(MainRunner.prototype, "run").callsFake(runFn && runFn.bind(null, runner));
+        runner.addTestToRun = sandbox.stub(MainRunner.prototype, "addTestToRun");
+        runner.init = sandbox.stub(MainRunner.prototype, "init").named("RunnerInit");
 
-        sandbox.stub(RunnerCls, "create").returns(runner);
+        sandbox.stub(MainRunner, "create").returns(runner);
         return runner;
     };
-
-    const mkNodejsEnvRunner_ = runFn => mkRunnerStubHelper_(NodejsEnvRunner, runFn);
 
     beforeEach(() => {
         sandbox.stub(Config, "create").returns(makeConfigStub());
@@ -56,6 +55,10 @@ describe("testplane", () => {
 
         loggerWarnStub = sandbox.stub();
         loggerErrorStub = sandbox.stub();
+
+        sandbox.stub(ViteServer, "create").returns(Object.create(ViteServer.prototype));
+        sandbox.stub(ViteServer.prototype, "start").resolves();
+        sandbox.stub(ViteServer.prototype, "close").resolves();
 
         Testplane = proxyquire("src/testplane", {
             "./reporters": { initReporters },
@@ -77,7 +80,7 @@ describe("testplane", () => {
 
     describe("constructor", () => {
         beforeEach(() => {
-            sandbox.stub(NodejsEnvRunner, "create").returns(new EventEmitter());
+            sandbox.stub(MainRunner, "create").returns(new EventEmitter());
         });
 
         describe("logLevel", () => {
@@ -155,47 +158,40 @@ describe("testplane", () => {
             sandbox.stub(Testplane.prototype, "halt");
         });
 
-        [
-            { name: "nodejs", mkRunner_: mkNodejsEnvRunner_, RunnerCls: NodejsEnvRunner },
-            { name: "browser", mkRunner_: mkNodejsEnvRunner_, RunnerCls: BrowserEnvRunner },
-        ].forEach(({ name, mkRunner_, RunnerCls }) => {
-            describe(`${name} environment runner`, () => {
-                it("should create runner", () => {
-                    mkRunner_();
+        it("should create runner", () => {
+            mkRunner_();
 
-                    return runTestplane().then(() => assert.calledOnce(RunnerCls.create));
-                });
+            return runTestplane().then(() => assert.calledOnce(MainRunner.create));
+        });
 
-                it("should create runner with config", () => {
-                    mkRunner_();
+        it("should create runner with config", () => {
+            mkRunner_();
 
-                    const config = makeConfigStub();
-                    Config.create.returns(config);
+            const config = makeConfigStub();
+            Config.create.returns(config);
 
-                    return mkTestplane_(config).run(() => assert.calledWith(RunnerCls.create, config));
-                });
+            return mkTestplane_(config).run(() => assert.calledWith(MainRunner.create, config));
+        });
 
-                it("should create runner with interceptors", async () => {
-                    mkRunner_();
+        it("should create runner with interceptors", async () => {
+            mkRunner_();
 
-                    const testplane = mkTestplane_();
-                    const fooHandler = () => {};
-                    const barHandler = () => {};
+            const testplane = mkTestplane_();
+            const fooHandler = () => {};
+            const barHandler = () => {};
 
-                    testplane.intercept("foo", fooHandler).intercept("bar", barHandler);
+            testplane.intercept("foo", fooHandler).intercept("bar", barHandler);
 
-                    await testplane.run();
+            await testplane.run();
 
-                    assert.calledWith(RunnerCls.create, sinon.match.any, [
-                        { event: "foo", handler: fooHandler },
-                        { event: "bar", handler: barHandler },
-                    ]);
-                });
-            });
+            assert.calledWith(MainRunner.create, sinon.match.any, [
+                { event: "foo", handler: fooHandler },
+                { event: "bar", handler: barHandler },
+            ]);
         });
 
         it("should warn about unknown browsers from cli", () => {
-            mkNodejsEnvRunner_();
+            mkRunner_();
 
             return runTestplane([], { browsers: ["bro3"] }).then(() =>
                 assert.calledWithMatch(loggerWarnStub, /Unknown browser ids: bro3/),
@@ -203,7 +199,7 @@ describe("testplane", () => {
         });
 
         it("should init runtime config", async () => {
-            mkNodejsEnvRunner_();
+            mkRunner_();
 
             await runTestplane([], {
                 updateRefs: true,
@@ -232,12 +228,12 @@ describe("testplane", () => {
                 local: false,
                 keepBrowserMode: { enabled: false, onFail: false },
             });
-            assert.callOrder(RuntimeConfig.getInstance, NodejsEnvRunner.create);
+            assert.callOrder(RuntimeConfig.getInstance, MainRunner.create);
         });
 
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
                 const testplane = mkTestplane_(
                     makeConfigStub({
                         lastFailed: { only: false },
@@ -251,7 +247,7 @@ describe("testplane", () => {
             });
 
             it("should reset test timeout to 0 if run in repl", async () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
                 const testplane = mkTestplane_(
                     makeConfigStub({
                         lastFailed: { only: false },
@@ -266,7 +262,7 @@ describe("testplane", () => {
         });
 
         describe("INIT", () => {
-            beforeEach(() => mkNodejsEnvRunner_());
+            beforeEach(() => mkRunner_());
 
             it("should emit INIT on run", () => {
                 const onInit = sinon.spy();
@@ -285,14 +281,14 @@ describe("testplane", () => {
                 const afterInit = sinon.spy();
                 const testplane = mkTestplane_().on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
 
-                return testplane.run().then(() => assert.callOrder(afterInit, NodejsEnvRunner.prototype.run));
+                return testplane.run().then(() => assert.callOrder(afterInit, MainRunner.prototype.run));
             });
 
             it("should init runner after emit INIT", () => {
                 const onInit = sinon.spy();
                 const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
 
-                return testplane.run().then(() => assert.callOrder(onInit, NodejsEnvRunner.prototype.init));
+                return testplane.run().then(() => assert.callOrder(onInit, MainRunner.prototype.init));
             });
 
             it("should send INIT event only once", () => {
@@ -305,13 +301,51 @@ describe("testplane", () => {
                     .then(() => testplane.run())
                     .then(() => assert.calledOnce(onInit));
             });
+
+            describe("vite server", () => {
+                it(`should do nothing if testRunEnv is ${NODEJS_TEST_RUN_ENV}`, async () => {
+                    const testplane = mkTestplane_({ system: { testRunEnv: NODEJS_TEST_RUN_ENV } });
+
+                    await testplane.run();
+
+                    assert.notCalled(ViteServer.create);
+                    assert.notCalled(ViteServer.prototype.start);
+                });
+
+                it("should create vite server", async () => {
+                    const config = makeConfigStub({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } });
+                    const testplane = mkTestplane_(config);
+
+                    await testplane.run();
+
+                    assert.calledOnceWith(ViteServer.create, config);
+                });
+
+                it("should start vite server", async () => {
+                    const testplane = mkTestplane_({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } });
+
+                    await testplane.run();
+
+                    assert.calledOnceWith(ViteServer.prototype.start);
+                });
+
+                it("should throw error if vite server failed", async () => {
+                    ViteServer.prototype.start.rejects(new Error("o.O"));
+
+                    const testplane = mkTestplane_({
+                        system: { testRunEnv: BROWSER_TEST_RUN_ENV },
+                    });
+
+                    await assert.isRejected(testplane.run(), "Vite server failed to start: o.O");
+                });
+            });
         });
 
         describe("reporters", () => {
             let runner;
 
             beforeEach(() => {
-                runner = mkNodejsEnvRunner_();
+                runner = mkRunner_();
             });
 
             it("should initialize passed reporters", async () => {
@@ -336,7 +370,7 @@ describe("testplane", () => {
         });
 
         describe("reading the tests", () => {
-            beforeEach(() => mkNodejsEnvRunner_());
+            beforeEach(() => mkRunner_());
 
             it("should read tests", async () => {
                 const testPaths = ["foo/bar"];
@@ -373,7 +407,7 @@ describe("testplane", () => {
 
                 await runTestplane(testCollection);
 
-                assert.calledOnceWith(NodejsEnvRunner.prototype.run, testCollection);
+                assert.calledOnceWith(MainRunner.prototype.run, testCollection);
             });
 
             it("should not read tests if test collection passed instead of paths", async () => {
@@ -388,24 +422,24 @@ describe("testplane", () => {
 
         describe("running of tests", () => {
             it("should run tests", () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
-                return runTestplane().then(() => assert.calledOnce(NodejsEnvRunner.prototype.run));
+                return runTestplane().then(() => assert.calledOnce(MainRunner.prototype.run));
             });
 
             it("should use read tests", async () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
                 const testCollection = TestCollection.create();
                 sandbox.stub(Testplane.prototype, "readTests").resolves(testCollection);
 
                 await runTestplane();
 
-                assert.calledWith(NodejsEnvRunner.prototype.run, testCollection);
+                assert.calledWith(MainRunner.prototype.run, testCollection);
             });
 
             it("should create runner stats", async () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
                 const testplane = mkTestplane_();
 
@@ -415,17 +449,17 @@ describe("testplane", () => {
             });
 
             it("should use created runner stats ", async () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
                 RunnerStats.create.returns("foo bar");
 
                 await runTestplane();
 
-                assert.calledWith(NodejsEnvRunner.prototype.run, sinon.match.any, "foo bar");
+                assert.calledWith(MainRunner.prototype.run, sinon.match.any, "foo bar");
             });
 
             it('should return "true" if there are no failed tests', () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
                 return runTestplane().then(success => assert.isTrue(success));
             });
@@ -436,7 +470,7 @@ describe("testplane", () => {
                     browserId: "chrome",
                     browserVersion: "1",
                 };
-                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL, results));
+                mkRunner_(runner => runner.emit(RunnerEvents.TEST_FAIL, results));
 
                 return runTestplane().then(success => assert.isFalse(success));
             });
@@ -445,7 +479,7 @@ describe("testplane", () => {
                 const testplane = mkTestplane_();
                 const err = new Error();
 
-                mkNodejsEnvRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
+                mkRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
 
                 return testplane.run().then(() => assert.calledOnceWith(testplane.halt, err));
             });
@@ -456,7 +490,7 @@ describe("testplane", () => {
                     browserId: "chrome",
                     browserVersion: "1",
                 };
-                mkNodejsEnvRunner_(runner => {
+                mkRunner_(runner => {
                     runner.emit(RunnerEvents.TEST_FAIL, results), runner.emit(RunnerEvents.RUNNER_END);
                 });
 
@@ -474,7 +508,7 @@ describe("testplane", () => {
 
         describe("should passthrough", () => {
             it("all synchronous runner events", () => {
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -491,7 +525,7 @@ describe("testplane", () => {
 
             it('synchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEvent");
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -506,7 +540,7 @@ describe("testplane", () => {
             });
 
             it("all asynchronous runner events", () => {
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -523,7 +557,7 @@ describe("testplane", () => {
 
             it('asynchronous runner events before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -538,7 +572,7 @@ describe("testplane", () => {
             });
 
             it("all runner events with passed event data", () => {
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
                 const results = {
                     fullTitle: () => "Title",
@@ -560,7 +594,7 @@ describe("testplane", () => {
             });
 
             it("exit event from signalHandler", () => {
-                mkNodejsEnvRunner_();
+                mkRunner_();
 
                 const testplane = mkTestplane_();
                 const onExit = sinon.spy().named("onExit");
@@ -577,7 +611,7 @@ describe("testplane", () => {
             it('exit event before "Runner.run" called', () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
 
-                const runner = mkNodejsEnvRunner_();
+                const runner = mkRunner_();
                 const testplane = mkTestplane_();
 
                 return testplane.run().then(() => {
@@ -595,7 +629,7 @@ describe("testplane", () => {
 
     describe("addTestToRun", () => {
         it("should pass test to the existing runner", async () => {
-            const runner = mkNodejsEnvRunner_();
+            const runner = mkRunner_();
             const testplane = mkTestplane_();
             const test = {};
 
@@ -606,7 +640,7 @@ describe("testplane", () => {
         });
 
         it("should return false when testplane is not running", () => {
-            const runner = mkNodejsEnvRunner_();
+            const runner = mkRunner_();
             const testplane = mkTestplane_();
 
             const added = testplane.addTestToRun({});
@@ -839,7 +873,7 @@ describe("testplane", () => {
         });
 
         it('should return "false" if there are no failed tests or errors', () => {
-            mkNodejsEnvRunner_();
+            mkRunner_();
 
             const testplane = mkTestplane_();
 
@@ -855,7 +889,7 @@ describe("testplane", () => {
                 browserVersion: "1",
             };
 
-            mkNodejsEnvRunner_(runner => {
+            mkRunner_(runner => {
                 runner.emit(RunnerEvents.TEST_FAIL, results);
 
                 assert.isTrue(testplane.isFailed());
@@ -880,10 +914,8 @@ describe("testplane", () => {
             testplane = mkTestplane_();
 
             sandbox.stub(process, "exit");
-            sandbox
-                .stub(NodejsEnvRunner.prototype, "run")
-                .callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
-            sandbox.stub(NodejsEnvRunner.prototype, "cancel");
+            sandbox.stub(MainRunner.prototype, "run").callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
+            sandbox.stub(MainRunner.prototype, "cancel");
         });
 
         it("should log provided error", () => {
@@ -898,10 +930,20 @@ describe("testplane", () => {
             });
         });
 
+        it("should close vite server", async () => {
+            testplane = mkTestplane_(makeConfigStub({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } }));
+
+            await testplane.run();
+
+            testplane.halt(new Error("test error"));
+
+            assert.calledOnce(ViteServer.prototype.close);
+        });
+
         it("should not cancel test runner if runner is not inited", () => {
             testplane.halt(new Error("test error"));
 
-            assert.notCalled(NodejsEnvRunner.prototype.cancel);
+            assert.notCalled(MainRunner.prototype.cancel);
         });
 
         it("should cancel test runner", () => {
@@ -910,7 +952,7 @@ describe("testplane", () => {
             });
 
             return testplane.run().finally(() => {
-                assert.calledOnce(NodejsEnvRunner.prototype.cancel);
+                assert.calledOnce(MainRunner.prototype.cancel);
             });
         });
 
@@ -933,7 +975,7 @@ describe("testplane", () => {
 
                 await testplane.run();
 
-                assert.callOrder(global.setTimeout, NodejsEnvRunner.prototype.cancel);
+                assert.callOrder(global.setTimeout, MainRunner.prototype.cancel);
             });
 
             it("should force exit if timeout is reached", () => {

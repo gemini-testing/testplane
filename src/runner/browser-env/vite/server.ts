@@ -13,7 +13,9 @@ import { plugin as generateIndexHtml } from "./plugins/generate-index-html";
 import { plugin as mockPlugin } from "./plugins/mock";
 import { ManualMock } from "./manual-mock";
 import { Config } from "../../../config";
+import RuntimeConfig from "../../../config/runtime-config";
 import { VITE_DEFAULT_CONFIG_ENV } from "./constants";
+import defaults from "../../../config/defaults";
 
 import type { ViteDevServer, UserConfig, InlineConfig } from "vite";
 import type { BrowserTestRunEnvOptions } from "./types";
@@ -76,6 +78,8 @@ export class ViteServer {
 
         await this._server.listen();
 
+        this._useBaseUrlFromVite();
+
         logger.log(chalk.green(`Vite server started on ${this.baseUrl}`));
     }
 
@@ -114,5 +118,22 @@ export class ViteServer {
 
     get baseUrl(): string | undefined {
         return this._server?.resolvedUrls!.local[0];
+    }
+
+    private _useBaseUrlFromVite(): void {
+        const viteBaseUrl = this.baseUrl!;
+        const defaultBaseUrl = defaults.baseUrl;
+
+        RuntimeConfig.getInstance().extend({ viteBaseUrl });
+
+        if (this._testplaneConfig.baseUrl === defaultBaseUrl) {
+            this._testplaneConfig.baseUrl = viteBaseUrl;
+        }
+
+        for (const broConfig of Object.values(this._testplaneConfig.browsers)) {
+            if (broConfig.baseUrl === defaultBaseUrl) {
+                broConfig.baseUrl = viteBaseUrl;
+            }
+        }
     }
 }
