@@ -3,8 +3,7 @@ import _ from "lodash";
 import fs from "fs-extra";
 import { Stats as RunnerStats } from "./stats";
 import { BaseTestplane } from "./base-testplane";
-import type { MainRunner as NodejsEnvRunner } from "./runner";
-import type { MainRunner as BrowserEnvRunner } from "./runner/browser-env";
+import type { MainRunner } from "./runner";
 import RuntimeConfig from "./config/runtime-config";
 import { MasterAsyncEvents, MasterEvents, MasterSyncEvents } from "./events";
 import eventsUtils from "./events/utils";
@@ -19,6 +18,7 @@ import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
 import { preloadWebdriverIO } from "./utils/preload-utils";
+import { ViteServer } from "./runner/browser-env/vite/server";
 
 interface RunOpts {
     browsers: string[];
@@ -70,7 +70,8 @@ export interface Testplane {
 export class Testplane extends BaseTestplane {
     protected failed: boolean;
     protected failedList: FailedListItem[];
-    protected runner: NodejsEnvRunner | BrowserEnvRunner | null;
+    protected runner: MainRunner | null;
+    protected viteServer: ViteServer | null;
 
     constructor(config?: string | ConfigInput) {
         super(config);
@@ -78,6 +79,7 @@ export class Testplane extends BaseTestplane {
         this.failed = false;
         this.failedList = [];
         this.runner = null;
+        this.viteServer = null;
     }
 
     extendCli(parser: Command): void {
@@ -90,6 +92,15 @@ export class Testplane extends BaseTestplane {
             devServerConfig: this._config.devServer,
             configPath: this._config.configPath,
         });
+
+        if (!isRunInNodeJsEnv(this._config)) {
+            try {
+                this.viteServer = ViteServer.create(this._config);
+                await this.viteServer.start();
+            } catch (err) {
+                throw new Error(`Vite server failed to start: ${(err as Error).message}`);
+            }
+        }
 
         return super._init();
     }
@@ -126,9 +137,7 @@ export class Testplane extends BaseTestplane {
             this._config.system.mochaOpts.timeout = 0;
         }
 
-        const RunnerClass = isRunInNodeJsEnv(this._config)
-            ? await import("./runner").then(m => m.MainRunner)
-            : await import("./runner/browser-env").then(m => m.MainRunner);
+        const RunnerClass = await import("./runner").then(m => m.MainRunner);
 
         const runner = RunnerClass.create(this._config, this._interceptors);
         this.runner = runner;
@@ -255,6 +264,10 @@ export class Testplane extends BaseTestplane {
                 logger.error("Forcing shutdown...");
                 process.exit(1);
             }, timeout).unref();
+        }
+
+        if (this.viteServer) {
+            this.viteServer.close();
         }
 
         if (this.runner) {
