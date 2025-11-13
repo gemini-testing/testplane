@@ -46,7 +46,7 @@ describe("Image", () => {
         Image = proxyquire("src/image", {
             fs: fsStub,
             "looks-same": looksSameStub,
-            "load-esm": { loadEsm: loadEsmStub },
+            "./utils/preload-utils": { loadEsm: loadEsmStub },
             "./utils/eight-bit-rgba-to-png": { convertRgbaToPng: convertRgbaToPngStub },
         }).Image;
     });
