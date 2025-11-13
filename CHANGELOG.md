@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.35.0](https://github.com/gemini-testing/testplane/compare/v8.34.5...v8.35.0) (2025-11-13)
+
+
+### Features
+
+* **selectivity:** write testplane test deps ([895a98e](https://github.com/gemini-testing/testplane/commit/895a98e34178bb965fb23ed19f22f8d1cd047552))
+
+
+### Bug Fixes
+
+* enable decorators support when parsing typescript using swc ([#1168](https://github.com/gemini-testing/testplane/issues/1168)) ([92db64e](https://github.com/gemini-testing/testplane/commit/92db64e46d9e902e54334e15f4e91e7ef8698258))
+* get rid of load-esm package ([#1167](https://github.com/gemini-testing/testplane/issues/1167)) ([522c656](https://github.com/gemini-testing/testplane/commit/522c656a35743595ca2a2d29d784d4c12508e1fe))
+
 ### [8.34.5](https://github.com/gemini-testing/testplane/compare/v8.34.4...v8.34.5) (2025-11-11)
 
 
