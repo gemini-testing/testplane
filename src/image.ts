@@ -1,6 +1,6 @@
 import fs from "fs";
 import looksSame from "looks-same";
-import { loadEsm } from "load-esm";
+import { loadEsm } from "./utils/preload-utils";
 import { DiffOptions, ImageSize } from "./types";
 import { convertRgbaToPng } from "./utils/eight-bit-rgba-to-png";
 import { BITS_IN_BYTE, PNG_HEIGHT_OFFSET, PNG_WIDTH_OFFSET, RGBA_CHANNELS } from "./constants/png";
@@ -34,15 +34,19 @@ interface CompareOptions {
 const initJsquashPromise = new Promise<unknown>(resolve => {
     const wasmLocation = require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
 
-    Promise.all([loadEsm("@jsquash/png/decode.js"), fs.promises.readFile(wasmLocation)])
+    Promise.all([
+        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
+        fs.promises.readFile(wasmLocation),
+    ])
         .then(([mod, wasmBytes]) => mod.init(wasmBytes))
         .then(resolve);
 });
 
 const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
-    return Promise.all([loadEsm("@jsquash/png/decode.js"), initJsquashPromise]).then(([mod]) =>
-        mod.decode(buffer, { bitDepth: BITS_IN_BYTE }),
-    );
+    return Promise.all([
+        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
+        initJsquashPromise,
+    ]).then(([mod]) => mod.decode(buffer, { bitDepth: BITS_IN_BYTE }));
 };
 
 export class Image {
