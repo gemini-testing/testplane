@@ -64,6 +64,7 @@ export const transformCode = (
                         parser: {
                             syntax: "typescript",
                             tsx: true,
+                            decorators: true,
                         },
                     },
                 }).code;
