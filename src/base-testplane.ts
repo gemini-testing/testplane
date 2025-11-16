@@ -11,7 +11,7 @@ import {
     Interceptor,
 } from "./events";
 import Errors from "./errors";
-import { registerTransformHook } from "./utils/typescript";
+import { registerTransformHook, updateTransformHook } from "./utils/typescript";
 import { ConfigInput } from "./config/types";
 
 export abstract class BaseTestplane extends AsyncEmitter {
@@ -31,8 +31,9 @@ export abstract class BaseTestplane extends AsyncEmitter {
         this._interceptors = [];
 
         registerTransformHook(this.isWorker());
-
         this._config = Config.create(config);
+        updateTransformHook(this._config);
+
         this._setLogLevel();
         this._loadPlugins();
     }

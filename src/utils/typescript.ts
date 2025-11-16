@@ -1,6 +1,9 @@
 import path from "node:path";
 import { addHook } from "pirates";
+import * as recast from "recast";
 import * as logger from "./logger";
+import { isRunInBrowserEnv } from "./config";
+import type { CommonConfig } from "../config/types";
 
 const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
 
@@ -20,11 +23,16 @@ const ASSET_EXTENSIONS = [
     ".woff2",
 ];
 
+type RecastParser = {
+    parse(source: string, options?: unknown): unknown;
+};
+
 type ProcessWithTransformHook = typeof process & {
     [TESTPLANE_TRANSFORM_HOOK]?: { revert: () => void; enableSourceMaps: () => void };
 };
 
 let transformFunc: null | ((code: string, sourceFile: string, sourceMaps: boolean) => string) = null;
+let shouldRemoveViteQueryImports: boolean = false;
 
 export const transformCode = (
     code: string,
@@ -49,8 +57,10 @@ export const transformCode = (
         if (envVar && hasSwcCore()) {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { transformSync }: typeof import("@swc/core") = require("@swc/core");
-            transformFunc = (code, sourceFile, sourceMaps): string =>
-                transformSync(code, {
+            transformFunc = (code, sourceFile, sourceMaps): string => {
+                const preprocessedCode = shouldRemoveViteQueryImports ? removeViteQueryImports(code, sourceFile) : code;
+
+                return transformSync(preprocessedCode, {
                     sourceFileName: sourceFile,
                     sourceMaps: sourceMaps ? "inline" : false,
                     configFile: false,
@@ -70,11 +80,14 @@ export const transformCode = (
                         },
                     },
                 }).code;
+            };
         } else {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { transformSync }: typeof import("esbuild") = require("esbuild");
-            transformFunc = (code, sourceFile, sourceMaps): string =>
-                transformSync(code, {
+            transformFunc = (code, sourceFile, sourceMaps): string => {
+                const preprocessedCode = shouldRemoveViteQueryImports ? removeViteQueryImports(code, sourceFile) : code;
+
+                return transformSync(preprocessedCode, {
                     sourcefile: sourceFile,
                     sourcemap: sourceMaps ? "inline" : false,
                     minify: false,
@@ -84,6 +97,7 @@ export const transformCode = (
                     platform: "node",
                     jsx: "automatic",
                 }).code;
+            };
         }
     }
 
@@ -141,6 +155,10 @@ export const registerTransformHook = (isSilent: boolean = false): void => {
     }
 };
 
+export const updateTransformHook = (config: CommonConfig): void => {
+    shouldRemoveViteQueryImports = isRunInBrowserEnv(config);
+};
+
 export const enableSourceMaps = (): void => {
     const processWithTranspileSymbol = process as ProcessWithTransformHook;
 
@@ -150,3 +168,87 @@ export const enableSourceMaps = (): void => {
 
     processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK].enableSourceMaps();
 };
+
+function removeViteQueryImports(code: string, sourceFile: string): string {
+    const extname = path.extname(sourceFile);
+    const isJsxOrTsx = extname === ".jsx" || extname === ".tsx";
+
+    if (!isJsxOrTsx) {
+        return code;
+    }
+
+    let parser: RecastParser | null = null;
+
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const babelParser: typeof import("@babel/parser") = require("@babel/parser");
+
+        parser = {
+            parse(source: string): ReturnType<typeof babelParser.parse> {
+                return babelParser.parse(source, {
+                    sourceType: "module",
+                    plugins: [
+                        "typescript",
+                        "jsx",
+                        "decorators-legacy",
+                        "classProperties",
+                        "nullishCoalescingOperator",
+                        "optionalChaining",
+                    ],
+                    tokens: true,
+                });
+            },
+        };
+    } catch (err) {
+        // If @babel/parser is not installed, return original code without transformation.
+        // This is not a critical issue as the user may not be using Vite-style imports with query parameters.
+        return code;
+    }
+
+    let ast: recast.types.namedTypes.File;
+
+    try {
+        ast = recast.parse(code, {
+            parser,
+            sourceFileName: sourceFile,
+            sourceRoot: path.dirname(sourceFile),
+        });
+    } catch (err) {
+        const errorMessage = (err as Error).message;
+        logger.warn(
+            `Failed to parse file ${sourceFile} for removal of Vite query imports: ${errorMessage}. ` +
+                `The file will be processed without removing query imports.`,
+        );
+        return code;
+    }
+
+    recast.visit(ast, {
+        visitImportDeclaration(nodePath) {
+            const declaration = nodePath.value as recast.types.namedTypes.ImportDeclaration;
+            const source = declaration.source.value;
+
+            if (typeof source === "string") {
+                const extname = path.extname(source);
+
+                if (extname && extname.includes("?")) {
+                    nodePath.prune();
+                    return false;
+                }
+            }
+
+            return this.traverse(nodePath);
+        },
+    });
+
+    try {
+        const result = recast.print(ast, { sourceMapName: sourceFile });
+        return result.code;
+    } catch (err) {
+        const errorMessage = (err as Error).message;
+        logger.warn(
+            `Failed to transform AST for ${sourceFile} for removal of Vite query imports: ${errorMessage}. ` +
+                `The file will be processed without removing query imports.`,
+        );
+        return code;
+    }
+}

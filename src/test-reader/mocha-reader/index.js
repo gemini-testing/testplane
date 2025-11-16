@@ -8,6 +8,7 @@ const { TreeBuilderDecorator } = require("./tree-builder-decorator");
 const { TestReaderEvents } = require("../../events");
 const { MasterEvents } = require("../../events");
 const { getMethodsByInterface } = require("./utils");
+const logger = require("../../utils/logger");
 const { enableSourceMaps } = require("../../utils/typescript");
 
 function getTagParser(original) {
@@ -30,7 +31,7 @@ function getTagParser(original) {
     };
 }
 
-async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }) {
+async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, isBrowserEnv = false }) {
     const mocha = new Mocha(config);
 
     mocha.suite.on("pre-require", context => {
@@ -56,7 +57,22 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }
     initEventListeners({ rootSuite: mocha.suite, outBus: eventBus, config, runnableOpts });
 
     files.forEach(f => mocha.addFile(f));
-    await mocha.loadFilesAsync({ esmDecorator });
+
+    try {
+        await mocha.loadFilesAsync({ esmDecorator });
+    } catch (err) {
+        const errorMessage = (err.message || "").split("\n")[0].trim();
+
+        if (isBrowserEnv && err.code === "MODULE_NOT_FOUND" && errorMessage.includes("?")) {
+            logger.warn(
+                `Failed to resolve module with query parameter: ${errorMessage}. ` +
+                    `This is likely a Vite-style import (e.g., './file.svg?react'). ` +
+                    `Please install @babel/parser version 7 or higher to fix this issue.`,
+            );
+        }
+
+        throw err;
+    }
 
     applyOnly(mocha.suite, eventBus);
 }

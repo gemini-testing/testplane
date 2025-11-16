@@ -9,6 +9,7 @@ const { ConfigController } = require("src/test-reader/controllers/config-control
 const { TestParserAPI } = require("src/test-reader/test-parser-api");
 const { Test, Suite } = require("src/test-reader/test-object");
 const { MasterEvents: RunnerEvents, TestReaderEvents } = require("src/events");
+const { BROWSER_TEST_RUN_ENV } = require("src/constants/config");
 const { makeConfigStub } = require("../../utils");
 const proxyquire = require("proxyquire").noCallThru();
 const path = require("path");
@@ -420,6 +421,18 @@ describe("test-reader/test-parser", () => {
                 await loadFiles_({ runnableOpts });
 
                 assert.calledWithMatch(readFiles, sinon.match.any, { runnableOpts });
+            });
+
+            it("should pass 'isBrowserEnv' option to reader", async () => {
+                const config = makeConfigStub({
+                    system: {
+                        testRunEnv: BROWSER_TEST_RUN_ENV,
+                    },
+                });
+
+                await loadFiles_({ config });
+
+                assert.calledWithMatch(readFiles, sinon.match.any, { isBrowserEnv: true });
             });
 
             describe("esm decorator", () => {

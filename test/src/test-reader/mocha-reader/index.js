@@ -19,6 +19,7 @@ describe("test-reader/mocha-reader", () => {
     let getMethodsByInterfaceStub;
     let enableSourceMapsStub;
     let readFiles;
+    let loggerWarnStub;
 
     const mkMochaSuiteStub_ = () => {
         const suite = Object.create(Mocha.Suite.prototype);
@@ -50,11 +51,14 @@ describe("test-reader/mocha-reader", () => {
         getMethodsByInterfaceStub = sinon.stub().returns({ suiteMethods: [], testMethods: [] });
         enableSourceMapsStub = sinon.stub();
 
+        loggerWarnStub = sinon.stub();
+
         readFiles = proxyquire("src/test-reader/mocha-reader", {
             mocha: MochaConstructorStub,
             "@cspotcode/source-map-support": SourceMapSupportStub,
             "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
             "../../utils/typescript": { enableSourceMaps: enableSourceMapsStub },
+            "../../utils/logger": { warn: loggerWarnStub },
         }).readFiles;
 
         sandbox.stub(MochaEventBus, "create").returns(Object.create(MochaEventBus.prototype));
@@ -167,6 +171,45 @@ describe("test-reader/mocha-reader", () => {
                 await readFiles_({ esmDecorator });
 
                 assert.calledWith(Mocha.prototype.loadFilesAsync, { esmDecorator });
+            });
+
+            describe("handle errors", () => {
+                it("should do nothing if error thrown in non-browser environment", async () => {
+                    Mocha.prototype.loadFilesAsync.rejects(new Error("Some error"));
+
+                    await assert.isRejected(readFiles_({ isBrowserEnv: false }), "Some error");
+                    assert.notCalled(loggerWarnStub);
+                });
+
+                it("should do nothing if error is not a MODULE_NOT_FOUND error", async () => {
+                    Mocha.prototype.loadFilesAsync.rejects(new Error("Some error"));
+
+                    await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Some error");
+                    assert.notCalled(loggerWarnStub);
+                });
+
+                it("should do nothing if error message does not contain '?'", async () => {
+                    const error = new Error("Cannot find module 'file.svg'");
+                    error.code = "MODULE_NOT_FOUND";
+                    Mocha.prototype.loadFilesAsync.rejects(error);
+
+                    await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Cannot find module 'file.svg'");
+                    assert.notCalled(loggerWarnStub);
+                });
+
+                it("should warn if module not found with query parameter in browser environment", async () => {
+                    const error = new Error("Cannot find module 'file.svg?react'");
+                    error.code = "MODULE_NOT_FOUND";
+                    Mocha.prototype.loadFilesAsync.rejects(error);
+
+                    await assert.isRejected(readFiles_({ isBrowserEnv: true }), "Cannot find module 'file.svg?react'");
+                    assert.calledOnceWith(
+                        loggerWarnStub,
+                        sinon.match(
+                            "Failed to resolve module with query parameter: Cannot find module 'file.svg?react'.",
+                        ),
+                    );
+                });
             });
         });
 
