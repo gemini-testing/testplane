@@ -17,6 +17,7 @@ import * as logger from "../utils/logger";
 import { getShortMD5 } from "../utils/crypto";
 import { Test } from "./test-object";
 import { Config } from "../config";
+import { isRunInBrowserEnv } from "../utils/config";
 import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
 
@@ -79,7 +80,9 @@ export class TestParser extends EventEmitter {
 
         const rand = Math.random();
         const esmDecorator = (f: string): string => f + `?rand=${rand}`;
-        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus, runnableOpts });
+        const isBrowserEnv = isRunInBrowserEnv(config);
+
+        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus, runnableOpts, isBrowserEnv });
 
         if (config.lastFailed.only) {
             try {

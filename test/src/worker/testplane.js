@@ -46,11 +46,12 @@ describe("worker/testplane", () => {
         });
 
         it("should create a runner instance", () => {
-            Config.create.returns({ some: "config" });
+            const config = makeConfigStub();
+            Config.create.returns(config);
 
             Testplane.create();
 
-            assert.calledOnceWith(Runner.create, { some: "config" });
+            assert.calledOnceWith(Runner.create, config);
         });
 
         it("should passthrough all runner events", () => {
@@ -113,7 +114,7 @@ describe("worker/testplane", () => {
         });
 
         it("testplane configuration", () => {
-            const config = { foo: "bar" };
+            const config = makeConfigStub();
 
             Config.create.returns(config);
 

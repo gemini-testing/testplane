@@ -814,7 +814,7 @@ describe("testplane", () => {
         });
 
         it("testplane configuration", () => {
-            const config = { foo: "bar" };
+            const config = makeConfigStub();
 
             assert.deepEqual(mkTestplane_(config).config, config);
         });
