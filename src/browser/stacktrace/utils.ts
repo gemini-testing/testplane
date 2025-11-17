@@ -84,7 +84,11 @@ export const captureRawStackFrames = (filterFunc?: (...args: unknown[]) => unkno
 export const FRAME_RELEVANCE: Record<string, { value: number; matcher: (fileName: string) => boolean }> = {
     repl: { value: 0, matcher: fileName => /^REPL\d+$/.test(fileName) },
     nodeInternals: { value: 0, matcher: fileName => /^node:[a-zA-Z\-_]/.test(fileName) },
-    wdioInternals: { value: 1, matcher: fileName => fileName.includes("/node_modules/webdriverio/") },
+    wdioInternals: {
+        value: 1,
+        matcher: fileName =>
+            fileName.includes("/node_modules/webdriverio/") || fileName.includes("/gemini-testing/webdriverio/"),
+    },
     projectInternals: { value: 2, matcher: fileName => fileName.includes("/node_modules/") },
     userCode: { value: 3, matcher: () => true },
 } as const;
@@ -170,7 +174,10 @@ export const filterExtraStackFrames = (error: Error): Error => {
             getStackTraceRelevance(error) > FRAME_RELEVANCE.projectInternals.value;
 
         const isIgnoredWebdriverioFrame = (frame: StackFrame): boolean => {
-            const isWebdriverioFrame = frame.fileName && frame.fileName.includes("/node_modules/webdriverio/");
+            const isWebdriverioFrame =
+                frame.fileName &&
+                (frame.fileName.includes("/node_modules/webdriverio/") ||
+                    frame.fileName.includes("/gemini-testing/webdriverio/"));
             const fnName = frame.functionName;
 
             if (!isWebdriverioFrame || !fnName) {
@@ -181,13 +188,20 @@ export const filterExtraStackFrames = (error: Error): Error => {
         };
 
         const isWdioUtilsFrame = (frame: StackFrame): boolean => {
-            return Boolean(frame.fileName && frame.fileName.includes("/node_modules/@testplane/wdio-utils/"));
+            return Boolean(
+                frame.fileName &&
+                    (frame.fileName.includes("/node_modules/@testplane/wdio-utils/") ||
+                        frame.fileName.includes("/gemini-testing/webdriverio/packages/src/monad.ts") ||
+                        frame.fileName.includes("/gemini-testing/webdriverio/packages/src/shim.ts")),
+            );
         };
 
         const isTestplaneExtraInternalFrame = (frame: StackFrame): boolean => {
             const testplaneExtraInternalFramePaths = [
                 "/node_modules/testplane/src/browser/history/",
+                "/node_modules/testplane/build/src/browser/history/",
                 "/node_modules/testplane/src/browser/stacktrace/",
+                "/node_modules/testplane/build/src/browser/stacktrace/",
             ];
 
             return Boolean(
