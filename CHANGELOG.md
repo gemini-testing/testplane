@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.35.1](https://github.com/gemini-testing/testplane/compare/v8.35.0...v8.35.1) (2025-11-17)
+
+
+### Bug Fixes
+
+* fix stack frames after moving to webdriverio v9 fork ([#1170](https://github.com/gemini-testing/testplane/issues/1170)) ([e7c6d20](https://github.com/gemini-testing/testplane/commit/e7c6d206d04c432b5c45ddc9fa6658c5c4babc53))
+
 ## [8.35.0](https://github.com/gemini-testing/testplane/compare/v8.34.5...v8.35.0) (2025-11-13)
 
 
