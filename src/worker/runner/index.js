@@ -7,7 +7,10 @@ const BrowserPool = require("./browser-pool");
 const { BrowserAgent } = require("./browser-agent");
 const { CachingTestParser } = require("./caching-test-parser");
 const { isRunInNodeJsEnv } = require("../../utils/config");
-const { runWithTestplaneDependenciesCollecting } = require("../../browser/cdp/selectivity/testplane-selectivity");
+const {
+    runWithTestplaneDependenciesCollecting,
+    readTestFileWithTestplaneDependenciesCollecting,
+} = require("../../browser/cdp/selectivity/testplane-selectivity");
 
 module.exports = class Runner extends AsyncEmitter {
     static create(config) {
@@ -42,10 +45,16 @@ module.exports = class Runner extends AsyncEmitter {
             attempt,
         });
 
+        const selectivityEnabled = config.selectivity && config.selectivity.enabled && isRunInNodeJsEnv(this._config);
+
         const prepareParseAndRun = async () => {
             runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
 
-            const tests = await this._testParser.parse({ file, browserId });
+            const readTestsFn = () => this._testParser.parse({ file, browserId });
+            const tests = selectivityEnabled
+                ? await readTestFileWithTestplaneDependenciesCollecting(file, readTestsFn)
+                : await readTestsFn();
+
             const test = tests.find(t => t.fullTitle() === fullTitle);
 
             runner.assignTest(test);
@@ -53,8 +62,6 @@ module.exports = class Runner extends AsyncEmitter {
             return runner.run();
         };
 
-        return config.selectivity && config.selectivity.enabled && isRunInNodeJsEnv(this._config)
-            ? runWithTestplaneDependenciesCollecting(prepareParseAndRun)
-            : prepareParseAndRun();
+        return selectivityEnabled ? runWithTestplaneDependenciesCollecting(prepareParseAndRun) : prepareParseAndRun();
     }
 };

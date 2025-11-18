@@ -238,10 +238,12 @@ describe("testplane", () => {
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({
-                    lastFailed: { only: false },
-                    system: { mochaOpts: { timeout: 100500 } },
-                });
+                const testplane = mkTestplane_(
+                    makeConfigStub({
+                        lastFailed: { only: false },
+                        system: { mochaOpts: { timeout: 100500 } },
+                    }),
+                );
 
                 await testplane.run([], { replMode: { enabled: false } });
 
@@ -250,10 +252,12 @@ describe("testplane", () => {
 
             it("should reset test timeout to 0 if run in repl", async () => {
                 mkNodejsEnvRunner_();
-                const testplane = mkTestplane_({
-                    lastFailed: { only: false },
-                    system: { mochaOpts: { timeout: 100500 } },
-                });
+                const testplane = mkTestplane_(
+                    makeConfigStub({
+                        lastFailed: { only: false },
+                        system: { mochaOpts: { timeout: 100500 } },
+                    }),
+                );
 
                 await testplane.run([], { replMode: { enabled: true } });
 

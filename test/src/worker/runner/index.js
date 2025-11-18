@@ -12,7 +12,8 @@ const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner", () => {
     const sandbox = sinon.createSandbox();
-    let nodejsTestRunner, browserTestRunner, runWithTestplaneDependenciesCollecting, Runner;
+    let nodejsTestRunner, browserTestRunner, Runner;
+    let runWithTestplaneDependenciesCollecting, readTestFileWithTestplaneDependenciesCollecting;
 
     const mkRunner_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
@@ -35,6 +36,7 @@ describe("worker/runner", () => {
         browserTestRunner.prepareBrowser = sandbox.stub().resolves();
         browserTestRunner.run = sandbox.stub().resolves();
         runWithTestplaneDependenciesCollecting = sandbox.stub().callsFake(fn => fn());
+        readTestFileWithTestplaneDependenciesCollecting = sandbox.stub().callsFake((file, fn) => fn());
 
         sandbox.stub(NodejsEnvTestRunner, "create").returns(nodejsTestRunner);
 
@@ -43,7 +45,10 @@ describe("worker/runner", () => {
         Runner = proxyquire("src/worker/runner", {
             "./test-runner": { default: { create: () => nodejsTestRunner } },
             "../browser-env/runner/test-runner": { TestRunner: { create: () => browserTestRunner } },
-            "../../browser/cdp/selectivity/testplane-selectivity": { runWithTestplaneDependenciesCollecting },
+            "../../browser/cdp/selectivity/testplane-selectivity": {
+                runWithTestplaneDependenciesCollecting,
+                readTestFileWithTestplaneDependenciesCollecting,
+            },
         });
     });
 

@@ -1,10 +1,10 @@
 import { memoize } from "lodash";
-import path from "node:path";
+import lockfile from "proper-lockfile";
 import fs from "fs-extra";
-import { shallowSortObject } from "./utils";
+import { getSelectivityTestsPath, getTestDependenciesPath, readTestDependencies, shallowSortObject } from "./utils";
 import type { Test } from "../../../types";
 import type { NormalizedDependencies, SelectivityCompressionType } from "./types";
-import { readJsonWithCompression, writeJsonWithCompression } from "./json-utils";
+import { writeJsonWithCompression } from "./json-utils";
 
 const areDepsSame = (browserDepsA?: NormalizedDependencies, browserDepsB?: NormalizedDependencies): boolean => {
     const props: Array<keyof NormalizedDependencies> = ["js", "css", "modules"] as const;
@@ -37,7 +37,7 @@ export class TestDependenciesWriter {
     private _directoryCreated = false;
 
     constructor(selectivityRootPath: string, compression: SelectivityCompressionType) {
-        this._selectivityTestsPath = path.join(selectivityRootPath, "tests");
+        this._selectivityTestsPath = getSelectivityTestsPath(selectivityRootPath);
         this._compression = compression;
     }
 
@@ -51,22 +51,33 @@ export class TestDependenciesWriter {
             this._directoryCreated = true;
         }
 
-        const testDepsPath = path.join(this._selectivityTestsPath, `${test.id}.json`);
-        const testDeps: Record<string, { browser: NormalizedDependencies; testplane: NormalizedDependencies }> =
-            await readJsonWithCompression(testDepsPath, this._compression, { defaultValue: {} }).catch(() => ({}));
+        const testDepsPath = getTestDependenciesPath(this._selectivityTestsPath, test);
 
-        if (
-            areDepsSame(testDeps[test.browserId]?.browser, browserDeps) &&
-            areDepsSame(testDeps[test.browserId]?.testplane, testplaneDeps)
-        ) {
-            return;
+        const releaseLock = await lockfile.lock(testDepsPath, {
+            stale: 5000,
+            update: 1000,
+            retries: { minTimeout: 100, maxTimeout: 1000, retries: 15 },
+            realpath: false,
+        });
+
+        try {
+            const testDeps = await readTestDependencies(this._selectivityTestsPath, test, this._compression);
+
+            if (
+                areDepsSame(testDeps[test.browserId]?.browser, browserDeps) &&
+                areDepsSame(testDeps[test.browserId]?.testplane, testplaneDeps)
+            ) {
+                return;
+            }
+
+            testDeps[test.browserId] = { browser: browserDeps, testplane: testplaneDeps };
+
+            shallowSortObject(testDeps);
+
+            await writeJsonWithCompression(testDepsPath, testDeps, this._compression);
+        } finally {
+            await releaseLock();
         }
-
-        testDeps[test.browserId] = { browser: browserDeps, testplane: testplaneDeps };
-
-        shallowSortObject(testDeps);
-
-        await writeJsonWithCompression(testDepsPath, testDeps, this._compression);
     }
 }
 
@@ -74,4 +85,5 @@ export const getTestDependenciesWriter = memoize(
     (selectivityRootPath: string, compression: SelectivityCompressionType): TestDependenciesWriter => {
         return new TestDependenciesWriter(selectivityRootPath, compression);
     },
+    (selectivityRootPath, compression) => `${selectivityRootPath}#${compression}`,
 );

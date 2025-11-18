@@ -2,9 +2,9 @@ import sinon, { SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import { EventEmitter } from "events";
 
-describe("CDP/Selectivity/FileHashProvider", () => {
+describe("CDP/Selectivity/HashProvider", () => {
     const sandbox = sinon.createSandbox();
-    let FileHashProvider: typeof import("src/browser/cdp/selectivity/file-hash-provider").FileHashProvider;
+    let HashProvider: typeof import("src/browser/cdp/selectivity/hash-provider").HashProvider;
     let cryptoStub: { createHash: SinonStub };
     let fsStub: { createReadStream: SinonStub };
     let hashMock: { update: SinonStub; digest: SinonStub };
@@ -23,24 +23,25 @@ describe("CDP/Selectivity/FileHashProvider", () => {
             createReadStream: sandbox.stub().returns(streamMock),
         };
 
-        FileHashProvider = proxyquire("src/browser/cdp/selectivity/file-hash-provider", {
+        HashProvider = proxyquire("src/browser/cdp/selectivity/hash-provider", {
             "node:crypto": cryptoStub,
             "node:fs": fsStub,
-        }).FileHashProvider;
+        }).HashProvider;
     });
 
     afterEach(() => {
         sandbox.restore();
         // Clear the static hash store between tests
-        (FileHashProvider as any)._hashStore?.clear();
+        (HashProvider as any)._fileHashStore?.clear();
+        (HashProvider as any)._patternHashStore?.clear();
     });
 
-    describe("calculateFor", () => {
+    describe("calculateForFile", () => {
         it("should calculate hash for a file", async () => {
             const filePath = "/path/to/file.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
 
-            const hashPromise = provider.calculateFor(filePath);
+            const hashPromise = provider.calculateForFile(filePath);
 
             streamMock.emit("data", Buffer.from("chunk1"));
             streamMock.emit("data", Buffer.from("chunk2"));
@@ -59,16 +60,16 @@ describe("CDP/Selectivity/FileHashProvider", () => {
 
         it("should return cached hash for the same file", async () => {
             const filePath = "/path/to/file.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
 
             // First call
-            const firstPromise = provider.calculateFor(filePath);
+            const firstPromise = provider.calculateForFile(filePath);
             streamMock.emit("data", Buffer.from("data"));
             streamMock.emit("end");
             const firstResult = await firstPromise;
 
             // Second call
-            const secondResult = await provider.calculateFor(filePath);
+            const secondResult = await provider.calculateForFile(filePath);
 
             assert.equal(firstResult, "mocked-hash-value");
             assert.equal(secondResult, "mocked-hash-value");
@@ -77,10 +78,10 @@ describe("CDP/Selectivity/FileHashProvider", () => {
 
         it("should handle file read errors", async () => {
             const filePath = "/path/to/nonexistent.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
             const error = new Error("ENOENT: no such file or directory");
 
-            const hashPromise = provider.calculateFor(filePath);
+            const hashPromise = provider.calculateForFile(filePath);
 
             streamMock.emit("error", error);
 
@@ -92,11 +93,11 @@ describe("CDP/Selectivity/FileHashProvider", () => {
 
         it("should handle multiple concurrent requests for the same file", async () => {
             const filePath = "/path/to/file.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
 
-            const promise1 = provider.calculateFor(filePath);
-            const promise2 = provider.calculateFor(filePath);
-            const promise3 = provider.calculateFor(filePath);
+            const promise1 = provider.calculateForFile(filePath);
+            const promise2 = provider.calculateForFile(filePath);
+            const promise3 = provider.calculateForFile(filePath);
 
             streamMock.emit("data", Buffer.from("data"));
             streamMock.emit("end");
@@ -112,7 +113,7 @@ describe("CDP/Selectivity/FileHashProvider", () => {
         it("should handle different files separately", async () => {
             const filePath1 = "/path/to/file1.js";
             const filePath2 = "/path/to/file2.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
 
             const streamMock1 = new EventEmitter();
             const streamMock2 = new EventEmitter();
@@ -128,8 +129,8 @@ describe("CDP/Selectivity/FileHashProvider", () => {
 
             hashMock.digest.onFirstCall().returns("hash1").onSecondCall().returns("hash2");
 
-            const promise1 = provider.calculateFor(filePath1);
-            const promise2 = provider.calculateFor(filePath2);
+            const promise1 = provider.calculateForFile(filePath1);
+            const promise2 = provider.calculateForFile(filePath2);
 
             streamMock1.emit("data", Buffer.from("data1"));
             streamMock1.emit("end");
@@ -148,7 +149,7 @@ describe("CDP/Selectivity/FileHashProvider", () => {
         it("should create new hash instance for each file", async () => {
             const filePath1 = "/path/to/file1.js";
             const filePath2 = "/path/to/file2.js";
-            const provider = new FileHashProvider();
+            const provider = new HashProvider();
 
             const hash1Mock = { update: sandbox.stub(), digest: sandbox.stub().returns("hash1") };
             const hash2Mock = { update: sandbox.stub(), digest: sandbox.stub().returns("hash2") };
@@ -167,8 +168,8 @@ describe("CDP/Selectivity/FileHashProvider", () => {
                 return new EventEmitter();
             });
 
-            const promise1 = provider.calculateFor(filePath1);
-            const promise2 = provider.calculateFor(filePath2);
+            const promise1 = provider.calculateForFile(filePath1);
+            const promise2 = provider.calculateForFile(filePath2);
 
             streamMock1.emit("data", Buffer.from("data1"));
             streamMock1.emit("end");

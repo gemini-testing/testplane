@@ -373,6 +373,7 @@ export interface CommonConfig {
         sourceRoot: string;
         testDependenciesPath: string;
         compression: SelectivityCompressionType;
+        disableSelectivityPatterns: string[];
     };
 
     timeTravel: TimeTravelConfig;

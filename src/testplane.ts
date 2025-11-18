@@ -19,6 +19,7 @@ import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
 import { preloadWebdriverIO } from "./utils/preload-utils";
+import { updateDisableSelectivityPatternsHashes } from "./browser/cdp/selectivity";
 
 interface RunOpts {
     browsers: string[];
@@ -161,6 +162,10 @@ export class Testplane extends BaseTestplane {
             await this._readTests(testPaths, { browsers, sets, grep, replMode, keepBrowserMode }),
             RunnerStats.create(this),
         );
+
+        if (!this.isFailed()) {
+            await updateDisableSelectivityPatternsHashes(this.config);
+        }
 
         if (this.config.afterAll) {
             await this.config.afterAll.call({ config: this.config }, { config: this.config });

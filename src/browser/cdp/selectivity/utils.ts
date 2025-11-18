@@ -3,11 +3,14 @@ import { SourceMapConsumer, type BasicSourceMapConsumer, type RawSourceMap } fro
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
+import * as logger from "../../../utils/logger";
 import type { CDPRuntime } from "../domains/runtime";
 import type { CDPSessionId } from "../types";
 import { softFileURLToPath } from "../../../utils/fs";
-import type { NormalizedDependencies } from "./types";
+import type { HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
 import { WEBPACK_PROTOCOL } from "./constants";
+import { readJsonWithCompression } from "./json-utils";
+import type { Test } from "../../../types";
 
 /**
  * Tries to fetch text by url from node.js, then falls back to "fetch" from browser, if node.js fetch fails
@@ -129,6 +132,18 @@ export const hasProtocol = (fileUrlLikePath: string): boolean => {
     }
 };
 
+const getProtocol = (fileUrlLikePath: string): string | null => {
+    if (!fileUrlLikePath.includes("://")) {
+        return null;
+    }
+
+    try {
+        return new URL(fileUrlLikePath).protocol;
+    } catch {
+        return null;
+    }
+};
+
 const ensurePosixRelativeDependencyPathExists = memoize((posixRelativePath: string): void => {
     const relativePath = posixRelativePath.replaceAll(path.posix.sep, path.sep);
 
@@ -143,6 +158,10 @@ const ensurePosixRelativeDependencyPathExists = memoize((posixRelativePath: stri
             "Configuring 'sourceRoot' in Testplane selectivity config also might help",
         ].join("\n"),
     );
+});
+
+const warnUnsupportedProtocol = memoize((protocol: string, dependency: string): void => {
+    logger.warn(`Selectivity: Ignoring dependencies of unsupported protocol "${protocol}" (example: "${dependency}")`);
 });
 
 /**
@@ -162,8 +181,11 @@ export const transformSourceDependencies = (
     const classifyDependency = (dependency: string, typedResultArray: string[]): void => {
         dependency = decodeURIComponent(softFileURLToPath(dependency));
 
-        if (hasProtocol(dependency)) {
-            throw new Error(`Selectivity: Found unsupported protocol in dependencies ("${dependency}")`);
+        const protocol = getProtocol(dependency);
+
+        if (protocol) {
+            warnUnsupportedProtocol(protocol, dependency);
+            return;
         }
 
         const dependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
@@ -289,3 +311,37 @@ export const shallowSortObject = (obj: Record<string, unknown>): void => {
         obj[testBrowser] = testBrowserDeps;
     }
 };
+
+export const getSelectivityHashesPath = (selectivityRootPath: string): string =>
+    path.join(selectivityRootPath, "hashes.json");
+
+export const readHashFileContents = (
+    selectivityHashesPath: string,
+    compression: SelectivityCompressionType,
+): Promise<HashFileContents> =>
+    readJsonWithCompression(selectivityHashesPath, compression, {
+        defaultValue: { files: {}, modules: {}, patterns: {} },
+    })
+        .catch(() => ({ files: {}, modules: {}, patterns: {} }))
+        .then(res => {
+            res.files ||= {};
+            res.modules ||= {};
+            res.patterns ||= {};
+
+            return res;
+        });
+
+export const getSelectivityTestsPath = (selectivityRootPath: string): string => path.join(selectivityRootPath, "tests");
+
+export const getTestDependenciesPath = (selectivityTestsPath: string, test: Test): string =>
+    path.join(selectivityTestsPath, `${test.id}.json`);
+
+/** @returns `Promise<Record<BrowserID, Record<DepType, NormalizedDependencies>>>` */
+export const readTestDependencies = (
+    selectivityTestsPath: string,
+    test: Test,
+    compression: SelectivityCompressionType,
+): Promise<Record<string, Record<string, NormalizedDependencies>>> =>
+    readJsonWithCompression(getTestDependenciesPath(selectivityTestsPath, test), compression, {
+        defaultValue: {},
+    }).catch(() => ({}));
