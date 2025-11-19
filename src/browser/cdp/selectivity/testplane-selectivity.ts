@@ -2,10 +2,8 @@ import path from "path";
 import { Module as UntypedModule } from "module";
 import { AsyncLocalStorage } from "async_hooks";
 
-const TypedModule = UntypedModule as unknown as {
-    _load: (...args: any) => unknown; // eslint-disable-line @typescript-eslint/no-explicit-any
-    _resolveFilename: (...args: any) => string; // eslint-disable-line @typescript-eslint/no-explicit-any
-};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TypedModule = UntypedModule as unknown as { _resolveFilename: (...args: any) => string | void };
 const testDependenciesStorage = new AsyncLocalStorage<{ jsTestplaneDeps?: Set<string> }>();
 const testFileDependenciesCache = new Map<string, string[]>();
 
@@ -23,18 +21,19 @@ export const enableCollectingTestplaneDependencies = (): void => {
         return;
     }
 
-    const originalModuleLoad = TypedModule._load;
+    const originalResolveFileName = TypedModule._resolveFilename;
 
     disableCollectingDependenciesCb = (): void => {
-        TypedModule._load = originalModuleLoad;
+        TypedModule._resolveFilename = originalResolveFileName;
     };
 
-    TypedModule._load = function (): unknown {
+    TypedModule._resolveFilename = function (): string | void {
+        // eslint-disable-next-line prefer-rest-params
+        const result = originalResolveFileName.apply(this, arguments);
+
         try {
             const store = disableCollectingDependenciesCb ? testDependenciesStorage.getStore() : null;
-            // eslint-disable-next-line prefer-rest-params
-            const absPath = store ? TypedModule._resolveFilename.apply(this, arguments) : null;
-            const relPath = absPath && path.isAbsolute(absPath) ? path.relative(process.cwd(), absPath) : null;
+            const relPath = result && path.isAbsolute(result) ? path.relative(process.cwd(), result) : null;
 
             if (store && relPath) {
                 const posixRelPath =
@@ -43,8 +42,7 @@ export const enableCollectingTestplaneDependencies = (): void => {
             }
         } catch {} // eslint-disable-line no-empty
 
-        // eslint-disable-next-line prefer-rest-params
-        return originalModuleLoad.apply(this, arguments);
+        return result;
     };
 };
 

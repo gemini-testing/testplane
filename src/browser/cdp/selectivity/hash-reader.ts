@@ -2,6 +2,7 @@ import { memoize } from "lodash";
 import path from "node:path";
 import { HashProvider } from "./hash-provider";
 import { getSelectivityHashesPath, readHashFileContents } from "./utils";
+import { debugSelectivity } from "./debug";
 import type { HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
 
 export class HashReader {
@@ -57,8 +58,14 @@ export class HashReader {
                     const adjustedFilePath = depFileType === "modules" ? path.join(filePath, "package.json") : filePath;
                     const [cachedFileHash, calculatedFileHash] = await Promise.all([
                         depFileType === "modules" ? this._readHashForModule(filePath) : this._readHashForFile(filePath),
-                        this._hashProvider.calculateForFile(adjustedFilePath),
+                        this._hashProvider.calculateForFile(adjustedFilePath).catch((err: Error) => err),
                     ]);
+
+                    if (calculatedFileHash instanceof Error) {
+                        debugSelectivity(
+                            `Couldn't calculate hash for ${adjustedFilePath}: ${calculatedFileHash.message}`,
+                        );
+                    }
 
                     if (cachedFileHash !== calculatedFileHash) {
                         hasAnythingChanged = true;
