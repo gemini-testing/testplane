@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.35.2](https://github.com/gemini-testing/testplane/compare/v8.35.1...v8.35.2) (2025-11-20)
+
+
+### Features
+
+* **selectivity:** selectively skips with disableSelectivityPatterns ([6e42c2b](https://github.com/gemini-testing/testplane/commit/6e42c2b3943ea4671fb983b2f3ac977e00bc3291))
+
+
+### Bug Fixes
+
+* prevent dynamic imports to be transpiled to require ([d76c991](https://github.com/gemini-testing/testplane/commit/d76c991dfb01927dc5647fdd44d991eabb9ea282))
+* **selectivity:** track testplane esm imports ([c98f67f](https://github.com/gemini-testing/testplane/commit/c98f67f710e70e4d55477fef09bf40bd4d45a00f))
+
 ### [8.35.1](https://github.com/gemini-testing/testplane/compare/v8.35.0...v8.35.1) (2025-11-17)
 
 
