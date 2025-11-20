@@ -58,6 +58,7 @@ export const transformCode = (
                     minify: false,
                     module: {
                         type: "commonjs",
+                        ignoreDynamic: true,
                     },
                     jsc: {
                         target: "esnext",
@@ -65,6 +66,7 @@ export const transformCode = (
                             syntax: "typescript",
                             tsx: true,
                             decorators: true,
+                            dynamicImport: true,
                         },
                     },
                 }).code;
@@ -79,6 +81,7 @@ export const transformCode = (
                     loader: path.extname(sourceFile).includes("j") ? "jsx" : "tsx",
                     format: "cjs",
                     target: "esnext",
+                    platform: "node",
                     jsx: "automatic",
                 }).code;
         }
