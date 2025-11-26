@@ -6,10 +6,11 @@ const option = require("gemini-configparser").option;
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("../constants/config");
+const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES } = require("../constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { TimeTravelMode } = require("./types");
+const { extractSelectivityEnabledEnvVariable } = require("./utils");
 
 const is = utils.is;
 
@@ -436,7 +437,11 @@ function buildBrowserOptions(defaultFactory, extra) {
             parseEnv: JSON.parse,
             parseCli: JSON.parse,
             validate: value => utils.assertOptionalObject(value, "selectivity"),
-            map: value => ({ ...defaults.selectivity, ...value }),
+            map: value => ({
+                ...defaults.selectivity,
+                ...value,
+                ...extractSelectivityEnabledEnvVariable(ENV_PREFIXES),
+            }),
         }),
     });
 }

@@ -99,3 +99,19 @@ export const addUserAgentToArgs = (config: ConfigParsed): ConfigParsed => {
 
     return config;
 };
+
+export const extractSelectivityEnabledEnvVariable = (envPrefixes: string[] = []): { enabled?: boolean } => {
+    for (const envPrefix of envPrefixes) {
+        const envName = envPrefix + "selectivity_enabled";
+
+        if (process.env[envName] === String(true)) {
+            return { enabled: true };
+        }
+
+        if (process.env[envName] === String(false)) {
+            return { enabled: false };
+        }
+    }
+
+    return {};
+};

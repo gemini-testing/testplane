@@ -1,5 +1,7 @@
 import { BrowserName, type W3CBrowserName } from "../browser/types";
 
+export const ENV_PREFIXES = ["testplane_", "hermione_"];
+
 export const WEBDRIVER_PROTOCOL = "webdriver";
 export const DEVTOOLS_PROTOCOL = "devtools";
 export const SAVE_HISTORY_MODE = {
