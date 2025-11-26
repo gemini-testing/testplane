@@ -16,6 +16,7 @@ import type { BaseTestplane } from "../base-testplane";
 import type { CoordBounds, LooksSameOptions } from "looks-same";
 import type { eventWithTime as RrwebEvent } from "@rrweb/types";
 import type { runGroup } from "../browser/history";
+import type { NormalizedDependencies, SelectivityCompressionType } from "../browser/cdp/selectivity/types";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
@@ -217,6 +218,16 @@ export interface SnapshotsData {
     rrwebSnapshots: RrwebEvent[];
 }
 
+export interface TestDepsContext {
+    testDependenciesPath: string;
+    compression: SelectivityCompressionType;
+    testId: string;
+    fullTitle: string;
+    browserId: string;
+}
+
+export interface TestDepsData extends NormalizedDependencies {}
+
 export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
     (event: Events["RUNNER_START"], callback: (runner: NodejsEnvRunner | BrowserEnvRunner) => Promise<void> | void): T;
@@ -235,6 +246,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["TEST_PENDING"], callback: (test: Test) => void): T;
     (event: Events["RETRY"], callback: (test: TestResultWithRetries) => void): T;
     (event: Events["DOM_SNAPSHOTS"], callback: (context: TestContext, data: SnapshotsData) => void): T;
+    (event: Events["TEST_DEPENDENCIES"], callback: (context: TestDepsContext, data: TestDepsData) => void): T;
 
     (event: Events["CLI"], callback: (commander: commander.CommanderStatic) => void): T;
     (event: Events["BEGIN"], callback: () => void): T;

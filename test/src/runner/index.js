@@ -17,6 +17,7 @@ describe("NodejsEnvRunner", () => {
     const sandbox = sinon.createSandbox();
     let BrowserPool;
     let Runner;
+    let SelectivityRunner;
 
     const mkWorkers_ = () => {
         return {
@@ -68,9 +69,14 @@ describe("NodejsEnvRunner", () => {
     };
 
     beforeEach(() => {
-        BrowserPool = {
-            create: sinon.stub().returns({ cancel: sandbox.spy() }),
-        };
+        BrowserPool = { create: sinon.stub().returns({ cancel: sandbox.spy() }) };
+
+        const createSelectivityRunnerStub = (mainRunner, config, runTestFn) => ({
+            runIfNecessary: (...args) => runTestFn(...args),
+            waitForTestsToRun: sinon.stub().resolves(),
+        });
+
+        SelectivityRunner = { create: sinon.stub().callsFake(createSelectivityRunnerStub) };
 
         sandbox.stub(WorkersRegistry.prototype);
 
@@ -88,9 +94,8 @@ describe("NodejsEnvRunner", () => {
 
         Runner = proxyquire("src/runner", {
             "../browser-pool": BrowserPool,
-            "../utils/logger": {
-                warn: sandbox.stub(),
-            },
+            "../browser/cdp/selectivity/runner": { SelectivityRunner },
+            "../utils/logger": { warn: sandbox.stub() },
         }).MainRunner;
     });
 

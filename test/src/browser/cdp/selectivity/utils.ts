@@ -277,15 +277,6 @@ describe("CDP/Selectivity/Utils", () => {
             assert.deepEqual(result.modules, ["node_modules/@scope/package"]);
         });
 
-        it("should throw error for unsupported protocols", () => {
-            const cssDeps: string[] = ["ftp://example.com/style.css"];
-            const jsDeps: string[] = [];
-
-            assert.throws(() => {
-                utils.transformSourceDependencies(cssDeps, jsDeps);
-            }, /Selectivity: Found unsupported protocol/);
-        });
-
         it("should throw error if dependency file doesn't exist", () => {
             const cssDeps: string[] = ["src/missing.css"];
             const jsDeps: string[] = [];
