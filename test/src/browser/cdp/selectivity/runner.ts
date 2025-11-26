@@ -62,12 +62,22 @@ describe("SelectivityRunner", () => {
         sandbox.restore();
     });
 
-    describe("event setup", () => {
-        it("should set up event listener for TEST_DEPENDENCIES", () => {
+    describe("constructor and event setup", () => {
+        it("should set up event listener for TEST_DEPENDENCIES when shouldDisableSelectivity is not set", () => {
             new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock);
 
             assert.calledOnce(mainRunnerMock.on);
             assert.calledWith(mainRunnerMock.on, MasterEvents.TEST_DEPENDENCIES, sinon.match.func);
+            assert.notCalled(debugSelectivityStub);
+        });
+
+        it("should not set up event listener when shouldDisableSelectivity is set", () => {
+            new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock, {
+                shouldDisableSelectivity: true,
+            });
+
+            assert.notCalled(mainRunnerMock.on);
+            assert.calledWith(debugSelectivityStub, "Test filter is specified, disabling selectivity");
         });
     });
 
@@ -106,6 +116,35 @@ describe("SelectivityRunner", () => {
             browserConfigMock.selectivity.enabled = false;
 
             runner.runIfNecessary(testMock, "chrome");
+
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(runTestFnMock, testMock, "chrome");
+        });
+
+        it("should run test immediately if shouldDisableSelectivity option is true", () => {
+            const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
+                mainRunnerMock as any,
+                configMock as any,
+                runTestFnMock,
+                { shouldDisableSelectivity: true },
+            );
+
+            runnerWithDisabledSelectivity.runIfNecessary(testMock, "chrome");
+
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(runTestFnMock, testMock, "chrome");
+        });
+
+        it("should run test immediately if both browser selectivity is disabled and shouldDisableSelectivity is true", () => {
+            browserConfigMock.selectivity.enabled = false;
+            const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
+                mainRunnerMock as any,
+                configMock as any,
+                runTestFnMock,
+                { shouldDisableSelectivity: true },
+            );
+
+            runnerWithDisabledSelectivity.runIfNecessary(testMock, "chrome");
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");

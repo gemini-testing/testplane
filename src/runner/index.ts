@@ -37,6 +37,10 @@ type MapOfMethods<T extends ReadonlyArray<string>> = {
 
 type RegisterWorkers<T extends ReadonlyArray<string>> = EventEmitter & MapOfMethods<T>;
 
+interface RunnerRunOptions {
+    shouldDisableSelectivity?: boolean;
+}
+
 /**
  * Part of Public API:
  * @link https://testplane.io/docs/v8/reference/testplane-events/#runner_start
@@ -92,13 +96,13 @@ export class MainRunner extends RunnableEmitter {
         return this.runned && !this.workersRegistry.isEnded() && !this.cancelled;
     }
 
-    async run(testCollection: TestCollection, stats: RunnerStats): Promise<void> {
+    async run(testCollection: TestCollection, stats: RunnerStats, opts?: RunnerRunOptions): Promise<void> {
         this.runned = true;
 
         try {
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
-            !this.cancelled && (await this._runTests(testCollection));
+            !this.cancelled && (await this._runTests(testCollection, opts));
         } finally {
             this.emit(MasterEvents.END);
             await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
@@ -122,9 +126,11 @@ export class MainRunner extends RunnableEmitter {
         return true;
     }
 
-    protected async _runTests(testCollection: TestCollection): Promise<void> {
+    protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {
         const runTestFn = this._addTestToBrowserRunner.bind(this);
-        const selectivityRunner = SelectivityRunner.create(this, this.config, runTestFn);
+        const selectivityRunner = SelectivityRunner.create(this, this.config, runTestFn, {
+            shouldDisableSelectivity: opts?.shouldDisableSelectivity,
+        });
 
         testCollection.eachTestAcrossBrowsers((test, browserId) => selectivityRunner.runIfNecessary(test, browserId));
 

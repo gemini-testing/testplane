@@ -108,9 +108,14 @@ const onTestDependencies = (context: TestDepsContext, data: TestDepsData): void 
     hashWriter.addTestDependencyHashes(data);
 };
 
+interface SelectivityRunnerOptions {
+    shouldDisableSelectivity?: boolean;
+}
+
 export class SelectivityRunner {
     private readonly _config: Config;
     private readonly _runTestFn: (test: Test, browserId: string) => void;
+    private readonly _opts?: SelectivityRunnerOptions;
     private readonly _browserSelectivityDisabledCache: Record<string, void | Promise<boolean>> = {};
     private readonly _processingTestPromises: Promise<void>[] = [];
 
@@ -118,11 +123,21 @@ export class SelectivityRunner {
         return new this(...args);
     }
 
-    constructor(mainRunner: MainRunner, config: Config, runTestFn: (test: Test, browserId: string) => void) {
+    constructor(
+        mainRunner: MainRunner,
+        config: Config,
+        runTestFn: (test: Test, browserId: string) => void,
+        opts?: SelectivityRunnerOptions,
+    ) {
         this._config = config;
         this._runTestFn = runTestFn;
+        this._opts = opts;
 
-        mainRunner.on(MasterEvents.TEST_DEPENDENCIES, onTestDependencies);
+        if (this._opts?.shouldDisableSelectivity) {
+            debugSelectivity("Test filter is specified, disabling selectivity");
+        } else {
+            mainRunner.on(MasterEvents.TEST_DEPENDENCIES, onTestDependencies);
+        }
     }
 
     private _shouldDisableSelectivityForBrowser(browserId: string): Promise<boolean> {
@@ -141,7 +156,7 @@ export class SelectivityRunner {
         const browserConfig = this._config.forBrowser(browserId);
         const isSelectivityEnabledForBrowser = browserConfig.selectivity.enabled;
 
-        if (!isSelectivityEnabledForBrowser) {
+        if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity) {
             return this._runTestFn(test, browserId);
         }
 
