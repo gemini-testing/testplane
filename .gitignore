@@ -10,6 +10,7 @@ build
 *.tgz
 .fuse*
 .project
+.testplane
 node_modules
 artifacts
 npm-debug.log
@@ -18,3 +19,4 @@ npm-debug.log
 hermione-report
 bundle.compat.js
 bundle.native.js
+wt/**
