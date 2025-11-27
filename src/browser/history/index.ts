@@ -23,7 +23,9 @@ export interface PromiseRef<T = unknown> {
 }
 
 const shouldNotWrapCommand = (commandName: string): boolean =>
-    ["addCommand", "overwriteCommand", "extendOptions", "setMeta", "getMeta", "runStep"].includes(commandName);
+    ["addCommand", "overwriteCommand", "extendOptions", "addTag", "setMeta", "getMeta", "runStep"].includes(
+        commandName,
+    );
 
 export const shouldPropagateFn = (parentNode: TestStep, currentNode: TestStep): boolean =>
     isGroup(parentNode) || isGroup(currentNode);

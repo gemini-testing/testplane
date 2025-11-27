@@ -23,4 +23,5 @@ export interface ExecutionThreadCtorOpts {
     hermioneCtx: WorkerRunTestTestplaneCtx;
     screenshooter: OneTimeScreenshooter;
     attempt: number;
+    tag?: string[];
 }

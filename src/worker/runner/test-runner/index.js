@@ -104,12 +104,14 @@ module.exports = class TestRunner {
 
         testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
 
-        const { meta } = this._browser;
+        const { meta, tag } = this._browser;
+
         const commandsHistory = callstackHistory ? callstackHistory.release() : [];
         const results = {
             testplaneCtx,
             hermioneCtx: testplaneCtx,
             meta,
+            tag,
         };
 
         switch (this._browser.config.saveHistoryMode) {

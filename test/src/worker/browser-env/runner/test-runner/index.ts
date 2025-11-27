@@ -71,7 +71,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             fn: sinon.stub(),
             location: undefined,
         }) as TestType;
-        test.parent = Suite.create({ id: "67890", title: "", file: test.file });
+        test.parent = Suite.create({ id: "67890", title: "", file: test.file, tag: [] });
 
         return test;
     };

@@ -32,6 +32,7 @@ export interface WorkerRunTestResult {
      * @deprecated Use `testplaneCtx` instead
      */
     hermioneCtx: WorkerRunTestTestplaneCtx;
+    tag: string[];
 }
 
 export interface Testplane {

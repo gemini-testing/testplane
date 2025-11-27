@@ -362,6 +362,7 @@ describe("testplane", () => {
                     sets,
                     replMode,
                     keepBrowserMode,
+                    tag: undefined,
                 });
             });
 
@@ -686,6 +687,7 @@ describe("testplane", () => {
                 runnableOpts: {
                     saveLocations: true,
                 },
+                tag: undefined,
             });
         });
 

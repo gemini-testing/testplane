@@ -196,11 +196,13 @@ describe("test-reader", () => {
                 browserId: "bro1",
                 config: bro1Config,
                 grep,
+                tag: undefined,
             });
             assert.calledWith(TestParser.prototype.parse, ["common/file", "file2"], {
                 browserId: "bro2",
                 config: bro2Config,
                 grep,
+                tag: undefined,
             });
         });
 

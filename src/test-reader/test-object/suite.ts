@@ -2,28 +2,49 @@ import _ from "lodash";
 import { ConfigurableTestObject } from "./configurable-test-object";
 import { Hook } from "./hook";
 import { Test } from "./test";
-import type { TestObjectData, ConfigurableTestObjectData, TestFunction, TestFunctionCtx } from "./types";
+import type { TestObjectData, ConfigurableTestObjectData, TestFunction, TestFunctionCtx, TestTag } from "./types";
 
-type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData;
+type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData & { tag: TestTag[] };
 
 export class Suite extends ConfigurableTestObject {
     #suites: this[];
     #tests: Test[];
     #beforeEachHooks: Hook[];
     #afterEachHooks: Hook[];
+    public tag: Map<string, boolean>;
 
     static create<T extends Suite>(this: new (opts: SuiteOpts) => T, opts: SuiteOpts): T {
         return new this(opts);
     }
 
     // used inside test
-    constructor({ title, file, id, location }: SuiteOpts = {} as SuiteOpts) {
+    constructor({ title, file, id, location, tag }: SuiteOpts = {} as SuiteOpts) {
         super({ title, file, id, location });
 
+        this.tag = new Map(tag?.map(({ title, dynamic }) => [title, !!dynamic]) || []);
         this.#suites = [];
         this.#tests = [];
         this.#beforeEachHooks = [];
         this.#afterEachHooks = [];
+    }
+
+    addTag(tag: string | string[], dynamic = false): void {
+        if (Array.isArray(tag)) {
+            tag.forEach(element => this.tag.set(element, dynamic));
+        } else {
+            this.tag.set(tag, dynamic);
+        }
+    }
+
+    hasTag(tag: string): boolean {
+        return this.tag.has(tag);
+    }
+
+    getTag(): TestTag[] {
+        return Array.from(this.tag.keys()).map(title => ({
+            title,
+            dynamic: this.tag.get(title),
+        }));
     }
 
     addSuite(suite: Suite): this {
