@@ -10,17 +10,29 @@ interface PngImageData {
     size: ImageSize;
 }
 
-export interface Rect {
-    width: number;
-    height: number;
+export interface Point {
     top: number;
     left: number;
 }
+
+export interface Size {
+    width: number;
+    height: number;
+}
+
+export type Rect = Point & Size;
 
 export interface RGB {
     R: number;
     G: number;
     B: number;
+}
+
+export interface RGBA {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
 }
 
 interface CompareOptions {
@@ -55,6 +67,7 @@ export class Image {
     private _width: number;
     private _height: number;
     private _composeImages: this[] = [];
+    private _clearAreas: Rect[] = [];
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
@@ -123,16 +136,21 @@ export class Image {
     }
 
     async applyJoin(): Promise<void> {
-        if (!this._composeImages.length) return;
+        if (this._composeImages.length) {
+            this._ensureImagesHaveSameWidth();
 
-        this._ensureImagesHaveSameWidth();
+            const resultHeight = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
+            const imageBuffers = await Promise.all([this, ...this._composeImages].map(img => img._getImgData()));
 
-        const resultHeight = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
-        const imageBuffers = await Promise.all([this, ...this._composeImages].map(img => img._getImgData()));
+            this._imgData = Buffer.concat(imageBuffers);
+            this._height = resultHeight;
+            this._composeImages = [];
+        }
 
-        this._imgData = Buffer.concat(imageBuffers);
-        this._height = resultHeight;
-        this._composeImages = [];
+        for (const rect of this._clearAreas) {
+            await this.clearArea(rect);
+        }
+        this._clearAreas = [];
     }
 
     async clearArea(rect: Rect): Promise<void> {
@@ -149,6 +167,10 @@ export class Image {
 
             sourceOffset += bytesToIterate;
         }
+    }
+
+    async addClear(rect: Rect): Promise<void> {
+        this._clearAreas.push(rect);
     }
 
     async getRGB(x: number, y: number): Promise<RGB> {

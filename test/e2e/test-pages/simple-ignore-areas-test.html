@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Simple Ignore Areas Test</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 40px;
+                height: 100vh;
+                background-color: #f5f5f5;
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                box-sizing: border-box;
+            }
+
+            .test-card {
+                position: relative;
+                width: 600px;
+                height: 400px;
+                background-color: white;
+                border: 2px solid #333;
+                border-radius: 12px;
+                padding: 30px;
+                box-sizing: border-box;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .card-title {
+                font-size: 24px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                color: #333;
+            }
+
+            .card-content {
+                position: relative;
+                width: 100%;
+                height: calc(100% - 60px);
+            }
+
+            /* Elements that should be ignored */
+            .to-be-ignored {
+                background-color: #ff4444;
+                color: white;
+                border: 2px solid #cc0000;
+            }
+
+            /* Elements that should not be ignored */
+            .not-ignored {
+                background-color: #44aa44;
+                color: white;
+                border: 2px solid #008800;
+            }
+
+            .element {
+                position: absolute;
+                padding: 8px;
+                border-radius: 6px;
+                font-size: 14px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .small-box {
+                width: 60px;
+                height: 40px;
+            }
+
+            .medium-box {
+                width: 120px;
+                height: 60px;
+            }
+
+            .text-element {
+                width: auto;
+                min-width: 80px;
+                height: auto;
+                min-height: 30px;
+                padding: 10px 15px;
+            }
+
+            .info-panel {
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                background-color: rgba(255, 255, 255, 0.95);
+                padding: 15px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 12px;
+                max-width: 250px;
+                z-index: 100;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="test-card" data-testid="test-card">
+            <h1 class="card-title">Ignore Areas Test Card</h1>
+
+            <div class="card-content">
+                <!-- Elements to be ignored (red) -->
+                <div class="element small-box to-be-ignored to-be-ignored-1" style="top: 20px; left: 20px">IGN1</div>
+
+                <div class="element text-element to-be-ignored to-be-ignored-2" style="top: 20px; right: 20px">
+                    Ignore Text
+                </div>
+
+                <div class="element medium-box to-be-ignored to-be-ignored-3" style="bottom: 80px; left: 20px">
+                    IGNORE BOX
+                </div>
+
+                <!-- Elements that should not be ignored (green) -->
+                <div class="element small-box not-ignored" style="top: 50px; left: 120px">OK1</div>
+
+                <div class="element text-element not-ignored" style="top: 120px; right: 20px">Keep Text</div>
+
+                <div class="element medium-box not-ignored" style="bottom: 20px; right: 20px">KEEP BOX</div>
+
+                <!-- Additional text element to ignore -->
+                <div class="element text-element to-be-ignored to-be-ignored-4" style="top: 200px; left: 250px">
+                    Ignore Label
+                </div>
+
+                <!-- Additional element not to ignore -->
+                <div class="element small-box not-ignored" style="bottom: 150px; left: 300px">KEEP</div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <strong>Test Elements:</strong><br />
+            🔴 Red = Elements to ignore<br />
+            🟢 Green = Elements to keep<br />
+            <br />
+            Red elements include both boxes and text that should be ignored during visual comparison.
+        </div>
+    </body>
+</html>

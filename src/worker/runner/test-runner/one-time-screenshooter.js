@@ -1,7 +1,7 @@
 "use strict";
 
 const { Image } = require("../../../image");
-const ScreenShooter = require("../../../browser/screen-shooter");
+const { ScreenShooter } = require("../../../browser/screen-shooter");
 const logger = require("../../../utils/logger");
 const { promiseTimeout } = require("../../../utils/promise");
 

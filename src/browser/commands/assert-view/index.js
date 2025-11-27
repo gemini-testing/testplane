@@ -3,13 +3,18 @@
 const fs = require("fs-extra");
 const path = require("path");
 const _ = require("lodash");
+const { pngValidator: validatePng } = require("png-validator");
 const { Image } = require("../../../image");
-const ScreenShooter = require("../../screen-shooter");
+const { ScreenShooter } = require("../../screen-shooter");
 const temp = require("../../../temp");
 const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
+const { AssertViewError } = require("./errors/assert-view-error");
+
+const makeDebug = require("debug");
+const debug = makeDebug("testplane:screenshots:assert-view");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -50,47 +55,34 @@ module.exports.default = browser => {
         });
 
         const { testplaneCtx } = session.executionContext;
+        const test = session.executionContext.ctx.currentTest;
         testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
 
-        if (testplaneCtx.assertViewResults.hasState(state)) {
-            return Promise.reject(new Error(`duplicate name for "${state}" state`));
+        let debugId = "debugId";
+        try {
+            debugId = `${test.fullTitle()}.${browser.id}.${state}`;
+        } catch {
+            /**/
         }
+        debug(`[${debugId}] assertView selectors: %O`, selectors);
+        debug(`[${debugId}] assertView opts: %O`, opts);
 
-        if (opts.waitForStaticToLoadTimeout) {
-            // Interval between checks is "waitPageReadyTimeout / 10" ms, but at least 50ms and not more than 500ms
-            await session.waitForStaticToLoad({
-                timeout: opts.waitForStaticToLoadTimeout,
-                interval: Math.min(Math.max(50, opts.waitForStaticToLoadTimeout / 10), 500),
-            });
+        if (testplaneCtx.assertViewResults.hasState(state)) {
+            return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
         }
 
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
-        const page = await browser.prepareScreenshot([].concat(selectors), {
-            ignoreSelectors: [].concat(opts.ignoreElements),
-            allowViewportOverflow: opts.allowViewportOverflow,
-            captureElementFromTop: opts.captureElementFromTop,
-            selectorToScroll: opts.selectorToScroll,
-            disableAnimation: opts.disableAnimation,
-        });
-
         const { tempOpts } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const screenshoterOpts = _.pick(opts, [
-            "allowViewportOverflow",
-            "compositeImage",
-            "screenshotDelay",
-            "selectorToScroll",
-        ]);
-        const currImgInst = await screenShooter
-            .capture(page, screenshoterOpts)
+        const { image: currImgInst, meta: currImgMeta } = await screenShooter
+            .capture(selectors, opts)
             .finally(() => browser.cleanupScreenshot(opts));
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
-        const test = session.executionContext.ctx.currentTest;
         const refImgAbsolutePath = config.getScreenshotPath(test, state);
         const refImgRelativePath = refImgAbsolutePath && path.relative(process.cwd(), refImgAbsolutePath);
         const refImg = { path: refImgAbsolutePath, relativePath: refImgRelativePath, size: null };
@@ -102,7 +94,7 @@ module.exports.default = browser => {
             return handleNoRefImage(currImg, refImg, state, { emitter }).catch(e => handleCaptureProcessorError(e));
         }
 
-        const { canHaveCaret, pixelRatio } = page;
+        const { canHaveCaret, pixelRatio } = currImgMeta;
         const imageCompareOpts = {
             tolerance: opts.tolerance,
             antialiasingTolerance: opts.antialiasingTolerance,
@@ -114,7 +106,7 @@ module.exports.default = browser => {
         const refBuffer = await fs.readFile(refImg.path);
 
         try {
-            require("png-validator").pngValidator(refBuffer);
+            validatePng(refBuffer);
         } catch (err) {
             await currImgInst.save(currImg.path);
 

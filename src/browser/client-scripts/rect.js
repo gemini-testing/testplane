@@ -79,10 +79,10 @@ Rect.prototype = {
 
     round: function () {
         return new Rect({
-            top: Math.floor(this.top),
-            left: Math.floor(this.left),
-            right: Math.ceil(this.right),
-            bottom: Math.ceil(this.bottom)
+            top: Math.round(this.top),
+            left: Math.round(this.left),
+            bottom: Math.round(this.top + this.height),
+            right: Math.round(this.left + this.width)
         });
     },
 
@@ -149,7 +149,7 @@ Rect.prototype = {
 };
 
 exports.Rect = Rect;
-exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
+exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts, logger) {
     var coords = getNestedBoundingClientRect(element, window);
     var widthRatio = coords.width % opts.viewportWidth;
     var heightRatio = coords.height % opts.documentHeight;
@@ -162,7 +162,19 @@ exports.getAbsoluteClientRect = function getAbsoluteClientRect(element, opts) {
         height: heightRatio > 0 && heightRatio < 1 ? opts.documentHeight : coords.height
     });
 
-    return clientRect.translate(util.getScrollLeft(opts.scrollElem), util.getScrollTop(opts.scrollElem));
+    logger("getAbsoluteClientRect, client rect: ", clientRect);
+
+    var scrollLeft = util.isRootElement(opts.scrollElem)
+        ? util.getScrollLeft(window)
+        : util.getScrollLeft(opts.scrollElem) + util.getScrollLeft(window);
+    var scrollTop = util.isRootElement(opts.scrollElem)
+        ? util.getScrollTop(window)
+        : util.getScrollTop(opts.scrollElem) + util.getScrollTop(window);
+
+    logger("getAbsoluteClientRect, is scroll element window? : ", util.isRootElement(opts.scrollElem));
+    logger("getAbsoluteClientRect, scrollTop: ", scrollTop);
+
+    return clientRect.translate(scrollLeft, scrollTop);
 };
 
 function getNestedBoundingClientRect(node, boundaryWindow) {

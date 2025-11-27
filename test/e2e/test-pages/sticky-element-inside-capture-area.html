@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Very Long Block Test</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                /* height: 15000px; */
+                background-color: #f0f0f0;
+                font-family: Arial, sans-serif;
+            }
+
+            .test-block {
+                position: relative;
+                width: 600px;
+                height: 1500px;
+                border: 3px solid black;
+                background-color: white;
+                margin-left: 400px;
+                margin-bottom: 20px;
+                /* margin-top: calc(100vh - 350px); */
+            }
+
+            .diagonal-lines {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            }
+
+            .sticky-bottom {
+                width: 80%;
+                position: sticky;
+                bottom: 5px;
+                height: 20px;
+                background-color: #eee;
+                border: 1px solid #ccc;
+                border-radius: 10px;
+                padding: 10px 20px;
+            }
+        </style>
+    </head>
+    <body>
+        <div data-testid="capture-element">
+            <div class="test-block">
+                <svg class="diagonal-lines" viewBox="0 0 600 400" preserveAspectRatio="none">
+                    <!-- Diagonal line from top-left to bottom-right -->
+                    <line x1="0" y1="0" x2="100%" y2="100%" stroke="black" stroke-width="2" />
+                    <!-- Diagonal line from top-right to bottom-left -->
+                    <line x1="100%" y1="0" x2="0" y2="100%" stroke="black" stroke-width="2" />
+                </svg>
+            </div>
+
+            <div class="sticky-bottom">Sticky element</div>
+        </div>
+    </body>
+</html>
