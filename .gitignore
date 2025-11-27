@@ -10,6 +10,7 @@ build
 *.tgz
 .fuse*
 .project
+.testplane
 node_modules
 artifacts
 npm-debug.log

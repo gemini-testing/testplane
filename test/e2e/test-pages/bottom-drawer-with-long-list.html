@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Bottom Drawer with Long List</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                padding-bottom: 350px; /* Space for drawer */
+                background-color: #f0f0f0;
+                font-family: Arial, sans-serif;
+                min-height: 100vh;
+            }
+
+            .main-content {
+                max-width: 800px;
+                margin: 0 auto;
+                background-color: white;
+                padding: 30px;
+                border-radius: 10px;
+                margin-bottom: 40px;
+            }
+
+            .main-title {
+                font-size: 28px;
+                font-weight: bold;
+                margin-bottom: 20px;
+                color: #333;
+                text-align: center;
+            }
+
+            .main-text {
+                font-size: 16px;
+                line-height: 1.6;
+                color: #666;
+                margin-bottom: 20px;
+            }
+
+            .drawer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background-color: white;
+                border-top: 3px solid #333;
+                border-radius: 15px 15px 0 0;
+                z-index: 1000;
+            }
+
+            .drawer-header {
+                padding: 15px 20px;
+                border-bottom: 5px solid blue;
+                background-color: #f8f9fa;
+                border-radius: 15px 15px 0 0;
+                position: sticky;
+                top: 0;
+                z-index: 1001;
+            }
+
+            .drawer-title {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                margin: 0;
+                display: flex;
+                align-items: center;
+            }
+
+            .drawer-handle {
+                width: 40px;
+                height: 4px;
+                background-color: #ccc;
+                border-radius: 2px;
+                margin: 0 auto 10px;
+            }
+
+            .drawer-content {
+                height: 250px;
+                overflow-y: auto;
+                padding: 0;
+            }
+
+            .list-container {
+                padding: 10px 20px 20px;
+            }
+
+            .list-item {
+                display: flex;
+                align-items: center;
+                padding: 12px 16px;
+                border-bottom: 1px solid #eee;
+                transition: background-color 0.2s ease;
+            }
+
+            .list-item:hover {
+                background-color: #f8f9fa;
+            }
+
+            .list-item:last-child {
+                border-bottom: none;
+            }
+
+            .item-icon {
+                width: 40px;
+                height: 40px;
+                background-color: #007bff;
+                color: white;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                margin-right: 15px;
+                flex-shrink: 0;
+            }
+
+            .item-content {
+                flex: 1;
+            }
+
+            .item-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 4px;
+            }
+
+            .item-description {
+                font-size: 14px;
+                color: #666;
+                line-height: 1.4;
+            }
+
+            .item-meta {
+                font-size: 12px;
+                color: #999;
+                margin-left: auto;
+                text-align: right;
+                flex-shrink: 0;
+            }
+
+            .info-panel {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background-color: rgba(255, 255, 255, 0.95);
+                padding: 15px;
+                border: 1px solid #ddd;
+                border-radius: 8px;
+                font-size: 14px;
+                max-width: 250px;
+                z-index: 100;
+            }
+
+            .button-wrapper {
+                padding: 10px 20px;
+            }
+
+            .proceed-button {
+                background-color: #007bff;
+                color: white;
+                font-weight: 500;
+                border: none;
+                padding: 10px;
+                border-radius: 10px;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="info-panel">
+            <strong>Page Info:</strong><br />
+            • Fixed drawer at bottom<br />
+            • Contains scrollable long list<br />
+            • 50+ list items<br />
+            • Drawer height: 320px
+        </div>
+
+        <div class="main-content">
+            <h1 class="main-title">Bottom Drawer Test Page</h1>
+            <p class="main-text">
+                This page demonstrates a fixed positioned drawer at the bottom of the screen. The drawer contains a
+                long, scrollable list of items that you can interact with.
+            </p>
+            <p class="main-text">
+                The drawer remains fixed at the bottom regardless of page scrolling, making it perfect for testing UI
+                components that need to stay accessible at all times.
+            </p>
+            <p class="main-text">
+                Scroll down within the drawer to see all the list items. The drawer has its own scrollable area
+                independent of the main page content.
+            </p>
+        </div>
+
+        <div class="drawer" data-testid="bottom-drawer">
+            <div class="drawer-header">
+                <div class="drawer-handle"></div>
+                <h3 class="drawer-title">📋 Long Item List</h3>
+            </div>
+            <div class="drawer-content" data-testid="drawer-content">
+                <div class="list-container" data-testid="list-container">
+                    <div class="list-item">
+                        <div class="item-icon">1</div>
+                        <div class="item-content">
+                            <div class="item-title">Task Management System</div>
+                            <div class="item-description">
+                                Complete project planning and task assignment for Q1 deliverables
+                            </div>
+                        </div>
+                        <div class="item-meta">High Priority</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">2</div>
+                        <div class="item-content">
+                            <div class="item-title">Database Migration</div>
+                            <div class="item-description">
+                                Migrate legacy database to new infrastructure with zero downtime
+                            </div>
+                        </div>
+                        <div class="item-meta">In Progress</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">3</div>
+                        <div class="item-content">
+                            <div class="item-title">User Interface Redesign</div>
+                            <div class="item-description">
+                                Modernize the user interface with new design system components
+                            </div>
+                        </div>
+                        <div class="item-meta">Pending</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">4</div>
+                        <div class="item-content">
+                            <div class="item-title">API Documentation</div>
+                            <div class="item-description">
+                                Create comprehensive API documentation for external developers
+                            </div>
+                        </div>
+                        <div class="item-meta">Review</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">5</div>
+                        <div class="item-content">
+                            <div class="item-title">Security Audit</div>
+                            <div class="item-description">
+                                Conduct thorough security review and implement recommended fixes
+                            </div>
+                        </div>
+                        <div class="item-meta">Critical</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">6</div>
+                        <div class="item-content">
+                            <div class="item-title">Performance Optimization</div>
+                            <div class="item-description">
+                                Optimize application performance and reduce loading times
+                            </div>
+                        </div>
+                        <div class="item-meta">Medium</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">7</div>
+                        <div class="item-content">
+                            <div class="item-title">Mobile App Development</div>
+                            <div class="item-description">
+                                Develop native mobile applications for iOS and Android platforms
+                            </div>
+                        </div>
+                        <div class="item-meta">Planning</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">8</div>
+                        <div class="item-content">
+                            <div class="item-title">Testing Framework</div>
+                            <div class="item-description">
+                                Implement automated testing framework for continuous integration
+                            </div>
+                        </div>
+                        <div class="item-meta">Active</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">9</div>
+                        <div class="item-content">
+                            <div class="item-title">Cloud Migration</div>
+                            <div class="item-description">
+                                Migrate on-premises infrastructure to cloud-based solutions
+                            </div>
+                        </div>
+                        <div class="item-meta">Research</div>
+                    </div>
+
+                    <div class="list-item">
+                        <div class="item-icon">10</div>
+                        <div class="item-content">
+                            <div class="item-title">Data Analytics Platform</div>
+                            <div class="item-description">
+                                Build comprehensive analytics platform for business intelligence
+                            </div>
+                        </div>
+                        <div class="item-meta">On Hold</div>
+                    </div>
+                </div>
+                <div class="button-wrapper">
+                    <button class="proceed-button">Proceed</button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

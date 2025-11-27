@@ -3,7 +3,7 @@
 const _ = require("lodash");
 const proxyquire = require("proxyquire");
 const { Image } = require("src/image");
-const ScreenShooter = require("src/browser/screen-shooter");
+const { ScreenShooter } = require("src/browser/screen-shooter");
 const { mkSessionStub_ } = require("../../../browser/utils");
 const { promiseDelay } = require("../../../../../src/utils/promise");
 

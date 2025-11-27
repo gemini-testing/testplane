@@ -19,6 +19,7 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Page } from "puppeteer-core";
+import { PrepareScreenshotResult } from "./screen-shooter/types";
 import { CDP } from "./cdp";
 import { WSDriverRequestAgent } from "./wsdriver";
 import type { ElementReference } from "@testplane/wdio-protocols";
@@ -26,8 +27,12 @@ import type { ElementReference } from "@testplane/wdio-protocols";
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 interface PrepareScreenshotOpts {
+    ignoreSelectors?: string[];
+    allowViewportOverflow?: boolean;
+    captureElementFromTop?: boolean;
+    selectorToScroll?: string;
     disableAnimation?: boolean;
-    // TODO: specify the rest of the options
+    debug?: boolean;
 }
 
 interface ClientBridgeErrorData {
@@ -168,7 +173,10 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async prepareScreenshot(selectors: string[] | Rect[], opts: PrepareScreenshotOpts = {}): Promise<unknown> {
+    async prepareScreenshot(
+        selectors: string[] | Rect[],
+        opts: PrepareScreenshotOpts = {},
+    ): Promise<PrepareScreenshotResult> {
         // Running this fragment with history causes rrweb snapshots to break on pages with iframes
         return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
             opts = _.extend(opts, {
@@ -176,7 +184,10 @@ export class ExistingBrowser extends Browser {
             });
 
             ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-            const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
+            const result = await this._clientBridge.call<PrepareScreenshotResult | ClientBridgeErrorData>(
+                "prepareScreenshot",
+                [selectors, opts],
+            );
             if (isClientBridgeErrorData(result)) {
                 throw new Error(
                     `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,

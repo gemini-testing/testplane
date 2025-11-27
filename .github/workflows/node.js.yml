@@ -5,13 +5,13 @@ name: Node.js CI
 
 on:
     push:
-        branches: [master]
+        branches: [master, testplane@9]
     pull_request:
-        branches: [master]
+        branches: [master, testplane@9]
 
 jobs:
     build:
-        runs-on: ubuntu-latest
+        runs-on: self-hosted-arc
 
         strategy:
             matrix:
