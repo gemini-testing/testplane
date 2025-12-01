@@ -18,6 +18,7 @@ describe("test-reader", () => {
             ignore: [],
             browsers: [],
             grep: undefined,
+            tag: undefined,
         });
 
         config = config || makeConfigStub();
@@ -247,6 +248,7 @@ describe("test-reader", () => {
                 { name: "ignore", value: "ignore1", expectedMsg: "- ignore: ignore1\n" },
                 { name: "sets", value: ["set1", "set2"], expectedMsg: "- sets: set1, set2\n" },
                 { name: "grep", value: "grep1", expectedMsg: "- grep: grep1\n" },
+                { name: "tag", value: "tag_one", expectedMsg: "- tag: tag_one\n" },
             ].forEach(({ name, value, expectedMsg }) => {
                 it(`should correctly print passed option ${name}`, async () => {
                     try {
@@ -277,7 +279,10 @@ describe("test-reader", () => {
             });
 
             it("should print supported options if none are specified", async () => {
-                await assert.isRejected(readTests_(), "Try to specify [paths, sets, ignore, browsers, grep] options");
+                await assert.isRejected(
+                    readTests_(),
+                    "Try to specify [paths, sets, ignore, browsers, grep, tag] options",
+                );
             });
 
             it("should throw error if there are only silently skipped tests", async () => {

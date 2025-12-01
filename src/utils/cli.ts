@@ -75,5 +75,5 @@ export const withCommonCliOptions = ({ cmd, actionName = "run" }: { cmd: Command
         .option("-s, --set <set>", `${actionName} tests only in the specified set`, collectCliValues)
         .option("-r, --require <module>", "require module", collectCliValues)
         .option("--grep <grep>", `${actionName} only tests matching the pattern`, compileGrep)
-        .option("--tag <tag>", "Tag filter", compileTagFilter);
+        .option("--tag <tag>", `${actionName} only tests matching the pattern`, compileTagFilter);
 };
