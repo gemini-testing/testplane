@@ -158,12 +158,17 @@ export class Testplane extends BaseTestplane {
             await this.config.beforeAll.call({ config: this.config }, { config: this.config });
         }
 
+        const hasTestPathsFilter = _.isArray(testPaths) ? Boolean(testPaths.length) : true;
+        const hasTestFilter = hasTestPathsFilter || Boolean(sets?.length) || Boolean(grep);
+        const shouldDisableSelectivity = Boolean(hasTestFilter);
+
         await runner.run(
             await this._readTests(testPaths, { browsers, sets, grep, replMode, keepBrowserMode }),
             RunnerStats.create(this),
+            { shouldDisableSelectivity },
         );
 
-        if (!this.isFailed()) {
+        if (!shouldDisableSelectivity && !this.isFailed()) {
             await updateSelectivityHashes(this.config);
         }
 

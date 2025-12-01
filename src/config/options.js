@@ -5,11 +5,9 @@ const { root, section, map, option } = require("gemini-configparser");
 const browserOptions = require("./browser-options");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
-const { NODEJS_TEST_RUN_ENV, BROWSER_TEST_RUN_ENV } = require("../constants/config");
+const { NODEJS_TEST_RUN_ENV, BROWSER_TEST_RUN_ENV, ENV_PREFIXES } = require("../constants/config");
 
 const options = optionsBuilder(_.propertyOf(defaults));
-
-const ENV_PREFIXES = ["testplane_", "hermione_"];
 
 const rootSection = section(
     _.extend(browserOptions.getTopLevel(), {
