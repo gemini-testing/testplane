@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.36.0](https://github.com/gemini-testing/testplane/compare/v8.35.2...v8.36.0) (2025-12-01)
+
+
+### Features
+
+* configure selectivity with env variables ([25ea561](https://github.com/gemini-testing/testplane/commit/25ea5619712c5ecc48e3f038619e95f54f225a3d))
+
+
+### Bug Fixes
+
+* **selectivity:** disable selectivity when test filter is specified ([f866f90](https://github.com/gemini-testing/testplane/commit/f866f90fb985b8ffc0f5d24136568ebf2826c66a))
+* **selectivity:** only update hashes after successfull run ([fffe93a](https://github.com/gemini-testing/testplane/commit/fffe93a55bfba5b3a467d6c7976d18bacb6dbbce))
+
 ### [8.35.2](https://github.com/gemini-testing/testplane/compare/v8.35.1...v8.35.2) (2025-11-20)
 
 
