@@ -22,7 +22,7 @@ import type { runTest, cancel } from "../worker";
 import type { Stats as RunnerStats } from "../stats";
 import EventEmitter from "events";
 import { Test } from "../types";
-import { shouldDisableSelectivity, shouldDisableTestBySelectivity } from "../browser/cdp/selectivity";
+import { SelectivityRunner } from "../browser/cdp/selectivity/runner";
 
 interface WorkerMethods {
     runTest: typeof runTest;
@@ -71,6 +71,7 @@ export class MainRunner extends RunnableEmitter {
             MasterEvents.NEW_WORKER_PROCESS,
             MasterEvents.ERROR,
             MasterEvents.DOM_SNAPSHOTS,
+            MasterEvents.TEST_DEPENDENCIES,
         ]);
 
         temp.init(this.config.system.tempDir);
@@ -122,37 +123,12 @@ export class MainRunner extends RunnableEmitter {
     }
 
     protected async _runTests(testCollection: TestCollection): Promise<void> {
-        const browserIds = this.config.getBrowserIds();
-        const shouldDisableSelectivityPerBrowser = browserIds.reduce((acc, browserId) => {
-            acc[browserId] = shouldDisableSelectivity(this.config.forBrowser(browserId), browserId);
+        const runTestFn = this._addTestToBrowserRunner.bind(this);
+        const selectivityRunner = SelectivityRunner.create(this, this.config, runTestFn);
 
-            return acc;
-        }, {} as Record<string, Promise<boolean>>);
+        testCollection.eachTestAcrossBrowsers((test, browserId) => selectivityRunner.runIfNecessary(test, browserId));
 
-        const promises: Promise<void>[] = [];
-
-        testCollection.eachTestAcrossBrowsers((test, browserId) => {
-            const browserConfig = this.config.forBrowser(browserId);
-
-            if (!browserConfig.selectivity.enabled) {
-                this._addTestToBrowserRunner(test, browserId);
-                return;
-            }
-
-            promises.push(
-                shouldDisableSelectivityPerBrowser[browserId]
-                    .then(shouldDisableSelectivity => {
-                        return !shouldDisableSelectivity && shouldDisableTestBySelectivity(browserConfig, test);
-                    })
-                    .then(shouldDisableTest => {
-                        if (!shouldDisableTest) {
-                            this._addTestToBrowserRunner(test, browserId);
-                        }
-                    }),
-            );
-        });
-
-        await Promise.all(promises);
+        await selectivityRunner.waitForTestsToRun();
 
         this.activeBrowserRunners.forEach(runner => this.running.add(this._waitBrowserRunnerTestsCompletion(runner)));
 

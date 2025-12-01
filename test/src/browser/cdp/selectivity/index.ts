@@ -6,9 +6,7 @@ import type { Test } from "src/types";
 describe("CDP/Selectivity", () => {
     const sandbox = sinon.createSandbox();
     let startSelectivity: typeof import("src/browser/cdp/selectivity/index").startSelectivity;
-    let shouldDisableSelectivity: typeof import("src/browser/cdp/selectivity/index").shouldDisableSelectivity;
-    let updateDisableSelectivityPatternsHashes: typeof import("src/browser/cdp/selectivity/index").updateDisableSelectivityPatternsHashes;
-    let shouldDisableTestBySelectivity: typeof import("src/browser/cdp/selectivity/index").shouldDisableTestBySelectivity;
+    let updateSelectivityHashes: typeof import("src/browser/cdp/selectivity/index").updateSelectivityHashes;
 
     let CSSSelectivityStub: SinonStub;
     let JSSelectivityStub: SinonStub;
@@ -117,9 +115,7 @@ describe("CDP/Selectivity", () => {
         });
 
         startSelectivity = proxyquiredModule.startSelectivity;
-        shouldDisableSelectivity = proxyquiredModule.shouldDisableSelectivity;
-        updateDisableSelectivityPatternsHashes = proxyquiredModule.updateDisableSelectivityPatternsHashes;
-        shouldDisableTestBySelectivity = proxyquiredModule.shouldDisableTestBySelectivity;
+        updateSelectivityHashes = proxyquiredModule.updateSelectivityHashes;
     });
 
     afterEach(() => {
@@ -225,18 +221,11 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(jsSelectivityMock.stop, false);
             assert.calledWith(transformSourceDependenciesStub, ["src/styles.css"], ["src/app.js"]);
             assert.calledWith(getTestDependenciesWriterStub, "/test/dependencies");
-            assert.calledWith(getHashWriterStub, "/test/dependencies");
-            assert.calledWith(hashWriterMock.addTestDependencyHashes, {
-                css: ["src/styles.css"],
-                js: ["src/app.js"],
-                modules: ["node_modules/react"],
-            });
             assert.calledWith(testDependenciesWriterMock.saveFor, mockTest, {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
             });
-            assert.calledOnce(hashWriterMock.commit);
         });
 
         it("should not save when no dependencies are found", async () => {
@@ -276,12 +265,6 @@ describe("CDP/Selectivity", () => {
             await assert.isRejected(stopFn(mockTest, false), "Save error");
         });
 
-        it("should handle file hash writer errors", async () => {
-            hashWriterMock.commit.rejects(new Error("Commit error"));
-
-            await assert.isRejected(stopFn(mockTest, false), "Commit error");
-        });
-
         it("should save dependencies when only CSS dependencies exist", async () => {
             jsSelectivityMock.stop.resolves([]);
 
@@ -289,8 +272,6 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(transformSourceDependenciesStub, ["src/styles.css"], []);
             assert.calledOnce(testDependenciesWriterMock.saveFor);
-            assert.calledOnce(hashWriterMock.addTestDependencyHashes);
-            assert.calledOnce(hashWriterMock.commit);
         });
 
         it("should save dependencies when only JS dependencies exist", async () => {
@@ -300,141 +281,10 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(transformSourceDependenciesStub, [], ["src/app.js"]);
             assert.calledOnce(testDependenciesWriterMock.saveFor);
-            assert.calledOnce(hashWriterMock.addTestDependencyHashes);
-            assert.calledOnce(hashWriterMock.commit);
         });
     });
 
-    describe("shouldDisableSelectivity", () => {
-        it("should return true if selectivity is disabled", async () => {
-            const config = {
-                selectivity: {
-                    enabled: false,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                    disableSelectivityPatterns: ["src/**/*.js"],
-                },
-            };
-
-            const result = await shouldDisableSelectivity(config as any, "chrome");
-
-            assert.isTrue(result);
-            assert.notCalled(getHashReaderStub);
-        });
-
-        it("should return false if no disable patterns are configured", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                    disableSelectivityPatterns: [],
-                },
-            };
-
-            const result = await shouldDisableSelectivity(config as any, "chrome");
-
-            assert.isFalse(result);
-            assert.notCalled(getHashReaderStub);
-        });
-
-        it("should return true if any pattern has changed", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                    disableSelectivityPatterns: ["src/**/*.js", "test/**/*.js"],
-                },
-            };
-
-            hashReaderMock.patternHasChanged
-                .withArgs("src/**/*.js")
-                .resolves(false)
-                .withArgs("test/**/*.js")
-                .resolves(true);
-
-            const result = await shouldDisableSelectivity(config as any, "chrome");
-
-            assert.isTrue(result);
-            assert.calledWith(getHashReaderStub, "/test/path", "none");
-            assert.calledWith(
-                debugSelectivityStub,
-                'Disabling selectivity for chrome: file change by pattern "test/**/*.js" is detected',
-            );
-        });
-
-        it("should return false if no patterns have changed", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "gz" as const,
-                    disableSelectivityPatterns: ["src/**/*.js", "test/**/*.js"],
-                },
-            };
-
-            hashReaderMock.patternHasChanged.resolves(false);
-
-            const result = await shouldDisableSelectivity(config as any, "firefox");
-
-            assert.isFalse(result);
-            assert.calledWith(getHashReaderStub, "/test/path", "gz");
-            assert.calledWith(debugSelectivityStub, "None of 'disableSelectivityPatterns' is changed for firefox");
-        });
-
-        it("should return true if pattern check throws an error", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "br" as const,
-                    disableSelectivityPatterns: ["src/**/*.js"],
-                },
-            };
-
-            const error = new Error("Pattern check failed");
-            hashReaderMock.patternHasChanged.rejects(error);
-
-            const result = await shouldDisableSelectivity(config as any, "safari");
-
-            assert.isTrue(result);
-            assert.calledWith(
-                debugSelectivityStub,
-                "Disabling selectivity for safari: got an error while checking 'disableSelectivityPatterns': %O",
-                error,
-            );
-        });
-
-        it("should be memoized based on config parameters", async () => {
-            const config1 = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path1",
-                    compression: "none" as const,
-                    disableSelectivityPatterns: ["src/**/*.js"],
-                },
-            };
-            const config2 = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path2",
-                    compression: "none" as const,
-                    disableSelectivityPatterns: ["src/**/*.js"],
-                },
-            };
-
-            hashReaderMock.patternHasChanged.resolves(false);
-
-            await shouldDisableSelectivity(config1 as any, "chrome");
-            await shouldDisableSelectivity(config1 as any, "chrome"); // Same config, should be memoized
-            await shouldDisableSelectivity(config2 as any, "chrome"); // Different config, should not be memoized
-
-            assert.calledTwice(getHashReaderStub); // Once for config1, once for config2
-        });
-    });
-
-    describe("updateDisableSelectivityPatternsHashes", () => {
+    describe("updateSelectivityHashes", () => {
         let configMock: {
             getBrowserIds: SinonStub;
             forBrowser: SinonStub;
@@ -471,7 +321,7 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(true);
 
-            await updateDisableSelectivityPatternsHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any);
 
             assert.calledOnce(getHashReaderStub); // Only for firefox
             assert.calledWith(getHashReaderStub, "/test/path", "none");
@@ -499,7 +349,7 @@ describe("CDP/Selectivity", () => {
                 .withArgs("pattern3")
                 .resolves(true);
 
-            await updateDisableSelectivityPatternsHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any);
 
             assert.calledWith(getHashReaderStub, "/test/path", "gz");
             assert.calledWith(getHashWriterStub, "/test/path", "gz");
@@ -522,7 +372,7 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(false);
 
-            await updateDisableSelectivityPatternsHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any);
 
             assert.notCalled(hashWriterMock.addPatternDependencyHash);
             assert.calledOnce(hashWriterMock.commit); // Still commits even if no patterns changed
@@ -552,136 +402,13 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(true);
 
-            await updateDisableSelectivityPatternsHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any);
 
             assert.calledTwice(getHashReaderStub);
             assert.calledWith(getHashReaderStub.firstCall, "/test/chrome", "none");
             assert.calledWith(getHashReaderStub.secondCall, "/test/firefox", "gz");
             assert.calledTwice(hashWriterMock.addPatternDependencyHash);
             assert.calledTwice(hashWriterMock.commit);
-        });
-    });
-
-    describe("shouldDisableTestBySelectivity", () => {
-        it("should return false if selectivity is disabled", async () => {
-            const config = {
-                selectivity: {
-                    enabled: false,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                },
-            };
-            const test = { id: "test-123", fullTitle: () => "Test Suite Test Case" } as any;
-
-            const result = await shouldDisableTestBySelectivity(config as any, test);
-
-            assert.isFalse(result);
-            assert.notCalled(getTestDependenciesReaderStub);
-            assert.notCalled(getHashReaderStub);
-        });
-
-        it("should return false if test has no JS dependencies", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                },
-            };
-            const test = { id: "test-123", fullTitle: () => "Test Suite Test Case" } as any;
-            const testDeps = { css: ["src/styles.css"], js: [], modules: ["react"] };
-
-            testDepsReaderMock.getFor.resolves(testDeps);
-
-            const result = await shouldDisableTestBySelectivity(config as any, test);
-
-            assert.isFalse(result);
-            assert.calledWith(getTestDependenciesReaderStub, "/test/path", "none");
-            assert.calledWith(getHashReaderStub, "/test/path", "none");
-            assert.calledWith(testDepsReaderMock.getFor, test);
-            assert.notCalled(hashReaderMock.getTestChangedDeps);
-            assert.calledWith(
-                debugSelectivityStub,
-                'Not disabling "Test Suite Test Case" as it has no js deps and therefore it was considered as new',
-            );
-        });
-
-        it("should return false if test dependencies have changed", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "gz" as const,
-                },
-            };
-            const test = { id: "test-123", fullTitle: () => "Test Suite Test Case" } as any;
-            const testDeps = { css: ["src/styles.css"], js: ["src/app.js"], modules: ["react"] };
-            const changedDeps = { css: [], js: ["src/app.js"], modules: [] };
-
-            testDepsReaderMock.getFor.resolves(testDeps);
-            hashReaderMock.getTestChangedDeps.resolves(changedDeps);
-
-            const result = await shouldDisableTestBySelectivity(config as any, test);
-
-            assert.isFalse(result);
-            assert.calledWith(getTestDependenciesReaderStub, "/test/path", "gz");
-            assert.calledWith(getHashReaderStub, "/test/path", "gz");
-            assert.calledWith(testDepsReaderMock.getFor, test);
-            assert.calledWith(hashReaderMock.getTestChangedDeps, testDeps);
-            assert.calledWith(
-                debugSelectivityStub,
-                'Not disabling "Test Suite Test Case" as its dependencies were changed: %O',
-                changedDeps,
-            );
-        });
-
-        it("should return true if test dependencies have not changed", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "br" as const,
-                },
-            };
-            const test = { id: "test-123", fullTitle: () => "Test Suite Test Case" } as any;
-            const testDeps = { css: ["src/styles.css"], js: ["src/app.js"], modules: ["react"] };
-
-            testDepsReaderMock.getFor.resolves(testDeps);
-            hashReaderMock.getTestChangedDeps.resolves(null); // No changes
-
-            const result = await shouldDisableTestBySelectivity(config as any, test);
-
-            assert.isTrue(result);
-            assert.calledWith(getTestDependenciesReaderStub, "/test/path", "br");
-            assert.calledWith(getHashReaderStub, "/test/path", "br");
-            assert.calledWith(testDepsReaderMock.getFor, test);
-            assert.calledWith(hashReaderMock.getTestChangedDeps, testDeps);
-            assert.calledWith(
-                debugSelectivityStub,
-                'Disabling "Test Suite Test Case" as its dependencies were not changed',
-            );
-        });
-
-        it("should be memoized based on config and test parameters", async () => {
-            const config = {
-                selectivity: {
-                    enabled: true,
-                    testDependenciesPath: "/test/path",
-                    compression: "none" as const,
-                },
-            };
-            const test1 = { id: "test-123", fullTitle: () => "Test 1" } as any;
-            const test2 = { id: "test-456", fullTitle: () => "Test 2" } as any;
-            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
-
-            testDepsReaderMock.getFor.resolves(testDeps);
-            hashReaderMock.getTestChangedDeps.resolves(null);
-
-            await shouldDisableTestBySelectivity(config as any, test1);
-            await shouldDisableTestBySelectivity(config as any, test1); // Same test, should be memoized
-            await shouldDisableTestBySelectivity(config as any, test2); // Different test, should not be memoized
-
-            assert.calledTwice(testDepsReaderMock.getFor); // Once for test1, once for test2
         });
     });
 });

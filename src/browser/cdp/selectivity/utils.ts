@@ -312,8 +312,8 @@ export const shallowSortObject = (obj: Record<string, unknown>): void => {
     }
 };
 
-export const getSelectivityHashesPath = (selectivityRootPath: string): string =>
-    path.join(selectivityRootPath, "hashes.json");
+export const getSelectivityHashesPath = (testDependenciesPath: string): string =>
+    path.join(testDependenciesPath, "hashes.json");
 
 export const readHashFileContents = (
     selectivityHashesPath: string,
@@ -331,7 +331,8 @@ export const readHashFileContents = (
             return res;
         });
 
-export const getSelectivityTestsPath = (selectivityRootPath: string): string => path.join(selectivityRootPath, "tests");
+export const getSelectivityTestsPath = (testDependenciesPath: string): string =>
+    path.join(testDependenciesPath, "tests");
 
 export const getTestDependenciesPath = (selectivityTestsPath: string, test: Test): string =>
     path.join(selectivityTestsPath, `${test.id}.json`);

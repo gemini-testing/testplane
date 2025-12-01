@@ -43,6 +43,8 @@ export const RunnerSyncEvents = {
     RETRY: "retry",
 
     DOM_SNAPSHOTS: "domSnapshots",
+
+    TEST_DEPENDENCIES: "testDependencies",
 } as const;
 
 export type RunnerSyncEvents = typeof RunnerSyncEvents;

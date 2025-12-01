@@ -15,8 +15,8 @@ export class HashWriter {
     private readonly _selectivityHashesPath: string;
     private readonly _compresion: SelectivityCompressionType;
 
-    constructor(selectivityRootPath: string, compression: SelectivityCompressionType) {
-        this._selectivityHashesPath = getSelectivityHashesPath(selectivityRootPath);
+    constructor(testDependenciesPath: string, compression: SelectivityCompressionType) {
+        this._selectivityHashesPath = getSelectivityHashesPath(testDependenciesPath);
         this._compresion = compression;
     }
 
@@ -180,8 +180,8 @@ export class HashWriter {
 }
 
 export const getHashWriter = memoize(
-    (selectivityRootPath: string, compression: SelectivityCompressionType): HashWriter => {
-        return new HashWriter(selectivityRootPath, compression);
+    (testDependenciesPath: string, compression: SelectivityCompressionType): HashWriter => {
+        return new HashWriter(testDependenciesPath, compression);
     },
-    (selectivityRootPath, compression) => `${selectivityRootPath}#${compression}`,
+    (testDependenciesPath, compression) => `${testDependenciesPath}#${compression}`,
 );

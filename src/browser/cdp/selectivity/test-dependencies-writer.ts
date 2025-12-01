@@ -36,8 +36,8 @@ export class TestDependenciesWriter {
     private readonly _compression: SelectivityCompressionType;
     private _directoryCreated = false;
 
-    constructor(selectivityRootPath: string, compression: SelectivityCompressionType) {
-        this._selectivityTestsPath = getSelectivityTestsPath(selectivityRootPath);
+    constructor(testDependenciesPath: string, compression: SelectivityCompressionType) {
+        this._selectivityTestsPath = getSelectivityTestsPath(testDependenciesPath);
         this._compression = compression;
     }
 
@@ -82,8 +82,8 @@ export class TestDependenciesWriter {
 }
 
 export const getTestDependenciesWriter = memoize(
-    (selectivityRootPath: string, compression: SelectivityCompressionType): TestDependenciesWriter => {
-        return new TestDependenciesWriter(selectivityRootPath, compression);
+    (testDependenciesPath: string, compression: SelectivityCompressionType): TestDependenciesWriter => {
+        return new TestDependenciesWriter(testDependenciesPath, compression);
     },
-    (selectivityRootPath, compression) => `${selectivityRootPath}#${compression}`,
+    (testDependenciesPath, compression) => `${testDependenciesPath}#${compression}`,
 );
