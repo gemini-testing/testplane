@@ -75,6 +75,8 @@ declare global {
 
             setMeta(this: WebdriverIO.Browser, key: string, value: unknown): Promise<void>;
 
+            addTag(this: WebdriverIO.Browser, tag: string | string[]): Promise<void>;
+
             extendOptions(this: WebdriverIO.Browser, opts: { [name: string]: unknown }): Promise<void>;
 
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;

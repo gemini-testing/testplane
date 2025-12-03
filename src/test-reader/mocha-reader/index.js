@@ -10,8 +10,46 @@ const { MasterEvents } = require("../../events");
 const { getMethodsByInterface } = require("./utils");
 const { enableSourceMaps } = require("../../utils/typescript");
 
+function getTagParser(original) {
+    return function (title, paramsOrFn, fn) {
+        if (typeof paramsOrFn === "function") {
+            return original.call(this, title, paramsOrFn);
+        } else {
+            const test = original.call(this, title, fn);
+
+            if (paramsOrFn?.tag) {
+                if (Array.isArray(paramsOrFn.tag)) {
+                    test.tags = paramsOrFn.tag.map(title => ({ title, dynamic: false }));
+                } else {
+                    test.tags = [{ title: paramsOrFn.tag, dynamic: false }];
+                }
+            }
+
+            return test;
+        }
+    };
+}
+
 async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }) {
     const mocha = new Mocha(config);
+
+    mocha.suite.on("pre-require", context => {
+        const originalDescribe = context.describe;
+        const originalIt = context.it;
+
+        context.describe = getTagParser(originalDescribe);
+        context.context = getTagParser(originalDescribe);
+
+        context.describe.only = originalDescribe.only;
+        context.describe.skip = originalDescribe.skip;
+
+        context.it = getTagParser(originalIt);
+        context.specify = getTagParser(originalIt);
+
+        context.it.only = originalIt.only;
+        context.it.skip = originalIt.skip;
+    });
+
     mocha.fullTrace();
 
     initBuildContext(eventBus);

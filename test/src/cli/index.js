@@ -144,6 +144,22 @@ describe("cli", () => {
         assert.calledWithMatch(Testplane.prototype.run, any, { browsers: ["first", "second"] });
     });
 
+    describe("tag", () => {
+        it("should not pass any grep rule if it was not specified from cli", async () => {
+            await run_();
+
+            assert.calledWithMatch(Testplane.prototype.run, any, { tag: undefined });
+        });
+
+        it("should use tag rule from cli", async () => {
+            await run_("--tag foo");
+
+            console.log("Testplane.prototype.run.firstCall.args", Testplane.prototype.run.firstCall.args);
+
+            assert.instanceOf(Testplane.prototype.run.firstCall.args[1].tag, Function);
+        });
+    });
+
     describe("grep", () => {
         it("should not pass any grep rule if it was not specified from cli", async () => {
             await run_();

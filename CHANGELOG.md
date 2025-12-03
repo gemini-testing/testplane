@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.37.0](https://github.com/gemini-testing/testplane/compare/v8.36.0...v8.37.0) (2025-12-03)
+
+
+### Features
+
+* add tags ([63f150e](https://github.com/gemini-testing/testplane/commit/63f150e3c53a70a38fd61b253d253d3119908413))
+
 ## [8.36.0](https://github.com/gemini-testing/testplane/compare/v8.35.2...v8.36.0) (2025-12-01)
 
 

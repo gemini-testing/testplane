@@ -120,6 +120,14 @@ describe("cli/commands/list-tests", () => {
             });
         });
 
+        it("should use tag from cli", async () => {
+            await listTests_("--tag smoke");
+
+            assert.calledWithMatch(Testplane.prototype.readTests as SinonStub, sinon.match.any, {
+                tag: sinon.match.instanceOf(Function),
+            });
+        });
+
         it("should use ignore paths from cli", async () => {
             await listTests_("--ignore first --ignore second");
 

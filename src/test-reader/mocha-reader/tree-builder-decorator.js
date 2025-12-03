@@ -18,12 +18,12 @@ class TreeBuilderDecorator {
     }
 
     addSuite(mochaSuite) {
-        const { id: mochaId } = mochaSuite;
+        const { id: mochaId, tags } = mochaSuite;
         const file = computeFile(mochaSuite) ?? "unknown-file";
 
         const positionInFile = this.#suiteCounter.get(file) || 0;
         const id = mochaSuite.root ? mochaId : crypto.getShortMD5(file) + positionInFile;
-        const suite = this.#mkTestObject(Suite, mochaSuite, { id });
+        const suite = this.#mkTestObject(Suite, mochaSuite, { id, tags });
 
         this.#applyConfig(suite, mochaSuite);
         this.#treeBuilder.addSuite(suite, this.#getParent(mochaSuite, null));
@@ -34,9 +34,9 @@ class TreeBuilderDecorator {
     }
 
     addTest(mochaTest) {
-        const { fn } = mochaTest;
+        const { fn, tags } = mochaTest;
         const id = crypto.getShortMD5(mochaTest.fullTitle());
-        const test = this.#mkTestObject(Test, mochaTest, { id, fn });
+        const test = this.#mkTestObject(Test, mochaTest, { id, fn, tags });
 
         this.#applyConfig(test, mochaTest);
         this.#treeBuilder.addTest(test, this.#getParent(mochaTest));

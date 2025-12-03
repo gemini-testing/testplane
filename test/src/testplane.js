@@ -342,6 +342,7 @@ describe("testplane", () => {
                 const testPaths = ["foo/bar"];
                 const browsers = ["bro1", "bro2"];
                 const grep = "baz.*";
+                const tag = "baz";
                 const sets = ["set1", "set2"];
                 const replMode = { enabled: false };
                 const keepBrowserMode = { enabled: false };
@@ -351,6 +352,7 @@ describe("testplane", () => {
                 await runTestplane(testPaths, {
                     browsers,
                     grep,
+                    tag,
                     sets,
                     replMode,
                     keepBrowserMode,
@@ -362,6 +364,7 @@ describe("testplane", () => {
                     sets,
                     replMode,
                     keepBrowserMode,
+                    tag,
                 });
             });
 
@@ -668,6 +671,7 @@ describe("testplane", () => {
                 ignore: "baz/qux",
                 sets: ["s1", "s2"],
                 grep: "grep",
+                tag: "tag_one",
                 replMode: { enabled: false },
                 keepBrowserMode: { enabled: false, onFail: false },
                 runnableOpts: {
@@ -681,6 +685,7 @@ describe("testplane", () => {
                 ignore: "baz/qux",
                 sets: ["s1", "s2"],
                 grep: "grep",
+                tag: "tag_one",
                 replMode: { enabled: false },
                 keepBrowserMode: { enabled: false, onFail: false },
                 runnableOpts: {
