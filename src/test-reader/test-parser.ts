@@ -15,14 +15,16 @@ import path from "path";
 import fs from "fs-extra";
 import * as logger from "../utils/logger";
 import { getShortMD5 } from "../utils/crypto";
-import { Test } from "./test-object";
+import { Suite, Test } from "./test-object";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
+import { TagFilter } from "../utils/cli";
 
 export type TestParserParseOpts = {
     browserId: string;
     grep?: RegExp;
+    tag?: TagFilter;
     config: BrowserConfig;
 };
 
@@ -135,13 +137,29 @@ export class TestParser extends EventEmitter {
         });
     }
 
-    parse(files: string[], { browserId, config, grep }: TestParserParseOpts): Test[] {
+    parse(files: string[], { browserId, config, grep, tag }: TestParserParseOpts): Test[] {
         const treeBuilder = new TreeBuilder();
 
         this.#buildInstructions.exec(files, { treeBuilder, browserId, config });
 
         if (grep) {
             treeBuilder.addTestFilter((test: Test) => grep.test(test.fullTitle()));
+        }
+
+        if (tag) {
+            treeBuilder.addTestFilter((test: Test) => {
+                let current: Test | Suite | null = test;
+
+                while (current) {
+                    if (tag(current.tags)) {
+                        return true;
+                    } else {
+                        current = current.parent;
+                    }
+                }
+
+                return false;
+            });
         }
 
         if (config.lastFailed?.only) {

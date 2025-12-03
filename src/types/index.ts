@@ -20,7 +20,7 @@ import type { NormalizedDependencies, SelectivityCompressionType } from "../brow
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
-export type { TestFunction, TestFunctionCtx } from "../test-reader/test-object/types";
+export type { TestFunction, TestFunctionCtx, TestTag } from "../test-reader/test-object/types";
 
 export type WdioBrowser = WebdriverIO.Browser;
 

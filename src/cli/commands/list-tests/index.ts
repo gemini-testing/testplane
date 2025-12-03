@@ -30,7 +30,7 @@ export const registerCmd = (cliTool: ListTestsCmd, testplane: Testplane): void =
         .option("--formatter [name]", "return tests in specified format", String, Formatters.LIST)
         .arguments("[paths...]")
         .action(async (paths: string[], options: ListTestsCmdOpts) => {
-            const { grep, browser: browsers, set: sets } = cliTool;
+            const { grep, tag, browser: browsers, set: sets } = cliTool;
             const { ignore, silent, outputFile, formatter } = options;
 
             try {
@@ -40,6 +40,7 @@ export const registerCmd = (cliTool: ListTestsCmd, testplane: Testplane): void =
                     browsers,
                     sets,
                     grep,
+                    tag,
                     ignore,
                     silent,
                     runnableOpts: {

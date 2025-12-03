@@ -20,11 +20,13 @@ import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
 import { preloadWebdriverIO } from "./utils/preload-utils";
 import { updateSelectivityHashes } from "./browser/cdp/selectivity";
+import { TagFilter } from "./utils/cli";
 
 interface RunOpts {
     browsers: string[];
     sets: string[];
     grep: RegExp;
+    tag: TagFilter;
     updateRefs: boolean;
     requireModules: string[];
     inspectMode: {
@@ -55,7 +57,8 @@ interface RunnableOpts {
     saveLocations?: boolean;
 }
 
-export interface ReadTestsOpts extends Pick<RunOpts, "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"> {
+export interface ReadTestsOpts
+    extends Pick<RunOpts, "tag" | "browsers" | "sets" | "grep" | "replMode" | "keepBrowserMode"> {
     silent: boolean;
     ignore: string | string[];
     failed: FailedListItem[];
@@ -101,6 +104,7 @@ export class Testplane extends BaseTestplane {
             browsers,
             sets,
             grep,
+            tag,
             updateRefs,
             requireModules,
             inspectMode,
@@ -159,11 +163,11 @@ export class Testplane extends BaseTestplane {
         }
 
         const hasTestPathsFilter = _.isArray(testPaths) ? Boolean(testPaths.length) : true;
-        const hasTestFilter = hasTestPathsFilter || Boolean(sets?.length) || Boolean(grep);
+        const hasTestFilter = hasTestPathsFilter || Boolean(sets?.length) || Boolean(grep) || Boolean(tag);
         const shouldDisableSelectivity = Boolean(hasTestFilter);
 
         await runner.run(
-            await this._readTests(testPaths, { browsers, sets, grep, replMode, keepBrowserMode }),
+            await this._readTests(testPaths, { browsers, sets, grep, tag, replMode, keepBrowserMode }),
             RunnerStats.create(this),
             { shouldDisableSelectivity },
         );
@@ -196,7 +200,17 @@ export class Testplane extends BaseTestplane {
 
     async readTests(
         testPaths: string[],
-        { browsers, sets, grep, silent, ignore, replMode, keepBrowserMode, runnableOpts }: Partial<ReadTestsOpts> = {},
+        {
+            browsers,
+            sets,
+            grep,
+            tag,
+            silent,
+            ignore,
+            replMode,
+            keepBrowserMode,
+            runnableOpts,
+        }: Partial<ReadTestsOpts> = {},
     ): Promise<TestCollection> {
         const testReader = TestReader.create(this._config);
 
@@ -215,6 +229,7 @@ export class Testplane extends BaseTestplane {
             ignore,
             sets,
             grep,
+            tag,
             replMode,
             keepBrowserMode,
             runnableOpts,

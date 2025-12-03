@@ -15,6 +15,7 @@ const path = require("path");
 const { EventEmitter } = require("events");
 const _ = require("lodash");
 const fs = require("fs-extra");
+const { compileTagFilter } = require("src/utils/cli");
 
 const { NEW_BUILD_INSTRUCTION } = TestReaderEvents;
 
@@ -515,7 +516,7 @@ describe("test-reader/test-parser", () => {
     });
 
     describe("parse", () => {
-        const parse_ = async ({ files, browserId, config, grep } = {}, loadFilesConfig) => {
+        const parse_ = async ({ files, browserId, config, grep, tag } = {}, loadFilesConfig) => {
             loadFilesConfig = loadFilesConfig || makeConfigStub();
             config = _.defaults(config, {
                 desiredCapabilities: {},
@@ -524,7 +525,7 @@ describe("test-reader/test-parser", () => {
             const parser = new TestParser();
             await parser.loadFiles([], { config: loadFilesConfig });
 
-            return parser.parse(files || [], { browserId, config, grep });
+            return parser.parse(files || [], { browserId, config, grep, tag });
         };
 
         beforeEach(() => {
@@ -613,6 +614,91 @@ describe("test-reader/test-parser", () => {
 
             assert.calledWithMatch(InstructionsList.prototype.exec, sinon.match.any, {
                 treeBuilder: sinon.match.instanceOf(TreeBuilder),
+            });
+        });
+
+        describe("tag", () => {
+            it("should not set test filter to tree builder if grep not set", async () => {
+                await parse_();
+
+                assert.notCalled(TreeBuilder.prototype.addTestFilter);
+            });
+
+            describe("if set", () => {
+                it("should set test filter to tree builder", async () => {
+                    await parse_({ tag: compileTagFilter("smoke") });
+
+                    assert.calledOnceWith(TreeBuilder.prototype.addTestFilter, sinon.match.func);
+                });
+
+                it("should set test filter to tree builder before applying filters", async () => {
+                    await parse_({ tag: compileTagFilter("smoke") });
+
+                    assert.callOrder(TreeBuilder.prototype.addTestFilter, TreeBuilder.prototype.applyFilters);
+                });
+
+                it("installed filter should accept matched test", async () => {
+                    await parse_({ tag: compileTagFilter("smoke") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = { fullTitle: () => "Some name", tags: new Map([["smoke", false]]) };
+
+                    assert.isTrue(filter(test));
+                });
+
+                it("installed filter should accept matched test with and operator for tags", async () => {
+                    await parse_({ tag: compileTagFilter("smoke&slow") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = {
+                        fullTitle: () => "Some name",
+                        tags: new Map([
+                            ["smoke", false],
+                            ["slow", false],
+                        ]),
+                    };
+
+                    assert.isTrue(filter(test));
+                });
+
+                it("installed filter should accept matched test with not operator for tags", async () => {
+                    await parse_({ tag: compileTagFilter("!smoke&!slow") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = {
+                        fullTitle: () => "Some name",
+                        tags: new Map([
+                            ["smoke", false],
+                            ["slow", false],
+                        ]),
+                    };
+
+                    assert.isFalse(filter(test));
+                });
+
+                it("installed filter should accept matched test with or operator for tags", async () => {
+                    await parse_({ tag: compileTagFilter("smoke|slow") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = {
+                        fullTitle: () => "Some name",
+                        tags: new Map([
+                            ["smoke", false],
+                            ["fast", false],
+                        ]),
+                    };
+
+                    assert.isTrue(filter(test));
+                });
+
+                it("installed filter should ignore not matched test", async () => {
+                    await parse_({ tag: compileTagFilter("desktop") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = { fullTitle: () => "Some name", tags: new Map([["smoke", false]]) };
+
+                    assert.isFalse(filter(test));
+                });
             });
         });
 

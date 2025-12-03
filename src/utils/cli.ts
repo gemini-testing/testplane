@@ -7,6 +7,39 @@ export const collectCliValues = (newValue: unknown, array = [] as unknown[]): un
     return array.concat(newValue);
 };
 
+export type TagFilter = (tags: Map<string, boolean>) => boolean;
+
+export const compileTagFilter = (filter: string): TagFilter => {
+    const normalizedFilter = filter.replace(/[\s'"`\\]/g, "").toLowerCase();
+
+    function compileOrExpression(expr: string): string {
+        const parts = expr.split("|");
+        if (parts.length === 1) {
+            return compileAndExpression(parts[0]);
+        }
+        return `(${parts.map(part => compileAndExpression(part)).join(" || ")})`;
+    }
+
+    function compileAndExpression(expr: string): string {
+        const parts = expr.split("&");
+        if (parts.length === 1) {
+            return compileSingleTag(parts[0]);
+        }
+        return `(${parts.map(part => compileSingleTag(part)).join(" && ")})`;
+    }
+
+    function compileSingleTag(tag: string): string {
+        if (tag.startsWith("!")) {
+            return `!tags.has("${tag.substring(1)}")`;
+        }
+        return `tags.has("${tag}")`;
+    }
+
+    const compiledCode = compileOrExpression(normalizedFilter);
+
+    return new Function("tags", `return ${compiledCode};`) as (tags: Map<string, boolean>) => boolean;
+};
+
 export const compileGrep = (grep: string): RegExp => {
     try {
         return new RegExp(`(${grep})|(${_.escapeRegExp(grep)})`);
@@ -41,5 +74,6 @@ export const withCommonCliOptions = ({ cmd, actionName = "run" }: { cmd: Command
         .option("-b, --browser <browser>", `${actionName} tests only in specified browser`, collectCliValues)
         .option("-s, --set <set>", `${actionName} tests only in the specified set`, collectCliValues)
         .option("-r, --require <module>", "require module", collectCliValues)
-        .option("--grep <grep>", `${actionName} only tests matching the pattern`, compileGrep);
+        .option("--grep <grep>", `${actionName} only tests matching the pattern`, compileGrep)
+        .option("--tag <tag>", `${actionName} only tests with specified tags`, compileTagFilter);
 };

@@ -29,7 +29,7 @@ export class TestReader extends EventEmitter {
     }
 
     async read(options: TestReaderOpts): Promise<Record<string, Test[]>> {
-        const { paths, browsers, ignore, sets, grep, runnableOpts } = options;
+        const { paths, browsers, ignore, sets, grep, tag, runnableOpts } = options;
 
         const { fileExtensions } = this.#config.system;
         const envSets = env.parseCommaSeparatedValue(["TESTPLANE_SETS", "HERMIONE_SETS"]).value;
@@ -46,7 +46,7 @@ export class TestReader extends EventEmitter {
 
         const filesByBro = setCollection.groupByBrowser();
         const testsByBro = _.mapValues(filesByBro, (files, browserId) =>
-            parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep }),
+            parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep, tag }),
         );
 
         validateTests(testsByBro, options, this.#config);

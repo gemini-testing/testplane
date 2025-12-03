@@ -35,8 +35,17 @@ export interface TestHookDefinition {
     <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(fn?: TestFunction<T>): Hook;
 }
 
+export type DefinitionParams = {
+    tag?: string | string[];
+};
+
 export interface TestDefinition {
     <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(title: string, fn?: TestFunction<T>): Test;
+    <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(
+        title: string,
+        params: DefinitionParams,
+        fn?: TestFunction<T>,
+    ): Test;
 
     only: <T extends Partial<TestFunctionCtx> = TestFunctionCtx>(title: string, fn?: TestFunction<T>) => Test;
 
@@ -45,7 +54,14 @@ export interface TestDefinition {
 
 export interface SuiteDefinition {
     (title: string, fn: (this: Suite) => void): Suite;
+    (title: string, params: DefinitionParams, fn: (this: Suite) => void): Suite;
 
     only: (title: string, fn: (this: Suite) => void) => Suite;
+
     skip: (title: string, fn: (this: Suite) => void) => Suite;
 }
+
+export type TestTag = {
+    title: string;
+    dynamic?: boolean;
+};

@@ -91,6 +91,7 @@ export class ExistingBrowser extends Browser {
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
     protected _cdp: CDP | null = null;
+    protected _tags: Set<string> = new Set();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -328,6 +329,14 @@ export class ExistingBrowser extends Browser {
     protected _addMetaAccessCommands(session: WebdriverIO.Browser): void {
         session.addCommand("setMeta", (key, value) => (this._meta[key] = value));
         session.addCommand("getMeta", key => (key ? this._meta[key] : this._meta));
+
+        session.addCommand("addTag", (tag: string | string[]) => {
+            if (Array.isArray(tag)) {
+                tag.forEach(element => this._tags?.add(element));
+            } else {
+                this._tags?.add(tag);
+            }
+        });
     }
 
     protected _decorateUrlMethod(session: WebdriverIO.Browser): void {
@@ -582,6 +591,10 @@ export class ExistingBrowser extends Browser {
 
     get meta(): Record<string, unknown> {
         return this._meta;
+    }
+
+    get tags(): string[] {
+        return [...this._tags];
     }
 
     get cdp(): CDP | null {
