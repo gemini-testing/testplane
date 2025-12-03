@@ -1,10 +1,10 @@
 import path from "node:path";
 import url from "node:url";
-import { builtinModules } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import _ from "lodash";
 import createDebug from "debug";
 import { MODULE_NAMES, MOCK_MODULE_NAME } from "../constants";
-import { getNodeModulePath, getImportMetaUrl, getTestInfoFromViteRequest } from "../utils";
+import { getImportMetaUrl, getTestInfoFromViteRequest } from "../utils";
 import { polyfillPath } from "../polyfill";
 import * as logger from "../../../../utils/logger";
 
@@ -27,11 +27,9 @@ const virtualModules = {
 };
 
 export const plugin = async (): Promise<Plugin[]> => {
-    const mochaPackagePath = await getNodeModulePath({
-        moduleName: "mocha",
-        parent: path.join("node_modules", "testplane", "node_modules"),
-    });
-    const mochaModulePath = path.join(url.fileURLToPath(path.dirname(mochaPackagePath)), "mocha.js");
+    const require = createRequire(getImportMetaUrl(__filename));
+    const mochaMainPath = require.resolve("mocha");
+    const mochaModulePath = path.join(path.dirname(mochaMainPath), "mocha.js");
 
     const dirname = url.fileURLToPath(new URL(".", getImportMetaUrl(__filename)));
     const browserModulesPath = path.resolve(dirname, "..", "browser-modules");

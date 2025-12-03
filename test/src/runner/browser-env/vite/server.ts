@@ -17,7 +17,6 @@ describe("runner/browser-env/vite/server", () => {
     let ViteServerStub: typeof ViteServer;
     let getPortStub: SinonStub;
     let createSocketServer: SinonStub;
-    let getNodeModulePathStub: SinonStub;
     let generateIndexHtmlPlugin: () => Vite.Plugin[];
     let mockPlugin: () => Vite.Plugin[];
     let loggerLogStub: SinonStub;
@@ -49,7 +48,6 @@ describe("runner/browser-env/vite/server", () => {
         loggerLogStub = sandbox.stub();
         createSocketServer = sandbox.stub();
         getPortStub = sandbox.stub().resolves(12345);
-        getNodeModulePathStub = sandbox.stub().resolves("file:///default-cwd");
         generateIndexHtmlPlugin = sandbox.stub().returns([{ name: "default-plugin-1" }]);
         mockPlugin = sandbox.stub().returns([{ name: "default-plugin-2" }]);
         sandbox.stub(ManualMock, "create").resolves(sinon.stub() as unknown as ManualMock);
@@ -59,7 +57,6 @@ describe("runner/browser-env/vite/server", () => {
             "./socket": { createSocketServer },
             "./plugins/generate-index-html": { plugin: generateIndexHtmlPlugin },
             "./plugins/mock": { plugin: mockPlugin },
-            "./utils": { getNodeModulePath: getNodeModulePathStub },
             "../../../utils/logger": {
                 log: loggerLogStub,
             },
