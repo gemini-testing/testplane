@@ -151,7 +151,7 @@ export class TestParser extends EventEmitter {
                 let current: Test | Suite | null = test;
 
                 while (current) {
-                    if (tag(current.tag)) {
+                    if (tag(current.tags)) {
                         return true;
                     } else {
                         current = current.parent;

@@ -641,7 +641,7 @@ describe("test-reader/test-parser", () => {
                     await parse_({ tag: compileTagFilter("smoke") });
 
                     const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
-                    const test = { fullTitle: () => "Some name", tag: new Map([["smoke", false]]) };
+                    const test = { fullTitle: () => "Some name", tags: new Map([["smoke", false]]) };
 
                     assert.isTrue(filter(test));
                 });
@@ -652,7 +652,7 @@ describe("test-reader/test-parser", () => {
                     const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
                     const test = {
                         fullTitle: () => "Some name",
-                        tag: new Map([
+                        tags: new Map([
                             ["smoke", false],
                             ["slow", false],
                         ]),
@@ -667,7 +667,7 @@ describe("test-reader/test-parser", () => {
                     const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
                     const test = {
                         fullTitle: () => "Some name",
-                        tag: new Map([
+                        tags: new Map([
                             ["smoke", false],
                             ["slow", false],
                         ]),
@@ -682,7 +682,7 @@ describe("test-reader/test-parser", () => {
                     const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
                     const test = {
                         fullTitle: () => "Some name",
-                        tag: new Map([
+                        tags: new Map([
                             ["smoke", false],
                             ["fast", false],
                         ]),
@@ -695,7 +695,7 @@ describe("test-reader/test-parser", () => {
                     await parse_({ tag: compileTagFilter("desktop") });
 
                     const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
-                    const test = { fullTitle: () => "Some name", tag: new Map([["smoke", false]]) };
+                    const test = { fullTitle: () => "Some name", tags: new Map([["smoke", false]]) };
 
                     assert.isFalse(filter(test));
                 });

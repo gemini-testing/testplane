@@ -91,7 +91,7 @@ export class ExistingBrowser extends Browser {
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
     protected _cdp: CDP | null = null;
-    protected _tag: Set<string> = new Set();
+    protected _tags: Set<string> = new Set();
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -332,9 +332,9 @@ export class ExistingBrowser extends Browser {
 
         session.addCommand("addTag", (tag: string | string[]) => {
             if (Array.isArray(tag)) {
-                tag.forEach(element => this._tag?.add(element));
+                tag.forEach(element => this._tags?.add(element));
             } else {
-                this._tag?.add(tag);
+                this._tags?.add(tag);
             }
         });
     }
@@ -593,8 +593,8 @@ export class ExistingBrowser extends Browser {
         return this._meta;
     }
 
-    get tag(): string[] {
-        return [...this._tag];
+    get tags(): string[] {
+        return [...this._tags];
     }
 
     get cdp(): CDP | null {

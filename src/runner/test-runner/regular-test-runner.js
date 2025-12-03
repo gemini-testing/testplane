@@ -71,7 +71,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         });
     }
 
-    _applyTestResults({ tag, meta, testplaneCtx = {}, history = [] }) {
+    _applyTestResults({ tags, meta, testplaneCtx = {}, history = [] }) {
         testplaneCtx.assertViewResults = AssertViewResults.fromRawObject(testplaneCtx.assertViewResults || []);
         this._test.assertViewResults = testplaneCtx.assertViewResults.get();
 
@@ -80,8 +80,8 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         this._test.hermioneCtx = testplaneCtx;
         this._test.history = history;
 
-        if (tag) {
-            tag.forEach(tag => this._test.addTag(tag));
+        if (tags) {
+            tags.forEach(tag => this._test.addTag(tag));
         }
 
         this._test.duration = Date.now() - this._test.startTime;

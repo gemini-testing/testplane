@@ -163,7 +163,7 @@ export class Testplane extends BaseTestplane {
         }
 
         const hasTestPathsFilter = _.isArray(testPaths) ? Boolean(testPaths.length) : true;
-        const hasTestFilter = hasTestPathsFilter || Boolean(sets?.length) || Boolean(grep);
+        const hasTestFilter = hasTestPathsFilter || Boolean(sets?.length) || Boolean(grep) || Boolean(tag);
         const shouldDisableSelectivity = Boolean(hasTestFilter);
 
         await runner.run(

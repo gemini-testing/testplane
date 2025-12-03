@@ -4,24 +4,24 @@ import { Hook } from "./hook";
 import { Test } from "./test";
 import type { TestObjectData, ConfigurableTestObjectData, TestFunction, TestFunctionCtx, TestTag } from "./types";
 
-type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData & { tag: TestTag[] };
+type SuiteOpts = Pick<ConfigurableTestObjectData, "file" | "id" | "location"> & TestObjectData & { tags: TestTag[] };
 
 export class Suite extends ConfigurableTestObject {
     #suites: this[];
     #tests: Test[];
     #beforeEachHooks: Hook[];
     #afterEachHooks: Hook[];
-    public tag: Map<string, boolean>;
+    public tags: Map<string, boolean>;
 
     static create<T extends Suite>(this: new (opts: SuiteOpts) => T, opts: SuiteOpts): T {
         return new this(opts);
     }
 
     // used inside test
-    constructor({ title, file, id, location, tag }: SuiteOpts = {} as SuiteOpts) {
+    constructor({ title, file, id, location, tags }: SuiteOpts = {} as SuiteOpts) {
         super({ title, file, id, location });
 
-        this.tag = new Map(tag?.map(({ title, dynamic }) => [title, !!dynamic]) || []);
+        this.tags = new Map(tags?.map(({ title, dynamic }) => [title, Boolean(dynamic)]) || []);
         this.#suites = [];
         this.#tests = [];
         this.#beforeEachHooks = [];
@@ -30,20 +30,20 @@ export class Suite extends ConfigurableTestObject {
 
     addTag(tag: string | string[], dynamic = false): void {
         if (Array.isArray(tag)) {
-            tag.forEach(element => this.tag.set(element, dynamic));
+            tag.forEach(element => this.tags.set(element, dynamic));
         } else {
-            this.tag.set(tag, dynamic);
+            this.tags.set(tag, dynamic);
         }
     }
 
     hasTag(tag: string): boolean {
-        return this.tag.has(tag);
+        return this.tags.has(tag);
     }
 
-    getTag(): TestTag[] {
-        return Array.from(this.tag.keys()).map(title => ({
+    getTags(): TestTag[] {
+        return Array.from(this.tags.keys()).map(title => ({
             title,
-            dynamic: this.tag.get(title),
+            dynamic: this.tags.get(title),
         }));
     }
 

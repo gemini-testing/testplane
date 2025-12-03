@@ -19,9 +19,9 @@ function getTagParser(original) {
 
             if (paramsOrFn?.tag) {
                 if (Array.isArray(paramsOrFn.tag)) {
-                    test.tag = paramsOrFn.tag.map(title => ({ title, dynamic: false }));
+                    test.tags = paramsOrFn.tag.map(title => ({ title, dynamic: false }));
                 } else {
-                    test.tag = [{ title: paramsOrFn.tag, dynamic: false }];
+                    test.tags = [{ title: paramsOrFn.tag, dynamic: false }];
                 }
             }
 
@@ -37,12 +37,14 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts }
         const originalDescribe = context.describe;
         const originalIt = context.it;
 
-        context.describe = context.context = getTagParser(originalDescribe);
+        context.describe = getTagParser(originalDescribe);
+        context.context = getTagParser(originalDescribe);
 
         context.describe.only = originalDescribe.only;
         context.describe.skip = originalDescribe.skip;
 
-        context.it = context.specify = getTagParser(originalIt);
+        context.it = getTagParser(originalIt);
+        context.specify = getTagParser(originalIt);
 
         context.it.only = originalIt.only;
         context.it.skip = originalIt.skip;
