@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.37.1](https://github.com/gemini-testing/testplane/compare/v8.37.0...v8.37.1) (2025-12-04)
+
+
+### Bug Fixes
+
+* **ct:** correctly works with pnpm ([641f281](https://github.com/gemini-testing/testplane/commit/641f28128317f1b6e37192dfea179b03fac68c1b))
+* **ct:** correctly works with vite-style imports ([776c679](https://github.com/gemini-testing/testplane/commit/776c6795324ed6c48a2e94249e76463982746cf8))
+* **ct:** run vite server once on init ([36be194](https://github.com/gemini-testing/testplane/commit/36be194488aa70e0dcd99aade9f023ed8d0e79d3))
+
 ## [8.37.0](https://github.com/gemini-testing/testplane/compare/v8.36.0...v8.37.0) (2025-12-03)
 
 
