@@ -75,6 +75,7 @@ export class MainRunner extends RunnableEmitter {
             MasterEvents.NEW_WORKER_PROCESS,
             MasterEvents.ERROR,
             MasterEvents.DOM_SNAPSHOTS,
+            MasterEvents.ADD_FILE_TO_REMOVE,
             MasterEvents.TEST_DEPENDENCIES,
         ]);
 

@@ -44,6 +44,8 @@ export const RunnerSyncEvents = {
 
     DOM_SNAPSHOTS: "domSnapshots",
 
+    ADD_FILE_TO_REMOVE: "addFileToRemove",
+
     TEST_DEPENDENCIES: "testDependencies",
 } as const;
 

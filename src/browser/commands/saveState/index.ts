@@ -7,6 +7,7 @@ import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser"
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
 import type { Browser } from "../../types";
+import { MasterEvents } from "../../../events";
 
 export type SaveStateOptions = {
     path?: string;
@@ -16,6 +17,7 @@ export type SaveStateOptions = {
     sessionStorage?: boolean;
 
     cookieFilter?: (cookie: Cookie) => boolean;
+    keepFile?: boolean;
 };
 
 export type FrameData = StorageData;
@@ -29,6 +31,7 @@ export const defaultOptions = {
     cookies: true,
     localStorage: true,
     sessionStorage: true,
+    keepFile: false,
 };
 
 // in case when we use webdriver protocol, bidi and isolation
@@ -178,8 +181,21 @@ export default (browser: ExistingBrowser): void => {
             data.cookies = data.cookies.filter(options.cookieFilter);
         }
 
-        if (options && options.path) {
-            await fs.writeJson(options.path, data, { spaces: 2 });
+        const dataIsEmpty = data.cookies?.length === 0 && _.isEmpty(data.framesData);
+
+        if (options && options.path && !dataIsEmpty) {
+            await fs.outputJson(options.path, data, { spaces: 2 });
+
+            if (options.keepFile) {
+                logger.warn(
+                    "\x1b[31mPlease be aware that the file containing authorization data will not be automatically deleted after the tests are completed!!!\x1b[0m",
+                );
+            } else if (process.send) {
+                process.send({
+                    event: MasterEvents.ADD_FILE_TO_REMOVE,
+                    data: options.path,
+                });
+            }
         }
 
         return data;
