@@ -1,3 +1,4 @@
+import fs from "fs";
 import { strict as assert } from "assert";
 import { launchBrowser } from "../../../src/browser/standalone";
 import { BROWSER_CONFIG, BROWSER_NAME } from "./constants";
@@ -94,6 +95,46 @@ type AutomationProtocol = typeof DEVTOOLS_PROTOCOL | typeof WEBDRIVER_PROTOCOL;
 
                     // check that now we logged in
                     assert.strictEqual(await status.getText(), "You are logged in");
+                });
+
+                it("saveState: {keepFile: true}", async function () {
+                    await browser.saveState({
+                        keepFile: true,
+                        path: "./state.json",
+                    });
+
+                    await browser.deleteSession();
+
+                    const fileExist = fs.existsSync("./state.json");
+                    assert.strictEqual(fileExist, true);
+                    fs.rmSync("./state.json");
+                });
+
+                it("saveState: {keepFile: false}", async function () {
+                    await browser.saveState({
+                        keepFile: false,
+                        path: "./state.json",
+                    });
+
+                    await browser.deleteSession();
+
+                    const fileExist = fs.existsSync("./state.json");
+                    assert.strictEqual(fileExist, false);
+                });
+
+                it("saveState: emptyState", async function () {
+                    await browser.saveState({
+                        keepFile: true,
+                        cookieFilter: () => false,
+                        path: "./state.json",
+                        localStorage: false,
+                        sessionStorage: false,
+                    });
+
+                    await browser.deleteSession();
+
+                    const fileExist = fs.existsSync("./state.json");
+                    assert.strictEqual(fileExist, false);
                 });
 
                 it("restoreState", async function () {
