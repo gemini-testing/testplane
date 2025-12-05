@@ -139,6 +139,10 @@ module.exports = class WorkersRegistry extends EventEmitter {
                     this.emit(MasterEvents.DOM_SNAPSHOTS, data.context, data.data);
                     break;
                 }
+                case MasterEvents.ADD_FILE_TO_REMOVE: {
+                    this.emit(MasterEvents.ADD_FILE_TO_REMOVE, data.data);
+                    break;
+                }
                 case MasterEvents.TEST_DEPENDENCIES: {
                     this.emit(MasterEvents.TEST_DEPENDENCIES, data.context, data.data);
                     break;

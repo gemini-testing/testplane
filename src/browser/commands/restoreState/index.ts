@@ -15,7 +15,7 @@ import {
 import { getActivePuppeteerPage } from "../../existing-browser";
 import { Cookie } from "@testplane/wdio-protocols";
 
-export type RestoreStateOptions = SaveStateOptions & {
+export type RestoreStateOptions = Omit<SaveStateOptions, "keepFile"> & {
     data?: SaveStateData;
     refresh?: boolean;
 };
