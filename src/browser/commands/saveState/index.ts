@@ -190,11 +190,15 @@ export default (browser: ExistingBrowser): void => {
                 logger.warn(
                     "\x1b[31mPlease be aware that the file containing authorization data will not be automatically deleted after the tests are completed!!!\x1b[0m",
                 );
-            } else if (process.send) {
-                process.send({
-                    event: MasterEvents.ADD_FILE_TO_REMOVE,
-                    data: options.path,
-                });
+            } else {
+                if (process.send) {
+                    process.send({
+                        event: MasterEvents.ADD_FILE_TO_REMOVE,
+                        data: options.path,
+                    });
+                }
+
+                browser.emitter.emit(MasterEvents.ADD_FILE_TO_REMOVE, options.path);
             }
         }
 

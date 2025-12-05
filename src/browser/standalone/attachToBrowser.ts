@@ -1,9 +1,10 @@
 import { Config } from "../../config";
 import { ExistingBrowser } from "./../existing-browser";
 import { Calibrator } from "./../calibrator";
-import { AsyncEmitter } from "../../events";
+import { AsyncEmitter, MasterEvents } from "../../events";
 import { BrowserName, type W3CBrowserName, type SessionOptions } from "./../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
+import fs from "fs-extra";
 
 export async function attachToBrowser(session: SessionOptions): Promise<WebdriverIO.Browser> {
     const browserName = session.sessionCaps?.browserName || BrowserName.CHROME;
@@ -24,6 +25,8 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
         },
     };
 
+    const filesToRemove: string[] = [];
+
     const config = new Config({
         browsers: {
             [browserName]: browserConfig,
@@ -35,6 +38,10 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
     }
 
     const emitter = new AsyncEmitter();
+
+    emitter.on(MasterEvents.ADD_FILE_TO_REMOVE, (path: string) => {
+        filesToRemove.push(path);
+    });
 
     const existingBrowser = new ExistingBrowser(config, {
         id: browserName,
@@ -53,6 +60,10 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
         // force kill driver process by pid, because { shutdownDriver: true } in prev command doesn't work :(
         if (session.driverPid) {
             process.kill(session.driverPid, 9);
+        }
+
+        if (filesToRemove.length > 0) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
         }
     });
 
