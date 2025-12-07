@@ -44,6 +44,27 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
 
         waitNetworkIdle &&= isChrome || isCDP;
 
+        const originalPageLoadTimeout = config.pageLoadTimeout;
+        const shouldUpdateTimeout = timeout && timeout !== originalPageLoadTimeout;
+
+        const setPageLoadTimeout = async (value: number | null): Promise<void> => {
+            if (!value) {
+                return;
+            }
+            try {
+                await session.setTimeout({ pageLoad: value });
+            } catch {
+                /* */
+            }
+        };
+
+        const restorePageLoadTimeout = (): void => {
+            if (shouldUpdateTimeout && originalPageLoadTimeout) {
+                // No await because session might be stuck on url() command
+                setPageLoadTimeout(originalPageLoadTimeout).catch(() => {});
+            }
+        };
+
         if (!uri || uri === emptyPageUrl) {
             return new Promise(resolve => {
                 session.url(uri).then(() => resolve());
@@ -64,7 +85,23 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
         let predicateResolved = !predicate;
         let networkResolved = !waitNetworkIdle;
 
-        return new Promise<void>((resolve, reject) => {
+        if (shouldUpdateTimeout) {
+            await setPageLoadTimeout(timeout);
+        }
+
+        // Create hard timeout promise to guarantee timeout is respected
+        // This is needed because WebDriver pageLoad timeout only affects the browser's
+        // page load event, not the HTTP connection/response time
+        let hardTimeoutId: NodeJS.Timeout | undefined;
+        const hardTimeoutPromise = timeout
+            ? new Promise<never>((_, reject) => {
+                  hardTimeoutId = setTimeout(() => {
+                      reject(new Error(`openAndWait timed out after ${timeout}ms`));
+                  }, timeout);
+              })
+            : null;
+
+        const loadPromise = new Promise<void>((resolve, reject) => {
             const handleError = (err: Error): void => {
                 reject(new Error(`url: ${err.message}`));
             };
@@ -76,7 +113,7 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             };
 
             const goToPage = async (): Promise<void> => {
-                await session.url(uri);
+                await session.url(uri, { timeout });
             };
 
             pageLoader.on("pageLoadError", handleError);
@@ -109,7 +146,21 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             });
 
             pageLoader.load(goToPage).then(checkLoaded);
-        }).finally(() => pageLoader.unsubscribe());
+        });
+
+        const racePromises: Promise<void>[] = [loadPromise];
+        if (hardTimeoutPromise) {
+            racePromises.push(hardTimeoutPromise);
+        }
+
+        return Promise.race(racePromises).finally(() => {
+            if (hardTimeoutId) {
+                clearTimeout(hardTimeoutId);
+            }
+            // No await, because session might be stuck on url() command
+            pageLoader.unsubscribe();
+            restorePageLoadTimeout();
+        });
     };
 
 export type OpenAndWaitCommand = ReturnType<typeof makeOpenAndWaitCommand>;
