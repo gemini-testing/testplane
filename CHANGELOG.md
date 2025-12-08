@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.37.2](https://github.com/gemini-testing/testplane/compare/v8.37.1...v8.37.2) (2025-12-08)
+
+
+### Bug Fixes
+
+* enforce timeouts in openAndWait command ([#1178](https://github.com/gemini-testing/testplane/issues/1178)) ([1fc2020](https://github.com/gemini-testing/testplane/commit/1fc202028ec2b9bf7956f7800021c5206dc4a857))
+
 ### [8.37.1](https://github.com/gemini-testing/testplane/compare/v8.37.0...v8.37.1) (2025-12-04)
 
 
