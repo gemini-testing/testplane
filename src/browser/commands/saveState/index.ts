@@ -31,7 +31,7 @@ export const defaultOptions = {
     cookies: true,
     localStorage: true,
     sessionStorage: true,
-    keepFile: false,
+    keepFile: process.env.TESTPLANE_SAVE_STATE_KEEP_FILE === "true" || false,
 };
 
 // in case when we use webdriver protocol, bidi and isolation
