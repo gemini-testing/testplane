@@ -12,5 +12,6 @@ export const customCommandFileNames = [
     "waitForStaticToLoad",
     "saveState",
     "restoreState",
+    "getState",
     "unstable_getCdp",
 ];

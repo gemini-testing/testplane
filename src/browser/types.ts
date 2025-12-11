@@ -10,6 +10,7 @@ import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 import type { Options } from "@testplane/wdio-types";
 import type { SaveStateData, SaveStateOptions } from "./commands/saveState";
+import type { GetStateOptions } from "./commands/getState";
 import type { RestoreStateOptions } from "./commands/restoreState";
 import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
 import type { CDP } from "./cdp";
@@ -83,6 +84,7 @@ declare global {
 
             saveState(options?: SaveStateOptions): Promise<SaveStateData>;
             restoreState(options: RestoreStateOptions): Promise<void>;
+            getState(options: GetStateOptions): Promise<SaveStateData>;
 
             overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,

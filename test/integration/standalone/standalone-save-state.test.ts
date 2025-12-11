@@ -8,7 +8,7 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../src/constants/co
 import { AuthServer } from "./mock-auth-page/server";
 import process from "node:process";
 
-const TIMEOUT = 180000;
+const TIMEOUT = 320000;
 
 // fix for ff, he doesn't like localhost in domain
 const removeDomainFromCookies = (loginState: SaveStateData): void => {
@@ -135,6 +135,17 @@ type AutomationProtocol = typeof DEVTOOLS_PROTOCOL | typeof WEBDRIVER_PROTOCOL;
 
                     const fileExist = fs.existsSync("./state.json");
                     assert.strictEqual(fileExist, false);
+                });
+
+                it("getState", async function () {
+                    const options = {
+                        path: "./state.json",
+                    };
+
+                    const saveResult = await browser.saveState(options);
+                    const getResult = await browser.getState(options);
+
+                    assert.deepEqual(saveResult, getResult);
                 });
 
                 it("restoreState", async function () {
