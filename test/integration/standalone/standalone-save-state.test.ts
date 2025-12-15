@@ -8,7 +8,7 @@ import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../src/constants/co
 import { AuthServer } from "./mock-auth-page/server";
 import process from "node:process";
 
-const TIMEOUT = 320000;
+const TIMEOUT = 180000;
 
 // fix for ff, he doesn't like localhost in domain
 const removeDomainFromCookies = (loginState: SaveStateData): void => {

@@ -20,6 +20,12 @@ module.exports = {
         clustersSize: 10,
         stopOnFirstFail: false,
     },
+    stateOpts: {
+        cookies: true,
+        localStorage: true,
+        sessionStorage: true,
+        keepFile: false,
+    },
     buildDiffOpts: {
         ignoreAntialiasing: true,
         ignoreCaret: true,

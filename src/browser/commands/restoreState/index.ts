@@ -5,17 +5,12 @@ import { restoreStorage } from "./restoreStorage";
 import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import {
-    defaultOptions,
-    getOverridesProtocol,
-    getWebdriverFrames,
-    SaveStateData,
-    SaveStateOptions,
-} from "../saveState";
+import { getOverridesProtocol, getWebdriverFrames, SaveStateData } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
 import { Cookie } from "@testplane/wdio-protocols";
+import { StateOpts } from "../../../config/types";
 
-export type RestoreStateOptions = Omit<SaveStateOptions, "keepFile"> & {
+export type RestoreStateOptions = Omit<StateOpts, "keepFile"> & {
     data?: SaveStateData;
     refresh?: boolean;
 };
@@ -31,7 +26,7 @@ export default (browser: Browser): void => {
             process.exit(1);
         }
 
-        const options = { ...defaultOptions, refresh: true, ..._options };
+        const options = { ...browser.config.stateOpts, refresh: true, ..._options };
 
         let restoreState: SaveStateData | undefined = options.data;
 

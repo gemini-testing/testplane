@@ -8,30 +8,13 @@ import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
 import type { Browser } from "../../types";
 import { MasterEvents } from "../../../events";
-
-export type SaveStateOptions = {
-    path?: string;
-
-    cookies?: boolean;
-    localStorage?: boolean;
-    sessionStorage?: boolean;
-
-    cookieFilter?: (cookie: Cookie) => boolean;
-    keepFile?: boolean;
-};
+import { StateOpts } from "../../../config/types";
 
 export type FrameData = StorageData;
 
 export type SaveStateData = {
     cookies?: Array<Cookie>;
     framesData: Record<string, FrameData>;
-};
-
-export const defaultOptions = {
-    cookies: true,
-    localStorage: true,
-    sessionStorage: true,
-    keepFile: process.env.TESTPLANE_SAVE_STATE_KEEP_FILE === "true" || false,
 };
 
 // in case when we use webdriver protocol, bidi and isolation
@@ -52,7 +35,7 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
 export default (browser: ExistingBrowser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData | undefined> => {
+    session.addCommand("saveState", async (_options: StateOpts = {}): Promise<SaveStateData | undefined> => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
@@ -60,7 +43,7 @@ export default (browser: ExistingBrowser): void => {
             process.exit(1);
         }
 
-        const options = { ...defaultOptions, ..._options };
+        const options = { ...browser.config.stateOpts, ..._options };
 
         const data: SaveStateData = {
             framesData: {},

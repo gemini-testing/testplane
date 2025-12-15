@@ -443,5 +443,16 @@ function buildBrowserOptions(defaultFactory, extra) {
                 ...extractSelectivityEnabledEnvVariable(ENV_PREFIXES),
             }),
         }),
+
+        stateOpts: option({
+            defaultValue: defaultFactory("stateOpts"),
+            parseEnv: JSON.parse,
+            parseCli: JSON.parse,
+            validate: value => utils.assertOptionalObject(value, "stateOpts"),
+            map: value => ({
+                ...defaults.stateOpts,
+                ...value,
+            }),
+        }),
     });
 }
