@@ -1,5 +1,6 @@
 import _ from "lodash";
-import { ConfigParsed } from "./types";
+import { ConfigParsed, StateOpts } from "./types";
+import defaults from "./defaults";
 
 type ValueType = "string" | "number" | "boolean" | "object" | "undefined" | "function";
 
@@ -114,4 +115,27 @@ export const extractSelectivityEnabledEnvVariable = (envPrefixes: string[] = [])
     }
 
     return {};
+};
+
+export const extractStateOptsEnvVariable = (envPrefixes: string[] = []): StateOpts => {
+    const result: Record<string, string | boolean> = {};
+
+    for (const envPrefix of envPrefixes) {
+        const envName = envPrefix + "state_opts_";
+
+        ["path", ...Object.keys(defaults.stateOpts)].forEach(optName => {
+            const value = process.env[envName + optName];
+
+            if (optName === "path" && value) {
+                result[optName] = value;
+                return;
+            }
+
+            if (value === String(true)) {
+                result[optName] = true;
+            }
+        });
+    }
+
+    return result;
 };

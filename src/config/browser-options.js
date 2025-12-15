@@ -10,7 +10,7 @@ const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES }
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { TimeTravelMode } = require("./types");
-const { extractSelectivityEnabledEnvVariable } = require("./utils");
+const { extractSelectivityEnabledEnvVariable, extractStateOptsEnvVariable } = require("./utils");
 
 const is = utils.is;
 
@@ -452,6 +452,7 @@ function buildBrowserOptions(defaultFactory, extra) {
             map: value => ({
                 ...defaults.stateOpts,
                 ...value,
+                ...extractStateOptsEnvVariable(ENV_PREFIXES),
             }),
         }),
     });
