@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 const fs = require("fs-extra");
-const option = require("gemini-configparser").option;
+const { option, section } = require("gemini-configparser");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
@@ -10,7 +10,7 @@ const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES }
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { TimeTravelMode } = require("./types");
-const { extractSelectivityEnabledEnvVariable, extractStateOptsEnvVariable } = require("./utils");
+const { extractSelectivityEnabledEnvVariable } = require("./utils");
 
 const is = utils.is;
 
@@ -444,16 +444,12 @@ function buildBrowserOptions(defaultFactory, extra) {
             }),
         }),
 
-        stateOpts: option({
-            defaultValue: defaultFactory("stateOpts"),
-            parseEnv: JSON.parse,
-            parseCli: JSON.parse,
-            validate: value => utils.assertOptionalObject(value, "stateOpts"),
-            map: value => ({
-                ...defaults.stateOpts,
-                ...value,
-                ...extractStateOptsEnvVariable(ENV_PREFIXES),
-            }),
-        }),
+        stateOpts: section({
+            path: options.optionalString("path"),
+            cookies: options.optionalBoolean("cookies"),
+            localStorage: options.optionalBoolean("localStorage"),
+            sessionStorage: options.optionalBoolean("sessionStorage"),
+            keepFile: options.optionalBoolean("keepFile"),
+        })
     });
 }
