@@ -340,30 +340,33 @@ export class ExistingBrowser extends Browser {
     }
 
     protected _decorateUrlMethod(session: WebdriverIO.Browser): void {
-        session.overwriteCommand("url", async (origUrlFn, uri): Promise<void | string | WebdriverIO.Request> => {
-            if (!uri) {
-                return session.getUrl();
-            }
+        session.overwriteCommand(
+            "url",
+            async (origUrlFn, uri, params): Promise<void | string | WebdriverIO.Request> => {
+                if (!uri) {
+                    return session.getUrl();
+                }
 
-            const newUri = this._resolveUrl(uri);
-            this._meta.url = newUri;
+                const newUri = this._resolveUrl(uri);
+                this._meta.url = newUri;
 
-            if (this._config.urlHttpTimeout) {
-                this.setHttpTimeout(this._config.urlHttpTimeout);
-            }
+                if (this._config.urlHttpTimeout) {
+                    this.setHttpTimeout(this._config.urlHttpTimeout);
+                }
 
-            const result = await origUrlFn(newUri);
+                const result = await origUrlFn(newUri, params);
 
-            if (this._config.urlHttpTimeout) {
-                this.restoreHttpTimeout();
-            }
+                if (this._config.urlHttpTimeout) {
+                    this.restoreHttpTimeout();
+                }
 
-            if (this._clientBridge) {
-                await this._clientBridge.call("resetZoom");
-            }
+                if (this._clientBridge) {
+                    await this._clientBridge.call("resetZoom");
+                }
 
-            return result;
-        });
+                return result;
+            },
+        );
     }
 
     protected _resolveUrl(uri: string): string {
