@@ -21,6 +21,7 @@ module.exports = {
         stopOnFirstFail: false,
     },
     stateOpts: {
+        path: null,
         cookies: true,
         localStorage: true,
         sessionStorage: true,

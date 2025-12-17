@@ -445,7 +445,9 @@ function buildBrowserOptions(defaultFactory, extra) {
         }),
 
         stateOpts: section({
-            path: options.optionalString("stateOpts.path"),
+            path: option({
+                defaultValue: defaultFactory("stateOpts.path"),
+            }),
             cookies: options.optionalBoolean("stateOpts.cookies"),
             localStorage: options.optionalBoolean("stateOpts.localStorage"),
             sessionStorage: options.optionalBoolean("stateOpts.sessionStorage"),
