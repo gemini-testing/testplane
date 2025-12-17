@@ -15,7 +15,7 @@ const { extractSelectivityEnabledEnvVariable } = require("./utils");
 const is = utils.is;
 
 function provideRootDefault(name) {
-    return () => defaults[name];
+    return () => _.get(defaults, name);
 }
 
 exports.getTopLevel = () => {
@@ -57,7 +57,7 @@ exports.getPerBrowser = () => {
 
 function provideTopLevelDefault(name) {
     return config => {
-        const value = config[name];
+        const value = _.get(config, name);
 
         if (_.isUndefined(value)) {
             throw new Error(`"${name}" should be set at the top level or per-browser option`);
@@ -445,11 +445,11 @@ function buildBrowserOptions(defaultFactory, extra) {
         }),
 
         stateOpts: section({
-            path: options.optionalString("path"),
-            cookies: options.optionalBoolean("cookies"),
-            localStorage: options.optionalBoolean("localStorage"),
-            sessionStorage: options.optionalBoolean("sessionStorage"),
-            keepFile: options.optionalBoolean("keepFile"),
-        })
+            path: options.optionalString("stateOpts.path"),
+            cookies: options.optionalBoolean("stateOpts.cookies"),
+            localStorage: options.optionalBoolean("stateOpts.localStorage"),
+            sessionStorage: options.optionalBoolean("stateOpts.sessionStorage"),
+            keepFile: options.optionalBoolean("stateOpts.keepFile"),
+        }),
     });
 }
