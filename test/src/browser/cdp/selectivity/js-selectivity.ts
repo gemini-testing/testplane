@@ -162,7 +162,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             await jsSelectivity.start();
             const result = await jsSelectivity.stop(true);
 
-            assert.deepEqual(result, []);
+            assert.deepEqual(Array.from(result || []).sort(), []);
             assert.calledTwice(cdpMock.debugger.off); // Remove both event listeners
         });
 
@@ -207,7 +207,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceRoot,
             );
 
-            assert.deepEqual(result, ["src/app.js", "src/utils.js"]);
+            assert.deepEqual(Array.from(result || []).sort(), ["src/app.js", "src/utils.js"]);
         });
 
         it("should handle scripts without URL", async () => {
@@ -425,7 +425,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             await jsSelectivity.start();
             const result = await jsSelectivity.stop();
 
-            assert.deepEqual(result, [
+            assert.deepEqual(Array.from(result || []).sort(), [
                 "src/app.js",
                 "src/component.jsx",
                 "src/config.cjs",

@@ -46,10 +46,10 @@ export const enableCollectingTestplaneDependencies = (): void => {
     };
 };
 
-export const getCollectedTestplaneDependencies = (): string[] => {
+export const getCollectedTestplaneDependencies = (): Set<string> | null => {
     const store = testDependenciesStorage.getStore();
 
-    return store && store.jsTestplaneDeps ? Array.from(store.jsTestplaneDeps).sort() : [];
+    return store && store.jsTestplaneDeps ? store.jsTestplaneDeps : null;
 };
 
 export const runWithTestplaneDependenciesCollecting = <T>(fn: () => Promise<T>): Promise<T> => {

@@ -44,7 +44,8 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
 };
 
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
-    const { enabled, compression, sourceRoot, testDependenciesPath } = browser.config.selectivity;
+    const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath } =
+        browser.config.selectivity;
 
     if (!enabled || !browser.publicAPI.isChromium) {
         return () => Promise.resolve();
@@ -91,13 +92,25 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
 
         cdpTaget.detachFromTarget(sessionId).catch(() => {});
 
-        if (drop || (!cssDependencies.length && !jsDependencies.length)) {
+        if (drop || (!cssDependencies?.size && !jsDependencies?.size)) {
             return;
         }
 
+        const mapBrowserDepsRelativePath = mapDependencyRelativePath
+            ? (relativePath: string): string | void => mapDependencyRelativePath({ scope: "browser", relativePath })
+            : null;
+
+        const mapTestplaneDepsRelativePath = mapDependencyRelativePath
+            ? (relativePath: string): string | void => mapDependencyRelativePath({ scope: "testplane", relativePath })
+            : null;
+
         const testDependencyWriter = getTestDependenciesWriter(testDependenciesPath, compression);
-        const browserDeps = transformSourceDependencies(cssDependencies, jsDependencies);
-        const testplaneDeps = transformSourceDependencies([], getCollectedTestplaneDependencies());
+        const browserDeps = transformSourceDependencies(cssDependencies, jsDependencies, mapBrowserDepsRelativePath);
+        const testplaneDeps = transformSourceDependencies(
+            null,
+            getCollectedTestplaneDependencies(),
+            mapTestplaneDepsRelativePath,
+        );
 
         process.send?.({
             event: MasterEvents.TEST_DEPENDENCIES,

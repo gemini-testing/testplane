@@ -75,12 +75,12 @@ export class JSSelectivity {
     }
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
-    async stop(drop?: boolean): Promise<string[]> {
+    async stop(drop?: boolean): Promise<Set<string> | null> {
         if (drop) {
             this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
             this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
 
-            return [];
+            return null;
         }
 
         const coverage = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
@@ -173,6 +173,6 @@ export class JSSelectivity {
         this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
         this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
 
-        return Array.from(totalDependingSourceFiles).sort();
+        return totalDependingSourceFiles;
     }
 }

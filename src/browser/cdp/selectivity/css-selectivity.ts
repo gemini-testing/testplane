@@ -52,11 +52,11 @@ export class CSSSelectivity {
     }
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
-    async stop(drop?: boolean): Promise<string[]> {
+    async stop(drop?: boolean): Promise<Set<string> | null> {
         if (drop) {
             this._cssOnStyleSheetAddedFn && this._cdp.css.off("styleSheetAdded", this._cssOnStyleSheetAddedFn);
 
-            return [];
+            return null;
         }
 
         const coverage = await this._cdp.css.stopRuleUsageTracking(this._sessionId);
@@ -148,6 +148,6 @@ export class CSSSelectivity {
 
         this._cssOnStyleSheetAddedFn && this._cdp.css.off("styleSheetAdded", this._cssOnStyleSheetAddedFn);
 
-        return Array.from(totalDependingSourceFiles).sort();
+        return totalDependingSourceFiles;
     }
 }
