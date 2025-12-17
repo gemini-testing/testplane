@@ -165,20 +165,21 @@ const warnUnsupportedProtocol = memoize((protocol: string, dependency: string): 
 });
 
 /**
- * @param cssDependencies SORTED uniq array of css dependenciy URI's
- * @param jsDependencies SORTED uniq array of js dependenciy URI's
+ * @param cssDependencies set of css dependenciy URI's
+ * @param jsDependencies set of js dependenciy URI's
  * @returns sorted uniq arrays of relative paths
  */
 export const transformSourceDependencies = (
-    cssDependencies: string[],
-    jsDependencies: string[],
+    cssDependencies: Set<string> | null,
+    jsDependencies: Set<string> | null,
+    mapDependencyPathFn?: null | ((relativePath: string) => string | void),
 ): NormalizedDependencies => {
     const nodeModulesLabel = "node_modules/";
-    const css: string[] = [];
-    const js: string[] = [];
-    const modules: string[] = [];
+    const cssSet: Set<string> = new Set();
+    const jsSet: Set<string> = new Set();
+    const modulesSet: Set<string> = new Set();
 
-    const classifyDependency = (dependency: string, typedResultArray: string[]): void => {
+    const classifyDependency = (dependency: string, typedResultSet: Set<string>): void => {
         dependency = decodeURIComponent(softFileURLToPath(dependency));
 
         const protocol = getProtocol(dependency);
@@ -188,13 +189,21 @@ export const transformSourceDependencies = (
             return;
         }
 
-        const dependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
+        const initialDependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
+
+        const dependencyRelativePath = mapDependencyPathFn
+            ? mapDependencyPathFn(initialDependencyRelativePath)
+            : initialDependencyRelativePath;
+
+        if (!dependencyRelativePath) {
+            return;
+        }
 
         const nodeModulesLabelPos = dependencyRelativePath.indexOf(nodeModulesLabel);
 
         if (nodeModulesLabelPos === -1) {
             ensurePosixRelativeDependencyPathExists(dependencyRelativePath);
-            typedResultArray.push(dependencyRelativePath);
+            typedResultSet.add(dependencyRelativePath);
             return;
         }
 
@@ -212,40 +221,29 @@ export const transformSourceDependencies = (
 
         if (moduleEndPos === -1) {
             ensurePosixRelativeDependencyPathExists(dependencyRelativePath);
-            typedResultArray.push(dependencyRelativePath);
+            typedResultSet.add(dependencyRelativePath);
         } else {
             const modulePath = dependencyRelativePath.slice(0, moduleEndPos);
 
-            if (modules[modules.length - 1] !== modulePath) {
-                ensurePosixRelativeDependencyPathExists(modulePath);
+            ensurePosixRelativeDependencyPathExists(modulePath);
 
-                modules.push(modulePath);
-            }
+            modulesSet.add(modulePath);
         }
     };
 
-    let cssIndex = 0;
-    let jsIndex = 0;
-
-    while (cssIndex < cssDependencies.length && jsIndex < jsDependencies.length) {
-        const compareResult = cssDependencies[cssIndex].localeCompare(jsDependencies[jsIndex]);
-
-        if (compareResult < 0) {
-            classifyDependency(cssDependencies[cssIndex++], css);
-        } else {
-            classifyDependency(jsDependencies[jsIndex++], js);
+    if (cssDependencies) {
+        for (const cssDependency of cssDependencies.values()) {
+            classifyDependency(cssDependency, cssSet);
         }
     }
 
-    while (cssIndex < cssDependencies.length) {
-        classifyDependency(cssDependencies[cssIndex++], css);
+    if (jsDependencies) {
+        for (const jsDependency of jsDependencies.values()) {
+            classifyDependency(jsDependency, jsSet);
+        }
     }
 
-    while (jsIndex < jsDependencies.length) {
-        classifyDependency(jsDependencies[jsIndex++], js);
-    }
-
-    return { css, js, modules };
+    return { css: Array.from(cssSet).sort(), js: Array.from(jsSet).sort(), modules: Array.from(modulesSet).sort() };
 };
 
 /** Merges two sorted deps array into one with uniq values */

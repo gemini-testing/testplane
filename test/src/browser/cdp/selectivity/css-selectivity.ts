@@ -220,7 +220,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             await cssSelectivity.start();
             const result = await cssSelectivity.stop(true);
 
-            assert.deepEqual(result, []);
+            assert.deepEqual(Array.from(result || []).sort(), []);
             assert.calledOnceWith(cdpMock.css.off, "styleSheetAdded");
         });
 
@@ -278,7 +278,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
                 sourceRoot,
             );
 
-            assert.deepEqual(result, ["/root/src/styles.css", "/root/src/theme.css"]);
+            assert.deepEqual(Array.from(result || []).sort(), ["/root/src/styles.css", "/root/src/theme.css"]);
         });
 
         it("should handle missing styleSheetAdded events by fetching manually", async () => {
@@ -441,7 +441,10 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
             const result = await cssSelectivity.stop();
 
-            assert.deepEqual(result, ["/root/src/relative.css", "file:///absolute/path/styles.css"]);
+            assert.deepEqual(Array.from(result || []).sort(), [
+                "/root/src/relative.css",
+                "file:///absolute/path/styles.css",
+            ]);
         });
 
         it("should return sorted and unique dependencies", async () => {
@@ -485,7 +488,11 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
             const result = await cssSelectivity.stop();
 
-            assert.deepEqual(result, ["/root/src/a-styles.css", "/root/src/b-styles.css", "/root/src/z-styles.css"]);
+            assert.deepEqual(Array.from(result || []).sort(), [
+                "/root/src/a-styles.css",
+                "/root/src/b-styles.css",
+                "/root/src/z-styles.css",
+            ]);
         });
     });
 });

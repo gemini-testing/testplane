@@ -128,6 +128,7 @@ module.exports = {
         testDependenciesPath: ".testplane/selectivity",
         compression: "gz",
         disableSelectivityPatterns: [],
+        mapDependencyRelativePath: null,
     },
 };
 

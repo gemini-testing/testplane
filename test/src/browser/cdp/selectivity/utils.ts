@@ -254,8 +254,8 @@ describe("CDP/Selectivity/Utils", () => {
         });
 
         it("should classify dependencies into css, js, and modules", () => {
-            const cssDeps = ["src/styles.css", "../node_modules/lib/style.css"];
-            const jsDeps = ["src/app.js", "node_modules/react/index.js"];
+            const cssDeps = new Set(["src/styles.css", "../node_modules/lib/style.css"]);
+            const jsDeps = new Set(["src/app.js", "node_modules/react/index.js"]);
 
             fsStub.existsSync.returns(true);
 
@@ -263,12 +263,12 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.deepEqual(result.css, ["src/styles.css"]);
             assert.deepEqual(result.js, ["src/app.js"]);
-            assert.deepEqual(result.modules, ["node_modules/react", "../node_modules/lib"]);
+            assert.deepEqual(result.modules, ["../node_modules/lib", "node_modules/react"]);
         });
 
         it("should handle scoped packages", () => {
-            const cssDeps: string[] = [];
-            const jsDeps: string[] = ["node_modules/@scope/package/index.js"];
+            const cssDeps = new Set<string>();
+            const jsDeps = new Set(["node_modules/@scope/package/index.js"]);
 
             fsStub.existsSync.returns(true);
 
@@ -278,8 +278,8 @@ describe("CDP/Selectivity/Utils", () => {
         });
 
         it("should throw error if dependency file doesn't exist", () => {
-            const cssDeps: string[] = ["src/missing.css"];
-            const jsDeps: string[] = [];
+            const cssDeps = new Set(["src/missing.css"]);
+            const jsDeps = new Set<string>([]);
 
             fsStub.existsSync.returns(false);
 
@@ -289,8 +289,8 @@ describe("CDP/Selectivity/Utils", () => {
         });
 
         it("should decode URI components", () => {
-            const cssDeps: string[] = ["src/file%20with%20spaces.css"];
-            const jsDeps: string[] = [];
+            const cssDeps = new Set(["src/file%20with%20spaces.css"]);
+            const jsDeps = new Set<string>();
 
             softFileURLToPathStub.returns("src/file with spaces.css");
             pathStub.posix.relative.returns("src/file with spaces.css");
@@ -300,6 +300,27 @@ describe("CDP/Selectivity/Utils", () => {
 
             assert.calledWith(softFileURLToPathStub, "src/file%20with%20spaces.css");
             assert.deepEqual(result.css, ["src/file with spaces.css"]);
+        });
+
+        it("should map dependencies using passed function", () => {
+            const mapFn = (relativePath: string): string | void => {
+                if (relativePath === "ignore") {
+                    return;
+                }
+
+                if (relativePath === "../foo") {
+                    return "../bar";
+                }
+            };
+
+            const cssDeps = new Set<string>();
+            const jsDeps = new Set<string>(["ignore", "../foo"]);
+
+            fsStub.existsSync.returns(true);
+
+            const result = utils.transformSourceDependencies(cssDeps, jsDeps, mapFn);
+
+            assert.deepEqual(result.js, ["../bar"]);
         });
     });
 

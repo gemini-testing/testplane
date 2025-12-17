@@ -282,6 +282,17 @@ export interface TimeTravelConfig {
     mode: TimeTravelMode;
 }
 
+/**
+ * @param {Object} dependency - Object with dependency scope and posix relative path
+ * @param {"browser"|"testplane"|string} dependency.scope - Dependency scope
+ * @param {string} dependency.relativePath - POSIX relative path
+ * @returns {string|void} Updated POSIX relative path or falsy value, if dependency should be ignored.
+ */
+type SelectivityMapDependencyRelativePathFn = (dependency: {
+    scope: "browser" | "testplane" | (string & NonNullable<unknown>);
+    relativePath: string;
+}) => string | void;
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
@@ -374,6 +385,7 @@ export interface CommonConfig {
         testDependenciesPath: string;
         compression: SelectivityCompressionType;
         disableSelectivityPatterns: string[];
+        mapDependencyRelativePath: null | SelectivityMapDependencyRelativePathFn;
     };
 
     timeTravel: TimeTravelConfig;

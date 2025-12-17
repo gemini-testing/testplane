@@ -32,6 +32,7 @@ describe("CDP/Selectivity", () => {
                 testDependenciesPath: string;
                 compression: "none";
                 disableSelectivityPatterns: string[];
+                mapDependencyRelativePath: null;
             };
         };
         publicAPI: { isChromium: boolean; getWindowHandle: SinonStub };
@@ -43,11 +44,11 @@ describe("CDP/Selectivity", () => {
     beforeEach(() => {
         cssSelectivityMock = {
             start: sandbox.stub().resolves(),
-            stop: sandbox.stub().resolves(["src/styles.css"]),
+            stop: sandbox.stub().resolves(new Set(["src/styles.css"])),
         };
         jsSelectivityMock = {
             start: sandbox.stub().resolves(),
-            stop: sandbox.stub().resolves(["src/app.js"]),
+            stop: sandbox.stub().resolves(new Set(["src/app.js"])),
         };
         testDependenciesWriterMock = {
             saveFor: sandbox.stub().resolves(),
@@ -86,6 +87,7 @@ describe("CDP/Selectivity", () => {
                     testDependenciesPath: "/test/dependencies",
                     compression: "none",
                     disableSelectivityPatterns: [],
+                    mapDependencyRelativePath: null,
                 },
             },
             publicAPI: {
@@ -219,7 +221,7 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(cssSelectivityMock.stop, false);
             assert.calledWith(jsSelectivityMock.stop, false);
-            assert.calledWith(transformSourceDependenciesStub, ["src/styles.css"], ["src/app.js"]);
+            assert.calledWith(transformSourceDependenciesStub, new Set(["src/styles.css"]), new Set(["src/app.js"]));
             assert.calledWith(getTestDependenciesWriterStub, "/test/dependencies");
             assert.calledWith(testDependenciesWriterMock.saveFor, mockTest, {
                 css: ["src/styles.css"],
@@ -270,16 +272,16 @@ describe("CDP/Selectivity", () => {
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, ["src/styles.css"], []);
+            assert.calledWith(transformSourceDependenciesStub, new Set(["src/styles.css"]), []);
             assert.calledOnce(testDependenciesWriterMock.saveFor);
         });
 
         it("should save dependencies when only JS dependencies exist", async () => {
-            cssSelectivityMock.stop.resolves([]);
+            cssSelectivityMock.stop.resolves(null);
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, [], ["src/app.js"]);
+            assert.calledWith(transformSourceDependenciesStub, null, new Set(["src/app.js"]));
             assert.calledOnce(testDependenciesWriterMock.saveFor);
         });
     });
