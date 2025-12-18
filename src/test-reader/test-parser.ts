@@ -153,15 +153,15 @@ export class TestParser extends EventEmitter {
             treeBuilder.addTestFilter((test: Test) => {
                 let current: Test | Suite | null = test;
 
+                const allTags = new Set<string>([]);
+
                 while (current) {
-                    if (tag(current.tags)) {
-                        return true;
-                    } else {
-                        current = current.parent;
-                    }
+                    [...current.tags.keys()].forEach(item => allTags.add(item));
+
+                    current = current.parent;
                 }
 
-                return false;
+                return tag(allTags);
             });
         }
 
