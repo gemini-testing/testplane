@@ -7,7 +7,7 @@ export const collectCliValues = (newValue: unknown, array = [] as unknown[]): un
     return array.concat(newValue);
 };
 
-export type TagFilter = (tags: Map<string, boolean>) => boolean;
+export type TagFilter = (tags: Set<string>) => boolean;
 
 export const compileTagFilter = (filter: string): TagFilter => {
     const normalizedFilter = filter.replace(/[\s'"`\\]/g, "").toLowerCase();
@@ -37,7 +37,7 @@ export const compileTagFilter = (filter: string): TagFilter => {
 
     const compiledCode = compileOrExpression(normalizedFilter);
 
-    return new Function("tags", `return ${compiledCode};`) as (tags: Map<string, boolean>) => boolean;
+    return new Function("tags", `return ${compiledCode};`) as (tags: Set<string>) => boolean;
 };
 
 export const compileGrep = (grep: string): RegExp => {

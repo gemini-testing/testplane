@@ -674,6 +674,22 @@ describe("test-reader/test-parser", () => {
                     assert.isTrue(filter(test));
                 });
 
+                it("installed filter should accept matched test with not operator and parent test for tags", async () => {
+                    await parse_({ tag: compileTagFilter("!smoke") });
+
+                    const filter = TreeBuilder.prototype.addTestFilter.lastCall.args[0];
+                    const test = {
+                        fullTitle: () => "Some name",
+                        tags: new Map([["slow", false]]),
+                        parent: {
+                            fullTitle: () => "Some parent",
+                            tags: new Map([["smoke", false]]),
+                        },
+                    };
+
+                    assert.isFalse(filter(test));
+                });
+
                 it("installed filter should accept matched test with not operator for tags", async () => {
                     await parse_({ tag: compileTagFilter("!smoke&!slow") });
 
@@ -684,6 +700,10 @@ describe("test-reader/test-parser", () => {
                             ["smoke", false],
                             ["slow", false],
                         ]),
+                        parent: {
+                            fullTitle: () => "Some parent",
+                            tags: new Map([]),
+                        },
                     };
 
                     assert.isFalse(filter(test));
