@@ -637,7 +637,7 @@ describe("test-reader/test-parser", () => {
                 assert.notCalled(TreeBuilder.prototype.addTestFilter);
             });
 
-            describe.only("if set", () => {
+            describe("if set", () => {
                 it("should set test filter to tree builder", async () => {
                     await parse_({ tag: compileTagFilter("smoke") });
 
