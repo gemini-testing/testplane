@@ -38,7 +38,7 @@ export const plugin = async (): Promise<Plugin[]> => {
     const driverModulePath = path.resolve(browserModulesPath, "driver.js");
     const mockModulePath = path.resolve(browserModulesPath, "mock.js");
 
-    const automationProtocolPath = `/@fs${driverModulePath}`;
+    const automationProtocolPath = path.join("/@fs", driverModulePath).replace(/\\/g, "/");
 
     const stubDefaultModulePath = path.resolve(browserModulesPath, "stubs/default-module.js");
     const stubImportMetaResolvePath = path.resolve(browserModulesPath, "stubs/import-meta-resolve.js");
