@@ -28,9 +28,9 @@ describe("compileTagFilter", () => {
         cases.forEach(({ expression, okTags, badTags }) => {
             const func = compileTagFilter(expression);
 
-            assert.isTrue(func(new Map(okTags.map(tag => [tag, false]))));
+            assert.isTrue(func(new Set(okTags.map(tag => tag))));
 
-            assert.isFalse(func(new Map(badTags.map(tag => [tag, false]))));
+            assert.isFalse(func(new Set(badTags.map(tag => tag))));
         });
     });
 
@@ -38,6 +38,6 @@ describe("compileTagFilter", () => {
         const injectionStr = '")+console.log("111111';
         const func = compileTagFilter(injectionStr);
 
-        assert.isFalse(func(new Map()));
+        assert.isFalse(func(new Set()));
     });
 });
