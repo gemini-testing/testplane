@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.38.1 (2025-12-18)
+
+
+### Bug Fixes
+
+* tags no operator ([3481756](https://github.com/gemini-testing/testplane/commit/3481756077aedcf5f3d1b4eb69538af9a0b1d092))
+
 ## 8.38.0 (2025-12-17)
 
 ### 8.37.3 (2025-12-16)
