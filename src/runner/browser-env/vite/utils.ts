@@ -59,7 +59,7 @@ export const getTestInfoFromViteRequest = (req: Connect.IncomingMessage): TestIn
         runUuid,
         env: {
             ...env,
-            file: path.join("/", path.relative(process.cwd(), env.file)).replace(/\\/g, "/"),
+            file: path.posix.join("/", path.relative(process.cwd(), env.file)).replaceAll(path.sep, path.posix.sep),
         },
     };
 };
