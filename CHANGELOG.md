@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.38.2 (2025-12-22)
+
+
+### Bug Fixes
+
+* component testing for windows ([0b0da8c](https://github.com/gemini-testing/testplane/commit/0b0da8cc37817b3c695fd46ff962ba05f4973ff2))
+
 ### 8.38.1 (2025-12-18)
 
 
