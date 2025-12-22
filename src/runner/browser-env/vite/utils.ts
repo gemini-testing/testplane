@@ -54,7 +54,14 @@ export const getTestInfoFromViteRequest = (req: Connect.IncomingMessage): TestIn
         );
     }
 
-    return { routeName, runUuid, env };
+    return {
+        routeName,
+        runUuid,
+        env: {
+            ...env,
+            file: path.posix.join("/", path.relative(process.cwd(), env.file).replaceAll(path.sep, path.posix.sep)),
+        },
+    };
 };
 
 export const getPathWithoutExtName = (fsPath: string): string => {
