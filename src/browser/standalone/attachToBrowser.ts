@@ -5,6 +5,7 @@ import { AsyncEmitter, MasterEvents } from "../../events";
 import { BrowserName, type W3CBrowserName, type SessionOptions } from "./../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
 import fs from "fs-extra";
+import { useGlobalFilesToRemove } from "../../globalFilesToRemove";
 
 export async function attachToBrowser(session: SessionOptions): Promise<WebdriverIO.Browser> {
     const browserName = session.sessionCaps?.browserName || BrowserName.CHROME;
@@ -62,7 +63,7 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
             process.kill(session.driverPid, 9);
         }
 
-        if (filesToRemove.length > 0) {
+        if (filesToRemove.length > 0 && !useGlobalFilesToRemove()) {
             await Promise.all(filesToRemove.map(path => fs.remove(path)));
         }
     });

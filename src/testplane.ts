@@ -21,6 +21,7 @@ import { preloadWebdriverIO } from "./utils/preload-utils";
 import { updateSelectivityHashes } from "./browser/cdp/selectivity";
 import { TagFilter } from "./utils/cli";
 import { ViteServer } from "./runner/browser-env/vite/server";
+import { getGlobalFilesToRemove, initGlobalFilesToRemove } from "./globalFilesToRemove";
 
 interface RunOpts {
     browsers: string[];
@@ -178,6 +179,8 @@ export class Testplane extends BaseTestplane {
 
         preloadWebdriverIO();
 
+        initGlobalFilesToRemove();
+
         if (this.config.beforeAll) {
             await this.config.beforeAll.call({ config: this.config }, { config: this.config });
         }
@@ -200,8 +203,10 @@ export class Testplane extends BaseTestplane {
             await this.config.afterAll.call({ config: this.config }, { config: this.config });
         }
 
-        if (this._filesToRemove.length > 0) {
-            await Promise.all(this._filesToRemove.map(path => fs.remove(path)));
+        const filesToRemove = [...new Set([...this._filesToRemove, ...getGlobalFilesToRemove()])];
+
+        if (filesToRemove.length > 0) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
         }
 
         return !this.isFailed();

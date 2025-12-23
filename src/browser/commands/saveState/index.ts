@@ -9,6 +9,7 @@ import { Cookie } from "../../../types";
 import type { Browser } from "../../types";
 import { MasterEvents } from "../../../events";
 import { StateOpts } from "../../../config/types";
+import { addGlobalFileToRemove } from "../../../globalFilesToRemove";
 
 export type FrameData = StorageData;
 
@@ -39,8 +40,7 @@ export default (browser: ExistingBrowser): void => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            logger.error("Before saveState first open page using url command");
-            process.exit(1);
+            throw new Error("Before saveState first open page using url command");
         }
 
         const options = { ...browser.config.stateOpts, ..._options };
@@ -171,7 +171,7 @@ export default (browser: ExistingBrowser): void => {
 
             if (options.keepFile) {
                 logger.warn(
-                    "\x1b[31mPlease be aware that the file containing authorization data will not be automatically deleted after the tests are completed!!!\x1b[0m",
+                    "\x1b[31mOption keepFile in stateOpts now is true. Please be aware that the file containing authorization data will not be automatically deleted after the tests are completed!\x1b[0m",
                 );
             } else {
                 if (process.send) {
@@ -180,6 +180,8 @@ export default (browser: ExistingBrowser): void => {
                         data: options.path,
                     });
                 }
+
+                addGlobalFileToRemove(options.path);
 
                 browser.emitter.emit(MasterEvents.ADD_FILE_TO_REMOVE, options.path);
             }

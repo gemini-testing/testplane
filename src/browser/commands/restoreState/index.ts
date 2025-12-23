@@ -2,7 +2,6 @@ import fs from "fs-extra";
 
 import { restoreStorage } from "./restoreStorage";
 
-import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { getOverridesProtocol, getWebdriverFrames, SaveStateData } from "../saveState";
@@ -18,12 +17,11 @@ export type RestoreStateOptions = Omit<StateOpts, "keepFile"> & {
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
+    session.addCommand("restoreState", async (_options: RestoreStateOptions = {}) => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            logger.error("Before restoreState first open page using url command");
-            process.exit(1);
+            throw new Error("Before restoreState first open page using url command");
         }
 
         const options = { ...browser.config.stateOpts, refresh: true, ..._options };
@@ -35,8 +33,7 @@ export default (browser: Browser): void => {
         }
 
         if (!restoreState) {
-            logger.error("Can't restore state: please provide a path to file or data");
-            process.exit(1);
+            throw new Error("Can't restore state: please provide a path to file or data");
         }
 
         if (restoreState?.cookies && options.cookieFilter) {

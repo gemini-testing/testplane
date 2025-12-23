@@ -20,6 +20,7 @@ export type StandaloneBrowserOptions = Pick<
     | "user"
     | "key"
     | "system"
+    | "stateOpts"
 >;
 
 export type StandaloneBrowserOptionsInput = Partial<Omit<StandaloneBrowserOptions, "system">> & {
