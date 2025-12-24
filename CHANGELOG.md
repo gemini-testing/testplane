@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.38.3 (2025-12-24)
+
+
+### Bug Fixes
+
+* params url error without bidi ([eb99e59](https://github.com/gemini-testing/testplane/commit/eb99e591f53b8c95a6a667806cca40721f1a7904))
+
 ### 8.38.2 (2025-12-22)
 
 
