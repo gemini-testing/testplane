@@ -354,7 +354,7 @@ export class ExistingBrowser extends Browser {
                     this.setHttpTimeout(this._config.urlHttpTimeout);
                 }
 
-                const result = await origUrlFn(newUri, params);
+                const result = await origUrlFn(newUri, this._session?.isBidi ? params : undefined);
 
                 if (this._config.urlHttpTimeout) {
                     this.restoreHttpTimeout();
