@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 8.40.0 (2025-12-25)
+
+
+### Features
+
+* saveState improvements ([cc1f6e6](https://github.com/gemini-testing/testplane/commit/cc1f6e687a262c475b960c314101f8cb912d8151))
+
 ## 8.39.0 (2025-12-25)
 
 
