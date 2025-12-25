@@ -258,6 +258,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["ERROR"], callback: (err: Error) => void): T;
 
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
+    (event: Events["ADD_FILE_TO_REMOVE"], callback: (path: string) => void): T;
     (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
 

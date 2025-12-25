@@ -21,6 +21,7 @@ import { preloadWebdriverIO } from "./utils/preload-utils";
 import { updateSelectivityHashes } from "./browser/cdp/selectivity";
 import { TagFilter } from "./utils/cli";
 import { ViteServer } from "./runner/browser-env/vite/server";
+import { getGlobalFilesToRemove, initGlobalFilesToRemove } from "./globalFilesToRemove";
 
 interface RunOpts {
     browsers: string[];
@@ -78,6 +79,8 @@ export class Testplane extends BaseTestplane {
     protected runner: MainRunner | null;
     protected viteServer: ViteServer | null;
 
+    private _filesToRemove: string[];
+
     constructor(config?: string | ConfigInput) {
         super(config);
 
@@ -85,10 +88,16 @@ export class Testplane extends BaseTestplane {
         this.failedList = [];
         this.runner = null;
         this.viteServer = null;
+
+        this._filesToRemove = [];
     }
 
     extendCli(parser: Command): void {
         this.emit(MasterEvents.CLI, parser);
+    }
+
+    addFileToRemove(path: string): void {
+        this._filesToRemove.push(path);
     }
 
     protected async _init(): Promise<void> {
@@ -156,6 +165,8 @@ export class Testplane extends BaseTestplane {
 
         this.on(MasterEvents.RUNNER_END, async () => await this._saveFailed());
 
+        this.on(MasterEvents.ADD_FILE_TO_REMOVE, this.addFileToRemove);
+
         await initReporters(reporters, this);
 
         eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
@@ -167,6 +178,8 @@ export class Testplane extends BaseTestplane {
         runner.init();
 
         preloadWebdriverIO();
+
+        initGlobalFilesToRemove();
 
         if (this.config.beforeAll) {
             await this.config.beforeAll.call({ config: this.config }, { config: this.config });
@@ -188,6 +201,12 @@ export class Testplane extends BaseTestplane {
 
         if (this.config.afterAll) {
             await this.config.afterAll.call({ config: this.config }, { config: this.config });
+        }
+
+        const filesToRemove = [...new Set([...this._filesToRemove, ...getGlobalFilesToRemove()])];
+
+        if (filesToRemove.length > 0) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
         }
 
         return !this.isFailed();

@@ -2,7 +2,7 @@
 
 const _ = require("lodash");
 const fs = require("fs-extra");
-const option = require("gemini-configparser").option;
+const { option, section } = require("gemini-configparser");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
@@ -15,7 +15,7 @@ const { extractSelectivityEnabledEnvVariable } = require("./utils");
 const is = utils.is;
 
 function provideRootDefault(name) {
-    return () => defaults[name];
+    return () => _.get(defaults, name);
 }
 
 exports.getTopLevel = () => {
@@ -57,7 +57,7 @@ exports.getPerBrowser = () => {
 
 function provideTopLevelDefault(name) {
     return config => {
-        const value = config[name];
+        const value = _.get(config, name);
 
         if (_.isUndefined(value)) {
             throw new Error(`"${name}" should be set at the top level or per-browser option`);
@@ -442,6 +442,16 @@ function buildBrowserOptions(defaultFactory, extra) {
                 ...value,
                 ...extractSelectivityEnabledEnvVariable(ENV_PREFIXES),
             }),
+        }),
+
+        stateOpts: section({
+            path: option({
+                defaultValue: defaultFactory("stateOpts.path"),
+            }),
+            cookies: options.optionalBoolean("stateOpts.cookies"),
+            localStorage: options.optionalBoolean("stateOpts.localStorage"),
+            sessionStorage: options.optionalBoolean("stateOpts.sessionStorage"),
+            keepFile: options.optionalBoolean("stateOpts.keepFile"),
         }),
     });
 }

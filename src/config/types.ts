@@ -1,6 +1,6 @@
 import type { BrowserConfig } from "./browser-config";
 import type { BrowserTestRunEnvOptions } from "../runner/browser-env/vite/types";
-import type { Test } from "../types";
+import type { Cookie, Test } from "../types";
 import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
@@ -282,6 +282,17 @@ export interface TimeTravelConfig {
     mode: TimeTravelMode;
 }
 
+export type StateOpts = {
+    path?: string;
+
+    cookies?: boolean;
+    localStorage?: boolean;
+    sessionStorage?: boolean;
+
+    cookieFilter?: (cookie: Cookie) => boolean;
+    keepFile?: boolean;
+};
+
 /**
  * @param {Object} dependency - Object with dependency scope and posix relative path
  * @param {"browser"|"testplane"|string} dependency.scope - Dependency scope
@@ -336,6 +347,7 @@ export interface CommonConfig {
     buildDiffOpts: BuildDiffOptsConfig;
     assertViewOpts: AssertViewOpts;
     expectOpts: ExpectOptsConfig;
+    stateOpts?: StateOpts;
     meta: { [name: string]: unknown };
     windowSize: { width: number; height: number } | `${number}x${number}` | null;
     orientation: "landscape" | "portrait" | null;
