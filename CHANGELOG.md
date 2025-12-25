@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 8.39.0 (2025-12-25)
+
+
+### Features
+
+* ability to connect to repl server by port ([1521f93](https://github.com/gemini-testing/testplane/commit/1521f9327036384bc64637e70007c37e1b07d6f9))
+
 ### 8.38.3 (2025-12-24)
 
 
