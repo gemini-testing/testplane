@@ -1,3 +1,8 @@
+/*
+    This functional with global determines if it's running in a browser launched from beforeAll/afterAll hooks.
+    In this case, it does not delete the state file and passes it to a global variable for Testplane to clean up after all tests and hooks.
+ */
+
 const TESTPLANE_FILES_TO_REMOVE = Symbol.for("testplaneFilesToRemove");
 
 type TestplaneGlobal = typeof globalThis & {
