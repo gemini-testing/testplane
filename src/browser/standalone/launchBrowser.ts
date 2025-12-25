@@ -9,7 +9,7 @@ import { LOCAL_GRID_URL } from "../../constants/config";
 import { WebdriverPool } from "../../browser-pool/webdriver-pool";
 import type { StandaloneBrowserOptionsInput } from "./types";
 import fs from "fs-extra";
-import { useGlobalFilesToRemove } from "../../globalFilesToRemove";
+import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
 
 const webdriverPool = new WebdriverPool();
 
@@ -107,7 +107,7 @@ export async function launchBrowser(
         await existingBrowser.quit();
         await newBrowser.kill();
 
-        if (filesToRemove.length > 0 && !useGlobalFilesToRemove()) {
+        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
             await Promise.all(filesToRemove.map(path => fs.remove(path)));
         }
     });
