@@ -1106,12 +1106,34 @@ describe("ExistingBrowser", () => {
             assert.equal(browser.state.isBroken, true);
         });
 
+        it("should not stub session commands by default", async () => {
+            session.commandList = ["foo"];
+            session.foo = sandbox.stub().resolves("foo");
+            const browser = await initBrowser_();
+
+            browser.markAsBroken();
+
+            const result = await session.foo();
+            assert.equal(result, "foo");
+        });
+
+        it("should stub session commands if 'stubBrowserCommands' param was used", async () => {
+            session.commandList = ["foo"];
+            session.foo = sandbox.stub().resolves("foo");
+            const browser = await initBrowser_();
+
+            browser.markAsBroken({ stubBrowserCommands: true });
+
+            const result = await session.foo();
+            assert.isUndefined(result);
+        });
+
         it('should not stub "deleteSession" command', async () => {
             session.commandList = ["deleteSession"];
             session.deleteSession = () => "deleted";
             const browser = await initBrowser_();
 
-            browser.markAsBroken();
+            browser.markAsBroken({ stubBrowserCommands: true });
 
             assert.equal(session.deleteSession(), "deleted");
         });
@@ -1121,20 +1143,9 @@ describe("ExistingBrowser", () => {
             session.isProp = true;
             const browser = await initBrowser_();
 
-            browser.markAsBroken();
+            browser.markAsBroken({ stubBrowserCommands: true });
 
             assert.isTrue(session.isProp);
-        });
-
-        it("should stub session commands", async () => {
-            session.commandList = ["foo"];
-            session.foo = sandbox.stub().resolves("foo");
-            const browser = await initBrowser_();
-
-            browser.markAsBroken();
-
-            const result = await session.foo();
-            assert.isUndefined(result);
         });
 
         it("should not mark session as broken twice", async () => {
@@ -1142,9 +1153,9 @@ describe("ExistingBrowser", () => {
             session.foo = () => "foo";
             const browser = await initBrowser_();
 
-            browser.markAsBroken();
+            browser.markAsBroken({ stubBrowserCommands: true });
             session.overwriteCommand.resetHistory();
-            browser.markAsBroken();
+            browser.markAsBroken({ stubBrowserCommands: true });
 
             assert.notCalled(session.overwriteCommand);
         });

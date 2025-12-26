@@ -35,7 +35,7 @@ module.exports = class BrowserPool {
                 throw error;
             }
 
-            browser.markAsBroken();
+            browser.markAsBroken({ stubBrowserCommands: true });
             this.freeBrowser(browser);
 
             throw Object.assign(error, { meta: browser.meta });
