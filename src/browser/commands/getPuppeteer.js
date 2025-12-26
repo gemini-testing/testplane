@@ -39,7 +39,7 @@ module.exports.default = browser => {
 
                 isSettled = true;
 
-                browser.markAsBroken();
+                browser.markAsBroken({ stubBrowserCommands: false });
 
                 reject(new Error(`Unable to establish a CDP connection in ${PUPPETEER_REJECT_TIMEOUT} ms`));
             }, PUPPETEER_REJECT_TIMEOUT);

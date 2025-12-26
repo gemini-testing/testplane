@@ -99,7 +99,7 @@ module.exports = class TestRunner {
         // 1. before afterEach hook to prevent working with broken sessions
         // 2. after collecting all assertView errors (including afterEach section)
         if (!this._browser.state.isBroken && isSessionBroken(error, this._config)) {
-            this._browser.markAsBroken();
+            this._browser.markAsBroken({ stubBrowserCommands: true });
         }
 
         testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
@@ -186,7 +186,7 @@ module.exports = class TestRunner {
         }
 
         if (isSessionBroken(error, this._config)) {
-            this._browser.markAsBroken();
+            this._browser.markAsBroken({ stubBrowserCommands: true });
         }
 
         try {

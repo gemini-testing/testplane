@@ -564,7 +564,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -590,7 +590,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -616,7 +616,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -632,7 +632,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -655,7 +655,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
         });
