@@ -79,17 +79,17 @@ export class LimitedPool implements Pool {
         return this.underlyingPool.freeBrowser(browser, optsForFree).finally(() => this._launchNextBrowser());
     }
 
-    cancel(): void {
+    cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
 
-        const reject_ = (entry: QueueItem): void => entry.reject(new CancelledError());
+        const reject_ = (entry: QueueItem): void => entry.reject(error);
         this._highPriorityRequestQueue.forEach(reject_);
         this._requestQueue.forEach(reject_);
 
         this._highPriorityRequestQueue = yallist.create();
         this._requestQueue = yallist.create();
 
-        this.underlyingPool.cancel();
+        this.underlyingPool.cancel(error);
     }
 
     private async _getBrowser(id: string, opts: BrowserOpts = {}): Promise<Browser> {

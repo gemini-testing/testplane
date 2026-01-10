@@ -22,6 +22,8 @@ import { updateSelectivityHashes } from "./browser/cdp/selectivity";
 import { TagFilter } from "./utils/cli";
 import { ViteServer } from "./runner/browser-env/vite/server";
 import { getGlobalFilesToRemove, initGlobalFilesToRemove } from "./globalFilesToRemove";
+import { TestsTracker, formatTrackedTests, getTestsByWorkerPid } from "./runner/tests-tracker";
+import { UnhandledRejectionError } from "./errors/unhandled-rejection-error";
 
 interface RunOpts {
     browsers: string[];
@@ -73,6 +75,10 @@ export interface Testplane {
     prependListener: MasterEventHandler<this>;
 }
 
+interface ErrorWithWorkerPid extends Error {
+    workerPid?: number;
+}
+
 export class Testplane extends BaseTestplane {
     protected failed: boolean;
     protected failedList: FailedListItem[];
@@ -80,6 +86,7 @@ export class Testplane extends BaseTestplane {
     protected viteServer: ViteServer | null;
 
     private _filesToRemove: string[];
+    protected testsTracker: TestsTracker | null;
 
     constructor(config?: string | ConfigInput) {
         super(config);
@@ -90,6 +97,8 @@ export class Testplane extends BaseTestplane {
         this.viteServer = null;
 
         this._filesToRemove = [];
+
+        this.testsTracker = null;
     }
 
     extendCli(parser: Command): void {
@@ -161,11 +170,14 @@ export class Testplane extends BaseTestplane {
             this._fail();
             this._addFailedTest(res);
         });
-        this.on(MasterEvents.ERROR, (err: Error) => this.halt(err));
+
+        this.on(MasterEvents.ERROR, (err: ErrorWithWorkerPid) => this._handleError(err));
 
         this.on(MasterEvents.RUNNER_END, async () => await this._saveFailed());
 
         this.on(MasterEvents.ADD_FILE_TO_REMOVE, this.addFileToRemove);
+
+        this.testsTracker = new TestsTracker(this);
 
         await initReporters(reporters, this);
 
@@ -299,14 +311,46 @@ export class Testplane extends BaseTestplane {
         return false;
     }
 
-    halt(err: Error, timeout = 60000): void {
-        logger.error("Terminating on critical error:", err);
+    private _handleError(err: ErrorWithWorkerPid): void {
+        if (err && err.workerPid && this.testsTracker) {
+            const allTests = this.testsTracker.getAllTests();
+            const relevantTests = getTestsByWorkerPid(allTests, err.workerPid);
+            const topTests = relevantTests.slice(0, 5);
+
+            const unhandledErrorWithAllTestsHint = new UnhandledRejectionError({
+                testsHint: formatTrackedTests(relevantTests),
+                workerPid: err.workerPid,
+                error: err,
+            });
+            const unhandledErrorWithTopTestsHint = new UnhandledRejectionError({
+                testsHint: formatTrackedTests(topTests),
+                workerPid: err.workerPid,
+                error: err,
+            });
+
+            this.once(MasterEvents.RUNNER_END, () => {
+                logger.error("\n\n", logger.withLogOptions({ timestamp: false }));
+                logger.error("Terminating on critical error:", unhandledErrorWithAllTestsHint);
+            });
+
+            // Slice tests list to 5 to avoid blowing up reporter size, because this message will be duplicated for each test
+            this.halt(unhandledErrorWithTopTestsHint, 60000, false);
+        } else {
+            this.halt(err);
+        }
+    }
+
+    halt(err: Error, timeout = 60000, logError = true): void {
+        if (logError) {
+            logger.error("Terminating on critical error:", err);
+        }
 
         this._fail();
 
         if (timeout > 0) {
             setTimeout(() => {
                 logger.error("Forcing shutdown...");
+                logger.error(err);
                 process.exit(1);
             }, timeout).unref();
         }
@@ -316,7 +360,7 @@ export class Testplane extends BaseTestplane {
         }
 
         if (this.runner) {
-            this.runner.cancel();
+            this.runner.cancel(err);
         }
     }
 }

@@ -14,16 +14,25 @@ module.exports = class FileInformer extends BaseInformer {
         logger.log(`Information with test results for report: "${opts.type}" will be saved to a file: "${opts.path}"`);
     }
 
-    log(message) {
-        this._fileStream.write(`${this._prepareMsg(message)}\n`);
+    log(...args) {
+        const lastArg = args[args.length - 1];
+        const isLogOptions = lastArg && typeof lastArg === "object" && Symbol.for("logOptions") in lastArg;
+
+        if (isLogOptions) {
+            args.pop();
+        }
+
+        args.forEach(message => {
+            this._fileStream.write(`${this._prepareMsg(message)}\n`);
+        });
     }
 
-    warn(message) {
-        this.log(message);
+    warn(...args) {
+        this.log(...args);
     }
 
-    error(message) {
-        this.log(message);
+    error(...args) {
+        this.log(...args);
     }
 
     end(message) {

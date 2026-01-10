@@ -99,6 +99,7 @@ describe("utils/page-loader", () => {
             log: sandbox.stub(),
             warn: sandbox.stub(),
             error: sandbox.stub(),
+            withLogOptions: sandbox.stub(),
         };
         PageLoader = proxyquire("src/utils/page-loader", {
             "./logger": loggerStub,

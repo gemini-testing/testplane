@@ -14,8 +14,23 @@ const {
     WORKER_INIT,
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
+    TEST_ASSIGNED_TO_WORKER,
 } = require("../constants/process-messages");
 const { isRunInNodeJsEnv } = require("./config");
+
+const extractErrorFromWorkerMessage = data => {
+    if (data.error) {
+        let error = data.error;
+        if (!(error instanceof Error)) {
+            const errorTextLines = String(error).split("\n");
+            error = new Error(errorTextLines[0]);
+            error.stack = errorTextLines.slice(1).join("\n");
+        }
+        error.workerPid = data.workerPid;
+        return error;
+    }
+    return null;
+};
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -132,8 +147,12 @@ module.exports = class WorkersRegistry extends EventEmitter {
                     break;
                 case WORKER_UNHANDLED_REJECTION:
                     if (data.error) {
-                        this.emit(MasterEvents.ERROR, data.error);
+                        const error = extractErrorFromWorkerMessage(data);
+                        this.emit(MasterEvents.ERROR, error);
                     }
+                    break;
+                case TEST_ASSIGNED_TO_WORKER:
+                    this.emit(MasterEvents.TEST_ASSIGNED_TO_WORKER, data);
                     break;
                 case MasterEvents.DOM_SNAPSHOTS: {
                     this.emit(MasterEvents.DOM_SNAPSHOTS, data.context, data.data);

@@ -151,7 +151,8 @@ describe("WorkersRegistry", () => {
 
             child.emit("message", { event: WORKER_UNHANDLED_REJECTION, error: errorMsg });
 
-            assert.calledOnceWith(onError, errorMsg);
+            const calledArgs = onError.getCall(0).args;
+            assert.equal(calledArgs[0].message, errorMsg);
         });
 
         describe("other events", () => {

@@ -4,6 +4,7 @@ const _ = require("lodash");
 const BaseReporter = require("./base");
 const helpers = require("./utils/helpers");
 const icons = require("./utils/icons");
+const { withLogOptions } = require("../utils/logger");
 
 module.exports = class FlatReporter extends BaseReporter {
     constructor(...args) {
@@ -29,18 +30,23 @@ module.exports = class FlatReporter extends BaseReporter {
 
         const failedTests = helpers.formatFailedTests(this._tests);
 
+        const noTimestamp = withLogOptions({ timestamp: false });
+
         failedTests.forEach((test, index) => {
-            this.informer.log(`\n${index + 1}) ${test.fullTitle}`);
-            this.informer.log(`   in file ${test.file}\n`);
+            this.informer.log(`\n${index + 1}) ${test.fullTitle}`, noTimestamp);
+            this.informer.log(`   in file ${test.file}\n`, noTimestamp);
 
             _.forEach(test.browsers, testCase => {
                 const icon = testCase.isFailed ? icons.FAIL : icons.RETRY;
 
-                this.informer.log(`   ${testCase.browserId}`);
+                this.informer.log(`   ${testCase.browserId}`, noTimestamp);
                 if (testCase.errorSnippet) {
-                    testCase.errorSnippet.split("\n").forEach(line => this.informer.log(line));
+                    testCase.errorSnippet.split("\n").forEach(line => this.informer.log(line, noTimestamp));
                 }
-                this.informer.log(`     ${icon} ${testCase.error}`);
+                this.informer.log(
+                    `${icon} ${testCase.error}`,
+                    withLogOptions({ timestamp: false, prefixEachLine: "    " }),
+                );
             });
         });
     }

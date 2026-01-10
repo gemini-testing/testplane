@@ -20,7 +20,7 @@ process.on("unhandledRejection", (reason, p) => {
         `Reason: ${utilInspectSafe(reason)}`,
     ].join("\n");
 
-    ipc.emit(WORKER_UNHANDLED_REJECTION, { error });
+    ipc.emit(WORKER_UNHANDLED_REJECTION, { error, workerPid: process.pid });
 });
 
 preloadWebdriverIO();

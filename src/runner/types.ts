@@ -8,7 +8,7 @@ export abstract class CancelableEmitter extends AsyncEmitter {
         return new this(...args);
     }
 
-    abstract cancel(): void;
+    abstract cancel(error: Error): void;
 }
 
 export abstract class RunnableEmitter extends CancelableEmitter {
