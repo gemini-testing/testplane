@@ -3,7 +3,7 @@ import { getMilestone, retryFetch } from "../../../utils";
 import { FIREFOX_VERSIONS_ALL_VERSIONS_API_URL, MIN_FIREFOX_VERSION } from "../../../constants";
 
 type FirefoxVersionInfo = {
-    category: "major" | "esr" | "stability" | "dev";
+    category: "major" | "stability";
     date: `${number}-${number}-${number}`;
     version: string;
 };
@@ -15,7 +15,7 @@ export const fetchFirefoxMilestoneVersions = async (): Promise<string[]> => {
         const response = await retryFetch(FIREFOX_VERSIONS_ALL_VERSIONS_API_URL);
         const data = (await response.json()) as FirefoxVersionsApiResponse;
         const stableVersions = Object.values(data.releases)
-            .filter(data => ["major", "stability", "esr"].includes(data.category))
+            .filter(data => ["major", "stability"].includes(data.category))
             .filter(data => Number(getMilestone(data.version)) >= MIN_FIREFOX_VERSION);
 
         const majorGrouped = _.groupBy(stableVersions, data => data.version.split(".")[0]);
