@@ -2,11 +2,23 @@
 
 const _ = require("lodash");
 const { WORKER_UNHANDLED_REJECTION } = require("../constants/process-messages");
+const debug = require("debug")("testplane:worker:processor");
 const logger = require("./logger");
 const ipc = require("./ipc");
 const { shouldIgnoreUnhandledRejection } = require("./errors");
 const { utilInspectSafe } = require("./secret-replacer");
 const { preloadWebdriverIO, preloadMochaReader } = require("./preload-utils.js");
+
+process.on("uncaughtException", err => {
+    if (err.code === "EPIPE" || err.code === "ERR_IPC_CHANNEL_CLOSED") {
+        debug(
+            "The following error was ignored in worker, because we tried to send message to master process, but it has already exited",
+        );
+        debug(err);
+        return;
+    }
+    throw err;
+});
 
 process.on("unhandledRejection", (reason, p) => {
     if (shouldIgnoreUnhandledRejection(reason)) {

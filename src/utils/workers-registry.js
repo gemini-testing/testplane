@@ -17,6 +17,8 @@ const {
     TEST_ASSIGNED_TO_WORKER,
 } = require("../constants/process-messages");
 const { isRunInNodeJsEnv } = require("./config");
+const { utilInspectSafe } = require("./secret-replacer");
+const { NEW_ISSUE_LINK } = require("../constants/help");
 
 const extractErrorFromWorkerMessage = data => {
     if (data.error) {
@@ -76,7 +78,27 @@ module.exports = class WorkersRegistry extends EventEmitter {
                 if (this._ended) {
                     return Promise.reject(new Error(`Can't execute method '${methodName}' because worker farm ended.`));
                 }
-                return promisify(this._workerFarm.execute)(workerFilepath, methodName, args);
+                const stack = new Error().stack;
+                return promisify(this._workerFarm.execute)(workerFilepath, methodName, args).catch(error => {
+                    if (error.name === "ProcessTerminatedError") {
+                        const workerCallError = new Error(
+                            `Testplane tried to run method '${methodName}' with args ${utilInspectSafe(
+                                args,
+                            )} in worker, but failed to do so.\n` +
+                                `Most likely this happened due to a critical error in the worker like unhandled promise rejection or the worker process was terminated unexpectedly.\n` +
+                                `Check surrounding logs for more details on the cause. If you believe this should not have happened, let us know: ${NEW_ISSUE_LINK}\n\n`,
+                        );
+                        try {
+                            workerCallError.stack = workerCallError.name + stack.split("\n").slice(1).join("\n");
+                        } catch {
+                            /* */
+                        }
+                        workerCallError.cause = error;
+
+                        throw workerCallError;
+                    }
+                    throw error;
+                });
             };
         }
 

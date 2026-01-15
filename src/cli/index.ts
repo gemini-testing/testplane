@@ -22,6 +22,9 @@ process.on("uncaughtException", err => {
 });
 
 process.on("unhandledRejection", (reason, p) => {
+    // This flag lets other unhandledRejection handlers know that we already processed it on Testplane side.
+    // Currently we use this to avoid duplicate error logging and force shutdown in HTML Reporter.
+    (global as Record<string, unknown>)["__TESTPLANE_INTERNAL_UNHANDLED_REJECTION_PROCESSED"] = true;
     if (shouldIgnoreUnhandledRejection(reason as Error)) {
         logger.warn(`Unhandled Rejection "${reason}" in testplane:master:${process.pid} was ignored`);
         return;

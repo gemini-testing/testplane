@@ -208,7 +208,9 @@ export class MainRunner extends RunnableEmitter {
 
         this.activeBrowserRunners.forEach(runner => runner.cancel(error));
 
-        this.workers?.cancel();
+        this.workers?.cancel().catch(() => {
+            /* we can just ignore the error thrown, because we don't care about cleanup at this point */
+        });
     }
 
     registerWorkers<T extends ReadonlyArray<string>>(workerFilepath: string, exportedMethods: T): RegisterWorkers<T> {
