@@ -3,7 +3,7 @@
  */
 export class CancelledError extends Error {
     name = "CancelledError";
-    message =  `Browser request was cancelled
+    message = `Browser request was cancelled
 
 What happened:
 - This test tried to run in a browser that was already stopped
