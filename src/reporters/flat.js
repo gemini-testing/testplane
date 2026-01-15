@@ -45,7 +45,7 @@ module.exports = class FlatReporter extends BaseReporter {
                 }
                 this.informer.log(
                     `${icon} ${testCase.error}`,
-                    withLogOptions({ timestamp: false, prefixEachLine: "    " }),
+                    withLogOptions({ timestamp: false, prefixEachLine: " ".repeat(4) }),
                 );
             });
         });
