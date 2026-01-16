@@ -4,3 +4,6 @@ examples
 src/browser/client-scripts/rrweb-record.min.js
 bundle.compat.js
 bundle.native.js
+wt
+test/e2e/report
+tmp

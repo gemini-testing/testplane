@@ -5,6 +5,7 @@ import { Pool } from "./types";
 import { Config } from "../config";
 import { Browser } from "../browser/browser";
 import { LimitedPool } from "./limited-pool";
+import { CancelledError } from "./cancelled-error";
 
 export class PerBrowserLimitedPool implements Pool {
     log: debug.Debugger;
@@ -36,8 +37,8 @@ export class PerBrowserLimitedPool implements Pool {
         return this._browserPools[browser.id].freeBrowser(browser, opts);
     }
 
-    cancel(): void {
+    cancel(error: Error = new CancelledError()): void {
         this.log("cancel");
-        forEach(this._browserPools, pool => pool.cancel());
+        forEach(this._browserPools, pool => pool.cancel(error));
     }
 }

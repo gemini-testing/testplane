@@ -227,6 +227,14 @@ export interface TestDepsContext {
 
 export interface TestDepsData extends NormalizedDependencies {}
 
+export interface TestAssignedToWorkerData {
+    fullTitle: string;
+    browserId: string;
+    file: string;
+    sessionId: string;
+    workerPid: number;
+}
+
 export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["INIT"], callback: () => Promise<void> | void): T;
     (event: Events["RUNNER_START"], callback: (runner: MainRunner) => Promise<void> | void): T;
@@ -239,6 +247,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["SUITE_BEGIN"], callback: (suite: Suite) => void): T;
     (event: Events["SUITE_END"], callback: (suite: Suite) => void): T;
     (event: Events["TEST_BEGIN"], callback: (test: Test) => void): T;
+    (event: Events["TEST_ASSIGNED_TO_WORKER"], callback: (data: TestAssignedToWorkerData) => void): T;
     (event: Events["TEST_END"], callback: (test: TestResult) => void): T;
     (event: Events["TEST_PASS"], callback: (test: TestResult) => void): T;
     (event: Events["TEST_FAIL"], callback: (test: TestResult) => void): T;

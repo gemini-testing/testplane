@@ -34,6 +34,7 @@ export const RunnerSyncEvents = {
     SUITE_END: "endSuite",
 
     TEST_BEGIN: "beginTest",
+    TEST_ASSIGNED_TO_WORKER: "testAssignedToWorker",
     TEST_END: "endTest",
 
     TEST_PASS: "passTest",

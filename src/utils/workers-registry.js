@@ -14,8 +14,25 @@ const {
     WORKER_INIT,
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
+    TEST_ASSIGNED_TO_WORKER,
 } = require("../constants/process-messages");
 const { isRunInNodeJsEnv } = require("./config");
+const { utilInspectSafe } = require("./secret-replacer");
+const { NEW_ISSUE_LINK } = require("../constants/help");
+
+const extractErrorFromWorkerMessage = data => {
+    if (data.error) {
+        let error = data.error;
+        if (!(error instanceof Error)) {
+            const errorTextLines = String(error).split("\n");
+            error = new Error(errorTextLines[0]);
+            error.stack = errorTextLines.slice(1).join("\n");
+        }
+        error.workerPid = data.workerPid;
+        return error;
+    }
+    return null;
+};
 
 module.exports = class WorkersRegistry extends EventEmitter {
     static create(...args) {
@@ -61,7 +78,31 @@ module.exports = class WorkersRegistry extends EventEmitter {
                 if (this._ended) {
                     return Promise.reject(new Error(`Can't execute method '${methodName}' because worker farm ended.`));
                 }
-                return promisify(this._workerFarm.execute)(workerFilepath, methodName, args);
+                const stack = new Error().stack;
+                return promisify(this._workerFarm.execute)(workerFilepath, methodName, args).catch(error => {
+                    if (error.name === "ProcessTerminatedError") {
+                        const workerCallError = new Error(
+                            `Testplane tried to run method '${methodName}' with args ${utilInspectSafe(
+                                args,
+                            )} in worker, but failed to do so.\n` +
+                                `Most likely this happened due to a critical error in the worker like unhandled promise rejection or the worker process was terminated unexpectedly.\n` +
+                                `Check surrounding logs for more details on the cause. If you believe this should not have happened, let us know: ${NEW_ISSUE_LINK}\n\n`,
+                        );
+                        try {
+                            const nodeInternalLinesFilter = line => !/node:internal|node:events|node:domain/.test(line);
+                            workerCallError.stack =
+                                workerCallError.name +
+                                stack.split("\n").slice(1).filter(nodeInternalLinesFilter).join("\n");
+                            error.stack = error.stack.split("\n").filter(nodeInternalLinesFilter).join("\n");
+                        } catch {
+                            /* */
+                        }
+                        workerCallError.cause = error;
+
+                        throw workerCallError;
+                    }
+                    throw error;
+                });
             };
         }
 
@@ -132,8 +173,12 @@ module.exports = class WorkersRegistry extends EventEmitter {
                     break;
                 case WORKER_UNHANDLED_REJECTION:
                     if (data.error) {
-                        this.emit(MasterEvents.ERROR, data.error);
+                        const error = extractErrorFromWorkerMessage(data);
+                        this.emit(MasterEvents.ERROR, error);
                     }
+                    break;
+                case TEST_ASSIGNED_TO_WORKER:
+                    this.emit(MasterEvents.TEST_ASSIGNED_TO_WORKER, data);
                     break;
                 case MasterEvents.DOM_SNAPSHOTS: {
                     this.emit(MasterEvents.DOM_SNAPSHOTS, data.context, data.data);

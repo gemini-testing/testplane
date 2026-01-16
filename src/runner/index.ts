@@ -77,6 +77,7 @@ export class MainRunner extends RunnableEmitter {
             MasterEvents.DOM_SNAPSHOTS,
             MasterEvents.ADD_FILE_TO_REMOVE,
             MasterEvents.TEST_DEPENDENCIES,
+            MasterEvents.TEST_ASSIGNED_TO_WORKER,
         ]);
 
         temp.init(this.config.system.tempDir);
@@ -201,13 +202,15 @@ export class MainRunner extends RunnableEmitter {
         );
     }
 
-    cancel(): void {
+    cancel(error: Error): void {
         this.cancelled = true;
-        this.browserPool?.cancel();
+        this.browserPool?.cancel(error);
 
-        this.activeBrowserRunners.forEach(runner => runner.cancel());
+        this.activeBrowserRunners.forEach(runner => runner.cancel(error));
 
-        this.workers?.cancel();
+        this.workers?.cancel().catch(() => {
+            /* we can just ignore the error thrown, because we don't care about cleanup at this point */
+        });
     }
 
     registerWorkers<T extends ReadonlyArray<string>>(workerFilepath: string, exportedMethods: T): RegisterWorkers<T> {

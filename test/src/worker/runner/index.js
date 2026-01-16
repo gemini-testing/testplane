@@ -14,6 +14,7 @@ describe("worker/runner", () => {
     const sandbox = sinon.createSandbox();
     let nodejsTestRunner, browserTestRunner, Runner;
     let runWithTestplaneDependenciesCollecting, readTestFileWithTestplaneDependenciesCollecting;
+    let processSendBackup;
 
     const mkRunner_ = (opts = {}) => {
         const config = opts.config || makeConfigStub();
@@ -50,10 +51,14 @@ describe("worker/runner", () => {
                 readTestFileWithTestplaneDependenciesCollecting,
             },
         });
+
+        processSendBackup = process.send;
+        process.send = sandbox.stub();
     });
 
     afterEach(() => {
         sandbox.restore();
+        process.send = processSendBackup;
     });
 
     describe("constructor", () => {

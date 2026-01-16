@@ -92,7 +92,7 @@ describe("Plain reporter", () => {
 
                 assert.match(
                     getDeserializedResult(stdout),
-                    /some test title \[bro\] - 100ms\s.+some\/path\/file.js\s.+some error stack/,
+                    /some test title \[bro\] - 100ms\s.+some\/path\/file.js\s.*some error stack/s,
                 );
             });
 

@@ -2,16 +2,16 @@ const BaseInformer = require("./base");
 const logger = require("../../utils/logger");
 
 module.exports = class ConsoleInformer extends BaseInformer {
-    log(message) {
-        logger.log(message);
+    log(...args) {
+        logger.log(...args);
     }
 
-    warn(message) {
-        logger.warn(message);
+    warn(...args) {
+        logger.warn(...args);
     }
 
-    error(message) {
-        logger.error(message);
+    error(...args) {
+        logger.error(...args);
     }
 
     end(message) {

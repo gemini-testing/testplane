@@ -85,8 +85,8 @@ export class BrowserRunner extends CancelableEmitter {
         this.activeTestRunners.delete(runner);
     }
 
-    cancel(): void {
-        this.activeTestRunners.forEach(runner => runner.cancel());
+    cancel(error: Error): void {
+        this.activeTestRunners.forEach(runner => runner.cancel(error));
     }
 
     private passthroughEvents(runner: EventEmitter, events: InterceptedEvent[]): void {
