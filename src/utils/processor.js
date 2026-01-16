@@ -20,7 +20,7 @@ process.on("uncaughtException", err => {
     throw err;
 });
 
-process.on("unhandledRejection", (reason, p) => {
+process.on("unhandledRejection", reason => {
     if (shouldIgnoreUnhandledRejection(reason)) {
         logger.warn(`Unhandled Rejection "${reason}" in testplane:worker:${process.pid} was ignored`);
         return;
@@ -28,7 +28,6 @@ process.on("unhandledRejection", (reason, p) => {
 
     const error = [
         `Unhandled Rejection in testplane:worker:${process.pid}:`,
-        `Promise: ${utilInspectSafe(p)}`,
         `Reason: ${utilInspectSafe(reason)}`,
     ].join("\n");
 

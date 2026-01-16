@@ -21,7 +21,7 @@ process.on("uncaughtException", err => {
     process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, p) => {
+process.on("unhandledRejection", reason => {
     // This flag lets other unhandledRejection handlers know that we already processed it on Testplane side.
     // Currently we use this to avoid duplicate error logging and force shutdown in HTML Reporter.
     (global as Record<string, unknown>)["__TESTPLANE_INTERNAL_UNHANDLED_REJECTION_PROCESSED"] = true;
@@ -32,7 +32,6 @@ process.on("unhandledRejection", (reason, p) => {
 
     const error = [
         `Unhandled Rejection in testplane:master:${process.pid}:`,
-        `Promise: ${utilInspectSafe(p)}`,
         `Reason: ${utilInspectSafe(reason)}`,
     ].join("\n");
 

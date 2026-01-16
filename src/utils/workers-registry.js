@@ -89,7 +89,11 @@ module.exports = class WorkersRegistry extends EventEmitter {
                                 `Check surrounding logs for more details on the cause. If you believe this should not have happened, let us know: ${NEW_ISSUE_LINK}\n\n`,
                         );
                         try {
-                            workerCallError.stack = workerCallError.name + stack.split("\n").slice(1).join("\n");
+                            const nodeInternalLinesFilter = line => !/node:internal|node:events|node:domain/.test(line);
+                            workerCallError.stack =
+                                workerCallError.name +
+                                stack.split("\n").slice(1).filter(nodeInternalLinesFilter).join("\n");
+                            error.stack = error.stack.split("\n").filter(nodeInternalLinesFilter).join("\n");
                         } catch {
                             /* */
                         }
