@@ -1,6 +1,5 @@
 import { memoize } from "lodash";
 import path from "node:path";
-import lockfile from "proper-lockfile";
 import { HashProvider } from "./hash-provider";
 import { getSelectivityHashesPath, readHashFileContents, shallowSortObject } from "./utils";
 import { writeJsonWithCompression } from "./json-utils";
@@ -138,44 +137,28 @@ export class HashWriter {
             ...Object.values(this._stagedPatternHashes),
         ]);
 
-        const releaseLock = await lockfile.lock(this._selectivityHashesPath, {
-            stale: 5000,
-            update: 1000,
-            retries: { minTimeout: 100, maxTimeout: 1000, retries: 15 },
-            realpath: false,
-        });
+        const existingHashesContent = await readHashFileContents(this._selectivityHashesPath, this._compresion);
 
-        try {
-            const existingHashesContent = await readHashFileContents(this._selectivityHashesPath, this._compresion);
+        const [updatedModules, updatedFiles, updatedPatterns] = await Promise.all([
+            filterMatchingHashes(stagedModuleNames, this._stagedModuleHashes, existingHashesContent.modules),
+            filterMatchingHashes(stagedFileNames, this._stagedFileHashes, existingHashesContent.files),
+            filterMatchingHashes(stagedPatternNames, this._stagedPatternHashes, existingHashesContent.patterns),
+        ]);
 
-            const [updatedModules, updatedFiles, updatedPatterns] = await Promise.all([
-                filterMatchingHashes(stagedModuleNames, this._stagedModuleHashes, existingHashesContent.modules),
-                filterMatchingHashes(stagedFileNames, this._stagedFileHashes, existingHashesContent.files),
-                filterMatchingHashes(stagedPatternNames, this._stagedPatternHashes, existingHashesContent.patterns),
-            ]);
-
-            if (!updatedFiles.length && !updatedModules.length && !updatedPatterns.length) {
-                await releaseLock();
-                return;
-            }
-
-            await Promise.all([
-                writeTo(updatedModules, this._stagedModuleHashes, existingHashesContent.modules),
-                writeTo(updatedFiles, this._stagedFileHashes, existingHashesContent.files),
-                writeTo(updatedPatterns, this._stagedPatternHashes, existingHashesContent.patterns),
-            ]);
-
-            await writeJsonWithCompression(this._selectivityHashesPath, existingHashesContent, this._compresion);
-
-            await releaseLock();
-
-            markAsCommited(updatedModules, this._stagedModuleHashes);
-            markAsCommited(updatedFiles, this._stagedFileHashes);
-        } catch (err) {
-            await releaseLock();
-
-            throw err;
+        if (!updatedFiles.length && !updatedModules.length && !updatedPatterns.length) {
+            return;
         }
+
+        await Promise.all([
+            writeTo(updatedModules, this._stagedModuleHashes, existingHashesContent.modules),
+            writeTo(updatedFiles, this._stagedFileHashes, existingHashesContent.files),
+            writeTo(updatedPatterns, this._stagedPatternHashes, existingHashesContent.patterns),
+        ]);
+
+        await writeJsonWithCompression(this._selectivityHashesPath, existingHashesContent, this._compresion);
+
+        markAsCommited(updatedModules, this._stagedModuleHashes);
+        markAsCommited(updatedFiles, this._stagedFileHashes);
     }
 }
 
