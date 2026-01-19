@@ -7,7 +7,10 @@ import { transformCode } from "../utils/typescript";
 import type { SufficientStackFrame, ResolvedFrame } from "./types";
 
 export const extractSourceMaps = async (fileContents: string, fileName: string): Promise<SourceMapConsumer | null> => {
-    if (fileContents.indexOf(JS_SOURCE_MAP_URL_COMMENT) === -1) {
+    const hasNoSourceMaps = fileContents.indexOf(JS_SOURCE_MAP_URL_COMMENT) === -1;
+    const isEsmFile = fileName.startsWith("file://");
+
+    if (hasNoSourceMaps && !isEsmFile) {
         fileContents = transformCode(fileContents, { sourceFile: fileName, sourceMaps: true });
     }
 
