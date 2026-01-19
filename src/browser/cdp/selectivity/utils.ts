@@ -1,5 +1,5 @@
 import { sortedIndex, memoize } from "lodash";
-import { SourceMapConsumer, type BasicSourceMapConsumer, type RawSourceMap } from "source-map";
+import { SourceMapConsumer, type RawSourceMap } from "source-map-js";
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
@@ -89,7 +89,7 @@ export const extractSourceFilesDeps = async (
     const dependantSourceFiles = new Set<string>();
     const sourceMapsParsed = patchSourceMapSources(JSON.parse(sourceMaps), sourceRoot);
 
-    const consumer = (await new SourceMapConsumer(sourceMapsParsed)) as BasicSourceMapConsumer;
+    const consumer = new SourceMapConsumer(sourceMapsParsed);
 
     let sourceOffset = source.indexOf("\n");
     const offsetToLine = [0];

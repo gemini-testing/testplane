@@ -1,4 +1,4 @@
-import { SourceMapConsumer, type BasicSourceMapConsumer } from "source-map";
+import { RawSourceMap, SourceMapConsumer } from "source-map-js";
 import url from "url";
 import { JS_SOURCE_MAP_URL_COMMENT } from "./constants";
 import { getSourceCodeFile } from "./utils";
@@ -6,10 +6,7 @@ import { softFileURLToPath } from "../utils/fs";
 import { transformCode } from "../utils/typescript";
 import type { SufficientStackFrame, ResolvedFrame } from "./types";
 
-export const extractSourceMaps = async (
-    fileContents: string,
-    fileName: string,
-): Promise<BasicSourceMapConsumer | null> => {
+export const extractSourceMaps = async (fileContents: string, fileName: string): Promise<SourceMapConsumer | null> => {
     if (fileContents.indexOf(JS_SOURCE_MAP_URL_COMMENT) === -1) {
         fileContents = transformCode(fileContents, { sourceFile: fileName, sourceMaps: true });
     }
@@ -27,16 +24,16 @@ export const extractSourceMaps = async (
             : fileContents.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length, sourceMapsEndIndex);
 
     const sourceMaps = await getSourceCodeFile(url.resolve(fileName, sourceMapUrl));
-    const consumer = (await new SourceMapConsumer(sourceMaps)) as BasicSourceMapConsumer;
+    const rawSourceMaps = JSON.parse(sourceMaps) as RawSourceMap;
 
-    consumer.file = consumer.file || fileName;
+    rawSourceMaps.file = rawSourceMaps.file || fileName;
 
-    return consumer;
+    return new SourceMapConsumer(rawSourceMaps);
 };
 
 export const resolveLocationWithSourceMap = (
     stackFrame: SufficientStackFrame,
-    sourceMaps: BasicSourceMapConsumer,
+    sourceMaps: SourceMapConsumer,
 ): ResolvedFrame => {
     const positions = sourceMaps.originalPositionFor({ line: stackFrame.lineNumber, column: stackFrame.columnNumber });
     const source = positions.source ? sourceMaps.sourceContentFor(positions.source) : null;
@@ -50,5 +47,5 @@ export const resolveLocationWithSourceMap = (
         throw new Error("Line and column could not be evaluated from the source map");
     }
 
-    return { file: softFileURLToPath(sourceMaps.file), source, location };
+    return { file: softFileURLToPath(sourceMaps.file as string), source, location };
 };

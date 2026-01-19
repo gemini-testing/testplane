@@ -44,7 +44,7 @@ describe("CDP/Selectivity/Utils", () => {
         utils = proxyquire("src/browser/cdp/selectivity/utils", {
             fs: fsStub,
             path: pathStub,
-            "source-map": {
+            "source-map-js": {
                 SourceMapConsumer: SourceMapConsumerStub,
             },
             "../../../utils/fs": {
@@ -130,7 +130,7 @@ describe("CDP/Selectivity/Utils", () => {
     describe("patchSourceMapSources", () => {
         it("should patch webpack protocol sources", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["webpack://src/app.js", "webpack://src/utils.js", "regular/file.js"],
                 sourceRoot: "",
                 names: [],
@@ -146,7 +146,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should use existing sourceRoot if no custom sourceRoot provided", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["webpack:///src/app.js"],
                 sourceRoot: "/existing/root",
                 names: [],
@@ -161,7 +161,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should handle sources without webpack protocol", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["src/app.js", "lib/utils.js"],
                 sourceRoot: "",
                 names: [],
@@ -528,7 +528,7 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map": {
+                "source-map-js": {
                     SourceMapConsumer: SourceMapConsumerStub,
                 },
                 "../../../utils/fs": {
@@ -609,7 +609,7 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map": {
+                "source-map-js": {
                     SourceMapConsumer: SourceMapConsumerStub,
                 },
                 "../../../utils/fs": {
