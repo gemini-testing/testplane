@@ -104,7 +104,7 @@
     "sizzle": "2.3.6",
     "socket.io": "4.7.5",
     "socket.io-client": "4.7.5",
-    "source-map": "0.7.6",
+    "source-map-js": "1.2.1",
     "strftime": "0.10.2",
     "strip-ansi": "6.0.1",
     "temp": "0.8.3",
