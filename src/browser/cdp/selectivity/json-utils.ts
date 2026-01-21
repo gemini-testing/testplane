@@ -1,5 +1,6 @@
-import fs from "node:fs";
+import path from "node:path";
 import zlib from "node:zlib";
+import fs from "fs-extra";
 import { Compression, type SelectivityCompressionType } from "./types";
 import type { Readable, Transform, Writable } from "node:stream";
 
@@ -154,13 +155,15 @@ export const readJsonWithCompression = async <T>(
     return JSON.parse(fileData);
 };
 
-export const writeJsonWithCompression = (
+export const writeJsonWithCompression = async (
     jsonBasePath: string,
     data: unknown,
     preferredCompressionType: SelectivityCompressionType,
 ): Promise<void> => {
     const filePath = jsonBasePath + getCompressionPrefix(preferredCompressionType);
     const fileData = JSON.stringify(data, null, preferredCompressionType === "none" ? 2 : 0);
+
+    await fs.ensureDir(path.dirname(filePath));
 
     return writeCompressedTextFile(filePath, fileData, preferredCompressionType);
 };
