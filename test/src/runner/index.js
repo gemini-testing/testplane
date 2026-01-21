@@ -72,8 +72,8 @@ describe("NodejsEnvRunner", () => {
         BrowserPool = { create: sinon.stub().returns({ cancel: sandbox.spy() }) };
 
         const createSelectivityRunnerStub = (mainRunner, config, runTestFn) => ({
-            runIfNecessary: (...args) => runTestFn(...args),
-            waitForTestsToRun: sinon.stub().resolves(),
+            startTestCheckToRun: (...args) => runTestFn(...args),
+            runNecessaryTests: sinon.stub().resolves(),
         });
 
         SelectivityRunner = { create: sinon.stub().callsFake(createSelectivityRunnerStub) };

@@ -180,7 +180,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         beforeEach(() => {
             consumerMock = { originalPositionFor: sandbox.stub() };
-            SourceMapConsumerStub.resolves(consumerMock);
+            SourceMapConsumerStub.returns(consumerMock);
         });
 
         it("should extract source files from coverage offsets", async () => {
