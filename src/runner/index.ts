@@ -134,9 +134,11 @@ export class MainRunner extends RunnableEmitter {
             shouldDisableSelectivity: opts?.shouldDisableSelectivity,
         });
 
-        testCollection.eachTestAcrossBrowsers((test, browserId) => selectivityRunner.runIfNecessary(test, browserId));
+        testCollection.eachTestAcrossBrowsers((test, browserId) =>
+            selectivityRunner.startTestCheckToRun(test, browserId),
+        );
 
-        await selectivityRunner.waitForTestsToRun();
+        await selectivityRunner.runNecessaryTests();
 
         this.activeBrowserRunners.forEach(runner => this.running.add(this._waitBrowserRunnerTestsCompletion(runner)));
 
