@@ -19,20 +19,43 @@ export async function installRrwebAndCollectEvents(
     return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, () =>
         session.execute(
             (rrwebRecordFnCode, serverTime) => {
-                // @ts-expect-error
-                if (!window.__testplaneTiming) {
-                    // @ts-expect-error
-                    window.__testplaneTiming = {
-                        serverTime: serverTime,
-                        baseRaf: null,
-                        initialized: true,
-                    };
+                const getRealTimestamp = (fallbackTime: number = 0): number => {
+                    const nativeCode = "[native code]";
 
-                    requestAnimationFrame(timestamp => {
-                        // @ts-expect-error
-                        window.__testplaneTiming.baseRaf = timestamp;
-                    });
-                }
+                    try {
+                        if (Date.now.toString().includes(nativeCode)) {
+                            return Date.now();
+                        }
+                    } catch (e) {
+                        /**/
+                    }
+
+                    try {
+                        if (new Date().getTime.toString().includes(nativeCode)) {
+                            return new Date().getTime();
+                        }
+                    } catch (e) {
+                        /**/
+                    }
+
+                    try {
+                        if (new Date().valueOf.toString().includes(nativeCode)) {
+                            return new Date().valueOf();
+                        }
+                    } catch (e) {
+                        /**/
+                    }
+
+                    try {
+                        if (performance.now.toString().includes(nativeCode)) {
+                            return Math.floor(performance.timeOrigin + performance.now());
+                        }
+                    } catch (e) {
+                        /**/
+                    }
+
+                    return fallbackTime;
+                };
 
                 try {
                     // @ts-expect-error
@@ -47,23 +70,10 @@ export async function installRrwebAndCollectEvents(
                         window.rrweb.record({
                             // @ts-expect-error
                             emit(event) {
-                                // We use this complex RAF-based timing, because users might have Date.now() stubbed
-                                requestAnimationFrame(currentRaf => {
-                                    // @ts-expect-error
-                                    const baseRaf = window.__testplaneTiming.baseRaf;
-                                    // @ts-expect-error
-                                    const serverTime = window.__testplaneTiming.serverTime;
+                                event.timestamp = getRealTimestamp(serverTime);
 
-                                    if (baseRaf !== null) {
-                                        event.timestamp = Math.floor(serverTime + (currentRaf - baseRaf));
-                                    } else {
-                                        // RAF not ready, use server time
-                                        event.timestamp = serverTime;
-                                    }
-
-                                    // @ts-expect-error
-                                    window.rrwebEvents.push(event);
-                                });
+                                // @ts-expect-error
+                                window.rrwebEvents.push(event);
                             },
                         });
 
