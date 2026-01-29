@@ -117,6 +117,27 @@ describe("CDP/Selectivity/HashReader", () => {
 
             assert.calledOnce(readHashFileContentsStub);
         });
+
+        it("should throw error if no files are found by pattern", async () => {
+            const reader = new HashReader("/test/selectivity", "none");
+            const pattern = "src/**/*.js";
+            const patternError = new Error(
+                `Selectivity: Couldn't find files by disableSelectivityPattern "${pattern}"`,
+            );
+            const hashFileContents = {
+                files: {},
+                modules: {},
+                patterns: {},
+            };
+
+            readHashFileContentsStub.resolves(hashFileContents);
+            hashProviderMock.calculateForPattern.withArgs(pattern).rejects(patternError);
+
+            const result = reader.patternHasChanged(pattern);
+
+            assert.isRejected(result, /Couldn't find files by disableSelectivityPattern/);
+            assert.calledWith(hashProviderMock.calculateForPattern, pattern);
+        });
     });
 
     describe("getTestChangedDeps", () => {
