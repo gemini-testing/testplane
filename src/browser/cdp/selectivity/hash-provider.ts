@@ -44,6 +44,11 @@ export class HashProvider {
 
             const cwd = process.cwd();
             const files = await globExtra.expandPaths(pattern, { root: cwd });
+
+            if (!files.length) {
+                throw new Error(`Selectivity: Couldn't find files by disableSelectivityPattern "${pattern}"`);
+            }
+
             const filesSorted = files.sort();
             const hash = crypto.createHash("md5");
 

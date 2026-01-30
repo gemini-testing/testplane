@@ -81,6 +81,9 @@ export const readTestFileWithTestplaneDependenciesCollecting = <T>(file: string,
     }
 
     return fn().finally(() => {
-        testFileDependenciesCache.set(file, Array.from(jsTestplaneDeps).sort());
+        testFileDependenciesCache.set(
+            file,
+            Array.from(jsTestplaneDeps).sort((a, b) => a.localeCompare(b)),
+        );
     });
 };

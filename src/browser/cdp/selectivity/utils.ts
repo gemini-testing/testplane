@@ -243,7 +243,13 @@ export const transformSourceDependencies = (
         }
     }
 
-    return { css: Array.from(cssSet).sort(), js: Array.from(jsSet).sort(), modules: Array.from(modulesSet).sort() };
+    const cmpStr = (a: string, b: string): number => a.localeCompare(b);
+
+    return {
+        css: Array.from(cssSet).sort(cmpStr),
+        js: Array.from(jsSet).sort(cmpStr),
+        modules: Array.from(modulesSet).sort(cmpStr),
+    };
 };
 
 /** Merges two sorted deps array into one with uniq values */
@@ -299,7 +305,7 @@ export const mergeSourceDependencies = (
 
 // Ensures file consistency
 export const shallowSortObject = (obj: Record<string, unknown>): void => {
-    const testBrowsers = Object.keys(obj).sort();
+    const testBrowsers = Object.keys(obj).sort((a, b) => a.localeCompare(b));
 
     for (const testBrowser of testBrowsers) {
         const testBrowserDeps = obj[testBrowser];
