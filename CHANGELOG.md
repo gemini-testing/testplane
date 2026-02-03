@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.40.6 (2026-02-02)
+
+
+### Bug Fixes
+
+* timeline error ([cb35917](https://github.com/gemini-testing/testplane/commit/cb35917643eb1e5b0be71590d3e3b62f9287f1cf))
+
 ### 8.40.5 (2026-01-30)
 
 ### 8.40.4 (2026-01-22)
