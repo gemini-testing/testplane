@@ -321,13 +321,14 @@ function getElementCaptureRect(element, opts) {
 
 function getExtRect(css, clientRect, allowViewportOverflow) {
     var shadows = parseBoxShadow(css.boxShadow),
-        outline = parseInt(css.outlineWidth, 10);
+        outlineWidth = parseInt(css.outlineWidth, 10),
+        outlineStyle = css.outlineStyle;
 
-    if (isNaN(outline)) {
-        outline = 0;
+    if (isNaN(outlineWidth) || outlineStyle === "none") {
+        outlineWidth = 0;
     }
 
-    return adjustRect(clientRect, shadows, outline, allowViewportOverflow);
+    return adjustRect(clientRect, shadows, outlineWidth, allowViewportOverflow);
 }
 
 function parseBoxShadow(value) {
