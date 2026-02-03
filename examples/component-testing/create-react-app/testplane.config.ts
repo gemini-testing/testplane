@@ -1,4 +1,5 @@
 export default {
+    gridUrl: "local",
     baseUrl: "http://localhost",
     automationProtocol: "devtools",
     sessionsPerBrowser: 1,
@@ -26,9 +27,9 @@ export default {
         }
     },
     plugins: {
-        "html-reporter/hermione": {
+        "html-reporter/testplane": {
             enabled: true,
-            path: "hermione-report",
+            path: "testplane-report",
             defaultView: "all",
             diffMode: "3-up-scaled"
         }
