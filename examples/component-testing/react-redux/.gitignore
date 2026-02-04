@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/testplane-report
 
 # production
 /build
