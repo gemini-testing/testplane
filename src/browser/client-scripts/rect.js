@@ -106,6 +106,20 @@ Rect.prototype = {
         };
     },
 
+    toString: function () {
+        return (
+            "Rect(left: " +
+            this.left +
+            ", top: " +
+            this.top +
+            ", width: " +
+            this.width +
+            ", height: " +
+            this.height +
+            ")"
+        );
+    },
+
     overflowsTopBound: function (rect) {
         return this._overflowsBound(rect, "top");
     },

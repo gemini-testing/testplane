@@ -188,4 +188,12 @@ describe("assertView", () => {
 
         await browser.assertView("test-block", "[data-testid=capture-element]");
     });
+
+    it("should work fine when capturing elements that are overlapping", async ({ browser }) => {
+        await browser.url("overlapping-blocks-at-y2000.html");
+
+        await expect(() =>
+            browser.assertView("text-block", "[data-testid=text-block]", { captureElementFromTop: false }),
+        ).rejects.toThrow("The element is completely obscured by fixed or sticky elements");
+    });
 });

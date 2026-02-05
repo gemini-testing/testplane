@@ -21,7 +21,7 @@ exports.prepareScreenshot = function prepareScreenshot(areas, opts) {
         return prepareScreenshotUnsafe(areas, opts);
     } catch (e) {
         return {
-            error: "JS",
+            errorCode: "JS",
             message: e.stack || e.message
         };
     }
@@ -32,7 +32,7 @@ exports.disableFrameAnimations = function disableFrameAnimations() {
         return disableFrameAnimationsUnsafe();
     } catch (e) {
         return {
-            error: "JS",
+            errorCode: "JS",
             message: e.stack || e.message
         };
     }
@@ -84,11 +84,12 @@ function prepareScreenshotUnsafe(areas, opts) {
 
         if (!scrollElem) {
             return {
-                error: "NOTFOUND",
+                errorCode: "NOTFOUND",
                 message:
                     'Could not find element with css selector specified in "selectorToScroll" option: ' +
                     opts.selectorToScroll,
-                selector: opts.selectorToScroll
+                selector: opts.selectorToScroll,
+                debugLog: logger()
             };
         }
     } else {
@@ -121,9 +122,10 @@ function prepareScreenshotUnsafe(areas, opts) {
 
     if (!rect) {
         return {
-            error: "HIDDEN",
+            errorCode: "HIDDEN",
             message: "Area with css selector : " + selectors + " is hidden",
-            selector: selectors
+            selector: selectors,
+            debugLog: logger()
         };
     }
 
@@ -162,7 +164,10 @@ function prepareScreenshotUnsafe(areas, opts) {
         return top;
     }, 9999999);
 
-    if (captureElementFromTop && (topmostCaptureElementTop < 0 || topmostCaptureElementTop >= viewportHeight)) {
+    if (
+        captureElementFromTop &&
+        (topmostCaptureElementTop < safeArea.top || topmostCaptureElementTop >= safeArea.top + safeArea.height)
+    ) {
         logger("captureElementFromTop=true and capture element is outside of viewport, going to perform scroll");
         if (!util.isRootElement(scrollElem) && captureElementFromTop) {
             var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
@@ -268,16 +273,72 @@ function prepareScreenshotUnsafe(areas, opts) {
         );
 
         logger("  capture rect after scrolling to capture area:", rect);
-    } else if (allowViewportOverflow && viewPort.rectIntersects(rect)) {
+    } else if (!viewPort.rectIntersects(rect)) {
+        // Element is completely outside viewport with no intersection - always error
+        return {
+            errorCode: "OUTSIDE_OF_VIEWPORT",
+            message:
+                "Can not capture element, because it is completely outside of viewport with no intersection. " +
+                'Try to set "captureElementFromTop=true" to scroll to it before capture.',
+            debugLog: logger()
+        };
+    }
+
+    // Check if element has intersection with safeArea (viewport minus sticky/fixed interfering elements)
+    var safeAreaRect = new Rect({
+        left: safeArea.left + util.getScrollLeft(scrollElem) + (scrollElem !== window ? window.pageXOffset : 0),
+        top: safeArea.top + util.getScrollTop(scrollElem) + (scrollElem !== window ? window.pageYOffset : 0),
+        width: safeArea.width,
+        height: safeArea.height
+    });
+
+    if (!safeAreaRect.rectIntersects(rect)) {
+        // Element has no intersection with safe area - completely obscured by sticky/fixed elements
+        return {
+            errorCode: "OUTSIDE_OF_SAFE_AREA",
+            message:
+                "Can not capture element at position: " +
+                rect.toString() +
+                ", because it has no intersection with the safe area at position: " +
+                safeAreaRect.toString() +
+                ". " +
+                "The element is completely obscured by fixed or sticky elements. " +
+                'Try to set "captureElementFromTop=true" to scroll to it before capture.',
+            debugLog: logger()
+        };
+    }
+
+    var visibleAreaRect = getVisibleAreaRect({
+        scrollElem: scrollElem,
+        viewportWidth: viewportWidth,
+        viewportHeight: viewportHeight
+    });
+
+    if (allowViewportOverflow && viewPort.rectIntersects(rect)) {
+        // Element has intersection with viewport and overflow is allowed - adjust bounds
         rect.overflowsTopBound(viewPort) && rect.recalculateHeight(viewPort);
         rect.overflowsLeftBound(viewPort) && rect.recalculateWidth(viewPort);
-    } else if (!captureElementFromTop && !allowViewportOverflow && !viewPort.rectIntersects(rect)) {
+    } else if (
+        !captureElementFromTop &&
+        !allowViewportOverflow &&
+        (topmostCaptureElementTop < visibleAreaRect.top ||
+            topmostCaptureElementTop >= visibleAreaRect.top + visibleAreaRect.height)
+    ) {
+        // captureElementFromTop is false, element is outside safe area, overflow not allowed - error
         return {
-            error: "OUTSIDE_OF_VIEWPORT",
+            errorCode: "OUTSIDE_OF_VISIBLE_AREA",
             message:
-                "Can not capture element, because it is outside of viewport. " +
+                "Can not capture element, because it is outside of the visible area (viewport area minus interfering sticky/fixed elements).\n" +
+                "Top bound of capture area is: " +
+                topmostCaptureElementTop +
+                ", visible area is: " +
+                visibleAreaRect.toString() +
+                "\n" +
+                "The element might be obscured by fixed or sticky elements. " +
                 'Try to set "captureElementFromTop=true" to scroll to it before capture' +
-                ' or to set "allowViewportOverflow=true" to ignore viewport overflow error.'
+                ' or to set "allowViewportOverflow=true" to ignore this error. ' +
+                'Or try to set "selectorToScroll" to a parent element of the element to capture.',
+            debugLog: logger()
         };
     }
 
@@ -411,6 +472,24 @@ function getBoundingClientContentRect(element) {
     });
 }
 
+function getVisibleAreaRect(opts) {
+    var scrollElem = opts.scrollElem;
+    var viewportWidth = opts.viewportWidth;
+    var viewportHeight = opts.viewportHeight;
+
+    if (scrollElem === window) {
+        return new Rect({ left: 0, top: 0, width: viewportWidth, height: viewportHeight });
+    } else {
+        var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
+
+        var viewportRect = new Rect({ left: 0, top: 0, width: viewportWidth, height: viewportHeight });
+
+        var scrollElemInsideViewport = _getIntersectionRect(scrollElemBoundingRect, viewportRect);
+
+        return scrollElemInsideViewport || viewportRect;
+    }
+}
+
 function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     // Safe area is the dimensions of current scrollable container minus vertical space of sticky elements that may interfere with our target elements.
     if (!captureArea || !opts) {
@@ -423,34 +502,16 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     }
 
     var scrollElem = opts.scrollElem;
-    var viewportWidth = opts.viewportWidth;
     var viewportHeight = opts.viewportHeight;
 
     // 1. Base safe area equals the visible rectangle of the scroll container.
-    var safeArea, originalSafeArea;
-    if (scrollElem === window) {
-        safeArea = new Rect({ left: 0, top: 0, width: viewportWidth, height: viewportHeight });
-        originalSafeArea = new Rect({
-            left: safeArea.left,
-            top: safeArea.top,
-            width: safeArea.width,
-            height: safeArea.height
-        });
-    } else {
-        var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
-
-        var viewportRect = new Rect({ left: 0, top: 0, width: viewportWidth, height: viewportHeight });
-
-        var scrollElemInsideViewport = _getIntersectionRect(scrollElemBoundingRect, viewportRect);
-
-        safeArea = scrollElemInsideViewport || viewportRect;
-        originalSafeArea = new Rect({
-            left: safeArea.left,
-            top: safeArea.top,
-            width: safeArea.width,
-            height: safeArea.height
-        });
-    }
+    var safeArea = getVisibleAreaRect(opts);
+    var originalSafeArea = new Rect({
+        left: safeArea.left,
+        top: safeArea.top,
+        width: safeArea.width,
+        height: safeArea.height
+    });
 
     var captureAreaInViewportCoords = new Rect({
         left: captureArea.left - util.getScrollLeft(scrollElem),
@@ -529,7 +590,6 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             if (scrollParent && typeof scrollParent.getBoundingClientRect === "function") {
                 var scrollParentBr = scrollParent.getBoundingClientRect();
                 topValue += scrollParentBr.top;
-                bottomValue += scrollParentBr.bottom;
             }
 
             if (!isNaN(topValue)) {
@@ -540,7 +600,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                     height: br.height
                 };
                 likelyInterferes = true;
-                logger("  it is sticky to top! bounding rect: " + JSON.stringify(br));
+                logger("  it is sticky to top! topValue: " + topValue + " bounding rect: " + JSON.stringify(br));
             } else if (!isNaN(bottomValue)) {
                 var viewportBottom = util.isRootElement(scrollElem) ? viewportHeight : safeArea.top + safeArea.height;
                 br = {
@@ -550,7 +610,9 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                     height: br.height
                 };
                 likelyInterferes = true;
-                logger("  it is sticky to bottom! bounding rect: " + JSON.stringify(br));
+                logger(
+                    "  it is sticky to bottom! bottomValue: " + bottomValue + " bounding rect: " + JSON.stringify(br)
+                );
             }
         }
 
@@ -586,12 +648,25 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         logger("  getSafeAreaRect, shrinkTop:", shrinkTop);
         logger("  getSafeAreaRect, shrinkBottom:", shrinkBottom);
 
+        var resultingTop = safeArea.top,
+            resultingHeight = safeArea.height;
+
         if (shrinkTop < shrinkBottom) {
-            safeArea.top = Math.max(safeArea.top, br.y + br.height);
-            safeArea.height = safeAreaBottom - safeArea.top;
+            resultingTop = Math.max(safeArea.top, br.y + br.height);
+            resultingHeight = safeAreaBottom - resultingTop;
         } else {
-            safeArea.height = Math.min(safeArea.height, br.y - safeArea.top);
+            resultingHeight = Math.min(safeArea.height, br.y - safeArea.top);
         }
+
+        if (resultingHeight < originalSafeArea.height / 2) {
+            logger(
+                "  getSafeAreaRect, resultingHeight is less than half of originalSafeArea.height, skipping due to too large shrinking"
+            );
+            return;
+        }
+
+        safeArea.top = resultingTop;
+        safeArea.height = resultingHeight;
 
         logger("  getSafeAreaRect, safeArea after shrinking:", safeArea);
     });
@@ -632,7 +707,7 @@ function getCaptureElements(selectors) {
         var element = lib.queryFirst(selectors[i]);
         if (!element) {
             return {
-                error: "NOTFOUND",
+                errorCode: "NOTFOUND",
                 message: "Could not find element with css selector specified in setCaptureElements: " + selectors[i],
                 selector: selectors[i]
             };

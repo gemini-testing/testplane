@@ -62,12 +62,13 @@ const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
 };
 
 export class Image {
-    private _imgDataPromise: Promise<Buffer>;
+    private _imgDataPromise: Promise<Buffer | null>;
     private _imgData: Buffer | null = null;
     private _width: number;
     private _height: number;
     private _composeImages: this[] = [];
     private _clearAreas: Rect[] = [];
+    private _decodeError: Error | null = null;
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
@@ -76,9 +77,14 @@ export class Image {
     constructor(buffer: Buffer) {
         this._width = buffer.readUInt32BE(PNG_WIDTH_OFFSET);
         this._height = buffer.readUInt32BE(PNG_HEIGHT_OFFSET);
-        this._imgDataPromise = jsquashDecode(buffer).then(({ data }) => {
-            return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
-        });
+        this._imgDataPromise = jsquashDecode(buffer)
+            .then(({ data }) => {
+                return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+            })
+            .catch(error => {
+                this._decodeError = error;
+                return null;
+            });
     }
 
     async _getImgData(): Promise<Buffer> {
@@ -86,7 +92,11 @@ export class Image {
             return this._imgData;
         }
 
-        return (this._imgData = await this._imgDataPromise);
+        this._imgData = await this._imgDataPromise;
+        if (!this._imgData) {
+            throw new Error("Failed to decode image", { cause: this._decodeError });
+        }
+        return this._imgData;
     }
 
     _ensureImagesHaveSameWidth(): void {
