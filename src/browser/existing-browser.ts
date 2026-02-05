@@ -24,6 +24,8 @@ import { CDP } from "./cdp";
 import { WSDriverRequestAgent } from "./wsdriver";
 import type { ElementReference } from "@testplane/wdio-protocols";
 
+import makeDebug from "debug";
+
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
 interface PrepareScreenshotOpts {
@@ -36,7 +38,7 @@ interface PrepareScreenshotOpts {
 }
 
 interface ClientBridgeErrorData {
-    error: string;
+    errorCode: string;
     message: string;
 }
 
@@ -62,7 +64,7 @@ function ensure<T>(value: T | undefined | null, hint?: string): asserts value is
 }
 
 const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData => {
-    return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
+    return Boolean(data && (data as ClientBridgeErrorData).errorCode && (data as ClientBridgeErrorData).message);
 };
 
 export const getActivePuppeteerPage = async (session: WebdriverIO.Browser): Promise<Page | undefined> => {
@@ -188,9 +190,18 @@ export class ExistingBrowser extends Browser {
                 "prepareScreenshot",
                 [selectors, opts],
             );
+            makeDebug("testplane:screenshots:browser:prepareScreenshot")((result as PrepareScreenshotResult).debugLog);
+
             if (isClientBridgeErrorData(result)) {
                 throw new Error(
-                    `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
+                    `Failed to perform the visual check, because we couldn't compute screenshot area to capture.\n\n` +
+                        `What happened:\n` +
+                        `- You called assertView command with the following selectors: ${JSON.stringify(selectors)}\n` +
+                        `- You passed the following options: ${JSON.stringify(opts)}\n` +
+                        `- We tried to determine positions of these elements, but failed with the '${result.errorCode}' error: ${result.message}\n\n` +
+                        `What you can do:\n` +
+                        `- Check that passed selectors are valid and exist on the page\n` +
+                        `- If you believe this is a bug on our side, re-run this test with DEBUG=testplane:screenshots* and file an issue with this log at ${NEW_ISSUE_LINK}\n`,
                 );
             }
 
@@ -578,7 +589,7 @@ export class ExistingBrowser extends Browser {
 
         if (isClientBridgeErrorData(result)) {
             throw new Error(
-                `Disable animations failed with error type '${result.error}' and error message: ${result.message}`,
+                `Disable animations failed with error type '${result.errorCode}' and error message: ${result.message}`,
             );
         }
 

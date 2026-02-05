@@ -53,9 +53,6 @@ export class ScreenShooter {
             debug: browserPrepareScreenshotDebug.enabled,
         });
 
-        browserPrepareScreenshotDebug(
-            `[${opts.debugId}] browser logs during prepareScreenshot call:\n${page.debugLog}`,
-        );
         delete page.debugLog;
 
         assertCorrectCaptureAreaBounds(
