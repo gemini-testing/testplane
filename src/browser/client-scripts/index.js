@@ -350,7 +350,7 @@ function prepareScreenshotUnsafe(areas, opts) {
     logger("prepareScreenshotUnsafe, pixelRatio:", pixelRatio);
 
     return {
-        captureArea: rect.scale(pixelRatio).round().serialize(),
+        captureArea: rect.scale(pixelRatio).serialize(),
         ignoreAreas: ignoreAreas,
         viewport: new Rect({
             left: util.getScrollLeft(scrollElem),
@@ -734,7 +734,7 @@ function getCaptureRect(captureElements, opts, logger) {
         }
     }
 
-    return rect;
+    return rect ? rect.round() : rect;
 }
 
 function configurePixelRatio(usePixelRatio) {
@@ -772,7 +772,7 @@ function addIgnoreArea(element, opts, logger) {
         return;
     }
 
-    var ignoreArea = rect.scale(opts.pixelRatio).round().serialize();
+    var ignoreArea = rect.round().scale(opts.pixelRatio).serialize();
 
     this.push(ignoreArea);
 }
