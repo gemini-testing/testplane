@@ -79,10 +79,10 @@ Rect.prototype = {
 
     round: function () {
         return new Rect({
-            top: Math.round(this.top),
-            left: Math.round(this.left),
-            bottom: Math.round(this.top + this.height),
-            right: Math.round(this.left + this.width)
+            top: Math.floor(this.top),
+            left: Math.floor(this.left),
+            right: Math.ceil(this.right),
+            bottom: Math.ceil(this.bottom)
         });
     },
 
