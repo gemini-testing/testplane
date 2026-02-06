@@ -88,7 +88,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             const originalError =
                 css.status === "rejected" ? css.reason : js.status === "rejected" ? js.reason : "unknown reason";
 
-            throw new Error(`Selectivity: Couldn't start selectivity: ${originalError}`);
+            throw new Error("Selectivity: Couldn't start selectivity", { cause: originalError });
         }
     });
 

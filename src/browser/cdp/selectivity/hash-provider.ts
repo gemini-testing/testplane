@@ -9,8 +9,8 @@ const calculateFileMd5Hash = (filePath: string): Promise<string> =>
 
         fileReadStream.on("data", chunk => hash.update(chunk));
         fileReadStream.on("end", () => resolve(hash.digest("hex")));
-        fileReadStream.on("error", err =>
-            reject(new Error(`Selectivity: Couldn't calculate hash for ${filePath}: ${err}`)),
+        fileReadStream.on("error", cause =>
+            reject(new Error(`Selectivity: Couldn't calculate hash for ${filePath}`, { cause })),
         );
     });
 
