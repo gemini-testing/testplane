@@ -130,6 +130,20 @@ module.exports = class TestRunner {
         if (error) {
             filterExtraStackFrames(error);
 
+            let current = error.cause;
+            let depth = 1;
+
+            while (current) {
+                const indent = "    ".repeat(depth);
+                error.stack += `\n\n${indent}Caused by: ${current.stack.split("\n").join(`\n${indent}`)}`;
+
+                current = current.cause;
+
+                depth++;
+            }
+
+            delete error.cause;
+
             await extendWithCodeSnippet(error);
 
             throw Object.assign(error, results);
