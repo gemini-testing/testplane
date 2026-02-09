@@ -189,6 +189,38 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=capture-element]");
     });
 
+    it("should suppress hover on short blocks when disableHover=always", async ({ browser }) => {
+        await browser.url("suppress-interactions-hover.html");
+
+        await browser.$("[data-testid=short-block]").moveTo();
+
+        await browser.assertView("short-block-suppress-on", "[data-testid=short-block]", {
+            disableHover: "always",
+        });
+
+        // Previous assertView should not affect future behavior
+        await browser.$("[data-testid=short-block]").click();
+        await browser.assertView("short-block-final", "[data-testid=short-block]");
+    });
+
+    it("should suppress hover on long blocks by default during composite", async ({ browser }) => {
+        await browser.url("suppress-interactions-hover.html");
+
+        await browser.$("[data-testid=long-block]").moveTo();
+
+        await browser.assertView("long-block-suppress-default", "[data-testid=long-block]");
+    });
+
+    it("should keep hover on long blocks when disableHover=never", async ({ browser }) => {
+        await browser.url("suppress-interactions-hover.html");
+
+        await browser.$("[data-testid=long-block]").moveTo();
+
+        await browser.assertView("long-block-suppress-off", "[data-testid=long-block]", {
+            disableHover: "never",
+        });
+    });
+
     it("should work fine when capturing elements that are overlapping", async ({ browser }) => {
         await browser.url("overlapping-blocks-at-y2000.html");
 
