@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.40.7 (2026-02-09)
+
+
+### Bug Fixes
+
+* error cause ([807d838](https://github.com/gemini-testing/testplane/commit/807d838023db42441ba619bfdacb38425538f042))
+
 ### 8.40.6 (2026-02-02)
 
 
