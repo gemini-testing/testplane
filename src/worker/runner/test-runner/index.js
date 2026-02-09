@@ -133,6 +133,7 @@ module.exports = class TestRunner {
             let current = error.cause;
             let depth = 1;
 
+            // Propagate errors from the cause into the stack trace of the main error.
             while (current) {
                 const indent = "    ".repeat(depth);
                 error.stack += `\n\n${indent}Caused by: ${current.stack.split("\n").join(`\n${indent}`)}`;
@@ -142,6 +143,7 @@ module.exports = class TestRunner {
                 depth++;
             }
 
+            // The original cause must be removed to avoid possible duplicates later.
             delete error.cause;
 
             await extendWithCodeSnippet(error);
