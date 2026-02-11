@@ -635,6 +635,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         }
 
         var likelyInterferes = false;
+        var interferenceReason = "";
         if (position === "fixed") {
             likelyInterferes = true;
         } else if (position === "absolute") {
@@ -655,6 +656,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                 typeof scrollElem.contains === "function" &&
                 !scrollElem.contains(containingBlock)
             ) {
+                interferenceReason = "absolute element is positioned relative to ancestor outside scroll container";
                 likelyInterferes = true;
             }
         } else if (position === "sticky") {
@@ -669,33 +671,43 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             }
 
             if (!isNaN(topValue)) {
-                br = {
+                br = new Rect({
                     left: br.left,
                     top: topValue,
                     width: br.width,
                     height: br.height
-                };
+                });
                 likelyInterferes = true;
-                logger("  it is sticky to top! topValue: " + topValue + " bounding rect: " + JSON.stringify(br));
+                interferenceReason =
+                    "sticky element is positioned to top, topValue: " +
+                    topValue +
+                    " bounding rect: " +
+                    JSON.stringify(br);
             } else if (!isNaN(bottomValue)) {
                 var viewportBottom = util.isRootElement(scrollElem) ? viewportHeight : safeArea.top + safeArea.height;
-                br = {
+                br = new Rect({
                     left: br.left,
                     top: viewportBottom - bottomValue - br.height,
                     width: br.width,
                     height: br.height
-                };
+                });
                 likelyInterferes = true;
-                logger(
-                    "  it is sticky to bottom! bottomValue: " + bottomValue + " bounding rect: " + JSON.stringify(br)
-                );
+                interferenceReason =
+                    "sticky element is positioned to bottom, bottomValue: " +
+                    bottomValue +
+                    " bounding rect: " +
+                    JSON.stringify(br);
             }
         }
 
-        logger("  likely interferes: " + likelyInterferes);
-
         if (likelyInterferes) {
-            var candChain = util.buildZChain(el);
+            logger(
+                "getSafeAreaRect(), this element likely interferes: " +
+                    el.classList.toString() +
+                    " interference reason: " +
+                    interferenceReason
+            );
+            var candChain = util.buildZChain(el, { includeReasons: false });
 
             var behindAll = targetChains.every(function (tChain) {
                 return util.isChainBehind(candChain, tChain);
@@ -704,7 +716,19 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             logger("  is candidate z chain behind all target chains? : " + behindAll);
 
             if (!behindAll) {
-                interferingRects.push({ x: br.left, y: br.top, width: br.width, height: br.height });
+                var extRect = getExtRect(computedStyle, br, true);
+                if (
+                    extRect.right <= captureAreaInViewportCoords.left ||
+                    extRect.left >= captureAreaInViewportCoords.right
+                ) {
+                    return;
+                }
+                interferingRects.push({
+                    x: extRect.left,
+                    y: extRect.top,
+                    width: extRect.width,
+                    height: extRect.height
+                });
             }
         }
     });
