@@ -55,9 +55,13 @@ export const getCollectedTestplaneDependencies = (): Set<string> | null => {
 export const runWithTestplaneDependenciesCollecting = <T>(fn: () => Promise<T>): Promise<T> => {
     enableCollectingTestplaneDependencies();
 
-    const store = { jsTestplaneDeps: new Set<string>() };
+    const store: { jsTestplaneDeps?: Set<string> } = { jsTestplaneDeps: new Set() };
 
-    return testDependenciesStorage.run(store, fn);
+    return testDependenciesStorage.run(store, fn).finally(() => {
+        // After "fn" completion, "store" is reachable in CDP ping interval callback, so it never GC-removed
+        // Thats why we do it manually. Removing "jsTestplaneDeps" is enough, and set remains unchanged, if used
+        delete store.jsTestplaneDeps;
+    });
 };
 
 export const readTestFileWithTestplaneDependenciesCollecting = <T>(file: string, fn: () => Promise<T>): Promise<T> => {
