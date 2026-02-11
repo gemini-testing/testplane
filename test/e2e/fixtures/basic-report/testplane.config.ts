@@ -1,29 +1,26 @@
 import path from "path";
 
-const SERVER_PORT = 3000;
+const SERVER_PORT = 3700;
 
 export default {
     gridUrl: "http://127.0.0.1:4444/",
 
     baseUrl: `http://host.docker.internal:${SERVER_PORT}/`,
 
-    timeTravel: "on",
+    timeTravel: "off",
     saveHistoryMode: "all",
 
     screenshotsDir: "test/e2e/screens",
 
     sets: {
         assertView: {
-            files: path.join(__dirname, "tests/assert-view.testplane.js"),
-        },
-        reportPageScreenshot: {
-            files: path.join(__dirname, "tests/report-page-screenshot.testplane.js"),
+            files: path.join(__dirname, "tests/**/*.testplane.js"),
         },
     },
 
     takeScreenshotOnFails: {
-        testFail: false,
-        assertViewFail: false,
+        testFail: true,
+        assertViewFail: true,
     },
 
     browsers: {
@@ -44,10 +41,7 @@ export default {
     },
 
     devServer: {
-        command: `npx --yes --prefer-offline serve -p ${SERVER_PORT} --no-request-logging ${path.resolve(
-            __dirname,
-            "static",
-        )}`,
+        command: `npx --yes serve -p ${SERVER_PORT} --no-request-logging ${path.resolve(__dirname, "static")}`,
         readinessProbe: {
             url: `http://localhost:${SERVER_PORT}/`,
             timeouts: {
@@ -59,7 +53,7 @@ export default {
     plugins: {
         "html-reporter/testplane": {
             enabled: true,
-            path: "test/e2e/report",
+            path: path.resolve(__dirname, "../../static/basic-report"),
         },
     },
 };

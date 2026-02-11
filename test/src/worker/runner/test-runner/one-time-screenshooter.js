@@ -23,7 +23,6 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
                 opts,
             ),
             evalScript: sinon.stub().named("evalScript").resolves({ height: 0, width: 0 }),
-            prepareScreenshot: sinon.stub().named("prepareScreenshot").resolves(),
             setHttpTimeout: sinon.spy().named("setHttpTimeout"),
             restoreHttpTimeout: sinon.spy().named("restoreHttpTimeout"),
         };
@@ -61,7 +60,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
             "../../../utils/logger": logger,
         });
 
-        sandbox.stub(ScreenShooter.prototype, "capture").resolves(stubImage_());
+        sandbox.stub(ScreenShooter.prototype, "capture").resolves({ image: stubImage_(), meta: {} });
         sandbox.stub(Image, "fromBase64").returns(stubImage_());
     });
 
@@ -102,20 +101,17 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it('should capture full page screenshot if option "takeScreenshotOnFailsMode" is set to "fullpage"', async () => {
             const browser = mkBrowser_();
             browser.evalScript.resolves({ width: 100, height: 500 });
-            browser.prepareScreenshot
-                .withArgs([{ left: 0, top: 0, width: 100, height: 500 }], {
-                    ignoreSelectors: [],
-                    captureElementFromTop: true,
-                    allowViewportOverflow: true,
-                })
-                .resolves("page-data");
             const imgStub = stubImage_({ width: 100, height: 500 });
             ScreenShooter.prototype.capture
-                .withArgs("page-data", {
-                    compositeImage: true,
-                    allowViewportOverflow: true,
-                })
-                .resolves(imgStub);
+                .withArgs(
+                    sinon.match([{ left: 0, top: 0, width: 100, height: 500 }]),
+                    sinon.match({
+                        compositeImage: true,
+                        allowViewportOverflow: true,
+                        captureElementFromTop: true,
+                    }),
+                )
+                .resolves({ image: imgStub, meta: {} });
 
             const config = { takeScreenshotOnFailsMode: "fullpage" };
             const screenshooter = mkScreenshooter_({ browser, config });

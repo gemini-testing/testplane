@@ -1,3 +1,5 @@
+/* global document, window */
+
 describe("assertView", () => {
     it("should take a screenshot of a block that is slightly not in viewport with captureElementFromTop", async ({
         browser,
@@ -189,35 +191,138 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=capture-element]");
     });
 
-    it("should suppress hover on short blocks when disableHover=always", async ({ browser }) => {
-        await browser.url("suppress-interactions-hover.html");
+    describe("allowViewportOverflow", () => {
+        it("should still try to scroll when allowViewportOverflow is true", async ({ browser }) => {
+            await browser.url("long-block.html");
 
-        await browser.$("[data-testid=short-block]").moveTo();
+            await browser.assertView("test-block", "[data-testid=test-block]", { allowViewportOverflow: true });
+        });
+    });
 
-        await browser.assertView("short-block-suppress-on", "[data-testid=short-block]", {
-            disableHover: "always",
+    describe("disableHover", () => {
+        it("should suppress hover on short blocks when disableHover=always", async ({ browser }) => {
+            await browser.url("suppress-interactions-hover.html");
+
+            await browser.$("[data-testid=short-block]").moveTo();
+
+            await browser.assertView("short-block-suppress-on", "[data-testid=short-block]", {
+                disableHover: "always",
+            });
+
+            // Previous assertView should not affect future behavior
+            await browser.$("[data-testid=short-block]").click();
+            await browser.assertView("short-block-final", "[data-testid=short-block]");
         });
 
-        // Previous assertView should not affect future behavior
-        await browser.$("[data-testid=short-block]").click();
-        await browser.assertView("short-block-final", "[data-testid=short-block]");
+        it("should suppress hover on long blocks by default during composite", async ({ browser }) => {
+            await browser.url("suppress-interactions-hover.html");
+
+            await browser.$("[data-testid=long-block]").moveTo();
+
+            await browser.assertView("long-block-suppress-default", "[data-testid=long-block]");
+        });
+
+        it("should keep hover on long blocks when disableHover=never", async ({ browser }) => {
+            await browser.url("suppress-interactions-hover.html");
+
+            await browser.$("[data-testid=long-block]").moveTo();
+
+            await browser.assertView("long-block-suppress-off", "[data-testid=long-block]", {
+                disableHover: "never",
+            });
+        });
     });
 
-    it("should suppress hover on long blocks by default during composite", async ({ browser }) => {
-        await browser.url("suppress-interactions-hover.html");
+    describe("disableAnimation", () => {
+        it("should stop and resume animations on a basic page", async ({ browser }) => {
+            await browser.url("animation-cleanup.html");
 
-        await browser.$("[data-testid=long-block]").moveTo();
+            // This pause is to ensure the test fails if animations are not stopped
+            await browser.pause(Math.random() * 500);
 
-        await browser.assertView("long-block-suppress-default", "[data-testid=long-block]");
-    });
+            await browser.assertView("animation-cleanup", "[data-testid=animated-block]", { disableAnimation: true });
 
-    it("should keep hover on long blocks when disableHover=never", async ({ browser }) => {
-        await browser.url("suppress-interactions-hover.html");
+            const state = await browser.execute(() => {
+                const targetElement = document.querySelector("[data-testid=animated-block]");
+                const animationDuration = window.getComputedStyle(targetElement).animationDuration;
+                const hasStyle = Array.from(document.querySelectorAll("style")).some(style =>
+                    style.textContent.includes("animation-duration: 0ms"),
+                );
 
-        await browser.$("[data-testid=long-block]").moveTo();
+                return {
+                    animationDuration,
+                    someElementHasAnimationStoppedStyle: hasStyle,
+                };
+            });
 
-        await browser.assertView("long-block-suppress-off", "[data-testid=long-block]", {
-            disableHover: "never",
+            expect(state.someElementHasAnimationStoppedStyle).toBe(false);
+            expect(state.animationDuration).toBe("0.2s");
+        });
+
+        it("should stop and resume animations in iframe and restore frame context", async ({ browser }) => {
+            await browser.url("animation-cleanup.html");
+
+            await browser.execute(() => {
+                window.__thisIsOriginalFrame = true;
+            });
+
+            // This pause is to ensure the test fails if animations are not stopped
+            await browser.pause(Math.random() * 500);
+
+            await browser.assertView("animation-cleanup-iframe", "[data-testid=animation-iframe]", {
+                disableAnimation: true,
+            });
+
+            const state = await browser.execute(() => {
+                const isOriginalFrame = window.__thisIsOriginalFrame;
+
+                const iframe = document.querySelector("[data-testid=animation-iframe]");
+                const iframeWindow = iframe.contentWindow;
+                const iframeDocument = iframe.contentDocument;
+                const iframeElement = iframeDocument.querySelector("[data-testid=animated-block]");
+                const animationDuration = iframeWindow.getComputedStyle(iframeElement).animationDuration;
+                const hasStyle = Array.from(iframeDocument.querySelectorAll("style")).some(style =>
+                    style.textContent.includes("animation-duration: 0ms"),
+                );
+
+                return {
+                    isOriginalFrame,
+                    animationDuration,
+                    someElementHasAnimationStoppedStyle: hasStyle,
+                };
+            });
+
+            expect(state.isOriginalFrame).toBe(true);
+            expect(state.someElementHasAnimationStoppedStyle).toBe(false);
+            expect(state.animationDuration).toBe("0.3s");
+        });
+
+        it("should resume animations after assertView failure", async ({ browser }) => {
+            await browser.url("animation-cleanup.html");
+
+            await expect(() =>
+                browser.assertView("animation-cleanup-fail", "[data-testid=too-tall]", {
+                    disableAnimation: true,
+                    compositeImage: false,
+                    captureElementFromTop: true,
+                }),
+            ).rejects.toThrow();
+
+            const state = await browser.execute(() => {
+                const targetElement = document.querySelector("[data-testid=animated-block]");
+                const animationDuration = window.getComputedStyle(targetElement).animationDuration;
+                const hasStyle = Array.from(document.querySelectorAll("style")).some(style =>
+                    style.textContent.includes("animation-duration: 0ms"),
+                );
+
+                return {
+                    animationDuration,
+                    someElementHasAnimationStoppedStyle: hasStyle,
+                };
+            });
+
+            expect(state.someElementHasAnimationStoppedStyle).toBe(false);
+            expect(state.animationDuration).toBe("0.2s");
         });
     });
 

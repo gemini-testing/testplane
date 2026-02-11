@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Iframe animation cleanup</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .animated {
+                width: 120px;
+                height: 120px;
+                background: #3ccf5a;
+                animation: pulse 0.3s infinite alternate;
+            }
+
+            @keyframes pulse {
+                from {
+                    opacity: 0.2;
+                }
+                to {
+                    opacity: 0.8;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div data-testid="animated-block" class="animated"></div>
+        <script>
+            window.__frameId = "child";
+            window.__animationStyleInserted = false;
+            window.__animationStyleRemoved = false;
+
+            (function () {
+                var observer = new MutationObserver(function (records) {
+                    records.forEach(function (record) {
+                        record.addedNodes.forEach(function (node) {
+                            if (
+                                node &&
+                                node.tagName === "STYLE" &&
+                                node.textContent.indexOf("animation-duration: 0ms") !== -1
+                            ) {
+                                window.__animationStyleInserted = true;
+                            }
+                        });
+                        record.removedNodes.forEach(function (node) {
+                            if (
+                                node &&
+                                node.tagName === "STYLE" &&
+                                node.textContent.indexOf("animation-duration: 0ms") !== -1
+                            ) {
+                                window.__animationStyleRemoved = true;
+                            }
+                        });
+                    });
+                });
+                observer.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        </script>
+    </body>
+</html>
