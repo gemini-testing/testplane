@@ -1,11 +1,11 @@
 import path from "path";
 import { Module as UntypedModule } from "module";
 import { AsyncLocalStorage } from "async_hooks";
+import { CacheType, getCachedSelectivityFile, setCachedSelectivityFile } from "./fs-cache";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TypedModule = UntypedModule as unknown as { _resolveFilename: (...args: any) => string | void };
 const testDependenciesStorage = new AsyncLocalStorage<{ jsTestplaneDeps?: Set<string> }>();
-const testFileDependenciesCache = new Map<string, string[]>();
 
 let disableCollectingDependenciesCb: (() => void) | null = null;
 
@@ -55,12 +55,17 @@ export const getCollectedTestplaneDependencies = (): Set<string> | null => {
 export const runWithTestplaneDependenciesCollecting = <T>(fn: () => Promise<T>): Promise<T> => {
     enableCollectingTestplaneDependencies();
 
-    const store = { jsTestplaneDeps: new Set<string>() };
+    const store: { jsTestplaneDeps?: Set<string> } = { jsTestplaneDeps: new Set() };
 
-    return testDependenciesStorage.run(store, fn);
+    return testDependenciesStorage.run(store, fn).finally(() => {
+        delete store.jsTestplaneDeps;
+    });
 };
 
-export const readTestFileWithTestplaneDependenciesCollecting = <T>(file: string, fn: () => Promise<T>): Promise<T> => {
+export const readTestFileWithTestplaneDependenciesCollecting = async <T>(
+    file: string,
+    fn: () => Promise<T>,
+): Promise<T> => {
     if (!disableCollectingDependenciesCb) {
         return fn();
     }
@@ -72,18 +77,22 @@ export const readTestFileWithTestplaneDependenciesCollecting = <T>(file: string,
         return fn();
     }
 
-    const cachedDependencies = testFileDependenciesCache.get(file);
+    const cachedDependencies = await getCachedSelectivityFile(CacheType.TestFile, file);
 
     if (cachedDependencies) {
-        cachedDependencies.forEach(dependency => jsTestplaneDeps.add(dependency));
+        const parsedDependencies = JSON.parse(cachedDependencies) as string[];
+
+        parsedDependencies.forEach(dependency => jsTestplaneDeps.add(dependency));
 
         return fn();
     }
 
-    return fn().finally(() => {
-        testFileDependenciesCache.set(
-            file,
-            Array.from(jsTestplaneDeps).sort((a, b) => a.localeCompare(b)),
-        );
-    });
+    try {
+        return await fn();
+    } finally {
+        const cacheValue = Array.from(jsTestplaneDeps).sort((a, b) => a.localeCompare(b));
+
+        // This cache is critical and we should throw error if writing it failed
+        await setCachedSelectivityFile(CacheType.TestFile, file, JSON.stringify(cacheValue));
+    }
 };
