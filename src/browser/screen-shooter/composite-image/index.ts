@@ -136,18 +136,20 @@ export class CompositeImage {
         this._lastContainerOffset = scrollElementOffset;
         this._lastViewportOffset = viewportOffset;
 
+        await viewportImage.crop(cropAreaInViewportCoords);
+        const imageSize = await viewportImage.getSize();
+
         debug(
-            "Captured the next chunk at offset %O.\n  notCapturedArea before capture: %O\n  notCapturedAreaInViewportCoords: %O\n  cropArea: %O\n  windowOffset: %O",
+            "Captured the next chunk at offset %O.\n  notCapturedArea before capture: %O\n  notCapturedAreaInViewportCoords: %O\n  cropArea: %O\n  windowOffset: %O\n  image size: %O",
             scrollElementOffset,
             notCapturedArea,
             notCapturedAreaInViewportCoords,
             cropAreaInViewportCoords,
             viewportOffset,
+            imageSize,
         );
 
-        await viewportImage.crop(cropAreaInViewportCoords);
-
-        this._compositeChunks.push({ image: viewportImage, imageSize: await viewportImage.getSize() });
+        this._compositeChunks.push({ image: viewportImage, imageSize });
     }
 
     async render(): Promise<Image> {

@@ -62,16 +62,18 @@ export class ScreenShooter {
     }
 
     async capture(
-        selectorOrAreas: string | string[] | Rect | Rect[],
+        selectorsOrAreas: string | string[] | Rect | Rect[],
         opts: ScreenShooterOpts = {},
     ): Promise<CaptureImageResult> {
-        const areas = ([] as Array<string | Rect>).concat(selectorOrAreas as Array<string | Rect>);
-        const selectors = areas.filter((area): area is string => typeof area === "string");
+        const selectorsOrAreasArray = ([] as Array<string | Rect>).concat(selectorsOrAreas as Array<string | Rect>);
+        const selectors = selectorsOrAreasArray.filter(
+            (areaOrSelector): areaOrSelector is string => typeof areaOrSelector === "string",
+        );
         this._selectorsToCapture = selectors;
 
         const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
         try {
-            const page = await this._prepareScreenshot(areas, {
+            const page = await this._prepareScreenshot(selectorsOrAreasArray, {
                 ignoreSelectors: ([] as string[]).concat(opts.ignoreElements ?? []),
                 allowViewportOverflow: opts.allowViewportOverflow,
                 captureElementFromTop: opts.captureElementFromTop,
@@ -85,7 +87,7 @@ export class ScreenShooter {
             delete page.debugLog;
 
             assertCorrectCaptureAreaBounds(
-                JSON.stringify(areas),
+                JSON.stringify(selectorsOrAreasArray),
                 page.viewport,
                 page.viewportOffset,
                 page.captureArea,
@@ -96,28 +98,34 @@ export class ScreenShooter {
 
             await this._preparePointerForScreenshot(page, opts);
 
-            const viewportImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
+            const viewport = {
+                ...page.viewport,
+                ...page.viewportOffset,
+            };
+            const viewportImage = await this._browser.captureViewportImage(viewport, opts.screenshotDelay);
             const image = CompositeImage.create(page.captureArea, page.safeArea, page.ignoreAreas);
             await image.registerViewportImageAtOffset(viewportImage, page.scrollElementOffset, page.viewportOffset);
 
             await this._captureOverflowingAreaIfNeeded(image, page, opts);
+
+            debug(`[${opts.debugId}] All areas captured. Proceeding to render image`);
 
             return {
                 image: await image.render(),
                 meta: page,
             };
         } catch (error) {
-            const baseMessage = `Failed to capture screenshot for selectors: ${JSON.stringify(areas)}`;
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`${baseMessage}\nOriginal error: ${errorMessage}`, { cause: error });
+            console.warn(`Failed to capture screenshot for selectors: ${JSON.stringify(selectorsOrAreasArray)}`);
+            throw error;
         } finally {
             try {
                 await this._cleanupScreenshot(opts);
             } catch (cleanupError) {
                 const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
                 console.warn(
-                    `Warning: failed to cleanup after screenshot for selectors: ${JSON.stringify(areas)}\n` +
-                        `Cleanup error: ${cleanupMessage}`,
+                    `Warning: failed to cleanup after screenshot for selectors: ${JSON.stringify(
+                        selectorsOrAreasArray,
+                    )}\n` + `Cleanup error: ${cleanupMessage}`,
                 );
             }
         }
@@ -263,10 +271,12 @@ export class ScreenShooter {
         }
 
         try {
+            pointerDebug("Trying to move pointer by %dpx, %dpx", x, y);
             await session
                 .action("pointer", { parameters: { pointerType: "mouse" } })
                 .move({ duration: 0, origin: "pointer", x, y })
                 .perform();
+            pointerDebug("Pointer moved by %dpx, %dpx", x, y);
             return true;
         } catch (error) {
             pointerDebug("Failed to move pointer relatively: %O", error);
@@ -283,7 +293,7 @@ export class ScreenShooter {
 
         const boundingRectsBeforeScroll = await getBoundingRects(
             this._browser.publicAPI,
-            this._selectorsToCapture,
+            this._selectorsToCapture.length > 0 ? this._selectorsToCapture : ["body"],
         ).catch(() => null);
 
         debug("boundingRectBeforeScroll: %O", boundingRectsBeforeScroll);
@@ -328,7 +338,7 @@ export class ScreenShooter {
 
         const boundingRectsAfterScroll = await getBoundingRects(
             this._browser.publicAPI,
-            this._selectorsToCapture,
+            this._selectorsToCapture.length > 0 ? this._selectorsToCapture : ["body"],
         ).catch(() => null);
 
         debug("boundingRectAfterScroll: %O", boundingRectsAfterScroll);
@@ -374,7 +384,12 @@ export class ScreenShooter {
             windowOffset,
         );
 
-        const newImage = await this._browser.captureViewportImage(page, opts.screenshotDelay);
+        const currentViewport = {
+            ...page.viewport,
+            top: windowOffset.top,
+            left: windowOffset.left,
+        };
+        const newImage = await this._browser.captureViewportImage(currentViewport, opts.screenshotDelay);
 
         await image.registerViewportImageAtOffset(newImage, containerOffset, windowOffset);
 

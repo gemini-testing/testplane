@@ -4,7 +4,7 @@ import { attach, type AttachOptions, type ElementArray } from "@testplane/webdri
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
-import { Camera, PageMeta } from "./camera";
+import { Camera, ImageArea } from "./camera";
 import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
@@ -180,12 +180,12 @@ export class ExistingBrowser extends Browser {
         return this._config.automationProtocol === WEBDRIVER_PROTOCOL;
     }
 
-    async captureViewportImage(page?: PageMeta, screenshotDelay?: number): Promise<Image> {
+    async captureViewportImage(viewport?: ImageArea, screenshotDelay?: number): Promise<Image> {
         if (screenshotDelay) {
             await new Promise(resolve => setTimeout(resolve, screenshotDelay));
         }
 
-        return this._camera.captureViewportImage(page);
+        return this._camera.captureViewportImage(viewport);
     }
 
     scrollBy(params: ScrollByParams): Promise<void> {

@@ -90,6 +90,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     });
 
+    var initialRect = rect;
     var captureElements = getCaptureElements(selectors);
 
     if (opts.selectorToScroll) {
@@ -124,6 +125,7 @@ function prepareScreenshotUnsafe(areas, opts) {
     rect = getCaptureRect(
         captureElements,
         {
+            initialRect: initialRect,
             allowViewportOverflow: allowViewportOverflow,
             scrollElem: scrollElem,
             viewportWidth: viewportWidth,
@@ -200,6 +202,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             rect = getCaptureRect(
                 captureElements,
                 {
+                    initialRect: initialRect,
                     allowViewportOverflow: allowViewportOverflow,
                     scrollElem: scrollElem,
                     viewportWidth: viewportWidth,
@@ -258,6 +261,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         rect = getCaptureRect(
             captureElements,
             {
+                initialRect: initialRect,
                 allowViewportOverflow: allowViewportOverflow,
                 scrollElem: scrollElem,
                 viewportWidth: viewportWidth,
@@ -577,6 +581,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         });
     }
 
+    var captureElementsOrBody = captureElements.length > 0 ? captureElements : [document.body];
     var scrollElem = opts.scrollElem;
     var viewportHeight = opts.viewportHeight;
 
@@ -599,7 +604,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     // 2. Build z-index chains for all capture elements
     //    One z-chain is a list of objects: { stacking context, z-index } -> { stacking context, z-index } -> ...
     //    It is used to determine which element is on top of the other.
-    var targetChains = captureElements.map(function (el) {
+    var targetChains = captureElementsOrBody.map(function (el) {
         return util.buildZChain(el);
     });
 
@@ -610,10 +615,9 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     var interferingRects = [];
 
     allElements.forEach(function (el) {
-        logger("getSafeAreaRect(), processing potentially interfering element: " + el.classList.toString());
         // Skip elements that contain capture elements
         if (
-            util.some(captureElements, function (capEl) {
+            util.some(captureElementsOrBody, function (capEl) {
                 return el.contains(capEl);
             })
         ) {
@@ -641,7 +645,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
             if (
-                captureElements.some(function (captureEl) {
+                captureElementsOrBody.some(function (captureEl) {
                     return captureEl.contains(el);
                 })
             ) {

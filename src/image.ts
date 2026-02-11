@@ -197,7 +197,18 @@ export class Image {
     async _getPngBuffer(): Promise<Buffer> {
         const imageData = await this._getImgData();
 
-        return convertRgbaToPng(imageData, this._width, this._height);
+        try {
+            return convertRgbaToPng(imageData, this._width, this._height);
+        } catch (e) {
+            const baseMessage =
+                `Failed to convert image buffer to PNG.\n` +
+                `Expected image size (formatted as height x width): ${this._height} x ${this._width}.\n` +
+                `Actual data present in buffer (formatted as height x width): ${this._height} x ${
+                    imageData.length / (this._height * RGBA_CHANNELS)
+                } or ${imageData.length / (this._width * RGBA_CHANNELS)} x ${this._width}.\n` +
+                `This means the data is malformed or image size doesn't match actual image dimensions.\n`;
+            throw new Error(baseMessage, { cause: e });
+        }
     }
 
     async save(file: string): Promise<void> {
