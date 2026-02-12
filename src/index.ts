@@ -5,6 +5,8 @@
 import "./browser/types";
 // Declares global expect function
 import "expect-webdriverio";
+// Overrides matchers return type
+import "./vendors/expect-webdriverio/matchers-overrides";
 
 import { GlobalHelper } from "./types";
 export { run as runCli } from "./cli";
