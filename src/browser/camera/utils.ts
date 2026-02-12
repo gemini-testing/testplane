@@ -7,7 +7,7 @@ export const isFullPage = (imageArea: ImageArea, viewport: ImageArea, screenshot
         case "viewport":
             return false;
         case "auto":
-            return imageArea.height > viewport.height && imageArea.width > viewport.width;
+            return imageArea.height > viewport.height || imageArea.width > viewport.width;
     }
 };
 
