@@ -44,6 +44,19 @@ exports.cleanupFrameAnimations = function cleanupFrameAnimations() {
     }
 };
 
+exports.disablePointerEvents = function disablePointerEvents() {
+    try {
+        return disablePointerEventsUnsafe();
+    } catch (e) {
+        return {
+            errorCode: "JS",
+            message: e.stack || e.message
+        };
+    }
+};
+
+exports.cleanupPointerEvents = function cleanupPointerEvents() {};
+
 function prepareScreenshotUnsafe(areas, opts) {
     var logger = util.createDebugLogger(opts);
 
@@ -77,6 +90,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         }
     });
 
+    var initialRect = rect;
     var captureElements = getCaptureElements(selectors);
 
     if (opts.selectorToScroll) {
@@ -111,6 +125,7 @@ function prepareScreenshotUnsafe(areas, opts) {
     rect = getCaptureRect(
         captureElements,
         {
+            initialRect: initialRect,
             allowViewportOverflow: allowViewportOverflow,
             scrollElem: scrollElem,
             viewportWidth: viewportWidth,
@@ -164,10 +179,13 @@ function prepareScreenshotUnsafe(areas, opts) {
         return top;
     }, 9999999);
 
-    if (
-        captureElementFromTop &&
-        (topmostCaptureElementTop < safeArea.top || topmostCaptureElementTop >= safeArea.top + safeArea.height)
-    ) {
+    var scrollOffsetTopForFit = scrollElem === window || !scrollElem.parentElement ? 0 : util.getScrollTop(scrollElem);
+    var rectTopInViewportForFit = rect.top - scrollOffsetTopForFit - window.scrollY;
+    var rectBottomInViewportForFit = rectTopInViewportForFit + rect.height;
+    var fitsInSafeArea =
+        rectTopInViewportForFit >= safeArea.top && rectBottomInViewportForFit <= safeArea.top + safeArea.height;
+
+    if (captureElementFromTop && !fitsInSafeArea) {
         logger("captureElementFromTop=true and capture element is outside of viewport, going to perform scroll");
         if (!util.isRootElement(scrollElem) && captureElementFromTop) {
             var scrollElemBoundingRect = getBoundingClientContentRect(scrollElem);
@@ -184,6 +202,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             rect = getCaptureRect(
                 captureElements,
                 {
+                    initialRect: initialRect,
                     allowViewportOverflow: allowViewportOverflow,
                     scrollElem: scrollElem,
                     viewportWidth: viewportWidth,
@@ -242,6 +261,7 @@ function prepareScreenshotUnsafe(areas, opts) {
         rect = getCaptureRect(
             captureElements,
             {
+                initialRect: initialRect,
                 allowViewportOverflow: allowViewportOverflow,
                 scrollElem: scrollElem,
                 viewportWidth: viewportWidth,
@@ -346,6 +366,25 @@ function prepareScreenshotUnsafe(areas, opts) {
         disableFrameAnimationsUnsafe();
     }
 
+    var disableHover = opts.disableHover;
+    var pointerEventsDisabled = false;
+    if (disableHover === "always") {
+        logger("adding stylesheet with pointer-events: none on all elements");
+        disablePointerEventsUnsafe();
+        pointerEventsDisabled = true;
+    } else if (disableHover === "when-scrolling-needed" && opts.compositeImage) {
+        var scrollOffsetTop = scrollElem === window || !scrollElem.parentElement ? 0 : util.getScrollTop(scrollElem);
+        var rectTopInViewport = rect.top - scrollOffsetTop - window.scrollY;
+        var needsScrolling =
+            rectTopInViewport < safeArea.top || rectTopInViewport + rect.height > safeArea.top + safeArea.height;
+
+        if (needsScrolling) {
+            logger("adding stylesheet with pointer-events: none on all elements (composite capture needs scrolling)");
+            disablePointerEventsUnsafe();
+            pointerEventsDisabled = true;
+        }
+    }
+
     logger("prepareScreenshotUnsafe, final capture rect:", rect);
     logger("prepareScreenshotUnsafe, pixelRatio:", pixelRatio);
 
@@ -379,8 +418,19 @@ function prepareScreenshotUnsafe(areas, opts) {
                     ? 0
                     : Math.floor(util.getScrollLeft(scrollElem) * pixelRatio)
         },
+        pointerEventsDisabled: pointerEventsDisabled,
         debugLog: logger()
     };
+}
+
+function createDefaultTrustedTypesPolicy() {
+    if (window.trustedTypes && window.trustedTypes.createPolicy) {
+        window.trustedTypes.createPolicy("default", {
+            createHTML: function (string) {
+                return string;
+            }
+        });
+    }
 }
 
 function disableFrameAnimationsUnsafe() {
@@ -412,16 +462,6 @@ function disableFrameAnimationsUnsafe() {
         styleElements.push(styleElement);
     }
 
-    function createDefaultTrustedTypesPolicy() {
-        if (window.trustedTypes && window.trustedTypes.createPolicy) {
-            window.trustedTypes.createPolicy("default", {
-                createHTML: function (string) {
-                    return string;
-                }
-            });
-        }
-    }
-
     util.forEachRoot(function (root) {
         try {
             appendDisableAnimationStyleElement(root);
@@ -443,6 +483,46 @@ function disableFrameAnimationsUnsafe() {
         }
 
         delete window.__cleanupAnimation;
+    };
+}
+
+function disablePointerEventsUnsafe() {
+    var everyElementSelector = "*:not(#testplane-q.testplane-w.testplane-e.testplane-r.testplane-t.testplane-y)";
+    var everythingSelector = ["", "::before", "::after"]
+        .map(function (pseudo) {
+            return everyElementSelector + pseudo;
+        })
+        .join(", ");
+
+    var styleElements = [];
+
+    function appendDisablePointerEventsStyleElement(root) {
+        var styleElement = document.createElement("style");
+        styleElement.innerHTML = everythingSelector + ["{", "    pointer-events: none !important;", "}"].join("\n");
+
+        root.appendChild(styleElement);
+        styleElements.push(styleElement);
+    }
+
+    util.forEachRoot(function (root) {
+        try {
+            appendDisablePointerEventsStyleElement(root);
+        } catch (err) {
+            if (err && err.message && err.message.includes("This document requires 'TrustedHTML' assignment")) {
+                createDefaultTrustedTypesPolicy();
+
+                appendDisablePointerEventsStyleElement(root);
+            } else {
+                throw err;
+            }
+        }
+    });
+
+    exports.cleanupPointerEvents = function () {
+        for (var i = 0; i < styleElements.length; i++) {
+            styleElements[i].parentNode.removeChild(styleElements[i]);
+        }
+        exports.cleanupPointerEvents = function () {};
     };
 }
 
@@ -501,6 +581,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         });
     }
 
+    var captureElementsOrBody = captureElements.length > 0 ? captureElements : [document.body];
     var scrollElem = opts.scrollElem;
     var viewportHeight = opts.viewportHeight;
 
@@ -523,7 +604,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     // 2. Build z-index chains for all capture elements
     //    One z-chain is a list of objects: { stacking context, z-index } -> { stacking context, z-index } -> ...
     //    It is used to determine which element is on top of the other.
-    var targetChains = captureElements.map(function (el) {
+    var targetChains = captureElementsOrBody.map(function (el) {
         return util.buildZChain(el);
     });
 
@@ -534,10 +615,9 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
     var interferingRects = [];
 
     allElements.forEach(function (el) {
-        logger("getSafeAreaRect(), processing potentially interfering element: " + el.classList.toString());
         // Skip elements that contain capture elements
         if (
-            util.some(captureElements, function (capEl) {
+            util.some(captureElementsOrBody, function (capEl) {
                 return el.contains(capEl);
             })
         ) {
@@ -559,12 +639,13 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
         }
 
         var likelyInterferes = false;
+        var interferenceReason = "";
         if (position === "fixed") {
             likelyInterferes = true;
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
             if (
-                captureElements.some(function (captureEl) {
+                captureElementsOrBody.some(function (captureEl) {
                     return captureEl.contains(el);
                 })
             ) {
@@ -579,6 +660,7 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
                 typeof scrollElem.contains === "function" &&
                 !scrollElem.contains(containingBlock)
             ) {
+                interferenceReason = "absolute element is positioned relative to ancestor outside scroll container";
                 likelyInterferes = true;
             }
         } else if (position === "sticky") {
@@ -593,33 +675,43 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             }
 
             if (!isNaN(topValue)) {
-                br = {
+                br = new Rect({
                     left: br.left,
                     top: topValue,
                     width: br.width,
                     height: br.height
-                };
+                });
                 likelyInterferes = true;
-                logger("  it is sticky to top! topValue: " + topValue + " bounding rect: " + JSON.stringify(br));
+                interferenceReason =
+                    "sticky element is positioned to top, topValue: " +
+                    topValue +
+                    " bounding rect: " +
+                    JSON.stringify(br);
             } else if (!isNaN(bottomValue)) {
                 var viewportBottom = util.isRootElement(scrollElem) ? viewportHeight : safeArea.top + safeArea.height;
-                br = {
+                br = new Rect({
                     left: br.left,
                     top: viewportBottom - bottomValue - br.height,
                     width: br.width,
                     height: br.height
-                };
+                });
                 likelyInterferes = true;
-                logger(
-                    "  it is sticky to bottom! bottomValue: " + bottomValue + " bounding rect: " + JSON.stringify(br)
-                );
+                interferenceReason =
+                    "sticky element is positioned to bottom, bottomValue: " +
+                    bottomValue +
+                    " bounding rect: " +
+                    JSON.stringify(br);
             }
         }
 
-        logger("  likely interferes: " + likelyInterferes);
-
         if (likelyInterferes) {
-            var candChain = util.buildZChain(el);
+            logger(
+                "getSafeAreaRect(), this element likely interferes: " +
+                    el.classList.toString() +
+                    " interference reason: " +
+                    interferenceReason
+            );
+            var candChain = util.buildZChain(el, { includeReasons: false });
 
             var behindAll = targetChains.every(function (tChain) {
                 return util.isChainBehind(candChain, tChain);
@@ -628,7 +720,19 @@ function getSafeAreaRect(captureArea, captureElements, opts, logger) {
             logger("  is candidate z chain behind all target chains? : " + behindAll);
 
             if (!behindAll) {
-                interferingRects.push({ x: br.left, y: br.top, width: br.width, height: br.height });
+                var extRect = getExtRect(computedStyle, br, true);
+                if (
+                    extRect.right <= captureAreaInViewportCoords.left ||
+                    extRect.left >= captureAreaInViewportCoords.right
+                ) {
+                    return;
+                }
+                interferingRects.push({
+                    x: extRect.left,
+                    y: extRect.top,
+                    width: extRect.width,
+                    height: extRect.height
+                });
             }
         }
     });

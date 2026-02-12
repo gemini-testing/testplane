@@ -1,6 +1,9 @@
 import _ from "lodash";
 import { Image } from "../../image";
 import * as utils from "./utils";
+import makeDebug from "debug";
+
+const debug = makeDebug("testplane:screenshots:camera");
 
 export interface ImageArea {
     left: number;
@@ -41,7 +44,8 @@ export class Camera {
         this._calibration = calibration;
     }
 
-    async captureViewportImage(page?: PageMeta): Promise<Image> {
+    /** @param viewport - Current state of the viewport. Top/left denote scroll offsets, width/height denote viewport size. */
+    async captureViewportImage(viewport?: ImageArea): Promise<Image> {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
@@ -49,7 +53,7 @@ export class Camera {
         const imageArea: ImageArea = { left: 0, top: 0, width, height };
 
         const calibratedArea = this._calibrateArea(imageArea);
-        const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, page);
+        const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, viewport);
 
         if (viewportCroppedArea.width !== width || viewportCroppedArea.height !== height) {
             await image.crop(viewportCroppedArea);
@@ -68,23 +72,28 @@ export class Camera {
         return { left, top, width: imageArea.width - left, height: imageArea.height - top };
     }
 
-    private _cropAreaToViewport(imageArea: ImageArea, page?: PageMeta): ImageArea {
-        if (!page) {
+    /* On some browsers, e.g. older firefox versions, the screenshot returned by the browser can be the whole page
+       (even beyond the viewport, potentially spanning thousands of pixels down).
+       This function is used to detect such cases and crop the image to the viewport, always. */
+    private _cropAreaToViewport(imageArea: ImageArea, viewport?: ImageArea): ImageArea {
+        if (!viewport) {
             return imageArea;
         }
 
-        const isFullPage = utils.isFullPage(imageArea, page, this._screenshotMode);
-        const cropArea = _.clone(page.viewport);
+        const isFullPage = utils.isFullPage(imageArea, viewport, this._screenshotMode);
+        const cropArea = _.clone(viewport);
 
         if (!isFullPage) {
             _.extend(cropArea, { top: 0, left: 0 });
         }
+        debug(
+            "cropping area to viewport. imageArea: %O, viewport: %O, cropArea: %O, isFullPage: %s",
+            imageArea,
+            viewport,
+            cropArea,
+            isFullPage,
+        );
 
-        return {
-            left: imageArea.left + cropArea.left,
-            top: imageArea.top + cropArea.top,
-            width: Math.min(imageArea.width - cropArea.left, cropArea.width),
-            height: Math.min(imageArea.height - cropArea.top, cropArea.height),
-        };
+        return utils.getIntersection(imageArea, cropArea);
     }
 }

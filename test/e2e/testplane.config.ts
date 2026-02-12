@@ -7,7 +7,7 @@ export default {
 
     baseUrl: `http://host.docker.internal:${SERVER_PORT}/`,
 
-    timeTravel: "off",
+    timeTravel: "on",
     saveHistoryMode: "all",
 
     screenshotsDir: "test/e2e/screens",
@@ -15,6 +15,9 @@ export default {
     sets: {
         assertView: {
             files: path.join(__dirname, "tests/assert-view.testplane.js"),
+        },
+        reportPageScreenshot: {
+            files: path.join(__dirname, "tests/report-page-screenshot.testplane.js"),
         },
     },
 
@@ -41,7 +44,10 @@ export default {
     },
 
     devServer: {
-        command: `npx --yes serve -p ${SERVER_PORT} --no-request-logging test/e2e/test-pages/`,
+        command: `npx --yes --prefer-offline serve -p ${SERVER_PORT} --no-request-logging ${path.resolve(
+            __dirname,
+            "static",
+        )}`,
         readinessProbe: {
             url: `http://localhost:${SERVER_PORT}/`,
             timeouts: {

@@ -84,10 +84,22 @@ describe("ScreenShooter", () => {
             config: {},
             publicAPI: {
                 execute: sandbox.stub(),
+                action: sandbox.stub().returns({
+                    move: sandbox.stub().returnsThis(),
+                    perform: sandbox.stub().resolves(),
+                }),
+                findElements: sandbox.stub().resolves([]),
+                switchToFrame: sandbox.stub().resolves(),
+                $: sandbox.stub(),
             },
-            prepareScreenshot: sandbox.stub().resolves(createMockPage()),
+            callMethodOnBrowserSide: sandbox.stub().resolves(createMockPage()),
             captureViewportImage: sandbox.stub().resolves(imageStub),
-            cleanupScreenshot: sandbox.stub().resolves(),
+            get shouldUsePixelRatio() {
+                return true;
+            },
+            get isWebdriverProtocol() {
+                return true;
+            },
         };
     });
 
@@ -114,7 +126,9 @@ describe("ScreenShooter", () => {
 
                 await screenShooter.capture(selector);
 
-                assert.calledOnceWith(browser.prepareScreenshot, [selector], sinon.match.object);
+                const [method, args] = browser.callMethodOnBrowserSide.firstCall.args;
+                assert.equal(method, "prepareScreenshot");
+                assert.deepEqual(args[0], [selector]);
             });
 
             it("should accept multiple selectors as array", async () => {
@@ -122,7 +136,9 @@ describe("ScreenShooter", () => {
 
                 await screenShooter.capture(selectors);
 
-                assert.calledOnceWith(browser.prepareScreenshot, selectors, sinon.match.object);
+                const [method, args] = browser.callMethodOnBrowserSide.firstCall.args;
+                assert.equal(method, "prepareScreenshot");
+                assert.deepEqual(args[0], selectors);
             });
 
             it("should pass options to prepareScreenshot", async () => {
@@ -136,12 +152,18 @@ describe("ScreenShooter", () => {
 
                 await screenShooter.capture(".element", opts);
 
-                assert.calledOnceWith(browser.prepareScreenshot, [".element"], {
+                const [method, args] = browser.callMethodOnBrowserSide.firstCall.args;
+                assert.equal(method, "prepareScreenshot");
+                assert.deepEqual(args[0], [".element"]);
+                assert.deepEqual(args[1], {
                     ignoreSelectors: [".ignore1", ".ignore2"],
                     allowViewportOverflow: true,
                     captureElementFromTop: false,
                     selectorToScroll: ".scrollable",
                     disableAnimation: true,
+                    disableHover: undefined,
+                    compositeImage: true,
+                    usePixelRatio: true,
                     debug: false,
                 });
             });
@@ -151,16 +173,15 @@ describe("ScreenShooter", () => {
 
                 await screenShooter.capture(".element", opts);
 
-                assert.calledWith(
-                    browser.prepareScreenshot,
-                    [".element"],
-                    sinon.match({ ignoreSelectors: [".single-ignore"] }),
-                );
+                const [method, args] = browser.callMethodOnBrowserSide.firstCall.args;
+                assert.equal(method, "prepareScreenshot");
+                assert.deepEqual(args[0], [".element"]);
+                assert.deepEqual(args[1].ignoreSelectors, [".single-ignore"]);
             });
 
             it("should remove debugLog from page result", async () => {
                 const pageWithDebugLog = createMockPage({ debugLog: "some debug info" });
-                browser.prepareScreenshot.resolves(pageWithDebugLog);
+                browser.callMethodOnBrowserSide.resolves(pageWithDebugLog);
 
                 await screenShooter.capture(".element");
 
@@ -173,7 +194,7 @@ describe("ScreenShooter", () => {
                 const selectors = [".element1", ".element2"];
                 const page = createMockPage();
                 const opts = createDefaultOpts();
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 await screenShooter.capture(selectors, opts);
 
@@ -192,11 +213,11 @@ describe("ScreenShooter", () => {
             it("should capture viewport image with page and screenshotDelay", async () => {
                 const page = createMockPage();
                 const opts = createDefaultOpts({ screenshotDelay: 500 });
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 await screenShooter.capture(".element", opts);
 
-                assert.calledOnceWith(browser.captureViewportImage, page, 500);
+                assert.calledOnceWith(browser.captureViewportImage, page.viewport, 500);
             });
 
             it("should create CompositeImage with page data", async () => {
@@ -205,7 +226,7 @@ describe("ScreenShooter", () => {
                     safeArea: { left: 0, top: 0, width: 100, height: 150 },
                     ignoreAreas: [{ left: 50, top: 50, width: 20, height: 20 }],
                 });
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 await screenShooter.capture(".element");
 
@@ -217,7 +238,7 @@ describe("ScreenShooter", () => {
                     scrollElementOffset: { left: 10, top: 20 },
                     viewportOffset: { left: 5, top: 15 },
                 });
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 await screenShooter.capture(".element");
 
@@ -231,7 +252,7 @@ describe("ScreenShooter", () => {
 
             it("should render composite image and return result", async () => {
                 const page = createMockPage();
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 const result = await screenShooter.capture(".element");
 
@@ -296,7 +317,7 @@ describe("ScreenShooter", () => {
 
             it("should capture new image after scrolling", async () => {
                 const page = createMockPage();
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
 
@@ -309,7 +330,7 @@ describe("ScreenShooter", () => {
 
             it("should calculate correct scroll height based on pixelRatio", async () => {
                 const page = createMockPage({ pixelRatio: 2 });
-                browser.prepareScreenshot.resolves(page);
+                browser.callMethodOnBrowserSide.resolves(page);
 
                 compositeImageStub.hasNotCapturedArea.onCall(0).returns(true).onCall(1).returns(false);
                 compositeImageStub.getNextNotCapturedArea.returns({
@@ -479,23 +500,32 @@ describe("ScreenShooter", () => {
 
             it("should propagate prepareScreenshot errors", async () => {
                 const error = new Error("Prepare screenshot failed");
-                browser.prepareScreenshot.rejects(error);
+                browser.callMethodOnBrowserSide.rejects(error);
 
-                await assert.isRejected(screenShooter.capture(".element"), error);
+                const promise = screenShooter.capture(".element");
+
+                const thrownError = await promise.catch(e => e);
+                assert.include(thrownError.message, "Prepare screenshot failed");
             });
 
             it("should propagate captureViewportImage errors", async () => {
                 const error = new Error("Capture failed");
                 browser.captureViewportImage.rejects(error);
 
-                await assert.isRejected(screenShooter.capture(".element"), error);
+                const promise = screenShooter.capture(".element");
+
+                const thrownError = await promise.catch(e => e);
+                assert.include(thrownError.message, "Capture failed");
             });
 
             it("should propagate CompositeImage errors", async () => {
                 const error = new Error("Composite failed");
                 compositeImageStub.render.rejects(error);
 
-                await assert.isRejected(screenShooter.capture(".element"), error);
+                const promise = screenShooter.capture(".element");
+
+                const thrownError = await promise.catch(e => e);
+                assert.include(thrownError.message, "Composite failed");
             });
         });
     });

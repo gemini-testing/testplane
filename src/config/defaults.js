@@ -1,7 +1,7 @@
 "use strict";
 
 const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, NODEJS_TEST_RUN_ENV } = require("../constants/config");
-const { TimeTravelMode } = require("./types");
+const { TimeTravelMode, DisableHoverMode } = require("./types");
 
 module.exports = {
     baseUrl: "http://localhost",
@@ -37,6 +37,7 @@ module.exports = {
         allowViewportOverflow: false,
         ignoreDiffPixelCount: 0,
         waitForStaticToLoadTimeout: 5000,
+        disableHover: DisableHoverMode.WhenScrollingNeeded,
     },
     openAndWaitOpts: {
         waitNetworkIdle: true,
