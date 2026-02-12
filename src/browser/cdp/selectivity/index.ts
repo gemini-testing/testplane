@@ -81,7 +81,16 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     const cssSelectivity = new CSSSelectivity(browser.cdp, sessionId, sourceRoot);
     const jsSelectivity = new JSSelectivity(browser.cdp, sessionId, sourceRoot);
 
-    await Promise.all([cssSelectivity.start(), jsSelectivity.start()]);
+    await Promise.allSettled([cssSelectivity.start(), jsSelectivity.start()]).then(async ([css, js]) => {
+        if (css.status === "rejected" || js.status === "rejected") {
+            await Promise.all([cssSelectivity.stop(true), jsSelectivity.stop(true)]);
+
+            const originalError =
+                css.status === "rejected" ? css.reason : js.status === "rejected" ? js.reason : "unknown reason";
+
+            throw new Error(`Selectivity: Couldn't start selectivity: ${originalError}`);
+        }
+    });
 
     /** @param drop only performs cleanup without writing anything. Should be "true" if test is failed */
     return async function stopSelectivity(test: Test, drop: boolean): Promise<void> {

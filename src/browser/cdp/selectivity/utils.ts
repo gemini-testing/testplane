@@ -144,7 +144,7 @@ const getProtocol = (fileUrlLikePath: string): string | null => {
     }
 };
 
-const ensurePosixRelativeDependencyPathExists = memoize((posixRelativePath: string): void => {
+const ensurePosixRelativeDependencyPathExists = (posixRelativePath: string): void => {
     const relativePath = posixRelativePath.replaceAll(path.posix.sep, path.sep);
 
     if (fs.existsSync(relativePath)) {
@@ -158,7 +158,7 @@ const ensurePosixRelativeDependencyPathExists = memoize((posixRelativePath: stri
             "Configuring 'sourceRoot' in Testplane selectivity config also might help",
         ].join("\n"),
     );
-});
+};
 
 const warnUnsupportedProtocol = memoize((protocol: string, dependency: string): void => {
     logger.warn(`Selectivity: Ignoring dependencies of unsupported protocol "${protocol}" (example: "${dependency}")`);
