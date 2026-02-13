@@ -19,6 +19,13 @@ describe("CDP/Selectivity/JSSelectivity", () => {
     let extractSourceFilesDepsStub: SinonStub;
     let urlResolveStub: SinonStub;
     let groupByStub: SinonStub;
+    let isDataProtocolStub: SinonStub;
+
+    const CacheType = { Asset: "a" };
+
+    let getCachedSelectivityFileStub: SinonStub;
+    let hasCachedSelectivityFileStub: SinonStub;
+    let setCachedSelectivityFileStub: SinonStub;
 
     const sessionId = "test-session-id";
     const sourceRoot = "/test/source-root";
@@ -55,6 +62,11 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             });
             return result;
         });
+        isDataProtocolStub = sandbox.stub().callsFake((url: string) => url.startsWith("data:"));
+
+        getCachedSelectivityFileStub = sandbox.stub().resolves("mock source map");
+        hasCachedSelectivityFileStub = sandbox.stub().resolves(false);
+        setCachedSelectivityFileStub = sandbox.stub().resolves();
 
         JSSelectivity = proxyquire("src/browser/cdp/selectivity/js-selectivity", {
             lodash: { groupBy: groupByStub },
@@ -62,6 +74,13 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             "./utils": {
                 extractSourceFilesDeps: extractSourceFilesDepsStub,
                 fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub,
+                isDataProtocol: isDataProtocolStub,
+            },
+            "./fs-cache": {
+                CacheType,
+                getCachedSelectivityFile: getCachedSelectivityFileStub,
+                hasCachedSelectivityFile: hasCachedSelectivityFileStub,
+                setCachedSelectivityFile: setCachedSelectivityFileStub,
             },
         }).JSSelectivity;
     });
@@ -116,8 +135,12 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             assert.calledWith(cdpMock.debugger.resume, sessionId);
         });
 
-        it("should handle scriptParsed events", async () => {
+        it("should handle scriptParsed events when there is no cache", async () => {
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+            const fetchTextWithBrowserFallbackStubResult = Promise.resolve("src");
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
 
             await jsSelectivity.start();
 
@@ -131,8 +154,66 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             scriptParsedHandler(scriptParsedEvent);
 
+            await hasCachedSelectivityFileStubResult;
+            await fetchTextWithBrowserFallbackStubResult;
+
             assert.calledWith(cdpMock.debugger.getScriptSource, sessionId, "script-123");
             assert.calledWith(fetchTextWithBrowserFallbackStub, "app.js.map", cdpMock.runtime, sessionId);
+            assert.calledWith(setCachedSelectivityFileStub, CacheType.Asset, "app.js.map");
+        });
+
+        it("should handle scriptParsed events when there is cache", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const hasCachedSelectivityFileStubResult = Promise.resolve(true);
+            const getCachedSelectivityFileStubResult = Promise.resolve("src");
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            getCachedSelectivityFileStub.returns(getCachedSelectivityFileStubResult);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+
+            const scriptParsedEvent = {
+                scriptId: "script-123",
+                url: "http://example.com/app.js",
+                sourceMapURL: "app.js.map",
+            };
+
+            scriptParsedHandler(scriptParsedEvent);
+
+            await hasCachedSelectivityFileStubResult;
+
+            assert.calledWith(hasCachedSelectivityFileStub, CacheType.Asset, "app.js.map");
+            assert.calledWith(hasCachedSelectivityFileStub, CacheType.Asset, "http://example.com/app.js");
+            assert.neverCalledWith(cdpMock.debugger.getScriptSource, sessionId, "script-123");
+            assert.neverCalledWith(fetchTextWithBrowserFallbackStub, "app.js.map", cdpMock.runtime, sessionId);
+            assert.neverCalledWith(setCachedSelectivityFileStub, CacheType.Asset, "app.js.map");
+        });
+
+        it("should handle scriptParsed events for inline source maps", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const hasCachedSelectivityFileStubResult = Promise.resolve(true);
+            const getCachedSelectivityFileStubResult = Promise.resolve("src");
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            getCachedSelectivityFileStub.returns(getCachedSelectivityFileStubResult);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+
+            const sourceMapURL = "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==";
+            const scriptParsedEvent = {
+                scriptId: "script-123",
+                url: "http://example.com/app.js",
+                sourceMapURL: "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==",
+            };
+
+            scriptParsedHandler(scriptParsedEvent);
+
+            await hasCachedSelectivityFileStubResult;
+
+            assert.neverCalledWith(hasCachedSelectivityFileStub, CacheType.Asset, sourceMapURL);
+            assert.calledWith(fetchTextWithBrowserFallbackStub, sourceMapURL);
         });
 
         it("should handle scriptParsed events without URL or sourceMapURL", async () => {
@@ -246,7 +327,46 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             assert.calledOnce(extractSourceFilesDepsStub);
         });
 
+        it("should pull sources from from fs-cache", async () => {
+            hasCachedSelectivityFileStub.resolves(true);
+            getCachedSelectivityFileStub.resolves("source-map");
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            const mockCoverage = {
+                timestamp: 100500,
+                result: [
+                    {
+                        scriptId: "script-123",
+                        url: "http://example.com/app.js",
+                        functions: [
+                            {
+                                functionName: "foo",
+                                isBlockCoverage: false,
+                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const sourceWithSourceMap = `
+                console.log("test");
+                //# sourceMappingURL=app.js.map
+            `;
+
+            cdpMock.profiler.takePreciseCoverage.resolves(mockCoverage);
+            cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithSourceMap });
+
+            await jsSelectivity.start();
+            await jsSelectivity.stop();
+
+            assert.calledWith(getCachedSelectivityFileStub, CacheType.Asset, "app.js.map");
+            assert.neverCalledWith(fetchTextWithBrowserFallbackStub, "app.js.map");
+        });
+
         it("should handle missing scriptParsed events by fetching source manually", async () => {
+            hasCachedSelectivityFileStub.resolves(false);
+            getCachedSelectivityFileStub.resolves(null);
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
 
             const mockCoverage = {
@@ -281,40 +401,9 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             assert.calledWith(fetchTextWithBrowserFallbackStub, "app.js.map", cdpMock.runtime, sessionId);
         });
 
-        it("should handle source code without source map comment", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
-
-            const mockCoverage = {
-                timestamp: 100500,
-                result: [
-                    {
-                        scriptId: "script-123",
-                        url: "http://example.com/app.js",
-                        functions: [
-                            {
-                                functionName: "foo",
-                                isBlockCoverage: false,
-                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
-                            },
-                        ],
-                    },
-                ],
-            };
-
-            const sourceWithoutSourceMap = "console.log('test');";
-
-            cdpMock.profiler.takePreciseCoverage.resolves(mockCoverage);
-            cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithoutSourceMap });
-
-            await jsSelectivity.start();
-
-            await assert.isRejected(
-                jsSelectivity.stop(),
-                /JS Selectivity: Couldn't load source maps of.*Source maping url comment is missing/,
-            );
-        });
-
         it("should handle source fetch errors", async () => {
+            hasCachedSelectivityFileStub.resolves(false);
+            getCachedSelectivityFileStub.resolves(null);
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
 
             const mockCoverage = {
@@ -342,11 +431,13 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await assert.isRejected(
                 jsSelectivity.stop(),
-                /JS Selectivity: Couldn't load source code at.*Failed to fetch source/,
+                "JS Selectivity: Couldn't load source code from http://example.com/app.js",
             );
         });
 
         it("should handle source map fetch errors", async () => {
+            hasCachedSelectivityFileStub.resolves(false);
+            getCachedSelectivityFileStub.resolves(null);
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
 
             const mockCoverage = {
@@ -374,14 +465,11 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             const sourceMapError = new Error("Failed to fetch source map");
             cdpMock.profiler.takePreciseCoverage.resolves(mockCoverage);
             cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithSourceMap });
-            fetchTextWithBrowserFallbackStub.resolves(sourceMapError);
+            fetchTextWithBrowserFallbackStub.rejects(sourceMapError);
 
             await jsSelectivity.start();
 
-            await assert.isRejected(
-                jsSelectivity.stop(),
-                /JS Selectivity: Couldn't load source maps of.*Failed to fetch source map/,
-            );
+            await assert.isRejected(jsSelectivity.stop(), "JS Selectivity: Couldn't load source maps from app.js.map");
         });
 
         it("should filter out non-source-code files", async () => {

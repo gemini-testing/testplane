@@ -73,7 +73,7 @@ const readCompressedTextFile = (filePath: string, compression: SelectivityCompre
         });
 
         stream.on("error", err => {
-            reject(new Error(`Couldn't read ${filePath} with ${compression} compression:\n${err}`));
+            reject(new Error(`Couldn't read ${filePath} with ${compression} compression`, { cause: err }));
         });
     });
 };
@@ -112,7 +112,7 @@ const writeCompressedTextFile = (
 
         stream.write(data, "utf8", err => {
             if (err) {
-                reject(new Error(`Couldn't write to ${filePath} with ${compression} compression:\n${err}`));
+                reject(new Error(`Couldn't write to ${filePath} with ${compression} compression`, { cause: err }));
             } else {
                 stream.end();
             }
@@ -123,7 +123,7 @@ const writeCompressedTextFile = (
         });
 
         writeStream.on("error", err => {
-            reject(new Error(`Couldn't save to ${filePath} with ${compression} compression:\n${err}`));
+            reject(new Error(`Couldn't save to ${filePath} with ${compression} compression`, { cause: err }));
         });
     });
 };

@@ -90,7 +90,7 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             await assert.isRejected(
                 hashPromise,
-                /Selectivity: Couldn't calculate hash for \/path\/to\/nonexistent\.js: Error: ENOENT: no such file or directory/,
+                /Selectivity: Couldn't calculate hash for \/path\/to\/nonexistent\.js/,
             );
         });
 

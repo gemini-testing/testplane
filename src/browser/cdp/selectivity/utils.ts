@@ -7,7 +7,7 @@ import * as logger from "../../../utils/logger";
 import type { CDPRuntime } from "../domains/runtime";
 import type { CDPSessionId } from "../types";
 import { softFileURLToPath } from "../../../utils/fs";
-import type { HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
+import type { CachedOnFs, HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
 import { WEBPACK_PROTOCOL } from "./constants";
 import { readJsonWithCompression } from "./json-utils";
 import type { Test } from "../../../types";
@@ -23,15 +23,13 @@ export const fetchTextWithBrowserFallback = async (
     url: string,
     runtime: CDPRuntime,
     sessionId: CDPSessionId,
-): Promise<string | Error> => {
+): Promise<string> => {
     const isSourceMapEmbedded = new URL(url).protocol === "data:";
 
     if (isSourceMapEmbedded) {
         // With "data" protocol it just decodes embedded source maps without actual network requests
         // So we can do it directly from node.js
-        return fetch(url)
-            .then(r => r.text())
-            .catch((err: Error) => err);
+        return fetch(url).then(r => r.text());
     }
 
     // At first, trying to fetch sourceMaps directly from the node.js
@@ -45,8 +43,7 @@ export const fetchTextWithBrowserFallback = async (
                 awaitPromise: true,
                 returnByValue: true,
             })
-            .then(r => r.result.value)
-            .catch((err: Error) => err);
+            .then(r => r.result.value);
     }
 };
 
@@ -143,6 +140,8 @@ const getProtocol = (fileUrlLikePath: string): string | null => {
         return null;
     }
 };
+
+export const isDataProtocol = (fileUrlLikePath: string): boolean => fileUrlLikePath.startsWith("data:");
 
 const ensurePosixRelativeDependencyPathExists = (posixRelativePath: string): void => {
     const relativePath = posixRelativePath.replaceAll(path.posix.sep, path.sep);
@@ -350,3 +349,5 @@ export const readTestDependencies = (
     readJsonWithCompression(getTestDependenciesPath(selectivityTestsPath, test), compression, {
         defaultValue: {},
     }).catch(() => ({}));
+
+export const isCachedOnFs = (value: unknown): value is CachedOnFs => value === true;
