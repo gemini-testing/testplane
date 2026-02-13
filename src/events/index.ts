@@ -34,6 +34,7 @@ export const RunnerSyncEvents = {
     SUITE_END: "endSuite",
 
     TEST_BEGIN: "beginTest",
+    TEST_ASSIGNED_TO_WORKER: "testAssignedToWorker",
     TEST_END: "endTest",
 
     TEST_PASS: "passTest",
@@ -43,6 +44,8 @@ export const RunnerSyncEvents = {
     RETRY: "retry",
 
     DOM_SNAPSHOTS: "domSnapshots",
+
+    ADD_FILE_TO_REMOVE: "addFileToRemove",
 
     TEST_DEPENDENCIES: "testDependencies",
 } as const;

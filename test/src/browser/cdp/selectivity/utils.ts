@@ -44,7 +44,7 @@ describe("CDP/Selectivity/Utils", () => {
         utils = proxyquire("src/browser/cdp/selectivity/utils", {
             fs: fsStub,
             path: pathStub,
-            "source-map": {
+            "source-map-js": {
                 SourceMapConsumer: SourceMapConsumerStub,
             },
             "../../../utils/fs": {
@@ -103,16 +103,16 @@ describe("CDP/Selectivity/Utils", () => {
             });
         });
 
-        it("should return error if both fetch methods fail", async () => {
+        it("should throw error if both fetch methods fail", async () => {
             const url = "http://example.com/sourcemap.js.map";
             const browserError = new Error("Browser fetch failed");
             fetchStub.rejects(new Error("Network error"));
             runtimeStub.evaluate.rejects(browserError);
 
-            const result = await utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId);
-
-            assert.instanceOf(result, Error);
-            assert.equal((result as Error).message, "Browser fetch failed");
+            await assert.isRejected(
+                utils.fetchTextWithBrowserFallback(url, runtimeStub, sessionId),
+                "Browser fetch failed",
+            );
         });
 
         it("should return error if embedded source map fetch fails", async () => {
@@ -120,17 +120,17 @@ describe("CDP/Selectivity/Utils", () => {
             const fetchError = new Error("Invalid data URL");
             fetchStub.rejects(fetchError);
 
-            const result = await utils.fetchTextWithBrowserFallback(dataUrl, runtimeStub, sessionId);
-
-            assert.instanceOf(result, Error);
-            assert.equal((result as Error).message, "Invalid data URL");
+            await assert.isRejected(
+                utils.fetchTextWithBrowserFallback(dataUrl, runtimeStub, sessionId),
+                "Invalid data URL",
+            );
         });
     });
 
     describe("patchSourceMapSources", () => {
         it("should patch webpack protocol sources", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["webpack://src/app.js", "webpack://src/utils.js", "regular/file.js"],
                 sourceRoot: "",
                 names: [],
@@ -146,7 +146,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should use existing sourceRoot if no custom sourceRoot provided", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["webpack:///src/app.js"],
                 sourceRoot: "/existing/root",
                 names: [],
@@ -161,7 +161,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should handle sources without webpack protocol", () => {
             const sourceMap = {
-                version: 3,
+                version: 3 as unknown as string,
                 sources: ["src/app.js", "lib/utils.js"],
                 sourceRoot: "",
                 names: [],
@@ -180,7 +180,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         beforeEach(() => {
             consumerMock = { originalPositionFor: sandbox.stub() };
-            SourceMapConsumerStub.resolves(consumerMock);
+            SourceMapConsumerStub.returns(consumerMock);
         });
 
         it("should extract source files from coverage offsets", async () => {
@@ -528,7 +528,7 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map": {
+                "source-map-js": {
                     SourceMapConsumer: SourceMapConsumerStub,
                 },
                 "../../../utils/fs": {
@@ -609,7 +609,7 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map": {
+                "source-map-js": {
                     SourceMapConsumer: SourceMapConsumerStub,
                 },
                 "../../../utils/fs": {

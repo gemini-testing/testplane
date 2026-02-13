@@ -112,16 +112,17 @@ describe("SelectivityRunner", () => {
             runner = new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock);
         });
 
-        it("should run test immediately if selectivity is disabled for browser", () => {
+        it("should run test if selectivity is disabled for browser", async () => {
             browserConfigMock.selectivity.enabled = false;
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
         });
 
-        it("should run test immediately if shouldDisableSelectivity option is true", () => {
+        it("should run test if shouldDisableSelectivity option is true", async () => {
             const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
                 mainRunnerMock as any,
                 configMock as any,
@@ -129,13 +130,14 @@ describe("SelectivityRunner", () => {
                 { shouldDisableSelectivity: true },
             );
 
-            runnerWithDisabledSelectivity.runIfNecessary(testMock, "chrome");
+            runnerWithDisabledSelectivity.startTestCheckToRun(testMock, "chrome");
+            await runnerWithDisabledSelectivity.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
         });
 
-        it("should run test immediately if both browser selectivity is disabled and shouldDisableSelectivity is true", () => {
+        it("should run test if both browser selectivity is disabled and shouldDisableSelectivity is true", async () => {
             browserConfigMock.selectivity.enabled = false;
             const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
                 mainRunnerMock as any,
@@ -144,7 +146,8 @@ describe("SelectivityRunner", () => {
                 { shouldDisableSelectivity: true },
             );
 
-            runnerWithDisabledSelectivity.runIfNecessary(testMock, "chrome");
+            runnerWithDisabledSelectivity.startTestCheckToRun(testMock, "chrome");
+            await runnerWithDisabledSelectivity.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -157,9 +160,9 @@ describe("SelectivityRunner", () => {
             testDepsReaderMock.getFor.resolves(testDeps);
             hashReaderMock.getTestChangedDeps.resolves({ css: [], js: ["src/app.js"], modules: [] });
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -169,9 +172,9 @@ describe("SelectivityRunner", () => {
             browserConfigMock.selectivity.disableSelectivityPatterns = ["src/**/*.js"];
             hashReaderMock.patternHasChanged.resolves(true);
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -188,9 +191,9 @@ describe("SelectivityRunner", () => {
             const error = new Error("Pattern check failed");
             hashReaderMock.patternHasChanged.rejects(error);
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -210,9 +213,9 @@ describe("SelectivityRunner", () => {
             testDepsReaderMock.getFor.resolves(testDeps);
             hashReaderMock.getTestChangedDeps.resolves(changedDeps);
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -234,9 +237,9 @@ describe("SelectivityRunner", () => {
             testDepsReaderMock.getFor.resolves(testDeps);
             hashReaderMock.getTestChangedDeps.resolves(null); // No changes
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.notCalled(runTestFnMock);
             assert.calledWith(getTestDependenciesReaderStub, "/test/path", "none");
@@ -255,9 +258,9 @@ describe("SelectivityRunner", () => {
             const testDeps = { css: ["src/styles.css"], js: [], modules: [] };
             testDepsReaderMock.getFor.resolves(testDeps);
 
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.calledOnce(runTestFnMock); // Should run because no JS deps means it's new
             assert.calledWith(runTestFnMock, testMock, "chrome");
@@ -279,10 +282,10 @@ describe("SelectivityRunner", () => {
             const test1 = { ...testMock, id: "test-1" } as Test;
             const test2 = { ...testMock, id: "test-2" } as Test;
 
-            runner.runIfNecessary(test1, "chrome");
-            runner.runIfNecessary(test2, "chrome");
+            runner.startTestCheckToRun(test1, "chrome");
+            runner.startTestCheckToRun(test2, "chrome");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.notCalled(runTestFnMock);
             assert.calledOnce(hashReaderMock.patternHasChanged); // Should be cached for same browser
@@ -315,16 +318,16 @@ describe("SelectivityRunner", () => {
             testDepsReaderMock.getFor.resolves(testDeps);
             hashReaderMock.getTestChangedDeps.resolves(null);
 
-            runner.runIfNecessary(testMock, "chrome");
-            runner.runIfNecessary(testMock, "firefox");
+            runner.startTestCheckToRun(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "firefox");
 
-            await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
             assert.notCalled(runTestFnMock);
         });
     });
 
-    describe("waitForTestsToRun", () => {
+    describe("runNecessaryTests", () => {
         let runner: SelectivityRunner;
 
         beforeEach(() => {
@@ -332,10 +335,9 @@ describe("SelectivityRunner", () => {
         });
 
         it("should resolve immediately if no tests are processing", async () => {
-            const result = await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
-            assert.isArray(result);
-            assert.lengthOf(result, 0);
+            assert.notCalled(runTestFnMock);
         });
 
         it("should wait for all processing tests to complete", async () => {
@@ -359,13 +361,12 @@ describe("SelectivityRunner", () => {
             testDepsReaderMock.getFor.resolves(testDeps);
             hashReaderMock.getTestChangedDeps.resolves({ css: [], js: ["src/app.js"], modules: [] });
 
-            runner.runIfNecessary(testMock, "chrome");
-            runner.runIfNecessary(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "chrome");
 
-            const result = await runner.waitForTestsToRun();
+            await runner.runNecessaryTests();
 
-            assert.isArray(result);
-            assert.lengthOf(result, 2);
+            assert.calledTwice(runTestFnMock);
         });
     });
 

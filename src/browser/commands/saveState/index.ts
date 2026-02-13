@@ -7,28 +7,15 @@ import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser"
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
 import type { Browser } from "../../types";
-
-export type SaveStateOptions = {
-    path?: string;
-
-    cookies?: boolean;
-    localStorage?: boolean;
-    sessionStorage?: boolean;
-
-    cookieFilter?: (cookie: Cookie) => boolean;
-};
+import { MasterEvents } from "../../../events";
+import { StateOpts } from "../../../config/types";
+import { addGlobalFileToRemove } from "../../../globalFilesToRemove";
 
 export type FrameData = StorageData;
 
 export type SaveStateData = {
     cookies?: Array<Cookie>;
     framesData: Record<string, FrameData>;
-};
-
-export const defaultOptions = {
-    cookies: true,
-    localStorage: true,
-    sessionStorage: true,
 };
 
 // in case when we use webdriver protocol, bidi and isolation
@@ -49,15 +36,14 @@ export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<
 export default (browser: ExistingBrowser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("saveState", async (_options: SaveStateOptions = {}): Promise<SaveStateData | undefined> => {
+    session.addCommand("saveState", async (_options: StateOpts = {}): Promise<SaveStateData | undefined> => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            logger.error("Before saveState first open page using url command");
-            process.exit(1);
+            throw new Error("Before saveState first open page using url command");
         }
 
-        const options = { ...defaultOptions, ..._options };
+        const options = { ...browser.config.stateOpts, ..._options };
 
         const data: SaveStateData = {
             framesData: {},
@@ -178,8 +164,27 @@ export default (browser: ExistingBrowser): void => {
             data.cookies = data.cookies.filter(options.cookieFilter);
         }
 
-        if (options && options.path) {
-            await fs.writeJson(options.path, data, { spaces: 2 });
+        const dataIsEmpty = data.cookies?.length === 0 && _.isEmpty(data.framesData);
+
+        if (options && options.path && !dataIsEmpty) {
+            await fs.outputJson(options.path, data, { spaces: 2 });
+
+            if (options.keepFile) {
+                logger.warn(
+                    "\x1b[31mOption keepFile in stateOpts now is true. Please be aware that the file containing authorization data will not be automatically deleted after the tests are completed!\x1b[0m",
+                );
+            } else {
+                if (process.send) {
+                    process.send({
+                        event: MasterEvents.ADD_FILE_TO_REMOVE,
+                        data: options.path,
+                    });
+                }
+
+                addGlobalFileToRemove(options.path);
+
+                browser.emitter.emit(MasterEvents.ADD_FILE_TO_REMOVE, options.path);
+            }
         }
 
         return data;

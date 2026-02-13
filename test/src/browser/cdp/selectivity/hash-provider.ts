@@ -9,6 +9,7 @@ describe("CDP/Selectivity/HashProvider", () => {
     let fsStub: { createReadStream: SinonStub };
     let hashMock: { update: SinonStub; digest: SinonStub };
     let streamMock: EventEmitter;
+    let globExtraStub: { expandPaths: SinonStub };
 
     beforeEach(() => {
         hashMock = {
@@ -22,10 +23,12 @@ describe("CDP/Selectivity/HashProvider", () => {
         fsStub = {
             createReadStream: sandbox.stub().returns(streamMock),
         };
+        globExtraStub = { expandPaths: sandbox.stub().resolves([]) };
 
         HashProvider = proxyquire("src/browser/cdp/selectivity/hash-provider", {
             "node:crypto": cryptoStub,
             "node:fs": fsStub,
+            "../../../bundle/glob-extra": globExtraStub,
         }).HashProvider;
     });
 
@@ -87,7 +90,7 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             await assert.isRejected(
                 hashPromise,
-                /Selectivity: Couldn't calculate hash for \/path\/to\/nonexistent\.js: Error: ENOENT: no such file or directory/,
+                /Selectivity: Couldn't calculate hash for \/path\/to\/nonexistent\.js/,
             );
         });
 
@@ -183,6 +186,19 @@ describe("CDP/Selectivity/HashProvider", () => {
             assert.calledTwice(cryptoStub.createHash);
             assert.calledWith(hash1Mock.update, Buffer.from("data1"));
             assert.calledWith(hash2Mock.update, Buffer.from("data2"));
+        });
+    });
+
+    describe("calculateForPattern", () => {
+        it("should reject with an error if can't find files by pattern", async () => {
+            const filePattern = "/pattern/of/**/file-that-does-not-exist.js";
+            const provider = new HashProvider();
+
+            globExtraStub.expandPaths.resolves([]);
+
+            const result = provider.calculateForPattern(filePattern);
+
+            assert.isRejected(result, /Couldn't find files/);
         });
     });
 });

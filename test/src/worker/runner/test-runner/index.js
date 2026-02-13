@@ -564,7 +564,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -590,7 +590,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -616,7 +616,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -632,7 +632,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
 
@@ -655,7 +655,7 @@ describe("worker/runner/test-runner", () => {
 
                     await run_({ runner }).catch(() => {});
 
-                    assert.calledOnce(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
             });
         });
@@ -822,6 +822,19 @@ describe("worker/runner/test-runner", () => {
                 const error = await run_().catch(e => e);
 
                 assert.match(error.testplaneCtx, { foo: "bar" });
+            });
+
+            it("should extend error with testplaneCtx object passed to execution thread", async () => {
+                ExecutionThread.create.callsFake(() => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        return Promise.reject(new Error("new error", { cause: new Error("original error") }));
+                    });
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                const error = await run_().catch(e => e);
+
+                assert.include(error.stack, "Caused by: Error: original error");
             });
 
             it("should extend testplaneCtx with empty assert view results", async () => {

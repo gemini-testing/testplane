@@ -9,8 +9,8 @@ const calculateFileMd5Hash = (filePath: string): Promise<string> =>
 
         fileReadStream.on("data", chunk => hash.update(chunk));
         fileReadStream.on("end", () => resolve(hash.digest("hex")));
-        fileReadStream.on("error", err =>
-            reject(new Error(`Selectivity: Couldn't calculate hash for ${filePath}: ${err}`)),
+        fileReadStream.on("error", cause =>
+            reject(new Error(`Selectivity: Couldn't calculate hash for ${filePath}`, { cause })),
         );
     });
 
@@ -44,6 +44,11 @@ export class HashProvider {
 
             const cwd = process.cwd();
             const files = await globExtra.expandPaths(pattern, { root: cwd });
+
+            if (!files.length) {
+                throw new Error(`Selectivity: Couldn't find files by disableSelectivityPattern "${pattern}"`);
+            }
+
             const filesSorted = files.sort();
             const hash = crypto.createHash("md5");
 

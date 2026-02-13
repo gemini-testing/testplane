@@ -1,10 +1,13 @@
 import { groupBy } from "lodash";
 import { resolve as urlResolve } from "node:url";
+import { JS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
+import { extractSourceFilesDeps, fetchTextWithBrowserFallback, isCachedOnFs, isDataProtocol } from "./utils";
+import { CacheType, getCachedSelectivityFile, hasCachedSelectivityFile, setCachedSelectivityFile } from "./fs-cache";
+import { debugSelectivity } from "./debug";
 import type { CDP } from "..";
 import type { DebuggerEvents } from "../domains/debugger";
 import type { CDPRuntimeScriptId, CDPSessionId } from "../types";
-import { JS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
-import { extractSourceFilesDeps, fetchTextWithBrowserFallback } from "./utils";
+import type { SelectivityAssetState } from "./types";
 
 const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
 
@@ -18,8 +21,9 @@ export class JSSelectivity {
     private readonly _sourceRoot: string;
     private _debuggerOnPausedFn: (() => void) | null = null;
     private _debuggerOnScriptParsedFn: ((params: DebuggerEvents["scriptParsed"]) => void) | null = null;
-    private _scriptsSource: Record<CDPRuntimeScriptId, null | Promise<string | Error>> = {};
-    private _scriptsSourceMap: Record<CDPRuntimeScriptId, null | Promise<string | Error>> = {};
+    private _scriptsSource: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
+    private _scriptsSourceMap: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
+    private _scriptIdToSourceMapUrl: Record<CDPRuntimeScriptId, string | null> = {};
 
     constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
         this._cdp = cdp;
@@ -33,21 +37,60 @@ export class JSSelectivity {
         }
 
         if (!url || !sourceMapURL) {
-            this._scriptsSource[scriptId] ||= null;
-            this._scriptsSourceMap[scriptId] ||= null;
+            this._scriptsSource[scriptId] ||= Promise.resolve(null);
+            this._scriptsSourceMap[scriptId] ||= Promise.resolve(null);
             return;
         }
 
-        this._scriptsSource[scriptId] ||= this._cdp.debugger
-            .getScriptSource(this._sessionId, scriptId)
-            .then(res => res.scriptSource)
-            .catch((err: Error) => err);
+        this._scriptsSource[scriptId] ||= hasCachedSelectivityFile(CacheType.Asset, url).then(isCached => {
+            return isCached
+                ? true
+                : this._cdp.debugger
+                      .getScriptSource(this._sessionId, scriptId)
+                      .then(res => res.scriptSource)
+                      .then(data =>
+                          setCachedSelectivityFile(CacheType.Asset, url, data)
+                              .then(() => true as const)
+                              .catch(err => {
+                                  debugSelectivity(`Couldn't offload asset from "${url}" to fs-cache: %O`, err);
+                                  return data;
+                              }),
+                      )
+                      .catch((err: Error) => err);
+        });
 
-        this._scriptsSourceMap[scriptId] ||= fetchTextWithBrowserFallback(
-            urlResolve(url, sourceMapURL),
-            this._cdp.runtime,
-            this._sessionId,
-        );
+        const sourceMapResolvedUrl = urlResolve(url, sourceMapURL);
+
+        // Embedded source maps are not cached on file system because of their large cache key
+        if (isDataProtocol(sourceMapResolvedUrl)) {
+            this._scriptIdToSourceMapUrl[scriptId] = null;
+            this._scriptsSourceMap[scriptId] ||= fetchTextWithBrowserFallback(
+                sourceMapResolvedUrl,
+                this._cdp.runtime,
+                this._sessionId,
+            ).catch((err: Error) => err);
+        } else {
+            this._scriptIdToSourceMapUrl[scriptId] = sourceMapResolvedUrl;
+            this._scriptsSourceMap[scriptId] ||= hasCachedSelectivityFile(CacheType.Asset, sourceMapResolvedUrl).then(
+                isCached => {
+                    return isCached
+                        ? true
+                        : fetchTextWithBrowserFallback(sourceMapResolvedUrl, this._cdp.runtime, this._sessionId)
+                              .then(data =>
+                                  setCachedSelectivityFile(CacheType.Asset, sourceMapResolvedUrl, data)
+                                      .then(() => true as const)
+                                      .catch(err => {
+                                          debugSelectivity(
+                                              `Couldn't offload asset from "${sourceMapResolvedUrl}" to fs-cache: %O`,
+                                              err,
+                                          );
+                                          return data;
+                                      }),
+                              )
+                              .catch((err: Error) => err);
+                },
+            );
+        }
     }
 
     async start(): Promise<void> {
@@ -76,103 +119,160 @@ export class JSSelectivity {
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
     async stop(drop?: boolean): Promise<Set<string> | null> {
-        if (drop) {
-            this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
-            this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
-
-            return null;
-        }
-
-        const coverage = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
-
-        const scriptsWithUrl = coverage.result.filter(script => script.url);
-
-        // If we haven't got "scriptParsed" event for the script, pull up source code + source map manually
-        scriptsWithUrl.forEach(({ scriptId, url }) => {
-            if (Object.hasOwn(this._scriptsSource, scriptId) && Object.hasOwn(this._scriptsSourceMap, scriptId)) {
-                return;
+        try {
+            if (drop) {
+                return null;
             }
 
-            const scriptSourcePromise = this._cdp.debugger
-                .getScriptSource(this._sessionId, scriptId)
-                .then(res => res.scriptSource)
-                .catch((err: Error) => err);
+            const coverage = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
-            this._scriptsSource[scriptId] ||= scriptSourcePromise;
-            this._scriptsSourceMap[scriptId] ||= scriptSourcePromise.then(sourceCode => {
-                if (sourceCode instanceof Error) {
-                    return sourceCode;
-                }
+            const scriptsWithUrl = coverage.result.filter(script => script.url);
 
-                const sourceMapsStartIndex = sourceCode.lastIndexOf(JS_SOURCE_MAP_URL_COMMENT);
-                const sourceMapsEndIndex = sourceCode.indexOf("\n", sourceMapsStartIndex);
-
-                if (sourceMapsStartIndex === -1) {
-                    return new Error("Source maping url comment is missing");
-                }
-
-                const sourceMapURL =
-                    sourceMapsEndIndex === -1
-                        ? sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length)
-                        : sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length, sourceMapsEndIndex);
-
-                return fetchTextWithBrowserFallback(urlResolve(url, sourceMapURL), this._cdp.runtime, this._sessionId);
-            });
-        });
-
-        const totalDependingSourceFiles = new Set<string>();
-        const grouppedByScriptCoverage = groupBy(coverage.result, "scriptId");
-        const scriptIds = Object.keys(grouppedByScriptCoverage);
-
-        await Promise.all(
-            scriptIds.map(async scriptId => {
-                // Every "scriptId" has only one uniq "url"
-                const url = grouppedByScriptCoverage[scriptId][0].url;
-                const [source, sourceMaps] = await Promise.all([
-                    this._scriptsSource[scriptId],
-                    this._scriptsSourceMap[scriptId],
-                ]);
-
-                if (!source || !sourceMaps) {
+            // If we haven't got "scriptParsed" event for the script, pull up source code + source map manually
+            scriptsWithUrl.forEach(({ scriptId, url }) => {
+                // Was processed with "this._processScript"
+                if (Object.hasOwn(this._scriptsSource, scriptId) && Object.hasOwn(this._scriptsSourceMap, scriptId)) {
                     return;
                 }
 
-                if (source instanceof Error) {
-                    throw new Error(`JS Selectivity: Couldn't load source code at ${url}: ${source}`);
-                }
+                // Not dropping sources to fs the end of test (when "stop" is called) because we use it immediately
+                const scriptSourcePromise = this._cdp.debugger
+                    .getScriptSource(this._sessionId, scriptId)
+                    .then(({ scriptSource }) => {
+                        setCachedSelectivityFile(CacheType.Asset, url, scriptSource).catch(() => {});
+                        return scriptSource;
+                    })
+                    .catch((err: Error) => err);
 
-                if (sourceMaps instanceof Error) {
-                    throw new Error(`JS Selectivity: Couldn't load source maps of ${url}: ${sourceMaps}`);
-                }
+                this._scriptsSource[scriptId] ||= scriptSourcePromise;
+                this._scriptsSourceMap[scriptId] ||= scriptSourcePromise.then(async sourceCode => {
+                    if (sourceCode instanceof Error) {
+                        return sourceCode;
+                    }
 
-                const startOffsetsSet = new Set<number>();
+                    const sourceMapsStartIndex = sourceCode.lastIndexOf(JS_SOURCE_MAP_URL_COMMENT);
+                    const sourceMapsEndIndex = sourceCode.indexOf("\n", sourceMapsStartIndex);
 
-                grouppedByScriptCoverage[scriptId].forEach(entry => {
-                    entry.functions.forEach(fn => {
-                        fn.ranges.forEach(range => {
-                            startOffsetsSet.add(range.startOffset);
+                    // Source maps are not generated for this source file
+                    if (sourceMapsStartIndex === -1) {
+                        return null;
+                    }
+
+                    const sourceMapURL =
+                        sourceMapsEndIndex === -1
+                            ? sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length)
+                            : sourceCode.slice(
+                                  sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length,
+                                  sourceMapsEndIndex,
+                              );
+
+                    if (isDataProtocol(sourceMapURL)) {
+                        return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
+                            (err: Error) => err,
+                        );
+                    }
+
+                    const resolvedSourceMapUrl = urlResolve(url, sourceMapURL);
+
+                    this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
+
+                    try {
+                        const cachedSourceMaps = await getCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl);
+
+                        if (cachedSourceMaps) {
+                            return cachedSourceMaps;
+                        }
+
+                        const sourceMap = await fetchTextWithBrowserFallback(
+                            resolvedSourceMapUrl,
+                            this._cdp.runtime,
+                            this._sessionId,
+                        );
+
+                        setCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl, sourceMap).catch(() => {});
+
+                        return sourceMap;
+                    } catch (err) {
+                        return err as Error;
+                    }
+                });
+            });
+
+            const totalDependingSourceFiles = new Set<string>();
+            const grouppedByScriptCoverage = groupBy(coverage.result, "scriptId");
+            const scriptIds = Object.keys(grouppedByScriptCoverage);
+
+            await Promise.all(
+                scriptIds.map(async scriptId => {
+                    // Every "scriptId" has only one uniq "url"
+                    const url = grouppedByScriptCoverage[scriptId][0].url;
+                    const [source, sourceMaps] = await Promise.all([
+                        this._scriptsSource[scriptId],
+                        this._scriptsSourceMap[scriptId],
+                    ]);
+                    const sourceMapUrl = this._scriptIdToSourceMapUrl[scriptId];
+
+                    // Function was called, but source maps were not generated for the file
+                    if (!source || !sourceMaps) {
+                        return;
+                    }
+
+                    if (source instanceof Error) {
+                        throw new Error(`JS Selectivity: Couldn't load source code from ${url}`, { cause: source });
+                    }
+
+                    if (sourceMaps instanceof Error) {
+                        throw new Error(`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, {
+                            cause: sourceMaps,
+                        });
+                    }
+
+                    if (isCachedOnFs(sourceMaps) && !sourceMapUrl) {
+                        throw new Error(
+                            "Assertation failed: souce map url has to present if source maps are fs-cached",
+                        );
+                    }
+
+                    const sourceString = isCachedOnFs(source)
+                        ? await getCachedSelectivityFile(CacheType.Asset, url)
+                        : source;
+                    const sourceMapsString = isCachedOnFs(sourceMaps)
+                        ? await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
+                        : sourceMaps;
+
+                    if (!sourceString || !sourceMapsString) {
+                        throw new Error(`JS Selectivity: fs-cache is broken for ${url}`);
+                    }
+
+                    const startOffsetsSet = new Set<number>();
+
+                    grouppedByScriptCoverage[scriptId].forEach(entry => {
+                        entry.functions.forEach(fn => {
+                            fn.ranges.forEach(range => {
+                                startOffsetsSet.add(range.startOffset);
+                            });
                         });
                     });
-                });
 
-                const dependingSourceFiles = await extractSourceFilesDeps(
-                    source,
-                    sourceMaps,
-                    Array.from(startOffsetsSet),
-                    this._sourceRoot,
-                );
+                    const dependingSourceFiles = await extractSourceFilesDeps(
+                        sourceString,
+                        sourceMapsString,
+                        Array.from(startOffsetsSet),
+                        this._sourceRoot,
+                    );
 
-                for (const sourceFile of dependingSourceFiles.values()) {
-                    if (isSourceCodeFile(sourceFile)) {
-                        totalDependingSourceFiles.add(sourceFile);
+                    for (const sourceFile of dependingSourceFiles.values()) {
+                        if (isSourceCodeFile(sourceFile)) {
+                            totalDependingSourceFiles.add(sourceFile);
+                        }
                     }
-                }
-            }),
-        );
+                }),
+            );
 
-        this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
-        this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
-
-        return totalDependingSourceFiles;
+            return totalDependingSourceFiles;
+        } finally {
+            this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
+            this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
+        }
     }
 }

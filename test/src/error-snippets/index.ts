@@ -25,17 +25,27 @@ describe("error-snippets", () => {
         let fetchStub: SinonStub;
         let formatErrorSnippetStub: SinonStub;
         let findRelevantStackFrameStub: SinonStub;
+        let extractSourceMapsStub: SinonStub;
+        let resolveLocationWithSourceMap: SinonStub;
 
         beforeEach(() => {
             fsReadFileStub = sandbox.stub(fs, "readFile");
-            fetchStub = sandbox.stub(globalThis, "fetch");
-
+            fetchStub = sandbox.stub(globalThis, "fetch").resolves({
+                text: () => Promise.resolve("source code"),
+                headers: new Map() as unknown as Headers,
+            } as Response);
             formatErrorSnippetStub = sandbox.stub();
             findRelevantStackFrameStub = sandbox.stub();
+            extractSourceMapsStub = sandbox.stub().resolves(null);
+            resolveLocationWithSourceMap = sandbox.stub();
 
             extendWithCodeSnippet = proxyquire("../../../src/error-snippets", {
                 "./utils": { formatErrorSnippet: formatErrorSnippetStub },
                 "./frames": { findRelevantStackFrame: findRelevantStackFrameStub },
+                "./source-maps": {
+                    extractSourceMaps: extractSourceMapsStub,
+                    resolveLocationWithSourceMap: resolveLocationWithSourceMap,
+                },
             }).extendWithCodeSnippet;
         });
 
@@ -97,27 +107,35 @@ describe("error-snippets", () => {
             assert.equal(error, result);
         });
 
-        it("should return error with snippet for file path", async () => {
+        it("should return error with snippet for file path for esm file from stacktrace", async () => {
             const error = new Error("test error");
-            const stackFrame = { fileName: "/file/file1", lineNumber: 100, columnNumber: 500 };
+            const stackFrame = { fileName: "file:///file/file1", lineNumber: 100, columnNumber: 500 };
             findRelevantStackFrameStub.returns(stackFrame);
+            extractSourceMapsStub.resolves(null);
             formatErrorSnippetStub.returns("code snippet");
-            fsReadFileStub.resolves("source code");
+            fsReadFileStub.resolves("async function main() {}");
 
             const result = await extendWithCodeSnippet(error);
 
             assert.equal(result.snippet, "code snippet");
         });
 
-        it("should return error with snippet for network url", async () => {
+        it("should return error with snippet for network url from source maps", async () => {
             const error = new Error("test error");
             const stackFrame = { fileName: "http://localhost:3000/file/file1", lineNumber: 100, columnNumber: 500 };
+            const resolvedLocation = {
+                file: "file/file1",
+                source: "source code",
+                location: {},
+            };
             findRelevantStackFrameStub.returns(stackFrame);
-            formatErrorSnippetStub.returns("code snippet");
             fetchStub.withArgs("http://localhost:3000/file/file1").resolves({
                 text: () => Promise.resolve("source code"),
                 headers: new Map(),
             });
+            extractSourceMapsStub.resolves("source-maps");
+            resolveLocationWithSourceMap.withArgs(stackFrame, "source-maps").resolves(resolvedLocation);
+            formatErrorSnippetStub.withArgs(error, resolvedLocation).returns("code snippet");
 
             const result = await extendWithCodeSnippet(error);
 

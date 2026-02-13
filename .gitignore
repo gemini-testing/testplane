@@ -18,3 +18,5 @@ npm-debug.log
 hermione-report
 bundle.compat.js
 bundle.native.js
+wt/**
+tmp/**

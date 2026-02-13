@@ -35,13 +35,15 @@ export default {
         chrome: {
             headless: true,
             desiredCapabilities: {
-                browserName: "chrome"
+                browserName: "chrome",
+                browserVersion: "145"
             }
         },
         firefox: {
             headless: true,
             desiredCapabilities: {
-                browserName: "firefox"
+                browserName: "firefox",
+                browserVersion: "145"
             }
         }
     },

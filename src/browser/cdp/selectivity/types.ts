@@ -21,3 +21,12 @@ export type HashFileContents = {
     modules: Record<string, string>;
     patterns: Record<string, string>;
 };
+
+export type CachedOnFs = true;
+export type ActualValue = string;
+export type SelectivityAssetState = Promise<
+    | CachedOnFs // Acknowledged asset presence in fs cache
+    | ActualValue // Actual asset value
+    | Error // An error, occured while trying to aquire asset
+    | null // No source maps are present
+>;

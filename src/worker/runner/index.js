@@ -11,6 +11,8 @@ const {
     runWithTestplaneDependenciesCollecting,
     readTestFileWithTestplaneDependenciesCollecting,
 } = require("../../browser/cdp/selectivity/testplane-selectivity");
+const ipc = require("../../utils/ipc");
+const { TEST_ASSIGNED_TO_WORKER } = require("../../constants/process-messages");
 
 module.exports = class Runner extends AsyncEmitter {
     static create(config) {
@@ -32,6 +34,14 @@ module.exports = class Runner extends AsyncEmitter {
     }
 
     async runTest(fullTitle, { browserId, browserVersion, file, sessionId, sessionCaps, sessionOpts, state, attempt }) {
+        ipc.emit(TEST_ASSIGNED_TO_WORKER, {
+            fullTitle,
+            browserId,
+            file,
+            sessionId,
+            workerPid: process.pid,
+        });
+
         const browserAgent = BrowserAgent.create({ id: browserId, version: browserVersion, pool: this._browserPool });
         const RunnerClass = isRunInNodeJsEnv(this._config)
             ? await import("./test-runner").then(m => m.default)

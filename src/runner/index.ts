@@ -75,7 +75,9 @@ export class MainRunner extends RunnableEmitter {
             MasterEvents.NEW_WORKER_PROCESS,
             MasterEvents.ERROR,
             MasterEvents.DOM_SNAPSHOTS,
+            MasterEvents.ADD_FILE_TO_REMOVE,
             MasterEvents.TEST_DEPENDENCIES,
+            MasterEvents.TEST_ASSIGNED_TO_WORKER,
         ]);
 
         temp.init(this.config.system.tempDir);
@@ -132,9 +134,11 @@ export class MainRunner extends RunnableEmitter {
             shouldDisableSelectivity: opts?.shouldDisableSelectivity,
         });
 
-        testCollection.eachTestAcrossBrowsers((test, browserId) => selectivityRunner.runIfNecessary(test, browserId));
+        testCollection.eachTestAcrossBrowsers((test, browserId) =>
+            selectivityRunner.startTestCheckToRun(test, browserId),
+        );
 
-        await selectivityRunner.waitForTestsToRun();
+        await selectivityRunner.runNecessaryTests();
 
         this.activeBrowserRunners.forEach(runner => this.running.add(this._waitBrowserRunnerTestsCompletion(runner)));
 
@@ -200,13 +204,15 @@ export class MainRunner extends RunnableEmitter {
         );
     }
 
-    cancel(): void {
+    cancel(error: Error): void {
         this.cancelled = true;
-        this.browserPool?.cancel();
+        this.browserPool?.cancel(error);
 
-        this.activeBrowserRunners.forEach(runner => runner.cancel());
+        this.activeBrowserRunners.forEach(runner => runner.cancel(error));
 
-        this.workers?.cancel();
+        this.workers?.cancel().catch(() => {
+            /* we can just ignore the error thrown, because we don't care about cleanup at this point */
+        });
     }
 
     registerWorkers<T extends ReadonlyArray<string>>(workerFilepath: string, exportedMethods: T): RegisterWorkers<T> {

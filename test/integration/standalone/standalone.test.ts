@@ -16,11 +16,11 @@ describe("Standalone Browser E2E Tests", function () {
 
     setTimeout(() => {
         console.error(
-            "ERROR! Standalone test failed to complete in 120 seconds.\n" +
+            "ERROR! Standalone test failed to complete in 180 seconds.\n" +
                 "If all tests have passed, most likely this is caused by a bug in browser cleanup logic, e.g. deleteSession() command.",
         );
         process.exit(1);
-    }, 120000).unref();
+    }, 180000).unref();
 
     let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
 

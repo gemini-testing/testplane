@@ -148,14 +148,16 @@ export class ExistingBrowser extends Browser {
         return this;
     }
 
-    markAsBroken(): void {
+    markAsBroken({ stubBrowserCommands = false } = {}): void {
         if (this.state.isBroken) {
             return;
         }
 
         this.applyState({ isBroken: true });
 
-        this._stubCommands();
+        if (stubBrowserCommands) {
+            this._stubCommands();
+        }
     }
 
     quit(): void {

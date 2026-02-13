@@ -1,7 +1,7 @@
 const SERVER_PORT = process.env.PORT || 3000;
 
 export default {
-    gridUrl: "http://localhost:4444/wd/hub",
+    gridUrl: "local",
     baseUrl: `http://localhost:${SERVER_PORT}`,
     pageLoadTimeout: 0,
     httpTimeout: 60000,
@@ -19,7 +19,6 @@ export default {
     },
     browsers: {
         chrome: {
-            automationProtocol: "devtools",
             headless: true,
             desiredCapabilities: {
                 browserName: "chrome"

@@ -117,7 +117,7 @@ export class SelectivityRunner {
     private readonly _runTestFn: (test: Test, browserId: string) => void;
     private readonly _opts?: SelectivityRunnerOptions;
     private readonly _browserSelectivityDisabledCache: Record<string, void | Promise<boolean>> = {};
-    private readonly _processingTestPromises: Promise<void>[] = [];
+    private readonly _processingTestPromises: Promise<[Test, string] | null>[] = [];
 
     static create(...args: ConstructorParameters<typeof this>): SelectivityRunner {
         return new this(...args);
@@ -152,32 +152,50 @@ export class SelectivityRunner {
         return this._browserSelectivityDisabledCache[browserId] as Promise<boolean>;
     }
 
-    runIfNecessary(test: Test, browserId: string): void {
+    startTestCheckToRun(test: Test, browserId: string): void {
         const browserConfig = this._config.forBrowser(browserId);
         const isSelectivityEnabledForBrowser = browserConfig.selectivity.enabled;
 
+        // If selectivity is disabled for browser
         if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity) {
-            return this._runTestFn(test, browserId);
+            this._processingTestPromises.push(Promise.resolve([test, browserId]));
+            return;
         }
 
         this._processingTestPromises.push(
-            (async (): Promise<void> => {
+            (async (): Promise<[Test, string] | null> => {
                 const shouldDisableBrowserSelectivity = await this._shouldDisableSelectivityForBrowser(browserId);
 
                 if (shouldDisableBrowserSelectivity) {
-                    return this._runTestFn(test, browserId);
+                    return [test, browserId];
                 }
 
                 const shouldDisableTest = await shouldDisableTestBySelectivity(browserConfig, test);
 
                 if (!shouldDisableTest) {
-                    this._runTestFn(test, browserId);
+                    return [test, browserId];
                 }
+
+                return null;
             })(),
         );
     }
 
-    waitForTestsToRun(): Promise<void[]> {
-        return Promise.all(this._processingTestPromises);
+    async runNecessaryTests(): Promise<void> {
+        const testsToRun = await Promise.all(this._processingTestPromises);
+
+        for (const testToRun of testsToRun) {
+            if (!testToRun) {
+                continue;
+            }
+
+            const [test, browserId] = testToRun;
+
+            // All tests need to be started synchronously
+            this._runTestFn(test, browserId);
+        }
+
+        // Free used memory
+        this._processingTestPromises.length = 0;
     }
 }

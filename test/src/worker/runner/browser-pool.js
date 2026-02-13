@@ -131,7 +131,7 @@ describe("worker/browser-pool", () => {
                         .getBrowser({ browserId: "bro-id" })
                         .catch(e => e);
 
-                    assert.calledOnceWith(browser.markAsBroken);
+                    assert.calledOnceWith(browser.markAsBroken, { stubBrowserCommands: true });
                 });
 
                 it("should free browser", async () => {

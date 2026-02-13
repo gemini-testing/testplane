@@ -99,7 +99,7 @@ module.exports = class TestRunner {
         // 1. before afterEach hook to prevent working with broken sessions
         // 2. after collecting all assertView errors (including afterEach section)
         if (!this._browser.state.isBroken && isSessionBroken(error, this._config)) {
-            this._browser.markAsBroken();
+            this._browser.markAsBroken({ stubBrowserCommands: true });
         }
 
         testplaneCtx.assertViewResults = assertViewResults ? assertViewResults.toRawObject() : [];
@@ -129,6 +129,22 @@ module.exports = class TestRunner {
 
         if (error) {
             filterExtraStackFrames(error);
+
+            let current = error.cause;
+            let depth = 1;
+
+            // Propagate errors from the cause into the stack trace of the main error.
+            while (current) {
+                const indent = "    ".repeat(depth);
+                error.stack += `\n\n${indent}Caused by: ${current.stack.split("\n").join(`\n${indent}`)}`;
+
+                current = current.cause;
+
+                depth++;
+            }
+
+            // The original cause must be removed to avoid possible duplicates later.
+            delete error.cause;
 
             await extendWithCodeSnippet(error);
 
@@ -186,7 +202,7 @@ module.exports = class TestRunner {
         }
 
         if (isSessionBroken(error, this._config)) {
-            this._browser.markAsBroken();
+            this._browser.markAsBroken({ stubBrowserCommands: true });
         }
 
         try {

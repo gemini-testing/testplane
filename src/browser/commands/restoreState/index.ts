@@ -2,20 +2,14 @@ import fs from "fs-extra";
 
 import { restoreStorage } from "./restoreStorage";
 
-import * as logger from "../../../utils/logger";
 import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import {
-    defaultOptions,
-    getOverridesProtocol,
-    getWebdriverFrames,
-    SaveStateData,
-    SaveStateOptions,
-} from "../saveState";
+import { getOverridesProtocol, getWebdriverFrames, SaveStateData } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
 import { Cookie } from "@testplane/wdio-protocols";
+import { StateOpts } from "../../../config/types";
 
-export type RestoreStateOptions = SaveStateOptions & {
+export type RestoreStateOptions = Omit<StateOpts, "keepFile"> & {
     data?: SaveStateData;
     refresh?: boolean;
 };
@@ -23,15 +17,14 @@ export type RestoreStateOptions = SaveStateOptions & {
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    session.addCommand("restoreState", async (_options: RestoreStateOptions) => {
+    session.addCommand("restoreState", async (_options: RestoreStateOptions = {}) => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            logger.error("Before restoreState first open page using url command");
-            process.exit(1);
+            throw new Error("Before restoreState first open page using url command");
         }
 
-        const options = { ...defaultOptions, refresh: true, ..._options };
+        const options = { ...browser.config.stateOpts, refresh: true, ..._options };
 
         let restoreState: SaveStateData | undefined = options.data;
 
@@ -40,8 +33,7 @@ export default (browser: Browser): void => {
         }
 
         if (!restoreState) {
-            logger.error("Can't restore state: please provide a path to file or data");
-            process.exit(1);
+            throw new Error("Can't restore state: please provide a path to file or data");
         }
 
         if (restoreState?.cookies && options.cookieFilter) {

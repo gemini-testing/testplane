@@ -2,12 +2,14 @@ import { Config } from "../../config";
 import { NewBrowser } from "./../new-browser";
 import { ExistingBrowser } from "./../existing-browser";
 import { Calibrator } from "./../calibrator";
-import { AsyncEmitter } from "../../events";
+import { AsyncEmitter, MasterEvents } from "../../events";
 import { BrowserName, type W3CBrowserName } from "./../types";
 import { getNormalizedBrowserName } from "../../utils/browser";
 import { LOCAL_GRID_URL } from "../../constants/config";
 import { WebdriverPool } from "../../browser-pool/webdriver-pool";
 import type { StandaloneBrowserOptionsInput } from "./types";
+import fs from "fs-extra";
+import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
 
 const webdriverPool = new WebdriverPool();
 
@@ -48,7 +50,10 @@ export async function launchBrowser(
         user: options.user,
         key: options.key,
         prepareBrowser: options.prepareBrowser,
+        stateOpts: options.stateOpts,
     };
+
+    const filesToRemove: string[] = [];
 
     const config = new Config({
         browsers: {
@@ -61,6 +66,10 @@ export async function launchBrowser(
     }
 
     const emitter = new AsyncEmitter();
+
+    emitter.on(MasterEvents.ADD_FILE_TO_REMOVE, (path: string) => {
+        filesToRemove.push(path);
+    });
 
     const newBrowser = new NewBrowser(config, {
         id: browserName,
@@ -97,6 +106,10 @@ export async function launchBrowser(
     existingBrowser.publicAPI.overwriteCommand("deleteSession", async function () {
         await existingBrowser.quit();
         await newBrowser.kill();
+
+        if (filesToRemove.length > 0 && !hasGlobalFilesToRemove()) {
+            await Promise.all(filesToRemove.map(path => fs.remove(path)));
+        }
     });
 
     existingBrowser.publicAPI.addCommand("getDriverPid", () => newBrowser.getDriverPid());

@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.40.8 (2026-02-13)
+
+### 8.40.7 (2026-02-09)
+
+
+### Bug Fixes
+
+* error cause ([807d838](https://github.com/gemini-testing/testplane/commit/807d838023db42441ba619bfdacb38425538f042))
+
+### 8.40.6 (2026-02-02)
+
+
+### Bug Fixes
+
+* timeline error ([cb35917](https://github.com/gemini-testing/testplane/commit/cb35917643eb1e5b0be71590d3e3b62f9287f1cf))
+
+### 8.40.5 (2026-01-30)
+
+### 8.40.4 (2026-01-22)
+
+### 8.40.3 (2026-01-21)
+
+### 8.40.2 (2026-01-12)
+
+### 8.40.1 (2025-12-26)
+
+## 8.40.0 (2025-12-25)
+
+
+### Features
+
+* saveState improvements ([cc1f6e6](https://github.com/gemini-testing/testplane/commit/cc1f6e687a262c475b960c314101f8cb912d8151))
+
+## 8.39.0 (2025-12-25)
+
+
+### Features
+
+* ability to connect to repl server by port ([1521f93](https://github.com/gemini-testing/testplane/commit/1521f9327036384bc64637e70007c37e1b07d6f9))
+
 ### 8.38.3 (2025-12-24)
 
 

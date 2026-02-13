@@ -9,7 +9,9 @@ import type { Callstack } from "./history/callstack";
 import type { Test, Hook } from "../test-reader/test-object";
 import type { CaptureSnapshotOptions, CaptureSnapshotResult } from "./commands/captureDomSnapshot";
 import type { Options } from "@testplane/wdio-types";
-import type { SaveStateData, SaveStateOptions } from "./commands/saveState";
+import type { SaveStateData } from "./commands/saveState";
+import type { StateOpts } from "../config/types";
+import type { GetStateOptions } from "./commands/getState";
 import type { RestoreStateOptions } from "./commands/restoreState";
 import type { WaitForStaticToLoadResult } from "./commands/waitForStaticToLoad";
 import type { CDP } from "./cdp";
@@ -81,8 +83,9 @@ declare global {
 
             getConfig(this: WebdriverIO.Browser): Promise<BrowserConfig>;
 
-            saveState(options?: SaveStateOptions): Promise<SaveStateData>;
-            restoreState(options: RestoreStateOptions): Promise<void>;
+            saveState(options?: StateOpts): Promise<SaveStateData>;
+            restoreState(options?: RestoreStateOptions): Promise<void>;
+            getState(options?: GetStateOptions): Promise<SaveStateData | null>;
 
             overwriteCommand<CommandName extends BrowserCommand>(
                 name: CommandName,
