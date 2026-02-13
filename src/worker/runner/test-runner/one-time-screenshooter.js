@@ -1,6 +1,6 @@
 "use strict";
 
-const { Image } = require("../../../image");
+const { extractBase64PngSize } = require("../../../image");
 const ScreenShooter = require("../../../browser/screen-shooter");
 const logger = require("../../../utils/logger");
 const { promiseTimeout } = require("../../../utils/promise");
@@ -106,8 +106,7 @@ module.exports = class OneTimeScreenshooter {
 
     async _makeViewportScreenshot() {
         const base64 = await this._browser.publicAPI.takeScreenshot();
-        const image = Image.fromBase64(base64);
-        const size = await image.getSize();
+        const size = extractBase64PngSize(base64);
 
         return { base64, size };
     }
