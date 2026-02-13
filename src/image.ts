@@ -3,7 +3,14 @@ import looksSame from "looks-same";
 import { loadEsm } from "./utils/preload-utils";
 import { DiffOptions, ImageSize } from "./types";
 import { convertRgbaToPng } from "./utils/eight-bit-rgba-to-png";
-import { BITS_IN_BYTE, PNG_HEIGHT_OFFSET, PNG_WIDTH_OFFSET, RGBA_CHANNELS } from "./constants/png";
+import {
+    BITS_IN_BYTE,
+    PNG_HEIGHT_OFFSET,
+    PNG_MIN_ASSIST_BYTES,
+    PNG_SIGNATURE,
+    PNG_WIDTH_OFFSET,
+    RGBA_CHANNELS,
+} from "./constants/png";
 
 interface PngImageData {
     data: Buffer;
@@ -47,6 +54,30 @@ const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
         loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
         initJsquashPromise,
     ]).then(([mod]) => mod.decode(buffer, { bitDepth: BITS_IN_BYTE }));
+};
+
+export const extractBase64PngSize = (base64EncodedPng: string): ImageSize => {
+    // Strips data URI prefix if it exists
+    const base64Data = base64EncodedPng.includes(";base64,")
+        ? (base64EncodedPng.split(";base64,").pop() as string)
+        : base64EncodedPng;
+
+    if (base64Data.length <= PNG_MIN_ASSIST_BYTES) {
+        throw new Error("Invalid base64 encoded png: too short");
+    }
+
+    const headerBytesToRead = Math.max(PNG_WIDTH_OFFSET, PNG_HEIGHT_OFFSET) + 4;
+    const headerCharsToRead = Math.ceil(headerBytesToRead / 3) * 4;
+    const pngHeader = Buffer.from(base64Data.slice(0, headerCharsToRead), "base64");
+
+    if (!pngHeader.subarray(0, PNG_SIGNATURE.byteLength).equals(PNG_SIGNATURE)) {
+        throw new Error("Invalid base64 encoded png: signature missmatch");
+    }
+
+    return {
+        width: pngHeader.readUInt32BE(PNG_WIDTH_OFFSET),
+        height: pngHeader.readUInt32BE(PNG_HEIGHT_OFFSET),
+    };
 };
 
 export class Image {
