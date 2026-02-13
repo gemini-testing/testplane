@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.40.9 (2026-02-13)
+
+
+### Bug Fixes
+
+* **types:** overrides matchers return type from R to Promise<R> ([f48b42c](https://github.com/gemini-testing/testplane/commit/f48b42c0dddd4fb5b47a37b8b01230ddb029d786))
+
 ### 8.40.8 (2026-02-13)
 
 ### 8.40.7 (2026-02-09)
