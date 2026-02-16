@@ -61,6 +61,15 @@ describe("CDP/Selectivity/FsCache", () => {
     });
 
     describe("hasCachedSelectivityFile", () => {
+        it("should throw error when key is empty", async () => {
+            const cacheType = CacheType.TestFile;
+
+            await assert.isRejected(
+                hasCachedSelectivityFile(cacheType, ""),
+                "Attepted to check existance of cache with empty key",
+            );
+        });
+
         it("should return true if flag file was modified after process start", async () => {
             const key = "test-key";
             const cacheType = CacheType.TestFile;
@@ -118,6 +127,12 @@ describe("CDP/Selectivity/FsCache", () => {
     });
 
     describe("getCachedSelectivityFile", () => {
+        it("should throw error when key is empty", async () => {
+            const cacheType = CacheType.TestFile;
+
+            await assert.isRejected(getCachedSelectivityFile(cacheType, ""), "Attepted to read cache with empty key");
+        });
+
         it("should return cached content if flag file is ready", async () => {
             const key = "test-key";
             const cacheType = CacheType.TestFile;
@@ -202,6 +217,16 @@ describe("CDP/Selectivity/FsCache", () => {
     });
 
     describe("setCachedSelectivityFile", () => {
+        it("should throw error when key is empty", async () => {
+            const cacheType = CacheType.TestFile;
+            const content = "test content";
+
+            await assert.isRejected(
+                setCachedSelectivityFile(cacheType, "", content),
+                "Attepted to write cache with empty key",
+            );
+        });
+
         it("should write cache and flag files if not already cached", async () => {
             const key = "test-key";
             const cacheType = CacheType.TestFile;
