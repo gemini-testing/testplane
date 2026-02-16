@@ -51,7 +51,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         };
 
         fetchTextWithBrowserFallbackStub = sandbox.stub().resolves("mock source map");
-        extractSourceFilesDepsStub = sandbox.stub().resolves(new Set(["src/app.js", "src/utils.js"]));
+        extractSourceFilesDepsStub = sandbox.stub().returns(new Set(["src/app.js", "src/utils.js"]));
         urlResolveStub = sandbox.stub().returnsArg(1);
         groupByStub = sandbox.stub().callsFake((arr, key) => {
             const result: Record<string, any[]> = {};
@@ -274,7 +274,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             cdpMock.debugger.getScriptSource.resolves({
                 scriptSource: "mock source\n//# sourceMappingURL=app.js.map",
             });
-            extractSourceFilesDepsStub.resolves(new Set(["src/app.js", "src/utils.js", "src/styles.css"]));
+            extractSourceFilesDepsStub.returns(new Set(["src/app.js", "src/utils.js", "src/styles.css"]));
 
             await jsSelectivity.start();
             const result = await jsSelectivity.stop();
@@ -544,7 +544,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 ],
             };
 
-            extractSourceFilesDepsStub.resolves(
+            extractSourceFilesDepsStub.returns(
                 new Set([
                     "src/app.js",
                     "src/utils.ts",
