@@ -324,7 +324,59 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             await jsSelectivity.start();
             await jsSelectivity.stop();
 
-            assert.calledOnce(extractSourceFilesDepsStub);
+            assert.calledOnceWith(
+                extractSourceFilesDepsStub,
+                "mock source\n//# sourceMappingURL=app.js.map",
+                "mock source map",
+            );
+        });
+
+        it("should not rely on profiler.takePreciseCoverage provided URL", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            const mockCoverage = {
+                timestamp: 100500,
+                result: [
+                    {
+                        scriptId: "script-123",
+                        url: "", // invalid empty url
+                        functions: [
+                            {
+                                functionName: "foo",
+                                isBlockCoverage: false,
+                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            cdpMock.profiler.takePreciseCoverage.resolves(mockCoverage);
+            cdpMock.debugger.getScriptSource.resolves({
+                scriptSource: "mock source\n//# sourceMappingURL=app.js.map",
+            });
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+
+            const sourceMapURL = "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==";
+            const scriptParsedEvent = {
+                scriptId: "script-123",
+                url: "http://example.com/app.js", // scriptParsed emitted with valid url
+                sourceMapURL: sourceMapURL,
+            };
+
+            scriptParsedHandler(scriptParsedEvent);
+
+            await jsSelectivity.stop();
+
+            assert.calledWith(cdpMock.debugger.getScriptSource, "test-session-id", "script-123");
+            assert.calledOnceWith(hasCachedSelectivityFileStub, CacheType.Asset, "http://example.com/app.js");
+            assert.calledOnceWith(getCachedSelectivityFileStub, CacheType.Asset, "http://example.com/app.js");
+            assert.neverCalledWith(hasCachedSelectivityFileStub, CacheType.Asset, "");
+            assert.neverCalledWith(getCachedSelectivityFileStub, CacheType.Asset, "");
+            assert.neverCalledWith(setCachedSelectivityFileStub, CacheType.Asset, "");
         });
 
         it("should pull sources from from fs-cache", async () => {
