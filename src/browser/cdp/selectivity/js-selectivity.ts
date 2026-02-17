@@ -23,6 +23,7 @@ export class JSSelectivity {
     private _debuggerOnScriptParsedFn: ((params: DebuggerEvents["scriptParsed"]) => void) | null = null;
     private _scriptsSource: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
     private _scriptsSourceMap: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
+    private _scriptIdToSourceUrl: Record<CDPRuntimeScriptId, string | null> = {};
     private _scriptIdToSourceMapUrl: Record<CDPRuntimeScriptId, string | null> = {};
 
     constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
@@ -35,6 +36,8 @@ export class JSSelectivity {
         if (!this._sessionId) {
             return;
         }
+
+        this._scriptIdToSourceUrl[scriptId] ||= url;
 
         if (!url || !sourceMapURL) {
             this._scriptsSource[scriptId] ||= Promise.resolve(null);
@@ -144,6 +147,7 @@ export class JSSelectivity {
                     })
                     .catch((err: Error) => err);
 
+                this._scriptIdToSourceUrl[scriptId] ||= url;
                 this._scriptsSource[scriptId] ||= scriptSourcePromise;
                 this._scriptsSourceMap[scriptId] ||= scriptSourcePromise.then(async sourceCode => {
                     if (sourceCode instanceof Error) {
@@ -204,21 +208,24 @@ export class JSSelectivity {
 
             await Promise.all(
                 scriptIds.map(async scriptId => {
-                    // Every "scriptId" has only one uniq "url"
-                    const url = grouppedByScriptCoverage[scriptId][0].url;
                     const [source, sourceMaps] = await Promise.all([
                         this._scriptsSource[scriptId],
                         this._scriptsSourceMap[scriptId],
                     ]);
                     const sourceMapUrl = this._scriptIdToSourceMapUrl[scriptId];
+                    // Every "scriptId" has only one uniq "url"
+                    const sourceUrl = this._scriptIdToSourceUrl[scriptId] || grouppedByScriptCoverage[scriptId][0].url;
 
                     // Function was called, but source maps were not generated for the file
-                    if (!source || !sourceMaps) {
+                    // Or its anonymous script, without source url
+                    if (!source || !sourceMaps || !sourceUrl) {
                         return;
                     }
 
                     if (source instanceof Error) {
-                        throw new Error(`JS Selectivity: Couldn't load source code from ${url}`, { cause: source });
+                        throw new Error(`JS Selectivity: Couldn't load source code from ${sourceUrl}`, {
+                            cause: source,
+                        });
                     }
 
                     if (sourceMaps instanceof Error) {
@@ -234,14 +241,14 @@ export class JSSelectivity {
                     }
 
                     const sourceString = isCachedOnFs(source)
-                        ? await getCachedSelectivityFile(CacheType.Asset, url)
+                        ? await getCachedSelectivityFile(CacheType.Asset, sourceUrl)
                         : source;
                     const sourceMapsString = isCachedOnFs(sourceMaps)
                         ? await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
                         : sourceMaps;
 
                     if (!sourceString || !sourceMapsString) {
-                        throw new Error(`JS Selectivity: fs-cache is broken for ${url}`);
+                        throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
                     }
 
                     const startOffsetsSet = new Set<number>();

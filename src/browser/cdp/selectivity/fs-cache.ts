@@ -30,6 +30,10 @@ const wasModifiedAfterProcessStart = async (flagFilePath: string): Promise<boole
 };
 
 export const hasCachedSelectivityFile = async (cacheType: CacheTypeValue, key: string): Promise<boolean> => {
+    if (!key) {
+        throw new Error("Attepted to check existance of cache with empty key");
+    }
+
     const hashName = cacheType + getMD5(key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
@@ -38,6 +42,10 @@ export const hasCachedSelectivityFile = async (cacheType: CacheTypeValue, key: s
 };
 
 export const getCachedSelectivityFile = async (cacheType: CacheTypeValue, key: string): Promise<string | null> => {
+    if (!key) {
+        throw new Error("Attepted to read cache with empty key");
+    }
+
     const hashName = cacheType + getMD5(key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
@@ -69,6 +77,10 @@ export const setCachedSelectivityFile = async (
     key: string,
     utf8Contents: string,
 ): Promise<void> => {
+    if (!key) {
+        throw new Error("Attepted to write cache with empty key");
+    }
+
     const hashName = cacheType + getMD5(key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
