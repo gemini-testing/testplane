@@ -1,0 +1,20 @@
+{
+  "name": "m-t-l-e",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/webdriverio": "^3.2.1",
+    "html-reporter": "^10.6.2",
+    "testplane": "^8.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^4.9.5"
+  }
+}
