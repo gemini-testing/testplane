@@ -1,4 +1,5 @@
 import _ from "lodash";
+import pLimit from "p-limit";
 import type { Config } from "../../../config";
 import type { BrowserConfig } from "../../../config/browser-config";
 import type { MainRunner } from "../../../runner";
@@ -117,7 +118,9 @@ export class SelectivityRunner {
     private readonly _runTestFn: (test: Test, browserId: string) => void;
     private readonly _opts?: SelectivityRunnerOptions;
     private readonly _browserSelectivityDisabledCache: Record<string, void | Promise<boolean>> = {};
-    private readonly _processingTestPromises: Promise<[Test, string] | null>[] = [];
+    private readonly _testsToRun: [Test, string][] = [];
+    private readonly _processingTestLimit = pLimit(10);
+    private readonly _processingTestPromises: Array<Promise<void>> = [];
 
     static create(...args: ConstructorParameters<typeof this>): SelectivityRunner {
         return new this(...args);
@@ -158,44 +161,40 @@ export class SelectivityRunner {
 
         // If selectivity is disabled for browser
         if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity) {
-            this._processingTestPromises.push(Promise.resolve([test, browserId]));
+            this._testsToRun.push([test, browserId]);
             return;
         }
 
         this._processingTestPromises.push(
-            (async (): Promise<[Test, string] | null> => {
+            this._processingTestLimit(async () => {
                 const shouldDisableBrowserSelectivity = await this._shouldDisableSelectivityForBrowser(browserId);
 
                 if (shouldDisableBrowserSelectivity) {
-                    return [test, browserId];
+                    this._testsToRun.push([test, browserId]);
+                    return;
                 }
 
                 const shouldDisableTest = await shouldDisableTestBySelectivity(browserConfig, test);
 
                 if (!shouldDisableTest) {
-                    return [test, browserId];
+                    this._testsToRun.push([test, browserId]);
                 }
-
-                return null;
-            })(),
+            }),
         );
     }
 
     async runNecessaryTests(): Promise<void> {
-        const testsToRun = await Promise.all(this._processingTestPromises);
+        await Promise.all(this._processingTestPromises);
 
-        for (const testToRun of testsToRun) {
-            if (!testToRun) {
-                continue;
-            }
-
-            const [test, browserId] = testToRun;
-
-            // All tests need to be started synchronously
+        this._testsToRun.forEach(([test, browserId]) => {
             this._runTestFn(test, browserId);
-        }
+        });
 
         // Free used memory
         this._processingTestPromises.length = 0;
+        this._testsToRun.length = 0;
+
+        shouldDisableBrowserSelectivity.cache.clear?.();
+        shouldDisableTestBySelectivity.cache.clear?.();
     }
 }

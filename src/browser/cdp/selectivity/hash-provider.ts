@@ -1,6 +1,7 @@
 import path from "node:path";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import pLimit from "p-limit";
 
 const calculateFileMd5Hash = (filePath: string): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -17,6 +18,7 @@ const calculateFileMd5Hash = (filePath: string): Promise<string> =>
 export class HashProvider {
     private static readonly _fileHashStore: Map<string, Promise<string>> = new Map();
     private static readonly _patternHashStore: Map<string, Promise<string>> = new Map();
+    private static readonly _limited = pLimit(10);
 
     async calculateForFile(filePath: string): Promise<string> {
         const cachedHash = HashProvider._fileHashStore.get(filePath);
@@ -25,7 +27,7 @@ export class HashProvider {
             return cachedHash;
         }
 
-        const hashPromise = calculateFileMd5Hash(filePath);
+        const hashPromise = HashProvider._limited(() => calculateFileMd5Hash(filePath));
 
         HashProvider._fileHashStore.set(filePath, hashPromise);
 
@@ -55,7 +57,7 @@ export class HashProvider {
             let promiseQue = Promise.resolve();
 
             for (const filePath of filesSorted) {
-                const fileHashPromise = calculateFileMd5Hash(filePath);
+                const fileHashPromise = HashProvider._limited(() => calculateFileMd5Hash(filePath));
                 const cwdRelativePath = path.relative(cwd, filePath);
                 const posixRelativePath =
                     path.sep === path.posix.sep

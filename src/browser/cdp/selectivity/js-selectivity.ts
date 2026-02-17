@@ -240,12 +240,12 @@ export class JSSelectivity {
                         );
                     }
 
-                    const sourceString = isCachedOnFs(source)
-                        ? await getCachedSelectivityFile(CacheType.Asset, sourceUrl)
-                        : source;
-                    const sourceMapsString = isCachedOnFs(sourceMaps)
-                        ? await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
-                        : sourceMaps;
+                    const [sourceString, sourceMapsString] = await Promise.all([
+                        isCachedOnFs(source) ? getCachedSelectivityFile(CacheType.Asset, sourceUrl) : source,
+                        isCachedOnFs(sourceMaps)
+                            ? getCachedSelectivityFile(CacheType.Asset, sourceMapUrl as string)
+                            : sourceMaps,
+                    ]);
 
                     if (!sourceString || !sourceMapsString) {
                         throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
@@ -261,7 +261,7 @@ export class JSSelectivity {
                         });
                     });
 
-                    const dependingSourceFiles = await extractSourceFilesDeps(
+                    const dependingSourceFiles = extractSourceFilesDeps(
                         sourceString,
                         sourceMapsString,
                         Array.from(startOffsetsSet),

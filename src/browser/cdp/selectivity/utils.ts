@@ -77,12 +77,12 @@ export const patchSourceMapSources = (sourceMap: RawSourceMap, sourceRoot?: stri
  * @param startOffsets Executed start offsets (v8 format)
  * @param sourceRoot Source root
  */
-export const extractSourceFilesDeps = async (
+export const extractSourceFilesDeps = (
     source: string,
     sourceMaps: string,
     startOffsets: number[],
     sourceRoot: string,
-): Promise<Set<string>> => {
+): Set<string> => {
     const dependantSourceFiles = new Set<string>();
     const sourceMapsParsed = patchSourceMapSources(JSON.parse(sourceMaps), sourceRoot);
 

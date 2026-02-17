@@ -46,6 +46,8 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             const hashPromise = provider.calculateForFile(filePath);
 
+            await new Promise(setImmediate);
+
             streamMock.emit("data", Buffer.from("chunk1"));
             streamMock.emit("data", Buffer.from("chunk2"));
             streamMock.emit("end");
@@ -67,6 +69,9 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             // First call
             const firstPromise = provider.calculateForFile(filePath);
+
+            await new Promise(setImmediate);
+
             streamMock.emit("data", Buffer.from("data"));
             streamMock.emit("end");
             const firstResult = await firstPromise;
@@ -86,6 +91,8 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             const hashPromise = provider.calculateForFile(filePath);
 
+            await new Promise(setImmediate);
+
             streamMock.emit("error", error);
 
             await assert.isRejected(
@@ -101,6 +108,8 @@ describe("CDP/Selectivity/HashProvider", () => {
             const promise1 = provider.calculateForFile(filePath);
             const promise2 = provider.calculateForFile(filePath);
             const promise3 = provider.calculateForFile(filePath);
+
+            await new Promise(setImmediate);
 
             streamMock.emit("data", Buffer.from("data"));
             streamMock.emit("end");
@@ -134,6 +143,8 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             const promise1 = provider.calculateForFile(filePath1);
             const promise2 = provider.calculateForFile(filePath2);
+
+            await new Promise(setImmediate);
 
             streamMock1.emit("data", Buffer.from("data1"));
             streamMock1.emit("end");
@@ -173,6 +184,8 @@ describe("CDP/Selectivity/HashProvider", () => {
 
             const promise1 = provider.calculateForFile(filePath1);
             const promise2 = provider.calculateForFile(filePath2);
+
+            await new Promise(setImmediate);
 
             streamMock1.emit("data", Buffer.from("data1"));
             streamMock1.emit("end");

@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import pLimit from "p-limit";
 import lockfile from "proper-lockfile";
 import fs from "fs-extra";
 import { getMD5 } from "../../../utils/crypto";
@@ -16,13 +17,16 @@ type CacheTypeValue = (typeof CacheType)[keyof typeof CacheType];
 const processStartTime = Number(new Date());
 const tmpDir = path.join(os.tmpdir(), SELECTIVITY_CACHE_DIRECTIRY);
 
+// https://nodejs.org/api/cli.html#uv_threadpool_sizesize
+const libUVLimited = pLimit((process.env.UV_THREADPOOL_SIZE && Number(process.env.UV_THREADPOOL_SIZE)) || 16);
+
 const ensureSelectivityCacheDirectory = async (): Promise<void> => {
-    await fs.ensureDir(tmpDir);
+    await libUVLimited(() => fs.ensureDir(tmpDir));
 };
 
 const wasModifiedAfterProcessStart = async (flagFilePath: string): Promise<boolean> => {
     try {
-        const stats = await fs.stat(flagFilePath);
+        const stats = await libUVLimited(() => fs.stat(flagFilePath));
         return stats.mtimeMs >= processStartTime;
     } catch {
         return false;
@@ -51,7 +55,7 @@ export const getCachedSelectivityFile = async (cacheType: CacheTypeValue, key: s
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
 
     if (await wasModifiedAfterProcessStart(flagFilePath)) {
-        const cacheContents = await fs.readFile(cacheFilePath, "utf8").catch(() => null);
+        const cacheContents = await libUVLimited(() => fs.readFile(cacheFilePath, "utf8")).catch(() => null);
 
         return cacheContents;
     }
@@ -60,7 +64,7 @@ export const getCachedSelectivityFile = async (cacheType: CacheTypeValue, key: s
     if (await wasModifiedAfterProcessStart(cacheFilePath)) {
         for (let i = 0; i < 10; i++) {
             if (await wasModifiedAfterProcessStart(flagFilePath)) {
-                const cacheContents = await fs.readFile(cacheFilePath, "utf8").catch(() => null);
+                const cacheContents = await libUVLimited(() => fs.readFile(cacheFilePath, "utf8")).catch(() => null);
 
                 return cacheContents;
             }
@@ -113,12 +117,12 @@ export const setCachedSelectivityFile = async (
     }
 
     try {
-        await fs.writeFile(cacheFilePath, utf8Contents, { encoding: "utf8" }).catch(cause => {
+        await libUVLimited(() => fs.writeFile(cacheFilePath, utf8Contents, { encoding: "utf8" })).catch(cause => {
             throw new Error(`Couldn't write cache to "${cacheFilePath}"`, { cause });
         });
 
         // Using "writeFile" to trigger "mtime" update even if file exists
-        await fs.writeFile(flagFilePath, "").catch(cause => {
+        await libUVLimited(() => fs.writeFile(flagFilePath, "")).catch(cause => {
             throw new Error(`Couldn't mark cache as fresh at "${cacheFilePath}"`, { cause });
         });
     } finally {
