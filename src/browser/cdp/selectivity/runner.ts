@@ -160,7 +160,8 @@ export class SelectivityRunner {
         const isSelectivityEnabledForBrowser = browserConfig.selectivity.enabled;
 
         // If selectivity is disabled for browser
-        if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity) {
+        // If test is disabled on its own (e.g plugin testplane/chunks) we dont waste our time calculating the deps.
+        if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity || test.disabled) {
             this._testsToRun.push([test, browserId]);
             return;
         }
