@@ -3,6 +3,7 @@ import proxyquire from "proxyquire";
 import type { SelectivityRunner } from "src/browser/cdp/selectivity/runner";
 import type { Test } from "src/types";
 import { MasterEvents } from "src/events";
+import { SelectivityMode, type SelectivityModeValue } from "src/config/types";
 
 describe("SelectivityRunner", () => {
     const sandbox = sinon.createSandbox();
@@ -13,9 +14,9 @@ describe("SelectivityRunner", () => {
     let getTestDependenciesReaderStub: SinonStub;
 
     let mainRunnerMock: { on: SinonStub };
-    let configMock: { forBrowser: SinonStub };
+    let configMock: { forBrowser: SinonStub; getBrowserIds: SinonStub };
     let runTestFnMock: SinonStub;
-    let hashReaderMock: { patternHasChanged: SinonStub; getTestChangedDeps: SinonStub };
+    let hashReaderMock: { patternHasChanged: SinonStub; getTestChangedDeps: SinonStub; clearCache: SinonStub };
     let hashWriterMock: { addTestDependencyHashes: SinonStub };
     let testDepsReaderMock: { getFor: SinonStub };
 
@@ -28,6 +29,7 @@ describe("SelectivityRunner", () => {
         hashReaderMock = {
             patternHasChanged: sandbox.stub(),
             getTestChangedDeps: sandbox.stub(),
+            clearCache: sandbox.stub(),
         };
         hashWriterMock = {
             addTestDependencyHashes: sandbox.stub(),
@@ -41,6 +43,7 @@ describe("SelectivityRunner", () => {
         };
         configMock = {
             forBrowser: sandbox.stub(),
+            getBrowserIds: sandbox.stub().returns([]),
         };
         runTestFnMock = sandbox.stub();
 
@@ -85,7 +88,7 @@ describe("SelectivityRunner", () => {
         let runner: SelectivityRunner;
         let browserConfigMock: {
             selectivity: {
-                enabled: boolean;
+                enabled: SelectivityModeValue;
                 testDependenciesPath: string;
                 compression: string;
                 disableSelectivityPatterns: string[];
@@ -96,7 +99,7 @@ describe("SelectivityRunner", () => {
         beforeEach(() => {
             browserConfigMock = {
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: [],
@@ -108,18 +111,21 @@ describe("SelectivityRunner", () => {
                 fullTitle: () => "Test Suite Test Case",
             } as Test;
 
+            configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.returns(browserConfigMock);
             runner = new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock);
         });
 
-        it("should run test if selectivity is disabled for browser", async () => {
-            browserConfigMock.selectivity.enabled = false;
+        [SelectivityMode.Disabled, SelectivityMode.WriteOnly].forEach(mode => {
+            it(`should run test if selectivity mode is ${mode}`, async () => {
+                browserConfigMock.selectivity.enabled = mode;
 
-            runner.startTestCheckToRun(testMock, "chrome");
-            await runner.runNecessaryTests();
+                runner.startTestCheckToRun(testMock, "chrome");
+                await runner.runNecessaryTests();
 
-            assert.calledOnce(runTestFnMock);
-            assert.calledWith(runTestFnMock, testMock, "chrome");
+                assert.calledOnce(runTestFnMock);
+                assert.calledWith(runTestFnMock, testMock, "chrome");
+            });
         });
 
         it("should run test if shouldDisableSelectivity option is true", async () => {
@@ -157,6 +163,7 @@ describe("SelectivityRunner", () => {
             browserConfigMock.selectivity.enabled = true;
             browserConfigMock.selectivity.disableSelectivityPatterns = ["src/**/*.js"];
             hashReaderMock.patternHasChanged.resolves(false);
+            configMock.getBrowserIds.returns(["chrome"]);
 
             const testDeps = { css: [], js: ["src/app.js"], modules: [] };
             testDepsReaderMock.getFor.resolves(testDeps);
@@ -173,7 +180,6 @@ describe("SelectivityRunner", () => {
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, disabledTestMock, "chrome");
             assert.notCalled(getTestDependenciesReaderStub);
-            assert.notCalled(getHashReaderStub);
         });
 
         it("should run test if browser selectivity is disabled due to no patterns", async () => {
@@ -318,7 +324,7 @@ describe("SelectivityRunner", () => {
         it("should handle different browsers separately", async () => {
             const chromeConfig = {
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/chrome",
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
@@ -326,7 +332,7 @@ describe("SelectivityRunner", () => {
             };
             const firefoxConfig = {
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/firefox",
                     compression: "gz",
                     disableSelectivityPatterns: ["test/**/*.js"],
@@ -366,7 +372,7 @@ describe("SelectivityRunner", () => {
         it("should wait for all processing tests to complete", async () => {
             const browserConfigMock = {
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: [],
@@ -378,6 +384,7 @@ describe("SelectivityRunner", () => {
                 fullTitle: () => "Test Suite Test Case",
             } as Test;
 
+            configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.returns(browserConfigMock);
 
             const testDeps = { css: [], js: ["src/app.js"], modules: [] };

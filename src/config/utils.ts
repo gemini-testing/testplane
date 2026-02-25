@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { ConfigParsed } from "./types";
+import { ConfigParsed, SelectivityMode, SelectivityModeValue } from "./types";
 
 type ValueType = "string" | "number" | "boolean" | "object" | "undefined" | "function";
 
@@ -100,16 +100,21 @@ export const addUserAgentToArgs = (config: ConfigParsed): ConfigParsed => {
     return config;
 };
 
-export const extractSelectivityEnabledEnvVariable = (envPrefixes: string[] = []): { enabled?: boolean } => {
+export const extractSelectivityEnabledEnvVariable = (
+    envPrefixes: string[] = [],
+): { enabled?: SelectivityModeValue } => {
     for (const envPrefix of envPrefixes) {
         const envName = envPrefix + "selectivity_enabled";
 
-        if (process.env[envName] === String(true)) {
-            return { enabled: true };
-        }
-
-        if (process.env[envName] === String(false)) {
-            return { enabled: false };
+        switch (process.env[envName]) {
+            case String(SelectivityMode.Enabled):
+                return { enabled: SelectivityMode.Enabled };
+            case String(SelectivityMode.Disabled):
+                return { enabled: SelectivityMode.Disabled };
+            case String(SelectivityMode.ReadOnly):
+                return { enabled: SelectivityMode.ReadOnly };
+            case String(SelectivityMode.WriteOnly):
+                return { enabled: SelectivityMode.WriteOnly };
         }
     }
 

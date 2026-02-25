@@ -248,5 +248,53 @@ describe("worker/runner", () => {
                 browserId: "bro",
             });
         });
+
+        it("should run with dependency collecting if selectivity mode is write-only", async () => {
+            const runner = mkRunner_({
+                config: makeConfigStub({
+                    system: { testRunEnv: NODEJS_TEST_RUN_ENV },
+                    selectivity: { enabled: "write-only" },
+                }),
+            });
+            await runner.runTest(null, { file: "some/file.js", browserId: "bro" });
+
+            assert.calledOnce(runWithTestplaneDependenciesCollecting);
+            assert.calledOnceWith(CachingTestParser.prototype.parse, {
+                file: "some/file.js",
+                browserId: "bro",
+            });
+        });
+
+        it("should not run with dependency collecting if selectivity is disabled", async () => {
+            const runner = mkRunner_({
+                config: makeConfigStub({
+                    system: { testRunEnv: NODEJS_TEST_RUN_ENV },
+                    selectivity: { enabled: false },
+                }),
+            });
+            await runner.runTest(null, { file: "some/file.js", browserId: "bro" });
+
+            assert.notCalled(runWithTestplaneDependenciesCollecting);
+            assert.calledOnceWith(CachingTestParser.prototype.parse, {
+                file: "some/file.js",
+                browserId: "bro",
+            });
+        });
+
+        it("should not run with dependency collecting if selectivity mode is read-only", async () => {
+            const runner = mkRunner_({
+                config: makeConfigStub({
+                    system: { testRunEnv: NODEJS_TEST_RUN_ENV },
+                    selectivity: { enabled: "read-only" },
+                }),
+            });
+            await runner.runTest(null, { file: "some/file.js", browserId: "bro" });
+
+            assert.notCalled(runWithTestplaneDependenciesCollecting);
+            assert.calledOnceWith(CachingTestParser.prototype.parse, {
+                file: "some/file.js",
+                browserId: "bro",
+            });
+        });
     });
 });

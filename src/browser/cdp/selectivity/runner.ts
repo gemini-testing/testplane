@@ -9,11 +9,12 @@ import type { Test, TestDepsContext, TestDepsData } from "../../../types";
 import { MasterEvents } from "../../../events";
 import { getHashWriter } from "./hash-writer";
 import { getTestDependenciesReader } from "./test-dependencies-reader";
+import { selectivityShouldRead } from "./modes";
 
 /** Called at the start of testplane run per each browser */
 const shouldDisableBrowserSelectivity = _.memoize(
     async (config: BrowserConfig, browserId: string): Promise<boolean> => {
-        if (!config.selectivity.enabled) {
+        if (!selectivityShouldRead(config.selectivity.enabled)) {
             return true;
         }
 
@@ -60,8 +61,9 @@ const shouldDisableBrowserSelectivity = _.memoize(
     },
     config => {
         const { enabled, testDependenciesPath, compression, disableSelectivityPatterns } = config.selectivity;
-        return enabled
-            ? enabled + "#" + testDependenciesPath + "#" + compression + "#" + disableSelectivityPatterns.join("#")
+
+        return selectivityShouldRead(enabled)
+            ? testDependenciesPath + "#" + compression + "#" + disableSelectivityPatterns.join("#")
             : "";
     },
 );
@@ -70,7 +72,7 @@ const shouldDisableTestBySelectivity = _.memoize(
     async (config: BrowserConfig, test: Test): Promise<boolean> => {
         const { enabled, testDependenciesPath, compression } = config.selectivity;
 
-        if (!enabled) {
+        if (!selectivityShouldRead(enabled)) {
             return false;
         }
 
@@ -99,7 +101,7 @@ const shouldDisableTestBySelectivity = _.memoize(
     (config, test) => {
         const { enabled, testDependenciesPath, compression } = config.selectivity;
 
-        return enabled ? enabled + "#" + testDependenciesPath + "#" + compression + "#" + test.id : "";
+        return selectivityShouldRead(enabled) ? testDependenciesPath + "#" + compression + "#" + test.id : "";
     },
 );
 
@@ -157,11 +159,11 @@ export class SelectivityRunner {
 
     startTestCheckToRun(test: Test, browserId: string): void {
         const browserConfig = this._config.forBrowser(browserId);
-        const isSelectivityEnabledForBrowser = browserConfig.selectivity.enabled;
+        const shouldSelectivelySkipTests = selectivityShouldRead(browserConfig.selectivity.enabled);
 
         // If selectivity is disabled for browser
         // If test is disabled on its own (e.g plugin testplane/chunks) we dont waste our time calculating the deps.
-        if (!isSelectivityEnabledForBrowser || this._opts?.shouldDisableSelectivity || test.disabled) {
+        if (!shouldSelectivelySkipTests || this._opts?.shouldDisableSelectivity || test.disabled) {
             this._testsToRun.push([test, browserId]);
             return;
         }
@@ -197,6 +199,10 @@ export class SelectivityRunner {
 
         shouldDisableBrowserSelectivity.cache.clear?.();
         shouldDisableTestBySelectivity.cache.clear?.();
-        getHashReader(this._config.selectivity.testDependenciesPath, this._config.selectivity.compression).clearCache();
+        this._config.getBrowserIds().forEach(browserId => {
+            const { selectivity } = this._config.forBrowser(browserId);
+
+            getHashReader(selectivity.testDependenciesPath, selectivity.compression).clearCache();
+        });
     }
 }

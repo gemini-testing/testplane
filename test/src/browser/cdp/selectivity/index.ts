@@ -2,6 +2,7 @@ import sinon, { SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import type { ExistingBrowser } from "src/browser/existing-browser";
 import type { Test } from "src/types";
+import { SelectivityMode, type SelectivityModeValue } from "src/config/types";
 
 describe("CDP/Selectivity", () => {
     const sandbox = sinon.createSandbox();
@@ -27,7 +28,7 @@ describe("CDP/Selectivity", () => {
     let browserMock: {
         config: {
             selectivity: {
-                enabled: boolean;
+                enabled: SelectivityModeValue;
                 sourceRoot: string;
                 testDependenciesPath: string;
                 compression: "none";
@@ -82,7 +83,7 @@ describe("CDP/Selectivity", () => {
         browserMock = {
             config: {
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     sourceRoot: "/test/source-root",
                     testDependenciesPath: "/test/dependencies",
                     compression: "none",
@@ -125,17 +126,19 @@ describe("CDP/Selectivity", () => {
     });
 
     describe("startSelectivity", () => {
-        it("should return no-op function if selectivity is disabled", async () => {
-            browserMock.config.selectivity.enabled = false;
+        [SelectivityMode.Disabled, SelectivityMode.ReadOnly].forEach(mode => {
+            it(`should return no-op function if selectivity mode is ${mode}`, async () => {
+                browserMock.config.selectivity.enabled = mode;
 
-            const stopFn = await startSelectivity(browserMock as unknown as ExistingBrowser);
+                const stopFn = await startSelectivity(browserMock as unknown as ExistingBrowser);
 
-            assert.isFunction(stopFn);
+                assert.isFunction(stopFn);
 
-            await stopFn({ id: "test", browserId: "chrome" } as Test, true);
+                await stopFn({ id: "test", browserId: "chrome" } as Test, true);
 
-            assert.notCalled(CSSSelectivityStub);
-            assert.notCalled(JSSelectivityStub);
+                assert.notCalled(CSSSelectivityStub);
+                assert.notCalled(JSSelectivityStub);
+            });
         });
 
         it("should return no-op function if browser is not Chromium", async () => {
@@ -299,44 +302,46 @@ describe("CDP/Selectivity", () => {
             };
         });
 
-        it("should skip browsers with selectivity disabled", async () => {
-            configMock.getBrowserIds.returns(["chrome", "firefox"]);
-            configMock.forBrowser
-                .withArgs("chrome")
-                .returns({
-                    selectivity: {
-                        enabled: false,
-                        testDependenciesPath: "/test/path",
-                        compression: "none",
-                        disableSelectivityPatterns: ["src/**/*.js"],
-                    },
-                })
-                .withArgs("firefox")
-                .returns({
-                    selectivity: {
-                        enabled: true,
-                        testDependenciesPath: "/test/path",
-                        compression: "none",
-                        disableSelectivityPatterns: ["src/**/*.js"],
-                    },
-                });
+        [SelectivityMode.Disabled, SelectivityMode.ReadOnly].forEach(mode => {
+            it(`should skip browsers with selectivity mode ${mode}`, async () => {
+                configMock.getBrowserIds.returns(["chrome", "firefox"]);
+                configMock.forBrowser
+                    .withArgs("chrome")
+                    .returns({
+                        selectivity: {
+                            enabled: mode,
+                            testDependenciesPath: "/test/path",
+                            compression: "none",
+                            disableSelectivityPatterns: ["src/**/*.js"],
+                        },
+                    })
+                    .withArgs("firefox")
+                    .returns({
+                        selectivity: {
+                            enabled: SelectivityMode.Enabled,
+                            testDependenciesPath: "/test/path",
+                            compression: "none",
+                            disableSelectivityPatterns: ["src/**/*.js"],
+                        },
+                    });
 
-            hashReaderMock.patternHasChanged.resolves(true);
+                hashReaderMock.patternHasChanged.resolves(true);
 
-            await updateSelectivityHashes(configMock as any);
+                await updateSelectivityHashes(configMock as any);
 
-            assert.calledOnce(getHashReaderStub); // Only for firefox
-            assert.calledWith(getHashReaderStub, "/test/path", "none");
-            assert.calledOnce(hashWriterMock.addPatternDependencyHash);
-            assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
-            assert.calledOnce(hashWriterMock.commit);
+                assert.calledOnce(getHashReaderStub); // Only for firefox
+                assert.calledWith(getHashReaderStub, "/test/path", "none");
+                assert.calledOnce(hashWriterMock.addPatternDependencyHash);
+                assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
+                assert.calledOnce(hashWriterMock.commit);
+            });
         });
 
         it("should update hashes for changed patterns", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/path",
                     compression: "gz",
                     disableSelectivityPatterns: ["pattern1", "pattern2", "pattern3"],
@@ -365,7 +370,7 @@ describe("CDP/Selectivity", () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.Enabled,
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: ["pattern1", "pattern2"],
@@ -386,7 +391,7 @@ describe("CDP/Selectivity", () => {
                 .withArgs("chrome")
                 .returns({
                     selectivity: {
-                        enabled: true,
+                        enabled: SelectivityMode.Enabled,
                         testDependenciesPath: "/test/chrome",
                         compression: "none",
                         disableSelectivityPatterns: ["chrome-pattern"],
@@ -395,7 +400,7 @@ describe("CDP/Selectivity", () => {
                 .withArgs("firefox")
                 .returns({
                     selectivity: {
-                        enabled: true,
+                        enabled: SelectivityMode.Enabled,
                         testDependenciesPath: "/test/firefox",
                         compression: "gz",
                         disableSelectivityPatterns: ["firefox-pattern"],
@@ -413,25 +418,24 @@ describe("CDP/Selectivity", () => {
             assert.calledTwice(hashWriterMock.commit);
         });
 
-        it("should throw error with cause when commit fails", async () => {
+        it("should update hashes for WriteOnly mode", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
                 selectivity: {
-                    enabled: true,
+                    enabled: SelectivityMode.WriteOnly,
                     testDependenciesPath: "/test/path",
                     compression: "none",
-                    disableSelectivityPatterns: ["pattern1"],
+                    disableSelectivityPatterns: ["src/**/*.js"],
                 },
             });
 
             hashReaderMock.patternHasChanged.resolves(true);
-            const commitError = new Error("Failed to write file");
-            hashWriterMock.commit.rejects(commitError);
 
-            await assert.isRejected(
-                updateSelectivityHashes(configMock as any),
-                /Selectivity: couldn't save test dependencies hash/,
-            );
+            await updateSelectivityHashes(configMock as any);
+
+            assert.calledOnce(hashWriterMock.addPatternDependencyHash);
+            assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
+            assert.calledOnce(hashWriterMock.commit);
         });
     });
 });

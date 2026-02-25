@@ -13,6 +13,7 @@ const {
 } = require("../../browser/cdp/selectivity/testplane-selectivity");
 const ipc = require("../../utils/ipc");
 const { TEST_ASSIGNED_TO_WORKER } = require("../../constants/process-messages");
+const { selectivityShouldWrite } = require("../../browser/cdp/selectivity/modes");
 
 module.exports = class Runner extends AsyncEmitter {
     static create(config) {
@@ -55,13 +56,14 @@ module.exports = class Runner extends AsyncEmitter {
             attempt,
         });
 
-        const selectivityEnabled = config.selectivity && config.selectivity.enabled && isRunInNodeJsEnv(this._config);
+        const shouldRecordSelectivityDeps =
+            config.selectivity && selectivityShouldWrite(config.selectivity.enabled) && isRunInNodeJsEnv(this._config);
 
         const prepareParseAndRun = async () => {
             runner.prepareBrowser({ sessionId, sessionCaps, sessionOpts, state });
 
             const readTestsFn = () => this._testParser.parse({ file, browserId });
-            const tests = selectivityEnabled
+            const tests = shouldRecordSelectivityDeps
                 ? await readTestFileWithTestplaneDependenciesCollecting(file, readTestsFn)
                 : await readTestsFn();
 
@@ -72,6 +74,8 @@ module.exports = class Runner extends AsyncEmitter {
             return runner.run();
         };
 
-        return selectivityEnabled ? runWithTestplaneDependenciesCollecting(prepareParseAndRun) : prepareParseAndRun();
+        return shouldRecordSelectivityDeps
+            ? runWithTestplaneDependenciesCollecting(prepareParseAndRun)
+            : prepareParseAndRun();
     }
 };
