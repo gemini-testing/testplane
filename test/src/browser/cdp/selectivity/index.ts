@@ -412,5 +412,26 @@ describe("CDP/Selectivity", () => {
             assert.calledTwice(hashWriterMock.addPatternDependencyHash);
             assert.calledTwice(hashWriterMock.commit);
         });
+
+        it("should throw error with cause when commit fails", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: ["pattern1"],
+                },
+            });
+
+            hashReaderMock.patternHasChanged.resolves(true);
+            const commitError = new Error("Failed to write file");
+            hashWriterMock.commit.rejects(commitError);
+
+            await assert.isRejected(
+                updateSelectivityHashes(configMock as any),
+                /Selectivity: couldn't save test dependencies hash/,
+            );
+        });
     });
 });
