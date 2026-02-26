@@ -39,7 +39,7 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
             }
         }
 
-        await hashWriter.commit();
+        await hashWriter.save();
     }
 };
 

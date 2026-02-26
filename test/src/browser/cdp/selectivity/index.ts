@@ -20,7 +20,7 @@ describe("CDP/Selectivity", () => {
     let cssSelectivityMock: { start: SinonStub; stop: SinonStub };
     let jsSelectivityMock: { start: SinonStub; stop: SinonStub };
     let testDependenciesWriterMock: { saveFor: SinonStub };
-    let hashWriterMock: { addTestDependencyHashes: SinonStub; addPatternDependencyHash: SinonStub; commit: SinonStub };
+    let hashWriterMock: { addTestDependencyHashes: SinonStub; addPatternDependencyHash: SinonStub; save: SinonStub };
     let hashReaderMock: { patternHasChanged: SinonStub; getTestChangedDeps: SinonStub };
     let testDepsReaderMock: { getFor: SinonStub };
 
@@ -56,7 +56,7 @@ describe("CDP/Selectivity", () => {
         hashWriterMock = {
             addTestDependencyHashes: sandbox.stub(),
             addPatternDependencyHash: sandbox.stub(),
-            commit: sandbox.stub().resolves(),
+            save: sandbox.stub().resolves(),
         };
         hashReaderMock = {
             patternHasChanged: sandbox.stub(),
@@ -213,7 +213,7 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(browserMock.cdp!.target.detachFromTarget, "session-123");
             assert.notCalled(testDependenciesWriterMock.saveFor);
             assert.notCalled(hashWriterMock.addTestDependencyHashes);
-            assert.notCalled(hashWriterMock.commit);
+            assert.notCalled(hashWriterMock.save);
         });
 
         it("should stop selectivity and save dependencies when drop is false", async () => {
@@ -238,7 +238,7 @@ describe("CDP/Selectivity", () => {
 
             assert.notCalled(testDependenciesWriterMock.saveFor);
             assert.notCalled(hashWriterMock.addTestDependencyHashes);
-            assert.notCalled(hashWriterMock.commit);
+            assert.notCalled(hashWriterMock.save);
         });
 
         it("should handle CDP detach errors gracefully", async () => {
@@ -329,7 +329,7 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(getHashReaderStub, "/test/path", "none");
             assert.calledOnce(hashWriterMock.addPatternDependencyHash);
             assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
-            assert.calledOnce(hashWriterMock.commit);
+            assert.calledOnce(hashWriterMock.save);
         });
 
         it("should update hashes for changed patterns", async () => {
@@ -358,7 +358,7 @@ describe("CDP/Selectivity", () => {
             assert.calledTwice(hashWriterMock.addPatternDependencyHash);
             assert.calledWith(hashWriterMock.addPatternDependencyHash.firstCall, "pattern1");
             assert.calledWith(hashWriterMock.addPatternDependencyHash.secondCall, "pattern3");
-            assert.calledOnce(hashWriterMock.commit);
+            assert.calledOnce(hashWriterMock.save);
         });
 
         it("should not add hashes for unchanged patterns", async () => {
@@ -377,7 +377,7 @@ describe("CDP/Selectivity", () => {
             await updateSelectivityHashes(configMock as any);
 
             assert.notCalled(hashWriterMock.addPatternDependencyHash);
-            assert.calledOnce(hashWriterMock.commit); // Still commits even if no patterns changed
+            assert.calledOnce(hashWriterMock.save); // Still saves even if no patterns changed
         });
 
         it("should handle multiple browsers", async () => {
@@ -410,7 +410,7 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(getHashReaderStub.firstCall, "/test/chrome", "none");
             assert.calledWith(getHashReaderStub.secondCall, "/test/firefox", "gz");
             assert.calledTwice(hashWriterMock.addPatternDependencyHash);
-            assert.calledTwice(hashWriterMock.commit);
+            assert.calledTwice(hashWriterMock.save);
         });
     });
 });
