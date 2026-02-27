@@ -18,7 +18,7 @@ const calculateFileMd5Hash = (filePath: string): Promise<string> =>
 export class HashProvider {
     private static readonly _fileHashStore: Map<string, Promise<string>> = new Map();
     private static readonly _patternHashStore: Map<string, Promise<string>> = new Map();
-    private static readonly _limited = pLimit(10);
+    private static readonly _limited = pLimit(16);
 
     async calculateForFile(filePath: string): Promise<string> {
         const cachedHash = HashProvider._fileHashStore.get(filePath);

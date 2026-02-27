@@ -119,7 +119,7 @@ export class SelectivityRunner {
     private readonly _opts?: SelectivityRunnerOptions;
     private readonly _browserSelectivityDisabledCache: Record<string, void | Promise<boolean>> = {};
     private readonly _testsToRun: [Test, string][] = [];
-    private readonly _processingTestLimit = pLimit(10);
+    private readonly _processingTestLimit = pLimit(16);
     private readonly _processingTestPromises: Array<Promise<void>> = [];
 
     static create(...args: ConstructorParameters<typeof this>): SelectivityRunner {
@@ -197,5 +197,6 @@ export class SelectivityRunner {
 
         shouldDisableBrowserSelectivity.cache.clear?.();
         shouldDisableTestBySelectivity.cache.clear?.();
+        getHashReader(this._config.selectivity.testDependenciesPath, this._config.selectivity.compression).clearCache();
     }
 }

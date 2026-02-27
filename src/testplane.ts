@@ -208,7 +208,9 @@ export class Testplane extends BaseTestplane {
         );
 
         if (!shouldDisableSelectivity && !this.isFailed()) {
-            await updateSelectivityHashes(this.config);
+            await updateSelectivityHashes(this.config).catch(err => {
+                console.error("Skipping selectivity state update because of an error:", err);
+            });
         }
 
         if (this.config.afterAll) {

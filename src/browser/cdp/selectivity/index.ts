@@ -39,7 +39,11 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
             }
         }
 
-        await hashWriter.commit();
+        try {
+            await hashWriter.commit();
+        } catch (cause) {
+            throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
+        }
     }
 };
 
