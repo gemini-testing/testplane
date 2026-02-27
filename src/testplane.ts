@@ -18,7 +18,7 @@ import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
 import { MasterEventHandler, Test, TestResult } from "./types";
 import { preloadWebdriverIO } from "./utils/preload-utils";
-import { updateSelectivityHashes } from "./browser/cdp/selectivity";
+import { clearUnusedSelectivityDumps, updateSelectivityHashes } from "./browser/cdp/selectivity";
 import { TagFilter } from "./utils/cli";
 import { ViteServer } from "./runner/browser-env/vite/server";
 import { getGlobalFilesToRemove, initGlobalFilesToRemove } from "./globalFilesToRemove";
@@ -208,7 +208,18 @@ export class Testplane extends BaseTestplane {
         );
 
         if (!shouldDisableSelectivity && !this.isFailed()) {
-            await updateSelectivityHashes(this.config);
+            const [updateResult, clearResult] = await Promise.allSettled([
+                updateSelectivityHashes(this.config),
+                clearUnusedSelectivityDumps(this.config),
+            ]);
+
+            if (updateResult.status === "rejected") {
+                console.error("Couldn't update selectivity state: ", updateResult.reason);
+            }
+
+            if (clearResult.status === "rejected") {
+                console.error("Couldn't clear stale selectivity files: ", clearResult.reason);
+            }
         }
 
         if (this.config.afterAll) {
