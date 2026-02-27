@@ -1,9 +1,11 @@
+import path from "node:path";
+import fs from "fs-extra";
 import { CSSSelectivity } from "./css-selectivity";
 import { JSSelectivity } from "./js-selectivity";
 import type { ExistingBrowser } from "../../existing-browser";
 import { getTestDependenciesWriter } from "./test-dependencies-writer";
 import type { Test, TestDepsContext, TestDepsData } from "../../../types";
-import { mergeSourceDependencies, transformSourceDependencies } from "./utils";
+import { getSelectivityTestsPath, mergeSourceDependencies, transformSourceDependencies } from "./utils";
 import { getHashWriter } from "./hash-writer";
 import { Compression } from "./types";
 import { getCollectedTestplaneDependencies } from "./testplane-selectivity";
@@ -11,6 +13,7 @@ import { getHashReader } from "./hash-reader";
 import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
 import { selectivityShouldWrite } from "./modes";
+import { debugSelectivity } from "./debug";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -45,6 +48,71 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
         } catch (cause) {
             throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
         }
+    }
+};
+
+export const clearUnusedSelectivityDumps = async (config: Config): Promise<void> => {
+    const browserIds = config.getBrowserIds();
+    const selectivityRoots: string[] = [];
+
+    for (const browserId of browserIds) {
+        const browserConfig = config.forBrowser(browserId);
+        const { enabled, testDependenciesPath } = browserConfig.selectivity;
+
+        if (enabled && !selectivityRoots.includes(testDependenciesPath)) {
+            selectivityRoots.push(testDependenciesPath);
+        }
+    }
+
+    let filesTotal = 0;
+    let filesDeleted = 0;
+
+    // eslint-disable-next-line no-bitwise
+    const rwMode = fs.constants.R_OK | fs.constants.W_OK;
+
+    await Promise.all(
+        selectivityRoots.map(async selectivityRoot => {
+            const testsPath = getSelectivityTestsPath(selectivityRoot);
+            const accessError = await fs.access(testsPath, rwMode).catch((err: Error) => err);
+
+            if (accessError) {
+                if (!("code" in accessError && accessError.code === "ENOENT")) {
+                    debugSelectivity(`Couldn't access "${testsPath}" to clear stale files: %O`, accessError);
+                }
+
+                return;
+            }
+
+            const testsFileNames = await fs.readdir(testsPath);
+
+            filesTotal += testsFileNames.length;
+
+            for (const testFileName of testsFileNames) {
+                const filePath = path.join(testsPath, testFileName);
+                const fileStat = await fs.stat(filePath).catch(() => null);
+
+                if (!fileStat) {
+                    debugSelectivity(`Couldn't access file "${filePath}" to check if it was used. Skipping`);
+                    continue;
+                }
+
+                // File was not used in this run
+                if (fileStat.atimeMs < performance.timeOrigin && fileStat.isFile()) {
+                    await fs
+                        .unlink(filePath)
+                        .then(() => {
+                            filesDeleted++;
+                        })
+                        .catch(err => {
+                            debugSelectivity(`Couldn't remove stale file "${filePath}": %O`, err);
+                        });
+                }
+            }
+        }),
+    );
+
+    if (filesDeleted) {
+        debugSelectivity(`Out of ${filesTotal} files, ${filesDeleted} were considered as outdated and deleted`);
     }
 };
 

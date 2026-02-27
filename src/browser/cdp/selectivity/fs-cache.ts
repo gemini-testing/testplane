@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import pLimit from "p-limit";
 import lockfile from "proper-lockfile";
 import fs from "fs-extra";
@@ -14,7 +15,6 @@ export const CacheType = {
 type CacheTypeValue = (typeof CacheType)[keyof typeof CacheType];
 
 // Cache is considered fresh if it was created after process start
-const processStartTime = Number(new Date());
 const tmpDir = path.join(os.tmpdir(), SELECTIVITY_CACHE_DIRECTIRY);
 
 // https://nodejs.org/api/cli.html#uv_threadpool_sizesize
@@ -27,7 +27,7 @@ const ensureSelectivityCacheDirectory = async (): Promise<void> => {
 const wasModifiedAfterProcessStart = async (flagFilePath: string): Promise<boolean> => {
     try {
         const stats = await libUVLimited(() => fs.stat(flagFilePath));
-        return stats.mtimeMs >= processStartTime;
+        return stats.mtimeMs >= performance.timeOrigin;
     } catch {
         return false;
     }

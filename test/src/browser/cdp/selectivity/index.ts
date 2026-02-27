@@ -8,6 +8,7 @@ describe("CDP/Selectivity", () => {
     const sandbox = sinon.createSandbox();
     let startSelectivity: typeof import("src/browser/cdp/selectivity/index").startSelectivity;
     let updateSelectivityHashes: typeof import("src/browser/cdp/selectivity/index").updateSelectivityHashes;
+    let clearUnusedSelectivityDumps: typeof import("src/browser/cdp/selectivity/index").clearUnusedSelectivityDumps;
 
     let CSSSelectivityStub: SinonStub;
     let JSSelectivityStub: SinonStub;
@@ -17,6 +18,14 @@ describe("CDP/Selectivity", () => {
     let getTestDependenciesReaderStub: SinonStub;
     let transformSourceDependenciesStub: SinonStub;
     let debugSelectivityStub: SinonStub;
+    let getSelectivityTestsPathStub: SinonStub;
+    let fsStub: {
+        access: SinonStub;
+        readdir: SinonStub;
+        stat: SinonStub;
+        unlink: SinonStub;
+        constants: { R_OK: number; W_OK: number };
+    };
 
     let cssSelectivityMock: { start: SinonStub; stop: SinonStub };
     let jsSelectivityMock: { start: SinonStub; stop: SinonStub };
@@ -67,6 +76,14 @@ describe("CDP/Selectivity", () => {
             getFor: sandbox.stub(),
         };
 
+        fsStub = {
+            access: sandbox.stub().resolves(),
+            readdir: sandbox.stub().resolves([]),
+            stat: sandbox.stub().resolves(null),
+            unlink: sandbox.stub().resolves(),
+            constants: { R_OK: 4, W_OK: 2 },
+        };
+
         CSSSelectivityStub = sandbox.stub().returns(cssSelectivityMock);
         JSSelectivityStub = sandbox.stub().returns(jsSelectivityMock);
         getTestDependenciesWriterStub = sandbox.stub().returns(testDependenciesWriterMock);
@@ -79,6 +96,7 @@ describe("CDP/Selectivity", () => {
             modules: ["node_modules/react"],
         });
         debugSelectivityStub = sandbox.stub();
+        getSelectivityTestsPathStub = sandbox.stub().callsFake((path: string) => `${path}/tests`);
 
         browserMock = {
             config: {
@@ -113,12 +131,17 @@ describe("CDP/Selectivity", () => {
             "./hash-writer": { getHashWriter: getHashWriterStub },
             "./hash-reader": { getHashReader: getHashReaderStub },
             "./test-dependencies-reader": { getTestDependenciesReader: getTestDependenciesReaderStub },
-            "./utils": { transformSourceDependencies: transformSourceDependenciesStub },
+            "./utils": {
+                transformSourceDependencies: transformSourceDependenciesStub,
+                getSelectivityTestsPath: getSelectivityTestsPathStub,
+            },
             "./debug": { debugSelectivity: debugSelectivityStub },
+            "fs-extra": fsStub,
         });
 
         startSelectivity = proxyquiredModule.startSelectivity;
         updateSelectivityHashes = proxyquiredModule.updateSelectivityHashes;
+        clearUnusedSelectivityDumps = proxyquiredModule.clearUnusedSelectivityDumps;
     });
 
     afterEach(() => {
@@ -329,11 +352,10 @@ describe("CDP/Selectivity", () => {
 
                 await updateSelectivityHashes(configMock as any);
 
-            assert.calledOnce(getHashReaderStub); // Only for firefox
-            assert.calledWith(getHashReaderStub, "/test/path", "none");
-            assert.calledOnce(hashWriterMock.addPatternDependencyHash);
-            assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
-            assert.calledOnce(hashWriterMock.save);
+                assert.calledOnceWith(getHashReaderStub, "/test/path", "none"); // Only for firefox
+                assert.calledOnceWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
+                assert.calledOnce(hashWriterMock.save);
+            });
         });
 
         it("should update hashes for changed patterns", async () => {
@@ -432,9 +454,414 @@ describe("CDP/Selectivity", () => {
 
             await updateSelectivityHashes(configMock as any);
 
-            assert.calledOnce(hashWriterMock.addPatternDependencyHash);
-            assert.calledWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
-            assert.calledOnce(hashWriterMock.commit);
+            assert.calledOnceWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
+            assert.calledOnce(hashWriterMock.save);
+        });
+    });
+
+    describe("clearUnusedSelectivityDumps", () => {
+        let configMock: {
+            getBrowserIds: SinonStub;
+            forBrowser: SinonStub;
+        };
+        const performanceTimeOrigin = performance.timeOrigin;
+
+        beforeEach(() => {
+            configMock = {
+                getBrowserIds: sandbox.stub(),
+                forBrowser: sandbox.stub(),
+            };
+        });
+
+        it("should skip browsers with selectivity disabled", async () => {
+            configMock.getBrowserIds.returns(["chrome", "firefox"]);
+            configMock.forBrowser
+                .withArgs("chrome")
+                .returns({
+                    selectivity: {
+                        enabled: false,
+                        testDependenciesPath: "/test/chrome",
+                    },
+                })
+                .withArgs("firefox")
+                .returns({
+                    selectivity: {
+                        enabled: false,
+                        testDependenciesPath: "/test/firefox",
+                    },
+                });
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.notCalled(getSelectivityTestsPathStub);
+            assert.notCalled(fsStub.access);
+            assert.notCalled(fsStub.readdir);
+        });
+
+        it("should process single browser with selectivity enabled", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves([]);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnceWith(getSelectivityTestsPathStub, "/test/deps");
+            assert.calledOnceWith(fsStub.access, "/test/deps/tests", 6); // R_OK | W_OK = 4 | 2 = 6
+            assert.calledOnceWith(fsStub.readdir, "/test/deps/tests");
+        });
+
+        it("should process multiple browsers with same selectivity root only once", async () => {
+            configMock.getBrowserIds.returns(["chrome", "firefox"]);
+            configMock.forBrowser
+                .withArgs("chrome")
+                .returns({
+                    selectivity: {
+                        enabled: true,
+                        testDependenciesPath: "/test/shared",
+                    },
+                })
+                .withArgs("firefox")
+                .returns({
+                    selectivity: {
+                        enabled: true,
+                        testDependenciesPath: "/test/shared",
+                    },
+                });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves([]);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnceWith(getSelectivityTestsPathStub, "/test/shared");
+            assert.calledOnce(fsStub.access);
+            assert.calledOnce(fsStub.readdir);
+        });
+
+        it("should process multiple browsers with different selectivity roots", async () => {
+            configMock.getBrowserIds.returns(["chrome", "firefox"]);
+            configMock.forBrowser
+                .withArgs("chrome")
+                .returns({
+                    selectivity: {
+                        enabled: true,
+                        testDependenciesPath: "/test/chrome",
+                    },
+                })
+                .withArgs("firefox")
+                .returns({
+                    selectivity: {
+                        enabled: true,
+                        testDependenciesPath: "/test/firefox",
+                    },
+                });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves([]);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(getSelectivityTestsPathStub);
+            assert.calledWith(getSelectivityTestsPathStub.firstCall, "/test/chrome");
+            assert.calledWith(getSelectivityTestsPathStub.secondCall, "/test/firefox");
+            assert.calledTwice(fsStub.access);
+            assert.calledTwice(fsStub.readdir);
+        });
+
+        it("should skip silently if directory does not exist (ENOENT)", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            const enoentError = new Error("ENOENT: no such file or directory") as NodeJS.ErrnoException;
+            enoentError.code = "ENOENT";
+            fsStub.access.rejects(enoentError);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnce(fsStub.access);
+            assert.notCalled(fsStub.readdir);
+            assert.notCalled(debugSelectivityStub);
+        });
+
+        it("should log debug message for non-ENOENT access errors", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            const permissionError = new Error("EACCES: permission denied");
+            fsStub.access.rejects(permissionError);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnce(fsStub.access);
+            assert.notCalled(fsStub.readdir);
+            assert.calledOnceWith(
+                debugSelectivityStub,
+                sinon.match(/Couldn't access ".*" to clear stale files/),
+                permissionError,
+            );
+        });
+
+        it("should handle empty directory", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves([]);
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnce(fsStub.readdir);
+            assert.notCalled(fsStub.stat);
+            assert.notCalled(fsStub.unlink);
+            assert.notCalled(debugSelectivityStub);
+        });
+
+        it("should delete stale files", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["stale-test-1.json", "stale-test-2.json"]);
+            fsStub.stat.resolves({
+                atimeMs: performanceTimeOrigin - 10000,
+                isFile: () => true,
+            });
+            fsStub.unlink.resolves();
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(fsStub.stat);
+            assert.calledWith(fsStub.stat.firstCall, "/test/deps/tests/stale-test-1.json");
+            assert.calledWith(fsStub.stat.secondCall, "/test/deps/tests/stale-test-2.json");
+            assert.calledTwice(fsStub.unlink);
+            assert.calledWith(fsStub.unlink.firstCall, "/test/deps/tests/stale-test-1.json");
+            assert.calledWith(fsStub.unlink.secondCall, "/test/deps/tests/stale-test-2.json");
+            assert.calledOnceWith(
+                debugSelectivityStub,
+                sinon.match(/Out of 2 files, 2 were considered as outdated and deleted/),
+            );
+        });
+
+        it("should not delete fresh files", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["fresh-test-1.json", "fresh-test-2.json"]);
+            fsStub.stat.resolves({
+                atimeMs: performanceTimeOrigin + 5000,
+                isFile: () => true,
+            });
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(fsStub.stat);
+            assert.notCalled(fsStub.unlink);
+            assert.notCalled(debugSelectivityStub);
+        });
+
+        it("should handle mix of stale and fresh files", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["stale-test.json", "fresh-test.json", "another-stale.json"]);
+            fsStub.stat
+                .withArgs("/test/deps/tests/stale-test.json")
+                .resolves({
+                    atimeMs: performanceTimeOrigin - 10000,
+                    isFile: () => true,
+                })
+                .withArgs("/test/deps/tests/fresh-test.json")
+                .resolves({
+                    atimeMs: performanceTimeOrigin + 5000,
+                    isFile: () => true,
+                })
+                .withArgs("/test/deps/tests/another-stale.json")
+                .resolves({
+                    atimeMs: performanceTimeOrigin - 20000,
+                    isFile: () => true,
+                });
+            fsStub.unlink.resolves();
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledThrice(fsStub.stat);
+            assert.calledTwice(fsStub.unlink);
+            assert.calledWith(fsStub.unlink.firstCall, "/test/deps/tests/stale-test.json");
+            assert.calledWith(fsStub.unlink.secondCall, "/test/deps/tests/another-stale.json");
+            assert.calledOnceWith(
+                debugSelectivityStub,
+                sinon.match(/Out of 3 files, 2 were considered as outdated and deleted/),
+            );
+        });
+
+        it("should skip files when stat fails", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["test-1.json", "test-2.json"]);
+            fsStub.stat
+                .withArgs("/test/deps/tests/test-1.json")
+                .rejects(new Error("stat error"))
+                .withArgs("/test/deps/tests/test-2.json")
+                .resolves({
+                    atimeMs: performanceTimeOrigin - 10000,
+                    isFile: () => true,
+                });
+            fsStub.unlink.resolves();
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(fsStub.stat);
+            assert.calledOnceWith(fsStub.unlink, "/test/deps/tests/test-2.json");
+            assert.calledTwice(debugSelectivityStub);
+            assert.calledWith(
+                debugSelectivityStub.firstCall,
+                sinon.match(/Couldn't access file ".*" to check if it was used/),
+            );
+            assert.calledWith(
+                debugSelectivityStub.secondCall,
+                sinon.match(/Out of 2 files, 1 were considered as outdated and deleted/),
+            );
+        });
+
+        it("should handle unlink errors gracefully", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["stale-test-1.json", "stale-test-2.json"]);
+            fsStub.stat.resolves({
+                atimeMs: performanceTimeOrigin - 10000,
+                isFile: () => true,
+            });
+
+            const unlinkError = new Error("unlink error");
+            fsStub.unlink
+                .withArgs("/test/deps/tests/stale-test-1.json")
+                .rejects(unlinkError)
+                .withArgs("/test/deps/tests/stale-test-2.json")
+                .resolves();
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(fsStub.unlink);
+            assert.calledTwice(debugSelectivityStub);
+            assert.calledWith(
+                debugSelectivityStub.firstCall,
+                sinon.match(/Couldn't remove stale file ".*"/),
+                unlinkError,
+            );
+            assert.calledWith(
+                debugSelectivityStub.secondCall,
+                sinon.match(/Out of 2 files, 1 were considered as outdated and deleted/),
+            );
+        });
+
+        it("should not delete directories even if stale", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["stale-dir", "stale-file.json"]);
+            fsStub.stat
+                .withArgs("/test/deps/tests/stale-dir")
+                .resolves({
+                    atimeMs: performanceTimeOrigin - 10000,
+                    isFile: () => false,
+                })
+                .withArgs("/test/deps/tests/stale-file.json")
+                .resolves({
+                    atimeMs: performanceTimeOrigin - 10000,
+                    isFile: () => true,
+                });
+            fsStub.unlink.resolves();
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledTwice(fsStub.stat);
+            assert.calledOnceWith(fsStub.unlink, "/test/deps/tests/stale-file.json");
+            assert.calledOnceWith(
+                debugSelectivityStub,
+                sinon.match(/Out of 2 files, 1 were considered as outdated and deleted/),
+            );
+        });
+
+        it("should not log if no files were deleted", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                selectivity: {
+                    enabled: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            fsStub.access.resolves();
+            fsStub.readdir.resolves(["fresh-test.json"]);
+            fsStub.stat.resolves({
+                atimeMs: performanceTimeOrigin + 5000,
+                isFile: () => true,
+            });
+
+            await clearUnusedSelectivityDumps(configMock as any);
+
+            assert.calledOnce(fsStub.stat);
+            assert.notCalled(fsStub.unlink);
+            assert.notCalled(debugSelectivityStub);
         });
     });
 });
