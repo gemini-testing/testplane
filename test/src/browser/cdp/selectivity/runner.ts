@@ -153,6 +153,29 @@ describe("SelectivityRunner", () => {
             assert.calledWith(runTestFnMock, testMock, "chrome");
         });
 
+        it("should run test if test is already disabled", async () => {
+            browserConfigMock.selectivity.enabled = true;
+            browserConfigMock.selectivity.disableSelectivityPatterns = ["src/**/*.js"];
+            hashReaderMock.patternHasChanged.resolves(false);
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null); // No changes
+
+            const disabledTestMock = {
+                ...testMock,
+                disabled: true,
+            } as Test;
+
+            runner.startTestCheckToRun(disabledTestMock, "chrome");
+            await runner.runNecessaryTests();
+
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(runTestFnMock, disabledTestMock, "chrome");
+            assert.notCalled(getTestDependenciesReaderStub);
+            assert.notCalled(getHashReaderStub);
+        });
+
         it("should run test if browser selectivity is disabled due to no patterns", async () => {
             browserConfigMock.selectivity.disableSelectivityPatterns = [];
 
