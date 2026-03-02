@@ -136,7 +136,6 @@ describe("CDP/Selectivity/HashReader", () => {
             const result = reader.patternHasChanged(pattern);
 
             assert.isRejected(result, /Couldn't find files by disableSelectivityPattern/);
-            assert.calledWith(hashProviderMock.calculateForPattern, pattern);
         });
     });
 

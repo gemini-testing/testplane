@@ -268,15 +268,28 @@ type ReadinessProbeObj = {
 type ReadinessProbe = ReadinessProbeFn | ReadinessProbeObj;
 
 export enum TimeTravelMode {
-    // Record and save all test runs
+    /** @description Record and save all test runs */
     On = "on",
-    // Do not record any test runs
+    /** @description Do not record any test runs */
     Off = "off",
-    // Record and save all retries
+    /** @description Record and save all retries */
     RetriesOnly = "retries-only",
-    // Record all test runs, but save only last failed run
+    /** @description Record all test runs, but save only last failed run  */
     LastFailedRun = "last-failed-run",
 }
+
+export const SelectivityMode = {
+    /** @description Completely disables Testplane selectivity */
+    Disabled: false,
+    /** @description Skips running unchanged tests, does not update selectivity state after successful run */
+    ReadOnly: "read-only",
+    /** @description Runs unchanged tests, updates selectivity state after successful run */
+    WriteOnly: "write-only",
+    /** @description Skips running unchanged tests, updates selectivity state after successful run */
+    Enabled: true,
+} as const;
+
+export type SelectivityModeValue = (typeof SelectivityMode)[keyof typeof SelectivityMode];
 
 export interface TimeTravelConfig {
     mode: TimeTravelMode;
@@ -392,7 +405,7 @@ export interface CommonConfig {
     };
 
     selectivity: {
-        enabled: boolean;
+        enabled: SelectivityModeValue;
         sourceRoot: string;
         testDependenciesPath: string;
         compression: SelectivityCompressionType;

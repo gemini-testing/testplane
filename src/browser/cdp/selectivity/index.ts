@@ -10,6 +10,7 @@ import { getCollectedTestplaneDependencies } from "./testplane-selectivity";
 import { getHashReader } from "./hash-reader";
 import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
+import { selectivityShouldWrite } from "./modes";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -24,7 +25,7 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
         const browserConfig = config.forBrowser(browserId);
         const { enabled, testDependenciesPath, compression, disableSelectivityPatterns } = browserConfig.selectivity;
 
-        if (!enabled) {
+        if (!selectivityShouldWrite(enabled)) {
             continue;
         }
 
@@ -51,7 +52,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath } =
         browser.config.selectivity;
 
-    if (!enabled || !browser.publicAPI.isChromium) {
+    if (!selectivityShouldWrite(enabled) || !browser.publicAPI.isChromium) {
         return () => Promise.resolve();
     }
 
