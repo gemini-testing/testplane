@@ -7,6 +7,8 @@ import { CDPDebugger } from "./domains/debugger";
 import { CDPRuntime } from "./domains/runtime";
 import { CDPDom } from "./domains/dom";
 import { CDPCss } from "./domains/css";
+import { CDPNetwork } from "./domains/network";
+import { CDFetch } from "./domains/fetch";
 
 export class CDP {
     private readonly _connection: CDPConnection;
@@ -16,6 +18,8 @@ export class CDP {
     public readonly runtime: CDPRuntime;
     public readonly dom: CDPDom;
     public readonly css: CDPCss;
+    public readonly network: CDPNetwork;
+    public readonly fetch: CDFetch;
 
     static async create(browser: Browser): Promise<CDP | null> {
         // "isChrome" is "true" when automationProtocol is "devtools"
@@ -38,6 +42,8 @@ export class CDP {
         this.runtime = new CDPRuntime(connection);
         this.dom = new CDPDom(connection);
         this.css = new CDPCss(connection);
+        this.network = new CDPNetwork();
+        this.fetch = new CDFetch();
         this._connection.onEventMessage = this._onEventMessage.bind(this);
     }
 
@@ -77,6 +83,12 @@ export class CDP {
                 break;
             case "CSS":
                 this.css.emit(method, cdpEventMessage.params);
+                break;
+            case "Network":
+                this.network.emit(method, cdpEventMessage.params);
+                break;
+            case "Fetch":
+                this.fetch.emit(method, cdpEventMessage.params);
                 break;
         }
     }
