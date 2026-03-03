@@ -34,7 +34,7 @@ export type {
     TestTag,
 } from "./types";
 export type { Config } from "./config";
-export { TimeTravelMode } from "./config";
+export { TimeTravelMode, SelectivityMode } from "./config";
 export type { ConfigInput, AssertViewOpts } from "./config/types";
 export type {
     TestCollection,

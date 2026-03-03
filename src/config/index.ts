@@ -7,7 +7,7 @@ import * as logger from "../utils/logger";
 import { ConfigInput, ConfigParsed } from "./types";
 import { addUserAgentToArgs } from "./utils";
 
-export { TimeTravelMode } from "./types";
+export { TimeTravelMode, SelectivityMode } from "./types";
 
 export class Config {
     configPath!: string;
