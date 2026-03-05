@@ -7,7 +7,13 @@ import * as logger from "../../../utils/logger";
 import type { CDPRuntime } from "../domains/runtime";
 import type { CDPScriptCoverage, CDPSessionId } from "../types";
 import { softFileURLToPath } from "../../../utils/fs";
-import type { CachedOnFs, HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
+import type {
+    CachedOnFs,
+    HashFileContents,
+    NormalizedDependencies,
+    SelectivityCompressionType,
+    TestDependenciesFileContents,
+} from "./types";
 import { WEBPACK_PROTOCOL } from "./constants";
 import { readJsonWithCompression } from "./json-utils";
 import type { Test } from "../../../types";
@@ -387,7 +393,7 @@ export const readTestDependencies = (
     selectivityTestsPath: string,
     test: Test,
     compression: SelectivityCompressionType,
-): Promise<Record<string, Record<string, NormalizedDependencies>>> =>
+): Promise<TestDependenciesFileContents> =>
     readJsonWithCompression(getTestDependenciesPath(selectivityTestsPath, test), compression, {
         defaultValue: {},
     }).catch(() => ({}));
