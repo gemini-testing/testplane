@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.41.2 (2026-03-05)
+
+
+### Features
+
+* add Fetch and Network domains to unstable_getCdp API ([#1218](https://github.com/gemini-testing/testplane/issues/1218)) ([e8bae7b](https://github.com/gemini-testing/testplane/commit/e8bae7b0b5feec94721caf08c88f153075988308))
+
 ### 8.41.1 (2026-03-03)
 
 ## 8.41.0 (2026-03-02)
