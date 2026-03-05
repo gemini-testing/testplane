@@ -61,7 +61,22 @@ export const resolveEdgeVersion = _.once(async () => {
         case BrowserPlatform.MAC_ARM:
             return resolveMacEdgeVersion();
 
-        default:
-            throw new Error(`Unsupported platform: "${platform}"`);
+        default: {
+            const lines: string[] = [];
+
+            lines.push(`Cannot detect the installed Edge version: unsupported platform "${platform}".`);
+            lines.push(
+                "\nTestplane can only detect Edge on Linux, macOS, and Windows.",
+                `The current platform "${platform}" is not in the supported list.`,
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Run tests on a supported platform (Linux, macOS, or Windows)",
+                "- Set the Edge version explicitly in your config (e.g. browserVersion: '120') instead of relying on auto-detection",
+            );
+
+            throw new Error(lines.join("\n"));
+        }
     }
 });

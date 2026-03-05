@@ -204,12 +204,27 @@ export class TestParser extends EventEmitter {
 
             if (titles[fullTitle] === relatePath) {
                 throw new Error(
-                    `Tests with the same title '${fullTitle}'` + ` in file '${titles[fullTitle]}' can't be used`,
+                    [
+                        `Duplicate test title detected: '${fullTitle}'`,
+                        `\nTwo or more tests in '${titles[fullTitle]}' share the same full title.`,
+                        `\nIn Testplane, every test must have a unique title within the test suite.`,
+                        `\nWhat you can do:`,
+                        `- Rename one of the tests to make it unique`,
+                        `- If using shared helpers that generate tests, ensure each gets a distinct name`,
+                    ].join("\n"),
                 );
             } else {
                 throw new Error(
-                    `Tests with the same title '${fullTitle}'` +
-                        ` in files '${titles[fullTitle]}' and '${relatePath}' can't be used`,
+                    [
+                        `Duplicate test title detected: '${fullTitle}'`,
+                        `\nThis title is used in two different files:`,
+                        `  1. ${titles[fullTitle]}`,
+                        `  2. ${relatePath}`,
+                        `\nIn Testplane, every test must have a globally unique title.`,
+                        `\nWhat you can do:`,
+                        `- Rename one of the tests to make it unique`,
+                        `- Wrap tests in a describe() block with a unique name to create separate namespaces`,
+                    ].join("\n"),
                 );
             }
         });

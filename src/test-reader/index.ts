@@ -68,11 +68,27 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
         const browsersToRun = _.uniq(testsToRun.map(test => test.browserId));
 
         if (testsToRun.length !== 1) {
-            throw new Error(
-                `In ${mode.name} only 1 test in 1 browser should be run, but found ${testsToRun.length} tests` +
-                    `${testsToRun.length === 0 ? ". " : ` that run in ${browsersToRun.join(", ")} browsers. `}` +
-                    `Try to specify cli-options: "--grep" and "--browser" or use "testplane.only.in" in the test file.`,
+            const count = testsToRun.length;
+            const lines: string[] = [];
+
+            lines.push(
+                `${mode.name} requires exactly 1 test in 1 browser, but ${
+                    count === 0 ? "no tests were" : `${count} tests were`
+                } found.`,
             );
+
+            if (count > 1) {
+                lines.push(`\nThe following browsers have tests to run: ${browsersToRun.join(", ")}`);
+            }
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Use --grep to narrow down to a single test: testplane --repl --grep 'exact test name'",
+                "- Use --browser to narrow down to a single browser: testplane --repl --browser chrome",
+                "- Use testplane.only.in(['chrome']) in your test file to target a specific browser",
+            );
+
+            throw new Error(lines.join("\n"));
         }
     }
 
@@ -82,9 +98,35 @@ function validateTests(testsByBro: Record<string, Test[]>, options: TestReaderOp
 
     const stringifiedOpts = convertOptions(_.omit(options, "replMode", "keepBrowserMode"));
     if (_.isEmpty(stringifiedOpts)) {
-        throw new Error(`There are no tests found. Try to specify [${Object.keys(options).join(", ")}] options`);
+        const lines: string[] = [];
+
+        lines.push("No tests were found.");
+        lines.push("\nTestplane scanned the configured test paths but found no runnable tests.");
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Check the 'sets' configuration in your testplane.config.ts to make sure paths are correct`,
+            `- You can narrow the run using CLI options: ${Object.keys(options)
+                .map(k => `--${k}`)
+                .join(", ")}`,
+            `- Example: testplane --browser chrome --grep 'my test'`,
+        );
+
+        throw new Error(lines.join("\n"));
     } else {
-        throw new Error(`There are no tests found by the specified options:\n${stringifiedOpts}`);
+        const lines: string[] = [];
+
+        lines.push("No tests were found matching the specified options.");
+        lines.push(`\n${stringifiedOpts}`);
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Check that test file paths match the patterns in the 'sets' config",
+            "- Verify the --grep pattern matches your test titles",
+            "- Check that the --browser value matches a browser ID in your config",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 }
 

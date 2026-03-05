@@ -24,12 +24,22 @@ export class WebdriverPool {
         const browserNameNormalized = getNormalizedBrowserName(browserName);
 
         if (!browserNameNormalized) {
-            throw new Error(
-                [
-                    `Couldn't run browser driver for "${browserName}", as this browser is not supported`,
-                    `Supported browsers: "chrome", "firefox", "safari", "MicrosoftEdge"`,
-                ].join("\n"),
+            const lines: string[] = [];
+
+            lines.push(`Cannot start WebDriver: browser "${browserName}" is not supported.`);
+            lines.push(
+                `\nTestplane tried to start a local WebDriver process for "${browserName}",`,
+                `but this browser is not in the supported list.`,
+                `Supported browser names: "chrome", "firefox", "safari", "MicrosoftEdge"`,
             );
+
+            lines.push(
+                "\nWhat you can do:",
+                `- Check the 'desiredCapabilities.browserName' in your Testplane config`,
+                `- Use one of the supported values above`,
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         const { resolveBrowserVersion } = await import("../browser-installer");

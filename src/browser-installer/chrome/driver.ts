@@ -44,13 +44,28 @@ export const installChromeDriver = async (chromeVersion: string, { force = false
     const canBeInstalled = await canDownload({ browser: DriverName.CHROMEDRIVER, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
-        throw new Error(
-            [
-                `chromedriver@${buildId} can't be installed.`,
-                `Probably the major browser version '${milestone}' is invalid`,
-                "Correct chrome version examples: '123', '124'",
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Failed to install ChromeDriver for Chrome@${milestone}.`);
+        lines.push(
+            "\nTestplane checked the ChromeDriver download registry and found no driver matching the requested Chrome version.",
         );
+
+        lines.push(
+            "\nPossible reasons:",
+            `- Chrome milestone '${milestone}' does not have a corresponding ChromeDriver release`,
+            "- The version string is malformed or refers to an unsupported release",
+            `- ChromeDriver is only available for Chrome versions >= 115 via Chrome for Testing`,
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Use a valid Chrome milestone such as '123' or '124'",
+            "- Check available ChromeDriver versions at: https://googlechromelabs.github.io/chrome-for-testing/",
+            "- For Chrome < 115, ChromeDriver is downloaded from chromedriver.storage.googleapis.com automatically",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const installFn = (downloadProgressCallback: DownloadProgressCallback): Promise<string> =>

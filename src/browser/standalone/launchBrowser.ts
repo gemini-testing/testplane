@@ -22,12 +22,21 @@ export async function launchBrowser(
     const normalizedBrowserName = getNormalizedBrowserName(browserName) as W3CBrowserName;
 
     if (!normalizedBrowserName) {
-        throw new Error(
-            [
-                `Running browser "${browserName}" is unsupported`,
-                `Supported browsers: "chrome", "firefox", "safari", "edge"`,
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Cannot launch browser: "${browserName}" is not supported.`);
+        lines.push(
+            `\nTestplane does not know how to launch "${browserName}".`,
+            `Supported browser names: "chrome", "firefox", "safari", "edge"`,
         );
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Pass a supported browser name in the 'desiredCapabilities.browserName' option of launchBrowser()`,
+            `- Example: launchBrowser({ desiredCapabilities: { browserName: 'chrome' } })`,
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const browserConfig = {

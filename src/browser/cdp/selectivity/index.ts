@@ -43,7 +43,16 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
         try {
             await hashWriter.commit();
         } catch (cause) {
-            throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
+            const lines: string[] = [];
+            lines.push("What happened: Selectivity failed to save the test dependencies hash to disk.");
+            lines.push("\nPossible reasons:");
+            lines.push("  - The disk is full or the target directory is read-only");
+            lines.push("  - A file system permission error prevents writing the hash file");
+            lines.push("  - A concurrent process is locking the hash file");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Check available disk space and file permissions in the selectivity cache directory");
+            lines.push("  - Review the cause error above for specific I/O details");
+            throw new Error(lines.join("\n"), { cause });
         }
     }
 };
@@ -57,13 +66,32 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     }
 
     if (compression === Compression.ZSTD && !process.versions.zstd) {
-        throw new Error(
-            "Selectivity: Compression 'zstd' is not supported in your node version. Please, upgrade the node version to 22",
-        );
+        const lines: string[] = [];
+        lines.push("What happened: Selectivity compression 'zstd' is not supported by the current Node.js version.");
+        lines.push(`\nCurrent Node.js version: ${process.version}`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - Node.js version is older than 22, which does not have built-in zstd support");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Upgrade Node.js to version 22 or later");
+        lines.push("  - Change 'selectivity.compression' to 'gzip' or 'br' in your testplane.config.js");
+        throw new Error(lines.join("\n"));
     }
 
     if (!browser.cdp) {
-        throw new Error("Selectivity: Devtools connection is not established, couldn't record selectivity without it");
+        const lines: string[] = [];
+        lines.push(
+            "What happened: Selectivity could not start because the DevTools (CDP) connection is not established.",
+        );
+        lines.push("\nPossible reasons:");
+        lines.push("  - The browser was launched without DevTools Protocol support");
+        lines.push(
+            "  - The test is running in a non-Chromium browser (CDP is only available for Chromium-based browsers)",
+        );
+        lines.push("  - The 'devtools' option is disabled in the browser configuration");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Enable DevTools in your testplane config: devtools: true");
+        lines.push("  - Ensure you're running tests in a Chromium-based browser");
+        throw new Error(lines.join("\n"));
     }
 
     const cdpTaget = browser.cdp.target;
@@ -72,13 +100,17 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     const cdpTargetId = targetInfos.find(t => handle.includes(t.targetId))?.targetId;
 
     if (!cdpTargetId) {
-        throw new Error(
-            [
-                "Selectivity: Couldn't find current page;",
-                `\n\t- webdriver handle: ${handle}`,
-                `\n\t- cdp targets: ${targetInfos.map(t => `"${t.targetId}"`).join(", ")}`,
-            ].join(""),
-        );
+        const lines: string[] = [];
+        lines.push("What happened: Selectivity could not match the current browser window handle to a CDP target.");
+        lines.push(`\n  WebDriver handle: ${handle}`);
+        lines.push(`  CDP targets: ${targetInfos.map(t => `"${t.targetId}"`).join(", ")}`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - The browser window handle format doesn't match the CDP targetId format");
+        lines.push("  - The page was navigated or closed between reading the handle and fetching CDP targets");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Ensure the page is fully loaded and stable before selectivity starts recording");
+        lines.push("  - Check for concurrent test or tab operations that may cause a mismatch");
+        throw new Error(lines.join("\n"));
     }
 
     const sessionId = await cdpTaget.attachToTarget(cdpTargetId).then(r => r.sessionId);
@@ -93,7 +125,15 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             const originalError =
                 css.status === "rejected" ? css.reason : js.status === "rejected" ? js.reason : "unknown reason";
 
-            throw new Error("Selectivity: Couldn't start selectivity", { cause: originalError });
+            const lines: string[] = [];
+            lines.push("What happened: Selectivity failed to start CSS or JS coverage recording.");
+            lines.push("\nPossible reasons:");
+            lines.push("  - The CDP session was closed or the target page navigated away before recording started");
+            lines.push("  - The browser's DevTools Protocol returned an error when enabling coverage");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Check the cause error below for the specific CDP failure");
+            lines.push("  - Ensure the page is not navigating when selectivity is being initialized");
+            throw new Error(lines.join("\n"), { cause: originalError });
         }
     });
 

@@ -137,7 +137,22 @@ export const plugin = (manualMock: ManualMock): Plugin[] => {
                     if (testFileMocks.has(mockModuleName)) {
                         mockCallExpression.arguments.push(b.identifier(testFileMocks.get(mockModuleName)!));
                     } else {
-                        throw new Error(`Cannot find mocked module "${mockModuleName}"`);
+                        const lines: string[] = [];
+                        lines.push(
+                            `What happened: Cannot find the mocked module "${mockModuleName}" in the current test file's imports.`,
+                        );
+                        lines.push("\nPossible reasons:");
+                        lines.push(`  - The module "${mockModuleName}" is not imported in the test file`);
+                        lines.push("  - The mock path is spelled differently from the actual import path");
+                        lines.push("  - The mock call refers to a module that was not processed by the mock plugin");
+                        lines.push("\nWhat you can do:");
+                        lines.push(
+                            `  - Make sure "${mockModuleName}" is imported in the test file before calling mock()`,
+                        );
+                        lines.push(
+                            "  - Verify that the path passed to mock() exactly matches the import path in the test",
+                        );
+                        throw new Error(lines.join("\n"));
                     }
 
                     return b.expressionStatement(b.awaitExpression(mockCallExpression));

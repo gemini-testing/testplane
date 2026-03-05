@@ -17,9 +17,19 @@ export const initDevServer: InitDevServer = async ({ testplane, devServerConfig,
 
     if (devServerConfig.reuseExisting) {
         if (typeof devServerConfig.readinessProbe === "function" || !devServerConfig.readinessProbe.url) {
-            throw new Error(
-                "When 'reuseExisting' option is set in 'devServer' config, it is required to set 'devServer.readinessProbe.url' option",
+            const lines: string[] = [];
+            lines.push(
+                "What happened: The 'devServer.reuseExisting' option is set to true, but 'devServer.readinessProbe.url' is not configured.",
             );
+            lines.push("\nPossible reasons:");
+            lines.push("  - 'readinessProbe' is a function instead of an object with a 'url' property");
+            lines.push("  - 'readinessProbe.url' is missing or empty in the devServer config");
+            lines.push("\nWhat you can do:");
+            lines.push(
+                "  - Set 'devServer.readinessProbe.url' to the URL Testplane should ping to check if the server is ready",
+            );
+            lines.push("  - Example: readinessProbe: { url: 'http://localhost:3000/health' }");
+            throw new Error(lines.join("\n"));
         }
 
         const isReady = await probeServer(devServerConfig.readinessProbe);

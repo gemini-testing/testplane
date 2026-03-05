@@ -15,11 +15,32 @@ const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
 
     if (percent === false || _.isNaN(percent)) {
-        throw new Error(`Invalid ignoreDiffPixelCount value: got ${value}, but expected number or '\${number}%'`);
+        const lines = [];
+        lines.push(
+            `Invalid "ignoreDiffPixelCount" value: received "${value}", but expected a number or a percent string like "5%".`,
+        );
+        lines.push("");
+        lines.push("Possible reasons:");
+        lines.push('  - The value is a string but does not end with "%" or contains non-numeric characters.');
+        lines.push("  - The option was set programmatically with an incorrect type.");
+        lines.push("");
+        lines.push("What you can do:");
+        lines.push("  - Use a plain number (e.g. ignoreDiffPixelCount: 10) to allow up to N differing pixels.");
+        lines.push('  - Use a percent string (e.g. ignoreDiffPixelCount: "1%") to allow up to N% of differing pixels.');
+        throw new Error(lines.join("\n"));
     }
 
     if (percent > 100 || percent < 0) {
-        throw new Error(`Invalid ignoreDiffPixelCount value: percent should be in range between 0 and 100`);
+        const lines = [];
+        lines.push(`Invalid "ignoreDiffPixelCount" percent value: ${value} is out of the allowed range [0%, 100%].`);
+        lines.push("");
+        lines.push("Possible reasons:");
+        lines.push("  - The percent value is negative.");
+        lines.push("  - The percent value exceeds 100.");
+        lines.push("");
+        lines.push("What you can do:");
+        lines.push('  - Use a percent string in the range [0%, 100%], e.g. "5%" or "0.5%".');
+        throw new Error(lines.join("\n"));
     }
 
     return percent / 100;
@@ -170,9 +191,23 @@ module.exports.default = browser => {
                     .$(selector)
                     .then(el => el.waitForExist())
                     .catch(() => {
-                        throw new Error(
-                            `element ("${selector}") still not existing after ${browser.options.waitforTimeout} ms`,
+                        const lines = [];
+                        lines.push(
+                            `Element ("${selector}") still not found after ${browser.options.waitforTimeout} ms.`,
                         );
+                        lines.push("");
+                        lines.push("Possible reasons:");
+                        lines.push("  - The selector does not match any element in the current DOM.");
+                        lines.push("  - The element appears after the waitforTimeout has already expired.");
+                        lines.push("  - The page has not finished rendering the expected content.");
+                        lines.push("");
+                        lines.push("What you can do:");
+                        lines.push(
+                            `  - Check that the selector "${selector}" is correct and targets the right element.`,
+                        );
+                        lines.push('  - Increase "waitforTimeout" in your browser config if the element loads slowly.');
+                        lines.push("  - Add an explicit wait before calling assertView.");
+                        throw new Error(lines.join("\n"));
                     }),
             ),
         );
@@ -208,9 +243,19 @@ module.exports.default = browser => {
         "assertView",
         async function (state, opts = {}) {
             await this.waitForExist({ timeoutMsg: "custom timeout msg" }).catch(() => {
-                throw new Error(
-                    `element ("${this.selector}") still not existing after ${this.options.waitforTimeout} ms`,
-                );
+                const lines = [];
+                lines.push(`Element ("${this.selector}") still not found after ${this.options.waitforTimeout} ms.`);
+                lines.push("");
+                lines.push("Possible reasons:");
+                lines.push("  - The selector does not match any element in the current DOM.");
+                lines.push("  - The element appears after the waitforTimeout has already expired.");
+                lines.push("  - The page has not finished rendering the expected content.");
+                lines.push("");
+                lines.push("What you can do:");
+                lines.push(`  - Check that the selector "${this.selector}" is correct and targets the right element.`);
+                lines.push('  - Increase "waitforTimeout" in your browser config if the element loads slowly.');
+                lines.push("  - Add an explicit wait before calling assertView.");
+                throw new Error(lines.join("\n"));
             });
 
             return assertView(state, this.selector, opts);

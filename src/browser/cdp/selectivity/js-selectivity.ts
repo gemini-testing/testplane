@@ -223,21 +223,39 @@ export class JSSelectivity {
                     }
 
                     if (source instanceof Error) {
-                        throw new Error(`JS Selectivity: Couldn't load source code from ${sourceUrl}`, {
-                            cause: source,
-                        });
+                        const lines: string[] = [];
+                        lines.push(`What happened: JS Selectivity could not load source code from "${sourceUrl}".`);
+                        lines.push("\nPossible reasons:");
+                        lines.push("  - The source file URL is not reachable from the Node.js process");
+                        lines.push("  - The file was deleted or moved after the script was loaded by the browser");
+                        lines.push("\nWhat you can do:");
+                        lines.push("  - Check the cause error for the specific network or file system issue");
+                        throw new Error(lines.join("\n"), { cause: source });
                     }
 
                     if (sourceMaps instanceof Error) {
-                        throw new Error(`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, {
-                            cause: sourceMaps,
-                        });
+                        const lines: string[] = [];
+                        lines.push(`What happened: JS Selectivity could not load source maps from "${sourceMapUrl}".`);
+                        lines.push("\nPossible reasons:");
+                        lines.push("  - The source map URL is not reachable or the file doesn't exist");
+                        lines.push("  - The build tool did not generate source maps for this file");
+                        lines.push("\nWhat you can do:");
+                        lines.push("  - Enable source map generation in your build tool (webpack/vite/tsc)");
+                        lines.push("  - Check the cause error for the specific network or file system issue");
+                        throw new Error(lines.join("\n"), { cause: sourceMaps });
                     }
 
                     if (isCachedOnFs(sourceMaps) && !sourceMapUrl) {
-                        throw new Error(
-                            "Assertation failed: souce map url has to present if source maps are fs-cached",
+                        const lines: string[] = [];
+                        lines.push(
+                            "What happened: Internal selectivity assertion failed: source map URL must be present when source maps are fs-cached.",
                         );
+                        lines.push("\nThis is an internal bug in Testplane.");
+                        lines.push("\nWhat you can do:");
+                        lines.push(
+                            "  - Please report this issue at https://github.com/gemini-testing/testplane/issues",
+                        );
+                        throw new Error(lines.join("\n"));
                     }
 
                     const [sourceString, sourceMapsString] = await Promise.all([
@@ -248,7 +266,17 @@ export class JSSelectivity {
                     ]);
 
                     if (!sourceString || !sourceMapsString) {
-                        throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
+                        const lines: string[] = [];
+                        lines.push(
+                            `What happened: JS Selectivity fs-cache is broken for "${sourceUrl}". Expected cache entry is missing or empty.`,
+                        );
+                        lines.push("\nPossible reasons:");
+                        lines.push("  - The cache file was deleted or corrupted between writing and reading");
+                        lines.push("  - A race condition occurred during concurrent cache writes");
+                        lines.push("\nWhat you can do:");
+                        lines.push("  - Delete the selectivity cache directory and re-run the tests");
+                        lines.push(`  - Check the OS temp directory for stale selectivity cache files`);
+                        throw new Error(lines.join("\n"));
                     }
 
                     const startOffsetsSet = new Set<number>();

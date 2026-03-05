@@ -52,9 +52,24 @@ export default (browser: Browser): void => {
         const { onReplMode } = browser.state;
 
         if (!runtimeCfg.replMode || !runtimeCfg.replMode.enabled) {
-            throw new Error(
-                'Command "switchToRepl" available only in REPL mode, which can be started using cli option: "--repl", "--repl-before-test" or "--repl-on-fail"',
+            const lines: string[] = [];
+
+            lines.push('Command "switchToRepl" is not available: Testplane is not running in REPL mode.');
+            lines.push(
+                "\nThis command pauses test execution and opens an interactive REPL session in the terminal.",
+                "It can only be used when Testplane is started with a REPL flag.",
             );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Start Testplane with one of the following CLI options:",
+                "    --repl               Start REPL mode at the beginning of each test",
+                "    --repl-before-test   Start REPL before the failing test step",
+                "    --repl-on-fail       Start REPL when a test assertion fails",
+                "- Example: npx testplane --repl --grep 'my test name'",
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         if (onReplMode) {

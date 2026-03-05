@@ -12,12 +12,21 @@ export async function attachToBrowser(session: SessionOptions): Promise<Webdrive
     const normalizedBrowserName = getNormalizedBrowserName(browserName) as W3CBrowserName;
 
     if (!normalizedBrowserName) {
-        throw new Error(
-            [
-                `Running browser "${browserName}" is unsupported`,
-                `Supported browsers: "chrome", "firefox", "safari", "edge"`,
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Cannot attach to browser: "${browserName}" is not supported.`);
+        lines.push(
+            `\nTestplane does not recognize the browser name "${browserName}" from the session capabilities.`,
+            `Supported browser names: "chrome", "firefox", "safari", "edge"`,
         );
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Ensure the session was started with a supported browser`,
+            `- Check the 'sessionCaps.browserName' value passed to attachToBrowser()`,
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const browserConfig = {

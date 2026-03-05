@@ -121,7 +121,17 @@ export class Testplane extends BaseTestplane {
                 this.viteServer = ViteServer.create(this._config);
                 await this.viteServer.start();
             } catch (err) {
-                throw new Error(`Vite server failed to start: ${(err as Error).message}`);
+                const lines: string[] = [];
+                lines.push(`What happened: Vite server failed to start. Error: ${(err as Error).message}`);
+                lines.push("\nPossible reasons:");
+                lines.push("  - A port required by Vite is already in use");
+                lines.push("  - The vite configuration in testplane.config.js contains an error");
+                lines.push("  - A required Vite plugin has a missing or incompatible dependency");
+                lines.push("\nWhat you can do:");
+                lines.push("  - Check the full error above for specific Vite diagnostics");
+                lines.push("  - Make sure the port Vite uses is not occupied by another process");
+                lines.push("  - Review 'system.viteConfig' in your testplane.config.js for configuration errors");
+                throw new Error(lines.join("\n"));
             }
         }
 

@@ -150,13 +150,19 @@ const ensurePosixRelativeDependencyPathExists = (posixRelativePath: string): voi
         return;
     }
 
-    throw new Error(
-        [
-            `Selectivity: Couldn't find "${relativePath}", which is test's dependency`,
-            "Please ensure 'sources' of generated source maps contain valid paths to existing files",
-            "Configuring 'sourceRoot' in Testplane selectivity config also might help",
-        ].join("\n"),
+    const lines: string[] = [];
+    lines.push(
+        `What happened: Selectivity could not find "${relativePath}", which is listed as a test dependency in the source map.`,
     );
+    lines.push("\nPossible reasons:");
+    lines.push("  - The source map 'sources' field contains a path that doesn't exist on disk");
+    lines.push("  - The 'sourceRoot' option in the source map or testplane config points to a wrong directory");
+    lines.push("  - The file was deleted or moved after the source map was generated");
+    lines.push("\nWhat you can do:");
+    lines.push("  - Verify the 'sources' field in the generated source maps contains valid relative paths");
+    lines.push("  - Configure 'selectivity.sourceRoot' in testplane.config.js to correct the base path");
+    lines.push("  - Regenerate source maps to ensure paths are up to date");
+    throw new Error(lines.join("\n"));
 };
 
 const warnUnsupportedProtocol = memoize((protocol: string, dependency: string): void => {

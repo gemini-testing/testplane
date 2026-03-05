@@ -79,12 +79,19 @@ export class Image {
     _ensureImagesHaveSameWidth(): void {
         for (const image of this._composeImages) {
             if (image._width !== this._width) {
-                throw new Error(
-                    [
-                        `It looks like viewport width changed while performing long page screenshot (${this._width}px -> ${image._width}px)`,
-                        "Please make sure page is fully loaded before making screenshot",
-                    ].join("\n"),
+                const lines: string[] = [];
+                lines.push(
+                    `What happened: Viewport width changed during a long page screenshot (${this._width}px → ${image._width}px).`,
                 );
+                lines.push("\nPossible reasons:");
+                lines.push("  - The page reacted to scroll events and resized (responsive layout)");
+                lines.push("  - A dynamic element (banner, cookie notice, sidebar) appeared and changed the layout");
+                lines.push("  - The page wasn't fully loaded or settled when the screenshot started");
+                lines.push("\nWhat you can do:");
+                lines.push("  - Call browser.waitForPageLoad() or add an explicit wait before taking the screenshot");
+                lines.push("  - Use 'screenshotDelay' config option to wait for the page to stabilize");
+                lines.push("  - Disable responsive layout elements or set a fixed viewport size in the test");
+                throw new Error(lines.join("\n"));
             }
         }
     }

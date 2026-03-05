@@ -41,7 +41,21 @@ export function mkProvider(
 ): (browserId: string) => BrowserVersionController {
     return browserId => {
         if (!knownBrowsers.includes(browserId)) {
-            throw new Error(`browser "${browserId}" was not found in config file`);
+            const lines: string[] = [];
+
+            lines.push(`Browser "${browserId}" is not defined in the Testplane config.`);
+            lines.push(
+                "\nYou are calling 'browser.version(...)' for a browser ID that does not exist in the config.",
+                `Available browser IDs: ${knownBrowsers.join(", ")}`,
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                `- Add a browser with id "${browserId}" to the 'browsers' section in your testplane.config.ts`,
+                `- Or use one of the existing browser IDs: ${knownBrowsers.join(", ")}`,
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         return BrowserVersionController.create(browserId, eventBus);

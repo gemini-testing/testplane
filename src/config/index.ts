@@ -52,7 +52,21 @@ export class Config {
             }
 
             if (!this.configPath) {
-                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
+                const lines: string[] = [];
+                lines.push(
+                    `What happened: Testplane configuration file was not found at any of the default paths: ${defaults.configPaths.join(
+                        ", ",
+                    )}`,
+                );
+                lines.push("\nPossible reasons:");
+                lines.push("  - The config file doesn't exist yet (first-time setup)");
+                lines.push("  - The command is run from a directory other than the project root");
+                lines.push("  - The config file has a non-standard name or location");
+                lines.push("\nWhat you can do:");
+                lines.push("  - Run 'npx testplane init' to create a default config file");
+                lines.push("  - Pass the config path explicitly: testplane --config path/to/testplane.config.js");
+                lines.push("  - Make sure you're running the command from your project root directory");
+                throw new Error(lines.join("\n"));
             }
 
             options = Config.read(this.configPath) as ConfigInput;

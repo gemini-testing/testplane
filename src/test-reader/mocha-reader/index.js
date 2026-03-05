@@ -98,9 +98,21 @@ function forbidSuiteHooks(bus) {
     [MochaEventBus.events.EVENT_SUITE_ADD_HOOK_BEFORE_ALL, MochaEventBus.events.EVENT_SUITE_ADD_HOOK_AFTER_ALL].forEach(
         event => {
             bus.on(event, () => {
-                throw new Error(
-                    '"before" and "after" hooks are forbidden, use "beforeEach" and "afterEach" hooks instead',
+                const lines = [];
+                lines.push('Hook "before" / "after" is not allowed in this context.');
+                lines.push("");
+                lines.push("Possible reasons:");
+                lines.push(
+                    '  - You used "before" or "after" hooks in a describe/suite block, which is forbidden in Testplane.',
                 );
+                lines.push("  - A plugin or third-party code registered a suite-level hook.");
+                lines.push("");
+                lines.push("What you can do:");
+                lines.push('  - Replace "before" with "beforeEach" and "after" with "afterEach".');
+                lines.push(
+                    '  - "beforeEach" / "afterEach" hooks run before/after every individual test and are fully supported.',
+                );
+                throw new Error(lines.join("\n"));
             });
         },
     );

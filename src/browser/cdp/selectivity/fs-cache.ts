@@ -35,7 +35,12 @@ const wasModifiedAfterProcessStart = async (flagFilePath: string): Promise<boole
 
 export const hasCachedSelectivityFile = async (cacheType: CacheTypeValue, key: string): Promise<boolean> => {
     if (!key) {
-        throw new Error("Attepted to check existance of cache with empty key");
+        const lines: string[] = [];
+        lines.push("What happened: Internal selectivity error: attempted to check cache existence with an empty key.");
+        lines.push("\nThis is an internal bug in Testplane.");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Please report this issue at https://github.com/gemini-testing/testplane/issues");
+        throw new Error(lines.join("\n"));
     }
 
     const hashName = cacheType + getMD5(key);
@@ -47,7 +52,12 @@ export const hasCachedSelectivityFile = async (cacheType: CacheTypeValue, key: s
 
 export const getCachedSelectivityFile = async (cacheType: CacheTypeValue, key: string): Promise<string | null> => {
     if (!key) {
-        throw new Error("Attepted to read cache with empty key");
+        const lines: string[] = [];
+        lines.push("What happened: Internal selectivity error: attempted to read cache with an empty key.");
+        lines.push("\nThis is an internal bug in Testplane.");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Please report this issue at https://github.com/gemini-testing/testplane/issues");
+        throw new Error(lines.join("\n"));
     }
 
     const hashName = cacheType + getMD5(key);
@@ -82,7 +92,12 @@ export const setCachedSelectivityFile = async (
     utf8Contents: string,
 ): Promise<void> => {
     if (!key) {
-        throw new Error("Attepted to write cache with empty key");
+        const lines: string[] = [];
+        lines.push("What happened: Internal selectivity error: attempted to write cache with an empty key.");
+        lines.push("\nThis is an internal bug in Testplane.");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Please report this issue at https://github.com/gemini-testing/testplane/issues");
+        throw new Error(lines.join("\n"));
     }
 
     const hashName = cacheType + getMD5(key);
@@ -118,12 +133,28 @@ export const setCachedSelectivityFile = async (
 
     try {
         await libUVLimited(() => fs.writeFile(cacheFilePath, utf8Contents, { encoding: "utf8" })).catch(cause => {
-            throw new Error(`Couldn't write cache to "${cacheFilePath}"`, { cause });
+            const lines: string[] = [];
+            lines.push(`What happened: Selectivity could not write cache file to "${cacheFilePath}".`);
+            lines.push("\nPossible reasons:");
+            lines.push("  - The directory does not exist or is not writable");
+            lines.push("  - The disk is full");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Check disk space and permissions for the OS temp directory");
+            lines.push("  - Check the cause error for specific I/O details");
+            throw new Error(lines.join("\n"), { cause });
         });
 
         // Using "writeFile" to trigger "mtime" update even if file exists
         await libUVLimited(() => fs.writeFile(flagFilePath, "")).catch(cause => {
-            throw new Error(`Couldn't mark cache as fresh at "${cacheFilePath}"`, { cause });
+            const lines: string[] = [];
+            lines.push(`What happened: Selectivity could not mark cache as fresh at "${cacheFilePath}".`);
+            lines.push("\nPossible reasons:");
+            lines.push("  - The directory does not exist or is not writable");
+            lines.push("  - The disk is full");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Check disk space and permissions for the OS temp directory");
+            lines.push("  - Check the cause error for specific I/O details");
+            throw new Error(lines.join("\n"), { cause });
         });
     } finally {
         await releaseLock();

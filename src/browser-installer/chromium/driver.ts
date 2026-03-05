@@ -26,12 +26,21 @@ export const installChromeDriverManually = async (milestone: string): Promise<st
     const platform = getBrowserPlatform();
 
     if (Number(milestone) < MIN_CHROMIUM_VERSION) {
-        throw new Error(
-            [
-                `chromedriver@${milestone} can't be installed.`,
-                `Automatic driver downloader is not available for chrome versions < ${MIN_CHROMIUM_VERSION}`,
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Failed to install ChromeDriver for Chrome@${milestone}: version is too old.`);
+        lines.push(
+            `\nTestplane's automatic ChromeDriver downloader only supports Chrome versions >= ${MIN_CHROMIUM_VERSION}.`,
+            `The requested version '${milestone}' is below this threshold.`,
         );
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Use Chrome/Chromium version ${MIN_CHROMIUM_VERSION} or higher`,
+            "- If you must test with this old version, download ChromeDriver manually from https://chromedriver.chromium.org/downloads and set 'webdriverBinaryPath' in your config",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const driverVersion = await getChromeDriverVersionByChromiumVersion(milestone);

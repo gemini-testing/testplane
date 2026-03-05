@@ -23,9 +23,23 @@ export const runBrowserDriver = async (
             return import("./edge").then(module => module.runEdgeDriver(browserVersion, { debug }));
         case BrowserName.SAFARI:
             return import("./safari").then(module => module.runSafariDriver({ debug }));
-        default:
-            throw new Error(
-                `Invalid browser: ${browserName}. Expected one of: ${Object.values(BrowserName).join(", ")}`,
+        default: {
+            const validBrowsers = Object.values(BrowserName).join(", ");
+            const lines: string[] = [];
+
+            lines.push(`Cannot start browser driver: unknown browser name "${browserName}".`);
+            lines.push(
+                `\nTestplane does not know how to launch a WebDriver for "${browserName}".`,
+                `Valid browser names are: ${validBrowsers}`,
             );
+
+            lines.push(
+                "\nWhat you can do:",
+                `- Check the 'desiredCapabilities.browserName' in your Testplane config`,
+                `- Make sure you are using one of the supported values: ${validBrowsers}`,
+            );
+
+            throw new Error(lines.join("\n"));
+        }
     }
 };

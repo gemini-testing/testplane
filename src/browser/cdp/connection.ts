@@ -67,7 +67,23 @@ export class CDPConnection {
         const headers = browser.publicAPI.options?.headers ?? {};
 
         if (!cdpWsEndpoint) {
-            throw new CDPError({ message: `Couldn't determine CDP endpoint for session ${sessionId}` });
+            const lines: string[] = [];
+            lines.push(`Failed to determine the CDP WebSocket endpoint for browser session "${sessionId}".`);
+            lines.push("");
+            lines.push("Possible reasons:");
+            lines.push(
+                "  - The browser did not expose a DevTools endpoint (e.g. not launched with --remote-debugging-port).",
+            );
+            lines.push("  - The browser session has already ended or was never fully initialized.");
+            lines.push(
+                "  - The WebDriver session does not support CDP (e.g. non-Chromium browser without CDP support).",
+            );
+            lines.push("");
+            lines.push("What you can do:");
+            lines.push("  - Make sure you are using a Chromium-based browser with CDP support enabled.");
+            lines.push("  - Check that the browser process is still running and the session is valid.");
+            lines.push("  - Verify the browser launch arguments include --remote-debugging-port if running locally.");
+            throw new CDPError({ message: lines.join("\n") });
         }
 
         return new this(cdpWsEndpoint, headers);
@@ -93,9 +109,22 @@ export class CDPConnection {
 
                 const timeoutId = setTimeout(() => {
                     closeWsConnection(ws);
+                    const lines: string[] = [];
+                    lines.push(
+                        `Timed out trying to establish a CDP WebSocket connection to "${endpoint}" after ${CDP_CONNECTION_TIMEOUT}ms.`,
+                    );
+                    lines.push("");
+                    lines.push("Possible reasons:");
+                    lines.push("  - The browser process has not started its DevTools server yet.");
+                    lines.push("  - A firewall or network policy is blocking the WebSocket connection.");
+                    lines.push("  - The browser crashed or is unresponsive.");
+                    lines.push("");
+                    lines.push("What you can do:");
+                    lines.push("  - Increase CDP_CONNECTION_TIMEOUT if your environment is slow to start.");
+                    lines.push("  - Verify the browser process is running and the DevTools port is accessible.");
                     done(
                         new CDPTimeoutError({
-                            message: `Couldn't establish CDP connection to "${endpoint}" in ${CDP_CONNECTION_TIMEOUT}ms`,
+                            message: lines.join("\n"),
                         }),
                     );
                 }, CDP_CONNECTION_TIMEOUT).unref();
@@ -106,17 +135,43 @@ export class CDPConnection {
 
                 const onError = (error: unknown): void => {
                     closeWsConnection(ws);
+                    const lines: string[] = [];
+                    lines.push(`Failed to establish a CDP WebSocket connection to "${endpoint}".`);
+                    lines.push(`WebSocket error: ${error}`);
+                    lines.push("");
+                    lines.push("Possible reasons:");
+                    lines.push(
+                        "  - The CDP endpoint URL is incorrect or the browser is not listening on that address.",
+                    );
+                    lines.push("  - The browser process has terminated or restarted.");
+                    lines.push("  - A network error prevented the connection.");
+                    lines.push("");
+                    lines.push("What you can do:");
+                    lines.push("  - Verify the browser is running and the CDP port is correct.");
+                    lines.push("  - Check for firewall rules or port conflicts.");
                     done(
                         new CDPError({
-                            message: `Couldn't establish CDP connection to "${endpoint}": ${error}`,
+                            message: lines.join("\n"),
                         }),
                     );
                 };
 
                 const onClose = (): void => {
+                    const lines: string[] = [];
+                    lines.push(
+                        `CDP WebSocket connection to "${endpoint}" was closed unexpectedly before it could be fully established.`,
+                    );
+                    lines.push("");
+                    lines.push("Possible reasons:");
+                    lines.push("  - The browser rejected the connection (e.g. session limit reached).");
+                    lines.push("  - The browser process crashed or restarted during the handshake.");
+                    lines.push("");
+                    lines.push("What you can do:");
+                    lines.push("  - Check that the browser session is still alive.");
+                    lines.push("  - Retry the operation; it may be a transient failure.");
                     done(
                         new CDPError({
-                            message: `CDP connection to "${endpoint}" unexpectedly closed while establishing`,
+                            message: lines.join("\n"),
                         }),
                     );
                 };
@@ -153,7 +208,17 @@ export class CDPConnection {
         const ws = this._wsConnection;
 
         if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
-            throw new CDPConnectionTerminatedError({ message: `Session to ${this._cdpWsEndpoint} was closed` });
+            const lines: string[] = [];
+            lines.push(`Cannot use CDP connection to "${this._cdpWsEndpoint}": the session has already been closed.`);
+            lines.push("");
+            lines.push("Possible reasons:");
+            lines.push("  - The CDP connection was explicitly closed (e.g. browser.close() was called).");
+            lines.push("  - The browser session ended before this request was made.");
+            lines.push("");
+            lines.push("What you can do:");
+            lines.push("  - Ensure CDP requests are not made after the browser session is closed.");
+            lines.push("  - Check your test teardown logic to avoid using the browser after it has been shut down.");
+            throw new CDPConnectionTerminatedError({ message: lines.join("\n") });
         }
 
         if (this._wsConnectionStatus === WsConnectionStatus.CONNECTING && this._wsConnectionPromise) {
@@ -235,8 +300,22 @@ export class CDPConnection {
                     }
                 }
 
+                const lines: string[] = [];
+                lines.push(
+                    `Failed to establish a CDP WebSocket connection to "${this._cdpWsEndpoint}" after ${CDP_CONNECTION_RETRIES} retries.`,
+                );
+                lines.push("");
+                lines.push("Possible reasons:");
+                lines.push("  - The browser DevTools endpoint is not accessible or is responding with errors.");
+                lines.push("  - The browser process keeps crashing or restarting.");
+                lines.push("  - Network instability is preventing a stable connection.");
+                lines.push("");
+                lines.push("What you can do:");
+                lines.push("  - Verify the browser process is running and healthy.");
+                lines.push("  - Increase CDP_CONNECTION_RETRIES or CDP_CONNECTION_TIMEOUT for slow environments.");
+                lines.push("  - Check network conditions and firewall rules between the test runner and the browser.");
                 throw new CDPError({
-                    message: `Couldn't establish CDP connection to ${this._cdpWsEndpoint} in ${CDP_CONNECTION_RETRIES} retries`,
+                    message: lines.join("\n"),
                 });
             } catch (err) {
                 if (this._wsConnectionStatus === WsConnectionStatus.CONNECTING) {
@@ -340,8 +419,20 @@ export class CDPConnection {
         const requestMessage = JSON.stringify({ id, sessionId, method, params });
 
         if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
+            const lines: string[] = [];
+            lines.push(
+                `Cannot send CDP request "${method}": the connection to "${this._cdpWsEndpoint}" was already closed.`,
+            );
+            lines.push("");
+            lines.push("Possible reasons:");
+            lines.push("  - The CDP connection was explicitly closed before this request was dispatched.");
+            lines.push("  - A prior error caused the session to terminate.");
+            lines.push("");
+            lines.push("What you can do:");
+            lines.push("  - Do not send CDP requests after calling connection.close().");
+            lines.push("  - Check that the browser session lifecycle is correctly managed in your test.");
             throw new CDPConnectionTerminatedError({
-                message: `Couldn't send "${requestMessage}" because CDP connection was manually closed`,
+                message: lines.join("\n"),
             });
         }
 
@@ -353,8 +444,19 @@ export class CDPConnection {
             let isSettled = false;
 
             const onTimeout = setTimeout(() => {
+                const lines: string[] = [];
+                lines.push(`CDP request "${method}" timed out after ${CDP_REQUEST_TIMEOUT}ms (request ID: ${id}).`);
+                lines.push("");
+                lines.push("Possible reasons:");
+                lines.push("  - The browser is under heavy load and processing the command slowly.");
+                lines.push("  - The browser has crashed or become unresponsive.");
+                lines.push("  - The CDP method requires a long-running operation that exceeds the timeout.");
+                lines.push("");
+                lines.push("What you can do:");
+                lines.push("  - Increase CDP_REQUEST_TIMEOUT if the operation is expected to take longer.");
+                lines.push("  - Check the browser health and available system resources.");
                 const err = new CDPTimeoutError({
-                    message: `Timed out while waiting for ${method} for ${CDP_REQUEST_TIMEOUT}ms`,
+                    message: lines.join("\n"),
                     requestId: id,
                 });
 
@@ -379,9 +481,22 @@ export class CDPConnection {
                     return;
                 }
 
+                const lines: string[] = [];
+                lines.push(`Failed to send CDP request "${method}" over the WebSocket connection.`);
+                lines.push(`WebSocket send error: ${error.message}`);
+                lines.push("");
+                lines.push("Possible reasons:");
+                lines.push("  - The WebSocket connection was lost or closed between request dispatch and send.");
+                lines.push("  - The browser process has terminated.");
+                lines.push("");
+                lines.push("What you can do:");
+                lines.push(
+                    "  - This is typically a transient failure; the connection will attempt to reconnect automatically.",
+                );
+                lines.push("  - If this happens frequently, check the stability of the browser session.");
                 done(
                     new CDPError({
-                        message: `Couldn't send CDP request "${method}": ${error.message}`,
+                        message: lines.join("\n"),
                         code: CDP_ERROR_CODE.SEND_FAILED,
                         requestId: id,
                     }),

@@ -240,7 +240,20 @@ export class NewBrowser extends Browser {
 
     protected async _getLocalWebdriverGridUrl(): Promise<string> {
         if (!this._wdPool) {
-            throw new Error("webdriver pool is not defined");
+            const lines: string[] = [];
+
+            lines.push("Internal error: WebDriver pool is not initialized.");
+            lines.push(
+                "\nTestplane attempted to start a local WebDriver session, but the WebDriver pool was not set up.",
+                "This is likely a framework-level initialization bug.",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Open an issue at https://github.com/gemini-testing/testplane with the full error stacktrace",
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         if (this._wdProcess) {
@@ -264,12 +277,23 @@ export class NewBrowser extends Browser {
         const browserNameW3C = getNormalizedBrowserName(config.desiredCapabilities?.browserName);
 
         if (!browserNameW3C) {
-            throw new Error(
-                [
-                    `Running auto local "${config.desiredCapabilities?.browserName}" is unsupported`,
-                    `Supported browsers: "chrome", "firefox", "safari", "edge"`,
-                ].join("\n"),
+            const browserName = config.desiredCapabilities?.browserName;
+            const lines: string[] = [];
+
+            lines.push(`Cannot run local browser: "${browserName}" is not supported.`);
+            lines.push(
+                `\nTestplane tried to auto-install and launch a local browser for "${browserName}",`,
+                `but this browser name is not recognized.`,
+                `Supported browser names: "chrome", "firefox", "safari", "edge"`,
             );
+
+            lines.push(
+                "\nWhat you can do:",
+                `- Change the 'desiredCapabilities.browserName' in your Testplane config to one of the supported values`,
+                `- If you use a remote grid (non-local), remove 'gridUrl: "local"' from your config`,
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         const executablePath = await installBrowser(browserNameW3C, config.desiredCapabilities?.browserVersion, {

@@ -21,7 +21,15 @@ export default (browser: Browser): void => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            throw new Error("Before restoreState first open page using url command");
+            throw new Error(
+                [
+                    "Cannot restore state: no page is currently open.",
+                    "\nThe browser is not on a real page (current origin is null or missing).",
+                    "\nWhat you can do:",
+                    "- Open a page first using: await browser.url('https://your-site.com')",
+                    "- Call restoreState() only after the page has been loaded",
+                ].join("\n"),
+            );
         }
 
         const options = { ...browser.config.stateOpts, refresh: true, ..._options };
@@ -33,7 +41,15 @@ export default (browser: Browser): void => {
         }
 
         if (!restoreState) {
-            throw new Error("Can't restore state: please provide a path to file or data");
+            throw new Error(
+                [
+                    "Cannot restore state: no state data was provided.",
+                    "\nTestplane needs either a file path or a previously saved state object to restore.",
+                    "\nWhat you can do:",
+                    "- First call saveState() and keep the result, then pass it as: restoreState({ data: savedState })",
+                    "- Or save state to a file: saveState({ path: './state.json' }), then restore: restoreState({ path: './state.json' })",
+                ].join("\n"),
+            );
         }
 
         if (restoreState?.cookies && options.cookieFilter) {

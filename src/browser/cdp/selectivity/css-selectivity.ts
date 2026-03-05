@@ -164,16 +164,30 @@ export class CSSSelectivity {
                     }
 
                     if (sourceMap instanceof Error) {
-                        throw new Error(
-                            `CSS Selectivity: Couldn't load source maps for stylesheet id ${styleSheetId}`,
-                            { cause: sourceMap },
+                        const lines: string[] = [];
+                        lines.push(
+                            `What happened: CSS Selectivity could not load source maps for stylesheet id "${styleSheetId}".`,
                         );
+                        lines.push("\nPossible reasons:");
+                        lines.push("  - The source map URL is not reachable or the file doesn't exist");
+                        lines.push("  - The build tool did not generate source maps for this stylesheet");
+                        lines.push("\nWhat you can do:");
+                        lines.push("  - Enable source map generation for CSS in your build tool (webpack/vite)");
+                        lines.push("  - Check the cause error for specific network or file system details");
+                        throw new Error(lines.join("\n"), { cause: sourceMap });
                     }
 
                     if (isCachedOnFs(sourceMap) && !sourceMapUrl) {
-                        throw new Error(
-                            "Assertation failed: souce map url has to present if source maps are fs-cached",
+                        const lines: string[] = [];
+                        lines.push(
+                            "What happened: Internal selectivity assertion failed: source map URL must be present when source maps are fs-cached (CSS).",
                         );
+                        lines.push("\nThis is an internal bug in Testplane.");
+                        lines.push("\nWhat you can do:");
+                        lines.push(
+                            "  - Please report this issue at https://github.com/gemini-testing/testplane/issues",
+                        );
+                        throw new Error(lines.join("\n"));
                     }
 
                     const sourceMapString = isCachedOnFs(sourceMap)
@@ -181,7 +195,18 @@ export class CSSSelectivity {
                         : sourceMap;
 
                     if (!sourceMapString) {
-                        throw new Error(`CSS Selectivity: fs-cache is broken for ${sourceMapUrl}`);
+                        const lines: string[] = [];
+                        lines.push(
+                            `What happened: CSS Selectivity fs-cache is broken for "${sourceMapUrl}". Expected cache entry is missing or empty.`,
+                        );
+                        lines.push("\nPossible reasons:");
+                        lines.push("  - The cache file was deleted or corrupted between writing and reading");
+                        lines.push("  - A race condition occurred during concurrent cache writes");
+                        lines.push("\nWhat you can do:");
+                        lines.push(
+                            "  - Delete the selectivity cache directory and re-run the tests to regenerate the cache",
+                        );
+                        throw new Error(lines.join("\n"));
                     }
 
                     const rawSourceMap = patchSourceMapSources(JSON.parse(sourceMapString), this._sourceRoot);

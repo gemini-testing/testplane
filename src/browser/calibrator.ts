@@ -52,9 +52,25 @@ export class Calibrator {
         const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio });
 
         if (!imageFeatures) {
-            throw new CoreError(
-                "Could not calibrate. This could be due to calibration page has failed to open properly",
+            const lines: string[] = [];
+            lines.push(
+                "Browser calibration failed: could not detect the calibration marker in the captured viewport image.",
             );
+            lines.push("");
+            lines.push("Possible reasons:");
+            lines.push("  - The calibration page (about:blank) failed to open or render correctly.");
+            lines.push("  - The viewport screenshot returned a blank or unexpected image.");
+            lines.push(
+                "  - The browser does not render the calibration color marker as expected (unusual pixelRatio or viewport settings).",
+            );
+            lines.push("");
+            lines.push("What you can do:");
+            lines.push("  - Verify that the browser session is healthy and can open pages and take screenshots.");
+            lines.push("  - Try increasing the viewport size in your browser config.");
+            lines.push(
+                "  - If using a remote or headless browser, confirm the display is available and the session is not in a broken state.",
+            );
+            throw new CoreError(lines.join("\n"));
         }
 
         const calibratedFeatures: CalibrationResult = {

@@ -95,6 +95,29 @@ export const resolveLatestChromeVersion = _.memoize(async (force = false): Promi
     return retryFetch(CHROME_FOR_TESTING_LATEST_STABLE_API_URL)
         .then(res => res.text())
         .catch(() => {
-            throw new Error("Couldn't resolve latest chrome version");
+            const lines: string[] = [];
+
+            lines.push("Failed to resolve the latest Chrome version.");
+            lines.push(
+                "\nTestplane tried to fetch the latest stable Chrome version from:",
+                `  ${CHROME_FOR_TESTING_LATEST_STABLE_API_URL}`,
+                "The request failed after multiple retries.",
+            );
+
+            lines.push(
+                "\nPossible reasons:",
+                "- No internet connection, or the network is behind a firewall/proxy that blocks external requests",
+                "- The Chrome for Testing API (googlechromelabs.github.io) is temporarily unavailable",
+                "- DNS resolution failed in this environment (e.g. a restricted CI container)",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                '- Set an explicit Chrome version in the Testplane config (e.g. browserVersion: "130") to avoid this network request entirely',
+                "- Check your network connectivity: try opening the URL above in a browser or running `curl` against it",
+                "- If you are behind a proxy, make sure the HTTPS_PROXY / HTTP_PROXY environment variables are set",
+            );
+
+            throw new Error(lines.join("\n"));
         });
 });

@@ -43,11 +43,32 @@ export const resolveLocationWithSourceMap = (
     const location = { line: positions.line!, column: positions.column! };
 
     if (!source) {
-        throw new Error("File source code could not be evaluated from the source map");
+        const lines: string[] = [];
+        lines.push("What happened: Source code could not be retrieved from the source map for this stack frame.");
+        lines.push("\nPossible reasons:");
+        lines.push("  - The source map does not include 'sourcesContent' for the referenced file");
+        lines.push("  - The source file path in the source map points to a non-existent file");
+        lines.push("  - The source map was generated without embedding source contents");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Regenerate the source maps with 'sourcesContent: true' (e.g. in webpack/vite config)");
+        lines.push("  - Ensure that the source files referenced in the source map are accessible on disk");
+        throw new Error(lines.join("\n"));
     }
 
     if (!location.line || !location.column) {
-        throw new Error("Line and column could not be evaluated from the source map");
+        const lines: string[] = [];
+        lines.push(
+            "What happened: Could not resolve a valid line/column position from the source map for this stack frame.",
+        );
+        lines.push("\nPossible reasons:");
+        lines.push("  - The source map mapping for this code location is incomplete or missing");
+        lines.push("  - The original source position corresponds to a generated preamble with no original location");
+        lines.push("\nWhat you can do:");
+        lines.push(
+            "  - Check if the source map is complete and was generated from the same build as the executed code",
+        );
+        lines.push("  - Regenerate the source maps to ensure all code positions have valid mappings");
+        throw new Error(lines.join("\n"));
     }
 
     return { file: softFileURLToPath(sourceMaps.file as string), source, location };

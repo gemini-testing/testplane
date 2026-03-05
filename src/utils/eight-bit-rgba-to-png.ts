@@ -27,7 +27,17 @@ const convertRgbaToScanlines = (rgba: Buffer, width: number, height: number): Bu
     }
 
     if (scanlineOffset !== scanlines.byteLength) {
-        throw new Error("Got malformed input while trying to convert rgba to png");
+        const lines: string[] = [];
+        lines.push(
+            `What happened: Malformed RGBA input detected while building PNG scanlines. Expected ${scanlines.byteLength} bytes written, but got ${scanlineOffset}.`,
+        );
+        lines.push("\nPossible reasons:");
+        lines.push("  - The 'rgba' buffer size does not match the expected width × height × 4 bytes");
+        lines.push("  - 'width' or 'height' parameters are incorrect for the given buffer");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Verify that rgba.length === width * height * 4 before calling convertRgbaToPng()");
+        lines.push("  - Check that the width and height values correctly describe the image dimensions");
+        throw new Error(lines.join("\n"));
     }
 
     return scanlines;
@@ -70,7 +80,17 @@ export const convertRgbaToPng = (rgba: Buffer, width: number, height: number, co
     pointer = resultBuffer.writeUInt32BE(iendCrc, pointer);
 
     if (pointer !== resultBuffer.byteLength) {
-        throw new Error("Got malformed input while trying to convert rgba to png");
+        const lines: string[] = [];
+        lines.push(
+            `What happened: Malformed RGBA input detected while writing PNG chunks. Expected to write ${resultBuffer.byteLength} bytes, but wrote ${pointer}.`,
+        );
+        lines.push("\nPossible reasons:");
+        lines.push("  - The 'rgba' buffer size does not match the expected width × height × 4 bytes");
+        lines.push("  - Compressed data size calculation was incorrect");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Verify that rgba.length === width * height * 4 before calling convertRgbaToPng()");
+        lines.push("  - Check that the width and height values correctly describe the image dimensions");
+        throw new Error(lines.join("\n"));
     }
 
     return resultBuffer;

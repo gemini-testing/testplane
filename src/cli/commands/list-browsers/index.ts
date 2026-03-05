@@ -20,8 +20,15 @@ const validateOption = (availableOptions: Record<string, string>, value: string,
 
     if (!optionsArray.includes(value)) {
         const optionsList = optionsArray.map(value => `"${value}"`).join(", ");
-
-        throw new Error(`"${optionName}" option must be one of: ${optionsList}, but got "${value}"`);
+        const lines: string[] = [];
+        lines.push(`What happened: Invalid value "${value}" for CLI option "--${optionName}".`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - The option value is misspelled");
+        lines.push("  - An unsupported value was passed on the command line");
+        lines.push("\nWhat you can do:");
+        lines.push(`  - Use one of the allowed values for --${optionName}: ${optionsList}`);
+        lines.push(`  - Run 'testplane list-browsers --help' to see all available options`);
+        throw new Error(lines.join("\n"));
     }
 };
 

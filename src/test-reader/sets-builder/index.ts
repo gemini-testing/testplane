@@ -42,13 +42,17 @@ export class SetsBuilder {
             return;
         }
 
-        let error = `No such sets: ${unknownSets.join(", ")}.`;
-
+        const lines: string[] = [];
+        lines.push(`What happened: Unknown test set(s) specified: "${unknownSets.join('", "')}".`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - Set name is misspelled in the CLI argument or script");
+        lines.push("  - Set was renamed or removed from the testplane config");
+        lines.push("\nWhat you can do:");
         if (!_.isEmpty(setsNames)) {
-            error += ` Use one of the specified sets: ${setsNames.join(", ")}`;
+            lines.push(`  - Use one of the configured sets: ${setsNames.join(", ")}`);
         }
-
-        throw new Error(error);
+        lines.push('  - Check the "sets" key in your testplane.config.js to see which sets are defined');
+        throw new Error(lines.join("\n"));
     }
 
     useFiles(files: string[]): SetsBuilder {
@@ -107,7 +111,17 @@ export class SetsBuilder {
     #validateFoundFiles(foundFiles: string[]): void {
         if (!_.isEmpty(this.#filesToUse) && _.isEmpty(foundFiles)) {
             const paths = ([] as string[]).concat(this.#filesToUse).join(", ");
-            throw new Error(`Cannot find files by specified paths: ${paths}`);
+            const lines: string[] = [];
+            lines.push(`What happened: No test files were found at the specified path(s): ${paths}`);
+            lines.push("\nPossible reasons:");
+            lines.push("  - The path(s) are incorrect or contain typos");
+            lines.push("  - The files were moved, renamed, or deleted");
+            lines.push("  - The paths are relative and the working directory is not what you expect");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Double-check the file paths passed as CLI arguments");
+            lines.push("  - Run the command from the project root directory");
+            lines.push("  - Use glob patterns (e.g. 'tests/**/*.test.js') to match multiple files");
+            throw new Error(lines.join("\n"));
         }
     }
 
@@ -115,7 +129,19 @@ export class SetsBuilder {
         _.forEach(this.#sets, set => set.useFiles(filesToUse));
 
         if (!this.#hasFiles()) {
-            throw new Error("Cannot find files by masks in sets");
+            const lines: string[] = [];
+            lines.push(
+                "What happened: No test files were found matching the glob masks defined in the sets configuration.",
+            );
+            lines.push("\nPossible reasons:");
+            lines.push("  - The 'files' globs in your testplane config sets don't match any existing files");
+            lines.push("  - Test files have an extension not included in the file extensions list (.js, .mjs)");
+            lines.push("  - All matched directories are empty");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Review the 'sets' section in your testplane.config.js and verify the 'files' globs");
+            lines.push("  - Check that test files exist in the directories specified by the globs");
+            lines.push("  - Ensure test files use supported extensions (.js or .mjs)");
+            throw new Error(lines.join("\n"));
         }
     }
 

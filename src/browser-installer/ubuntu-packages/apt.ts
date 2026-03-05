@@ -133,13 +133,23 @@ export const installUbuntuPackages = async (
     const missingPkgs = MANDATORY_UBUNTU_PACKAGES_TO_BE_INSTALLED.filter(pkg => dependenciesToDownload.includes(pkg));
 
     if (missingPkgs.length) {
-        throw new Error(
-            [
-                "Missing some packages, which needs to be installed manually",
-                `Use \`apt-get install ${missingPkgs.join(" ")}\` to install them`,
-                `Then run "testplane install-deps" again\n`,
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push("Required system packages are missing and must be installed manually.");
+        lines.push(
+            "\nTestplane needs the following mandatory packages to be present on the system before it can download browser dependencies:",
+            `  ${missingPkgs.join(", ")}`,
         );
+
+        lines.push("\nThese packages cannot be installed automatically because they require system-level privileges.");
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Run: sudo apt-get install ${missingPkgs.join(" ")}`,
+            "- Then re-run: testplane install-deps",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     browserInstallerDebug(`There are ${dependenciesToDownload.length} deb packages to download`);

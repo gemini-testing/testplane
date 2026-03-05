@@ -40,7 +40,15 @@ export default (browser: ExistingBrowser): void => {
         const currentUrl = new URL(await session.getUrl());
 
         if (!currentUrl.origin || currentUrl.origin === "null") {
-            throw new Error("Before saveState first open page using url command");
+            throw new Error(
+                [
+                    "Cannot save state: no page is currently open.",
+                    "\nThe browser is not on a real page (current origin is null or missing).",
+                    "\nWhat you can do:",
+                    "- Open a page first using: await browser.url('https://your-site.com')",
+                    "- Call saveState() only after the page has been loaded",
+                ].join("\n"),
+            );
         }
 
         const options = { ...browser.config.stateOpts, ..._options };

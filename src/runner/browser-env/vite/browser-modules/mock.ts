@@ -35,7 +35,16 @@ export async function mock(moduleName: string, factory?: MockFactory, originalIm
         mockCache.set(mockPath, resolvedMock);
     } catch (err: unknown) {
         const error = err as Error;
-        throw new Error(`There was an error in mock factory of module "${moduleName}":\n${error.stack}`);
+        const lines: string[] = [];
+        lines.push(`What happened: The mock factory function for module "${moduleName}" threw an error.`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - The factory function contains a runtime error (e.g. undefined reference, type error)");
+        lines.push("  - The factory function is async and an awaited promise was rejected");
+        lines.push("  - 'originalImport' passed to the factory is undefined or has unexpected shape");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Review the mock factory body for any errors");
+        lines.push(`  - Check the full stack trace below:\n${error.stack}`);
+        throw new Error(lines.join("\n"));
     }
 }
 

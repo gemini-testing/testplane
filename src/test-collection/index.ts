@@ -241,8 +241,14 @@ export class TestCollection {
 
 export function validateFormatter(formatterType: ValueOf<typeof Formatters>): void {
     if (!AVAILABLE_FORMATTERS.includes(formatterType)) {
-        throw new Error(
-            `"formatter" option must be one of: ${AVAILABLE_FORMATTERS.join(", ")}, but got ${formatterType}`,
-        );
+        const lines: string[] = [];
+        lines.push(`What happened: Invalid "formatter" option value: "${formatterType}".`);
+        lines.push("\nPossible reasons:");
+        lines.push("  - The formatter name is misspelled");
+        lines.push("  - An unsupported formatter was passed to the TestCollection.format() call");
+        lines.push("\nWhat you can do:");
+        lines.push(`  - Use one of the supported formatters: ${AVAILABLE_FORMATTERS.join(", ")}`);
+        lines.push("  - Example: collection.format(TestCollection.FORMATTERS.LIST)");
+        throw new Error(lines.join("\n"));
     }
 }

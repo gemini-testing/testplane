@@ -70,7 +70,27 @@ export const getBrowserPlatform = (): BrowserPlatform => {
     const platform = detectBrowserPlatform();
 
     if (!platform) {
-        throw new Error(`Got an error while trying to download browsers: platform "${platform}" is not supported`);
+        const lines: string[] = [];
+
+        lines.push("Failed to detect the current operating system platform.");
+        lines.push(
+            "\nTestplane uses @puppeteer/browsers to detect the platform, but it returned no result.",
+            "This typically means you are running on an unrecognized or unsupported OS.",
+        );
+
+        lines.push(
+            "\nPossible reasons:",
+            "- You are running on an exotic or custom Linux distribution that is not recognized",
+            "- The Node.js process is running in an unusual container or virtual environment",
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Ensure you are running on Linux (x64/arm64), macOS, or Windows",
+            "- If you are on a supported OS but still see this error, please open an issue at https://github.com/gemini-testing/testplane",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     return platform;
@@ -141,7 +161,26 @@ export const downloadFile = async (url: string, filePath: string): Promise<void>
     const response = await fetch(url);
 
     if (!response.ok || !response.body) {
-        throw new Error(`Unable to download file from ${url}: ${response.statusText}`);
+        const lines: string[] = [];
+
+        lines.push(`Failed to download file from: ${url}`);
+        lines.push(`\nThe server responded with status: ${response.status} ${response.statusText}`);
+
+        lines.push(
+            "\nPossible reasons:",
+            "- The URL is no longer valid or the resource has been moved",
+            "- The server is temporarily unavailable",
+            "- Network connectivity or proxy configuration is blocking the request",
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Try again in a few minutes",
+            "- Check your network connection and proxy settings",
+            "- If the problem persists, open an issue at https://github.com/gemini-testing/testplane",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const stream = Readable.fromWeb(response.body as never).pipe(writeStream);

@@ -72,11 +72,36 @@ class Registry {
         const registryKey = getRegistryBinaryKey(name, platform);
 
         if (!this.registry.binaries[registryKey]) {
-            throw new Error(`Binary '${name}' on '${platform}' is not installed`);
+            const lines: string[] = [];
+
+            lines.push(`Binary not found: '${name}' on '${platform}' is not installed.`);
+            lines.push("\nTestplane looked up the binary registry but found no entry for this browser or driver.");
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Run 'testplane install-deps' to install the required browsers and drivers",
+                "- Make sure the binary was successfully installed before trying to use it",
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         if (!this.registry.binaries[registryKey][version]) {
-            throw new Error(`Version '${version}' of driver '${name}' on '${platform}' is not installed`);
+            const lines: string[] = [];
+
+            lines.push(`Binary version not found: '${name}@${version}' on '${platform}' is not installed.`);
+            lines.push(
+                "\nTestplane found a registry entry for this binary, but the requested version is missing.",
+                "This can happen if the installation was interrupted or the registry is out of sync.",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Run 'testplane install-deps' again to repair or update the installation",
+                `- To force reinstallation, delete the registry file at: ${this.registryPath}`,
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         const binaryRelativePath = await this.registry.binaries[registryKey][version];
@@ -90,7 +115,21 @@ class Registry {
         const registryKey = getRegistryOsPackagesKey(name, version);
 
         if (!this.registry.osPackages[registryKey]) {
-            throw new Error(`Packages for ${name}@${version} are not installed`);
+            const lines: string[] = [];
+
+            lines.push(`OS packages not found: packages for ${name}@${version} are not installed.`);
+            lines.push(
+                "\nTestplane could not find the required Ubuntu system packages in the registry.",
+                "This usually means 'testplane install-deps' has not been run yet, or was run on a different machine.",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Run 'testplane install-deps' on this machine to install the required packages",
+                `- To force reinstallation, delete the registry file at: ${this.registryPath}`,
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         const osPackagesRelativePath = await this.registry.osPackages[registryKey];

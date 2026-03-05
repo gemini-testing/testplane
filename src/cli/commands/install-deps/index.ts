@@ -49,12 +49,23 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
 
                         return { browserName, browserVersion };
                     } else {
-                        throw new Error(
-                            [
-                                `Unknown browser: ${browser}.`,
-                                `Expected config's <browserId> or '<browserName>@<browserVersion>' (example: "chrome@130")`,
-                            ].join("\n"),
+                        const lines: string[] = [];
+                        lines.push(`Unknown browser argument: "${browser}".`);
+                        lines.push("");
+                        lines.push("Possible reasons:");
+                        lines.push("  - The value is not a browserId from your Testplane config.");
+                        lines.push('  - The value is not in the expected "<browserName>@<browserVersion>" format.');
+                        lines.push("  - There is a typo in the browser name or version.");
+                        lines.push("");
+                        lines.push("What you can do:");
+                        lines.push(
+                            `  - Use a browserId defined in your config (e.g. one of: ${
+                                Object.keys(testplane.config.browsers).join(", ") || "<none defined>"
+                            }).`,
                         );
+                        lines.push('  - Or use the format "<browserName>@<browserVersion>", e.g. "chrome@130".');
+                        lines.push("  - Run `testplane install-deps --help` to see usage details.");
+                        throw new Error(lines.join("\n"));
                     }
                 });
 

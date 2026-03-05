@@ -48,7 +48,17 @@ export class HashProvider {
             const files = await globExtra.expandPaths(pattern, { root: cwd });
 
             if (!files.length) {
-                throw new Error(`Selectivity: Couldn't find files by disableSelectivityPattern "${pattern}"`);
+                const lines: string[] = [];
+                lines.push(
+                    `What happened: Selectivity could not find any files matching the 'disableSelectivityPattern' glob: "${pattern}"`,
+                );
+                lines.push("\nPossible reasons:");
+                lines.push("  - The glob pattern is too restrictive or contains a typo");
+                lines.push("  - The pattern uses a path that doesn't exist relative to the project root");
+                lines.push("\nWhat you can do:");
+                lines.push("  - Verify the 'disableSelectivityPattern' value in your testplane.config.js");
+                lines.push("  - Test the pattern manually using: glob.sync(pattern, { cwd: process.cwd() })");
+                throw new Error(lines.join("\n"));
             }
 
             const filesSorted = files.sort();

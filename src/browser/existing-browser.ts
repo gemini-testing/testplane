@@ -175,9 +175,30 @@ export class ExistingBrowser extends Browser {
             ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
             const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
             if (isClientBridgeErrorData(result)) {
-                throw new Error(
-                    `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
+                const lines: string[] = [];
+
+                lines.push(`Screenshot preparation failed: ${result.error}`);
+                lines.push(
+                    `\nThe client-side script that prepares the page for screenshotting reported an error:`,
+                    `  Type: ${result.error}`,
+                    `  Message: ${result.message}`,
                 );
+
+                lines.push(
+                    "\nPossible reasons:",
+                    "- The page has a JavaScript error that prevents the client bridge from running",
+                    "- The page was navigated away before the screenshot was taken",
+                    "- A Content Security Policy (CSP) on the page is blocking the injected script",
+                );
+
+                lines.push(
+                    "\nWhat you can do:",
+                    "- Check the browser console for JavaScript errors on this page",
+                    "- If the page has a strict CSP, try disabling it for testing or using CDP-based screenshots",
+                    "- Open an issue at https://github.com/gemini-testing/testplane if you believe this is a bug",
+                );
+
+                throw new Error(lines.join("\n"));
             }
 
             // https://github.com/webdriverio/webdriverio/issues/11396
@@ -235,9 +256,15 @@ export class ExistingBrowser extends Browser {
 
                 if (!elem) {
                     throw new Error(
-                        "Scroll screenshot failed with: " +
-                            'Could not find element with css selector specified in "selectorToScroll" option: ' +
-                            params.selector,
+                        [
+                            "Scroll failed: element not found.",
+                            `\nTestplane tried to scroll using the CSS selector from the "selectorToScroll" option:`,
+                            `  "${params.selector}"`,
+                            `\nBut no matching element was found on the page.`,
+                            `\nWhat you can do:`,
+                            `- Verify the selector is correct and the element is present in the DOM`,
+                            `- Wait for the element to appear before taking the screenshot (e.g. using browser.waitForExist)`,
+                        ].join("\n"),
                     );
                 }
 
@@ -548,9 +575,30 @@ export class ExistingBrowser extends Browser {
         const result = await this._clientBridge.call<void>("disableFrameAnimations");
 
         if (isClientBridgeErrorData(result)) {
-            throw new Error(
-                `Disable animations failed with error type '${result.error}' and error message: ${result.message}`,
+            const lines: string[] = [];
+
+            lines.push(`Failed to disable animations: ${result.error}`);
+            lines.push(
+                "\nThe client-side script that disables CSS/JS animations in the browser frame reported an error:",
+                `  Type: ${result.error}`,
+                `  Message: ${result.message}`,
             );
+
+            lines.push(
+                "\nPossible reasons:",
+                "- A Content Security Policy (CSP) is blocking the injected script",
+                "- The page navigated away or was reloaded before the script ran",
+                "- The frame is a cross-origin iframe that cannot be accessed",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                "- Check the browser console for CSP violations",
+                "- If the page uses strict CSP, consider using 'disableAnimation: false' in your screenshot options",
+                "- Open an issue at https://github.com/gemini-testing/testplane if the error persists",
+            );
+
+            throw new Error(lines.join("\n"));
         }
 
         return result;

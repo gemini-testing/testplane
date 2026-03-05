@@ -8,7 +8,28 @@ const getLatestGeckoDriverVersion = async (): Promise<string> => {
     const version = cargoVersionsToml.split("\n").find(line => line.startsWith("version = "));
 
     if (!version) {
-        throw new Error("Couldn't resolve latest geckodriver version while downloading geckodriver");
+        const lines: string[] = [];
+
+        lines.push("Failed to resolve the latest GeckoDriver version.");
+        lines.push(
+            "\nTestplane fetched the GeckoDriver Cargo.toml from:",
+            `  ${GECKODRIVER_CARGO_TOML}`,
+            "but could not find a version string in the response.",
+        );
+
+        lines.push(
+            "\nPossible reasons:",
+            "- The network request succeeded but the file format changed unexpectedly",
+            "- The geckodriver repository structure has been updated",
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Check your internet connection and try again",
+            "- If the problem persists, open an issue at https://github.com/gemini-testing/testplane",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const latestGeckoVersion = version.split(" = ").pop()!.slice(1, -1);

@@ -96,10 +96,17 @@ export const readTestFileWithTestplaneDependenciesCollecting = async <T>(
         try {
             parsedDependencies = JSON.parse(fsCachedDependencies) as string[];
         } catch (cause) {
-            throw new Error(
-                `Selectivity: It looks like fs-cache for "${file}" dependencies is broken: contents of cache file is invalid JSON`,
-                { cause },
+            const lines: string[] = [];
+            lines.push(
+                `What happened: Selectivity fs-cache for test file "${file}" is corrupted — the cache contents are not valid JSON.`,
             );
+            lines.push("\nPossible reasons:");
+            lines.push("  - The cache file was partially written (e.g. process killed during write)");
+            lines.push("  - The cache file was manually edited or corrupted by another tool");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Delete the selectivity cache directory and re-run the tests to regenerate the cache");
+            lines.push("  - Check the OS temp directory for the selectivity cache files");
+            throw new Error(lines.join("\n"), { cause });
         }
 
         parsedDependencies.forEach(dependency => jsTestplaneDeps.add(dependency));

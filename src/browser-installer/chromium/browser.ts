@@ -10,12 +10,21 @@ export const installChromium = async (version: string, { force = false } = {}): 
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROMIUM_VERSION) {
-        throw new Error(
-            [
-                `chrome@${version} can't be installed.`,
-                `Automatic browser downloader is not available for chrome versions < ${MIN_CHROMIUM_VERSION}`,
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Failed to install Chromium@${version}: version is too old.`);
+        lines.push(
+            `\nTestplane's automatic Chromium downloader only supports versions >= ${MIN_CHROMIUM_VERSION}.`,
+            `The requested version '${version}' (milestone ${milestone}) is below this threshold.`,
         );
+
+        lines.push(
+            "\nWhat you can do:",
+            `- Use Chromium version ${MIN_CHROMIUM_VERSION} or higher`,
+            "- If you need an old browser for legacy testing, download it manually and point 'executablePath' to it in the config",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     const platform = getChromePlatform(version);
@@ -32,13 +41,26 @@ export const installChromium = async (version: string, { force = false } = {}): 
     const canBeInstalled = await canDownload({ browser: BrowserName.CHROMIUM, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
-        throw new Error(
-            [
-                `chrome@${version} can't be installed.`,
-                `Probably the version '${version}' is invalid, please try another version.`,
-                "Version examples: '93', '93.0'",
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Failed to install Chromium@${version}.`);
+        lines.push(
+            "\nTestplane checked the Chromium download registry and found no build matching the requested version.",
         );
+
+        lines.push(
+            "\nPossible reasons:",
+            `- The version '${version}' does not exist in Chromium releases for the current platform`,
+            "- The version string format is incorrect",
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Use a milestone number like '93' or a milestone + minor like '93.0'",
+            "- Browse available Chromium revisions at: https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     browserInstallerDebug(`installing chromium@${buildId} (${milestone}) for ${platform}`);

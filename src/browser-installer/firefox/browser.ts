@@ -31,13 +31,28 @@ const installFirefoxBrowser = async (version: string, { force = false } = {}): P
     const canBeInstalled = await canDownload({ browser: BrowserName.FIREFOX, platform, buildId, cacheDir });
 
     if (!canBeInstalled) {
-        throw new Error(
-            [
-                `firefox@${version} can't be installed.`,
-                `Probably the version '${version}' is invalid, please try another version.`,
-                "Version examples: '120', '130.0', '131.0'",
-            ].join("\n"),
+        const lines: string[] = [];
+
+        lines.push(`Failed to install Firefox@${version}.`);
+        lines.push(
+            "\nTestplane checked the Firefox download registry and found no binary matching the requested version.",
         );
+
+        lines.push(
+            "\nPossible reasons:",
+            `- The version '${version}' does not exist in Firefox releases`,
+            "- The version string format is incorrect",
+            `- Firefox versions below 60 are not supported by the automatic installer`,
+        );
+
+        lines.push(
+            "\nWhat you can do:",
+            "- Use a valid Firefox version such as '120', '130.0', or '131.0'",
+            "- Check available versions at: https://releases.mozilla.org/pub/firefox/releases/",
+            "- Omit browserVersion in config to have Testplane install the latest stable Firefox automatically",
+        );
+
+        throw new Error(lines.join("\n"));
     }
 
     browserInstallerDebug(`installing firefox@${buildId} for ${platform}`);
@@ -82,6 +97,29 @@ export const resolveLatestFirefoxVersion = _.memoize(async (force = false): Prom
         .then(res => res.json())
         .then(({ LATEST_FIREFOX_VERSION }) => LATEST_FIREFOX_VERSION)
         .catch(() => {
-            throw new Error("Couldn't resolve latest firefox version");
+            const lines: string[] = [];
+
+            lines.push("Failed to resolve the latest Firefox version.");
+            lines.push(
+                "\nTestplane tried to fetch the latest Firefox version from:",
+                `  ${FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL}`,
+                "The request failed after multiple retries.",
+            );
+
+            lines.push(
+                "\nPossible reasons:",
+                "- No internet connection, or the network is behind a firewall/proxy that blocks external requests",
+                "- The Mozilla Product Details API is temporarily unavailable",
+                "- DNS resolution failed in this environment (e.g. a restricted CI container)",
+            );
+
+            lines.push(
+                "\nWhat you can do:",
+                '- Set an explicit Firefox version in the Testplane config (e.g. browserVersion: "130.0") to avoid this network request entirely',
+                "- Check your network connectivity: try opening the URL above in a browser or running `curl` against it",
+                "- If you are behind a proxy, make sure the HTTPS_PROXY / HTTP_PROXY environment variables are set",
+            );
+
+            throw new Error(lines.join("\n"));
         });
 });

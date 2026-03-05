@@ -144,9 +144,17 @@ export const readJsonWithCompression = async <T>(
         if (opts?.defaultValue) {
             return Promise.resolve(opts.defaultValue);
         } else {
-            throw new Error(
-                `Couldn't read ${jsonBasePath} with following compression: ${compressionPriorities}: file does not exist`,
+            const lines: string[] = [];
+            lines.push(
+                `What happened: Could not read selectivity data file at "${jsonBasePath}". File does not exist with any of the expected compressions: ${compressionPriorities}.`,
             );
+            lines.push("\nPossible reasons:");
+            lines.push("  - The selectivity data file was never created (first run or was deleted)");
+            lines.push("  - The file path or compression settings changed since the last run");
+            lines.push("\nWhat you can do:");
+            lines.push("  - Run tests with selectivity in write mode first to generate the data file");
+            lines.push("  - Check 'selectivity.testDependenciesPath' in your testplane.config.js");
+            throw new Error(lines.join("\n"));
         }
     }
 

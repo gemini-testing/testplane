@@ -84,7 +84,16 @@ export const probeServer = async (
     readinessProbe: Exclude<Config["devServer"]["readinessProbe"], Function>,
 ): Promise<boolean> => {
     if (typeof readinessProbe.url !== "string") {
-        throw new Error("devServer.readinessProbe.url should be set to url");
+        const lines: string[] = [];
+        lines.push(
+            `What happened: 'devServer.readinessProbe.url' must be a string URL, but got ${typeof readinessProbe.url}.`,
+        );
+        lines.push("\nPossible reasons:");
+        lines.push("  - 'readinessProbe.url' was not set or was set to a non-string value");
+        lines.push("\nWhat you can do:");
+        lines.push("  - Set 'devServer.readinessProbe.url' to a valid URL string in your testplane.config.js");
+        lines.push("  - Example: readinessProbe: { url: 'http://localhost:3000/health' }");
+        throw new Error(lines.join("\n"));
     }
 
     const isReadyFn = readinessProbe.isReady || defaultIsReadyFn;
