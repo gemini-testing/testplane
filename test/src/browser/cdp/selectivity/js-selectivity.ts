@@ -284,7 +284,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 extractSourceFilesDepsStub,
                 "mock source\n//# sourceMappingURL=app.js.map",
                 "mock source map",
-                [0, 100],
+                mockCoverage.result,
                 sourceRoot,
             );
 

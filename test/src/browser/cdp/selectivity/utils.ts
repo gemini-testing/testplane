@@ -176,54 +176,241 @@ describe("CDP/Selectivity/Utils", () => {
     });
 
     describe("extractSourceFilesDeps", () => {
-        let consumerMock: { originalPositionFor: SinonStub };
+        let consumerMock: { originalPositionFor: SinonStub; generatedPositionFor: SinonStub };
 
-        beforeEach(() => {
-            consumerMock = { originalPositionFor: sandbox.stub() };
-            SourceMapConsumerStub.returns(consumerMock);
+        const GREATEST_LOWER_BOUND = 1;
+        const LEAST_UPPER_BOUND = 2;
+
+        const sourceMaps = JSON.stringify({
+            version: 3,
+            sources: ["src/app.js"],
+            sourceRoot: "/root",
+            names: [],
+            mappings: "",
+            file: "bundle.js",
         });
 
-        it("should extract source files from coverage offsets", async () => {
+        const mkCoverages = (
+            ranges: Array<{ startOffset: number; endOffset: number }>,
+        ): Array<{
+            scriptId: string;
+            url: string;
+            functions: Array<{
+                functionName: string;
+                ranges: Array<{ startOffset: number; endOffset: number; count: number }>;
+                isBlockCoverage: boolean;
+            }>;
+        }> => [
+            {
+                scriptId: "1",
+                url: "http://example.com/bundle.js",
+                functions: [
+                    {
+                        functionName: "fn",
+                        ranges: ranges.map(r => ({ ...r, count: 1 })),
+                        isBlockCoverage: false,
+                    },
+                ],
+            },
+        ];
+
+        beforeEach(() => {
+            consumerMock = {
+                originalPositionFor: sandbox.stub(),
+                generatedPositionFor: sandbox.stub(),
+            };
+            SourceMapConsumerStub.returns(consumerMock);
+            (SourceMapConsumerStub as any).GREATEST_LOWER_BOUND = GREATEST_LOWER_BOUND;
+            (SourceMapConsumerStub as any).LEAST_UPPER_BOUND = LEAST_UPPER_BOUND;
+        });
+
+        it("should extract source files from coverage via GREATEST_LOWER_BOUND", () => {
+            // source: "line1\nline2\nline3\nline4"
+            // offsets: line0 starts at 0, line1 at 6, line2 at 12, line3 at 18
             const source = "line1\nline2\nline3\nline4";
-            const sourceMaps = JSON.stringify({
-                version: 3,
-                sources: ["src/app.js"],
-                sourceRoot: "/root",
-                names: [],
-                mappings: "",
-                file: "bundle.js",
-            });
-            const startOffsets = [0, 6, 12];
+            const coverages = [
+                {
+                    scriptId: "1",
+                    url: "http://example.com/bundle.js",
+                    functions: [
+                        {
+                            functionName: "fn1",
+                            ranges: [{ startOffset: 0, endOffset: 5, count: 1 }],
+                            isBlockCoverage: false,
+                        },
+                        {
+                            functionName: "fn2",
+                            ranges: [{ startOffset: 6, endOffset: 11, count: 1 }],
+                            isBlockCoverage: false,
+                        },
+                    ],
+                },
+            ];
 
             consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .onCall(0)
-                .returns({ source: "src/app.js" })
+                .returns({ source: "src/app.js", line: 1, column: 0 })
                 .onCall(1)
-                .returns({ source: "src/utils.js" })
-                .onCall(2)
-                .returns({ source: null });
+                .returns({ source: "src/utils.js", line: 2, column: 0 });
 
-            const result = await utils.extractSourceFilesDeps(source, sourceMaps, startOffsets, "/root");
+            consumerMock.generatedPositionFor
+                .onCall(0)
+                .returns({ line: 1 }) // >= startLine + 1 (1 >= 1) -> pass
+                .onCall(1)
+                .returns({ line: 2 }); // >= startLine + 1 (2 >= 2) -> pass
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
 
             assert.equal(result.size, 2);
             assert.isTrue(result.has("src/app.js"));
             assert.isTrue(result.has("src/utils.js"));
         });
 
-        it("should handle empty start offsets", async () => {
+        it("should handle empty coverages array", () => {
             const source = "line1\nline2";
-            const sourceMaps = JSON.stringify({
-                version: 3,
-                sources: ["src/app.js"],
-                sourceRoot: "/root",
-                names: [],
-                mappings: "",
-                file: "bundle.js",
-            });
 
-            const result = await utils.extractSourceFilesDeps(source, sourceMaps, [], "/root");
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, [], "/root");
 
             assert.equal(result.size, 0);
+        });
+
+        it("should reject GREATEST_LOWER_BOUND source if generated position line is before startLine", () => {
+            const source = "line1\nline2\nline3";
+            // startOffset 6 -> startLine 1 -> startLine + 1 = 2
+            const coverages = mkCoverages([{ startOffset: 6, endOffset: 11 }]);
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .returns({ source: "src/app.js", line: 5, column: 0 });
+
+            // generatedPosition.line (1) < startLine + 1 (2) -> fail
+            consumerMock.generatedPositionFor.returns({ line: 1 });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .returns({ source: null });
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should not add source if generatedPositionFor returns null line for GREATEST_LOWER_BOUND", () => {
+            const source = "line1\nline2";
+            const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .returns({ source: "src/app.js", line: 1, column: 0 });
+
+            consumerMock.generatedPositionFor.returns({ line: null });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .returns({ source: null });
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should fall through to LEAST_UPPER_BOUND when GREATEST_LOWER_BOUND returns no source", () => {
+            const source = "line1\nline2\nline3";
+            // endOffset 17 -> endLine 2 -> endLine + 1 = 3
+            const coverages = mkCoverages([{ startOffset: 0, endOffset: 17 }]);
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .returns({ source: null });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .returns({ source: "src/wrapped.js", line: 1, column: 0 });
+
+            // generatedPosition.line (2) <= endLine + 1 (3) -> pass
+            consumerMock.generatedPositionFor.returns({ line: 2 });
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("src/wrapped.js"));
+        });
+
+        it("should fall through to LEAST_UPPER_BOUND when GREATEST_LOWER_BOUND bounds check fails", () => {
+            const source = "line1\nline2\nline3";
+            // startOffset 6 -> startLine 1, endOffset 17 -> endLine 2
+            const coverages = mkCoverages([{ startOffset: 6, endOffset: 17 }]);
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .returns({ source: "src/wrong.js", line: 10, column: 0 });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .returns({ source: "src/correct.js", line: 2, column: 0 });
+
+            consumerMock.generatedPositionFor
+                .onCall(0)
+                .returns({ line: 1 }) // GREATEST_LOWER_BOUND: 1 < startLine + 1 (2) -> fail
+                .onCall(1)
+                .returns({ line: 3 }); // LEAST_UPPER_BOUND: 3 <= endLine + 1 (3) -> pass
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("src/correct.js"));
+        });
+
+        it("should reject LEAST_UPPER_BOUND source if generated position line is after endLine", () => {
+            const source = "line1\nline2\nline3";
+            // startOffset 0, endOffset 5 -> endLine 0 -> endLine + 1 = 1
+            const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .returns({ source: null });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .returns({ source: "src/far.js", line: 1, column: 0 });
+
+            // generatedPosition.line (5) > endLine + 1 (1) -> fail
+            consumerMock.generatedPositionFor.returns({ line: 5 });
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should process multiple ranges within a function and break on first match", () => {
+            const source = "line1\nline2\nline3";
+            const coverages = mkCoverages([
+                { startOffset: 0, endOffset: 5 },
+                { startOffset: 6, endOffset: 11 },
+            ]);
+
+            // First range: GREATEST_LOWER_BOUND returns no source
+            // First range: LEAST_UPPER_BOUND returns no source
+            // Second range: GREATEST_LOWER_BOUND returns a source with valid bounds
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .onCall(0)
+                .returns({ source: null })
+                .onCall(1)
+                .returns({ source: "src/app.js", line: 2, column: 0 });
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .onCall(0)
+                .returns({ source: null });
+
+            consumerMock.generatedPositionFor.returns({ line: 2 }); // >= startLine + 1 (2) -> pass
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("src/app.js"));
         });
     });
 

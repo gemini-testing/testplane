@@ -251,20 +251,10 @@ export class JSSelectivity {
                         throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
                     }
 
-                    const startOffsetsSet = new Set<number>();
-
-                    grouppedByScriptCoverage[scriptId].forEach(entry => {
-                        entry.functions.forEach(fn => {
-                            fn.ranges.forEach(range => {
-                                startOffsetsSet.add(range.startOffset);
-                            });
-                        });
-                    });
-
                     const dependingSourceFiles = extractSourceFilesDeps(
                         sourceString,
                         sourceMapsString,
-                        Array.from(startOffsetsSet),
+                        grouppedByScriptCoverage[scriptId],
                         this._sourceRoot,
                     );
 
