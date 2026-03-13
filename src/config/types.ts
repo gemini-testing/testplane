@@ -411,6 +411,7 @@ export interface CommonConfig {
         compression: SelectivityCompressionType;
         disableSelectivityPatterns: string[];
         mapDependencyRelativePath: null | SelectivityMapDependencyRelativePathFn;
+        reportPath: string;
     };
 
     timeTravel: TimeTravelConfig;
