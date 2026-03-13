@@ -12,6 +12,8 @@ describe("SelectivityRunner", () => {
     let getHashReaderStub: SinonStub;
     let getHashWriterStub: SinonStub;
     let getTestDependenciesReaderStub: SinonStub;
+    let fsExtraStub: { outputJson: SinonStub };
+    let loggerStub: { error: SinonStub };
 
     let mainRunnerMock: { on: SinonStub };
     let configMock: { forBrowser: SinonStub; getBrowserIds: SinonStub };
@@ -25,6 +27,8 @@ describe("SelectivityRunner", () => {
         getHashReaderStub = sandbox.stub();
         getHashWriterStub = sandbox.stub();
         getTestDependenciesReaderStub = sandbox.stub();
+        fsExtraStub = { outputJson: sandbox.stub().resolves() };
+        loggerStub = { error: sandbox.stub() };
 
         hashReaderMock = {
             patternHasChanged: sandbox.stub(),
@@ -56,6 +60,8 @@ describe("SelectivityRunner", () => {
             "./hash-reader": { getHashReader: getHashReaderStub },
             "./hash-writer": { getHashWriter: getHashWriterStub },
             "./test-dependencies-reader": { getTestDependenciesReader: getTestDependenciesReaderStub },
+            "fs-extra": fsExtraStub,
+            "../../../utils/logger": loggerStub,
         });
 
         SelectivityRunnerClass = proxyquiredModule.SelectivityRunner;
@@ -422,6 +428,262 @@ describe("SelectivityRunner", () => {
 
             assert.calledWith(getHashWriterStub, "/test/path", "none");
             assert.calledWith(hashWriterMock.addTestDependencyHashes, data);
+        });
+    });
+
+    describe("saving selectivity report", () => {
+        let runner: SelectivityRunner;
+        let browserConfigMock: {
+            selectivity: {
+                enabled: SelectivityModeValue;
+                testDependenciesPath: string;
+                compression: string;
+                disableSelectivityPatterns: string[];
+                reportPath: string;
+            };
+        };
+        let testMock: Test;
+
+        beforeEach(() => {
+            browserConfigMock = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    reportPath: "/tmp/selectivity-report.json",
+                },
+            };
+            testMock = {
+                id: "test-123",
+                browserId: "chrome",
+                fullTitle: () => "Test Suite Test Case",
+            } as Test;
+
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.returns(browserConfigMock);
+
+            hashReaderMock.patternHasChanged.resolves(false);
+
+            runner = new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock);
+        });
+
+        it("should save report with correct stats when test is skipped", async () => {
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.calledWith(
+                fsExtraStub.outputJson,
+                "/tmp/selectivity-report.json",
+                {
+                    totalProcessedCount: 1,
+                    totalSkippedCount: 1,
+                    perBrowserStats: {
+                        chrome: { processedCount: 1, skippedCount: 1 },
+                    },
+                },
+                { spaces: 4 },
+            );
+        });
+
+        it("should save report with correct stats when test is not skipped", async () => {
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            const changedDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(changedDeps);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.calledWith(
+                fsExtraStub.outputJson,
+                "/tmp/selectivity-report.json",
+                {
+                    totalProcessedCount: 1,
+                    totalSkippedCount: 0,
+                    perBrowserStats: {
+                        chrome: { processedCount: 1, skippedCount: 0 },
+                    },
+                },
+                { spaces: 4 },
+            );
+        });
+
+        it("should not save report when reportPath is empty", async () => {
+            browserConfigMock.selectivity.reportPath = "";
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.notCalled(fsExtraStub.outputJson);
+        });
+
+        it("should aggregate stats for multiple browsers with same reportPath", async () => {
+            const chromeConfig = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/chrome",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    reportPath: "/tmp/selectivity-report.json",
+                },
+            };
+            const firefoxConfig = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/firefox",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    reportPath: "/tmp/selectivity-report.json",
+                },
+            };
+
+            configMock.forBrowser.withArgs("chrome").returns(chromeConfig);
+            configMock.forBrowser.withArgs("firefox").returns(firefoxConfig);
+            configMock.getBrowserIds.returns(["chrome", "firefox"]);
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "firefox");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.calledOnce(fsExtraStub.outputJson);
+            assert.calledWith(
+                fsExtraStub.outputJson,
+                "/tmp/selectivity-report.json",
+                {
+                    totalProcessedCount: 2,
+                    totalSkippedCount: 2,
+                    perBrowserStats: {
+                        chrome: { processedCount: 1, skippedCount: 1 },
+                        firefox: { processedCount: 1, skippedCount: 1 },
+                    },
+                },
+                { spaces: 4 },
+            );
+        });
+
+        it("should save separate reports for browsers with different reportPaths", async () => {
+            const chromeConfig = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/chrome",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    reportPath: "/tmp/chrome-report.json",
+                },
+            };
+            const firefoxConfig = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/firefox",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    reportPath: "/tmp/firefox-report.json",
+                },
+            };
+
+            configMock.forBrowser.withArgs("chrome").returns(chromeConfig);
+            configMock.forBrowser.withArgs("firefox").returns(firefoxConfig);
+            configMock.getBrowserIds.returns(["chrome", "firefox"]);
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            runner.startTestCheckToRun(testMock, "firefox");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.calledTwice(fsExtraStub.outputJson);
+            assert.calledWith(
+                fsExtraStub.outputJson,
+                "/tmp/chrome-report.json",
+                {
+                    totalProcessedCount: 1,
+                    totalSkippedCount: 1,
+                    perBrowserStats: {
+                        chrome: { processedCount: 1, skippedCount: 1 },
+                    },
+                },
+                { spaces: 4 },
+            );
+            assert.calledWith(
+                fsExtraStub.outputJson,
+                "/tmp/firefox-report.json",
+                {
+                    totalProcessedCount: 1,
+                    totalSkippedCount: 1,
+                    perBrowserStats: {
+                        firefox: { processedCount: 1, skippedCount: 1 },
+                    },
+                },
+                { spaces: 4 },
+            );
+        });
+
+        it("should use TESTPLANE_SELECTIVITY_REPORT_PATH env variable over config reportPath", async () => {
+            const originalEnv = process.env.TESTPLANE_SELECTIVITY_REPORT_PATH;
+            process.env.TESTPLANE_SELECTIVITY_REPORT_PATH = "/env/report.json";
+
+            try {
+                const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+                testDepsReaderMock.getFor.resolves(testDeps);
+                hashReaderMock.getTestChangedDeps.resolves(null);
+
+                runner.startTestCheckToRun(testMock, "chrome");
+                await runner.runNecessaryTests();
+                await new Promise(resolve => setTimeout(resolve, 0));
+
+                assert.calledWith(fsExtraStub.outputJson, "/env/report.json", sinon.match.object, { spaces: 4 });
+            } finally {
+                if (originalEnv === undefined) {
+                    delete process.env.TESTPLANE_SELECTIVITY_REPORT_PATH;
+                } else {
+                    process.env.TESTPLANE_SELECTIVITY_REPORT_PATH = originalEnv;
+                }
+            }
+        });
+
+        it("should log error when report saving fails", async () => {
+            const error = new Error("write failed");
+            fsExtraStub.outputJson.rejects(error);
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.calledWith(loggerStub.error, "Couldn't save selectivity report. Reason:", error);
+        });
+
+        it("should not track stats for tests that bypass selectivity processing", async () => {
+            browserConfigMock.selectivity.enabled = SelectivityMode.Disabled;
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+            await new Promise(resolve => setTimeout(resolve, 0));
+
+            assert.notCalled(fsExtraStub.outputJson);
         });
     });
 });
