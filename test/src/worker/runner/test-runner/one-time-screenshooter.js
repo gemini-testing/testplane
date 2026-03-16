@@ -11,6 +11,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
     const sandbox = sinon.createSandbox();
     let OneTimeScreenshooter;
     let logger;
+    let extractBase64PngSize;
 
     const mkBrowser_ = (opts = {}) => {
         const session = mkSessionStub_();
@@ -57,8 +58,10 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         logger = {
             warn: sinon.stub(),
         };
+        extractBase64PngSize = sinon.stub().named("extractBase64PngSize").returns({ width: 100500, height: 500100 });
         OneTimeScreenshooter = proxyquire("src/worker/runner/test-runner/one-time-screenshooter", {
             "../../../utils/logger": logger,
+            "../../../image": { extractBase64PngSize },
         });
 
         sandbox.stub(ScreenShooter.prototype, "capture").resolves(stubImage_());
@@ -71,8 +74,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it('should capture viewport screenshot if option "takeScreenshotOnFailsMode" is not set', async () => {
             const browser = mkBrowser_();
             browser.publicAPI.takeScreenshot.resolves("base64");
-            const imgStub = stubImage_({ width: 100, height: 500 });
-            Image.fromBase64.returns(imgStub);
+            extractBase64PngSize.withArgs("base64").returns({ width: 100, height: 500 });
             const screenshooter = mkScreenshooter_({ browser });
 
             await screenshooter[method](...getArgs());
@@ -86,8 +88,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it('should capture viewport screenshot if option "takeScreenshotOnFailsMode" is set to "viewport"', async () => {
             const browser = mkBrowser_();
             browser.publicAPI.takeScreenshot.resolves("base64");
-            const imgStub = stubImage_({ width: 100, height: 500 });
-            Image.fromBase64.returns(imgStub);
+            extractBase64PngSize.withArgs("base64").returns({ width: 100, height: 500 });
             const config = { takeScreenshotOnFailsMode: "viewport" };
             const screenshooter = mkScreenshooter_({ browser, config });
 
@@ -213,8 +214,8 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
         it("should extend passed error with screenshot data", async () => {
             const browser = mkBrowser_();
             browser.publicAPI.takeScreenshot.resolves("base64");
+            extractBase64PngSize.withArgs("base64").returns({ width: 100, height: 200 });
             const screenshooter = mkScreenshooter_({ browser });
-            Image.fromBase64.withArgs("base64").returns(stubImage_({ width: 100, height: 200 }));
 
             const error = await screenshooter.extendWithScreenshot(new Error());
 
@@ -286,7 +287,7 @@ describe("worker/runner/test-runner/one-time-screenshooter", () => {
 
     describe("getScreenshot", () => {
         it("should return captured screenshot", async () => {
-            Image.fromBase64.returns(stubImage_({ width: 100, height: 200 }));
+            extractBase64PngSize.returns({ width: 100, height: 200 });
 
             const screenshooter = mkScreenshooter_({});
 
