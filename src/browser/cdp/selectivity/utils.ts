@@ -1,11 +1,11 @@
 import { sortedIndex, memoize } from "lodash";
-import { SourceMapConsumer, type RawSourceMap } from "source-map-js";
+import { SourceFindPosition, SourceMapConsumer, type RawSourceMap } from "source-map-js";
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
 import * as logger from "../../../utils/logger";
 import type { CDPRuntime } from "../domains/runtime";
-import type { CDPSessionId } from "../types";
+import type { CDPScriptCoverage, CDPSessionId } from "../types";
 import { softFileURLToPath } from "../../../utils/fs";
 import type { CachedOnFs, HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
 import { WEBPACK_PROTOCOL } from "./constants";
@@ -69,18 +69,32 @@ export const patchSourceMapSources = (sourceMap: RawSourceMap, sourceRoot?: stri
 };
 
 /**
+ * With cdp coverage's offset style
+ * @returns sourcemap's 0-based line number
+ */
+const offsetToSourceMapLineNumber = (offsetToLine: number[], offset: number): number => {
+    let lineNumber = sortedIndex(offsetToLine, offset);
+
+    if (offset < offsetToLine[lineNumber]) {
+        lineNumber--;
+    }
+
+    return lineNumber;
+};
+
+/**
  * Given compiled code, its source map, and the executed offsets
  * It returns the original source files touched
  * Useful for turning coverage ranges into real TS/JS module dependencies
  * @param source Compiled source code
  * @param sourceMaps Source maps JSON string
- * @param startOffsets Executed start offsets (v8 format)
+ * @param coverages CDP script coverages
  * @param sourceRoot Source root
  */
 export const extractSourceFilesDeps = (
     source: string,
     sourceMaps: string,
-    startOffsets: number[],
+    coverages: CDPScriptCoverage[],
     sourceRoot: string,
 ): Set<string> => {
     const dependantSourceFiles = new Set<string>();
@@ -96,18 +110,46 @@ export const extractSourceFilesDeps = (
         sourceOffset = source.indexOf("\n", sourceOffset);
     }
 
-    for (const startOffset of startOffsets) {
-        let line = sortedIndex(offsetToLine, startOffset);
+    for (const scriptCoverage of coverages) {
+        for (const functionCall of scriptCoverage.functions) {
+            for (const range of functionCall.ranges) {
+                const startLine = offsetToSourceMapLineNumber(offsetToLine, range.startOffset);
 
-        if (startOffset < offsetToLine[line]) {
-            line--;
-        }
+                const column = range.startOffset - offsetToLine[startLine];
+                const previousPosition = consumer.originalPositionFor({
+                    line: startLine + 1,
+                    column,
+                    bias: SourceMapConsumer.GREATEST_LOWER_BOUND,
+                });
 
-        const column = startOffset - offsetToLine[line];
-        const position = consumer.originalPositionFor({ line: line + 1, column });
+                if (previousPosition.source) {
+                    (previousPosition as SourceFindPosition).bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
+                    const generatedPosition = consumer.generatedPositionFor(previousPosition);
 
-        if (position.source) {
-            dependantSourceFiles.add(position.source);
+                    if (typeof generatedPosition.line === "number" && generatedPosition.line >= startLine + 1) {
+                        dependantSourceFiles.add(previousPosition.source);
+                        break;
+                    }
+                }
+
+                // Bundler source file function wrapper case
+                const nextPosition = consumer.originalPositionFor({
+                    line: startLine + 1,
+                    column,
+                    bias: SourceMapConsumer.LEAST_UPPER_BOUND,
+                });
+
+                if (nextPosition.source) {
+                    (nextPosition as SourceFindPosition).bias = SourceMapConsumer.LEAST_UPPER_BOUND;
+                    const generatedPosition = consumer.generatedPositionFor(nextPosition);
+                    const endLine = offsetToSourceMapLineNumber(offsetToLine, range.endOffset);
+
+                    if (typeof generatedPosition.line === "number" && generatedPosition.line <= endLine + 1) {
+                        dependantSourceFiles.add(nextPosition.source);
+                        break;
+                    }
+                }
+            }
         }
     }
 
