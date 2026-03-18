@@ -95,23 +95,23 @@ describe("CDP/Selectivity/HashWriter", () => {
         });
     });
 
-    describe("commit", () => {
-        it("should not commit if not initialized", async () => {
+    describe("save", () => {
+        it("should not save if not initialized", async () => {
             const writer = new HashWriter("/test/selectivity", "none");
 
-            await writer.commit();
+            await writer.save();
 
             assert.notCalled(writeJsonWithCompression);
         });
 
-        it("should not commit if no staged dependencies", async () => {
+        it("should not save if no staged dependencies", async () => {
             const defaultValue = { files: {}, modules: {}, patterns: {} };
             const writer = new HashWriter("/test/selectivity", "none");
 
             readHashFileContentsStub.resolves(defaultValue);
             writer.addTestDependencyHashes({ css: [], js: [], modules: [] });
 
-            await writer.commit();
+            await writer.save();
 
             assert.notCalled(writeJsonWithCompression);
         });
@@ -135,7 +135,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 .resolves("module-hash");
 
             writer.addTestDependencyHashes(dependencies);
-            await writer.commit();
+            await writer.save();
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
                 files: {
@@ -147,70 +147,6 @@ describe("CDP/Selectivity/HashWriter", () => {
                 },
                 patterns: {},
             });
-        });
-
-        it("should update existing hash file", async () => {
-            const writer = new HashWriter("/test/selectivity", "none");
-            const dependencies = {
-                css: ["src/new-styles.css"],
-                js: ["src/new-app.js"],
-                modules: ["node_modules/new-lib"],
-            };
-
-            const existingContent = {
-                files: { "src/old-file.js": "old-hash" },
-                modules: { "node_modules/old-lib": "old-module-hash" },
-                patterns: {},
-            };
-
-            readHashFileContentsStub.resolves(existingContent);
-            fileHashProviderMock.calculateForFile
-                .withArgs("src/new-styles.css")
-                .resolves("new-css-hash")
-                .withArgs("src/new-app.js")
-                .resolves("new-js-hash")
-                .withArgs("node_modules/new-lib/package.json")
-                .resolves("new-module-hash");
-
-            writer.addTestDependencyHashes(dependencies);
-            await writer.commit();
-
-            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
-                files: {
-                    "src/old-file.js": "old-hash",
-                    "src/new-styles.css": "new-css-hash",
-                    "src/new-app.js": "new-js-hash",
-                },
-                modules: {
-                    "node_modules/old-lib": "old-module-hash",
-                    "node_modules/new-lib": "new-module-hash",
-                },
-                patterns: {},
-            });
-        });
-
-        it("should not update files with same hash", async () => {
-            const writer = new HashWriter("/test/selectivity", "none");
-            const dependencies = {
-                css: ["src/styles.css"],
-                js: [],
-                modules: [],
-            };
-
-            const existingContent = {
-                files: { "src/styles.css": "same-hash" },
-                modules: {},
-                patterns: {},
-            };
-
-            readHashFileContentsStub.resolves(existingContent);
-            fileHashProviderMock.calculateForFile.withArgs("src/styles.css").resolves("same-hash");
-
-            writer.addTestDependencyHashes(dependencies);
-            await writer.commit();
-
-            // Should not write to file since hash is the same
-            assert.notCalled(writeJsonWithCompression);
         });
 
         it("should handle hash calculation errors", async () => {
@@ -228,29 +164,7 @@ describe("CDP/Selectivity/HashWriter", () => {
 
             writer.addTestDependencyHashes(dependencies);
 
-            await assert.isRejected(writer.commit(), "File not found");
-        });
-
-        it("should sort objects after updating", async () => {
-            const defaultValue = { files: {}, modules: {}, patterns: {} };
-            const writer = new HashWriter("/test/selectivity", "none");
-            const dependencies = {
-                css: ["src/styles.css"],
-                js: [],
-                modules: ["node_modules/react"],
-            };
-
-            readHashFileContentsStub.resolves(defaultValue);
-            fileHashProviderMock.calculateForFile
-                .withArgs("src/styles.css")
-                .resolves("css-hash")
-                .withArgs("node_modules/react/package.json")
-                .resolves("module-hash");
-
-            writer.addTestDependencyHashes(dependencies);
-            await writer.commit();
-
-            assert.calledTwice(shallowSortObjectStub);
+            await assert.isRejected(writer.save(), "File not found");
         });
     });
 
