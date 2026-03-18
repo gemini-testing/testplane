@@ -4,17 +4,27 @@ import fs from "fs-extra";
 import { Compression, type SelectivityCompressionType } from "./types";
 import type { Readable, Transform, Writable } from "node:stream";
 
-const getCompressionPrefix = (type: SelectivityCompressionType): string => (type === "none" ? "" : "." + type);
+const getCompressionSuffix = (type: SelectivityCompressionType): string => (type === "none" ? "" : "." + type);
 
 const compressionPriorities: SelectivityCompressionType[] = process.versions.zstd
     ? [Compression.ZSTD, Compression.GZIP, Compression.BROTLI, Compression.NONE]
     : [Compression.GZIP, Compression.BROTLI, Compression.NONE];
 
-const getExistingJsonPathWithCompression = (
+export const stripCompressionSuffix = (filePath: string): string => {
+    for (const suffix of [Compression.ZSTD, Compression.GZIP, Compression.BROTLI]) {
+        if (filePath.endsWith("." + suffix)) {
+            return filePath.slice(0, -(suffix.length + 1));
+        }
+    }
+
+    return filePath;
+};
+
+export const getExistingJsonPathWithCompression = (
     jsonBasePath: string,
     preferredCompressionType: SelectivityCompressionType,
 ): { jsonPath: string | null; compressionType: SelectivityCompressionType } => {
-    const jsonPathWithPrefix = jsonBasePath + getCompressionPrefix(preferredCompressionType);
+    const jsonPathWithPrefix = jsonBasePath + getCompressionSuffix(preferredCompressionType);
 
     if (fs.existsSync(jsonPathWithPrefix)) {
         return { jsonPath: jsonPathWithPrefix, compressionType: preferredCompressionType };
@@ -25,7 +35,7 @@ const getExistingJsonPathWithCompression = (
             continue;
         }
 
-        const jsonPathWithCurrentPrefix = jsonBasePath + getCompressionPrefix(compressionType);
+        const jsonPathWithCurrentPrefix = jsonBasePath + getCompressionSuffix(compressionType);
         if (fs.existsSync(jsonPathWithCurrentPrefix)) {
             return { jsonPath: jsonPathWithCurrentPrefix, compressionType: compressionType };
         }
@@ -160,7 +170,7 @@ export const writeJsonWithCompression = async (
     data: unknown,
     preferredCompressionType: SelectivityCompressionType,
 ): Promise<void> => {
-    const filePath = jsonBasePath + getCompressionPrefix(preferredCompressionType);
+    const filePath = jsonBasePath + getCompressionSuffix(preferredCompressionType);
     const fileData = JSON.stringify(data, null, preferredCompressionType === "none" ? 2 : 0);
 
     await fs.ensureDir(path.dirname(filePath));

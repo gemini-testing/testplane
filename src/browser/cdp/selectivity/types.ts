@@ -22,6 +22,8 @@ export type HashFileContents = {
     patterns: Record<string, string>;
 };
 
+export type TestDependenciesFileContents = Record<string, Record<string, NormalizedDependencies>>;
+
 export type CachedOnFs = true;
 export type ActualValue = string;
 export type SelectivityAssetState = Promise<
