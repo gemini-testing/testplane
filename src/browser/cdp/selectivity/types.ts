@@ -26,7 +26,7 @@ export type TestDependenciesFileContents = Record<string, Record<string, Normali
 
 export type CachedOnFs = true;
 export type ActualValue = string;
-export type SelectivityAssetState = Promise<
+export type SelectivityAssetState = null | Promise<
     | CachedOnFs // Acknowledged asset presence in fs cache
     | ActualValue // Actual asset value
     | Error // An error, occured while trying to aquire asset

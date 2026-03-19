@@ -12,7 +12,7 @@ import { getCollectedTestplaneDependencies } from "./testplane-selectivity";
 import { getHashReader } from "./hash-reader";
 import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
-import { selectivityShouldWrite } from "./modes";
+import { selectivityShouldRead, selectivityShouldWrite } from "./modes";
 import { debugSelectivity } from "./debug";
 import { getUsedDumpsTracker } from "./used-dumps-tracker";
 
@@ -24,12 +24,15 @@ type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
  */
 export const updateSelectivityHashes = async (config: Config): Promise<void> => {
     const browserIds = config.getBrowserIds();
+    const processedRoots = new Set();
 
     for (const browserId of browserIds) {
         const browserConfig = config.forBrowser(browserId);
         const { enabled, testDependenciesPath, compression, disableSelectivityPatterns } = browserConfig.selectivity;
+        const shouldReadExistingHashes = selectivityShouldRead(enabled);
+        const rootKey = `${shouldReadExistingHashes}#${testDependenciesPath}#${compression}`;
 
-        if (!selectivityShouldWrite(enabled)) {
+        if (!selectivityShouldWrite(enabled) || processedRoots.has(rootKey)) {
             continue;
         }
 
@@ -45,10 +48,12 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
         }
 
         try {
-            await hashWriter.save();
+            await hashWriter.save(shouldReadExistingHashes);
         } catch (cause) {
             throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
         }
+
+        processedRoots.add(rootKey);
     }
 };
 
@@ -120,7 +125,7 @@ export const clearUnusedSelectivityDumps = async (config: Config): Promise<void>
     );
 
     if (filesDeleted) {
-        debugSelectivity(`Out of ${filesTotal} files, ${filesDeleted} were considered as outdated and deleted`);
+        debugSelectivity(`Out of ${filesTotal} dump files, ${filesDeleted} were considered as outdated and deleted`);
     }
 };
 

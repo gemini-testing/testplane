@@ -714,7 +714,7 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(fsStub.unlink.secondCall, "/test/deps/tests/stale-test-2.json");
             assert.calledOnceWith(
                 debugSelectivityStub,
-                sinon.match(/Out of 2 files, 2 were considered as outdated and deleted/),
+                sinon.match(/Out of 2 dump files, 2 were considered as outdated and deleted/),
             );
         });
 
@@ -768,7 +768,7 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(fsStub.unlink.secondCall, "/test/deps/tests/another-stale.json");
             assert.calledOnceWith(
                 debugSelectivityStub,
-                sinon.match(/Out of 3 files, 2 were considered as outdated and deleted/),
+                sinon.match(/Out of 3 dump files, 2 were considered as outdated and deleted/),
             );
         });
 
@@ -804,7 +804,7 @@ describe("CDP/Selectivity", () => {
             );
             assert.calledWith(
                 debugSelectivityStub.secondCall,
-                sinon.match(/Out of 2 files, 1 were considered as outdated and deleted/),
+                sinon.match(/Out of 2 dump files, 1 were considered as outdated and deleted/),
             );
         });
 
@@ -829,7 +829,7 @@ describe("CDP/Selectivity", () => {
             assert.calledOnceWith(fsStub.unlink, "/test/deps/tests/stale-file.json");
             assert.calledOnceWith(
                 debugSelectivityStub,
-                sinon.match(/Out of 2 files, 1 were considered as outdated and deleted/),
+                sinon.match(/Out of 2 dump files, 1 were considered as outdated and deleted/),
             );
         });
 

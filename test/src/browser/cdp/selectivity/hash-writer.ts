@@ -166,6 +166,61 @@ describe("CDP/Selectivity/HashWriter", () => {
 
             await assert.isRejected(writer.save(), "File not found");
         });
+
+        it("should not readHashFileContents when readExisting is false", async () => {
+            const writer = new HashWriter("/test/selectivity", "none");
+            const dependencies = {
+                css: ["src/styles.css"],
+                js: [],
+                modules: [],
+            };
+
+            fileHashProviderMock.calculateForFile.withArgs("src/styles.css").resolves("css-hash");
+
+            writer.addTestDependencyHashes(dependencies);
+            await writer.save(false);
+
+            assert.notCalled(readHashFileContentsStub);
+        });
+
+        it("should merge staged hashes with existing file contents when readExisting is true", async () => {
+            const existingContents = {
+                files: { "src/old.css": "old-hash" },
+                modules: { "node_modules/old-module": "old-module-hash" },
+                patterns: { "*.old": "old-pattern-hash" },
+            };
+            const writer = new HashWriter("/test/selectivity", "none");
+            const dependencies = {
+                css: ["src/styles.css"],
+                js: ["src/app.js"],
+                modules: ["node_modules/react"],
+            };
+
+            readHashFileContentsStub.resolves(existingContents);
+            fileHashProviderMock.calculateForFile
+                .withArgs("src/styles.css")
+                .resolves("css-hash")
+                .withArgs("src/app.js")
+                .resolves("js-hash")
+                .withArgs("node_modules/react/package.json")
+                .resolves("module-hash");
+
+            writer.addTestDependencyHashes(dependencies);
+            await writer.save(true);
+
+            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
+                files: {
+                    "src/old.css": "old-hash",
+                    "src/styles.css": "css-hash",
+                    "src/app.js": "js-hash",
+                },
+                modules: {
+                    "node_modules/old-module": "old-module-hash",
+                    "node_modules/react": "module-hash",
+                },
+                patterns: { "*.old": "old-pattern-hash" },
+            });
+        });
     });
 
     describe("getHashWriter", () => {

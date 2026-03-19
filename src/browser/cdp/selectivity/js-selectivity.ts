@@ -40,8 +40,12 @@ export class JSSelectivity {
         this._scriptIdToSourceUrl[scriptId] ||= url;
 
         if (!url || !sourceMapURL) {
-            this._scriptsSource[scriptId] ||= Promise.resolve(null);
-            this._scriptsSourceMap[scriptId] ||= Promise.resolve(null);
+            this._scriptsSource[scriptId] ||= null;
+            this._scriptsSourceMap[scriptId] ||= null;
+            return;
+        }
+
+        if (this._scriptsSource[scriptId] && this._scriptsSourceMap[scriptId]) {
             return;
         }
 
@@ -129,12 +133,12 @@ export class JSSelectivity {
 
             const coverage = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
 
-            const scriptsWithUrl = coverage.result.filter(script => script.url);
-
             // If we haven't got "scriptParsed" event for the script, pull up source code + source map manually
-            scriptsWithUrl.forEach(({ scriptId, url }) => {
-                // Was processed with "this._processScript"
-                if (Object.hasOwn(this._scriptsSource, scriptId) && Object.hasOwn(this._scriptsSourceMap, scriptId)) {
+            coverage.result.forEach(({ scriptId, url }) => {
+                const fixedUrl = url || this._scriptIdToSourceUrl[scriptId];
+
+                // Was processed with "this._processScript" or anonymous
+                if ((this._scriptsSource[scriptId] && this._scriptsSourceMap[scriptId]) || !fixedUrl) {
                     return;
                 }
 
@@ -142,7 +146,7 @@ export class JSSelectivity {
                 const scriptSourcePromise = this._cdp.debugger
                     .getScriptSource(this._sessionId, scriptId)
                     .then(({ scriptSource }) => {
-                        setCachedSelectivityFile(CacheType.Asset, url, scriptSource).catch(() => {});
+                        setCachedSelectivityFile(CacheType.Asset, fixedUrl, scriptSource).catch(() => {});
                         return scriptSource;
                     })
                     .catch((err: Error) => err);
@@ -176,7 +180,7 @@ export class JSSelectivity {
                         );
                     }
 
-                    const resolvedSourceMapUrl = urlResolve(url, sourceMapURL);
+                    const resolvedSourceMapUrl = urlResolve(fixedUrl, sourceMapURL);
 
                     this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
 

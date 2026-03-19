@@ -8,6 +8,7 @@ import { debugSelectivity } from "./debug";
 const TypedModule = UntypedModule as unknown as { _resolveFilename: (...args: any) => string | void };
 const testDependenciesStorage = new AsyncLocalStorage<{ jsTestplaneDeps?: Set<string> }>();
 const testFileDependenciesRamCache = new Map<string, string[]>();
+const testFileLocks: Record<string, Promise<void>> = {};
 
 let disableCollectingDependenciesCb: (() => void) | null = null;
 
@@ -81,9 +82,23 @@ export const readTestFileWithTestplaneDependenciesCollecting = async <T>(
         return fn();
     }
 
+    if (file in testFileLocks) {
+        await testFileLocks[file];
+    }
+
+    let releaseLock = (): void => {};
+
+    testFileLocks[file] = new Promise<void>(resolve => {
+        releaseLock = resolve;
+    }).finally(() => {
+        delete testFileLocks[file];
+    });
+
     const ramCachedDependencies = testFileDependenciesRamCache.get(file);
 
     if (ramCachedDependencies) {
+        releaseLock();
+
         ramCachedDependencies.forEach(dependency => jsTestplaneDeps.add(dependency));
 
         return fn();
@@ -92,6 +107,8 @@ export const readTestFileWithTestplaneDependenciesCollecting = async <T>(
     const fsCachedDependencies = await getCachedSelectivityFile(CacheType.TestFile, file);
 
     if (fsCachedDependencies) {
+        releaseLock();
+
         let parsedDependencies: string[];
         try {
             parsedDependencies = JSON.parse(fsCachedDependencies) as string[];
@@ -117,5 +134,7 @@ export const readTestFileWithTestplaneDependenciesCollecting = async <T>(
 
             debugSelectivity(`Couldn't offload test dependencies from "${file}" to fs-cache: %O`, err);
         });
+
+        releaseLock();
     }
 };
