@@ -102,6 +102,7 @@ export const extractSourceFilesDeps = (
     sourceMaps: string,
     coverages: CDPScriptCoverage[],
     sourceRoot: string,
+    sourceFilterFn?: (sourceFileName: string) => boolean,
 ): Set<string> => {
     const dependantSourceFiles = new Set<string>();
     const sourceMapsParsed = patchSourceMapSources(JSON.parse(sourceMaps), sourceRoot);
@@ -122,18 +123,18 @@ export const extractSourceFilesDeps = (
                 const startLine = offsetToSourceMapLineNumber(offsetToLine, range.startOffset);
 
                 const column = range.startOffset - offsetToLine[startLine];
-                const previousPosition = consumer.originalPositionFor({
+                const prevPosition = consumer.originalPositionFor({
                     line: startLine + 1,
                     column,
                     bias: SourceMapConsumer.GREATEST_LOWER_BOUND,
                 });
 
-                if (previousPosition.source) {
-                    (previousPosition as SourceFindPosition).bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
-                    const generatedPosition = consumer.generatedPositionFor(previousPosition);
+                if (prevPosition && prevPosition.source && (!sourceFilterFn || sourceFilterFn(prevPosition.source))) {
+                    (prevPosition as SourceFindPosition).bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
+                    const generatedPosition = consumer.generatedPositionFor(prevPosition);
 
                     if (typeof generatedPosition.line === "number" && generatedPosition.line >= startLine + 1) {
-                        dependantSourceFiles.add(previousPosition.source);
+                        dependantSourceFiles.add(prevPosition.source);
                         break;
                     }
                 }
@@ -145,7 +146,7 @@ export const extractSourceFilesDeps = (
                     bias: SourceMapConsumer.LEAST_UPPER_BOUND,
                 });
 
-                if (nextPosition.source) {
+                if (nextPosition && nextPosition.source && (!sourceFilterFn || sourceFilterFn(nextPosition.source))) {
                     (nextPosition as SourceFindPosition).bias = SourceMapConsumer.LEAST_UPPER_BOUND;
                     const generatedPosition = consumer.generatedPositionFor(nextPosition);
                     const endLine = offsetToSourceMapLineNumber(offsetToLine, range.endOffset);

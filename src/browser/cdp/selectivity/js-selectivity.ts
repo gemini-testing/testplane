@@ -256,12 +256,11 @@ export class JSSelectivity {
                         sourceMapsString,
                         grouppedByScriptCoverage[scriptId],
                         this._sourceRoot,
+                        isSourceCodeFile,
                     );
 
                     for (const sourceFile of dependingSourceFiles.values()) {
-                        if (isSourceCodeFile(sourceFile)) {
-                            totalDependingSourceFiles.add(sourceFile);
-                        }
+                        totalDependingSourceFiles.add(sourceFile);
                     }
                 }),
             );
