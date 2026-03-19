@@ -36,7 +36,11 @@ export class CSSSelectivity {
         }
 
         if (!sourceURL || !sourceMapURL) {
-            this._stylesSourceMap[styleSheetId] ||= Promise.resolve(null);
+            this._stylesSourceMap[styleSheetId] ||= null;
+            return;
+        }
+
+        if (this._stylesSourceMap[styleSheetId]) {
             return;
         }
 

@@ -274,7 +274,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             cdpMock.debugger.getScriptSource.resolves({
                 scriptSource: "mock source\n//# sourceMappingURL=app.js.map",
             });
-            extractSourceFilesDepsStub.returns(new Set(["src/app.js", "src/utils.js", "src/styles.css"]));
+            extractSourceFilesDepsStub.returns(new Set(["src/app.js", "src/utils.js"]));
 
             await jsSelectivity.start();
             const result = await jsSelectivity.stop();
@@ -286,6 +286,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 "mock source map",
                 mockCoverage.result,
                 sourceRoot,
+                sinon.match.func,
             );
 
             assert.deepEqual(Array.from(result || []).sort(), ["src/app.js", "src/utils.js"]);
@@ -522,56 +523,6 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             await jsSelectivity.start();
 
             await assert.isRejected(jsSelectivity.stop(), "JS Selectivity: Couldn't load source maps from app.js.map");
-        });
-
-        it("should filter out non-source-code files", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
-
-            const mockCoverage = {
-                timestamp: 100500,
-                result: [
-                    {
-                        scriptId: "script-123",
-                        url: "http://example.com/app.js",
-                        functions: [
-                            {
-                                functionName: "foo",
-                                isBlockCoverage: false,
-                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
-                            },
-                        ],
-                    },
-                ],
-            };
-
-            extractSourceFilesDepsStub.returns(
-                new Set([
-                    "src/app.js",
-                    "src/utils.ts",
-                    "src/component.jsx",
-                    "src/styles.css",
-                    "src/image.png",
-                    "src/data.json",
-                    "src/module.mjs",
-                    "src/config.cjs",
-                ]),
-            );
-
-            cdpMock.profiler.takePreciseCoverage.resolves(mockCoverage);
-            cdpMock.debugger.getScriptSource.resolves({
-                scriptSource: "mock source\n//# sourceMappingURL=app.js.map",
-            });
-
-            await jsSelectivity.start();
-            const result = await jsSelectivity.stop();
-
-            assert.deepEqual(Array.from(result || []).sort(), [
-                "src/app.js",
-                "src/component.jsx",
-                "src/config.cjs",
-                "src/module.mjs",
-                "src/utils.ts",
-            ]);
         });
     });
 });

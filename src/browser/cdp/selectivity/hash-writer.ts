@@ -1,9 +1,9 @@
 import { memoize } from "lodash";
 import path from "node:path";
 import { HashProvider } from "./hash-provider";
-import { getSelectivityHashesPath } from "./utils";
+import { getSelectivityHashesPath, readHashFileContents, shallowSortObject } from "./utils";
 import { writeJsonWithCompression } from "./json-utils";
-import type { HashFileContents, NormalizedDependencies, SelectivityCompressionType } from "./types";
+import type { NormalizedDependencies, SelectivityCompressionType } from "./types";
 
 export class HashWriter {
     private readonly _hashProvider = new HashProvider();
@@ -60,7 +60,7 @@ export class HashWriter {
         dependencies.modules.forEach(dependency => this._addModuleDependency(dependency));
     }
 
-    async save(): Promise<void> {
+    async save(readExisting?: boolean): Promise<void> {
         const hasStaged = Boolean(
             this._stagedFileHashes.size || this._stagedModuleHashes.size || this._stagedPatternHashes.size,
         );
@@ -84,13 +84,17 @@ export class HashWriter {
 
                 dest[key] = hash as string;
             }
+
+            shallowSortObject(dest);
         };
 
-        const fileContents: HashFileContents = {
-            files: {},
-            modules: {},
-            patterns: {},
-        };
+        const fileContents = readExisting
+            ? await readHashFileContents(this._selectivityHashesPath, this._compresion)
+            : {
+                  files: {},
+                  modules: {},
+                  patterns: {},
+              };
 
         await writeTo(this._stagedFileHashes, fileContents.files);
         await writeTo(this._stagedModuleHashes, fileContents.modules);

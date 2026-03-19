@@ -383,6 +383,49 @@ describe("CDP/Selectivity/Utils", () => {
             assert.equal(result.size, 0);
         });
 
+        it("should filter sources by filter function, if provided", () => {
+            // source: "line1\nline2\nline3\nline4"
+            // offsets: line0 starts at 0, line1 at 6, line2 at 12, line3 at 18
+            const source = "line1\nline2\nline3\nline4";
+            const filterFn = (file: string): boolean => file.endsWith(".js");
+            const coverages = [
+                {
+                    scriptId: "1",
+                    url: "http://example.com/bundle.js",
+                    functions: [
+                        {
+                            functionName: "fn1",
+                            ranges: [{ startOffset: 0, endOffset: 5, count: 1 }],
+                            isBlockCoverage: false,
+                        },
+                        {
+                            functionName: "fn2",
+                            ranges: [{ startOffset: 6, endOffset: 11, count: 1 }],
+                            isBlockCoverage: false,
+                        },
+                    ],
+                },
+            ];
+
+            consumerMock.originalPositionFor
+                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .onCall(0)
+                .returns({ source: "src/app.js", line: 1, column: 0 })
+                .onCall(1)
+                .returns({ source: "webpack/startup", line: 2, column: 0 });
+
+            consumerMock.generatedPositionFor
+                .onCall(0)
+                .returns({ line: 1 }) // >= startLine + 1 (1 >= 1) -> pass
+                .onCall(1)
+                .returns({ line: 2 }); // >= startLine + 1 (2 >= 2) -> pass
+
+            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root", filterFn);
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("src/app.js"));
+        });
+
         it("should process multiple ranges within a function and break on first match", () => {
             const source = "line1\nline2\nline3";
             const coverages = mkCoverages([
