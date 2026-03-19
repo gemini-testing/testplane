@@ -11,7 +11,9 @@ import type { Test, TestDepsContext, TestDepsData } from "../../../types";
 import { MasterEvents } from "../../../events";
 import { getHashWriter } from "./hash-writer";
 import { getTestDependenciesReader } from "./test-dependencies-reader";
-import { selectivityShouldRead } from "./modes";
+import { selectivityShouldRead, selectivityShouldWrite } from "./modes";
+import { getUsedDumpsTracker } from "./used-dumps-tracker";
+import { getTestSelectivityDumpId } from "./utils";
 
 /** Called at the start of testplane run per each browser */
 const shouldDisableBrowserSelectivity = _.memoize(
@@ -137,6 +139,7 @@ export class SelectivityRunner {
     private readonly _processingTestLimit = pLimit(16);
     private readonly _processingTestPromises: Array<Promise<void>> = [];
     private readonly _stats: Record<string, SelectivityBrowserStats> = {};
+    private readonly _usedDumpsTracker = getUsedDumpsTracker();
 
     static create(...args: ConstructorParameters<typeof this>): SelectivityRunner {
         return new this(...args);
@@ -174,10 +177,21 @@ export class SelectivityRunner {
     startTestCheckToRun(test: Test, browserId: string): void {
         const browserConfig = this._config.forBrowser(browserId);
         const shouldSelectivelySkipTests = selectivityShouldRead(browserConfig.selectivity.enabled);
+        const shouldUpdateSelectivityState = selectivityShouldWrite(browserConfig.selectivity.enabled);
 
-        // If selectivity is disabled for browser
-        // If test is disabled on its own (e.g plugin testplane/chunks) we dont waste our time calculating the deps.
-        if (!shouldSelectivelySkipTests || this._opts?.shouldDisableSelectivity || test.disabled) {
+        if (this._opts?.shouldDisableSelectivity || test.disabled) {
+            this._testsToRun.push([test, browserId]);
+            return;
+        }
+
+        if (shouldUpdateSelectivityState) {
+            this._usedDumpsTracker.trackUsed(
+                getTestSelectivityDumpId(test),
+                browserConfig.selectivity.testDependenciesPath,
+            );
+        }
+
+        if (!shouldSelectivelySkipTests) {
             this._testsToRun.push([test, browserId]);
             return;
         }

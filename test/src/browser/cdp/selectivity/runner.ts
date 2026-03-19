@@ -12,6 +12,9 @@ describe("SelectivityRunner", () => {
     let getHashReaderStub: SinonStub;
     let getHashWriterStub: SinonStub;
     let getTestDependenciesReaderStub: SinonStub;
+    let getUsedDumpsTrackerStub: SinonStub;
+    let getTestSelectivityDumpIdStub: SinonStub;
+    let usedDumpsTrackerMock: { trackUsed: SinonStub; usedDumpsFor: SinonStub; wasUsed: SinonStub };
     let fsExtraStub: { outputJson: SinonStub };
     let loggerStub: { error: SinonStub };
 
@@ -29,6 +32,14 @@ describe("SelectivityRunner", () => {
         getTestDependenciesReaderStub = sandbox.stub();
         fsExtraStub = { outputJson: sandbox.stub().resolves() };
         loggerStub = { error: sandbox.stub() };
+
+        usedDumpsTrackerMock = {
+            trackUsed: sandbox.stub(),
+            usedDumpsFor: sandbox.stub().returns(false),
+            wasUsed: sandbox.stub().returns(false),
+        };
+        getUsedDumpsTrackerStub = sandbox.stub().returns(usedDumpsTrackerMock);
+        getTestSelectivityDumpIdStub = sandbox.stub().callsFake((test: Test) => test.id);
 
         hashReaderMock = {
             patternHasChanged: sandbox.stub(),
@@ -60,6 +71,8 @@ describe("SelectivityRunner", () => {
             "./hash-reader": { getHashReader: getHashReaderStub },
             "./hash-writer": { getHashWriter: getHashWriterStub },
             "./test-dependencies-reader": { getTestDependenciesReader: getTestDependenciesReaderStub },
+            "./used-dumps-tracker": { getUsedDumpsTracker: getUsedDumpsTrackerStub },
+            "./utils": { getTestSelectivityDumpId: getTestSelectivityDumpIdStub },
             "fs-extra": fsExtraStub,
             "../../../utils/logger": loggerStub,
         });
@@ -122,19 +135,29 @@ describe("SelectivityRunner", () => {
             runner = new SelectivityRunnerClass(mainRunnerMock as any, configMock as any, runTestFnMock);
         });
 
-        [SelectivityMode.Disabled, SelectivityMode.WriteOnly].forEach(mode => {
-            it(`should run test if selectivity mode is ${mode}`, async () => {
-                browserConfigMock.selectivity.enabled = mode;
+        it("should run test if selectivity mode is Disabled and not track dumps", async () => {
+            browserConfigMock.selectivity.enabled = SelectivityMode.Disabled;
 
-                runner.startTestCheckToRun(testMock, "chrome");
-                await runner.runNecessaryTests();
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
 
-                assert.calledOnce(runTestFnMock);
-                assert.calledWith(runTestFnMock, testMock, "chrome");
-            });
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(runTestFnMock, testMock, "chrome");
+            assert.notCalled(usedDumpsTrackerMock.trackUsed);
         });
 
-        it("should run test if shouldDisableSelectivity option is true", async () => {
+        it("should run test if selectivity mode is WriteOnly and track dumps", async () => {
+            browserConfigMock.selectivity.enabled = SelectivityMode.WriteOnly;
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(runTestFnMock, testMock, "chrome");
+            assert.calledOnceWith(usedDumpsTrackerMock.trackUsed, "test-123", "/test/path");
+        });
+
+        it("should run test if shouldDisableSelectivity option is true and not track dumps", async () => {
             const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
                 mainRunnerMock as any,
                 configMock as any,
@@ -147,10 +170,11 @@ describe("SelectivityRunner", () => {
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
+            assert.notCalled(usedDumpsTrackerMock.trackUsed);
         });
 
         it("should run test if both browser selectivity is disabled and shouldDisableSelectivity is true", async () => {
-            browserConfigMock.selectivity.enabled = false;
+            browserConfigMock.selectivity.enabled = SelectivityMode.Disabled;
             const runnerWithDisabledSelectivity = new SelectivityRunnerClass(
                 mainRunnerMock as any,
                 configMock as any,
@@ -163,10 +187,11 @@ describe("SelectivityRunner", () => {
 
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, testMock, "chrome");
+            assert.notCalled(usedDumpsTrackerMock.trackUsed);
         });
 
-        it("should run test if test is already disabled", async () => {
-            browserConfigMock.selectivity.enabled = true;
+        it("should run test if test is already disabled and not track dumps when selectivity is enabled", async () => {
+            browserConfigMock.selectivity.enabled = SelectivityMode.Enabled;
             browserConfigMock.selectivity.disableSelectivityPatterns = ["src/**/*.js"];
             hashReaderMock.patternHasChanged.resolves(false);
             configMock.getBrowserIds.returns(["chrome"]);
@@ -186,6 +211,20 @@ describe("SelectivityRunner", () => {
             assert.calledOnce(runTestFnMock);
             assert.calledWith(runTestFnMock, disabledTestMock, "chrome");
             assert.notCalled(getTestDependenciesReaderStub);
+            assert.notCalled(usedDumpsTrackerMock.trackUsed);
+        });
+
+        it("should track dumps when selectivity is in Enabled mode", async () => {
+            browserConfigMock.selectivity.disableSelectivityPatterns = [];
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves({ css: [], js: ["src/app.js"], modules: [] });
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+
+            assert.calledOnceWith(usedDumpsTrackerMock.trackUsed, "test-123", "/test/path");
         });
 
         it("should run test if browser selectivity is disabled due to no patterns", async () => {

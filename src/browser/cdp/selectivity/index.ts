@@ -14,6 +14,7 @@ import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
 import { selectivityShouldWrite } from "./modes";
 import { debugSelectivity } from "./debug";
+import { getUsedDumpsTracker } from "./used-dumps-tracker";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -52,6 +53,7 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
 };
 
 export const clearUnusedSelectivityDumps = async (config: Config): Promise<void> => {
+    const usedDumpsTracker = getUsedDumpsTracker();
     const browserIds = config.getBrowserIds();
     const selectivityRoots: string[] = [];
 
@@ -59,7 +61,7 @@ export const clearUnusedSelectivityDumps = async (config: Config): Promise<void>
         const browserConfig = config.forBrowser(browserId);
         const { enabled, testDependenciesPath } = browserConfig.selectivity;
 
-        if (enabled && !selectivityRoots.includes(testDependenciesPath)) {
+        if (selectivityShouldWrite(enabled) && !selectivityRoots.includes(testDependenciesPath)) {
             selectivityRoots.push(testDependenciesPath);
         }
     }
@@ -72,6 +74,10 @@ export const clearUnusedSelectivityDumps = async (config: Config): Promise<void>
 
     await Promise.all(
         selectivityRoots.map(async selectivityRoot => {
+            if (!usedDumpsTracker.usedDumpsFor(selectivityRoot)) {
+                return;
+            }
+
             const testsPath = getSelectivityTestsPath(selectivityRoot);
             const accessError = await fs.access(testsPath, rwMode).catch((err: Error) => err);
 
@@ -88,16 +94,18 @@ export const clearUnusedSelectivityDumps = async (config: Config): Promise<void>
             filesTotal += testsFileNames.length;
 
             for (const testFileName of testsFileNames) {
-                const filePath = path.join(testsPath, testFileName);
-                const fileStat = await fs.stat(filePath).catch(() => null);
+                const extensionPosition = testFileName.indexOf(".json");
 
-                if (!fileStat) {
-                    debugSelectivity(`Couldn't access file "${filePath}" to check if it was used. Skipping`);
+                // If the file does not look like selectivity test dependencies, skip it
+                if (extensionPosition === -1) {
                     continue;
                 }
 
-                // File was not used in this run
-                if (fileStat.atimeMs < performance.timeOrigin && fileStat.isFile()) {
+                const dumpId = testFileName.slice(0, extensionPosition);
+
+                if (!usedDumpsTracker.wasUsed(dumpId, selectivityRoot)) {
+                    const filePath = path.join(testsPath, testFileName);
+
                     await fs
                         .unlink(filePath)
                         .then(() => {

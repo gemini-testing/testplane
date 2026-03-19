@@ -385,8 +385,10 @@ export const readHashFileContents = (
 export const getSelectivityTestsPath = (testDependenciesPath: string): string =>
     path.join(testDependenciesPath, "tests");
 
+export const getTestSelectivityDumpId = (test: Test): string => test.id;
+
 export const getTestDependenciesPath = (selectivityTestsPath: string, test: Test): string =>
-    path.join(selectivityTestsPath, `${test.id}.json`);
+    path.join(selectivityTestsPath, `${getTestSelectivityDumpId(test)}.json`);
 
 /** @returns `Promise<Record<BrowserID, Record<DepType, NormalizedDependencies>>>` */
 export const readTestDependencies = (
