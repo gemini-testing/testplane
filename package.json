@@ -84,7 +84,6 @@
     "esbuild": "0.25.8",
     "expect-webdriverio": "3.6.0",
     "extract-zip": "2.0.1",
-    "fastq": "1.13.0",
     "fs-extra": "7.0.1",
     "geckodriver": "4.5.0",
     "gemini-configparser": "1.4.2",
