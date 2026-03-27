@@ -2,7 +2,6 @@ import { EventEmitter } from "events";
 import { passthroughEvent } from "../../events/utils";
 import { SimpleTestParser } from "./simple-test-parser";
 import { WorkerEvents } from "../../events";
-import fastq from "fastq";
 import { Config } from "../../config";
 import { Test } from "../../test-reader/test-object";
 
@@ -13,7 +12,7 @@ export type ParseArgs = {
 
 export class SequenceTestParser extends EventEmitter {
     private _parser: SimpleTestParser;
-    private _queue: fastq.queueAsPromised<() => Promise<Test[]>, Test[]>;
+    private _queue: Promise<void>;
 
     static create<T extends SequenceTestParser>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,10 +28,12 @@ export class SequenceTestParser extends EventEmitter {
         this._parser = SimpleTestParser.create(config);
         passthroughEvent(this._parser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
 
-        this._queue = fastq.promise(fn => fn(), 1);
+        this._queue = Promise.resolve();
     }
 
-    async parse({ file, browserId }: ParseArgs): Promise<Test[]> {
-        return this._queue.push(() => this._parser.parse({ file, browserId }));
+    parse({ file, browserId }: ParseArgs): Promise<Test[]> {
+        return new Promise((resolve, reject) => {
+            this._queue = this._queue.finally(() => this._parser.parse({ file, browserId }).then(resolve, reject));
+        });
     }
 }
