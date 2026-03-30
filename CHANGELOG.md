@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.42.3 (2026-03-30)
+
+
+### Bug Fixes
+
+* do not start dev servers when reading tests ([#1226](https://github.com/gemini-testing/testplane/issues/1226)) ([3861f4a](https://github.com/gemini-testing/testplane/commit/3861f4ac68ba588ce7ed08f99adea79a8fb4a9fd))
+
 ### 8.42.2 (2026-03-27)
 
 ### 8.42.1 (2026-03-25)
