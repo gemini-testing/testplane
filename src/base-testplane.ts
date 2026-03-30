@@ -17,6 +17,7 @@ import { ConfigInput } from "./config/types";
 export abstract class BaseTestplane extends AsyncEmitter {
     protected _interceptors: Interceptor[] = [];
     protected _config: Config;
+    protected _initEventEmited: boolean = false;
 
     static create<T extends BaseTestplane>(
         this: new (config?: string | ConfigInput) => T,
@@ -38,8 +39,13 @@ export abstract class BaseTestplane extends AsyncEmitter {
         this._loadPlugins();
     }
 
-    protected async _init(): Promise<void> {
-        this._init = (): Promise<void> => Promise.resolve(); // init only once
+    /** @note Only the first call returns a promise to wait for INIT handlers to complete, subsequent calls return immediately to avoid deadlocks */
+    protected async _emitInitEventOnce(): Promise<void> {
+        if (this._initEventEmited) {
+            return;
+        }
+
+        this._initEventEmited = true;
         await this.emitAndWait(MasterEvents.INIT);
     }
 

@@ -109,7 +109,7 @@ export class Testplane extends BaseTestplane {
         this._filesToRemove.push(path);
     }
 
-    protected async _init(): Promise<void> {
+    protected async _startServersIfNeeded(): Promise<void> {
         await initDevServer({
             testplane: this,
             devServerConfig: this._config.devServer,
@@ -124,8 +124,6 @@ export class Testplane extends BaseTestplane {
                 throw new Error(`Vite server failed to start: ${(err as Error).message}`);
             }
         }
-
-        return super._init();
     }
 
     async run(
@@ -185,7 +183,8 @@ export class Testplane extends BaseTestplane {
         eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
 
-        await this._init();
+        await this._startServersIfNeeded();
+        await this._emitInitEventOnce();
 
         runner.init();
 
@@ -267,7 +266,7 @@ export class Testplane extends BaseTestplane {
         const testReader = TestReader.create(this._config);
 
         if (!silent) {
-            await this._init();
+            await this._emitInitEventOnce();
 
             eventsUtils.passthroughEvent(testReader, this, [
                 MasterEvents.BEFORE_FILE_READ,
