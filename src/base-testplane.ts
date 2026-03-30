@@ -39,7 +39,10 @@ export abstract class BaseTestplane extends AsyncEmitter {
         this._loadPlugins();
     }
 
+    /** @note Only the first call returns a promise to wait for INIT handlers to complete, subsequent calls return immediately to avoid deadlocks */
     protected async _emitInitEventOnce(): Promise<void> {
+        this._initEventPromise = Promise.resolve();
+
         if (this._initEventPromise) {
             return this._initEventPromise;
         }
