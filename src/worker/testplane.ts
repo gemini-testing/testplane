@@ -58,7 +58,7 @@ export class Testplane extends BaseTestplane {
     }
 
     async init(): Promise<void> {
-        await this._init();
+        await this._emitInitEventOnce();
 
         if (typeof expect === "undefined") {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
