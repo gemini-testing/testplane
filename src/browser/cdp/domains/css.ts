@@ -2,13 +2,21 @@ import { CDPConnection } from "../connection";
 import { CDPEventEmitter } from "../emitter";
 import type { CDPCSSStyleSheetHeader, CDPSessionId, CDPStyleSheetId } from "../types";
 
+export interface CSSRuleUsage {
+    styleSheetId: CDPStyleSheetId;
+    startOffset: number;
+    endOffset: number;
+    used: boolean;
+}
+
 interface StopRuleUsageTrackingResponse {
-    ruleUsage: Array<{
-        styleSheetId: CDPStyleSheetId;
-        startOffset: number;
-        endOffset: number;
-        used: boolean;
-    }>;
+    ruleUsage: CSSRuleUsage[];
+}
+
+interface TakeCoverageDeltaResponse {
+    coverage: CSSRuleUsage[];
+    /** Monotonically increasing time, in seconds. */
+    timestamp: number;
 }
 
 export interface CssEvents {
@@ -62,5 +70,10 @@ export class CDPCss extends CDPEventEmitter<CssEvents> {
     /** @link https://chromedevtools.github.io/devtools-protocol/tot/CSS/#method-stopRuleUsageTracking */
     async stopRuleUsageTracking(sessionId: CDPSessionId): Promise<StopRuleUsageTrackingResponse> {
         return this._connection.request("CSS.stopRuleUsageTracking", { sessionId });
+    }
+
+    /** @link https://chromedevtools.github.io/devtools-protocol/tot/CSS/#method-takeCoverageDelta */
+    async takeCoverageDelta(sessionId: CDPSessionId): Promise<TakeCoverageDeltaResponse> {
+        return this._connection.request("CSS.takeCoverageDelta", { sessionId });
     }
 }
