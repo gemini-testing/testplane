@@ -13,16 +13,19 @@ import { CacheType, getCachedSelectivityFile, hasCachedSelectivityFile, setCache
 import { debugSelectivity } from "./debug";
 import type { CDP } from "..";
 import type { CDPStyleSheetId, CDPSessionId } from "../types";
-import type { CssEvents } from "../domains/css";
+import type { CssEvents, CSSRuleUsage } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
 
 export class CSSSelectivity {
     private readonly _cdp: CDP;
     private readonly _sessionId: CDPSessionId;
     private readonly _sourceRoot: string;
-    private _cssOnStyleSheetAddedFn: ((params: CssEvents["styleSheetAdded"]) => void) | null = null;
+    private _cssOnStyleSheetAddedFn:
+        | ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void)
+        | null = null;
     private _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
     private _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
+    private _coverageResult: CSSRuleUsage[] = [];
 
     constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
         this._cdp = cdp;
@@ -30,8 +33,11 @@ export class CSSSelectivity {
         this._sourceRoot = sourceRoot;
     }
 
-    private _processStyle({ header: { styleSheetId, sourceURL, sourceMapURL } }: CssEvents["styleSheetAdded"]): void {
-        if (!this._sessionId) {
+    private _processStyle(
+        { header: { styleSheetId, sourceURL, sourceMapURL } }: CssEvents["styleSheetAdded"],
+        cdpSessionId?: CDPSessionId,
+    ): void {
+        if (!this._sessionId || cdpSessionId !== this._sessionId) {
             return;
         }
 
@@ -79,18 +85,80 @@ export class CSSSelectivity {
         }
     }
 
+    // If we haven't got "styleSheetAdded" event for the script, pull up styles + source map manually
+    private _ensureStylesAreLoading(ruleUsage: CSSRuleUsage[]): void {
+        ruleUsage.forEach(({ styleSheetId }) => {
+            if (Object.hasOwn(this._stylesSourceMap, styleSheetId)) {
+                return;
+            }
+
+            const scriptSourcePromise = this._cdp.css
+                .getStyleSheetText(this._sessionId, styleSheetId)
+                .then(res => res.text)
+                .catch((err: Error) => err);
+
+            this._stylesSourceMap[styleSheetId] ||= scriptSourcePromise.then(sourceCode => {
+                if (sourceCode instanceof Error) {
+                    return sourceCode;
+                }
+
+                const sourceMapsStartIndex = sourceCode.lastIndexOf(CSS_SOURCE_MAP_URL_COMMENT);
+                const sourceMapsEndIndex = sourceCode.indexOf("*/", sourceMapsStartIndex);
+
+                // Source maps are not generated for this source file
+                if (sourceMapsStartIndex === -1) {
+                    return null;
+                }
+
+                const sourceMapURL =
+                    sourceMapsEndIndex === -1
+                        ? sourceCode.slice(sourceMapsStartIndex + CSS_SOURCE_MAP_URL_COMMENT.length)
+                        : sourceCode.slice(
+                              sourceMapsStartIndex + CSS_SOURCE_MAP_URL_COMMENT.length,
+                              sourceMapsEndIndex,
+                          );
+
+                // If we encounter css stylesheet, that was not reported by "styleSheetAdded"
+                // We can only get sourcemaps if they are inlined
+                // Otherwise, we can't resolve actual sourcemaps url because we dont know css styles url itself.
+                if (!isDataProtocol(sourceMapURL)) {
+                    return new Error(
+                        [
+                            `Missed stylesheet url for stylesheet id ${styleSheetId}.`,
+                            "Looks like Chrome Devtools 'styleSheetAdded' event was lost",
+                            "It could happen due to network instability",
+                            "Switching to inline sourcemaps for CSS will help at the cost of increased RAM usage",
+                        ].join("\n"),
+                    );
+                }
+
+                return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
+                    (err: Error) => err,
+                );
+            });
+        });
+    }
+
+    private async _waitForLoadingStyles(): Promise<void> {
+        await Promise.allSettled(Object.values(this._stylesSourceMap));
+    }
+
     async start(): Promise<void> {
         const cssOnStyleSheetAdded = (this._cssOnStyleSheetAddedFn = this._processStyle.bind(this));
 
         this._cdp.css.on("styleSheetAdded", cssOnStyleSheetAdded);
 
-        await Promise.all([
-            this._cdp.target.setAutoAttach(this._sessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
-            this._cdp.dom
-                .enable(this._sessionId)
-                .then(() => this._cdp.css.enable(this._sessionId))
-                .then(() => this._cdp.css.startRuleUsageTracking(this._sessionId)),
-        ]);
+        await this._cdp.css.startRuleUsageTracking(this._sessionId);
+    }
+
+    async takeCoverageSnapshot(): Promise<void> {
+        const coveragePart = await this._cdp.css.takeCoverageDelta(this._sessionId);
+
+        this._ensureStylesAreLoading(coveragePart.coverage);
+
+        await this._waitForLoadingStyles();
+
+        this._coverageResult.push(...coveragePart.coverage);
     }
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
@@ -100,62 +168,13 @@ export class CSSSelectivity {
                 return null;
             }
 
-            const coverage = await this._cdp.css.stopRuleUsageTracking(this._sessionId);
+            const coverageLastPart = await this._cdp.css.stopRuleUsageTracking(this._sessionId);
+            const coverageStyles = [...this._coverageResult, ...coverageLastPart.ruleUsage];
 
-            // If we haven't got "styleSheetAdded" event for the script, pull up styles + source map manually
-            coverage.ruleUsage.forEach(({ styleSheetId }) => {
-                if (Object.hasOwn(this._stylesSourceMap, styleSheetId)) {
-                    return;
-                }
-
-                const scriptSourcePromise = this._cdp.css
-                    .getStyleSheetText(this._sessionId, styleSheetId)
-                    .then(res => res.text)
-                    .catch((err: Error) => err);
-
-                this._stylesSourceMap[styleSheetId] ||= scriptSourcePromise.then(sourceCode => {
-                    if (sourceCode instanceof Error) {
-                        return sourceCode;
-                    }
-
-                    const sourceMapsStartIndex = sourceCode.lastIndexOf(CSS_SOURCE_MAP_URL_COMMENT);
-                    const sourceMapsEndIndex = sourceCode.indexOf("*/", sourceMapsStartIndex);
-
-                    // Source maps are not generated for this source file
-                    if (sourceMapsStartIndex === -1) {
-                        return null;
-                    }
-
-                    const sourceMapURL =
-                        sourceMapsEndIndex === -1
-                            ? sourceCode.slice(sourceMapsStartIndex + CSS_SOURCE_MAP_URL_COMMENT.length)
-                            : sourceCode.slice(
-                                  sourceMapsStartIndex + CSS_SOURCE_MAP_URL_COMMENT.length,
-                                  sourceMapsEndIndex,
-                              );
-
-                    // If we encounter css stylesheet, that was not reported by "styleSheetAdded"
-                    // We can only get sourcemaps if they are inlined
-                    // Otherwise, we can't resolve actual sourcemaps url because we dont know css styles url itself.
-                    if (!isDataProtocol(sourceMapURL)) {
-                        return new Error(
-                            [
-                                `Missed stylesheet url for stylesheet id ${styleSheetId}.`,
-                                "Looks like Chrome Devtools 'styleSheetAdded' event was lost",
-                                "It could happen due to network instability",
-                                "Switching to inline sourcemaps for CSS will help at the cost of increased RAM usage",
-                            ].join("\n"),
-                        );
-                    }
-
-                    return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
-                        (err: Error) => err,
-                    );
-                });
-            });
+            this._ensureStylesAreLoading(coverageLastPart.ruleUsage);
 
             const totalDependingSourceFiles = new Set<string>();
-            const grouppedByStyleSheetCoverage = groupBy(coverage.ruleUsage, "styleSheetId");
+            const grouppedByStyleSheetCoverage = groupBy(coverageStyles, "styleSheetId");
             const styleSheetIds = Object.keys(grouppedByStyleSheetCoverage);
 
             await Promise.all(

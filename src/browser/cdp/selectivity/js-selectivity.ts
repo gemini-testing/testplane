@@ -6,7 +6,7 @@ import { CacheType, getCachedSelectivityFile, hasCachedSelectivityFile, setCache
 import { debugSelectivity } from "./debug";
 import type { CDP } from "..";
 import type { DebuggerEvents } from "../domains/debugger";
-import type { CDPRuntimeScriptId, CDPSessionId } from "../types";
+import type { CDPRuntimeScriptId, CDPScriptCoverage, CDPSessionId } from "../types";
 import type { SelectivityAssetState } from "./types";
 
 const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
@@ -19,12 +19,14 @@ export class JSSelectivity {
     private readonly _cdp: CDP;
     private readonly _sessionId: CDPSessionId;
     private readonly _sourceRoot: string;
-    private _debuggerOnPausedFn: (() => void) | null = null;
-    private _debuggerOnScriptParsedFn: ((params: DebuggerEvents["scriptParsed"]) => void) | null = null;
+    private _debuggerOnScriptParsedFn:
+        | ((params: DebuggerEvents["scriptParsed"], cdpSessionId?: CDPSessionId) => void)
+        | null = null;
     private _scriptsSource: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
     private _scriptsSourceMap: Record<CDPRuntimeScriptId, SelectivityAssetState> = {};
     private _scriptIdToSourceUrl: Record<CDPRuntimeScriptId, string | null> = {};
     private _scriptIdToSourceMapUrl: Record<CDPRuntimeScriptId, string | null> = {};
+    private _coverageResult: CDPScriptCoverage[] = [];
 
     constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
         this._cdp = cdp;
@@ -32,8 +34,11 @@ export class JSSelectivity {
         this._sourceRoot = sourceRoot;
     }
 
-    private _processScript({ scriptId, url, sourceMapURL }: DebuggerEvents["scriptParsed"]): void {
-        if (!this._sessionId) {
+    private _processScript(
+        { scriptId, url, sourceMapURL }: DebuggerEvents["scriptParsed"],
+        cdpSessionId?: CDPSessionId,
+    ): void {
+        if (!this._sessionId || cdpSessionId !== this._sessionId) {
             return;
         }
 
@@ -100,28 +105,109 @@ export class JSSelectivity {
         }
     }
 
-    async start(): Promise<void> {
-        const debuggerOnPaused = (this._debuggerOnPausedFn = async (): Promise<void> => {
-            return this._cdp.debugger.resume(this._sessionId).catch(() => {});
-        });
+    // If we haven't got "scriptParsed" event for the script, pull up source code + source map manually
+    private _ensureScriptsAreLoading(coverage: CDPScriptCoverage[]): void {
+        coverage.forEach(({ scriptId, url }) => {
+            const fixedUrl = url || this._scriptIdToSourceUrl[scriptId];
 
+            // Was processed with "this._processScript" or anonymous
+            if (
+                (Object.hasOwn(this._scriptsSource, scriptId) && Object.hasOwn(this._scriptsSourceMap, scriptId)) ||
+                !fixedUrl
+            ) {
+                return;
+            }
+
+            // Not dropping sources to fs the end of test (when "stop" is called) because we use it immediately
+            const scriptSourcePromise = this._cdp.debugger
+                .getScriptSource(this._sessionId, scriptId)
+                .then(({ scriptSource }) => {
+                    setCachedSelectivityFile(CacheType.Asset, fixedUrl, scriptSource).catch(() => {});
+                    return scriptSource;
+                })
+                .catch((err: Error) => err);
+
+            this._scriptIdToSourceUrl[scriptId] ||= url;
+            this._scriptsSource[scriptId] ||= scriptSourcePromise;
+            this._scriptsSourceMap[scriptId] ||= scriptSourcePromise.then(async sourceCode => {
+                if (sourceCode instanceof Error) {
+                    return sourceCode;
+                }
+
+                const sourceMapsStartIndex = sourceCode.lastIndexOf(JS_SOURCE_MAP_URL_COMMENT);
+                const sourceMapsEndIndex = sourceCode.indexOf("\n", sourceMapsStartIndex);
+
+                // Source maps are not generated for this source file
+                if (sourceMapsStartIndex === -1) {
+                    return null;
+                }
+
+                const sourceMapURL =
+                    sourceMapsEndIndex === -1
+                        ? sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length)
+                        : sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length, sourceMapsEndIndex);
+
+                if (isDataProtocol(sourceMapURL)) {
+                    return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
+                        (err: Error) => err,
+                    );
+                }
+
+                const resolvedSourceMapUrl = urlResolve(fixedUrl, sourceMapURL);
+
+                this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
+
+                try {
+                    const cachedSourceMaps = await getCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl);
+
+                    if (cachedSourceMaps) {
+                        return cachedSourceMaps;
+                    }
+
+                    const sourceMap = await fetchTextWithBrowserFallback(
+                        resolvedSourceMapUrl,
+                        this._cdp.runtime,
+                        this._sessionId,
+                    );
+
+                    setCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl, sourceMap).catch(() => {});
+
+                    return sourceMap;
+                } catch (err) {
+                    return err as Error;
+                }
+            });
+        });
+    }
+
+    private async _waitForLoadingScripts(): Promise<void> {
+        await Promise.all([
+            Promise.allSettled(Object.values(this._scriptsSource)),
+            Promise.allSettled(Object.values(this._scriptsSourceMap)),
+        ]);
+    }
+
+    async start(): Promise<void> {
         const debuggerOnScriptParsedFn = (this._debuggerOnScriptParsedFn = this._processScript.bind(this));
         const sessionId = this._sessionId;
 
-        this._cdp.debugger.on("paused", debuggerOnPaused);
         this._cdp.debugger.on("scriptParsed", debuggerOnScriptParsedFn);
 
-        await Promise.all([
-            this._cdp.target.setAutoAttach(sessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
-            this._cdp.debugger.enable(sessionId),
-            this._cdp.profiler.enable(sessionId).then(() =>
-                this._cdp.profiler.startPreciseCoverage(sessionId, {
-                    callCount: false,
-                    detailed: false,
-                    allowTriggeredUpdates: false,
-                }),
-            ),
-        ]);
+        await this._cdp.profiler.startPreciseCoverage(sessionId, {
+            callCount: false,
+            detailed: false,
+            allowTriggeredUpdates: false,
+        });
+    }
+
+    async takeCoverageSnapshot(): Promise<void> {
+        const coveragePart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
+
+        this._ensureScriptsAreLoading(coveragePart.result);
+
+        await this._waitForLoadingScripts();
+
+        this._coverageResult.push(...coveragePart.result);
     }
 
     /** @param drop only performs cleanup without providing actual deps. Should be "true" if test is failed */
@@ -131,83 +217,13 @@ export class JSSelectivity {
                 return null;
             }
 
-            const coverage = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
+            const coverageLastPart = await this._cdp.profiler.takePreciseCoverage(this._sessionId);
+            const coverageScripts = [...this._coverageResult, ...coverageLastPart.result];
 
-            // If we haven't got "scriptParsed" event for the script, pull up source code + source map manually
-            coverage.result.forEach(({ scriptId, url }) => {
-                const fixedUrl = url || this._scriptIdToSourceUrl[scriptId];
-
-                // Was processed with "this._processScript" or anonymous
-                if ((this._scriptsSource[scriptId] && this._scriptsSourceMap[scriptId]) || !fixedUrl) {
-                    return;
-                }
-
-                // Not dropping sources to fs the end of test (when "stop" is called) because we use it immediately
-                const scriptSourcePromise = this._cdp.debugger
-                    .getScriptSource(this._sessionId, scriptId)
-                    .then(({ scriptSource }) => {
-                        setCachedSelectivityFile(CacheType.Asset, fixedUrl, scriptSource).catch(() => {});
-                        return scriptSource;
-                    })
-                    .catch((err: Error) => err);
-
-                this._scriptIdToSourceUrl[scriptId] ||= url;
-                this._scriptsSource[scriptId] ||= scriptSourcePromise;
-                this._scriptsSourceMap[scriptId] ||= scriptSourcePromise.then(async sourceCode => {
-                    if (sourceCode instanceof Error) {
-                        return sourceCode;
-                    }
-
-                    const sourceMapsStartIndex = sourceCode.lastIndexOf(JS_SOURCE_MAP_URL_COMMENT);
-                    const sourceMapsEndIndex = sourceCode.indexOf("\n", sourceMapsStartIndex);
-
-                    // Source maps are not generated for this source file
-                    if (sourceMapsStartIndex === -1) {
-                        return null;
-                    }
-
-                    const sourceMapURL =
-                        sourceMapsEndIndex === -1
-                            ? sourceCode.slice(sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length)
-                            : sourceCode.slice(
-                                  sourceMapsStartIndex + JS_SOURCE_MAP_URL_COMMENT.length,
-                                  sourceMapsEndIndex,
-                              );
-
-                    if (isDataProtocol(sourceMapURL)) {
-                        return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
-                            (err: Error) => err,
-                        );
-                    }
-
-                    const resolvedSourceMapUrl = urlResolve(fixedUrl, sourceMapURL);
-
-                    this._scriptIdToSourceMapUrl[scriptId] ||= resolvedSourceMapUrl;
-
-                    try {
-                        const cachedSourceMaps = await getCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl);
-
-                        if (cachedSourceMaps) {
-                            return cachedSourceMaps;
-                        }
-
-                        const sourceMap = await fetchTextWithBrowserFallback(
-                            resolvedSourceMapUrl,
-                            this._cdp.runtime,
-                            this._sessionId,
-                        );
-
-                        setCachedSelectivityFile(CacheType.Asset, resolvedSourceMapUrl, sourceMap).catch(() => {});
-
-                        return sourceMap;
-                    } catch (err) {
-                        return err as Error;
-                    }
-                });
-            });
+            this._ensureScriptsAreLoading(coverageLastPart.result);
 
             const totalDependingSourceFiles = new Set<string>();
-            const grouppedByScriptCoverage = groupBy(coverage.result, "scriptId");
+            const grouppedByScriptCoverage = groupBy(coverageScripts, "scriptId");
             const scriptIds = Object.keys(grouppedByScriptCoverage);
 
             await Promise.all(
@@ -271,7 +287,6 @@ export class JSSelectivity {
 
             return totalDependingSourceFiles;
         } finally {
-            this._debuggerOnPausedFn && this._cdp.debugger.off("paused", this._debuggerOnPausedFn);
             this._debuggerOnScriptParsedFn && this._cdp.debugger.off("scriptParsed", this._debuggerOnScriptParsedFn);
         }
     }

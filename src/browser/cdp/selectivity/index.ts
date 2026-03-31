@@ -15,6 +15,8 @@ import { MasterEvents } from "../../../events";
 import { selectivityShouldRead, selectivityShouldWrite } from "./modes";
 import { debugSelectivity } from "./debug";
 import { getUsedDumpsTracker } from "./used-dumps-tracker";
+import { DebuggerEvents } from "../domains/debugger";
+import { CDPSessionId } from "../types";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -129,6 +131,9 @@ export const clearUnusedSelectivityDumps = async (config: Config): Promise<void>
     }
 };
 
+const testplaneCoverageBreakScriptName = "__testplane_cdp_coverage_snapshot_pause";
+const scriptToEvaluateOnNewDocument = `window.addEventListener("beforeunload", function ${testplaneCoverageBreakScriptName}() {debugger;});`;
+
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
     const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath } =
         browser.config.selectivity;
@@ -147,9 +152,9 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         throw new Error("Selectivity: Devtools connection is not established, couldn't record selectivity without it");
     }
 
-    const cdpTaget = browser.cdp.target;
+    const cdp = browser.cdp;
     const handle = await browser.publicAPI.getWindowHandle();
-    const { targetInfos } = await cdpTaget.getTargets();
+    const { targetInfos } = await cdp.target.getTargets();
     const cdpTargetId = targetInfos.find(t => handle.includes(t.targetId))?.targetId;
 
     if (!cdpTargetId) {
@@ -162,10 +167,18 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         );
     }
 
-    const sessionId = await cdpTaget.attachToTarget(cdpTargetId).then(r => r.sessionId);
+    const sessionId = await cdp.target.attachToTarget(cdpTargetId).then(r => r.sessionId);
 
-    const cssSelectivity = new CSSSelectivity(browser.cdp, sessionId, sourceRoot);
-    const jsSelectivity = new JSSelectivity(browser.cdp, sessionId, sourceRoot);
+    const cssSelectivity = new CSSSelectivity(cdp, sessionId, sourceRoot);
+    const jsSelectivity = new JSSelectivity(cdp, sessionId, sourceRoot);
+
+    await Promise.all([
+        cdp.dom.enable(sessionId).then(() => cdp.css.enable(sessionId)),
+        cdp.target.setAutoAttach(sessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
+        cdp.debugger.enable(sessionId),
+        cdp.page.enable(sessionId),
+        cdp.profiler.enable(sessionId),
+    ]);
 
     await Promise.allSettled([cssSelectivity.start(), jsSelectivity.start()]).then(async ([css, js]) => {
         if (css.status === "rejected" || js.status === "rejected") {
@@ -178,14 +191,58 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         }
     });
 
+    let pageSwitchPromise: Promise<void> = Promise.resolve();
+    let isSelectivityStopped = false;
+
+    const debuggerPausedFn = ({ callFrames }: DebuggerEvents["paused"], eventCdpSessionId?: CDPSessionId): void => {
+        if (eventCdpSessionId !== sessionId) {
+            return;
+        }
+
+        if (callFrames[0]?.functionName !== testplaneCoverageBreakScriptName || isSelectivityStopped) {
+            cdp.debugger.resume(sessionId).catch(() => {});
+            return;
+        }
+
+        pageSwitchPromise = pageSwitchPromise.finally(() =>
+            Promise.all([cssSelectivity.takeCoverageSnapshot(), jsSelectivity.takeCoverageSnapshot()])
+                .catch(err => {
+                    console.error("Selectivity: couldn't take snapshot while navigating:", err);
+                })
+                .then(() => {
+                    cdp.debugger.resume(sessionId).catch(() => {});
+                }),
+        );
+    };
+
+    cdp.debugger.on("paused", debuggerPausedFn);
+
+    await cdp.page.addScriptToEvaluateOnNewDocument(sessionId, { source: scriptToEvaluateOnNewDocument });
+
     /** @param drop only performs cleanup without writing anything. Should be "true" if test is failed */
     return async function stopSelectivity(test: Test, drop: boolean): Promise<void> {
-        const [cssDependencies, jsDependencies] = await Promise.all([
+        isSelectivityStopped = true;
+
+        await pageSwitchPromise;
+
+        const [cssDependenciesPromise, jsDependenciesPromise] = await Promise.allSettled([
             cssSelectivity.stop(drop),
             jsSelectivity.stop(drop),
         ]);
 
-        cdpTaget.detachFromTarget(sessionId).catch(() => {});
+        cdp.debugger.off("paused", debuggerPausedFn);
+        cdp.target.detachFromTarget(sessionId).catch(() => {});
+
+        if (jsDependenciesPromise.status === "rejected") {
+            throw jsDependenciesPromise.reason;
+        }
+
+        if (cssDependenciesPromise.status === "rejected") {
+            throw cssDependenciesPromise.reason;
+        }
+
+        const cssDependencies = cssDependenciesPromise.value;
+        const jsDependencies = jsDependenciesPromise.value;
 
         if (drop || (!cssDependencies?.size && !jsDependencies?.size)) {
             return;
