@@ -109,30 +109,12 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            assert.calledWith(cdpMock.target.setAutoAttach, sessionId, {
-                autoAttach: true,
-                waitForDebuggerOnStart: false,
-            });
-            assert.calledWith(cdpMock.debugger.enable, sessionId);
-            assert.calledWith(cdpMock.profiler.enable, sessionId);
             assert.calledWith(cdpMock.profiler.startPreciseCoverage, sessionId, {
                 callCount: false,
                 detailed: false,
                 allowTriggeredUpdates: false,
             });
-            assert.calledTwice(cdpMock.debugger.on); // paused and scriptParsed events
-        });
-
-        it("should handle debugger paused events", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
-
-            await jsSelectivity.start();
-
-            const pausedHandler = cdpMock.debugger.on.getCall(0).args[1];
-
-            await pausedHandler({});
-
-            assert.calledWith(cdpMock.debugger.resume, sessionId);
+            assert.calledOnce(cdpMock.debugger.on); // scriptParsed event only
         });
 
         it("should handle scriptParsed events when there is no cache", async () => {
@@ -144,7 +126,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
 
             const scriptParsedEvent = {
                 scriptId: "script-123",
@@ -152,7 +134,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceMapURL: "app.js.map",
             };
 
-            scriptParsedHandler(scriptParsedEvent);
+            scriptParsedHandler(scriptParsedEvent, sessionId);
 
             await hasCachedSelectivityFileStubResult;
             await fetchTextWithBrowserFallbackStubResult;
@@ -171,7 +153,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
 
             const scriptParsedEvent = {
                 scriptId: "script-123",
@@ -179,7 +161,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceMapURL: "app.js.map",
             };
 
-            scriptParsedHandler(scriptParsedEvent);
+            scriptParsedHandler(scriptParsedEvent, sessionId);
 
             await hasCachedSelectivityFileStubResult;
 
@@ -199,7 +181,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
 
             const sourceMapURL = "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==";
             const scriptParsedEvent = {
@@ -208,7 +190,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceMapURL: "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==",
             };
 
-            scriptParsedHandler(scriptParsedEvent);
+            scriptParsedHandler(scriptParsedEvent, sessionId);
 
             await hasCachedSelectivityFileStubResult;
 
@@ -221,7 +203,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
 
             const scriptParsedEvent = {
                 scriptId: "script-123",
@@ -229,10 +211,136 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceMapURL: "",
             };
 
-            scriptParsedHandler(scriptParsedEvent);
+            scriptParsedHandler(scriptParsedEvent, sessionId);
 
             assert.notCalled(cdpMock.debugger.getScriptSource);
             assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+    });
+
+    describe("takeCoverageSnapshot", () => {
+        it("should call takePreciseCoverage with sessionId", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+
+            assert.calledWith(cdpMock.profiler.takePreciseCoverage, sessionId);
+        });
+
+        it("should fetch sources for unknown scripts", async () => {
+            cdpMock.profiler.takePreciseCoverage.resolves({
+                timestamp: 100500,
+                result: [
+                    {
+                        scriptId: "script-999",
+                        url: "http://example.com/bundle.js",
+                        functions: [
+                            {
+                                functionName: "bar",
+                                isBlockCoverage: false,
+                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                            },
+                        ],
+                    },
+                ],
+            });
+            cdpMock.debugger.getScriptSource.resolves({
+                scriptSource: "mock source\n//# sourceMappingURL=bundle.js.map",
+            });
+
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+
+            assert.calledWith(cdpMock.debugger.getScriptSource, sessionId, "script-999");
+        });
+
+        it("should not re-fetch already known scripts", async () => {
+            cdpMock.profiler.takePreciseCoverage.resolves({
+                timestamp: 100500,
+                result: [
+                    {
+                        scriptId: "script-123",
+                        url: "http://example.com/app.js",
+                        functions: [
+                            {
+                                functionName: "foo",
+                                isBlockCoverage: false,
+                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+            scriptParsedHandler(
+                { scriptId: "script-123", url: "http://example.com/app.js", sourceMapURL: "app.js.map" },
+                sessionId,
+            );
+
+            await jsSelectivity.takeCoverageSnapshot();
+
+            // getScriptSource is called by _processScript (from scriptParsed), not by _ensureScriptsAreLoading
+            assert.calledOnce(cdpMock.debugger.getScriptSource);
+        });
+
+        it("should accumulate coverage results used by stop()", async () => {
+            cdpMock.profiler.takePreciseCoverage
+                .onFirstCall()
+                .resolves({
+                    timestamp: 100500,
+                    result: [
+                        {
+                            scriptId: "script-123",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "foo",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                })
+                .onSecondCall()
+                .resolves({
+                    timestamp: 100600,
+                    result: [
+                        {
+                            scriptId: "script-123",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "bar",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 30, endOffset: 60, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+            cdpMock.debugger.getScriptSource.resolves({
+                scriptSource: "mock source\n//# sourceMappingURL=app.js.map",
+            });
+            extractSourceFilesDepsStub.returns(new Set(["src/app.js"]));
+
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+            const result = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(result || []), ["src/app.js"]);
+            // takePreciseCoverage is called once by takeCoverageSnapshot and once by stop
+            assert.calledTwice(cdpMock.profiler.takePreciseCoverage);
         });
     });
 
@@ -244,7 +352,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             const result = await jsSelectivity.stop(true);
 
             assert.deepEqual(Array.from(result || []).sort(), []);
-            assert.calledTwice(cdpMock.debugger.off); // Remove both event listeners
+            assert.calledOnce(cdpMock.debugger.off); // Remove scriptParsed event listener only
         });
 
         it("should process coverage and return dependencies", async () => {
@@ -359,7 +467,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             await jsSelectivity.start();
 
-            const scriptParsedHandler = cdpMock.debugger.on.getCall(1).args[1];
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
 
             const sourceMapURL = "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==";
             const scriptParsedEvent = {
@@ -368,7 +476,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 sourceMapURL: sourceMapURL,
             };
 
-            scriptParsedHandler(scriptParsedEvent);
+            scriptParsedHandler(scriptParsedEvent, sessionId);
 
             await jsSelectivity.stop();
 

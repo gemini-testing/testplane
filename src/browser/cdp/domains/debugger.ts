@@ -46,7 +46,7 @@ interface GetScriptSourceResponse {
 
 export interface DebuggerEvents {
     paused: {
-        callFrames: CDPDebuggerCallFrame;
+        callFrames: CDPDebuggerCallFrame[];
         /** Location of console.profileEnd(). */
         reason: CDPDebuggerPausedReason;
         /** Object containing break-specific auxiliary properties. */

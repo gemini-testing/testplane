@@ -67,6 +67,7 @@ export interface CDPSuccessResponse<T = Record<string, unknown>> {
 export interface CDPEvent<T = Record<string, unknown>> {
     method: `${Domain}.${MethodName}`;
     params: T;
+    sessionId?: CDPSessionId;
 }
 
 export type CDPResponse<T = Record<string, unknown>> = CDPErrorResponse | CDPSuccessResponse<T>;
@@ -245,4 +246,279 @@ export interface CDPCSSStyleSheetHeader {
     endLine: number;
     /** Column offset of the end of the stylesheet within the resource (zero based). */
     endColumn: number;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-RequestId */
+export type CDPNetworkRequestId = string;
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-LoaderId */
+export type CDPNetworkLoaderId = string;
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-TimeSinceEpoch */
+export type CDPNetworkTimeSinceEpoch = number;
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-MonotonicTime */
+export type CDPNetworkMonotonicTime = number;
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-Headers */
+export type CDPNetworkHeaders = Record<string, string>;
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ResourcePriority */
+export type CDPNetworkResourcePriority = "VeryLow" | "Low" | "Medium" | "High" | "VeryHigh";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ErrorReason */
+export type CDPNetworkErrorReason =
+    | "Failed"
+    | "Aborted"
+    | "TimedOut"
+    | "AccessDenied"
+    | "ConnectionClosed"
+    | "ConnectionReset"
+    | "ConnectionRefused"
+    | "ConnectionAborted"
+    | "ConnectionFailed"
+    | "NameNotResolved"
+    | "InternetDisconnected"
+    | "AddressUnreachable"
+    | "BlockedByClient"
+    | "BlockedByResponse";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ResourceType */
+export type CDPNetworkResourceType =
+    | "Document"
+    | "Stylesheet"
+    | "Image"
+    | "Media"
+    | "Font"
+    | "Script"
+    | "TextTrack"
+    | "XHR"
+    | "Fetch"
+    | "Prefetch"
+    | "EventSource"
+    | "WebSocket"
+    | "Manifest"
+    | "SignedExchange"
+    | "Ping"
+    | "CSPViolationReport"
+    | "Preflight"
+    | "Other";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ConnectionType */
+export type CDPNetworkConnectionType =
+    | "none"
+    | "cellular2g"
+    | "cellular3g"
+    | "cellular4g"
+    | "bluetooth"
+    | "ethernet"
+    | "wifi"
+    | "wimax"
+    | "other";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-CookieSameSite */
+export type CDPNetworkCookieSameSite = "Strict" | "Lax" | "None";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-CookiePriority */
+export type CDPNetworkCookiePriority = "Low" | "Medium" | "High";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-CookieSourceScheme */
+export type CDPNetworkCookieSourceScheme = "Unset" | "NonSecure" | "Secure";
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-ResourceTiming */
+export interface CDPNetworkResourceTiming {
+    /** Timing's requestTime is a baseline in seconds, while the other numbers are ticks in milliseconds relatively to this requestTime. */
+    requestTime: number;
+    /** Started resolving proxy. */
+    proxyStart: number;
+    /** Finished resolving proxy. */
+    proxyEnd: number;
+    /** Started DNS address resolve. */
+    dnsStart: number;
+    /** Finished DNS address resolve. */
+    dnsEnd: number;
+    /** Started connecting to the remote host. */
+    connectStart: number;
+    /** Connected to the remote host. */
+    connectEnd: number;
+    /** Started SSL handshake. */
+    sslStart: number;
+    /** Finished SSL handshake. */
+    sslEnd: number;
+    /** Started sending request. */
+    sendStart: number;
+    /** Finished sending request. */
+    sendEnd: number;
+    /** Time the server started pushing request. */
+    pushStart: number;
+    /** Time the server finished pushing request. */
+    pushEnd: number;
+    /** Started receiving response headers. */
+    receiveHeadersStart: number;
+    /** Finished receiving response headers. */
+    receiveHeadersEnd: number;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-Request */
+export interface CDPNetworkRequest {
+    /** Request URL (without fragment). */
+    url: string;
+    /** Fragment of the requested URL starting with hash, if present. */
+    urlFragment?: string;
+    /** HTTP request method. */
+    method: string;
+    /** HTTP request headers. */
+    headers: CDPNetworkHeaders;
+    /** HTTP POST request data. */
+    postData?: string;
+    /** True when the request has POST data. */
+    hasPostData?: boolean;
+    /** The mixed content type of the request. */
+    mixedContentType?: "blockable" | "optionally-blockable" | "none";
+    /** Priority of the resource request at the time request is sent. */
+    initialPriority: CDPNetworkResourcePriority;
+    /** The referrer policy of the request, as defined in https://www.w3.org/TR/referrer-policy/ */
+    referrerPolicy: string;
+    /** Whether is loaded via link preload. */
+    isLinkPreload?: boolean;
+    /** Whether the request is same-site. */
+    isSameSite?: boolean;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-Response */
+export interface CDPNetworkResponse {
+    /** Response URL. This URL can be different from CachedResource.url in case of redirect. */
+    url: string;
+    /** HTTP response status code. */
+    status: number;
+    /** HTTP response status text. */
+    statusText: string;
+    /** HTTP response headers. */
+    headers: CDPNetworkHeaders;
+    /** Resource mimeType as determined by the browser. */
+    mimeType: string;
+    /** Refined HTTP request headers that were actually transmitted over the network. */
+    requestHeaders?: CDPNetworkHeaders;
+    /** Specifies whether physical connection was actually reused for this request. */
+    connectionReused: boolean;
+    /** Physical connection id that was actually used for this request. */
+    connectionId: number;
+    /** Remote IP address. */
+    remoteIPAddress?: string;
+    /** Remote port. */
+    remotePort?: number;
+    /** Specifies that the request was served from the disk cache. */
+    fromDiskCache?: boolean;
+    /** Specifies that the request was served from the ServiceWorker. */
+    fromServiceWorker?: boolean;
+    /** Specifies that the request was served from the prefetch cache. */
+    fromPrefetchCache?: boolean;
+    /** Total number of bytes received for this request so far. */
+    encodedDataLength: number;
+    /** Timing information for the given request. */
+    timing?: CDPNetworkResourceTiming;
+    /** Protocol used to fetch this request. */
+    protocol?: string;
+    /** Security state of the request resource. */
+    securityState: "unknown" | "neutral" | "insecure" | "secure" | "info" | "insecure-broken";
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-WebSocketRequest */
+export interface CDPNetworkWebSocketRequest {
+    /** HTTP request headers. */
+    headers: CDPNetworkHeaders;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-WebSocketResponse */
+export interface CDPNetworkWebSocketResponse {
+    /** HTTP response status code. */
+    status: number;
+    /** HTTP response status text. */
+    statusText: string;
+    /** HTTP response headers. */
+    headers: CDPNetworkHeaders;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-WebSocketFrame */
+export interface CDPNetworkWebSocketFrame {
+    /** WebSocket message opcode. */
+    opcode: number;
+    /** WebSocket message mask. */
+    mask: boolean;
+    /** WebSocket message payload data. If the opcode is 1, this is a text message and payloadData is a UTF-8 string. If the opcode isn't 1, then payloadData is a base64 encoded string representing binary data. */
+    payloadData: string;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-Initiator */
+export interface CDPNetworkInitiator {
+    /** Type of this initiator. */
+    type: "parser" | "script" | "preload" | "SignedExchange" | "preflight" | "other";
+    /** Initiator URL, set for Parser type or for Script type (when script is importing module) or for SignedExchange type. */
+    url?: string;
+    /** Initiator line number, set for Parser type or for Script type (when script is importing module) (0-based). */
+    lineNumber?: number;
+    /** Initiator column number, set for Parser type or for Script type (when script is importing module) (0-based). */
+    columnNumber?: number;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-Cookie */
+export interface CDPNetworkCookie {
+    /** Cookie name. */
+    name: string;
+    /** Cookie value. */
+    value: string;
+    /** Cookie domain. */
+    domain: string;
+    /** Cookie path. */
+    path: string;
+    /** Cookie expiration date as the number of seconds since the UNIX epoch. */
+    expires: number;
+    /** Cookie size. */
+    size: number;
+    /** True if cookie is http-only. */
+    httpOnly: boolean;
+    /** True if cookie is secure. */
+    secure: boolean;
+    /** True in case of session cookie. */
+    session: boolean;
+    /** Cookie SameSite type. */
+    sameSite?: CDPNetworkCookieSameSite;
+    /** Cookie Priority. */
+    priority: CDPNetworkCookiePriority;
+    /** True if cookie is SameParty. */
+    sameParty: boolean;
+    /** Cookie source scheme type. */
+    sourceScheme: CDPNetworkCookieSourceScheme;
+    /** Cookie source port. Valid values are {-1, [1, 65535]}, -1 indicates an unspecified port. */
+    sourcePort: number;
+}
+
+/** @link https://chromedevtools.github.io/devtools-protocol/1-3/Network/#type-CookieParam */
+export interface CDPNetworkCookieParam {
+    /** Cookie name. */
+    name: string;
+    /** Cookie value. */
+    value: string;
+    /** The request-URI to associate with the setting of the cookie. This value can affect the default domain, path, source port, and source scheme values of the created cookie. */
+    url?: string;
+    /** Cookie domain. */
+    domain?: string;
+    /** Cookie path. */
+    path?: string;
+    /** True if cookie is secure. */
+    secure?: boolean;
+    /** True if cookie is http-only. */
+    httpOnly?: boolean;
+    /** Cookie SameSite type. */
+    sameSite?: CDPNetworkCookieSameSite;
+    /** Cookie expiration date, session cookie if not set. */
+    expires?: CDPNetworkTimeSinceEpoch;
+    /** Cookie Priority. */
+    priority?: CDPNetworkCookiePriority;
+    /** True if cookie is SameParty. */
+    sameParty?: boolean;
+    /** Cookie source scheme type. */
+    sourceScheme?: CDPNetworkCookieSourceScheme;
+    /** Cookie source port. Valid values are {-1, [1, 65535]}, -1 indicates an unspecified port. */
+    sourcePort?: number;
 }

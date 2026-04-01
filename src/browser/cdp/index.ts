@@ -9,6 +9,7 @@ import { CDPDom } from "./domains/dom";
 import { CDPCss } from "./domains/css";
 import { CDPNetwork } from "./domains/network";
 import { CDFetch } from "./domains/fetch";
+import { CDPPage } from "./domains/page";
 
 export class CDP {
     private readonly _connection: CDPConnection;
@@ -20,6 +21,7 @@ export class CDP {
     public readonly css: CDPCss;
     public readonly network: CDPNetwork;
     public readonly fetch: CDFetch;
+    public readonly page: CDPPage;
 
     static async create(browser: Browser): Promise<CDP | null> {
         // "isChrome" is "true" when automationProtocol is "devtools"
@@ -42,8 +44,9 @@ export class CDP {
         this.runtime = new CDPRuntime(connection);
         this.dom = new CDPDom(connection);
         this.css = new CDPCss(connection);
-        this.network = new CDPNetwork();
-        this.fetch = new CDFetch();
+        this.network = new CDPNetwork(connection);
+        this.fetch = new CDFetch(connection);
+        this.page = new CDPPage(connection);
         this._connection.onEventMessage = this._onEventMessage.bind(this);
     }
 
@@ -67,28 +70,31 @@ export class CDP {
 
         switch (domain) {
             case "Target":
-                this.target.emit(method, cdpEventMessage.params);
+                this.target.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "Profiler":
-                this.profiler.emit(method, cdpEventMessage.params);
+                this.profiler.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "Debugger":
-                this.debugger.emit(method, cdpEventMessage.params);
+                this.debugger.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "Runtime":
-                this.runtime.emit(method, cdpEventMessage.params);
+                this.runtime.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "DOM":
-                this.dom.emit(method, cdpEventMessage.params);
+                this.dom.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "CSS":
-                this.css.emit(method, cdpEventMessage.params);
+                this.css.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "Network":
-                this.network.emit(method, cdpEventMessage.params);
+                this.network.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
             case "Fetch":
-                this.fetch.emit(method, cdpEventMessage.params);
+                this.fetch.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
+                break;
+            case "Page":
+                this.page.emit(method, cdpEventMessage.params, cdpEventMessage.sessionId);
                 break;
         }
     }

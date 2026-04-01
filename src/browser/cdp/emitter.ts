@@ -1,5 +1,6 @@
 import * as logger from "../../utils/logger";
 import { EventEmitter } from "events";
+import { CDPSessionId } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFunc = (...args: any) => unknown;
@@ -7,15 +8,18 @@ type AnyFunc = (...args: any) => unknown;
 export class CDPEventEmitter<Events extends { [key in keyof Events]: unknown }> extends EventEmitter {
     private _callbackMap: Map<AnyFunc, AnyFunc> = new Map();
 
-    on<U extends string & keyof Events>(event: U, listener: (params: Events[U]) => void | Promise<void>): this {
+    on<U extends string & keyof Events>(
+        event: U,
+        listener: (params: Events[U], sessionId?: CDPSessionId) => void | Promise<void>,
+    ): this {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const eventListenerWithErrorBoundary = (params: Events[U]): void | Promise<void> => {
+        const eventListenerWithErrorBoundary = (params: Events[U], sessionId?: CDPSessionId): void | Promise<void> => {
             const logError = (e: unknown): void => {
                 logger.error(`Catched unhandled error in CDP "${event}" handler: ${(e && (e as Error).stack) || e}`);
             };
 
             try {
-                const result = listener(params);
+                const result = listener(params, sessionId);
 
                 return result instanceof Promise ? result.catch(logError) : result;
             } catch (e) {

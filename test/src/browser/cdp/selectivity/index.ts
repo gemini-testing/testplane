@@ -28,8 +28,8 @@ describe("CDP/Selectivity", () => {
         constants: { R_OK: number; W_OK: number };
     };
 
-    let cssSelectivityMock: { start: SinonStub; stop: SinonStub };
-    let jsSelectivityMock: { start: SinonStub; stop: SinonStub };
+    let cssSelectivityMock: { start: SinonStub; stop: SinonStub; takeCoverageSnapshot: SinonStub };
+    let jsSelectivityMock: { start: SinonStub; stop: SinonStub; takeCoverageSnapshot: SinonStub };
     let testDependenciesWriterMock: { saveFor: SinonStub };
     let hashWriterMock: { addTestDependencyHashes: SinonStub; addPatternDependencyHash: SinonStub; save: SinonStub };
     let hashReaderMock: { patternHasChanged: SinonStub; getTestChangedDeps: SinonStub };
@@ -48,7 +48,17 @@ describe("CDP/Selectivity", () => {
         };
         publicAPI: { isChromium: boolean; getWindowHandle: SinonStub };
         cdp: {
-            target: { getTargets: SinonStub; attachToTarget: SinonStub; detachFromTarget: SinonStub };
+            target: {
+                getTargets: SinonStub;
+                attachToTarget: SinonStub;
+                detachFromTarget: SinonStub;
+                setAutoAttach: SinonStub;
+            };
+            dom: { enable: SinonStub };
+            css: { enable: SinonStub };
+            debugger: { enable: SinonStub; on: SinonStub; off: SinonStub; resume: SinonStub };
+            page: { enable: SinonStub; addScriptToEvaluateOnNewDocument: SinonStub };
+            profiler: { enable: SinonStub };
         } | null;
     };
 
@@ -56,10 +66,12 @@ describe("CDP/Selectivity", () => {
         cssSelectivityMock = {
             start: sandbox.stub().resolves(),
             stop: sandbox.stub().resolves(new Set(["src/styles.css"])),
+            takeCoverageSnapshot: sandbox.stub().resolves(),
         };
         jsSelectivityMock = {
             start: sandbox.stub().resolves(),
             stop: sandbox.stub().resolves(new Set(["src/app.js"])),
+            takeCoverageSnapshot: sandbox.stub().resolves(),
         };
         testDependenciesWriterMock = {
             saveFor: sandbox.stub().resolves(),
@@ -127,7 +139,21 @@ describe("CDP/Selectivity", () => {
                     }),
                     attachToTarget: sandbox.stub().resolves({ sessionId: "session-123" }),
                     detachFromTarget: sandbox.stub().resolves(),
+                    setAutoAttach: sandbox.stub().resolves(),
                 },
+                dom: { enable: sandbox.stub().resolves() },
+                css: { enable: sandbox.stub().resolves() },
+                debugger: {
+                    enable: sandbox.stub().resolves(),
+                    on: sandbox.stub(),
+                    off: sandbox.stub(),
+                    resume: sandbox.stub().resolves(),
+                },
+                page: {
+                    enable: sandbox.stub().resolves(),
+                    addScriptToEvaluateOnNewDocument: sandbox.stub().resolves(),
+                },
+                profiler: { enable: sandbox.stub().resolves() },
             },
         };
 
@@ -216,6 +242,77 @@ describe("CDP/Selectivity", () => {
             assert.calledOnce(cssSelectivityMock.start);
             assert.calledOnce(jsSelectivityMock.start);
             assert.isFunction(stopFn);
+        });
+
+        it("should enable CDP domains before starting selectivity", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            assert.calledWith(browserMock.cdp!.dom.enable, "session-123");
+            assert.calledWith(browserMock.cdp!.css.enable, "session-123");
+            assert.calledWith(browserMock.cdp!.target.setAutoAttach, "session-123", {
+                autoAttach: true,
+                waitForDebuggerOnStart: false,
+            });
+            assert.calledWith(browserMock.cdp!.debugger.enable, "session-123");
+            assert.calledWith(browserMock.cdp!.page.enable, "session-123");
+            assert.calledWith(browserMock.cdp!.profiler.enable, "session-123");
+        });
+
+        it("should register debugger paused handler and add beforeunload script", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            assert.calledOnceWith(browserMock.cdp!.debugger.on, "paused");
+            assert.calledOnceWith(browserMock.cdp!.page.addScriptToEvaluateOnNewDocument, "session-123", {
+                source: sinon.match.string,
+            });
+            assert.include(
+                browserMock.cdp!.page.addScriptToEvaluateOnNewDocument.args[0][1].source,
+                'window.addEventListener("beforeunload", function',
+            );
+        });
+
+        it("should take coverage snapshots when debugger pauses on beforeunload handler", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            pausedHandler({ callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] }, "session-123");
+
+            // Need to let the promise chain resolve
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            assert.calledOnce(cssSelectivityMock.takeCoverageSnapshot);
+            assert.calledOnce(jsSelectivityMock.takeCoverageSnapshot);
+            assert.calledWith(browserMock.cdp!.debugger.resume, "session-123");
+        });
+
+        it("should ignore debugger paused events from different sessions", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            pausedHandler(
+                { callFrames: [{ functionName: "__testplane_cdp_coverage_snapshot_pause" }] },
+                "different-session",
+            );
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            assert.notCalled(cssSelectivityMock.takeCoverageSnapshot);
+            assert.notCalled(jsSelectivityMock.takeCoverageSnapshot);
+        });
+
+        it("should ignore debugger paused events with non-matching function name", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            pausedHandler({ callFrames: [{ functionName: "someOtherFunction" }] }, "session-123");
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            assert.notCalled(cssSelectivityMock.takeCoverageSnapshot);
+            assert.notCalled(jsSelectivityMock.takeCoverageSnapshot);
         });
 
         it("should handle window handle containing target ID", async () => {
