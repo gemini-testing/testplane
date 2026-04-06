@@ -410,6 +410,7 @@ export interface CommonConfig {
         testDependenciesPath: string;
         compression: SelectivityCompressionType;
         disableSelectivityPatterns: string[];
+        ignoreSourceMapUrls: string[];
         mapDependencyRelativePath: null | SelectivityMapDependencyRelativePathFn;
         reportPath: string;
     };
