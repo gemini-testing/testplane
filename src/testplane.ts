@@ -41,7 +41,7 @@ interface RunOpts {
         enabled: boolean;
         beforeTest: boolean;
         onFail: boolean;
-        port: number;
+        port?: number;
     };
     devtools: boolean;
     local: boolean;
