@@ -321,9 +321,8 @@ export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver" | "devtools";
     desiredCapabilities: WebdriverIO.Capabilities | null;
-    sessionEnvFlags: Record<
-        "isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone",
-        boolean
+    sessionEnvFlags: Partial<
+        Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
     >;
     gridUrl: string;
     baseUrl: string;
