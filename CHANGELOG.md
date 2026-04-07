@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.42.6 (2026-04-07)
+
+
+### Bug Fixes
+
+* repl mode port type ([b0a9d8f](https://github.com/gemini-testing/testplane/commit/b0a9d8fb2a0c70465c0a078bf010f4570b468e38))
+
 ### 8.42.5 (2026-04-07)
 
 
