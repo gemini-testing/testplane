@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.42.5 (2026-04-07)
+
+
+### Bug Fixes
+
+* sessionEnvFlags type ([fe61a25](https://github.com/gemini-testing/testplane/commit/fe61a25d41ef20128e964876b2f5999433f4a717))
+
 ### 8.42.4 (2026-04-01)
 
 ### 8.42.3 (2026-03-30)
