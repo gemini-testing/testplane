@@ -1,6 +1,7 @@
 "use strict";
 
 const proxyquire = require("proxyquire");
+const { extractBase64PngSize } = require("src/image");
 
 describe("Image", () => {
     const sandbox = sinon.createSandbox();
@@ -52,6 +53,36 @@ describe("Image", () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("extractBase64PngSize", () => {
+        it("should throw error on invalid small strings", () => {
+            const fn = () => extractBase64PngSize("foobar");
+
+            assert.throw(fn, "Invalid base64 encoded png: too short");
+        });
+
+        it("should throw error on non-base64 png strings", () => {
+            const fn = () => extractBase64PngSize("foobar".repeat(20));
+
+            assert.throw(fn, "Invalid base64 encoded png: signature missmatch");
+        });
+
+        it("should work with minimal png", () => {
+            const minimalPng =
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVQImWNgYGAAAAAEAAGjChXjAAAAAElFTkSuQmCC";
+            const result = extractBase64PngSize(minimalPng);
+
+            assert.deepEqual(result, { width: 1, height: 1 });
+        });
+
+        it("should extract size", () => {
+            const tenPxSquarePng =
+                "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC";
+            const result = extractBase64PngSize(tenPxSquarePng);
+
+            assert.deepEqual(result, { width: 10, height: 10 });
+        });
+    });
 
     describe("constructor", () => {
         it("should read width and height from PNG buffer", () => {
