@@ -1,4 +1,5 @@
 import { groupBy } from "lodash";
+import mm from "micromatch";
 import { resolve as urlResolve } from "node:url";
 import { JS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
 import { extractSourceFilesDeps, fetchTextWithBrowserFallback, isCachedOnFs, isDataProtocol } from "./utils";
@@ -19,6 +20,7 @@ export class JSSelectivity {
     private readonly _cdp: CDP;
     private readonly _sessionId: CDPSessionId;
     private readonly _sourceRoot: string;
+    private readonly _ignoreSourceMapUrls: string[];
     private _debuggerOnScriptParsedFn:
         | ((params: DebuggerEvents["scriptParsed"], cdpSessionId?: CDPSessionId) => void)
         | null = null;
@@ -28,10 +30,11 @@ export class JSSelectivity {
     private _scriptIdToSourceMapUrl: Record<CDPRuntimeScriptId, string | null> = {};
     private _coverageResult: CDPScriptCoverage[] = [];
 
-    constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
+    constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "", ignoreSourceMapUrls: string[] = []) {
         this._cdp = cdp;
         this._sessionId = sessionId;
         this._sourceRoot = sourceRoot;
+        this._ignoreSourceMapUrls = ignoreSourceMapUrls;
     }
 
     private _processScript(
@@ -44,7 +47,7 @@ export class JSSelectivity {
 
         this._scriptIdToSourceUrl[scriptId] ||= url;
 
-        if (!url || !sourceMapURL) {
+        if (!url || !sourceMapURL || (this._ignoreSourceMapUrls.length && mm.isMatch(url, this._ignoreSourceMapUrls))) {
             this._scriptsSource[scriptId] ||= null;
             this._scriptsSourceMap[scriptId] ||= null;
             return;
@@ -113,7 +116,8 @@ export class JSSelectivity {
             // Was processed with "this._processScript" or anonymous
             if (
                 (Object.hasOwn(this._scriptsSource, scriptId) && Object.hasOwn(this._scriptsSourceMap, scriptId)) ||
-                !fixedUrl
+                !fixedUrl ||
+                (this._ignoreSourceMapUrls.length && mm.isMatch(fixedUrl, this._ignoreSourceMapUrls))
             ) {
                 return;
             }

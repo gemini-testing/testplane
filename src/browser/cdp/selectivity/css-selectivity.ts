@@ -1,4 +1,5 @@
 import { groupBy } from "lodash";
+import mm from "micromatch";
 import path from "node:path";
 import { resolve as urlResolve } from "node:url";
 import { CSS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
@@ -20,6 +21,7 @@ export class CSSSelectivity {
     private readonly _cdp: CDP;
     private readonly _sessionId: CDPSessionId;
     private readonly _sourceRoot: string;
+    private readonly _ignoreSourceMapUrls: string[];
     private _cssOnStyleSheetAddedFn:
         | ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void)
         | null = null;
@@ -27,10 +29,11 @@ export class CSSSelectivity {
     private _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
     private _coverageResult: CSSRuleUsage[] = [];
 
-    constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
+    constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "", ignoreSourceMapUrls: string[] = []) {
         this._cdp = cdp;
         this._sessionId = sessionId;
         this._sourceRoot = sourceRoot;
+        this._ignoreSourceMapUrls = ignoreSourceMapUrls;
     }
 
     private _processStyle(
@@ -41,7 +44,11 @@ export class CSSSelectivity {
             return;
         }
 
-        if (!sourceURL || !sourceMapURL) {
+        if (
+            !sourceURL ||
+            !sourceMapURL ||
+            (this._ignoreSourceMapUrls.length && mm.isMatch(sourceURL, this._ignoreSourceMapUrls))
+        ) {
             this._stylesSourceMap[styleSheetId] ||= null;
             return;
         }
