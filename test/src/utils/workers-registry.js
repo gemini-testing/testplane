@@ -6,6 +6,7 @@ const _ = require("lodash");
 const RuntimeConfig = require("src/config/runtime-config");
 const { MasterEvents: Events } = require("src/events");
 const { WorkerProcess } = require("src/utils/worker-process");
+const { SERIALIZED_ERROR_MARKER } = require("src/utils/worker-error-serialization");
 const {
     MASTER_INIT,
     MASTER_SYNC_CONFIG,
@@ -210,6 +211,40 @@ describe("WorkersRegistry", () => {
                 .then(() =>
                     assert.calledOnceWith(workersImpl.execute, "worker.js", "runTest", ["foo", { bar: "baz" }]),
                 );
+        });
+
+        it("should deserialize error with nested cause from worker", async () => {
+            const workersRegistry = mkWorkersRegistry_();
+            const workers = workersRegistry.register("worker.js", ["runTest"]);
+            workersImpl.execute.yieldsRight({
+                [SERIALIZED_ERROR_MARKER]: true,
+                name: "Error",
+                message: "outer",
+                stack: "Error: outer",
+                testplaneCtx: { foo: "bar" },
+                cause: {
+                    [SERIALIZED_ERROR_MARKER]: true,
+                    name: "TypeError",
+                    message: "inner",
+                    stack: "TypeError: inner",
+                },
+            });
+
+            let error;
+            try {
+                await workers.runTest("foo", { bar: "baz" });
+            } catch (err) {
+                error = err;
+            }
+
+            assert.instanceOf(error, Error);
+            assert.equal(error.message, "outer");
+            assert.deepEqual(error.testplaneCtx, { foo: "bar" });
+            assert.instanceOf(error.cause, Error);
+            assert.equal(error.cause.name, "TypeError");
+            assert.equal(error.cause.message, "inner");
+            assert.equal(error.cause.stack, "TypeError: inner");
+            assert.deepEqual(Object.keys(error), ["testplaneCtx"]);
         });
     });
 

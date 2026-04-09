@@ -11,3 +11,4 @@ bundle.native.js
 wt/**
 test/e2e/report
 tmp/**
+.testplane/**

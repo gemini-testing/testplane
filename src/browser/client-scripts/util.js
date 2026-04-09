@@ -228,35 +228,182 @@ exports.findContainingBlock = function findContainingBlock(element) {
     return document.documentElement;
 };
 
-function _isCreatingStackingContext(computedStyle) {
-    var position = computedStyle.position;
-    var zIndexStr = computedStyle.zIndex;
+function _matchesProp(style, propName, defaultValue) {
+    if (typeof style[propName] === "undefined") {
+        return false;
+    }
+
+    return style[propName] !== (typeof defaultValue === "undefined" ? "none" : defaultValue);
+}
+
+function _isFlexContainer(style) {
+    return style.display === "flex" || style.display === "inline-flex";
+}
+
+function _isGridContainer(style) {
+    return (style.display || "").indexOf("grid") !== -1;
+}
+
+function _hasContainStackingContext(contain) {
+    if (!contain) {
+        return false;
+    }
 
     return (
-        (position !== "static" && zIndexStr !== "auto") ||
-        parseFloat(computedStyle.opacity) < 1 ||
-        computedStyle.transform !== "none" ||
-        computedStyle.filter !== "none" ||
-        computedStyle.perspective !== "none" ||
-        position === "fixed" ||
-        position === "sticky"
+        contain === "layout" ||
+        contain === "paint" ||
+        contain === "strict" ||
+        contain === "content" ||
+        contain.indexOf("paint") !== -1 ||
+        contain.indexOf("layout") !== -1
     );
 }
 
-function _getStackingContextRoot(element) {
-    var curr = element.parentElement;
-    while (curr && curr !== document.documentElement) {
-        var style = lib.getComputedStyle(curr);
+// This method was inspired by https://github.com/gwwar/z-context/blob/dea7c1c220c77281ce6a02b910460b3a5d4744c8/content-script.js#L30
+function _stackingContextReason(node, computedStyle, includeReason) {
+    var position = computedStyle.position;
+    var zIndexStr = computedStyle.zIndex;
+    var reasonValue = includeReason
+        ? function (text) {
+              return text;
+          }
+        : function () {
+              return true;
+          };
 
-        var createsStackingContext = _isCreatingStackingContext(style);
-
-        if (createsStackingContext) {
-            return curr;
-        }
-        curr = curr.parentElement;
+    if (position === "fixed" || position === "sticky") {
+        return reasonValue("position: " + position);
     }
 
-    return document.documentElement;
+    if (computedStyle.containerType === "size" || computedStyle.containerType === "inline-size") {
+        return reasonValue("container-type: " + computedStyle.containerType);
+    }
+
+    if (zIndexStr !== "auto" && position !== "static") {
+        return reasonValue("position: " + position + "; z-index: " + zIndexStr);
+    }
+
+    if (parseFloat(computedStyle.opacity) < 1) {
+        return reasonValue("opacity: " + computedStyle.opacity);
+    }
+
+    if (computedStyle.transform !== "none") {
+        return reasonValue("transform: " + computedStyle.transform);
+    }
+
+    if (_matchesProp(computedStyle, "scale")) {
+        return reasonValue("scale: " + computedStyle.scale);
+    }
+
+    if (_matchesProp(computedStyle, "rotate")) {
+        return reasonValue("rotate: " + computedStyle.rotate);
+    }
+
+    if (_matchesProp(computedStyle, "translate")) {
+        return reasonValue("translate: " + computedStyle.translate);
+    }
+
+    if (computedStyle.mixBlendMode !== "normal") {
+        return reasonValue("mix-blend-mode: " + computedStyle.mixBlendMode);
+    }
+
+    if (computedStyle.filter !== "none") {
+        return reasonValue("filter: " + computedStyle.filter);
+    }
+
+    if (_matchesProp(computedStyle, "backdropFilter")) {
+        return reasonValue("backdrop-filter: " + computedStyle.backdropFilter);
+    }
+
+    if (_matchesProp(computedStyle, "webkitBackdropFilter")) {
+        return reasonValue("-webkit-backdrop-filter: " + computedStyle.webkitBackdropFilter);
+    }
+
+    if (computedStyle.perspective !== "none") {
+        return reasonValue("perspective: " + computedStyle.perspective);
+    }
+
+    if (_matchesProp(computedStyle, "clipPath")) {
+        return reasonValue("clip-path: " + computedStyle.clipPath);
+    }
+
+    var mask = computedStyle.mask || computedStyle.webkitMask;
+    if (typeof mask !== "undefined" && mask !== "none") {
+        return reasonValue("mask: " + mask);
+    }
+
+    var maskImage = computedStyle.maskImage || computedStyle.webkitMaskImage;
+    if (typeof maskImage !== "undefined" && maskImage !== "none") {
+        return reasonValue("mask-image: " + maskImage);
+    }
+
+    var maskBorder = computedStyle.maskBorder || computedStyle.webkitMaskBorder;
+    if (typeof maskBorder !== "undefined" && maskBorder !== "none") {
+        return reasonValue("mask-border: " + maskBorder);
+    }
+
+    if (computedStyle.isolation === "isolate") {
+        return reasonValue("isolation: isolate");
+    }
+
+    var willChange = computedStyle.willChange || "";
+    if (willChange.indexOf("transform") !== -1 || willChange.indexOf("opacity") !== -1) {
+        return reasonValue("will-change: " + willChange);
+    }
+
+    if (computedStyle.webkitOverflowScrolling === "touch") {
+        return reasonValue("-webkit-overflow-scrolling: touch");
+    }
+
+    if (zIndexStr !== "auto") {
+        var parentNode = getParentNode(node);
+        if (parentNode instanceof Element) {
+            var parentStyle = lib.getComputedStyle(parentNode);
+            if (_isFlexContainer(parentStyle)) {
+                return reasonValue("flex-item; z-index: " + zIndexStr);
+            }
+            if (_isGridContainer(parentStyle)) {
+                return reasonValue("grid-item; z-index: " + zIndexStr);
+            }
+        }
+    }
+
+    if (_hasContainStackingContext(computedStyle.contain || "")) {
+        return reasonValue("contain: " + computedStyle.contain);
+    }
+
+    return null;
+}
+
+function _createsStackingContext(node, computedStyle) {
+    return Boolean(_stackingContextReason(node, computedStyle, false));
+}
+
+function _getClosestStackingContext(node, includeReason) {
+    if (!node || node.nodeName === "HTML") {
+        return includeReason ? { node: document.documentElement, reason: "root" } : document.documentElement;
+    }
+
+    if (node.nodeName === "#document-fragment") {
+        return _getClosestStackingContext(node.host, includeReason);
+    }
+
+    if (!(node instanceof Element)) {
+        return _getClosestStackingContext(getParentNode(node), includeReason);
+    }
+
+    var computedStyle = lib.getComputedStyle(node);
+    var reason = _stackingContextReason(node, computedStyle, includeReason);
+
+    if (reason) {
+        return includeReason ? { node: node, reason: reason } : node;
+    }
+
+    return _getClosestStackingContext(getParentNode(node), includeReason);
+}
+
+function _getStackingContextRoot(element, includeReason) {
+    return _getClosestStackingContext(getParentNode(element), includeReason);
 }
 
 function _getEffectiveZIndex(element) {
@@ -264,7 +411,7 @@ function _getEffectiveZIndex(element) {
     while (curr && curr !== document.documentElement) {
         var style = lib.getComputedStyle(curr);
         var zIndexStr = style.zIndex;
-        var createsStackingContext = _isCreatingStackingContext(style);
+        var createsStackingContext = _createsStackingContext(curr, style);
 
         if (zIndexStr !== "auto") {
             var num = parseFloat(zIndexStr);
@@ -283,15 +430,23 @@ function _getEffectiveZIndex(element) {
     return 0;
 }
 
-exports.buildZChain = function buildZChain(element) {
+exports.buildZChain = function buildZChain(element, opts) {
+    opts = opts || {};
+    // includeReasons is useful for debugging only, but should not cause overhead in production
+    var includeReasons = Boolean(opts.includeReasons);
     var chain = [];
     var curr = element;
 
     while (curr && curr !== document.documentElement) {
-        var ctx = _getStackingContextRoot(curr);
+        var context = _getStackingContextRoot(curr, includeReasons);
+        var ctx = includeReasons ? context.node : context;
         var z = _getEffectiveZIndex(curr);
 
-        chain.unshift({ ctx: ctx, z: z });
+        var chainItem = { ctx: ctx, z: z };
+        if (includeReasons) {
+            chainItem.reason = context.reason;
+        }
+        chain.unshift(chainItem);
 
         if (ctx === document.documentElement) {
             break;

@@ -70,7 +70,7 @@ module.exports = class OneTimeScreenshooter {
     async _makeFullPageScreenshot() {
         const pageSize = await this._getPageSize();
 
-        const page = await this._browser.prepareScreenshot(
+        const { image } = await this._screenshooter.capture(
             [
                 {
                     left: 0,
@@ -80,18 +80,16 @@ module.exports = class OneTimeScreenshooter {
                 },
             ],
             {
-                ignoreSelectors: [],
+                ignoreElements: [],
                 captureElementFromTop: true,
                 allowViewportOverflow: true,
+                compositeImage: true,
             },
         );
 
-        const image = await this._screenshooter.capture(page, {
-            compositeImage: true,
-            allowViewportOverflow: true,
-        });
+        const imageBuffer = await image.toPngBuffer();
+        const { data, size } = imageBuffer;
 
-        const { data, size } = await image.toPngBuffer();
         const base64 = data.toString("base64");
 
         return { base64, size };

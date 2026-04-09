@@ -65,7 +65,7 @@ export async function findScrollParentAndScrollBy(
                             try {
                                 log += JSON.stringify(arguments[i], null, 2) + "\n";
                             } catch (e) {
-                                log += "<failed log message due to an error: " + e;
+                                log += "<failed log message due to an error: " + e + ">\n";
                             }
                         } else {
                             log += arguments[i] + "\n";

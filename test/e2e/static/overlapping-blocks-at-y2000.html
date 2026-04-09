@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Overlapping Blocks at Y=2000px Test Page</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                /* Height of 4 viewport heights */
+                height: 400vh;
+                position: relative;
+                background: linear-gradient(to bottom, #f0f0f0 0%, #e0e0e0 100%);
+            }
+
+            /* Container to hold both blocks */
+            .blocks-container {
+                position: absolute;
+                top: 2000px;
+                left: 200px;
+            }
+
+            /* Base block with text content */
+            .text-block {
+                position: absolute;
+                width: 400px;
+                height: 300px;
+                background: white;
+                border: 2px solid #333;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                font-size: 16px;
+                line-height: 1.6;
+                color: #333;
+            }
+
+            /* Overlapping red semi-transparent block - fixed position */
+            .overlay-block {
+                position: fixed;
+                width: 400px;
+                height: 300px;
+                background: rgba(255, 0, 0, 0.5);
+                z-index: 10;
+                bottom: 100px;
+            }
+
+            /* Helper markers for visual reference */
+            .marker {
+                position: absolute;
+                left: 20px;
+                font-family: monospace;
+                font-size: 14px;
+                color: #666;
+                background: rgba(255, 255, 255, 0.8);
+                padding: 5px 10px;
+                border: 1px solid #999;
+            }
+
+            .marker-0 {
+                top: 0;
+            }
+            .marker-1000 {
+                top: 1000px;
+            }
+            .marker-2000 {
+                top: 2000px;
+            }
+            .marker-3000 {
+                top: 3000px;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Visual markers for viewport positions -->
+        <div class="marker marker-0">Y = 0px (Start)</div>
+        <div class="marker marker-1000">Y = 1000px</div>
+        <div class="marker marker-2000">Y = 2000px (Test blocks here)</div>
+        <div class="marker marker-3000">Y = 3000px</div>
+
+        <!-- Test blocks container -->
+        <div class="blocks-container">
+            <!-- Bottom block with text -->
+            <div class="text-block" data-testid="text-block">
+                <h2>Test Block Content</h2>
+                <p>
+                    This is a text block positioned at approximately Y=2000px. It contains some sample text content to
+                    demonstrate the layout.
+                </p>
+                <p>
+                    This block has a white background with a solid border. The red semi-transparent overlay block is
+                    positioned exactly on top of this block with the same dimensions (400x300px).
+                </p>
+                <p>Both blocks are absolutely positioned to ensure exact alignment.</p>
+            </div>
+
+            <!-- Top block with red semi-transparent overlay -->
+            <div class="overlay-block"></div>
+        </div>
+
+        <script>
+            // After page loads, scroll to position the text block perfectly under the fixed overlay
+            // Scroll to the calculated position
+            setTimeout(() => {
+                window.scrollTo(0, 1197);
+            }, 10);
+        </script>
+    </body>
+</html>
