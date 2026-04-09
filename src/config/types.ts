@@ -17,6 +17,12 @@ export interface BuildDiffOptsConfig {
     ignoreCaret: boolean;
 }
 
+export enum DisableHoverMode {
+    Always = "always",
+    WhenScrollingNeeded = "when-scrolling-needed",
+    Never = "never",
+}
+
 export interface AssertViewOpts {
     /**
      * DOM-node selectors which will be ignored (painted with a black rectangle) when comparing images.
@@ -108,6 +114,23 @@ export interface AssertViewOpts {
      * @defaultValue `true`
      */
     disableAnimation?: boolean;
+    /**
+     * Controls whether hover effects should be disabled while making a screenshot
+     * Works by injecting a style that sets pointer-events: none on all elements.
+     *
+     * @remarks
+     * When capturing long screenshots that require scrolling, the mouse cursor stays at its original position
+     * and can cause unwanted hover effects on captured chunks.
+     *
+     * - `"always"` — always injects the style, disabling hovers for every screenshot capture.
+     * - `"when-scrolling-needed"` — only injects the style when the captured area requires scrolling
+     *   (long screenshots, needing compositing). Hovers are disabled for the entire capture duration, including
+     *   the first chunk. Single-viewport screenshots are unaffected.
+     * - `"never"` — never injects the style.
+     *
+     * @defaultValue `"when-scrolling-needed"`
+     */
+    disableHover?: DisableHoverMode;
     /**
      * Ability to ignore a small amount of different pixels to classify screenshots as being "identical"
      *

@@ -86,9 +86,7 @@ module.exports.default = browser => {
         const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const { image: currImgInst, meta: currImgMeta } = await screenShooter
-            .capture(selectors, opts)
-            .finally(() => browser.cleanupScreenshot(opts));
+        const { image: currImgInst, meta: currImgMeta } = await screenShooter.capture(selectors, opts);
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 

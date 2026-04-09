@@ -25,6 +25,8 @@ export interface PrepareScreenshotResult {
     canHaveCaret: boolean;
     // Pixel ratio: window.devicePixelRatio or 1 if usePixelRatio was set to false
     pixelRatio: number;
+    // Whether pointer-events were disabled during prepareScreenshot. Useful for "when-scrolling-needed", because in that case it's determined on browser side
+    pointerEventsDisabled?: boolean;
     // Debug log, returned only if DEBUG env includes scope "testplane:screenshots:browser:prepareScreenshot"
     debugLog?: string;
 }

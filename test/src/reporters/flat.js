@@ -260,19 +260,19 @@ describe("Flat reporter", () => {
                 });
 
                 it("should extend error with original selenium error if it exists", async () => {
+                    const error = new Error("some error");
+                    error.stack = "some error\nsome stack";
+                    error.seleniumStack = {
+                        orgStatusMessage: "some original message",
+                    };
                     test = mkTestStub_({
-                        err: {
-                            stack: "some stack",
-                            seleniumStack: {
-                                orgStatusMessage: "some original message",
-                            },
-                        },
+                        err: error,
                     });
 
                     await createFlatReporter();
                     emit(RunnerEvents[event], test);
 
-                    assert.match(stdout, /some stack \(some original message\)/);
+                    assert.match(stdout, /some error \(some original message\)/);
                 });
 
                 it(`should log "undefined" if ${testStates[event]} test does not have "err" property`, async () => {

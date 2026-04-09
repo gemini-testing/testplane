@@ -12,3 +12,4 @@ wt/**
 test/e2e/report
 test/e2e/**/fixture-project/.testplane/
 tmp/**
+.testplane/**

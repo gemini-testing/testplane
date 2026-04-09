@@ -19,6 +19,7 @@ const {
 const { isRunInNodeJsEnv } = require("./config");
 const { utilInspectSafe } = require("./secret-replacer");
 const { NEW_ISSUE_LINK } = require("../constants/help");
+const { deserializeWorkerError } = require("./worker-error-serialization");
 
 const extractErrorFromWorkerMessage = data => {
     if (data.error) {
@@ -80,6 +81,8 @@ module.exports = class WorkersRegistry extends EventEmitter {
                 }
                 const stack = new Error().stack;
                 return promisify(this._workerFarm.execute)(workerFilepath, methodName, args).catch(error => {
+                    error = deserializeWorkerError(error);
+
                     if (error.name === "ProcessTerminatedError") {
                         const workerCallError = new Error(
                             `Testplane tried to run method '${methodName}' with args ${utilInspectSafe(

@@ -57,16 +57,6 @@ describe("assertView command", () => {
 
     const stubBrowser_ = config => {
         const browser = mkBrowser_(config, undefined, ExistingBrowser);
-        sandbox.stub(browser, "prepareScreenshot").resolves({
-            viewport: { top: 0, left: 0, width: 1024, height: 768 },
-            viewportOffset: { top: 0, left: 0 },
-            captureArea: { top: 0, left: 0, width: 100, height: 100 },
-            safeArea: { top: 0, left: 0, width: 100, height: 100 },
-            ignoreAreas: [],
-            pixelRatio: 1,
-            scrollElementOffset: { top: 0, left: 0 },
-        });
-        sandbox.stub(browser, "captureViewportImage").resolves(stubImage_());
         sandbox.stub(browser, "emitter").get(() => new EventEmitter());
 
         return browser;
@@ -639,8 +629,6 @@ describe("assertView command", () => {
                         const config = mkConfig_({ [option]: 100 });
                         const browser = await initBrowser_({ browser: stubBrowser_(config) });
 
-                        browser.prepareScreenshot.resolves({});
-
                         await fn(browser, null, null, { [option]: 500 });
 
                         assert.calledOnceWith(
@@ -830,7 +818,6 @@ describe("assertView command", () => {
 
                         it('should pass browser emitter to "handleImageDiff" handler', async () => {
                             const browser = await initBrowser_();
-                            browser.prepareScreenshot.resolves({ canHaveCaret: true });
 
                             await fn(browser);
 
