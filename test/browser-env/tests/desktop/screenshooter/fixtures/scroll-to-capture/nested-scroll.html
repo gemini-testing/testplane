@@ -1,0 +1,51 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .outer {
+        width: 420px;
+        height: 380px;
+        margin: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border: 2px solid #888;
+        background: #fafafa;
+    }
+    .inner {
+        width: 100%;
+        height: 260px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border: 2px solid #555;
+        background: #fff;
+    }
+    .spacer-outer {
+        height: 120px;
+        background: #e0e0e0;
+    }
+    .spacer-inner {
+        height: 1200px;
+        background: repeating-linear-gradient(to bottom, #eceff1 0px, #eceff1 16px, #cfd8dc 16px, #cfd8dc 32px);
+    }
+    .target {
+        width: 200px;
+        height: 88px;
+        margin: 16px;
+        background-color: #ff9800;
+        border: 2px solid #e65100;
+    }
+    .tail-inner {
+        height: 480px;
+        background: #ffe0b2;
+    }
+</style>
+<div class="outer">
+    <div class="spacer-outer"></div>
+    <div class="inner">
+        <div class="spacer-inner"></div>
+        <div class="target">Nested target</div>
+        <div class="tail-inner"></div>
+    </div>
+</div>

@@ -1,0 +1,67 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: Inter, Arial, sans-serif;
+        background: #f3f4f6;
+    }
+
+    .workspace {
+        height: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+
+    .panel {
+        overflow: auto;
+        border-radius: 10px;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        box-sizing: border-box;
+        height: 100%;
+        padding: 16px;
+    }
+
+    .left-panel {
+        background: #ecfeff;
+    }
+
+    .right-panel {
+        background: #fdf2f8;
+    }
+
+    .spacer {
+        height: 520px;
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.06);
+        margin-bottom: 12px;
+    }
+
+    .target {
+        display: inline-block;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: #e2e8f0;
+    }
+</style>
+
+<div class="workspace">
+    <section class="panel left-panel">
+        <h2>Build Queue</h2>
+        <div class="spacer"></div>
+        <span class="target" id="left-target">left panel target</span>
+        <div class="spacer"></div>
+    </section>
+
+    <section class="panel right-panel">
+        <h2>Logs</h2>
+        <div class="spacer"></div>
+        <span class="target" id="right-target">right panel target</span>
+        <div class="spacer"></div>
+    </section>
+</div>

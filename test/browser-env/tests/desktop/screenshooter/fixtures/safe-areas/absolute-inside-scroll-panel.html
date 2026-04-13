@@ -1,0 +1,67 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #eef3fb;
+    }
+
+    /*
+     * The panel has position: fixed, which makes it a CSS containing block.
+     * Any position:absolute child of the panel therefore has the panel as its
+     * containing block. When scrollEl = panel, scrollEl.contains(containingBlock)
+     * is true, so the absolute overlay must NOT shrink the safe area.
+     */
+    .panel {
+        position: fixed;
+        left: 140px;
+        top: 80px;
+        width: 860px;
+        height: 480px;
+        overflow: auto;
+        background: #ffffff;
+        border: 2px solid #a3b7da;
+        border-radius: 12px;
+        box-sizing: border-box;
+    }
+
+    /* Absolutely positioned inside the panel — containing block IS the panel */
+    .absolute-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 60px;
+        background: rgba(255, 165, 0, 0.35);
+        border-bottom: 2px solid rgba(200, 120, 0, 0.7);
+        z-index: 100;
+        box-sizing: border-box;
+    }
+
+    .spacer {
+        height: 120px;
+    }
+
+    .target {
+        width: 700px;
+        height: 300px;
+        margin: 0 auto;
+        background: linear-gradient(150deg, #ffffff 0%, #e8f4ff 100%);
+        border: 2px solid #93c4ff;
+        border-radius: 12px;
+    }
+
+    .below {
+        height: 420px;
+    }
+</style>
+
+<div class="panel">
+    <div class="absolute-overlay"></div>
+    <div class="spacer"></div>
+    <div class="target"></div>
+    <div class="below"></div>
+</div>

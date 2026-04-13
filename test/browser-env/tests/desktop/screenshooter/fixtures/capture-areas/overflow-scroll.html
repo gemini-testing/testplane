@@ -1,0 +1,49 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        background: #f0f0f0;
+    }
+
+    .container {
+        position: absolute;
+        top: 80px;
+        left: 80px;
+        width: 350px;
+        height: 250px;
+        overflow: scroll;
+        border: 3px solid #555;
+        background: #fff;
+    }
+
+    .spacer {
+        height: 200px;
+    }
+
+    .target {
+        width: 500px;
+        height: 150px;
+        background: #7db8e0;
+        position: absolute;
+    }
+
+    .absolute-parent {
+        position: absolute;
+    }
+
+    .containing-block {
+        position: relative;
+    }
+</style>
+
+<div class="containing-block">
+    <div class="absolute-parent">
+        <div class="container">
+            <div class="spacer"></div>
+            <div class="target"></div>
+        </div>
+    </div>
+</div>

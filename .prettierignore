@@ -10,5 +10,11 @@ bundle.compat.js
 bundle.native.js
 wt/**
 test/e2e/report
+test/e2e/static/basic-report
 tmp/**
 .testplane/**
+coverage/**
+*.tsbuildinfo
+test/browser-env/report/**
+*.png
+*.DS_Store
