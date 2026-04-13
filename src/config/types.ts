@@ -5,6 +5,7 @@ import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
+import { DisableHoverMode } from "../browser/isomorphic/types";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -15,12 +16,6 @@ export interface CompareOptsConfig {
 export interface BuildDiffOptsConfig {
     ignoreAntialiasing: boolean;
     ignoreCaret: boolean;
-}
-
-export enum DisableHoverMode {
-    Always = "always",
-    WhenScrollingNeeded = "when-scrolling-needed",
-    Never = "never",
 }
 
 export interface AssertViewOpts {

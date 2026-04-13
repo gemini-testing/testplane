@@ -1,8 +1,7 @@
 /**
  * Adapted from: https://raw.githubusercontent.com/Financial-Times/polyfill-service
  */
-function evalQuery(query) {
-    /* jshint evil: true */
+function evalQuery(query: string): boolean {
     query = (query || "true")
         .replace(/^only\s+/, "")
         .replace(/(device)-([\w.]+)/g, "$1.$2")
@@ -14,9 +13,9 @@ function evalQuery(query) {
         .replace(/,/g, "||")
         .replace(/\band\b/g, "&&")
         .replace(/dpi/g, "")
-        .replace(/(\d+)(cm|em|in|dppx|mm|pc|pt|px|rem)/g, function ($0, $1, $2) {
+        .replace(/(\d+)(cm|em|in|dppx|mm|pc|pt|px|rem)/g, function ($0: string, $1: string, $2: string): string {
             return (
-                $1 *
+                parseFloat($1) *
                 ($2 === "cm"
                     ? 0.3937 * 96
                     : $2 === "em" || $2 === "rem"
@@ -30,38 +29,48 @@ function evalQuery(query) {
                     : $2 === "pt"
                     ? 96 / 72
                     : 1)
-            );
+            ).toString();
         });
+    // @ts-expect-error global might be present in old browsers
+    const globalObj = window || globalThis || global;
     return new Function("media", "try{ return !!(%s) }catch(e){ return false }".replace("%s", query))({
-        width: global.innerWidth,
-        height: global.innerHeight,
-        orientation: global.orientation || "landscape",
+        width: globalObj.innerWidth,
+        height: globalObj.innerHeight,
+        orientation: globalObj.orientation || "landscape",
         device: {
-            width: global.screen.width,
-            height: global.screen.height,
-            orientation: global.screen.orientation || global.orientation || "landscape"
+            width: globalObj.screen.width,
+            height: globalObj.screen.height,
+            orientation: globalObj.screen.orientation || globalObj.orientation || "landscape"
         }
     });
 }
 
-function MediaQueryList() {
+interface MediaQueryListPolyfill {
+    matches: boolean;
+    media: string;
+    addListener: (listener: () => void) => void;
+    removeListener: (listener: () => void) => void;
+}
+
+function MediaQueryList(this: MediaQueryListPolyfill): void {
     this.matches = false;
     this.media = "invalid";
 }
 
-MediaQueryList.prototype.addListener = function addListener(listener) {
+MediaQueryList.prototype.addListener = function addListener(listener: () => void): void {
     this.addListener.listeners.push(listener);
 };
 
-MediaQueryList.prototype.removeListener = function removeListener(listener) {
+MediaQueryList.prototype.removeListener = function removeListener(listener: () => void): void {
     this.addListener.listeners.splice(this.addListener.listeners.indexOf(listener), 1);
 };
 
-exports.MediaQueryList = MediaQueryList;
+export { MediaQueryList };
 
 // <Global>.matchMedia
-exports.matchMedia = function matchMedia(query) {
-    var list = new MediaQueryList();
+export function matchMedia(query: string): MediaQueryList {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const list = new (MediaQueryList as any)();
 
     if (arguments.length === 0) {
         throw new TypeError("Not enough arguments to matchMedia");
@@ -71,17 +80,20 @@ exports.matchMedia = function matchMedia(query) {
     list.matches = evalQuery(list.media);
     list.addListener.listeners = [];
 
+    // @ts-expect-error global might be present in old browsers
+    const globalObj = window || globalThis || global;
+
     window.addEventListener("resize", function () {
-        var listeners = [].concat(list.addListener.listeners),
+        const listeners = [].concat(list.addListener.listeners),
             matches = evalQuery(list.media);
 
         if (matches !== list.matches) {
             list.matches = matches;
-            for (var index = 0, length = listeners.length; index < length; ++index) {
-                listeners[index].call(global, list);
+            for (let index = 0, length = listeners.length; index < length; ++index) {
+                (listeners[index] as (...args: unknown[]) => void).call(globalObj, list);
             }
         }
     });
 
     return list;
-};
+}

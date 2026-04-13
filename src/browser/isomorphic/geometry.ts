@@ -54,8 +54,16 @@ export const equalsSize = <T extends Size<Unit>>(a: T, b: T): boolean => {
     return a.width === b.width && a.height === b.height;
 };
 
+export const prettyPoint = <T extends Point<Space, Unit>>(point: T): string => {
+    return `{ left: ${point.left}, top: ${point.top} }`;
+};
+
 export const prettySize = <T extends Size<Unit>>(size: T): string => {
-    return `${size.width} x ${size.height} (width x height)`;
+    return `{ width: ${size.width}, height: ${size.height} }`;
+};
+
+export const prettyRect = <T extends Rect<Space, Unit>>(rect: T): string => {
+    return `{ left: ${rect.left}, top: ${rect.top}, width: ${rect.width}, height: ${rect.height} }`;
 };
 
 export const intersectYBands = <T extends YBand<Space, Unit>>(a: T | null, b: T | null): T | null => {
