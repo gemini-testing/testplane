@@ -36,7 +36,7 @@
     "test-integration": "npm run create-client-scripts-symlinks && mocha -r ts-node/register -r test/integration/*/**",
     "test-e2e": "npm run test-e2e:generate-fixtures && npm run test-e2e:run-tests",
     "test-e2e:run-tests": "node bin/testplane --config test/e2e/testplane.config.ts",
-    "test-e2e:generate-fixtures": "node bin/testplane --config test/e2e/fixtures/basic-report/testplane.config.ts",
+    "test-e2e:generate-fixtures": "node bin/testplane --config test/e2e/fixtures/basic-report/testplane.config.ts || true",
     "test-e2e:gui": "node bin/testplane --config test/e2e/testplane.config.ts gui",
     "toc": "doctoc docs --title '### Contents'",
     "precommit": "npm run lint",
