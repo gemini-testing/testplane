@@ -148,7 +148,7 @@ export const fromViewportToCaptureArea = <U extends Unit>(
     coordRelativeToViewport: Coord<"viewport", U, "y">,
     captureAreaTopRelativeToViewport: Coord<"viewport", U, "y">,
 ): Coord<"capture", U, "y"> => {
-    return getHeight(coordRelativeToViewport, captureAreaTopRelativeToViewport) as number as Coord<"capture", U, "y">;
+    return (coordRelativeToViewport - captureAreaTopRelativeToViewport) as Coord<"capture", U, "y">;
 };
 
 export const getCoveringRect = <T extends Rect<Space, Unit>>(rects: T[]): T => {
@@ -174,30 +174,32 @@ export const getCoveringRect = <T extends Rect<Space, Unit>>(rects: T[]): T => {
     return { left, top, width: getWidth(left, right), height: getHeight(top, bottom) } as T;
 };
 
-export const roundCoords = <T extends Rect<Space, Unit> | YBand<Space, Unit> | XBand<Space, Unit>>(value: T): T => {
+type NumericShape = Rect<Space, Unit> | YBand<Space, Unit> | XBand<Space, Unit> | Size<Unit> | Point<Space, Unit>;
+
+export const roundCoords = <T extends NumericShape>(value: T): T => {
     const v = value as unknown as Record<string, number>;
     const result: Record<string, number> = {};
 
     if ("top" in v) {
         const top = v.top;
         result.top = Math.floor(top);
-        if ("height" in v) {
-            result.height = Math.ceil(top + v.height) - result.top;
-        }
+    }
+
+    if ("height" in v) {
+        result.height = "top" in v ? Math.ceil(v.top + v.height) - result.top : Math.ceil(v.height);
     }
 
     if ("left" in v) {
         const left = v.left;
         result.left = Math.floor(left);
-        if ("width" in v) {
-            result.width = Math.ceil(left + v.width) - result.left;
-        }
+    }
+
+    if ("width" in v) {
+        result.width = "left" in v ? Math.ceil(v.left + v.width) - result.left : Math.ceil(v.width);
     }
 
     return result as T;
 };
-
-type NumericShape = Rect<Space, Unit> | YBand<Space, Unit> | XBand<Space, Unit> | Size<Unit> | Point<Space, Unit>;
 
 export const floorCoords = <T extends NumericShape>(value: T): T => {
     const v = value as unknown as Record<string, number>;
@@ -246,7 +248,7 @@ export const fromCssToDevice = <
         scaled[key] = v[key] * pixelRatio;
     }
 
-    return (pixelRatio % 1 === 0 ? scaled : roundCoords(scaled as Rect<Space, Unit>)) as unknown as CssToDevice<T>;
+    return (pixelRatio % 1 === 0 ? scaled : roundCoords(scaled as NumericShape)) as unknown as CssToDevice<T>;
 };
 
 export const fromCssToDeviceNumber: {

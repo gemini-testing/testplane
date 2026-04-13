@@ -259,6 +259,22 @@ describe("browser/isomorphic/geometry", () => {
 
             assert.equal(fromViewportToCaptureArea(viewportCoord, captureTop), 30);
         });
+
+        it("should preserve negative offsets above capture-area top", () => {
+            const viewportCoord = 70 as Coord<"viewport", "device", "y">;
+            const captureTop = 100 as Coord<"viewport", "device", "y">;
+
+            assert.equal(fromViewportToCaptureArea(viewportCoord, captureTop), -30);
+        });
+
+        it("should be inverse of fromCaptureAreaToViewport", () => {
+            const captureRelative = -15 as Coord<"capture", "device", "y">;
+            const captureTop = 100 as Coord<"viewport", "device", "y">;
+
+            const viewportCoord = fromCaptureAreaToViewport(captureRelative, captureTop);
+
+            assert.equal(fromViewportToCaptureArea(viewportCoord, captureTop), captureRelative);
+        });
     });
 
     describe("getCoveringRect", () => {
