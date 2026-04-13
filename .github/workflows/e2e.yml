@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
     testplane-e2e:
-        runs-on: self-hosted-arc
+        runs-on: ubuntu-latest
 
         permissions:
             contents: write
