@@ -1,0 +1,56 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: Inter, Arial, sans-serif;
+        background: #f8fafc;
+    }
+
+    .page-content {
+        height: 1800px;
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+
+    .modal-shell {
+        position: fixed;
+        inset: 100px 200px auto 200px;
+        height: 420px;
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+        z-index: 50;
+        padding: 24px;
+        box-sizing: border-box;
+    }
+
+    .modal-body {
+        margin-top: 16px;
+        height: 320px;
+        overflow: hidden;
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 16px;
+        box-sizing: border-box;
+    }
+
+    #modal-target {
+        display: inline-block;
+        margin-top: 24px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: #fed7aa;
+    }
+</style>
+
+<div class="page-content"></div>
+
+<section class="modal-shell">
+    <h2>Deployment Confirmation</h2>
+    <div class="modal-body">
+        <p>Review services before publishing.</p>
+        <span id="modal-target">modal target</span>
+    </div>
+</section>

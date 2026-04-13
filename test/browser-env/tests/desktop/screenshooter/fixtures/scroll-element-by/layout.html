@@ -1,0 +1,60 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .page-top {
+        height: 1200px;
+        background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+        box-sizing: border-box;
+        padding: 20px;
+    }
+
+    .workspace {
+        height: 900px;
+        background: #f8fafc;
+        box-sizing: border-box;
+        padding: 24px;
+    }
+
+    .panel {
+        width: 620px;
+        height: 260px;
+        overflow: auto;
+        border: 1px solid #94a3b8;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .panel-content {
+        width: 1300px;
+        height: 1200px;
+        box-sizing: border-box;
+        padding: 16px;
+        background: repeating-linear-gradient(0deg, #f1f5f9, #f1f5f9 36px, #e2e8f0 36px, #e2e8f0 72px);
+    }
+
+    .panel-content h3 {
+        margin: 0;
+    }
+
+    .page-bottom {
+        height: 1600px;
+        background: linear-gradient(180deg, #dbeafe 0%, #bfdbfe 100%);
+    }
+</style>
+
+<section class="page-top">Top content</section>
+
+<section class="workspace">
+    <div class="panel">
+        <div class="panel-content">
+            <h3>Scrollable panel content</h3>
+            <p>Large area to provide realistic scrollHeight and scrollWidth.</p>
+        </div>
+    </div>
+</section>
+
+<section class="page-bottom"></section>

@@ -1,0 +1,35 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .panel {
+        height: 250vh;
+    }
+
+    .target {
+        width: 700px;
+        height: 300px;
+        margin: 100px auto;
+        background: linear-gradient(150deg, #ffffff 0%, #e8f4ff 100%);
+        border: 2px solid #93c4ff;
+        border-radius: 12px;
+    }
+
+    .sticky-header {
+        position: sticky;
+        top: 0;
+        height: 64px;
+        background: #2f4d78;
+        box-shadow: 0 0 0 20px rgba(0, 0, 0, 0.18);
+        z-index: 999;
+    }
+</style>
+
+<div class="sticky-header"></div>
+
+<div class="panel">
+    <div class="target"></div>
+</div>

@@ -85,10 +85,10 @@ jobs:
               run: |
                   link="https://storage.yandexcloud.net/gh-testplane-ci/testplane-ci/e2e-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/index.html"
                   if [ "${{ steps.testplane.outcome }}" != "success" ]; then
-                    comment="### ❌ Testplane run failed<br><br>[Report](${link})"
+                    comment="### ❌ Testplane E2E run failed<br><br>[Report](${link})"
                     echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
                   else
-                    comment="### ✅ Testplane run succeed<br><br>[Report](${link})"
+                    comment="### ✅ Testplane E2E run succeed<br><br>[Report](${link})"
                     echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
                   fi
 

@@ -1,0 +1,41 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 40px;
+        padding: 80px;
+        max-width: 500px;
+    }
+    .box {
+        width: 120px;
+        height: 80px;
+        background-color: #4caf50;
+    }
+    .rotated {
+        transform: rotate(45deg);
+    }
+    .scaled {
+        transform: scale(1.8);
+    }
+    .translated {
+        transform: translate(30px, -20px);
+    }
+    .skewed {
+        transform: skewX(25deg) skewY(10deg);
+    }
+    .combined {
+        transform: translate(10px, 10px) rotate(30deg) scale(1.3);
+        box-shadow: 8px 8px 4px rgba(0, 0, 0, 0.3);
+    }
+</style>
+<div class="container">
+    <div class="box rotated">Rotated</div>
+    <div class="box scaled">Scaled</div>
+    <div class="box translated">Translated</div>
+    <div class="box skewed">Skewed</div>
+    <div class="box combined">Combined</div>
+</div>
