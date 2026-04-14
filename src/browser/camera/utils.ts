@@ -1,26 +1,56 @@
-import { ImageArea, ScreenshotMode } from ".";
+import path from "path";
+import fs from "fs";
+import { ScreenshotMode } from ".";
+import { Image } from "../../image";
+import { Rect, Size, getBottom } from "../isomorphic/geometry";
+import { saveViewportImageWithDebugRects } from "../screen-shooter/composite-image/debug-utils";
 
-export const isFullPage = (imageArea: ImageArea, viewport: ImageArea, screenshotMode: ScreenshotMode): boolean => {
+export const isFullPage = (
+    imageSize: Rect<"image", "device">,
+    viewportSize: Size<"device">,
+    calibratedArea: Rect<"image", "device">,
+    screenshotMode: ScreenshotMode,
+): boolean => {
+    // "system ui" is something like status bar on safari mobile, or address bar at the bottom
+    const systemUiHeight = calibratedArea.top + (imageSize.height - getBottom(calibratedArea));
+
     switch (screenshotMode) {
         case "fullpage":
             return true;
         case "viewport":
             return false;
         case "auto":
-            return imageArea.height > viewport.height || imageArea.width > viewport.width;
+            return imageSize.height > viewportSize.height + systemUiHeight;
     }
 };
 
-export const getIntersection = (area1: ImageArea, area2: ImageArea): ImageArea => {
-    const left = Math.max(area1.left, area2.left);
-    const top = Math.max(area1.top, area2.top);
-    const right = Math.min(area1.left + area1.width, area2.left + area2.width);
-    const bottom = Math.min(area1.top + area1.height, area2.top + area2.height);
+export async function saveViewportImageForDebugIfNeeded(
+    viewportImage: Image,
+    viewportCroppedArea: Rect<"image", "device">,
+    debugDir: string | null,
+): Promise<void> {
+    if (!process.env.TESTPLANE_DEBUG_SCREENSHOTS || !debugDir) {
+        return;
+    }
 
-    return {
-        left,
-        top,
-        width: Math.max(0, right - left),
-        height: Math.max(0, bottom - top),
-    };
-};
+    try {
+        fs.mkdirSync(debugDir, { recursive: true });
+
+        const timestamp = String(Date.now()).padStart(13, "0");
+        const randomId = Math.random().toString(36).substring(2, 8);
+        const outputPath = path.join(debugDir, `viewport-${timestamp}-${randomId}.png`);
+
+        await saveViewportImageWithDebugRects(
+            viewportImage,
+            [
+                {
+                    rect: viewportCroppedArea as unknown as Rect<"viewport", "device">,
+                    color: { r: 0, g: 255, b: 0, a: 255 },
+                },
+            ],
+            outputPath,
+        );
+    } catch (error) {
+        console.warn("Failed to save camera viewport debug image: %O", error);
+    }
+}
