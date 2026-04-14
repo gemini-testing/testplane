@@ -359,18 +359,18 @@ export function computeSafeArea(
         const br = interference.rect;
         const safeBottom = getBottom({ top: safeTop, height: safeHeight });
         const brBottom = getBottom(br);
-        const shrinkTop = brBottom > safeTop ? brBottom - safeTop : null;
-        const shrinkBottom = safeBottom > br.top ? safeBottom - br.top : null;
+        const shrinkTop = brBottom - safeTop;
+        const shrinkBottom = safeBottom - br.top;
 
         let resultingTop = safeTop;
         let resultingHeight = safeHeight;
 
-        if (shrinkTop && shrinkBottom && shrinkTop < shrinkBottom) {
-            resultingTop = brBottom;
+        if (shrinkTop < shrinkBottom) {
+            resultingTop = Math.max(brBottom, safeTop) as Coord<"viewport", "css", "y">;
             resultingHeight = getHeight(safeBottom, resultingTop);
             logger?.("decided to shrink top");
         } else if (shrinkBottom) {
-            resultingHeight = getHeight(safeTop, br.top);
+            resultingHeight = Math.min(safeHeight, br.top - safeTop) as Length<"css", "y">;
             logger?.("decided to shrink bottom");
         }
 
@@ -460,7 +460,6 @@ export function scrollToCaptureAreaIfNeeded(
     if (!captureSpecsResult) return {};
 
     const captureArea = getCoveringRect(captureSpecsResult.captureSpecs.map(s => s.full));
-    // const captureElements = selectorsToCapture.flatMap(s => Array.from(document.querySelectorAll(s)));
     const safeArea = computeSafeArea(selectorsToCapture).safeArea;
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
