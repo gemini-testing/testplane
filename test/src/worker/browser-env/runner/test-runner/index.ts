@@ -6,7 +6,6 @@ import sinon, { SinonStub, SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";
 
 import type NodejsEnvRunnerOriginal from "../../../../../../src/worker/runner/test-runner";
-import { TestRunner as BrowserEnvRunner } from "../../../../../../src/worker/browser-env/runner/test-runner";
 import { wrapExecutionThread } from "../../../../../../src/worker/browser-env/runner/test-runner/execution-thread";
 import {
     WORKER_EVENT_PREFIX,
@@ -18,7 +17,6 @@ import { makeBrowserConfigStub } from "../../../../../utils";
 import { Test, Suite } from "../../../../../../src/test-reader/test-object";
 import { BrowserAgent } from "../../../../../../src/worker/runner/browser-agent";
 import * as history from "../../../../../../src/browser/history";
-import OneTimeScreenshooter from "../../../../../../src/worker/runner/test-runner/one-time-screenshooter";
 import RuntimeConfig from "../../../../../../src/config/runtime-config";
 
 import ExpectWebdriverIO from "expect-webdriverio";
@@ -43,6 +41,9 @@ import { AbortOnReconnectError } from "../../../../../../src/errors/abort-on-rec
 import { ExistingBrowser } from "../../../../../../src/browser/existing-browser";
 import { promiseDelay } from "../../../../../../src/utils/promise";
 
+type BrowserEnvRunnerClass = typeof import("../../../../../../src/worker/browser-env/runner/test-runner").TestRunner;
+type BrowserEnvRunner = InstanceType<BrowserEnvRunnerClass>;
+
 interface TestOpts {
     title: string;
     file: string;
@@ -56,10 +57,12 @@ interface RunOpts extends WorkerTestRunnerRunOpts {
 describe("worker/browser-env/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let loggerWarnStub: SinonStub;
-    let BrowserEnvRunnerStub: typeof BrowserEnvRunner;
+    let BrowserEnvRunnerStub: BrowserEnvRunnerClass;
     let socketClientStub: SinonStub;
     let wrapExecutionThreadStub: SinonStub;
     let historyRunGroupStub: SinonStub;
+    let extendWithCodeSnippetStub: SinonStub;
+    let startSelectivityStub: SinonStub;
     let NodejsEnvRunner: typeof NodejsEnvRunnerOriginal;
 
     const mkTest_ = (opts?: Partial<TestOpts>): TestType => {
@@ -108,7 +111,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             ..._.omit(opts, "runner", "executionContext"),
         };
 
-        return runner.run();
+        return runner.prepareBrowser(opts as WorkerTestRunnerRunOpts).then(() => runner.run());
     };
 
     const runWithEmitBrowserInit = async (
@@ -122,25 +125,44 @@ describe("worker/browser-env/runner/test-runner", () => {
         return promise;
     };
 
-    const mkBrowser_ = (opts: Partial<Browser> = {}): ExistingBrowser =>
+    const mkBrowser_ = (opts: Partial<ExistingBrowser> = {}): ExistingBrowser =>
         ({
             publicAPI: {
                 url: sandbox.stub().resolves(),
+                $: sandbox.stub().resolves({
+                    scrollIntoView: sandbox.stub().resolves(),
+                    elementId: "body-id",
+                }),
+                execute: sandbox.stub().resolves({ x: 0, y: 0 }),
+                action: sandbox.stub().returns({
+                    move: sandbox.stub().returnsThis(),
+                    perform: sandbox.stub().resolves(),
+                }),
+                moveToElement: sandbox.stub().resolves(),
+                isW3C: true,
             } as unknown as Browser["publicAPI"],
             config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
             state: {
                 isBroken: false,
+                isLastTestFailed: false,
+                onReplMode: false,
             },
             applyState: sandbox.stub(),
+            markAsBroken: sandbox.stub(),
             customCommands: [],
+            snapshotsPromiseRef: {
+                current: Promise.resolve(),
+            } as ExistingBrowser["snapshotsPromiseRef"],
+            meta: {},
+            tags: [],
             callstackHistory: {
                 enter: sandbox.stub(),
                 leave: sandbox.stub(),
                 markError: sandbox.stub(),
                 release: sandbox.stub(),
-            } as unknown as Browser["callstackHistory"],
+            } as unknown as ExistingBrowser["callstackHistory"],
             ...opts,
-        } as ExistingBrowser);
+        } as unknown as ExistingBrowser);
 
     const mkElement_ = (opts: Partial<WebdriverIO.Element> = {}): WebdriverIO.Element => {
         return {
@@ -164,20 +186,30 @@ describe("worker/browser-env/runner/test-runner", () => {
 
     const initBrowserEnvRunner_ = (
         opts: { expectMatchers: Record<string, VoidFunction> } = { expectMatchers: {} },
-    ): typeof BrowserEnvRunner => {
+    ): BrowserEnvRunnerClass => {
+        const strictProxyquire = proxyquire.noCallThru().noPreserveCache();
+
         loggerWarnStub = sandbox.stub();
         socketClientStub = sandbox.stub().returns(mkSocket_());
         wrapExecutionThreadStub = sandbox
             .stub()
             .callsFake((socket, throwIfAborted) => wrapExecutionThread(socket, throwIfAborted));
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
-        NodejsEnvRunner = proxyquire("../../../../../../src/worker/runner/test-runner", {
+        extendWithCodeSnippetStub = sandbox.stub().callsFake(err => Promise.resolve(err));
+        startSelectivityStub = sandbox.stub().resolves(() => Promise.resolve());
+        NodejsEnvRunner = strictProxyquire("../../../../../../src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
             },
+            "../../../error-snippets": {
+                extendWithCodeSnippet: extendWithCodeSnippetStub,
+            },
+            "../../../browser/cdp/selectivity": {
+                startSelectivity: startSelectivityStub,
+            },
         });
 
-        return proxyquire.noCallThru()("../../../../../../src/worker/browser-env/runner/test-runner", {
+        return strictProxyquire("../../../../../../src/worker/browser-env/runner/test-runner", {
             "socket.io-client": { io: socketClientStub },
             "./execution-thread": { wrapExecutionThread: wrapExecutionThreadStub },
             "expect-webdriverio/lib/matchers": opts.expectMatchers,
@@ -191,9 +223,6 @@ describe("worker/browser-env/runner/test-runner", () => {
     beforeEach(() => {
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(mkBrowser_());
         sandbox.stub(BrowserAgent.prototype, "freeBrowser");
-
-        sandbox.stub(OneTimeScreenshooter, "create").returns(Object.create(OneTimeScreenshooter.prototype));
-        sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").resolves();
 
         sandbox.stub(crypto, "randomUUID").returns("0-0-0-0-0");
         sandbox.stub(process, "pid").value(11111);
@@ -303,7 +332,7 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await run_(runOpts);
 
-            assert.calledOnceWith(NodejsEnvRunner.prototype.prepareToRun as SinonStub, runOpts);
+            assert.calledOnce(NodejsEnvRunner.prototype.prepareToRun as SinonStub);
         });
 
         it("should run runnables with execution thread wrapper", async () => {
@@ -437,6 +466,11 @@ describe("worker/browser-env/runner/test-runner", () => {
                     socketClientStub.returns(socket);
 
                     const promise = run_();
+                    const rejection = assert.isRejected(
+                        promise,
+                        `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
+                    );
+
                     await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.initialize, []);
                     socket.emit(BrowserEventNames.reconnect);
@@ -444,10 +478,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                     await clock.runToLastAsync();
                     await clock.tickAsync(BRO_INIT_TIMEOUT_ON_RECONNECT);
 
-                    await assert.isRejected(
-                        promise,
-                        `Browser didn't connect to the Vite server after reconnect in ${BRO_INIT_TIMEOUT_ON_RECONNECT}ms`,
-                    );
+                    await rejection;
                 });
 
                 it("browser initialization was failed after reconnect", async () => {
@@ -457,6 +488,8 @@ describe("worker/browser-env/runner/test-runner", () => {
                     const error = new Error("o.O");
 
                     const promise = run_();
+                    const rejection = assert.isRejected(promise, error);
+
                     await clock.tickAsync(1);
                     socket.emit(BrowserEventNames.initialize, []);
                     socket.emit(BrowserEventNames.reconnect);
@@ -465,7 +498,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                     await clock.runToLastAsync();
                     await clock.tickAsync(BRO_INIT_INTERVAL_ON_RECONNECT);
 
-                    await assert.isRejected(promise, error);
+                    await rejection;
                 });
 
                 [
@@ -486,6 +519,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                         socketClientStub.returns(socket);
 
                         const promise = run_();
+                        const rejection = assert.isRejected(promise, error);
 
                         await clock.tickAsync(1);
                         socket.emit(BrowserEventNames.reconnect);
@@ -493,7 +527,7 @@ describe("worker/browser-env/runner/test-runner", () => {
 
                         await clock.runToLastAsync();
 
-                        await assert.isRejected(promise, error);
+                        await rejection;
                     });
                 });
             });
@@ -968,9 +1002,14 @@ describe("worker/browser-env/runner/test-runner", () => {
 
             await runWithEmitBrowserInit(socket);
 
-            assert.calledWith(
+            assert.calledWithMatch(
                 historyRunGroupStub as SinonStub,
-                { callstack: browser.callstackHistory, config: sinon.match.any, session: sinon.match.any },
+                {
+                    callstack: browser.callstackHistory,
+                    snapshotsPromiseRef: browser.snapshotsPromiseRef,
+                    config: sinon.match.any,
+                    session: sinon.match.any,
+                },
                 "openVite",
                 sinon.match.func,
             );
@@ -1005,10 +1044,12 @@ describe("worker/browser-env/runner/test-runner", () => {
             const error = new Error("o.O");
 
             const promise = run_();
+            const rejection = assert.isRejected(promise, error);
+
             await promiseDelay(10);
             socket.emit(BrowserEventNames.initialize, [error]);
 
-            await assert.isRejected(promise, error);
+            await rejection;
         });
 
         it('should throw error if browser not inited during "httpTimeout"', async () => {

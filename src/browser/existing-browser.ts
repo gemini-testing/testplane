@@ -4,8 +4,8 @@ import { attach, type AttachOptions, type ElementArray } from "@testplane/webdri
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
-import { Camera, ImageArea } from "./camera";
-import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
+import { Camera, CaptureViewportImageOpts } from "./camera";
+import { ClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
 import { WEBDRIVER_PROTOCOL } from "../constants/config";
@@ -19,6 +19,7 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import type { SessionOptions } from "./types";
 import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
+import type * as browserSideUtilsImplementation from "./client-scripts/browser-utils/implementation";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
 
@@ -30,7 +31,6 @@ interface ScrollByParams {
 
 const BROWSER_SESSION_HINT = "browser session";
 const CDP_CONNECTION_HINT = "cdp connection";
-const CLIENT_BRIDGE_HINT = "client bridge";
 
 function ensure<T>(value: T | undefined | null, hint?: string): asserts value is T {
     if (!value) {
@@ -73,7 +73,7 @@ export class ExistingBrowser extends Browser {
     protected _camera: Camera;
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
-    protected _clientBridge?: ClientBridge;
+    protected _browserSideUtils?: ClientBridge<typeof browserSideUtilsImplementation>;
     protected _cdp: CDP | null = null;
     protected _tags: Set<string> = new Set();
 
@@ -125,7 +125,7 @@ export class ExistingBrowser extends Browser {
 
                 await this._prepareSession();
                 await this._performCalibration(calibrator);
-                await this._buildClientScripts();
+                await this._initBrowserSideUtils();
             },
         );
 
@@ -167,17 +167,16 @@ export class ExistingBrowser extends Browser {
         return this._session.execute(script);
     }
 
-    callMethodOnBrowserSide<T>(name: string, args: unknown[] = []): Promise<T> {
-        ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-        return this._clientBridge.call(name, args);
-    }
-
     get shouldUsePixelRatio(): boolean {
         return this._calibration ? this._calibration.usePixelRatio : true;
     }
 
     get isWebdriverProtocol(): boolean {
         return this._config.automationProtocol === WEBDRIVER_PROTOCOL;
+    }
+
+    get needsCompatLib(): boolean {
+        return this._calibration ? this._calibration.needsCompatLib : false;
     }
 
     async captureViewportImage(opts?: CaptureViewportImageOpts, screenshotDelay?: number): Promise<Image> {
@@ -327,8 +326,8 @@ export class ExistingBrowser extends Browser {
                     this.restoreHttpTimeout();
                 }
 
-                if (this._clientBridge) {
-                    await this._clientBridge.call("resetZoom");
+                if (this._browserSideUtils) {
+                    await this._browserSideUtils.call("resetZoom", []);
                 }
 
                 return result;
@@ -473,10 +472,10 @@ export class ExistingBrowser extends Browser {
         });
     }
 
-    protected async _buildClientScripts(): Promise<ClientBridge> {
-        return buildClientBridge(this, { calibration: this._calibration }).then(
-            clientBridge => (this._clientBridge = clientBridge),
-        );
+    protected async _initBrowserSideUtils(): Promise<ClientBridge<typeof browserSideUtilsImplementation>> {
+        return ClientBridge.create(this._session!, "browser-utils", {
+            needsCompatLib: this._calibration?.needsCompatLib,
+        }).then(clientBridge => (this._browserSideUtils = clientBridge));
     }
 
     _stubCommands(): void {

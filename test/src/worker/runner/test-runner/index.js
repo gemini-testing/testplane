@@ -4,7 +4,6 @@ const _ = require("lodash");
 const proxyquire = require("proxyquire");
 const HookRunner = require("src/worker/runner/test-runner/hook-runner");
 const ExecutionThread = require("src/worker/runner/test-runner/execution-thread");
-const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { BrowserAgent } = require("src/worker/runner/browser-agent");
 const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
 const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
@@ -17,6 +16,7 @@ const { promiseDelay } = require("../../../../../src/utils/promise");
 describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let historyRunGroupStub;
+    let captureFailScreenshotStub;
     let TestRunner;
 
     const mkTest_ = (opts = {}) => {
@@ -86,6 +86,7 @@ describe("worker/runner/test-runner", () => {
 
     beforeEach(() => {
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
+        captureFailScreenshotStub = sandbox.stub().resolves(null);
 
         TestRunner = proxyquire("src/worker/runner/test-runner", {
             "../../../browser/history": {
@@ -93,6 +94,9 @@ describe("worker/runner/test-runner", () => {
             },
             "../../../browser/cdp/selectivity": {
                 startSelectivity: sandbox.stub().resolves(() => Promise.resolve()),
+            },
+            "./capture-fail-screenshot": {
+                captureFailScreenshot: captureFailScreenshotStub,
             },
         });
 
@@ -107,8 +111,6 @@ describe("worker/runner/test-runner", () => {
         sandbox.stub(HookRunner.prototype, "runBeforeEachHooks").resolves();
         sandbox.stub(HookRunner.prototype, "hasAfterEachHooks").returns(false);
         sandbox.stub(HookRunner.prototype, "runAfterEachHooks").resolves();
-
-        sandbox.stub(OneTimeScreenshooter, "create").returns(Object.create(OneTimeScreenshooter.prototype));
     });
 
     afterEach(() => sandbox.restore());
@@ -149,18 +151,6 @@ describe("worker/runner/test-runner", () => {
             await run_({ runner, ...opts });
 
             assert.calledOnceWithExactly(BrowserAgent.prototype.getBrowser, opts);
-        });
-
-        it("should create one time screenshooter", async () => {
-            const config = makeConfigStub();
-            const runner = mkRunner_({ config });
-
-            const browser = mkBrowser_();
-            BrowserAgent.prototype.getBrowser.resolves(browser);
-
-            await run_({ runner });
-
-            assert.calledOnceWith(OneTimeScreenshooter.create, config, browser);
         });
 
         it("should create execution thread for test", async () => {
@@ -239,15 +229,6 @@ describe("worker/runner/test-runner", () => {
             await run_({ test });
 
             assert.propertyVal(test.parent, "foo", "bar");
-        });
-
-        it("should create execution thread with screenshooter", async () => {
-            const screenshooter = Object.create(OneTimeScreenshooter.prototype);
-            OneTimeScreenshooter.create.returns(screenshooter);
-
-            await run_();
-
-            assert.calledOnceWith(ExecutionThread.create, sinon.match({ screenshooter }));
         });
 
         it("should create hook runner for test with execution thread", async () => {
@@ -708,8 +689,13 @@ describe("worker/runner/test-runner", () => {
                 await assert.isRejected(run_(), AssertViewError);
             });
 
-            it("should extend AssertViewError with screenshot on fail if it exists", async () => {
-                sandbox.stub(OneTimeScreenshooter.prototype, "getScreenshot").returns("base64");
+            it("should extend AssertViewError with screenshot on fail if capture succeeds", async () => {
+                captureFailScreenshotStub.resolves({ base64: "base64", size: { width: 100, height: 200 } });
+
+                const config = makeConfigStub({
+                    takeScreenshotOnFails: { testFail: true, assertViewFail: true },
+                });
+                const runner = mkRunner_({ config });
 
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
@@ -721,13 +707,18 @@ describe("worker/runner/test-runner", () => {
                     return Object.create(ExecutionThread.prototype);
                 });
 
-                const error = await run_().catch(e => e);
+                const error = await run_({ runner }).catch(e => e);
 
-                assert.propertyVal(error, "screenshot", "base64");
+                assert.deepPropertyVal(error, "screenshot", { base64: "base64", size: { width: 100, height: 200 } });
             });
 
-            it("should not extend AssertViewError with screenshot on fail if it not exists", async () => {
-                sandbox.stub(OneTimeScreenshooter.prototype, "getScreenshot").returns();
+            it("should not extend AssertViewError with screenshot on fail if capture returns null", async () => {
+                captureFailScreenshotStub.resolves(null);
+
+                const config = makeConfigStub({
+                    takeScreenshotOnFails: { testFail: true, assertViewFail: true },
+                });
+                const runner = mkRunner_({ config });
 
                 const assertViewResults = AssertViewResults.create([new Error()]);
 
@@ -739,9 +730,30 @@ describe("worker/runner/test-runner", () => {
                     return Object.create(ExecutionThread.prototype);
                 });
 
-                const error = await run_().catch(e => e);
+                const error = await run_({ runner }).catch(e => e);
 
                 assert.notProperty(error, "screenshot");
+            });
+
+            it("should not capture screenshot on assertView fail if config disables it", async () => {
+                const config = makeConfigStub({
+                    takeScreenshotOnFails: { testFail: true, assertViewFail: false },
+                });
+                const runner = mkRunner_({ config });
+
+                const assertViewResults = AssertViewResults.create([new Error()]);
+
+                ExecutionThread.create.callsFake(({ testplaneCtx }) => {
+                    ExecutionThread.prototype.run.callsFake(() => {
+                        testplaneCtx.assertViewResults = assertViewResults;
+                    });
+
+                    return Object.create(ExecutionThread.prototype);
+                });
+
+                await run_({ runner }).catch(e => e);
+
+                assert.notCalled(captureFailScreenshotStub);
             });
 
             it("should resolve with browser meta", async () => {
