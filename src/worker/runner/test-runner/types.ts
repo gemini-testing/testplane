@@ -3,7 +3,6 @@ import type { Test } from "../../../test-reader/test-object/test";
 import type { BrowserConfig } from "../../../config/browser-config";
 import type { BrowserAgent } from "../browser-agent";
 import type { Browser } from "../../../browser/types";
-import type OneTimeScreenshooter from "./one-time-screenshooter";
 
 export interface WorkerTestRunnerRunOpts
     extends Pick<WorkerRunTestOpts, "sessionId" | "sessionCaps" | "sessionOpts" | "state"> {}
@@ -21,7 +20,6 @@ export interface ExecutionThreadCtorOpts {
     browser: Browser;
     testplaneCtx: WorkerRunTestTestplaneCtx;
     hermioneCtx: WorkerRunTestTestplaneCtx;
-    screenshooter: OneTimeScreenshooter;
     attempt: number;
     tags?: string[];
 }
