@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Viewport-sized Block</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+            }
+
+            .viewport-block {
+                height: 100vh;
+                background: linear-gradient(to bottom, #4caf50 0%, #81c784 100%);
+                border: 5px solid red;
+                box-sizing: border-box;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 24px;
+                color: white;
+            }
+
+            .before-block,
+            .after-block {
+                padding: 20px;
+                height: 500px;
+                background-color: gray;
+                border: 5px solid blue;
+                font-size: 20px;
+                font-weight: bold;
+            }
+
+            .fixed-header {
+                position: fixed;
+                top: 0px;
+                left: 0;
+                width: 100%;
+                height: 100px;
+                background-color: rgba(255, 255, 255, 0.5);
+            }
+
+            .fixed-footer {
+                position: fixed;
+                bottom: 0px;
+                left: 0;
+                width: 100%;
+                height: 50px;
+                background-color: rgba(255, 255, 255, 0.5);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="before-block">This is before the viewport-sized block</div>
+
+        <div class="fixed-header">Some header</div>
+        <div class="fixed-footer">Some footer</div>
+
+        <div class="viewport-block" data-testid="viewport-block">This block is of viewport size</div>
+
+        <div class="after-block">This is after the viewport-sized block</div>
+    </body>
+</html>

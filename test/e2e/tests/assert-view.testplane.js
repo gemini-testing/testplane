@@ -300,13 +300,20 @@ describe("assertView", () => {
         it("should resume animations after assertView failure", async ({ browser }) => {
             await browser.url("animation-cleanup.html");
 
-            await expect(() =>
-                browser.assertView("animation-cleanup-fail", "[data-testid=too-tall]", {
-                    disableAnimation: true,
-                    compositeImage: false,
-                    captureElementFromTop: true,
-                }),
-            ).rejects.toThrow();
+            const originalTakeScreenshot = browser.takeScreenshot.bind(browser);
+            browser.overwriteCommand("takeScreenshot", async () => {
+                throw new Error("Forced screenshot failure");
+            });
+
+            try {
+                await expect(
+                    browser.assertView("animation-cleanup-fail", "[data-testid=animated-block]", {
+                        disableAnimation: true,
+                    }),
+                ).rejects.toThrow("Forced screenshot failure");
+            } finally {
+                browser.overwriteCommand("takeScreenshot", async () => originalTakeScreenshot());
+            }
 
             const state = await browser.execute(() => {
                 const targetElement = document.querySelector("[data-testid=animated-block]");
@@ -318,9 +325,13 @@ describe("assertView", () => {
                 return {
                     animationDuration,
                     someElementHasAnimationStoppedStyle: hasStyle,
+                    animationStyleInserted: window.__animationStyleInserted,
+                    animationStyleRemoved: window.__animationStyleRemoved,
                 };
             });
 
+            expect(state.animationStyleInserted).toBe(true);
+            expect(state.animationStyleRemoved).toBe(true);
             expect(state.someElementHasAnimationStoppedStyle).toBe(false);
             expect(state.animationDuration).toBe("0.2s");
         });
@@ -329,8 +340,38 @@ describe("assertView", () => {
     it("should work fine when capturing elements that are overlapping", async ({ browser }) => {
         await browser.url("overlapping-blocks-at-y2000.html");
 
-        await expect(() =>
-            browser.assertView("text-block", "[data-testid=text-block]", { captureElementFromTop: false }),
-        ).rejects.toThrow("The element is completely obscured by fixed or sticky elements");
+        await browser.assertView("text-block", "[data-testid=text-block]", { captureElementFromTop: false });
+    });
+
+    it("should work fine when capturing elements that contain only sticky element", async ({ browser }) => {
+        await browser.url("just-sticky-element.html");
+
+        await browser.assertView("test-block", "[data-testid=parent-block]");
+    });
+
+    it("should be able to scroll to a block inside a scrollable container", async ({ browser }) => {
+        await browser.url("small-block-at-the-bottom-of-scrollable-container.html");
+
+        await browser.execute(() => {
+            document.querySelector("[data-testid=bottom-block]").scrollIntoView();
+        });
+
+        await browser.assertView("test-block", "[data-testid=bottom-block]");
+    });
+
+    it("should screenshot exactly the viewport when compositeImage=false and allowViewportOverflow=true", async ({
+        browser,
+    }) => {
+        await browser.url("viewport-sized-block.html");
+
+        await browser.execute(() => {
+            document.querySelector("[data-testid=viewport-block]").scrollIntoView();
+        });
+
+        await browser.assertView("viewport", "body", {
+            captureElementFromTop: false,
+            compositeImage: false,
+            allowViewportOverflow: true,
+        });
     });
 });
