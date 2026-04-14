@@ -196,14 +196,15 @@ export function computeSafeArea(
     const captureElements = selectorsToCapture
         .map(s => document.querySelector(parseCaptureSelector(s).elementSelector))
         .filter((e): e is NonNullable<typeof e> => e !== null);
+    const captureSpecs = computeCaptureSpecs(selectorsToCapture).captureSpecs.map(s => s.full);
 
-    if (captureElements.length === 0) {
+    if (captureSpecs.length === 0) {
         return {
             safeArea: { top: viewportRect.top, height: viewportRect.height }
         };
     }
 
-    const captureArea = getCoveringRect(computeCaptureSpecs(selectorsToCapture).captureSpecs.map(s => s.full));
+    const captureArea = getCoveringRect(captureSpecs);
     const scrollEl = scrollElement ?? document.documentElement;
 
     // 1. Base safe area equals the visible rectangle of the scroll container
