@@ -179,11 +179,7 @@ export class ExistingBrowser extends Browser {
         return this._calibration ? this._calibration.needsCompatLib : false;
     }
 
-    async captureViewportImage(opts?: CaptureViewportImageOpts, screenshotDelay?: number): Promise<Image> {
-        if (screenshotDelay) {
-            await new Promise(resolve => setTimeout(resolve, screenshotDelay));
-        }
-
+    async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<Image> {
         return this._camera.captureViewportImage(opts);
     }
 
