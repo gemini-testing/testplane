@@ -180,12 +180,12 @@ export class ExistingBrowser extends Browser {
         return this._config.automationProtocol === WEBDRIVER_PROTOCOL;
     }
 
-    async captureViewportImage(viewport?: ImageArea, screenshotDelay?: number): Promise<Image> {
+    async captureViewportImage(opts?: CaptureViewportImageOpts, screenshotDelay?: number): Promise<Image> {
         if (screenshotDelay) {
             await new Promise(resolve => setTimeout(resolve, screenshotDelay));
         }
 
-        return this._camera.captureViewportImage(viewport);
+        return this._camera.captureViewportImage(opts);
     }
 
     scrollBy(params: ScrollByParams): Promise<void> {
@@ -469,7 +469,7 @@ export class ExistingBrowser extends Browser {
 
         return calibrator.calibrate(this).then(calibration => {
             this._calibration = calibration;
-            this._camera.calibrate(calibration);
+            this._camera.calibrate(calibration.viewportArea);
         });
     }
 
@@ -505,5 +505,9 @@ export class ExistingBrowser extends Browser {
 
     get cdp(): CDP | null {
         return this._cdp;
+    }
+
+    get camera(): Camera {
+        return this._camera;
     }
 }
