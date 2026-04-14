@@ -74,17 +74,30 @@ export class Image {
         return new this(buffer);
     }
 
-    constructor(buffer: Buffer) {
-        this._width = buffer.readUInt32BE(PNG_WIDTH_OFFSET);
-        this._height = buffer.readUInt32BE(PNG_HEIGHT_OFFSET);
-        this._imgDataPromise = jsquashDecode(buffer)
-            .then(({ data }) => {
-                return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
-            })
-            .catch(error => {
-                this._decodeError = error;
-                return null;
-            });
+    constructor(buffer: Buffer);
+    constructor(size: Size);
+    constructor(bufferOrSize: Buffer | Size) {
+        if (Buffer.isBuffer(bufferOrSize)) {
+            this._width = bufferOrSize.readUInt32BE(PNG_WIDTH_OFFSET);
+            this._height = bufferOrSize.readUInt32BE(PNG_HEIGHT_OFFSET);
+            this._imgDataPromise = jsquashDecode(bufferOrSize)
+                .then(({ data }) => {
+                    return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+                })
+                .catch(error => {
+                    this._decodeError = error;
+                    return null;
+                });
+            return;
+        }
+
+        this._width = Math.max(0, Math.floor(bufferOrSize.width));
+        this._height = Math.max(0, Math.floor(bufferOrSize.height));
+
+        const blackRgbaPixel = Buffer.from([0, 0, 0, 255]);
+        this._imgData = Buffer.alloc(this._width * this._height * RGBA_CHANNELS);
+        this._imgData.fill(blackRgbaPixel);
+        this._imgDataPromise = Promise.resolve(this._imgData);
     }
 
     async _getImgData(): Promise<Buffer> {
@@ -126,10 +139,13 @@ export class Image {
         let bufferPointer = 0;
         let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
 
-        const bytesToCopy = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const actualWIdth = Math.min(rect.width, this._width - rect.left);
+        const actualHeight = Math.min(rect.height, this._height - rect.top);
+
+        const bytesToCopy = actualWIdth * RGBA_CHANNELS;
         const bytesToIterate = this._width * RGBA_CHANNELS;
 
-        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+        for (let i = 0; i < actualHeight; i++) {
             imgData.copy(imgData, bufferPointer, sourceOffset, sourceOffset + bytesToCopy);
 
             bufferPointer += bytesToCopy;
@@ -137,8 +153,8 @@ export class Image {
         }
 
         this._imgData = imgData.subarray(0, bufferPointer);
-        this._width = rect.width;
-        this._height = rect.height;
+        this._width = actualWIdth;
+        this._height = actualHeight;
     }
 
     addJoin(attachedImages: this[]): void {
@@ -164,15 +180,20 @@ export class Image {
     }
 
     async clearArea(rect: Rect): Promise<void> {
+        const clippedRect = this._clipRect(rect);
+        if (!clippedRect) {
+            return;
+        }
+
         const imgData = await this._getImgData();
 
-        let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
+        let sourceOffset = (clippedRect.top * this._width + clippedRect.left) * RGBA_CHANNELS;
 
-        const bytesToCopyAmount = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const bytesToCopyAmount = clippedRect.width * RGBA_CHANNELS;
         const bytesToIterate = this._width * RGBA_CHANNELS;
         const bytesToFill = Buffer.from([0, 0, 0, 255]); // black RGBA
 
-        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+        for (let i = 0; i < clippedRect.height; i++) {
             imgData.fill(bytesToFill, sourceOffset, sourceOffset + bytesToCopyAmount);
 
             sourceOffset += bytesToIterate;
@@ -181,6 +202,24 @@ export class Image {
 
     async addClear(rect: Rect): Promise<void> {
         this._clearAreas.push(rect);
+    }
+
+    private _clipRect(rect: Rect): Rect | null {
+        const left = Math.max(0, Math.floor(rect.left));
+        const top = Math.max(0, Math.floor(rect.top));
+        const right = Math.min(this._width, Math.ceil(rect.left + rect.width));
+        const bottom = Math.min(this._height, Math.ceil(rect.top + rect.height));
+
+        if (right <= left || bottom <= top) {
+            return null;
+        }
+
+        return {
+            left,
+            top,
+            width: right - left,
+            height: bottom - top,
+        };
     }
 
     async getRGB(x: number, y: number): Promise<RGB> {
