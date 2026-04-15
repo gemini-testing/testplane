@@ -35,6 +35,10 @@ function makeConfigStub(opts = {}) {
             input: "some-path",
             output: "some-other-path",
         },
+        takeScreenshotOnFails: {
+            testFail: true,
+            assertViewFail: true,
+        },
         timeTravel: { mode: "off" },
         selectivity: { enabled: false },
     });
@@ -49,6 +53,7 @@ function makeConfigStub(opts = {}) {
         lastFailed: opts.lastFailed,
         timeTravel: opts.timeTravel,
         selectivity: opts.selectivity,
+        takeScreenshotOnFails: opts.takeScreenshotOnFails,
     };
 
     opts.browsers.forEach(browserId => {
@@ -79,6 +84,7 @@ function makeBrowserConfigStub(opts = {}, browserId) {
         system: opts.system,
         urlHttpTimeout: opts.urlHttpTimeout,
         httpTimeout: opts.httpTimeout,
+        takeScreenshotOnFails: opts.takeScreenshotOnFails || { testFail: true, assertViewFail: true },
         timeTravel: { mode: "off" },
         selectivity: opts.selectivity,
     };

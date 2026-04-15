@@ -1,5 +1,6 @@
 import process from "node:process";
 import crypto from "node:crypto";
+import clearRequire from "clear-require";
 import { EventEmitter } from "node:stream";
 import _ from "lodash";
 import sinon, { SinonStub, SinonFakeTimers } from "sinon";
@@ -22,10 +23,7 @@ import RuntimeConfig from "../../../../../../src/config/runtime-config";
 import ExpectWebdriverIO from "expect-webdriverio";
 import { BrowserEventNames } from "../../../../../../src/runner/browser-env/vite/types";
 import { BrowserViteSocket } from "../../../../../../src/runner/browser-env/vite/browser-modules/types";
-import {
-    WorkerEventNames,
-    type WorkerViteSocket,
-} from "../../../../../../src/worker/browser-env/runner/test-runner/types";
+import { WorkerEventNames } from "../../../../../../src/worker/browser-env/runner/test-runner/types";
 import type { Socket } from "socket.io-client";
 import type { MatcherState } from "expect";
 import type { ChainablePromiseElement } from "@testplane/webdriverio";
@@ -125,22 +123,24 @@ describe("worker/browser-env/runner/test-runner", () => {
         return promise;
     };
 
-    const mkBrowser_ = (opts: Partial<ExistingBrowser> = {}): ExistingBrowser =>
-        ({
-            publicAPI: {
-                url: sandbox.stub().resolves(),
-                $: sandbox.stub().resolves({
-                    scrollIntoView: sandbox.stub().resolves(),
-                    elementId: "body-id",
-                }),
-                execute: sandbox.stub().resolves({ x: 0, y: 0 }),
-                action: sandbox.stub().returns({
-                    move: sandbox.stub().returnsThis(),
-                    perform: sandbox.stub().resolves(),
-                }),
-                moveToElement: sandbox.stub().resolves(),
-                isW3C: true,
-            } as unknown as Browser["publicAPI"],
+    const mkBrowser_ = (opts: Partial<ExistingBrowser> = {}): ExistingBrowser => {
+        const publicAPI = Object.assign(Object.create({}), {
+            url: sandbox.stub().resolves(),
+            $: sandbox.stub().resolves({
+                scrollIntoView: sandbox.stub().resolves(),
+                elementId: "body-id",
+            }),
+            execute: sandbox.stub().resolves({ x: 0, y: 0 }),
+            action: sandbox.stub().returns({
+                move: sandbox.stub().returnsThis(),
+                perform: sandbox.stub().resolves(),
+            }),
+            moveToElement: sandbox.stub().resolves(),
+            isW3C: true,
+        }) as unknown as Browser["publicAPI"];
+
+        return {
+            publicAPI,
             config: makeBrowserConfigStub({ saveHistoryMode: "none" }) as BrowserConfig,
             state: {
                 isBroken: false,
@@ -162,7 +162,8 @@ describe("worker/browser-env/runner/test-runner", () => {
                 release: sandbox.stub(),
             } as unknown as ExistingBrowser["callstackHistory"],
             ...opts,
-        } as unknown as ExistingBrowser);
+        } as unknown as ExistingBrowser;
+    };
 
     const mkElement_ = (opts: Partial<WebdriverIO.Element> = {}): WebdriverIO.Element => {
         return {
@@ -172,8 +173,8 @@ describe("worker/browser-env/runner/test-runner", () => {
         } as unknown as WebdriverIO.Element;
     };
 
-    const mkSocket_ = (): WorkerViteSocket => {
-        const socket = new EventEmitter() as unknown as WorkerViteSocket;
+    const mkSocket_ = (): BrowserViteSocket => {
+        const socket = new EventEmitter() as unknown as BrowserViteSocket;
         socket.emitWithAck = sandbox.stub().onFirstCall().resolves(null).onSecondCall().resolves([null]);
 
         socket.timeout = sandbox.stub().returnsThis();
@@ -187,7 +188,9 @@ describe("worker/browser-env/runner/test-runner", () => {
     const initBrowserEnvRunner_ = (
         opts: { expectMatchers: Record<string, VoidFunction> } = { expectMatchers: {} },
     ): BrowserEnvRunnerClass => {
-        const strictProxyquire = proxyquire.noCallThru().noPreserveCache();
+        const strictProxyquire = proxyquire.noCallThru();
+        clearRequire(require.resolve("../../../../../../src/worker/runner/test-runner"));
+        clearRequire(require.resolve("../../../../../../src/worker/browser-env/runner/test-runner"));
 
         loggerWarnStub = sandbox.stub();
         socketClientStub = sandbox.stub().returns(mkSocket_());
@@ -237,7 +240,10 @@ describe("worker/browser-env/runner/test-runner", () => {
         BrowserEnvRunnerStub = initBrowserEnvRunner_();
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        proxyquire.callThru();
+        sandbox.restore();
+    });
 
     describe("constructor", () => {
         describe("socket", () => {
@@ -292,7 +298,7 @@ describe("worker/browser-env/runner/test-runner", () => {
                 sandbox.stub(process, "pid").value(pid);
                 (crypto.randomUUID as SinonStub).returns(runUuid);
 
-                const socket = mkSocket_() as Socket;
+                const socket = mkSocket_() as unknown as Socket;
                 (socket as any).active = false;
                 socketClientStub.returns(socket);
 
@@ -455,7 +461,7 @@ describe("worker/browser-env/runner/test-runner", () => {
             let clock: SinonFakeTimers;
 
             beforeEach(() => {
-                clock = sinon.useFakeTimers({ toFake: ["setInterval", "setTimeout", "clearInterval"] });
+                clock = sinon.useFakeTimers({ toFake: ["setInterval", "setTimeout", "clearInterval", "clearTimeout"] });
             });
 
             afterEach(() => clock.restore());

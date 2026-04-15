@@ -4,7 +4,6 @@ const { DisableHoverMode } = require("../browser/isomorphic");
 const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, NODEJS_TEST_RUN_ENV } = require("../constants/config");
 const { TimeTravelMode } = require("./types");
 
-
 module.exports = {
     baseUrl: "http://localhost",
     gridUrl: "http://localhost:4444/wd/hub",

@@ -1,3 +1,5 @@
+/* global navigator, document, window */
+
 (function (window) {
     "use strict";
 

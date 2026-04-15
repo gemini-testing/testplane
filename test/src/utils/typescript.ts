@@ -11,6 +11,7 @@ describe("utils/typescript", () => {
     const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
 
     beforeEach(() => {
+        delete (process as any)[TESTPLANE_TRANSFORM_HOOK];
         revertHookStub = sinon.stub();
         addHookStub = sinon.stub().returns(revertHookStub);
         ts = proxyquire.noCallThru().load("src/utils/typescript", {
@@ -21,7 +22,7 @@ describe("utils/typescript", () => {
     });
 
     afterEach(() => {
-        _.set(process, TESTPLANE_TRANSFORM_HOOK, undefined);
+        delete (process as any)[TESTPLANE_TRANSFORM_HOOK];
         _.set(process, "env", processEnvBackup);
     });
 
