@@ -138,13 +138,15 @@ export class Browser {
                         req = this._config[optName](req);
                     }
 
-                    if (!req.headers!["X-Request-ID"]) {
-                        req.headers!["X-Request-ID"] = `${
+                    const requestHeaders = req.headers as Record<string, string>;
+
+                    if (!requestHeaders["X-Request-ID"]) {
+                        requestHeaders["X-Request-ID"] = `${
                             this.state.testXReqId
                         }${X_REQUEST_ID_DELIMITER}${crypto.randomUUID()}`;
                     }
-                    if (!req.headers!["traceparent"] && this.state.traceparent) {
-                        req.headers!["traceparent"] = this.state.traceparent;
+                    if (!requestHeaders["traceparent"] && this.state.traceparent) {
+                        requestHeaders["traceparent"] = this.state.traceparent;
                     }
 
                     return req;

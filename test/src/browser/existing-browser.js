@@ -22,7 +22,14 @@ describe("ExistingBrowser", () => {
     const sandbox = sinon.createSandbox();
     let session;
     let ExistingBrowser;
-    let webdriverioAttachStub, clientBridgeBuildStub, loggerWarnStub, initCommandHistoryStub, runGroupStub, CDPStub;
+    let webdriverioAttachStub,
+        clientBridgeBuildStub,
+        loggerWarnStub,
+        initCommandHistoryStub,
+        runGroupStub,
+        CDPStub,
+        WSDriverRequestAgentStub,
+        WSDriverRequestAgentCreateStub;
 
     const mkBrowser_ = (configOpts, opts) => {
         return mkExistingBrowser_(configOpts, opts, ExistingBrowser);
@@ -52,6 +59,8 @@ describe("ExistingBrowser", () => {
         loggerWarnStub = sandbox.stub();
         initCommandHistoryStub = sandbox.stub();
         runGroupStub = sandbox.stub();
+        WSDriverRequestAgentStub = { request: sandbox.stub() };
+        WSDriverRequestAgentCreateStub = sandbox.stub().returns(WSDriverRequestAgentStub);
 
         CDPStub = {
             target: {
@@ -89,6 +98,11 @@ describe("ExistingBrowser", () => {
             "./cdp": {
                 CDP: {
                     create: sandbox.stub().resolves(CDPStub),
+                },
+            },
+            "./wsdriver": {
+                WSDriverRequestAgent: {
+                    create: WSDriverRequestAgentCreateStub,
                 },
             },
         }).ExistingBrowser;
@@ -769,6 +783,76 @@ describe("ExistingBrowser", () => {
             await initBrowser_(browser, {}, calibrator);
 
             assert.calledOnceWith(clientBridgeBuildStub, browser, { calibration: { foo: "bar" } });
+        });
+    });
+
+    describe("useWsDriver", () => {
+        it("should not set customWdRequestAgent if useWsDriver is false", async () => {
+            const sessionCaps = { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "1" };
+            const browser = mkBrowser_({ useWsDriver: false });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isUndefined(attachOpts.customWdRequestAgent);
+        });
+
+        it("should not set customWdRequestAgent if se:wsdriver capability is not present", async () => {
+            const sessionCaps = { browserName: "chrome" };
+            const browser = mkBrowser_({ useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isUndefined(attachOpts.customWdRequestAgent);
+        });
+
+        it("should not set customWdRequestAgent if se:wsdriverVersion does not include version 1", async () => {
+            const sessionCaps = { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "2" };
+            const browser = mkBrowser_({ useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isUndefined(attachOpts.customWdRequestAgent);
+        });
+
+        it("should set customWdRequestAgent if useWsDriver is true and se:wsdriverVersion includes version 1", async () => {
+            const sessionCaps = { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "1" };
+            const sessionOpts = { headers: { "X-Custom-Header": "test" } };
+            const browser = mkBrowser_({ useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps, sessionOpts });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isDefined(attachOpts.customWdRequestAgent);
+            assert.calledOnceWith(WSDriverRequestAgentCreateStub, {
+                sessionId: sinon.match.any,
+                sessionCaps: { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "1" },
+                headers: { "X-Custom-Header": "test" },
+                browserConfig: browser.config,
+            });
+        });
+
+        it("should set customWdRequestAgent if se:wsdriverVersion includes multiple versions with version 1", async () => {
+            const sessionCaps = { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "0, 1, 2" };
+            const browser = mkBrowser_({ useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isDefined(attachOpts.customWdRequestAgent);
+            assert.calledOnce(WSDriverRequestAgentCreateStub);
+        });
+
+        it("should not set customWdRequestAgent if se:wsdriverVersion is undefined", async () => {
+            const sessionCaps = { "se:wsdriver": true };
+            const browser = mkBrowser_({ useWsDriver: true });
+
+            await initBrowser_(browser, { sessionCaps });
+
+            const attachOpts = webdriverioAttachStub.lastCall.args[0];
+            assert.isUndefined(attachOpts.customWdRequestAgent);
         });
     });
 

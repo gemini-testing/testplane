@@ -400,6 +400,8 @@ function buildBrowserOptions(defaultFactory, extra) {
 
         passive: options.boolean("passive"),
 
+        useWsDriver: options.boolean("useWsDriver"),
+
         timeTravel: option({
             defaultValue: defaultFactory("timeTravel"),
             parseEnv: JSON.parse,
