@@ -37,7 +37,7 @@
     "test-e2e": "npm run test-e2e-repl && npm run test-e2e:generate-fixtures && npm run test-e2e:run-tests",
     "test-e2e-repl": "_mocha \"test/e2e/**/*.test.js\" --ignore \"test/e2e/**/fixture-project/**\"",
     "test-e2e:run-tests": "node bin/testplane --config test/e2e/testplane.config.ts",
-    "test-e2e:generate-fixtures": "node bin/testplane --config test/e2e/fixtures/basic-report/testplane.config.ts",
+    "test-e2e:generate-fixtures": "node bin/testplane --config test/e2e/fixtures/basic-report/testplane.config.ts || true",
     "test-e2e:gui": "node bin/testplane --config test/e2e/testplane.config.ts gui",
     "toc": "doctoc docs --title '### Contents'",
     "precommit": "npm run lint",
