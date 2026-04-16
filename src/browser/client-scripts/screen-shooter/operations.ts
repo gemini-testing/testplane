@@ -1,7 +1,10 @@
 import {
     Coord,
     Length,
+    Point,
     Rect,
+    Size,
+    YBand,
     fromBcrToRect,
     getBottom,
     getCoveringRect,
@@ -9,18 +12,7 @@ import {
     getIntersection
 } from "@isomorphic";
 import { OutsideOfViewportError } from "./errors/outside-of-viewport";
-import {
-    ComputeCanHaveCaretResult,
-    ComputeDocumentSizeResult,
-    ComputeCaptureSpecsResult,
-    ComputeIgnoreAreasResult,
-    ComputePixelRatioResult,
-    ComputeSafeAreaResult,
-    ComputeViewportOffsetResult,
-    ComputeViewportSizeResult,
-    SavedScrollPosition as ElementScrollPosition,
-    ScrollToCaptureSpecResult
-} from "./types";
+import { CaptureSpec, SavedScrollPosition as ElementScrollPosition, ScrollToCaptureSpecResult } from "./types";
 import { getReadableElementDescriptor } from "./utils/descriptions";
 import {
     findContainingBlock,
@@ -55,21 +47,17 @@ export function computeScrollOffset(element: Element): Coord<"page", "css", "y">
     return (isRootLikeElement(element) ? window.scrollY : element.scrollTop) as Coord<"page", "css", "y">;
 }
 
-export function computeViewportSize(): ComputeViewportSizeResult {
+export function computeViewportSize(): Size<"css"> {
     return {
-        viewportSize: {
-            width: window.innerWidth as Length<"css", "x">,
-            height: window.innerHeight as Length<"css", "y">
-        }
+        width: window.innerWidth as Length<"css", "x">,
+        height: window.innerHeight as Length<"css", "y">
     };
 }
 
-export function computeViewportOffset(): ComputeViewportOffsetResult {
+export function computeViewportOffset(): Point<"page", "css"> {
     return {
-        viewportOffset: {
-            left: window.scrollX as Coord<"page", "css", "x">,
-            top: window.scrollY as Coord<"page", "css", "y">
-        }
+        left: window.scrollX as Coord<"page", "css", "x">,
+        top: window.scrollY as Coord<"page", "css", "y">
     };
 }
 
@@ -95,7 +83,7 @@ function getProbeAxisCoordinates(length: number, gridSize: number): number[] {
 export function computeElementPositionsProbe(
     gridSize = ELEMENT_POSITIONS_PROBE_GRID_SIZE
 ): Array<Rect<"viewport", "css"> | null> {
-    const viewportSize = computeViewportSize().viewportSize;
+    const viewportSize = computeViewportSize();
     const xCoordinates = getProbeAxisCoordinates(viewportSize.width as number, gridSize);
     const yCoordinates = getProbeAxisCoordinates(viewportSize.height as number, gridSize);
     const probe: Array<Rect<"viewport", "css"> | null> = [];
@@ -115,7 +103,7 @@ export function computeElementPositionsProbe(
 export function computeCaptureSpecs(
     selectors: string[],
     logger?: (...args: unknown[]) => unknown
-): ComputeCaptureSpecsResult {
+): CaptureSpec<"viewport", "css">[] {
     if (selectors.length === 0) {
         throw new Error("No selectors to compute capture area");
     }
@@ -156,10 +144,10 @@ export function computeCaptureSpecs(
     logger?.("computeCaptureSpecs time taken:", (performance.now() - startTime).toFixed(1) + "ms");
     logger?.("========== </computeCaptureSpecs> ==========");
 
-    return { captureSpecs };
+    return captureSpecs;
 }
 
-export function computeIgnoreAreas(selectors: string[] = []): ComputeIgnoreAreasResult {
+export function computeIgnoreAreas(selectors: string[] = []): Rect<"viewport", "css">[] {
     const ignoreAreas: Rect<"viewport", "css">[] = [];
 
     for (let s = 0; s < selectors.length; s++) {
@@ -175,18 +163,18 @@ export function computeIgnoreAreas(selectors: string[] = []): ComputeIgnoreAreas
         }
     }
 
-    return { ignoreAreas };
+    return ignoreAreas;
 }
 
 export function computeSafeArea(
     selectorsToCapture: string[],
     scrollElement?: Element,
     logger?: (...args: unknown[]) => unknown
-): ComputeSafeAreaResult {
+): YBand<"viewport", "css"> {
     logger?.("========== <computeSafeArea> ==========");
     const startTime = performance.now();
 
-    const viewportSize = computeViewportSize().viewportSize;
+    const viewportSize = computeViewportSize();
     const viewportRect: Rect<"viewport", "css"> = {
         left: 0 as Coord<"viewport", "css", "x">,
         top: 0 as Coord<"viewport", "css", "y">,
@@ -196,12 +184,10 @@ export function computeSafeArea(
     const captureElements = selectorsToCapture
         .map(s => document.querySelector(parseCaptureSelector(s).elementSelector))
         .filter((e): e is NonNullable<typeof e> => e !== null);
-    const captureSpecs = computeCaptureSpecs(selectorsToCapture).captureSpecs.map(s => s.full);
+    const captureSpecs = computeCaptureSpecs(selectorsToCapture).map(s => s.full);
 
     if (captureSpecs.length === 0) {
-        return {
-            safeArea: { top: viewportRect.top, height: viewportRect.height }
-        };
+        return { top: viewportRect.top, height: viewportRect.height };
     }
 
     const captureArea = getCoveringRect(captureSpecs);
@@ -406,40 +392,36 @@ export function computeSafeArea(
     logger?.("computeSafeArea time taken:", (performance.now() - startTime).toFixed(1) + "ms");
     logger?.("========== </computeSafeArea> ==========");
 
-    return {
-        safeArea: finalSafeArea
-    };
+    return finalSafeArea;
 }
 
-export function computeDocumentSize(): ComputeDocumentSizeResult {
+export function computeDocumentSize(): Size<"css"> {
     const mainDocumentElem = getMainDocumentElem();
     return {
-        documentSize: {
-            width: mainDocumentElem.scrollWidth as Length<"css", "x">,
-            height: mainDocumentElem.scrollHeight as Length<"css", "y">
-        }
+        width: mainDocumentElem.scrollWidth as Length<"css", "x">,
+        height: mainDocumentElem.scrollHeight as Length<"css", "y">
     };
 }
 
-export function computeCanHaveCaret(): ComputeCanHaveCaretResult {
+export function computeCanHaveCaret(): boolean {
     const el = document.activeElement;
     const canHaveCaret = el instanceof HTMLElement && (/^(input|textarea)$/i.test(el.tagName) || el.isContentEditable);
 
-    return { canHaveCaret };
+    return canHaveCaret;
 }
 
-export function computePixelRatio(usePixelRatio: boolean = true): ComputePixelRatioResult {
+export function computePixelRatio(usePixelRatio: boolean = true): number {
     if (usePixelRatio === false) {
-        return { pixelRatio: 1 };
+        return 1;
     }
 
     if (window.devicePixelRatio) {
-        return { pixelRatio: window.devicePixelRatio };
+        return window.devicePixelRatio;
     }
 
     // for ie6-ie10 (https://developer.mozilla.org/ru/docs/Web/API/Window/devicePixelRatio)
     // @ts-expect-error - IE hack
-    return { pixelRatio: window.screen.deviceXDPI / window.screen.logicalXDPI || 1 };
+    return window.screen.deviceXDPI / window.screen.logicalXDPI || 1;
 }
 
 export function scrollToCaptureAreaIfNeeded(
@@ -449,7 +431,7 @@ export function scrollToCaptureAreaIfNeeded(
     selectorToScroll?: string,
     logger?: (...args: unknown[]) => unknown
 ): ScrollToCaptureSpecResult {
-    const viewportSize = computeViewportSize().viewportSize;
+    const viewportSize = computeViewportSize();
     const viewport = {
         top: 0 as Coord<"viewport", "css", "y">,
         left: 0 as Coord<"viewport", "css", "x">,
@@ -459,8 +441,8 @@ export function scrollToCaptureAreaIfNeeded(
     const captureSpecsResult = computeCaptureSpecs(selectorsToCapture);
     if (!captureSpecsResult) return {};
 
-    const captureArea = getCoveringRect(captureSpecsResult.captureSpecs.map(s => s.full));
-    const safeArea = computeSafeArea(selectorsToCapture).safeArea;
+    const captureArea = getCoveringRect(captureSpecsResult.map(s => s.full));
+    const safeArea = computeSafeArea(selectorsToCapture);
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
     const captureAndViewportIntersection = getIntersection(captureArea, viewport);
@@ -518,7 +500,7 @@ export function scrollToCaptureAreaIfNeeded(
     }
 
     for (let i = 1; i < scrollChain.length; i++) {
-        const currentSafeArea = computeSafeArea(selectorsToCapture, scrollChain[i - 1]).safeArea;
+        const currentSafeArea = computeSafeArea(selectorsToCapture, scrollChain[i - 1]);
         const childTop = scrollChain[i].getBoundingClientRect().top;
         const scrollDelta = childTop - currentSafeArea.top;
         logger?.("scrollToCaptureAreaIfNeeded: scrolling chain element", {
@@ -529,10 +511,10 @@ export function scrollToCaptureAreaIfNeeded(
         scrollElementBy(scrollChain[i - 1], scrollDelta as Coord<"page", "css", "y">, logger);
     }
 
-    const finalCaptureArea = getCoveringRect(computeCaptureSpecs(selectorsToCapture).captureSpecs.map(s => s.full));
+    const finalCaptureArea = getCoveringRect(computeCaptureSpecs(selectorsToCapture).map(s => s.full));
     if (!finalCaptureArea) return {};
 
-    const finalSafeArea = computeSafeArea(selectorsToCapture, initialScrollElem).safeArea;
+    const finalSafeArea = computeSafeArea(selectorsToCapture, initialScrollElem);
     const finalScrollDelta = finalCaptureArea.top - finalSafeArea.top;
     logger?.("scrollToCaptureAreaIfNeeded: final alignment scroll", {
         scrollElement: readableSelectorToScrollDescr,

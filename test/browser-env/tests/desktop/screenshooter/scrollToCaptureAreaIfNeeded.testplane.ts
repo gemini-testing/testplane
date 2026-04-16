@@ -23,14 +23,14 @@ function expectClientRectClose(
 }
 
 function coveringFullTop(selectors: string[]): number {
-    const specs = computeCaptureSpecs(selectors).captureSpecs;
+    const specs = computeCaptureSpecs(selectors);
     const area = getCoveringRect(specs.map(s => s.full));
     return area.top as number;
 }
 
 function expectCaptureAlignedToSafeArea(selectors: string[], scrollElement: Element | undefined): void {
     const top = coveringFullTop(selectors);
-    const safe = computeSafeArea(selectors, scrollElement).safeArea;
+    const safe = computeSafeArea(selectors, scrollElement);
     expect(top).toBeCloseTo(safe.top as number, 0);
 }
 

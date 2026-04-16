@@ -73,42 +73,6 @@ export interface ScrollToCaptureSpecResult {
     readableSelectorToScrollDescr?: string;
 }
 
-export interface ComputeCaptureSpecsResult {
-    captureSpecs: CaptureSpec<"viewport", "css">[];
-}
-
-export interface ComputeCaptureSpecResult {
-    captureArea: Rect<"viewport", "css">;
-}
-
-export interface ComputeIgnoreAreasResult {
-    ignoreAreas: Rect<"viewport", "css">[];
-}
-
-export interface ComputeSafeAreaResult {
-    safeArea: YBand<"viewport", "css">;
-}
-
-export interface ComputeDocumentSizeResult {
-    documentSize: Size<"css">;
-}
-
-export interface ComputeCanHaveCaretResult {
-    canHaveCaret: boolean;
-}
-
-export interface ComputePixelRatioResult {
-    pixelRatio: number;
-}
-
-export interface ComputeViewportSizeResult {
-    viewportSize: Size<"css">;
-}
-
-export interface ComputeViewportOffsetResult {
-    viewportOffset: Point<"page", "css">;
-}
-
 export type ElementPositionsProbe<U extends Unit> = Array<Rect<"viewport", U> | null>;
 
 export interface PrepareFullPageScreenshotSuccess {
