@@ -378,6 +378,7 @@ export interface CommonConfig {
     headless: "old" | "new" | boolean | null;
     isolation: boolean;
     passive: boolean;
+    useWsDriver: boolean;
 
     lastFailed: {
         only: boolean;
