@@ -22,3 +22,9 @@ bundle.native.js
 wt/**
 tmp/**
 test/e2e/**/fixture-project/.testplane/
+coverage/**
+tsc-out
+testplane/**
+testplane-report/**
+*.tsbuildinfo
+test/browser-env/report/**

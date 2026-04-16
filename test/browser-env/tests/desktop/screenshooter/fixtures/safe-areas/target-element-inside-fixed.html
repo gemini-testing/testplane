@@ -1,0 +1,46 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .fixed-parent {
+        position: fixed;
+        top: 50px;
+        left: 0;
+        right: 0;
+        height: 0;
+        width: 0;
+        z-index: 100000;
+    }
+
+    .interference {
+        width: 100vw;
+        height: 50px;
+        background: rgba(255, 0, 0, 0.3);
+    }
+
+    .container {
+        height: 200vh;
+    }
+
+    .target {
+        width: 760px;
+        height: 110vh;
+        top: 110px;
+        left: 50px;
+        background: #ffffff;
+        border: 2px solid #89b6ff;
+        border-radius: 12px;
+        position: absolute;
+    }
+</style>
+
+<div class="fixed-parent">
+    <div class="interference"></div>
+</div>
+
+<div class="container">
+    <div class="target"></div>
+</div>

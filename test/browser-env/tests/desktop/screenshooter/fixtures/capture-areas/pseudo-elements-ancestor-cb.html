@@ -1,0 +1,50 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+
+    /*
+     * Grandparent is the actual containing block (position: relative).
+     * Parent has position: static, so its ::before/::after with position: absolute
+     * are positioned relative to grandparent, NOT parent.
+     */
+    .grandparent {
+        position: relative;
+        width: 300px;
+        height: 240px;
+        background-color: #eee;
+        margin: 80px;
+    }
+    /* No position set → static, not a containing block */
+    .parent {
+        width: 120px;
+        height: 80px;
+        background-color: #4caf50;
+        margin: 80px 100px;
+    }
+    /* ::before sits at top-left of grandparent — well above/left of .parent */
+    .parent::before {
+        content: "";
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        width: 50px;
+        height: 50px;
+        background-color: #ff9800;
+    }
+    /* ::after sits at bottom-right area of grandparent — beyond .parent's bounds */
+    .parent::after {
+        content: "";
+        position: absolute;
+        top: 170px;
+        left: 220px;
+        width: 50px;
+        height: 50px;
+        background-color: #2196f3;
+        box-shadow: 12px 12px 0px rgba(0, 0, 0, 0.4);
+    }
+</style>
+<div class="grandparent">
+    <div class="parent">Static parent</div>
+</div>

@@ -1,0 +1,126 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: Inter, Arial, sans-serif;
+        background: #f6f7fb;
+    }
+
+    .app-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        background: #1f2937;
+        color: #fff;
+        z-index: 10;
+    }
+
+    .page {
+        padding-top: 80px;
+        height: 100%;
+        box-sizing: border-box;
+    }
+
+    .dashboard-scroll {
+        width: 900px;
+        height: 380px;
+        margin: 0 auto;
+        overflow: auto;
+        background: #fff;
+        border: 1px solid #d9deea;
+        border-radius: 8px;
+        box-sizing: border-box;
+        padding: 20px;
+    }
+
+    .kpi-row {
+        height: 180px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .kpi-card {
+        background: #eef2ff;
+        border-radius: 8px;
+        padding: 16px;
+        box-sizing: border-box;
+    }
+
+    #single-in-dashboard,
+    #dashboard-item {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 8px 10px;
+        background: #c7d2fe;
+        border-radius: 6px;
+    }
+
+    .feed-scroll {
+        height: 220px;
+        overflow: auto;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #fafafa;
+        padding: 12px;
+        box-sizing: border-box;
+    }
+
+    .feed-item {
+        height: 140px;
+        margin-bottom: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        box-sizing: border-box;
+    }
+
+    #feed-item-a,
+    #feed-item-b {
+        display: inline-block;
+        margin-top: 60px;
+        padding: 6px 8px;
+        background: #fde68a;
+        border-radius: 4px;
+    }
+</style>
+
+<header class="app-header">Analytics Dashboard</header>
+
+<main class="page">
+    <section class="dashboard-scroll">
+        <div class="kpi-row">
+            <article class="kpi-card">
+                Revenue
+                <span id="single-in-dashboard">single target</span>
+            </article>
+            <article class="kpi-card">
+                Conversion
+                <span id="dashboard-item">outer target</span>
+            </article>
+            <article class="kpi-card">Churn</article>
+        </div>
+
+        <section class="feed-scroll">
+            <div class="feed-item">
+                Weekly report
+                <span id="feed-item-a">feed target A</span>
+            </div>
+            <div class="feed-item">
+                Monthly report
+                <span id="feed-item-b">feed target B</span>
+            </div>
+            <div class="feed-item">Quarterly report</div>
+            <div class="feed-item">Annual report</div>
+        </section>
+    </section>
+</main>

@@ -1,0 +1,47 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #f0f4f8;
+    }
+
+    .dashboard {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(45deg, rgba(175, 202, 255, 0.4) 25%, transparent 25%),
+            linear-gradient(-45deg, rgba(175, 202, 255, 0.4) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgba(175, 202, 255, 0.4) 75%),
+            linear-gradient(-45deg, transparent 75%, rgba(175, 202, 255, 0.4) 75%);
+        background-size: 48px 48px;
+        background-position: 0 0, 0 24px, 24px -24px, -24px 0;
+    }
+
+    .backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(13, 26, 56, 0.5);
+        z-index: 1000;
+    }
+
+    .target-modal {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        width: 560px;
+        height: 340px;
+        transform: translate(-50%, -50%);
+        background: #ffffff;
+        border-radius: 18px;
+        border: 2px solid #7fa6ff;
+        box-shadow: 0 22px 60px rgba(14, 35, 89, 0.35);
+        z-index: 1001;
+    }
+</style>
+
+<div class="dashboard"></div>
+<div class="backdrop"></div>
+<div class="target-modal"></div>

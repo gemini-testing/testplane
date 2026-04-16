@@ -1,0 +1,69 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #eef3fb;
+    }
+
+    .layout {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .panel {
+        position: fixed;
+        left: 140px;
+        top: 120px;
+        width: 860px;
+        height: 460px;
+        overflow: auto;
+        background: #ffffff;
+        border: 2px solid #a3b7da;
+        border-radius: 12px;
+        box-sizing: border-box;
+    }
+
+    .panel-space-top {
+        height: 80px;
+    }
+
+    .target {
+        width: 700px;
+        height: 280px;
+        margin: 0 auto;
+        background: linear-gradient(165deg, #ffffff 0%, #e6f5ff 100%);
+        border: 2px solid #8bc0ff;
+        border-radius: 12px;
+    }
+
+    .panel-space-bottom {
+        height: 420px;
+    }
+
+    .absolute-overlay {
+        position: absolute;
+        left: 150px;
+        top: 90px;
+        width: 840px;
+        height: 58px;
+        background: #ffbf47;
+        border: 2px solid #d98e00;
+        border-radius: 8px;
+        z-index: 300;
+        box-sizing: border-box;
+    }
+</style>
+
+<div class="layout">
+    <div class="absolute-overlay"></div>
+    <div class="panel">
+        <div class="panel-space-top"></div>
+        <div class="target"></div>
+        <div class="panel-space-bottom"></div>
+    </div>
+</div>

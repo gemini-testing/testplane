@@ -1,0 +1,98 @@
+name: Testplane Browser Env Tests
+
+on:
+    pull_request:
+        branches: [testplane@9]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    testplane-browser-env:
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: write
+            pull-requests: write
+
+        env:
+            DOCKER_IMAGE_NAME: html-reporter-browsers
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build the package
+              run: npm run build
+
+            - name: "Prepare browser-env tests: Cache browser docker image"
+              uses: actions/cache@v3
+              with:
+                  path: ~/.docker/cache
+                  key: docker-browser-image-testplane
+
+            - name: "Prepare browser-env tests: Pull browser docker image"
+              run: |
+                  mkdir -p ~/.docker/cache
+                  if [ -f ~/.docker/cache/image.tar ]; then
+                    docker load -i ~/.docker/cache/image.tar
+                  else
+                    docker pull yinfra/html-reporter-browsers
+                    docker save yinfra/html-reporter-browsers -o ~/.docker/cache/image.tar
+                  fi
+
+            - name: "Prepare browser-env tests: Run browser docker image"
+              run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) yinfra/html-reporter-browsers
+
+            - name: "browser-env: Run Testplane"
+              id: "testplane"
+              continue-on-error: true
+              run: npm run test-browser-env
+
+            - name: "browser-env: Stop browser docker image"
+              run: |
+                  docker kill ${{ env.DOCKER_IMAGE_NAME }} || true
+                  docker rm ${{ env.DOCKER_IMAGE_NAME }} || true
+
+            - name: Deploy Testplane html-reporter reports
+              uses: jakejarvis/s3-sync-action@v0.5.1
+              with:
+                  args: --acl public-read --follow-symlinks
+              env:
+                  AWS_S3_BUCKET: gh-testplane-ci
+                  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                  AWS_S3_ENDPOINT: https://s3.yandexcloud.net/
+                  SOURCE_DIR: "test/browser-env/report"
+                  DEST_DIR: "testplane-ci/browser-env-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/"
+
+            - name: Construct PR comment
+              run: |
+                  link="https://storage.yandexcloud.net/gh-testplane-ci/testplane-ci/browser-env-reports/${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}/index.html"
+                  if [ "${{ steps.testplane.outcome }}" != "success" ]; then
+                    comment="### ❌ Testplane browser-env run failed<br><br>[Report](${link})"
+                    echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
+                  else
+                    comment="### ✅ Testplane browser-env run succeed<br><br>[Report](${link})"
+                    echo "PR_COMMENT=${comment}" >> $GITHUB_ENV
+                  fi
+
+            - name: Leave comment to PR with link to Testplane HTML reports
+              if: github.event.pull_request
+              uses: thollander/actions-comment-pull-request@v3
+              with:
+                  message: ${{ env.PR_COMMENT }}
+                  comment-tag: testplane_results
+
+            - name: Fail the job if any Testplane job is failed
+              if: ${{ steps.testplane.outcome != 'success' }}
+              run: exit 1

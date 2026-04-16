@@ -8,3 +8,6 @@ wt
 test/e2e/report
 test/e2e/static/basic-report
 tmp
+coverage/**
+tsc-out
+test/browser-env/report/**
