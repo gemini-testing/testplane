@@ -125,8 +125,6 @@ describe("computeSafeArea", () => {
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
         await browser.assertView("compute-safe-area-target-element-inside-fixed");
-
-        console.log(logger.log);
     });
 
     it("should handle sticky header with shadow", async ({ browser }) => {
