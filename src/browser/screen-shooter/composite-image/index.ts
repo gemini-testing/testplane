@@ -313,9 +313,7 @@ export class CompositeImage {
     }
 
     private _shouldTreatHeightChangeAsStartShift(heightDelta: number | null): heightDelta is number {
-        const shouldShiftFromStart = true;
-
-        return shouldShiftFromStart && typeof heightDelta === "number" && heightDelta > 0;
+        return typeof heightDelta === "number" && heightDelta > 0;
     }
 
     private _isRenderableCaptureSpec(spec: CaptureSpec<"viewport", "device">): boolean {
