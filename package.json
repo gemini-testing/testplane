@@ -30,7 +30,7 @@
     "lint": "eslint --cache . && prettier --check .",
     "reformat": "eslint --fix . && prettier --write .",
     "prettier-watch": "onchange '**' --exclude-path .prettierignore -- prettier --write {{changed}}",
-    "test-unit": "npm run test-unit:generate-fixtures && _mocha \"test/!(integration|e2e|browser-env)/**/*.[jt]s\"",
+    "test-unit": "_mocha \"test/!(integration|e2e|browser-env)/**/*.[jt]s\"",
     "test-unit:coverage": "c8 --all --src=src --reporter=html --reporter=text-summary --exclude=\"build/**\" --exclude=\"test/**\" --exclude=\"**/*.d.ts\" _mocha \"test/!(integration|browser-env|e2e)/**/*.[jt]s\"",
     "test-unit:generate-fixtures": "TS_NODE_PROJECT=test/tsconfig.json node -r ts-node/register -r tsconfig-paths/register test/src/browser/screen-shooter/composite-image/fixtures/generate.ts generate",
     "test": "npm run test-unit && npm run check-types && npm run lint",
