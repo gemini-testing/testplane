@@ -260,7 +260,7 @@ export class ElementsScreenShooter {
             const enabledDebugTopics: string[] = [];
             const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
             if (browserPrepareScreenshotDebug.enabled) {
-                enabledDebugTopics.push("prepareScreenshot:areas-computation");
+                enabledDebugTopics.push("prepareElementsScreenshot");
             }
 
             const extendedOpts = {
@@ -382,12 +382,6 @@ export class ElementsScreenShooter {
             scrollTime = 0,
             callbackTime = 0;
 
-        const enabledScrollDebugTopics: string[] = [];
-        const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollAndRecomputeAreas");
-        if (browserScrollDebug.enabled) {
-            enabledScrollDebugTopics.push("scrollAndRecomputeAreas:scroll");
-        }
-
         try {
             while (iterations < COMPOSITING_ITERATIONS_LIMIT && !hasCapturedTheWholeArea && !hasReachedScrollLimit) {
                 debug(`========== Starting compositing iteration #${iterations} ==========`);
@@ -397,6 +391,13 @@ export class ElementsScreenShooter {
                 waitForSettleTime += performance.now() - waitForSettleStartTime;
 
                 const recomputeStartTime = performance.now();
+
+                const enabledScrollDebugTopics: string[] = [];
+                const browserScrollDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
+                if (browserScrollDebug.enabled) {
+                    enabledScrollDebugTopics.push("getCaptureState");
+                }
+
                 const currentStateOrError = await this._browserSideScreenshooter.call("getCaptureState", [
                     selectorsToCapture,
                     selectorsToIgnore,
@@ -547,9 +548,9 @@ export class ElementsScreenShooter {
         const startedAt = performance.now();
 
         const enabledScrollDebugTopics: string[] = [];
-        const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollAndRecomputeAreas");
+        const browserScrollDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
         if (browserScrollDebug.enabled) {
-            enabledScrollDebugTopics.push("scrollAndRecomputeAreas:scroll");
+            enabledScrollDebugTopics.push("getCaptureState");
         }
 
         const beforeCheckpointsValidationState = await this._browserSideScreenshooter.call("getCaptureState", [
@@ -756,12 +757,6 @@ export class ElementsScreenShooter {
 
         let shouldRestoreScrollPosition = false;
 
-        const enabledScrollDebugTopics: string[] = [];
-        const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollAndRecomputeAreas");
-        if (browserScrollDebug.enabled) {
-            enabledScrollDebugTopics.push("scrollAndRecomputeAreas:scroll");
-        }
-
         try {
             await this._scrollThroughCaptureArea(
                 selectorsToCapture,
@@ -826,6 +821,12 @@ export class ElementsScreenShooter {
         } finally {
             perfDebug(`Done capturing composite image. Time spent on raw viewport captures: ${timeSpentOnCapture}ms`);
             if (shouldRestoreScrollPosition) {
+                const enabledScrollDebugTopics: string[] = [];
+                const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollTo");
+                if (browserScrollDebug.enabled) {
+                    enabledScrollDebugTopics.push("scrollTo");
+                }
+
                 const restoreScrollResult = await this._browserSideScreenshooter.call("scrollTo", [
                     selectorsToCapture,
                     page.scrollOffset,

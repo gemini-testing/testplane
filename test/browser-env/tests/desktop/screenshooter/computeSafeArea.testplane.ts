@@ -17,8 +17,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         expect(captureSpecs).toHaveLength(1);
         expect(safeArea.top).toBeGreaterThan(0);
@@ -33,8 +33,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         expect(captureSpecs).toHaveLength(1);
 
@@ -48,8 +48,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target-modal"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -61,8 +61,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -79,8 +79,8 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, panel).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         expect(captureSpecs).toHaveLength(1);
 
@@ -101,8 +101,8 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".content"];
-        const safeArea = computeSafeArea(selectors, panel).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -119,8 +119,8 @@ describe("computeSafeArea", () => {
         );
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, undefined, logger).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, undefined, logger);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -134,7 +134,7 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
+        const safeArea = computeSafeArea(selectors);
 
         visualizeSafeArea(safeArea.top, safeArea.height);
         await browser.assertView("compute-safe-area-sticky-header-with-shadow");
@@ -150,8 +150,8 @@ describe("computeSafeArea", () => {
         );
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, undefined, logger).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, undefined, logger);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -163,8 +163,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -174,8 +174,8 @@ describe("computeSafeArea", () => {
     it("should return full viewport when no selectors match", () => {
         document.body.innerHTML = "<div>some content</div>";
 
-        const { viewportSize } = computeViewportSize();
-        const safeArea = computeSafeArea([".does-not-exist"]).safeArea;
+        const viewportSize = computeViewportSize();
+        const safeArea = computeSafeArea([".does-not-exist"]);
 
         expect(safeArea.top).toBe(0);
         expect(safeArea.height).toBe(viewportSize.height);
@@ -191,8 +191,8 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, panel).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         expect(captureSpecs).toHaveLength(1);
 
@@ -211,8 +211,8 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, panel).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
@@ -224,8 +224,8 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         const headerBcr = document.querySelector(".header")!.getBoundingClientRect();
         const footerBcr = document.querySelector(".footer")!.getBoundingClientRect();
@@ -249,8 +249,8 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, panel).safeArea;
-        const captureSpecs = computeCaptureSpecs(selectors).captureSpecs;
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
 
         expect(captureSpecs).toHaveLength(1);
 
@@ -267,10 +267,10 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
+        const safeArea = computeSafeArea(selectors);
 
         // overlay: z:5 / target's container: z:10 -> isChainBehind returns true -> no shrink
-        const { viewportSize } = computeViewportSize();
+        const viewportSize = computeViewportSize();
         expect(safeArea.top).toBe(0);
         expect(safeArea.height).toBe(viewportSize.height);
 
@@ -290,7 +290,7 @@ describe("computeSafeArea", () => {
         window.scrollTo(0, document.documentElement.scrollHeight - document.documentElement.clientHeight - 200);
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors, undefined, logger).safeArea;
+        const safeArea = computeSafeArea(selectors, undefined, logger);
 
         visualizeSafeArea(safeArea.top, safeArea.height);
         await browser.assertView("compute-safe-area-stacking-context-filter-in-front");
@@ -305,7 +305,7 @@ describe("computeSafeArea", () => {
         window.scrollTo(0, 5000);
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
+        const safeArea = computeSafeArea(selectors);
 
         // header: z:10 / target: z:0 -> isChainBehind returns false -> does shrink
         const headerBcr = document.querySelector(".header")!.getBoundingClientRect();
@@ -322,10 +322,10 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
+        const safeArea = computeSafeArea(selectors);
 
         // overlay: z:50 / app-shell: z:100 -> common ctx = documentElement -> 50 < 100 -> behind -> no shrink
-        const { viewportSize } = computeViewportSize();
+        const viewportSize = computeViewportSize();
         expect(safeArea.top).toBe(0);
         expect(safeArea.height).toBe(viewportSize.height);
 
@@ -340,7 +340,7 @@ describe("computeSafeArea", () => {
         document.body.innerHTML = html;
 
         const selectors = [".target"];
-        const safeArea = computeSafeArea(selectors).safeArea;
+        const safeArea = computeSafeArea(selectors);
 
         // overlay: z:50 / app-shell: z:10 -> common ctx = documentElement -> 50 < 10 is false -> in front -> does shrink
         const overlayBcr = document.querySelector(".fixed-overlay")!.getBoundingClientRect();

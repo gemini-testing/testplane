@@ -86,8 +86,8 @@ export function scrollBy(
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
-        const logger = createDebugLogger({ debug }, "scrollAndRecomputeAreas:scroll");
-        const pixelRatio = computePixelRatio().pixelRatio;
+        const logger = createDebugLogger({ debug }, "scrollBy");
+        const pixelRatio = computePixelRatio();
         const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
 
@@ -117,8 +117,8 @@ export function scrollTo(
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
-        const logger = createDebugLogger({ debug }, "scrollAndRecomputeAreas:scroll");
-        const pixelRatio = computePixelRatio().pixelRatio;
+        const logger = createDebugLogger({ debug }, "scrollTo");
+        const pixelRatio = computePixelRatio();
         const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
 
@@ -150,8 +150,8 @@ export function getCaptureState(
     debug?: string[]
 ): GetCaptureStateResult {
     return safeCall((): GetCaptureStateResult => {
-        const logger = createDebugLogger({ debug }, "scrollAndRecomputeAreas:scroll");
-        const pixelRatio = computePixelRatio().pixelRatio;
+        const logger = createDebugLogger({ debug }, "getCaptureState");
+        const pixelRatio = computePixelRatio();
         const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
         const readableAutoScrollElementDescr = getReadableElementDescriptor(scrollElement);
@@ -160,9 +160,9 @@ export function getCaptureState(
                 ? `${selectorToScroll} (${readableAutoScrollElementDescr})`
                 : `${selectorToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
             : `auto-detected ${readableAutoScrollElementDescr}`;
-        const ignoreAreas = computeIgnoreAreas(selectorsToIgnore).ignoreAreas;
-        const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger).safeArea;
-        const captureSpecsAfterCss = computeCaptureSpecs(selectorsToCapture, logger).captureSpecs;
+        const ignoreAreas = computeIgnoreAreas(selectorsToIgnore);
+        const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger);
+        const captureSpecsAfterCss = computeCaptureSpecs(selectorsToCapture, logger);
         const captureSpecs = captureSpecsAfterCss.map(spec => ({
             full: fromCssToDevice(roundCoords(spec.full), pixelRatio),
             visible: fromCssToDevice(roundCoords(spec.visible), pixelRatio)
@@ -188,14 +188,14 @@ export function prepareFullPageScreenshot(
     return safeCall((): PrepareFullPageScreenshotResult => {
         prepareFullPageScrollCleanup();
 
-        const pixelRatio = computePixelRatio(opts.usePixelRatio).pixelRatio;
+        const pixelRatio = computePixelRatio(opts.usePixelRatio);
 
         window.scrollTo(0, 0);
 
-        const documentSize = computeDocumentSize().documentSize;
-        const viewportSize = computeViewportSize().viewportSize;
-        const viewportOffset = computeViewportOffset().viewportOffset;
-        const safeArea = computeSafeArea(["body"], document.documentElement).safeArea;
+        const documentSize = computeDocumentSize();
+        const viewportSize = computeViewportSize();
+        const viewportOffset = computeViewportOffset();
+        const safeArea = computeSafeArea(["body"], document.documentElement);
 
         if (opts.disableAnimation) {
             disableAnimations();
@@ -235,13 +235,13 @@ export function scrollFullPage(
     opts: { usePixelRatio?: boolean } = {}
 ): ScrollFullPageResult {
     return safeCall((): ScrollFullPageResult => {
-        const pixelRatio = computePixelRatio(opts.usePixelRatio).pixelRatio;
+        const pixelRatio = computePixelRatio(opts.usePixelRatio);
         const scrollHeightCss = (fromDeviceToCssNumber(scrollHeight as Coord<"page", "device", "y">, pixelRatio) -
             1) as Coord<"page", "css", "y">;
 
         scrollElementBy(document.documentElement, scrollHeightCss);
 
-        const viewportOffset = computeViewportOffset().viewportOffset;
+        const viewportOffset = computeViewportOffset();
         const elementPositionsProbe = computeElementPositionsProbe().map(rect =>
             rect ? fromCssToDevice(roundCoords(rect), pixelRatio) : null
         );
@@ -257,11 +257,11 @@ export function prepareViewportScreenshot(
     opts: { usePixelRatio?: boolean; disableAnimation?: boolean; disableHover?: DisableHoverMode } = {}
 ): PrepareViewportScreenshotResult {
     return safeCall((): PrepareViewportScreenshotResult => {
-        const pixelRatio = computePixelRatio(opts.usePixelRatio).pixelRatio;
-        const viewportSize = computeViewportSize().viewportSize;
-        const viewportOffset = computeViewportOffset().viewportOffset;
-        const documentSize = computeDocumentSize().documentSize;
-        const canHaveCaret = computeCanHaveCaret().canHaveCaret;
+        const pixelRatio = computePixelRatio(opts.usePixelRatio);
+        const viewportSize = computeViewportSize();
+        const viewportOffset = computeViewportOffset();
+        const documentSize = computeDocumentSize();
+        const canHaveCaret = computeCanHaveCaret();
 
         if (opts.disableAnimation) {
             disableAnimations();
@@ -313,7 +313,7 @@ function prepareElementsScreenshotUnsafe(
     selectorsToCapture: string[],
     opts: PrepareScreenshotOptions
 ): PrepareScreenshotResult {
-    const logger = createDebugLogger(opts, "prepareScreenshot:areas-computation");
+    const logger = createDebugLogger(opts, "prepareElementsScreenshot");
 
     saveScrollPositions(selectorsToCapture, opts.selectorToScroll);
 
@@ -329,19 +329,19 @@ function prepareElementsScreenshotUnsafe(
         disableAnimations();
     }
 
-    const pixelRatio = computePixelRatio(opts.usePixelRatio).pixelRatio;
+    const pixelRatio = computePixelRatio(opts.usePixelRatio);
     const scrollTarget = opts.selectorToScroll ? document.querySelector(opts.selectorToScroll) : null;
     const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
 
-    const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors).ignoreAreas;
-    const captureSpecs = computeCaptureSpecs(selectorsToCapture, logger).captureSpecs;
-    const viewportSize = computeViewportSize().viewportSize;
-    const viewportOffset = computeViewportOffset().viewportOffset;
-    const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger).safeArea;
+    const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors);
+    const captureSpecs = computeCaptureSpecs(selectorsToCapture, logger);
+    const viewportSize = computeViewportSize();
+    const viewportOffset = computeViewportOffset();
+    const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger);
     const scrollOffset = computeScrollOffset(scrollElement);
 
-    const documentSize = computeDocumentSize().documentSize;
-    const canHaveCaret = computeCanHaveCaret().canHaveCaret;
+    const documentSize = computeDocumentSize();
+    const canHaveCaret = computeCanHaveCaret();
 
     let pointerEventsDisabled = false;
     if (opts.disableHover === DisableHoverMode.Always) {
