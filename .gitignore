@@ -21,3 +21,9 @@ bundle.compat.js
 bundle.native.js
 wt/**
 tmp/**
+coverage/**
+tsc-out
+testplane/**
+testplane-report/**
+*.tsbuildinfo
+test/browser-env/report/**

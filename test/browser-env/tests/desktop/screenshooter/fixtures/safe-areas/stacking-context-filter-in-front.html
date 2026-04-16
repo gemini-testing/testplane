@@ -1,0 +1,58 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #eef3f7;
+    }
+
+    .content {
+        padding-top: 120px;
+    }
+
+    /*
+     * Target has no explicit z-index → effective z:0 at documentElement level.
+     *   targetChain = [{ctx: documentElement, z: 0}]
+     */
+    .target {
+        width: 760px;
+        height: 420px;
+        margin: 150vh auto 500px;
+        background: linear-gradient(140deg, #fff 0%, #dcecff 100%);
+        border-radius: 14px;
+        border: 2px solid #8db8ff;
+        box-shadow: 0 18px 45px rgba(60, 90, 160, 0.22);
+    }
+
+    /*
+     * z-index: 10 — above target (z:0) → in front.
+     * filter: drop-shadow — triggers createsStackingContext via filter !== "none".
+     * This verifies that a filter-based stacking context does not prevent the
+     * header from being detected as interfering.
+     *   headerChain = [{ctx: documentElement, z: 10}]
+     * isChainBehind: 10 < 0 → false → NOT behind → DOES shrink safe area.
+     */
+    .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 88px;
+        z-index: 10;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.18));
+        background: #1f2a44;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        padding: 0 24px;
+        box-sizing: border-box;
+    }
+</style>
+
+<div class="header">Header (z:10, filter) — in front of target (z:0)</div>
+<div class="content">
+    <div class="target"></div>
+</div>

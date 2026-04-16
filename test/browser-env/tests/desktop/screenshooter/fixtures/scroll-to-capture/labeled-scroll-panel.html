@@ -1,0 +1,41 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    #labeled-panel {
+        width: 320px;
+        height: 240px;
+        margin: 0;
+        overflow-y: auto;
+        border: 2px solid #5c6bc0;
+        background: #f8f9ff;
+    }
+    .spacer {
+        height: 1200px;
+        background: repeating-linear-gradient(to bottom, #e8eaf6 0px, #e8eaf6 20px, #c5cae9 20px, #c5cae9 40px);
+    }
+    .target {
+        width: 180px;
+        height: 76px;
+        margin: 12px;
+        background-color: #7e57c2;
+        border: 2px solid #4527a0;
+        color: #fff;
+        font-family: sans-serif;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .tail {
+        height: 360px;
+        background: #ede7f6;
+    }
+</style>
+<div id="labeled-panel">
+    <div class="spacer"></div>
+    <div class="target">Panel target</div>
+    <div class="tail"></div>
+</div>
