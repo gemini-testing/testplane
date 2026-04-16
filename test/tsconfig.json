@@ -6,7 +6,8 @@
         "baseUrl": "..",
         "noEmit": true,
         "paths": {
-            "src/*": ["src/*"]
+            "src/*": ["src/*"],
+            "@isomorphic": ["src/browser/isomorphic/index.ts"]
         }
     }
 }
