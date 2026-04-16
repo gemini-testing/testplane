@@ -1,31 +1,28 @@
 /**
  * Adapted from: https://raw.githubusercontent.com/Financial-Times/polyfill-service
  */
-function getComputedStylePixel(element, property, fontSize) {
-    var // Internet Explorer sometimes struggles to read currentStyle until the element's document is accessed.
-        value = (element.document && element.currentStyle[property].match(/([\d.]+)(%|cm|em|in|mm|pc|pt|)/)) || [
-            0,
-            0,
-            ""
-        ],
+function getComputedStylePixel(element: Element, property: string, fontSize?: number | null): number {
+    const // Internet Explorer sometimes struggles to read currentStyle until the element's document is accessed.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        value = ((element as any).document &&
+            (element as any).currentStyle[property].match(/([\d.]+)(%|cm|em|in|mm|pc|pt|)/)) || [0, 0, ""],
         size = value[1],
-        suffix = value[2],
-        rootSize;
+        suffix = value[2];
 
     fontSize = !fontSize
         ? fontSize
         : /%|em/.test(suffix) && element.parentElement
         ? getComputedStylePixel(element.parentElement, "fontSize", null)
         : 16;
-    rootSize =
+    const rootSize =
         property === "fontSize" ? fontSize : /width/i.test(property) ? element.clientWidth : element.clientHeight;
 
     return suffix === "%"
-        ? (size / 100) * rootSize
+        ? (size / 100) * (rootSize as number)
         : suffix === "cm"
         ? size * 0.3937 * 96
         : suffix === "em"
-        ? size * fontSize
+        ? size * (fontSize as number)
         : suffix === "in"
         ? size * 96
         : suffix === "mm"
@@ -37,13 +34,14 @@ function getComputedStylePixel(element, property, fontSize) {
         : size;
 }
 
-function setShortStyleProperty(style, property) {
-    var borderSuffix = property === "border" ? "Width" : "",
-        t = property + "Top" + borderSuffix,
-        r = property + "Right" + borderSuffix,
-        b = property + "Bottom" + borderSuffix,
-        l = property + "Left" + borderSuffix;
+function setShortStyleProperty(style: CSSStyleDeclaration, property: string & keyof CSSStyleDeclaration): void {
+    const borderSuffix = property === "border" ? "Width" : "",
+        t = (property + "Top" + borderSuffix) as keyof CSSStyleDeclaration,
+        r = (property + "Right" + borderSuffix) as keyof CSSStyleDeclaration,
+        b = (property + "Bottom" + borderSuffix) as keyof CSSStyleDeclaration,
+        l = (property + "Left" + borderSuffix) as keyof CSSStyleDeclaration;
 
+    // @ts-expect-error This is a polyfill, we need manual overrides here
     style[property] = (
         style[t] === style[r] && style[t] === style[b] && style[t] === style[l]
             ? [style[t]]
@@ -56,28 +54,34 @@ function setShortStyleProperty(style, property) {
 }
 
 // <CSSStyleDeclaration>
-function CSSStyleDeclaration(element) {
-    var currentStyle = element.currentStyle,
+function CSSStyleDeclaration(this: CSSStyleDeclaration, element: Element): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const currentStyle = (element as any).currentStyle,
         fontSize = getComputedStylePixel(element, "fontSize"),
-        unCamelCase = function (match) {
+        unCamelCase = function (match: string): string {
             return "-" + match.toLowerCase();
-        },
-        property;
+        };
+    let property: string;
 
     for (property in currentStyle) {
         Array.prototype.push.call(this, property === "styleFloat" ? "float" : property.replace(/[A-Z]/, unCamelCase));
 
         if (property === "width") {
-            this[property] = element.offsetWidth + "px";
+            this[property] = (element as HTMLElement).offsetWidth + "px";
         } else if (property === "height") {
-            this[property] = element.offsetHeight + "px";
+            this[property] = (element as HTMLElement).offsetHeight + "px";
         } else if (property === "styleFloat") {
             this.float = currentStyle[property];
-        } else if (/margin.|padding.|border.+W/.test(property) && this[property] !== "auto") {
+        } else if (
+            /margin.|padding.|border.+W/.test(property) &&
+            this[property as keyof CSSStyleDeclaration] !== "auto"
+        ) {
+            // @ts-expect-error This is a polyfill, we need manual overrides here
             this[property] = Math.round(getComputedStylePixel(element, property, fontSize)) + "px";
         } else if (/^outline/.test(property)) {
             // errors on checking outline
             try {
+                // @ts-expect-error This is a polyfill, we need manual overrides here
                 this[property] = currentStyle[property];
             } catch (error) {
                 this.outlineColor = currentStyle.color;
@@ -86,6 +90,7 @@ function CSSStyleDeclaration(element) {
                 this.outline = [this.outlineColor, this.outlineWidth, this.outlineStyle].join(" ");
             }
         } else {
+            // @ts-expect-error This is a polyfill, we need manual overrides here
             this[property] = currentStyle[property];
         }
     }
@@ -100,39 +105,42 @@ function CSSStyleDeclaration(element) {
 CSSStyleDeclaration.prototype = {
     constructor: CSSStyleDeclaration,
     // <CSSStyleDeclaration>.getPropertyPriority
-    getPropertyPriority: function () {
+    getPropertyPriority: function (): never {
         throw new Error("NotSupportedError: DOM Exception 9");
     },
     // <CSSStyleDeclaration>.getPropertyValue
-    getPropertyValue: function (property) {
+    getPropertyValue: function (property: string): string {
         return this[
-            property.replace(/-\w/g, function (match) {
+            property.replace(/-\w/g, function (match: string): string {
                 return match[1].toUpperCase();
             })
         ];
     },
     // <CSSStyleDeclaration>.item
-    item: function (index) {
+    item: function (index: number): string {
         return this[index];
     },
     // <CSSStyleDeclaration>.removeProperty
-    removeProperty: function () {
+    removeProperty: function (): never {
         throw new Error("NoModificationAllowedError: DOM Exception 7");
     },
     // <CSSStyleDeclaration>.setProperty
-    setProperty: function () {
+    setProperty: function (): never {
         throw new Error("NoModificationAllowedError: DOM Exception 7");
     },
     // <CSSStyleDeclaration>.getPropertyCSSValue
-    getPropertyCSSValue: function () {
+    getPropertyCSSValue: function (): never {
         throw new Error("NotSupportedError: DOM Exception 9");
     }
 };
 
-exports.CSSStyleDeclaration = CSSStyleDeclaration;
+export { CSSStyleDeclaration };
 
 // <Global>.getComputedStyle
-exports.getComputedStyle = function getComputedStyle(element, pseudoEl) {
+export function getComputedStyle(element: Element, pseudoEl: string): CSSStyleDeclaration {
     // IE9 needs matchMedia support but already support getComputedStyle
-    return window.getComputedStyle ? window.getComputedStyle(element, pseudoEl) : new CSSStyleDeclaration(element);
-};
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return window.getComputedStyle
+        ? window.getComputedStyle(element, pseudoEl)
+        : new (CSSStyleDeclaration as any)(element);
+}
