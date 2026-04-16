@@ -1,0 +1,952 @@
+[
+    {
+        "id": "single-chunk-in-view",
+        "fullPage": "single-chunk-in-view/full-page.png",
+        "expected": "single-chunk-in-view/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-in-view/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "single-chunk-slightly-out-of-view",
+        "fullPage": "single-chunk-slightly-out-of-view/full-page.png",
+        "expected": "single-chunk-slightly-out-of-view/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-slightly-out-of-view/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 800,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 800,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "single-chunk-completely-out-of-view",
+        "fullPage": "single-chunk-completely-out-of-view/full-page.png",
+        "expected": "single-chunk-completely-out-of-view/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-completely-out-of-view/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 1100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 1100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "single-chunk-safe-area-expansion-top",
+        "fullPage": "single-chunk-safe-area-expansion-top/full-page.png",
+        "expected": "single-chunk-safe-area-expansion-top/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-safe-area-expansion-top/chunks/0.png",
+                "safeArea": {
+                    "top": 300,
+                    "height": 724
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "single-chunk-safe-area-expansion-bottom",
+        "fullPage": "single-chunk-safe-area-expansion-bottom/full-page.png",
+        "expected": "single-chunk-safe-area-expansion-bottom/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-safe-area-expansion-bottom/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 424
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "single-chunk-safe-area-expansion-top-and-bottom",
+        "fullPage": "single-chunk-safe-area-expansion-top-and-bottom/full-page.png",
+        "expected": "single-chunk-safe-area-expansion-top-and-bottom/expected.png",
+        "chunks": [
+            {
+                "file": "single-chunk-safe-area-expansion-top-and-bottom/chunks/0.png",
+                "safeArea": {
+                    "top": 300,
+                    "height": 324
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "two-chunks-with-gap",
+        "fullPage": "two-chunks-with-gap/full-page.png",
+        "expected": "two-chunks-with-gap/expected.png",
+        "chunks": [
+            {
+                "file": "two-chunks-with-gap/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 400
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "two-chunks-with-gap/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 800
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "two-chunks-relax-upper-bottom",
+        "fullPage": "two-chunks-relax-upper-bottom/full-page.png",
+        "expected": "two-chunks-relax-upper-bottom/expected.png",
+        "chunks": [
+            {
+                "file": "two-chunks-relax-upper-bottom/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 400
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "two-chunks-relax-upper-bottom/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 400
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "two-chunks-relax-lower-top",
+        "fullPage": "two-chunks-relax-lower-top/full-page.png",
+        "expected": "two-chunks-relax-lower-top/expected.png",
+        "chunks": [
+            {
+                "file": "two-chunks-relax-lower-top/chunks/0.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 400
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "two-chunks-relax-lower-top/chunks/1.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 400
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -300,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "two-equal-chunks",
+        "fullPage": "two-equal-chunks/full-page.png",
+        "expected": "two-equal-chunks/expected.png",
+        "chunks": [
+            {
+                "file": "two-equal-chunks/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "two-equal-chunks/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "multiple-overlapping-chunks-with-safe-areas",
+        "fullPage": "multiple-overlapping-chunks-with-safe-areas/full-page.png",
+        "expected": "multiple-overlapping-chunks-with-safe-areas/expected.png",
+        "chunks": [
+            {
+                "file": "multiple-overlapping-chunks-with-safe-areas/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-overlapping-chunks-with-safe-areas/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-overlapping-chunks-with-safe-areas/chunks/2.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-overlapping-chunks-with-safe-areas/chunks/3.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-overlapping-chunks-with-safe-areas/chunks/4.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "multiple-chunks-with-horizontal-shifts",
+        "fullPage": "multiple-chunks-with-horizontal-shifts/full-page.png",
+        "expected": "multiple-chunks-with-horizontal-shifts/expected.png",
+        "chunks": [
+            {
+                "file": "multiple-chunks-with-horizontal-shifts/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-chunks-with-horizontal-shifts/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 100,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 100,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-chunks-with-horizontal-shifts/chunks/2.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 50,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 50,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-chunks-with-horizontal-shifts/chunks/3.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 190,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 190,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "multiple-chunks-with-horizontal-shifts/chunks/4.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 300
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
+        "id": "multiple-chunks-with-safe-areas-and-ignore-areas",
+        "fullPage": "multiple-chunks-with-safe-areas-and-ignore-areas/full-page.png",
+        "expected": "multiple-chunks-with-safe-areas-and-ignore-areas/expected.png",
+        "chunks": [
+            {
+                "file": "multiple-chunks-with-safe-areas-and-ignore-areas/chunks/0.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 224
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": [
+                    {
+                        "left": 300,
+                        "top": 0,
+                        "width": 100,
+                        "height": 400
+                    }
+                ]
+            },
+            {
+                "file": "multiple-chunks-with-safe-areas-and-ignore-areas/chunks/1.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 224
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 0,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": [
+                    {
+                        "left": 300,
+                        "top": -100,
+                        "width": 100,
+                        "height": 400
+                    }
+                ]
+            },
+            {
+                "file": "multiple-chunks-with-safe-areas-and-ignore-areas/chunks/2.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 224
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -100,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": [
+                    {
+                        "left": 300,
+                        "top": -200,
+                        "width": 100,
+                        "height": 400
+                    }
+                ]
+            },
+            {
+                "file": "multiple-chunks-with-safe-areas-and-ignore-areas/chunks/3.png",
+                "safeArea": {
+                    "top": 100,
+                    "height": 224
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -200,
+                            "width": 500,
+                            "height": 500
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": [
+                    {
+                        "left": 300,
+                        "top": -300,
+                        "width": 100,
+                        "height": 400
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "duplicate-chunks-with-offscreen-zero-visible-spec",
+        "fullPage": "duplicate-chunks-with-offscreen-zero-visible-spec/full-page.png",
+        "expected": "duplicate-chunks-with-offscreen-zero-visible-spec/expected.png",
+        "chunks": [
+            {
+                "file": "duplicate-chunks-with-offscreen-zero-visible-spec/chunks/0.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 120,
+                            "width": 500,
+                            "height": 420
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 120,
+                            "width": 500,
+                            "height": 420
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "duplicate-chunks-with-offscreen-zero-visible-spec/chunks/1.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -500,
+                            "width": 500,
+                            "height": 420
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -500,
+                            "width": 500,
+                            "height": 0
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "duplicate-chunks-with-offscreen-zero-visible-spec/chunks/2.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -800,
+                            "width": 500,
+                            "height": 420
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -800,
+                            "width": 500,
+                            "height": 0
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "duplicate-chunks-with-offscreen-zero-visible-spec/chunks/3.png",
+                "safeArea": {
+                    "top": 0,
+                    "height": 1024
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": -800,
+                            "width": 500,
+                            "height": 420
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": -800,
+                            "width": 500,
+                            "height": 0
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        },
+                        "visible": {
+                            "left": 200,
+                            "top": 620,
+                            "width": 500,
+                            "height": 260
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    }
+]
