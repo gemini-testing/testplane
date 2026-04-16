@@ -41,8 +41,6 @@ export interface PrepareScreenshotSuccess {
     // Area free of sticky elements, inside which it's safe to capture element that's interesting to us
     // Measured relative to browser viewport (not the whole page!)
     safeArea: YBand<"viewport", "device">;
-    // Current scroll position of the scroll element, if window is being used, this will always be 0
-    // scrollElementOffset: Point;
     // Boundaries of elements that we should ignore when comparing screenshots (these areas will be painted in black)
     ignoreAreas: Rect<"viewport", "device">[];
     // Element capture areas with full (unconstrained) and visible (clipped by ancestor overflow) rects
