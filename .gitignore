@@ -27,3 +27,5 @@ testplane/**
 testplane-report/**
 *.tsbuildinfo
 test/browser-env/report/**
+test/src/browser/screen-shooter/composite-image/fixtures/**
+!test/src/browser/screen-shooter/composite-image/fixtures/generate.ts
