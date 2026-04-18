@@ -44,8 +44,8 @@ describe("calibrator", () => {
 
             const result = await calibrator.calibrate(browser);
 
-            assert.match(result.top, 2);
-            assert.match(result.left, 2);
+            assert.match(result.viewportArea.top, 2);
+            assert.match(result.viewportArea.left, 2);
         });
     });
 
@@ -74,10 +74,11 @@ describe("calibrator", () => {
 
         const result = await calibrator.calibrate(browser);
 
-        await calibrator.calibrate(browser);
+        const cachedResult = await calibrator.calibrate(browser);
 
-        assert.match(result.top, 2);
-        assert.match(result.left, 2);
+        assert.equal(cachedResult, result);
+        assert.match(result.viewportArea.top, 2);
+        assert.match(result.viewportArea.left, 2);
     });
 
     it("should fail on broken calibration page", () => {

@@ -7,13 +7,16 @@ describe("browser/camera", () => {
     const sandbox = sinon.createSandbox();
     let Camera;
     let isFullPageStub;
+    let getIntersectionStub;
     let image;
 
     beforeEach(() => {
         isFullPageStub = sinon.stub();
+        getIntersectionStub = sinon.stub().callsFake((_, area) => area);
         Camera = proxyquire("src/browser/camera", {
             "./utils": {
                 isFullPage: isFullPageStub,
+                getIntersection: getIntersectionStub,
             },
         }).Camera;
 
@@ -42,7 +45,7 @@ describe("browser/camera", () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
                     image.getSize.resolves({ width: 10, height: 10 });
 
-                    camera.calibrate({ top: 6, left: 4 });
+                    camera.calibrate({ top: 6, left: 4, width: 10, height: 10 });
                     await camera.captureViewportImage();
 
                     assert.calledOnceWith(image.crop, {
@@ -55,7 +58,9 @@ describe("browser/camera", () => {
             });
 
             describe("crop to viewport", () => {
-                let viewport;
+                let viewportOffset;
+                let viewportSize;
+                let opts;
 
                 const mkCamera_ = browserOptions => {
                     const screenshotMode = (browserOptions || {}).screenshotMode || "auto";
@@ -63,11 +68,17 @@ describe("browser/camera", () => {
                 };
 
                 beforeEach(() => {
-                    viewport = {
+                    viewportOffset = {
                         left: 1,
                         top: 1,
+                    };
+                    viewportSize = {
                         width: 100,
                         height: 100,
+                    };
+                    opts = {
+                        viewportOffset,
+                        viewportSize,
                     };
                 });
 
@@ -80,37 +91,35 @@ describe("browser/camera", () => {
                 it("should crop fullPage image with viewport value if page disposition was set", async () => {
                     isFullPageStub.returns(true);
 
-                    await mkCamera_({ screenshotMode: "fullPage" }).captureViewportImage(viewport);
+                    await mkCamera_({ screenshotMode: "fullpage" }).captureViewportImage(opts);
 
-                    assert.calledOnceWith(image.crop, viewport);
+                    assert.calledOnceWith(image.crop, {
+                        ...viewportSize,
+                        ...viewportOffset,
+                    });
                 });
 
                 it("should use viewportOffset for fullPage image crop if provided", async () => {
                     isFullPageStub.returns(true);
-                    viewport.top = 10;
-                    viewport.left = 20;
+                    viewportOffset.top = 10;
+                    viewportOffset.left = 20;
 
-                    await mkCamera_({ screenshotMode: "fullPage" }).captureViewportImage(viewport);
+                    await mkCamera_({ screenshotMode: "fullpage" }).captureViewportImage(opts);
 
                     assert.calledOnceWith(image.crop, {
                         top: 10,
                         left: 20,
-                        width: viewport.width,
-                        height: viewport.height,
+                        width: viewportSize.width,
+                        height: viewportSize.height,
                     });
                 });
 
-                it("should crop not fullPage image to the left and right", async () => {
+                it("should not crop not fullPage image", async () => {
                     isFullPageStub.returns(false);
 
-                    await mkCamera_({ screenshotMode: "viewport" }).captureViewportImage(viewport);
+                    await mkCamera_({ screenshotMode: "viewport" }).captureViewportImage(opts);
 
-                    assert.calledOnceWith(image.crop, {
-                        left: 0,
-                        top: 0,
-                        height: viewport.height,
-                        width: viewport.width,
-                    });
+                    assert.notCalled(image.crop);
                 });
             });
         });
