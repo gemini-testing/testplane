@@ -1,244 +1,611 @@
+import os from "node:os";
+import path from "node:path";
 import makeDebug from "debug";
-import { Image, Size, Point, Rect } from "../../../image";
-import { NEW_ISSUE_LINK } from "../../../constants/help";
+import { Image } from "../../../image";
+import {
+    YBand,
+    XBand,
+    Rect,
+    Size,
+    getSize,
+    prettySize,
+    subtractCoords,
+    Coord,
+    getBottom,
+    getMaxCoord,
+    getMinCoord,
+    getHeight,
+    intersectYBands,
+    getMaxLength,
+    intersectXBands,
+    Length,
+    fromCaptureAreaToViewport,
+    fromViewportToCaptureArea,
+    getCoveringRect,
+} from "../../isomorphic/geometry";
+import type { CaptureSpec } from "../../client-scripts/screen-shooter/types";
+import { saveRenderedPiecesForDebugIfNeeded, saveViewportImageForDebugIfNeeded } from "./debug-utils";
 
 const debug = makeDebug("testplane:screenshots:composite-image");
 
-function getAreaBottom(area: Rect): number {
-    return area.top + area.height;
+/** Raw chunk data as registered by the caller. */
+interface CompositeChunk {
+    image: Image;
+    imageSize: Size<"device">;
+    safeArea: YBand<"viewport", "device">;
+    captureSpecs: CaptureSpec<"viewport", "device">[];
+    boundingRectsToIgnore: Rect<"viewport", "device">[];
 }
 
-function getAreaRight(area: Rect): number {
-    return area.left + area.width;
+/** Chunk enriched with render-time computed anchor top. */
+interface AnchoredChunk extends CompositeChunk {
+    anchorTop: Coord<"viewport", "device", "y">;
 }
 
-function getIntersection(...areas: Rect[]): Rect | null {
-    const top = Math.max(...areas.map(area => area.top));
-    const bottom = Math.min(...areas.map(getAreaBottom));
-    const left = Math.max(...areas.map(area => area.left));
-    const right = Math.min(...areas.map(getAreaRight));
-
-    if (left >= right || top >= bottom) {
-        return null;
-    }
-
-    return { left, top, width: right - left, height: bottom - top };
+interface SegmentCandidate {
+    chunk: AnchoredChunk;
+    /** Preferred vertical crop area candidate, which fully respects safe area. */
+    strict: YBand<"viewport", "device"> | null;
+    /** Possible vertical crop area candidate, which respects bottom edge of safe area, but includes area beyond safe area at the top. */
+    relaxTop: YBand<"viewport", "device"> | null;
+    /** Possible vertical crop area candidate, which respects top edge of safe area, but includes area beyond safe area at the bottom. */
+    relaxBottom: YBand<"viewport", "device"> | null;
+    /** Possible vertical crop area candidate which doesn't respect safe area at all and contains the entire viewport. */
+    full: YBand<"viewport", "device"> | null;
+    /** Chosen vertical crop area candidate, which will be used to crop the viewport image. */
+    chosen: YBand<"viewport", "device"> | null;
 }
+
+type RenderPiece =
+    | { type: "chunk"; chunk: AnchoredChunk; verticalArea: YBand<"viewport", "device"> }
+    | { type: "black"; height: Length<"device", "y"> };
 
 export class CompositeImage {
-    // Measured in global page coords
-    private _captureArea: Rect;
-    // Measured relative to viewport
-    private _safeArea: Rect;
-    // Measured in global page coords
-    private _ignoreAreas: Rect[];
-    // Ready to join image chunks along with their sizes
-    private _compositeChunks: { image: Image; imageSize: Size }[];
-
-    private _lastViewportImageBuffer: Buffer | null = null;
-    private _lastContainerOffset: Point | null = null;
-    private _lastViewportOffset: Point | null = null;
+    private _captureAreaSize: Size<"device"> | null;
+    private _compositeChunks: CompositeChunk[];
+    private _debugTmpDir: string | null = null;
 
     static create(...args: ConstructorParameters<typeof CompositeImage>): CompositeImage {
         return new this(...args);
     }
 
-    constructor(captureArea: Rect, safeArea: Rect, ignoreAreas: Rect[]) {
-        this._captureArea = this._sanitize(captureArea);
-        this._safeArea = this._sanitize(safeArea);
-        this._ignoreAreas = ignoreAreas;
+    constructor() {
+        this._captureAreaSize = null;
         this._compositeChunks = [];
-
-        debug(
-            "CompositeImage initialized. captureArea: %O, safeArea: %O, ignoreAreas: %O",
-            this._captureArea,
-            this._safeArea,
-            this._ignoreAreas,
-        );
-    }
-
-    private async _addIgnoreAreas(image: Image): Promise<void> {
-        debug("Adding ignore areas to image.");
-
-        const size = await image.getSize();
-
-        debug("Image size: %O", size);
-
-        for (const area of this._ignoreAreas) {
-            const ignoreAreaInImageCoords = getIntersection(
-                {
-                    width: area.width,
-                    height: area.height,
-                    left: area.left - this._captureArea.left,
-                    top: area.top - this._captureArea.top,
-                },
-                {
-                    width: size.width,
-                    height: size.height,
-                    left: 0,
-                    top: 0,
-                },
+        if (process.env.TESTPLANE_DEBUG_SCREENSHOTS) {
+            this._debugTmpDir = path.join(
+                os.tmpdir(),
+                `testplane-composite-image-${Math.random().toString(36).slice(2)}`,
             );
-
-            if (ignoreAreaInImageCoords) {
-                debug("Adding ignore area: %O", ignoreAreaInImageCoords);
-                await image.addClear(ignoreAreaInImageCoords);
-            }
         }
     }
 
-    hasNotCapturedArea(): boolean {
-        return Boolean(this.getNextNotCapturedArea());
-    }
-
-    getNextNotCapturedArea(): Rect | null {
-        const capturedAreaHeight = this._compositeChunks.reduce((acc, chunk) => acc + chunk.imageSize.height, 0);
-
-        if (capturedAreaHeight >= this._captureArea.height) {
-            return null;
-        }
-
-        return {
-            left: this._captureArea.left,
-            top: this._captureArea.top + capturedAreaHeight,
-            width: this._captureArea.width,
-            height: this._captureArea.height - capturedAreaHeight,
-        };
-    }
-
+    /**
+     * Registers a viewport image with corresponding safe area, capture bounding rects and ignore bounding rects, all relative to the viewport.
+     * The order of registration can be arbitrary, viewport height can change between chunks, gaps will be handled gracefully.
+     * Expects finite integer coords and sizes, otherwise behavior is undefined.
+     * @throws {Error} if capture area size is zero or negative
+     */
     async registerViewportImageAtOffset(
         viewportImage: Image,
-        scrollElementOffset: Point,
-        viewportOffset: Point,
+        safeArea: YBand<"viewport", "device">,
+        captureSpecs: CaptureSpec<"viewport", "device">[],
+        ignoreBoundingRects: Rect<"viewport", "device">[],
     ): Promise<void> {
-        const notCapturedArea = this.getNextNotCapturedArea() as Rect;
-        const notCapturedAreaInViewportCoords = this._fromPageCoordsToViewportCoords(
-            scrollElementOffset,
-            viewportOffset,
-            notCapturedArea,
-        );
-        const cropAreaInViewportCoords = this._sanitize(
-            getIntersection(this._safeArea, notCapturedAreaInViewportCoords),
-        );
+        const visibleCoveringRect =
+            this._getVisibleCoveringRect({ captureSpecs }) ?? getCoveringRect(captureSpecs.map(s => s.visible));
 
-        if (this._compositeChunks.length === 0 && cropAreaInViewportCoords.top > notCapturedAreaInViewportCoords.top) {
-            debug("Safe area prevented us from capturing head of the element at the beginning, expanding crop area.");
-            debug("  crop area top before: %O", cropAreaInViewportCoords.top);
-
-            cropAreaInViewportCoords.height =
-                cropAreaInViewportCoords.height + (cropAreaInViewportCoords.top - notCapturedAreaInViewportCoords.top);
-            cropAreaInViewportCoords.top = Math.max(0, notCapturedAreaInViewportCoords.top);
-
-            debug("  crop area top after: %O", cropAreaInViewportCoords.top);
+        if (!this._captureAreaSize) {
+            this._captureAreaSize = getSize(visibleCoveringRect);
         }
 
-        this._lastViewportImageBuffer = await viewportImage.toPngBuffer({ resolveWithObject: false });
-        this._lastContainerOffset = scrollElementOffset;
-        this._lastViewportOffset = viewportOffset;
+        if (this._captureAreaSize.width <= 0 || this._captureAreaSize.height <= 0) {
+            throw new Error("Capture area size cannot be zero or negative. Got: " + prettySize(this._captureAreaSize));
+        }
 
-        await viewportImage.crop(cropAreaInViewportCoords);
-        const imageSize = await viewportImage.getSize();
+        const imageSize = (await viewportImage.getSize()) as Size<"device">;
 
         debug(
-            "Captured the next chunk at offset %O.\n  notCapturedArea before capture: %O\n  notCapturedAreaInViewportCoords: %O\n  cropArea: %O\n  windowOffset: %O\n  image size: %O",
-            scrollElementOffset,
-            notCapturedArea,
-            notCapturedAreaInViewportCoords,
-            cropAreaInViewportCoords,
-            viewportOffset,
+            "Captured the next chunk.\n  captureSpecs: %O\n  visibleCoveringRect: %O\n  ignoreBoundingRects: %O\n  viewportImageSize: %O",
+            captureSpecs,
+            visibleCoveringRect,
+            ignoreBoundingRects,
             imageSize,
         );
 
-        this._compositeChunks.push({ image: viewportImage, imageSize });
+        await saveViewportImageForDebugIfNeeded(
+            this._compositeChunks.length,
+            viewportImage,
+            imageSize,
+            safeArea,
+            captureSpecs,
+            visibleCoveringRect,
+            this._debugTmpDir,
+        );
+
+        this._compositeChunks.push({
+            image: viewportImage,
+            imageSize,
+            safeArea,
+            captureSpecs,
+            boundingRectsToIgnore: ignoreBoundingRects,
+        });
     }
 
+    /**
+     * Renders a composite image from the registered chunks.
+     * @throws {Error} if trying to render with zero chunks registered
+     * @throws {Error} if any of the chunks contain malformed PNG data
+     */
     async render(): Promise<Image> {
-        if (!this._lastViewportImageBuffer || !this._lastContainerOffset || !this._lastViewportOffset) {
+        if (!this._compositeChunks.length) {
             throw new Error(
-                "Cannot render composite image: last viewport image buffer, container offset or window offset is not set.\n" +
-                    "This means that screenshot was not captured even once and we have no image to render.\n" +
-                    "Please, make sure element that you are trying to capture exists and is valid.\n\n" +
-                    "If everything looks fine, but you are getting this error, please run your test with DEBUG=testplane:screenshots* and let us know at " +
-                    NEW_ISSUE_LINK,
+                "Cannot render composite image: no chunks were registered.\n" +
+                    "This means that screenshot was not captured even once and we have no image to render.",
             );
         }
 
-        if (this.hasNotCapturedArea()) {
-            debug(
-                "Safe area prevented us from capturing tail of the element in the end, adding it to the composite image.",
+        if (!this._captureAreaSize) {
+            throw new Error(
+                "Cannot render composite image: capture area size is not set.\n" +
+                    "This means registerViewportImageAtOffset was never called with a valid capture rect.",
             );
+        }
 
-            const captureAreaTail = new Image(this._lastViewportImageBuffer);
+        const anchoredChunks = this._computeAnchoredChunks();
+        const commonHorizontalArea = this._computeCommonHorizontalAreaIfNeeded(
+            anchoredChunks,
+            this._captureAreaSize.width,
+        );
+        const captureWidth = commonHorizontalArea?.width ?? this._captureAreaSize.width;
 
-            const notCapturedArea = this.getNextNotCapturedArea() as Rect;
-            const notCapturedAreaInViewportCoords = this._fromPageCoordsToViewportCoords(
-                this._lastContainerOffset,
-                this._lastViewportOffset,
-                notCapturedArea,
+        const sortedChunks = anchoredChunks.slice().sort((a, b) => subtractCoords(b.anchorTop, a.anchorTop));
+
+        const candidates = sortedChunks.map(chunk => this._buildCandidate(chunk));
+
+        debug("Candidates: %O", candidates);
+
+        this._chooseBestCandidates(candidates);
+
+        debug("Chosen best candidates: %O", candidates);
+
+        const pieces = this._buildRenderPieces(candidates);
+
+        debug("Rendering composite image. chunks: %d, pieces: %O", this._compositeChunks.length, pieces);
+
+        const renderedPieces: Image[] = [];
+
+        for (const piece of pieces) {
+            if (piece.type === "black") {
+                renderedPieces.push(await this._createBlackPiece(piece.height, captureWidth));
+                continue;
+            }
+
+            if (piece.verticalArea.height <= 0) {
+                continue;
+            }
+
+            renderedPieces.push(
+                await this._createChunkPiece(piece.chunk, piece.verticalArea, captureWidth, commonHorizontalArea),
             );
-            const viewportSize = await captureAreaTail.getSize();
-            const cropAreaInViewportCoords = this._sanitize(
-                getIntersection(
-                    { top: 0, left: 0, width: viewportSize.width, height: viewportSize.height },
-                    notCapturedAreaInViewportCoords,
-                ),
-            );
+        }
 
-            if (cropAreaInViewportCoords.height > 0) {
-                await captureAreaTail.crop(cropAreaInViewportCoords);
+        await saveRenderedPiecesForDebugIfNeeded(renderedPieces, this._debugTmpDir);
 
-                debug("  crop area coordinates: %O", cropAreaInViewportCoords);
+        if (!renderedPieces.length) {
+            return this._createBlackPiece(this._captureAreaSize.height, captureWidth);
+        }
 
-                this._compositeChunks.push({ image: captureAreaTail, imageSize: await captureAreaTail.getSize() });
-            } else {
-                debug("  crop area is empty, skipping");
+        const result = renderedPieces[0];
+
+        if (renderedPieces.length > 1) {
+            result.addJoin(renderedPieces.slice(1));
+        }
+
+        await result.applyJoin();
+
+        return result;
+    }
+
+    /**
+     * Computes anchor tops for all chunks by comparing element rects against a reference chunk
+     * (the one with the highest covering rect top). Reference chunk gets anchorTop = its covering rect top.
+     * Other chunks get anchorTop = referenceCoveringRectTop - maxDelta, where maxDelta is the max
+     * downward movement of any element rect compared to the reference.
+     */
+    private _computeAnchoredChunks(): AnchoredChunk[] {
+        let referenceIndex = 0;
+        let referenceCoveringRectTop = getCoveringRect(this._compositeChunks[0].captureSpecs.map(s => s.full)).top;
+
+        for (let i = 1; i < this._compositeChunks.length; i++) {
+            const coveringRectTop = getCoveringRect(this._compositeChunks[i].captureSpecs.map(s => s.full)).top;
+            if (coveringRectTop > referenceCoveringRectTop) {
+                referenceIndex = i;
+                referenceCoveringRectTop = coveringRectTop;
             }
         }
 
-        debug("Rendering composite image.");
+        const referenceCaptureSpecs = this._compositeChunks[referenceIndex].captureSpecs;
 
-        const image = new Image(await this._compositeChunks[0].image.toPngBuffer({ resolveWithObject: false }));
+        const anchoredChunks = this._compositeChunks.map((chunk, index) => {
+            if (index === referenceIndex) {
+                return { ...chunk, anchorTop: referenceCoveringRectTop };
+            }
 
-        if (this._compositeChunks.length > 1) {
-            image.addJoin(
-                this._compositeChunks.slice(1).map(chunk => {
-                    debug("  Adding chunk to join. imageSize: %O", chunk.imageSize);
+            let maxDelta = 0;
+            const minLength = Math.min(chunk.captureSpecs.length, referenceCaptureSpecs.length);
+            for (let i = 0; i < minLength; i++) {
+                const referenceSpec = referenceCaptureSpecs[i];
+                const chunkSpec = chunk.captureSpecs[i];
 
-                    return chunk.image;
-                }),
+                if (!this._isRenderableCaptureSpec(referenceSpec) || !this._isRenderableCaptureSpec(chunkSpec)) {
+                    continue;
+                }
+
+                const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
+                if (delta > maxDelta) {
+                    maxDelta = delta;
+                }
+            }
+
+            return {
+                ...chunk,
+                anchorTop: ((referenceCoveringRectTop as number) - maxDelta) as Coord<"viewport", "device", "y">,
+            };
+        });
+
+        debug("Anchored chunks: %O", anchoredChunks);
+
+        this._applyHeightChangeAnchorFixups(anchoredChunks);
+
+        return anchoredChunks;
+    }
+
+    private _applyHeightChangeAnchorFixups(chunks: AnchoredChunk[]): void {
+        if (chunks.length < 2) {
+            return;
+        }
+
+        debug("Applying height change anchor fixups");
+
+        const sortedChunks = chunks.slice().sort((a, b) => subtractCoords(b.anchorTop, a.anchorTop));
+
+        for (let i = 1; i < sortedChunks.length; i++) {
+            const previousChunk = sortedChunks[i - 1];
+            const currentChunk = sortedChunks[i];
+            const heightDelta = this._getHeightDeltaFromDifferingCaptureSpec(previousChunk, currentChunk);
+
+            if (!this._shouldTreatHeightChangeAsStartShift(heightDelta)) {
+                continue;
+            }
+
+            debug(
+                "Shifting anchor top for chunk %d by %d. Old anchor top: %d, new anchor top: %d",
+                i,
+                heightDelta,
+                currentChunk.anchorTop,
+                currentChunk.anchorTop - heightDelta,
             );
+            currentChunk.anchorTop = ((currentChunk.anchorTop as number) - heightDelta) as Coord<
+                "viewport",
+                "device",
+                "y"
+            >;
         }
-
-        await this._addIgnoreAreas(image);
-
-        await image.applyJoin();
-
-        return image;
     }
 
-    private _sanitize(area: Rect | null): Rect {
-        if (!area) {
-            return { left: 0, top: 0, width: 0, height: 0 };
+    private _getHeightDeltaFromDifferingCaptureSpec(
+        previousChunk: AnchoredChunk,
+        currentChunk: AnchoredChunk,
+    ): number | null {
+        const minLength = Math.min(previousChunk.captureSpecs.length, currentChunk.captureSpecs.length);
+
+        for (let i = 0; i < minLength; i++) {
+            const previousSpecHeight = previousChunk.captureSpecs[i].full.height as number;
+            const currentSpecHeight = currentChunk.captureSpecs[i].full.height as number;
+
+            if (previousSpecHeight !== currentSpecHeight) {
+                return previousSpecHeight - currentSpecHeight;
+            }
         }
 
+        return null;
+    }
+
+    private _shouldTreatHeightChangeAsStartShift(heightDelta: number | null): heightDelta is number {
+        const shouldShiftFromStart = true;
+
+        return shouldShiftFromStart && typeof heightDelta === "number" && heightDelta > 0;
+    }
+
+    private _isRenderableCaptureSpec(spec: CaptureSpec<"viewport", "device">): boolean {
+        return spec.visible.width > 0 && spec.visible.height > 0;
+    }
+
+    private _getVisibleCoveringRect(chunk: Pick<CompositeChunk, "captureSpecs">): Rect<"viewport", "device"> | null {
+        const visibleRects = chunk.captureSpecs
+            .filter(spec => this._isRenderableCaptureSpec(spec))
+            .map(spec => spec.visible);
+
+        if (!visibleRects.length) {
+            return null;
+        }
+
+        return getCoveringRect(visibleRects);
+    }
+
+    private _buildCandidate(chunk: AnchoredChunk): SegmentCandidate {
+        const strict = this._getYBandForMode(chunk, "strict");
+        const relaxTop = this._getYBandForMode(chunk, "relaxTop");
+        const relaxBottom = this._getYBandForMode(chunk, "relaxBottom");
+        const full = this._getYBandForMode(chunk, "full");
+
         return {
-            left: Math.max(area.left, 0),
-            top: Math.max(area.top, 0),
-            width: Math.max(area.width, 0),
-            height: Math.max(area.height, 0),
+            chunk,
+            strict,
+            relaxTop,
+            relaxBottom,
+            full,
+            chosen: strict,
         };
     }
 
-    private _fromPageCoordsToViewportCoords(
-        scrollElementOffset: Point,
-        viewportOffset: Point,
-        areaInPageCoords: Rect,
-    ): Rect {
-        return {
-            left: areaInPageCoords.left - scrollElementOffset.left - viewportOffset.left,
-            top: areaInPageCoords.top - scrollElementOffset.top - viewportOffset.top,
-            width: areaInPageCoords.width,
-            height: areaInPageCoords.height,
+    private _getYBandForMode(
+        chunk: AnchoredChunk,
+        mode: "strict" | "relaxTop" | "relaxBottom" | "full",
+    ): YBand<"viewport", "device"> | null {
+        const viewportTop = 0 as Coord<"viewport", "device", "y">;
+        const viewportBottom = chunk.imageSize.height as number as Coord<"viewport", "device", "y">;
+
+        const safeTop = chunk.safeArea.top;
+        const safeBottom = getBottom(chunk.safeArea);
+
+        let resultingBand: YBand<"viewport", "device"> | null = {
+            top: safeTop,
+            height: getHeight(safeTop, safeBottom),
         };
+
+        if (mode === "relaxTop") {
+            resultingBand.top = viewportTop;
+            resultingBand.height = getHeight(resultingBand.top, safeBottom);
+        } else if (mode === "relaxBottom") {
+            resultingBand.height = getHeight(resultingBand.top, viewportBottom);
+        } else if (mode === "full") {
+            resultingBand.top = viewportTop;
+            resultingBand.height = getHeight(resultingBand.top, viewportBottom);
+        }
+
+        const visibleCoveringRect = this._getVisibleCoveringRect(chunk);
+        if (!visibleCoveringRect) {
+            return null;
+        }
+
+        resultingBand = intersectYBands(resultingBand, { top: viewportTop, height: chunk.imageSize.height });
+        resultingBand = intersectYBands(resultingBand, visibleCoveringRect);
+
+        if (!resultingBand || resultingBand.height <= 0) {
+            return null;
+        }
+
+        return resultingBand;
+    }
+
+    private _chooseBestCandidates(candidates: SegmentCandidate[]): void {
+        if (!candidates.length) {
+            return;
+        }
+
+        // Always choose relaxed values for the first and last candidates
+        const first = candidates[0];
+        first.chosen = first.chosen ?? first.relaxTop ?? first.full;
+        if (first.chosen) {
+            const originalBottom = getBottom(first.chosen);
+            const relaxedTop = first.relaxTop?.top ?? first.full?.top ?? first.chosen.top;
+            first.chosen.top = getMinCoord(first.chosen.top, relaxedTop);
+            first.chosen.height = getHeight(first.chosen.top, originalBottom);
+        }
+
+        const last = candidates[candidates.length - 1];
+        last.chosen = last.chosen ?? last.relaxBottom ?? last.full;
+        if (last.chosen) {
+            const relaxedBottom = getBottom(last.relaxBottom ?? last.full ?? last.chosen);
+            const currentBottom = getBottom(last.chosen);
+            const maxBottom = getMaxCoord(currentBottom, relaxedBottom);
+            const maxHeight = getHeight(last.chosen.top, maxBottom);
+            last.chosen.height = getMaxLength(last.chosen.height, maxHeight);
+        }
+
+        for (let i = 0; i < candidates.length - 1; i++) {
+            const upper = candidates[i];
+            const lower = candidates[i + 1];
+
+            upper.chosen = upper.chosen ?? upper.relaxBottom ?? upper.full;
+            lower.chosen = lower.chosen ?? lower.relaxTop ?? lower.full;
+
+            if (!upper.chosen || !lower.chosen) {
+                continue;
+            }
+
+            let upperRelativeToCaptureArea = {
+                top: fromViewportToCaptureArea(upper.chosen.top, upper.chunk.anchorTop),
+                height: upper.chosen.height,
+            };
+            let upperBottomRelativeToCaptureArea = getBottom(upperRelativeToCaptureArea);
+            let lowerTopRelativeToCaptureArea = fromViewportToCaptureArea(lower.chosen.top, lower.chunk.anchorTop);
+
+            if (upperBottomRelativeToCaptureArea >= lowerTopRelativeToCaptureArea) {
+                continue;
+            }
+
+            const relaxedUpperBottom = getBottom(upper.relaxBottom ?? upper.full ?? upper.chosen);
+            if (relaxedUpperBottom > getBottom(upper.chosen)) {
+                upper.chosen.height = getHeight(upper.chosen.top, relaxedUpperBottom);
+            }
+
+            upperRelativeToCaptureArea = {
+                top: fromViewportToCaptureArea(upper.chosen.top, upper.chunk.anchorTop),
+                height: upper.chosen.height,
+            };
+            upperBottomRelativeToCaptureArea = getBottom(upperRelativeToCaptureArea);
+            lowerTopRelativeToCaptureArea = fromViewportToCaptureArea(lower.chosen.top, lower.chunk.anchorTop);
+
+            if (upperBottomRelativeToCaptureArea >= lowerTopRelativeToCaptureArea) {
+                continue;
+            }
+
+            const relaxedLowerStart = lower.relaxTop?.top ?? lower.full?.top ?? lower.chosen.top;
+            if (relaxedLowerStart < lower.chosen.top) {
+                const originalBottom = getBottom(lower.chosen);
+                lower.chosen.top = relaxedLowerStart;
+                lower.chosen.height = getHeight(lower.chosen.top, originalBottom);
+            }
+        }
+    }
+
+    private _buildRenderPieces(candidates: SegmentCandidate[]): RenderPiece[] {
+        const pieces: RenderPiece[] = [];
+
+        const sortedCandidates = candidates
+            .filter(candidate => Boolean(candidate.chosen))
+            .sort((a, b) =>
+                subtractCoords(
+                    fromViewportToCaptureArea(a.chosen!.top, a.chunk.anchorTop),
+                    fromViewportToCaptureArea(b.chosen!.top, b.chunk.anchorTop),
+                ),
+            );
+
+        let cursor = 0 as Coord<"capture", "device", "y">;
+        let hasStartedRendering = false;
+
+        for (const candidate of sortedCandidates) {
+            const chosen = candidate.chosen!;
+            const chosenRelativeToCaptureArea: YBand<"capture", "device"> = {
+                top: fromViewportToCaptureArea(chosen.top, candidate.chunk.anchorTop),
+                height: chosen.height,
+            };
+            const bottomRelativeToCaptureArea = getBottom(chosenRelativeToCaptureArea);
+
+            if (bottomRelativeToCaptureArea <= cursor) {
+                continue;
+            }
+
+            if (!hasStartedRendering) {
+                cursor = chosenRelativeToCaptureArea.top;
+                hasStartedRendering = true;
+            }
+
+            const topRelativeToCaptureArea = getMaxCoord(chosenRelativeToCaptureArea.top, cursor);
+
+            if (topRelativeToCaptureArea > cursor) {
+                pieces.push({ type: "black", height: getHeight(cursor, topRelativeToCaptureArea) });
+            }
+
+            const cursorRelativeToViewport = fromCaptureAreaToViewport(cursor, candidate.chunk.anchorTop);
+            const topRelativeToViewport = getMaxCoord(chosen.top, cursorRelativeToViewport);
+            const bottomRelativeToViewport = getBottom(chosen);
+            pieces.push({
+                type: "chunk",
+                chunk: candidate.chunk,
+                verticalArea: {
+                    top: topRelativeToViewport,
+                    height: getHeight(topRelativeToViewport, bottomRelativeToViewport),
+                },
+            });
+
+            cursor = bottomRelativeToCaptureArea;
+        }
+
+        return pieces;
+    }
+
+    private _getChunkHorizontalArea(
+        chunk: Pick<AnchoredChunk, "captureSpecs" | "imageSize">,
+    ): XBand<"viewport", "device"> | null {
+        const viewportHorizontalArea = {
+            left: 0 as Coord<"viewport", "device", "x">,
+            width: chunk.imageSize.width as number as Length<"device", "x">,
+        };
+        const visibleCoveringRect = this._getVisibleCoveringRect(chunk);
+        if (!visibleCoveringRect) {
+            return null;
+        }
+
+        return intersectXBands(viewportHorizontalArea, visibleCoveringRect);
+    }
+
+    private _computeCommonHorizontalAreaIfNeeded(
+        chunks: AnchoredChunk[],
+        captureWidth: Length<"device", "x">,
+    ): XBand<"viewport", "device"> | null {
+        const chunkHorizontalAreas = chunks
+            .map(chunk => this._getChunkHorizontalArea(chunk))
+            .filter((area): area is XBand<"viewport", "device"> => Boolean(area));
+
+        if (chunkHorizontalAreas.length === 0) {
+            return null;
+        }
+
+        const hasWidthMismatch = chunkHorizontalAreas.some(area => area.width !== captureWidth);
+
+        if (!hasWidthMismatch) {
+            return null;
+        }
+
+        const left = Math.min(...chunkHorizontalAreas.map(area => area.left));
+        const right = Math.max(...chunkHorizontalAreas.map(area => (area.left as number) + (area.width as number)));
+
+        return {
+            left: left as Coord<"viewport", "device", "x">,
+            width: (right - left) as Length<"device", "x">,
+        };
+    }
+
+    private async _createChunkPiece(
+        chunk: AnchoredChunk,
+        verticalArea: YBand<"viewport", "device">,
+        captureWidth: Length<"device", "x">,
+        commonHorizontalArea: XBand<"viewport", "device"> | null,
+    ): Promise<Image> {
+        const viewportHorizontalArea = {
+            left: 0 as Coord<"viewport", "device", "x">,
+            width: chunk.imageSize.width as number as Length<"device", "x">,
+        };
+        const horizonalArea = commonHorizontalArea
+            ? intersectXBands(viewportHorizontalArea, commonHorizontalArea)
+            : this._getChunkHorizontalArea(chunk);
+
+        if (
+            !horizonalArea ||
+            horizonalArea.width <= 0 ||
+            verticalArea.height <= 0 ||
+            horizonalArea.width !== captureWidth
+        ) {
+            debug(
+                "Chunk crop area is invalid or doesn't match capture width, using black fallback.\n  verticalArea: %O\n  horizonalArea: %O \n  captureWidth: %d",
+                verticalArea,
+                horizonalArea,
+                captureWidth,
+            );
+            return this._createBlackPiece(verticalArea.height, captureWidth);
+        }
+
+        const cropArea: Rect<"image", "device"> = {
+            top: verticalArea.top as number as Coord<"image", "device", "y">,
+            height: verticalArea.height,
+            left: horizonalArea.left as number as Coord<"image", "device", "x">,
+            width: horizonalArea.width,
+        };
+
+        for (const ignoreRect of chunk.boundingRectsToIgnore) {
+            await chunk.image.addClear(ignoreRect);
+        }
+        await chunk.image.applyJoin();
+        await chunk.image.crop(cropArea);
+
+        return chunk.image;
+    }
+
+    private async _createBlackPiece(height: Length<"device", "y">, width: Length<"device", "x">): Promise<Image> {
+        return new Image({ width, height });
     }
 }
