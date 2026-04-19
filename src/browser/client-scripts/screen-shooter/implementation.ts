@@ -168,6 +168,7 @@ export function getCaptureState(
             visible: fromCssToDevice(roundCoords(spec.visible), pixelRatio)
         }));
         const scrollOffset = computeScrollOffset(scrollElement);
+        const viewportOffset = computeViewportOffset();
 
         logger("scrollOffset:", scrollOffset);
 
@@ -176,6 +177,7 @@ export function getCaptureState(
             ignoreAreas: ignoreAreas.map(area => fromCssToDevice(roundCoords(area), pixelRatio)),
             safeArea: fromCssToDevice(roundCoords(safeArea), pixelRatio),
             scrollOffset: fromCssToDeviceNumber(scrollOffset, pixelRatio),
+            viewportOffset: fromCssToDevice(floorCoords(viewportOffset), pixelRatio),
             readableSelectorToScrollDescr,
             debugLog: logger()
         };

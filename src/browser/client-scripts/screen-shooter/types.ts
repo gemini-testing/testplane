@@ -9,6 +9,7 @@ export interface CaptureSpec<S extends Space, U extends Unit> {
 
 export interface CaptureState {
     scrollOffset: Coord<"page", "device", "y">;
+    viewportOffset: Point<"page", "device">;
     captureSpecs: CaptureSpec<"viewport", "device">[];
     ignoreAreas: Rect<"viewport", "device">[];
     safeArea: YBand<"viewport", "device">;
