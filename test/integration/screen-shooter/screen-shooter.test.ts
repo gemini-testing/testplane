@@ -210,6 +210,10 @@ describe("ElementsScreenShooter integration", function () {
     it("keeps fractional checkpoint offsets stable during replay", async () => {
         assert.ok(browser);
         const browserConfig = _.cloneDeep(BROWSER_CONFIG);
+        // This test is only applicable to Chrome, it's hard to replicate the issue in firefox
+        if (BROWSER_CONFIG.desiredCapabilities.browserName !== "chrome") {
+            return;
+        }
 
         _.set(browserConfig.desiredCapabilities, "goog:chromeOptions", {
             args: [
