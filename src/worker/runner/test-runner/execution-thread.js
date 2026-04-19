@@ -4,15 +4,16 @@ const { promiseMethod, promiseTimeout } = require("../../../utils/promise");
 const RuntimeConfig = require("../../../config/runtime-config");
 const logger = require("../../../utils/logger");
 const { AbortOnReconnectError } = require("../../../errors/abort-on-reconnect-error");
+const { captureFailScreenshot } = require("./capture-fail-screenshot");
 
 module.exports = class ExecutionThread {
     static create(...args) {
         return new this(...args);
     }
 
-    constructor({ test, browser, testplaneCtx, screenshooter, attempt }) {
+    constructor({ test, browser, testplaneCtx, attempt }) {
         this._testplaneCtx = testplaneCtx;
-        this._screenshooter = screenshooter;
+        this._browser = browser;
         this._ctx = {
             browser: browser.publicAPI,
             currentTest: test,
@@ -60,31 +61,27 @@ module.exports = class ExecutionThread {
 
         let error = null;
 
-        return fnPromise
-            .catch(async e => {
-                error = e;
+        return fnPromise.catch(async e => {
+            error = e;
 
-                if (error instanceof AbortOnReconnectError) {
-                    throw e;
-                }
-
-                if (replMode?.onFail) {
-                    logger.log("Caught error:", e);
-                    await this._ctx.browser.switchToRepl();
-                }
-
-                await this._screenshooter.extendWithScreenshot(e);
+            if (error instanceof AbortOnReconnectError) {
                 throw e;
-            })
-            .finally(async () => {
-                if (error instanceof AbortOnReconnectError) {
-                    return;
-                }
+            }
 
-                if (this._testplaneCtx.assertViewResults && this._testplaneCtx.assertViewResults.hasFails()) {
-                    await this._screenshooter.captureScreenshotOnAssertViewFail();
+            if (replMode?.onFail) {
+                logger.log("Caught error:", e);
+                await this._ctx.browser.switchToRepl();
+            }
+
+            const { takeScreenshotOnFails } = this._browser.config;
+            if (!e.screenshot && takeScreenshotOnFails.testFail) {
+                const screenshot = await captureFailScreenshot(this._browser);
+                if (screenshot) {
+                    e.screenshot = screenshot;
                 }
-            });
+            }
+            throw e;
+        });
     }
 
     _setExecutionContext(context) {

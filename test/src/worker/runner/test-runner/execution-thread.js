@@ -2,8 +2,6 @@
 
 const _ = require("lodash");
 const proxyquire = require("proxyquire");
-const AssertViewResults = require("src/browser/commands/assert-view/assert-view-results");
-const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-screenshooter");
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
@@ -12,6 +10,7 @@ const { promiseDelay } = require("../../../../../src/utils/promise");
 describe("worker/runner/test-runner/execution-thread", () => {
     const sandbox = sinon.createSandbox();
     let loggerLogStub;
+    let captureFailScreenshotStub;
     let ExecutionThread;
 
     const mkTest_ = (opts = {}) => {
@@ -30,6 +29,9 @@ describe("worker/runner/test-runner/execution-thread", () => {
     };
 
     const mkBrowser_ = (config = {}) => {
+        config = _.defaults(config, {
+            takeScreenshotOnFails: { testFail: true, assertViewFail: true },
+        });
         return {
             config,
             publicAPI: Object.create({
@@ -43,20 +45,21 @@ describe("worker/runner/test-runner/execution-thread", () => {
         const test = opts.test || mkTest_();
         const browser = opts.browser || mkBrowser_();
         const testplaneCtx = opts.testplaneCtx || {};
-        const screenshooter = opts.screenshooter || Object.create(OneTimeScreenshooter.prototype);
 
-        return ExecutionThread.create({ test, browser, testplaneCtx, screenshooter });
+        return ExecutionThread.create({ test, browser, testplaneCtx });
     };
 
     beforeEach(() => {
         loggerLogStub = sinon.stub();
+        captureFailScreenshotStub = sinon.stub().resolves(null);
         ExecutionThread = proxyquire("src/worker/runner/test-runner/execution-thread", {
             "../../../utils/logger": {
                 log: loggerLogStub,
             },
+            "./capture-fail-screenshot": {
+                captureFailScreenshot: captureFailScreenshotStub,
+            },
         });
-        sandbox.stub(OneTimeScreenshooter.prototype, "extendWithScreenshot").callsFake(e => Promise.resolve(e));
-        sandbox.stub(OneTimeScreenshooter.prototype, "captureScreenshotOnAssertViewFail").resolves();
         sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: { onFail: false } });
     });
 
@@ -246,7 +249,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
         });
 
         describe("takeScreenshotOnFails", () => {
-            it("should not extend error with screenshot if test failed with abort on reconnect error", async () => {
+            it("should not call captureFailScreenshot if test failed with abort on reconnect error", async () => {
                 const originalError = new AbortOnReconnectError();
                 const runnable = mkRunnable_({
                     fn: () => Promise.reject(originalError),
@@ -256,27 +259,53 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     .run(runnable)
                     .catch(e => e);
 
-                assert.notCalled(OneTimeScreenshooter.prototype.extendWithScreenshot);
+                assert.notCalled(captureFailScreenshotStub);
             });
 
-            it("should extend error with screenshot", async () => {
-                const originalError = new Error();
+            it("should attach screenshot to error on test fail", async () => {
+                captureFailScreenshotStub.resolves({ base64: "base64", size: { width: 100, height: 200 } });
                 const runnable = mkRunnable_({
-                    fn: () => Promise.reject(originalError),
-                });
-                OneTimeScreenshooter.prototype.extendWithScreenshot.withArgs(originalError).callsFake(e => {
-                    return Promise.resolve(_.extend(e, { screenshot: "screenshot" }));
+                    fn: () => Promise.reject(new Error()),
                 });
 
                 const error = await mkExecutionThread_()
                     .run(runnable)
                     .catch(e => e);
 
-                assert.propertyVal(error, "screenshot", "screenshot");
+                assert.deepPropertyVal(error, "screenshot", { base64: "base64", size: { width: 100, height: 200 } });
             });
 
-            it("should try to capture screenshot on test error", async () => {
+            it("should call captureFailScreenshot with browser on test error", async () => {
+                const browser = mkBrowser_();
+                const runnable = mkRunnable_({
+                    fn: () => Promise.reject(new Error()),
+                });
+
+                await mkExecutionThread_({ browser })
+                    .run(runnable)
+                    .catch(e => e);
+
+                assert.calledOnceWith(captureFailScreenshotStub, browser);
+            });
+
+            it("should not call captureFailScreenshot if config.takeScreenshotOnFails.testFail is false", async () => {
+                const browser = mkBrowser_({
+                    takeScreenshotOnFails: { testFail: false, assertViewFail: true },
+                });
+                const runnable = mkRunnable_({
+                    fn: () => Promise.reject(new Error()),
+                });
+
+                await mkExecutionThread_({ browser })
+                    .run(runnable)
+                    .catch(e => e);
+
+                assert.notCalled(captureFailScreenshotStub);
+            });
+
+            it("should not call captureFailScreenshot if error already has screenshot", async () => {
                 const error = new Error();
+                error.screenshot = "existing-screenshot";
                 const runnable = mkRunnable_({
                     fn: () => Promise.reject(error),
                 });
@@ -285,26 +314,12 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     .run(runnable)
                     .catch(e => e);
 
-                assert.calledOnceWith(OneTimeScreenshooter.prototype.extendWithScreenshot, error);
-            });
-
-            it("should try to capture screenshot on test fail with assert view errors", async () => {
-                const runnable = mkRunnable_({
-                    fn: () => Promise.resolve(),
-                });
-                const assertViewResults = AssertViewResults.create([new Error()]);
-                const testplaneCtx = { assertViewResults };
-
-                await mkExecutionThread_({ testplaneCtx }).run(runnable);
-
-                assert.calledOnce(OneTimeScreenshooter.prototype.captureScreenshotOnAssertViewFail);
+                assert.notCalled(captureFailScreenshotStub);
             });
 
             it("should wait until screenshot will be taken", async () => {
                 const afterScreenshot = sinon.spy().named("afterScreenshot");
-                OneTimeScreenshooter.prototype.extendWithScreenshot.callsFake(() =>
-                    promiseDelay(10).then(afterScreenshot),
-                );
+                captureFailScreenshotStub.callsFake(() => promiseDelay(10).then(afterScreenshot));
 
                 const runnable = mkRunnable_({
                     fn: () => Promise.reject(new Error()),
@@ -323,7 +338,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     timeout: 10,
                 });
 
-                OneTimeScreenshooter.prototype.extendWithScreenshot.callsFake(() => promiseDelay(20));
+                captureFailScreenshotStub.callsFake(() => promiseDelay(20));
 
                 const executionThread = mkExecutionThread_();
 
