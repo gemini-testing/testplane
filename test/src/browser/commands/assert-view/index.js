@@ -5,7 +5,8 @@ const _ = require("lodash");
 const fs = require("fs-extra");
 const webdriverio = require("@testplane/webdriverio");
 const { Image } = require("src/image");
-const { ScreenShooter } = require("src/browser/screen-shooter");
+const { ElementsScreenShooter } = require("src/browser/screen-shooter/elements-screen-shooter");
+const { ViewportScreenShooter } = require("src/browser/screen-shooter/viewport-screen-shooter");
 const temp = require("src/temp");
 const validator = require("png-validator");
 const { AssertViewError } = require("src/browser/commands/assert-view/errors/assert-view-error");
@@ -19,6 +20,7 @@ const proxyquire = require("proxyquire");
 
 describe("assertView command", () => {
     const sandbox = sinon.createSandbox();
+    sandbox.leakThreshold = 200;
     let ExistingBrowser;
 
     const assertViewBrowser = async (browser, state = "plain", selector = ".selector", opts = {}) => {
@@ -91,11 +93,16 @@ describe("assertView command", () => {
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ tempOpts: {} });
 
-        sandbox.spy(ScreenShooter, "create");
+        sandbox.spy(ElementsScreenShooter, "create");
+        sandbox.spy(ViewportScreenShooter, "create");
 
-        sandbox.stub(ScreenShooter.prototype, "capture").resolves({
+        sandbox.stub(ElementsScreenShooter.prototype, "capture").resolves({
             image: stubImage_(),
             meta: {},
+        });
+        sandbox.stub(ViewportScreenShooter.prototype, "capture").resolves({
+            image: stubImage_(),
+            meta: { canHaveCaret: false, pixelRatio: 1 },
         });
 
         sandbox.stub(updateRefs, "handleNoRefImage").resolves();
@@ -161,7 +168,7 @@ describe("assertView command", () => {
 
         await browser.publicAPI.assertView("plain", [".selector1", ".selector2"]);
 
-        assert.calledOnceWith(ScreenShooter.prototype.capture, [".selector1", ".selector2"]);
+        assert.calledOnceWith(ElementsScreenShooter.prototype.capture, [".selector1", ".selector2"]);
     });
 
     it("should screenshot the viewport if selector is not provided", async () => {
@@ -169,14 +176,8 @@ describe("assertView command", () => {
 
         await browser.publicAPI.assertView("plain");
 
-        assert.calledOnceWith(
-            ScreenShooter.prototype.capture,
-            "body",
-            sinon.match({
-                allowViewportOverflow: true,
-                captureElementFromTop: false,
-            }),
-        );
+        assert.notCalled(ElementsScreenShooter.prototype.capture);
+        assert.calledOnceWith(ViewportScreenShooter.prototype.capture, sinon.match({ screenshotDelay: 0 }));
     });
 
     it("should add custom options if selector is not provided", async () => {
@@ -186,13 +187,12 @@ describe("assertView command", () => {
             disableAnimation: false,
         });
 
+        assert.notCalled(ElementsScreenShooter.prototype.capture);
         assert.calledOnceWith(
-            ScreenShooter.prototype.capture,
-            "body",
+            ViewportScreenShooter.prototype.capture,
             sinon.match({
-                allowViewportOverflow: true,
-                captureElementFromTop: false,
                 disableAnimation: false,
+                screenshotDelay: 0,
             }),
         );
     });
@@ -222,7 +222,7 @@ describe("assertView command", () => {
 
                     await fn(browser, "plain", ".selector");
 
-                    assert.calledOnceWith(ScreenShooter.prototype.capture, ".selector");
+                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, ".selector");
                 });
 
                 describe("should pass ignore elements to ScreenShooter", () => {
@@ -241,11 +241,18 @@ describe("assertView command", () => {
 
                             await fn(browser, null, null, { ignoreElements });
 
-                            assert.calledOnceWith(
-                                ScreenShooter.prototype.capture,
-                                sinon.match.any,
-                                sinon.match({ ignoreElements }),
-                            );
+                            if (scope === "browser") {
+                                assert.calledOnceWith(
+                                    ViewportScreenShooter.prototype.capture,
+                                    sinon.match({ ignoreElements }),
+                                );
+                            } else {
+                                assert.calledOnceWith(
+                                    ElementsScreenShooter.prototype.capture,
+                                    sinon.match.any,
+                                    sinon.match({ ignoreElements }),
+                                );
+                            }
                         });
                     });
 
@@ -256,7 +263,7 @@ describe("assertView command", () => {
                         await fn(browser);
 
                         assert.calledOnceWith(
-                            ScreenShooter.prototype.capture,
+                            ElementsScreenShooter.prototype.capture,
                             sinon.match.any,
                             sinon.match({ ignoreElements: ["foo", "bar"] }),
                         );
@@ -268,11 +275,18 @@ describe("assertView command", () => {
 
                         await fn(browser, null, null, { ignoreElements: ["baz", "qux"] });
 
-                        assert.calledOnceWith(
-                            ScreenShooter.prototype.capture,
-                            sinon.match.any,
-                            sinon.match({ ignoreElements: ["baz", "qux"] }),
-                        );
+                        if (scope === "browser") {
+                            assert.calledOnceWith(
+                                ViewportScreenShooter.prototype.capture,
+                                sinon.match({ ignoreElements: ["baz", "qux"] }),
+                            );
+                        } else {
+                            assert.calledOnceWith(
+                                ElementsScreenShooter.prototype.capture,
+                                sinon.match.any,
+                                sinon.match({ ignoreElements: ["baz", "qux"] }),
+                            );
+                        }
                     });
                 });
 
@@ -289,7 +303,7 @@ describe("assertView command", () => {
                             await fn(browser);
 
                             assert.calledOnceWith(
-                                ScreenShooter.prototype.capture,
+                                ElementsScreenShooter.prototype.capture,
                                 sinon.match.any,
                                 sinon.match({ [option]: false }),
                             );
@@ -299,7 +313,7 @@ describe("assertView command", () => {
                             await fn(browser, null, "selector", { [option]: true });
 
                             assert.calledOnceWith(
-                                ScreenShooter.prototype.capture,
+                                ElementsScreenShooter.prototype.capture,
                                 sinon.match.any,
                                 sinon.match({ [option]: true }),
                             );
@@ -319,7 +333,7 @@ describe("assertView command", () => {
                         await fn(browser);
 
                         assert.calledOnceWith(
-                            ScreenShooter.prototype.capture,
+                            ElementsScreenShooter.prototype.capture,
                             sinon.match.any,
                             sinon.match({ selectorToScroll: ".selector-1" }),
                         );
@@ -328,11 +342,18 @@ describe("assertView command", () => {
                     it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
                         await fn(browser, null, null, { selectorToScroll: ".selector-2" });
 
-                        assert.calledOnceWith(
-                            ScreenShooter.prototype.capture,
-                            sinon.match.any,
-                            sinon.match({ selectorToScroll: ".selector-2" }),
-                        );
+                        if (scope === "browser") {
+                            assert.calledOnceWith(
+                                ViewportScreenShooter.prototype.capture,
+                                sinon.match({ selectorToScroll: ".selector-2" }),
+                            );
+                        } else {
+                            assert.calledOnceWith(
+                                ElementsScreenShooter.prototype.capture,
+                                sinon.match.any,
+                                sinon.match({ selectorToScroll: ".selector-2" }),
+                            );
+                        }
                     });
                 });
             });
@@ -341,7 +362,24 @@ describe("assertView command", () => {
                 it("should create an instance of a screen shooter", async () => {
                     const browser = await initBrowser_();
 
-                    assert.calledOnceWith(ScreenShooter.create, browser);
+                    assert.calledOnceWithMatch(ElementsScreenShooter.create, {
+                        camera: browser.camera,
+                        browser: browser.publicAPI,
+                        browserProperties: sinon.match({
+                            isWebdriverProtocol: true,
+                            shouldUsePixelRatio: true,
+                            needsCompatLib: false,
+                        }),
+                    });
+                    assert.calledOnceWithMatch(ViewportScreenShooter.create, {
+                        camera: browser.camera,
+                        browser: browser.publicAPI,
+                        browserProperties: sinon.match({
+                            isWebdriverProtocol: true,
+                            shouldUsePixelRatio: true,
+                            needsCompatLib: false,
+                        }),
+                    });
                 });
 
                 it("should capture a screenshot image", async () => {
@@ -349,7 +387,7 @@ describe("assertView command", () => {
 
                     await fn(browser);
 
-                    assert.calledOnceWith(ScreenShooter.prototype.capture, ".selector", sinon.match.object);
+                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, ".selector", sinon.match.object);
                 });
 
                 it("should save a captured screenshot", async () => {
@@ -358,7 +396,7 @@ describe("assertView command", () => {
                     const browser = await initBrowser_();
                     const image = stubImage_();
 
-                    ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                    ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
                     image.toPngBuffer.resolves("currPngBuffer");
 
                     await fn(browser);
@@ -381,7 +419,7 @@ describe("assertView command", () => {
                         it('from config option "assertViewOpts"', async () => {
                             await fn(browser);
 
-                            assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                            assert.calledWithMatch(ElementsScreenShooter.prototype.capture, sinon.match.any, {
                                 [option]: configValue,
                             });
                         });
@@ -389,9 +427,17 @@ describe("assertView command", () => {
                         it('from "assertView" command even if it is set in "assertViewOpts"', async () => {
                             await fn(browser, null, null, { [option]: passedValue });
 
-                            assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
-                                [option]: passedValue,
-                            });
+                            if (scope === "browser") {
+                                assert.calledWithMatch(ViewportScreenShooter.prototype.capture, {
+                                    [option]: passedValue,
+                                });
+                            } else {
+                                assert.calledWithMatch(
+                                    ElementsScreenShooter.prototype.capture,
+                                    sinon.match.any,
+                                    sinon.match({ [option]: passedValue }),
+                                );
+                            }
                         });
                     });
                 });
@@ -404,7 +450,7 @@ describe("assertView command", () => {
 
                             await fn(browser);
 
-                            assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                            assert.calledWithMatch(ElementsScreenShooter.prototype.capture, sinon.match.any, {
                                 [option]: "value-1",
                             });
                         });
@@ -420,7 +466,7 @@ describe("assertView command", () => {
 
                             await fn(browser);
 
-                            assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                            assert.calledWithMatch(ElementsScreenShooter.prototype.capture, sinon.match.any, {
                                 [option]: "value-2",
                             });
                         });
@@ -436,7 +482,7 @@ describe("assertView command", () => {
 
                             await fn(browser, null, "selector", { [option]: "value-3" });
 
-                            assert.calledWithMatch(ScreenShooter.prototype.capture, sinon.match.any, {
+                            assert.calledWithMatch(ElementsScreenShooter.prototype.capture, sinon.match.any, {
                                 [option]: "value-3",
                             });
                         });
@@ -448,7 +494,7 @@ describe("assertView command", () => {
                 const browser = await initBrowser_({ browser: stubBrowser_({ getScreenshotPath: () => "/ref/path" }) });
                 const image = stubImage_();
                 fs.existsSync.withArgs("/ref/path").returns(true);
-                ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
 
                 await fn(browser);
 
@@ -459,7 +505,7 @@ describe("assertView command", () => {
                 const browser = await initBrowser_({ browser: stubBrowser_({ getScreenshotPath: () => "/ref/path" }) });
                 const image = stubImage_();
                 fs.existsSync.withArgs("/ref/path").returns(false);
-                ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
 
                 await fn(browser);
 
@@ -479,7 +525,7 @@ describe("assertView command", () => {
                 temp.path.returns("/curr/path");
 
                 const currImage = stubImage_({ size: { width: 100, height: 200 } });
-                ScreenShooter.prototype.capture.resolves({ image: currImage, meta: {} });
+                ElementsScreenShooter.prototype.capture.resolves({ image: currImage, meta: {} });
 
                 const browser = await initBrowser_({ browser: stubBrowser_({ getScreenshotPath: () => "/ref/path" }) });
 
@@ -556,7 +602,7 @@ describe("assertView command", () => {
                     Image.compare.resolves({ equal: true, diffImage: { createBuffer: sandbox.stub() } });
                     temp.path.returns("/curr/path");
                     fs.readFile.withArgs("/ref/path").resolves("refPngBuffer");
-                    ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                    ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
                     image.toPngBuffer.resolves("currPngBuffer");
                     const browser = await initBrowser_({ browser: stubBrowser_(config) });
 
@@ -575,7 +621,7 @@ describe("assertView command", () => {
                     Image.compare
                         .withArgs("refPngBuffer", "currPngBuffer")
                         .resolves({ equal: true, diffImage: { createBuffer: sandbox.stub() } });
-                    ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                    ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
 
                     await fn(browser);
 
@@ -590,7 +636,7 @@ describe("assertView command", () => {
                     image.toPngBuffer.resolves("currPngBuffer");
                     Image.compare.withArgs("/ref/path", "currPngBuffer").resolves({ equal: false });
                     temp.path.returns("/curr/path");
-                    ScreenShooter.prototype.capture.resolves({ image, meta: {} });
+                    ElementsScreenShooter.prototype.capture.resolves({ image, meta: {} });
 
                     await fn(browser);
 
@@ -608,7 +654,7 @@ describe("assertView command", () => {
 
                     fs.existsSync.withArgs("/ref/path").returns(true);
                     fs.readFile.withArgs("/ref/path").resolves("refPngBuffer");
-                    ScreenShooter.prototype.capture.resolves({
+                    ElementsScreenShooter.prototype.capture.resolves({
                         image: stubImage_(),
                         meta: { canHaveCaret: "foo bar", pixelRatio: 300 },
                     });
@@ -662,7 +708,7 @@ describe("assertView command", () => {
                             });
                             const currImage = stubImage_({ size: { width: 100, height: 200 } });
 
-                            ScreenShooter.prototype.capture.resolves({ image: currImage, meta: {} });
+                            ElementsScreenShooter.prototype.capture.resolves({ image: currImage, meta: {} });
                             Image.compare.resolves({
                                 equal: false,
                                 metaInfo: { refImg: { size: { width: 300, height: 400 } } },

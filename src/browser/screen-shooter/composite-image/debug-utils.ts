@@ -4,7 +4,7 @@ import { convertRgbaToPng } from "../../../utils/eight-bit-rgba-to-png";
 import { loadEsm } from "../../../utils/preload-utils";
 import type { Coord, Rect, Size, YBand } from "../../isomorphic/geometry";
 import path from "node:path";
-import { CaptureSpec } from "../../client-scripts/screen-shooter/types";
+import type { CaptureSpec } from "../../client-scripts/screen-shooter/types";
 
 type DebugRectColor = { r: number; g: number; b: number; a: number };
 

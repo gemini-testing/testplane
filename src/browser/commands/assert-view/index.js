@@ -5,7 +5,8 @@ const path = require("path");
 const _ = require("lodash");
 const { pngValidator: validatePng } = require("png-validator");
 const { Image } = require("../../../image");
-const { ScreenShooter } = require("../../screen-shooter");
+const { ElementsScreenShooter } = require("../../screen-shooter/elements-screen-shooter");
+const { ViewportScreenShooter } = require("../../screen-shooter/viewport-screen-shooter");
 const temp = require("../../../temp");
 const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
@@ -32,7 +33,21 @@ const getIgnoreDiffPixelCountRatio = value => {
 };
 
 module.exports.default = browser => {
-    const screenShooter = ScreenShooter.create(browser);
+    const browserProperties = {
+        isWebdriverProtocol: browser.isWebdriverProtocol,
+        shouldUsePixelRatio: browser.shouldUsePixelRatio,
+        needsCompatLib: browser.needsCompatLib,
+    };
+    const screenShooterPromise = ElementsScreenShooter.create({
+        camera: browser.camera,
+        browser: browser.publicAPI,
+        browserProperties,
+    });
+    const viewportScreenShooterPromise = ViewportScreenShooter.create({
+        camera: browser.camera,
+        browser: browser.publicAPI,
+        browserProperties,
+    });
     const { publicAPI: session, config } = browser;
     const {
         assertViewOpts,
@@ -46,8 +61,8 @@ module.exports.default = browser => {
 
     const { handleNoRefImage, handleImageDiff, handleInvalidRefImage } = getCaptureProcessors();
 
-    const assertView = async (state, selectors, opts) => {
-        opts = _.defaults(opts, assertViewOpts, {
+    const getDefaultOpts = opts =>
+        _.defaults(opts, assertViewOpts, {
             compositeImage,
             screenshotDelay,
             tolerance,
@@ -55,18 +70,10 @@ module.exports.default = browser => {
             disableAnimation,
         });
 
+    const compareScreenshot = async (state, currImgInst, currImgMeta, opts) => {
         const { testplaneCtx } = session.executionContext;
         const test = session.executionContext.ctx.currentTest;
         testplaneCtx.assertViewResults = testplaneCtx.assertViewResults || AssertViewResults.create();
-
-        let debugId = "debugId";
-        try {
-            debugId = `${test.fullTitle()}.${browser.id}.${state}`;
-        } catch {
-            /**/
-        }
-        debug(`[${debugId}] assertView selectors: %O`, selectors);
-        debug(`[${debugId}] assertView opts: %O`, opts);
 
         if (testplaneCtx.assertViewResults.hasState(state)) {
             return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
@@ -86,7 +93,6 @@ module.exports.default = browser => {
         const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const { image: currImgInst, meta: currImgMeta } = await screenShooter.capture(selectors, opts);
         const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
@@ -168,11 +174,44 @@ module.exports.default = browser => {
         testplaneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
+    const assertView = async (state, selectors, opts) => {
+        opts = getDefaultOpts(opts);
+
+        let debugId = "debugId";
+        try {
+            const test = session.executionContext.ctx.currentTest;
+            debugId = `${test.fullTitle()}.${browser.id}.${state}`;
+            opts.debugId = debugId;
+        } catch {
+            /**/
+        }
+        debug(`[${debugId}] assertView selectors: %O`, selectors);
+        debug(`[${debugId}] assertView opts: %O`, opts);
+
+        const screenShooter = await screenShooterPromise;
+        const { image, meta } = await screenShooter.capture(selectors, opts);
+
+        return compareScreenshot(state, image, meta, opts);
+    };
+
+    const PSEUDO_SELECTOR_REGEXP = /(.*?)(::before|::after)\s*$/i;
+    const getSelectorToWaitForExist = selector => {
+        if (!_.isString(selector)) {
+            return selector;
+        }
+        const match = selector.match(PSEUDO_SELECTOR_REGEXP);
+        if (!match) {
+            return selector;
+        }
+        const elementSelector = match[1].trim();
+        return elementSelector || selector;
+    };
+
     const waitSelectorsForExist = async (browser, selectors) => {
         await Promise.all(
             [].concat(selectors).map(selector =>
                 browser
-                    .$(selector)
+                    .$(getSelectorToWaitForExist(selector))
                     .then(el => el.waitForExist())
                     .catch(() => {
                         throw new Error(
@@ -190,13 +229,14 @@ module.exports.default = browser => {
     };
 
     const assertViewByViewport = async (state, opts) => {
-        opts = Object.assign(opts, {
-            allowViewportOverflow: true,
-            compositeImage: false,
-            captureElementFromTop: false,
-        });
+        opts = getDefaultOpts(opts);
 
-        return assertView(state, "body", opts);
+        debug(`assertViewByViewport state: ${state}, opts: %O`, opts);
+
+        const vpScreenShooter = await viewportScreenShooterPromise;
+        const { image, meta } = await vpScreenShooter.capture(opts);
+
+        return compareScreenshot(state, image, meta, opts);
     };
 
     const shouldAssertViewport = selectorsOrOpts => {
