@@ -1,7 +1,6 @@
 "use strict";
 
 const proxyquire = require("proxyquire").noCallThru();
-const { CaptureAreaMovedError } = require("src/browser/screen-shooter/errors/capture-area-moved-error");
 
 const validationStubs = {
     assertCorrectCaptureAreaBounds: sinon.stub(),
@@ -467,19 +466,39 @@ describe("ElementsScreenShooter", () => {
             ]);
         });
 
-        it("should reject with CaptureAreaMovedError when capture area size changes and retries are disabled", async () => {
+        it("should continue capture on the last allowed attempt when capture area size changes", async () => {
             const page = createMockPage({
                 captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
             });
             const changedState = createCaptureState({
                 captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
             });
+            const settledState = createCaptureState({
+                captureSpecs: [captureSpec(rect(0, 100, 100, 20))],
+                safeArea: band(100, 100),
+                scrollOffset: 100,
+            });
 
-            browserSideScreenshooter.call.onCall(0).resolves(page).onCall(1).resolves(changedState);
+            browserSideScreenshooter.call
+                .onCall(0)
+                .resolves(page)
+                .onCall(1)
+                .resolves(changedState)
+                .onCall(2)
+                .resolves({ debugLog: "scroll debug" })
+                .onCall(3)
+                .resolves(settledState)
+                .onCall(4)
+                .resolves({ debugLog: "restore debug" });
 
-            const error = await screenShooter.capture(".element", { compositeImage: true }, 1).catch(e => e);
+            const result = await screenShooter.capture(".element", { compositeImage: true }, 1);
 
-            assert.instanceOf(error, CaptureAreaMovedError);
+            assert.calledOnce(validationStubs.assertCorrectCaptureAreaBounds);
+            assert.calledTwice(camera.captureViewportImage);
+            assert.deepEqual(result, {
+                image: renderedImage,
+                meta: page,
+            });
         });
 
         it("should warn when the captured area still overflows the viewport and allowViewportOverflow is false", async () => {

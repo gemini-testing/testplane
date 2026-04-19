@@ -3,5 +3,6 @@
 module.exports = {
     recursive: true,
     extension: [".js", ".ts"],
-    require: ["./test/setup", "./test/assert-ext", "./test/ts-node"],
+    ignore: ["./test/browser-env/**", "**/report/**", "**/basic-report/**"],
+    require: ["./test/setup", "./test/assert-ext", "./test/ts-node", "tsconfig-paths/register"],
 };

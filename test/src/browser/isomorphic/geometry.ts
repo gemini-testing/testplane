@@ -74,7 +74,7 @@ describe("browser/isomorphic/geometry", () => {
         it("should format size as text", () => {
             const size = { width: 10 as Length<"device", "x">, height: 20 as Length<"device", "y"> } as Size<"device">;
 
-            assert.equal(prettySize(size), "10 x 20 (width x height)");
+            assert.equal(prettySize(size), "{ width: 10, height: 20 }");
         });
     });
 

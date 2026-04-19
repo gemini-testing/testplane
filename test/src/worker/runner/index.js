@@ -1,17 +1,17 @@
 "use strict";
 
+const clearRequire = require("clear-require");
 const proxyquire = require("proxyquire");
 const BrowserPool = require("src/worker/runner/browser-pool");
 const { CachingTestParser } = require("src/worker/runner/caching-test-parser");
 const { BrowserAgent } = require("src/worker/runner/browser-agent");
 const { WorkerEvents: RunnerEvents } = require("src/events");
-const NodejsEnvTestRunner = require("src/worker/runner/test-runner");
-const { TestRunner: BrowserEnvTestRunner } = require("src/worker/browser-env/runner/test-runner");
 const { NODEJS_TEST_RUN_ENV, BROWSER_TEST_RUN_ENV } = require("src/constants/config");
 const { makeConfigStub, makeTest } = require("../../../utils");
 
 describe("worker/runner", () => {
     const sandbox = sinon.createSandbox();
+    let NodejsEnvTestRunner, BrowserEnvTestRunner;
     let nodejsTestRunner, browserTestRunner, Runner;
     let runWithTestplaneDependenciesCollecting, readTestFileWithTestplaneDependenciesCollecting;
     let processSendBackup;
@@ -22,6 +22,13 @@ describe("worker/runner", () => {
     };
 
     beforeEach(() => {
+        clearRequire(require.resolve("src/worker/runner"));
+        clearRequire(require.resolve("src/worker/runner/test-runner"));
+        clearRequire(require.resolve("src/worker/browser-env/runner/test-runner"));
+
+        NodejsEnvTestRunner = require("src/worker/runner/test-runner");
+        ({ TestRunner: BrowserEnvTestRunner } = require("src/worker/browser-env/runner/test-runner"));
+
         sandbox.stub(BrowserPool, "create").returns({ browser: "pool" });
 
         sandbox.stub(CachingTestParser, "create").returns(Object.create(CachingTestParser.prototype));
@@ -44,11 +51,12 @@ describe("worker/runner", () => {
         sandbox.stub(BrowserAgent, "create").returns(Object.create(BrowserAgent.prototype));
 
         Runner = proxyquire("src/worker/runner", {
-            "./test-runner": { default: { create: () => nodejsTestRunner } },
-            "../browser-env/runner/test-runner": { TestRunner: { create: () => browserTestRunner } },
             "../../browser/cdp/selectivity/testplane-selectivity": {
                 runWithTestplaneDependenciesCollecting,
                 readTestFileWithTestplaneDependenciesCollecting,
+            },
+            "../../constants/process-messages": {
+                TEST_ASSIGNED_TO_WORKER: "worker.testAssignedToWorker",
             },
         });
 
@@ -92,11 +100,13 @@ describe("worker/runner", () => {
     });
 
     [
-        { name: "NodejsEnvTestRunner", TestRunner: NodejsEnvTestRunner, testRunEnv: NODEJS_TEST_RUN_ENV },
-        { name: "BrowserEnvTestRunner", TestRunner: BrowserEnvTestRunner, testRunEnv: BROWSER_TEST_RUN_ENV },
-    ].forEach(({ name, TestRunner, testRunEnv }) => {
+        { name: "NodejsEnvTestRunner", testRunEnv: NODEJS_TEST_RUN_ENV },
+        { name: "BrowserEnvTestRunner", testRunEnv: BROWSER_TEST_RUN_ENV },
+    ].forEach(({ name, testRunEnv }) => {
         describe(name, () => {
             let runner;
+            const getTestRunner = () =>
+                testRunEnv === NODEJS_TEST_RUN_ENV ? NodejsEnvTestRunner : BrowserEnvTestRunner;
 
             beforeEach(() => {
                 runner = mkRunner_({
@@ -124,6 +134,7 @@ describe("worker/runner", () => {
                     CachingTestParser.prototype.parse.resolves([test]);
 
                     await runner.runTest("some test", {});
+                    const TestRunner = getTestRunner();
 
                     // Note: BrowserEnvTestRunner assertions are skipped due to dynamic import mocking limitations
                     // The core functionality is still tested via NodejsEnvTestRunner which uses the same API
@@ -143,6 +154,7 @@ describe("worker/runner", () => {
                     CachingTestParser.prototype.parse.resolves([test]);
 
                     await runner.runTest("some test", { browserId: "bro" });
+                    const TestRunner = getTestRunner();
 
                     // Note: BrowserEnvTestRunner assertions are skipped due to dynamic import mocking limitations
                     if (TestRunner === NodejsEnvTestRunner) {
@@ -157,6 +169,7 @@ describe("worker/runner", () => {
                     CachingTestParser.prototype.parse.resolves([test]);
 
                     await runner.runTest("some test", { file: "/path/to/file" });
+                    const TestRunner = getTestRunner();
 
                     assert.calledOnceWith(TestRunner.create, sinon.match({ file: "/path/to/file" }));
                 });
@@ -173,6 +186,7 @@ describe("worker/runner", () => {
                     BrowserAgent.create.withArgs({ id: "bro", version: "1.0", pool }).returns(browserAgent);
 
                     await runner.runTest("some test", { browserId: "bro", browserVersion: "1.0" });
+                    const TestRunner = getTestRunner();
 
                     assert.calledOnceWith(TestRunner.create, sinon.match({ browserAgent }));
                 });
@@ -191,6 +205,7 @@ describe("worker/runner", () => {
                     CachingTestParser.prototype.parse.resolves([test1, test2]);
 
                     await runner.runTest("other test", {});
+                    const TestRunner = getTestRunner();
 
                     const testRunner = TestRunner === NodejsEnvTestRunner ? nodejsTestRunner : browserTestRunner;
 
@@ -215,6 +230,7 @@ describe("worker/runner", () => {
                         sessionOpts: "some-opts",
                         state: {},
                     });
+                    const TestRunner = getTestRunner();
 
                     const testRunner = TestRunner === NodejsEnvTestRunner ? nodejsTestRunner : browserTestRunner;
 

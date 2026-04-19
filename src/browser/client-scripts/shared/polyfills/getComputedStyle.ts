@@ -3,9 +3,10 @@
  */
 function getComputedStylePixel(element: Element, property: string, fontSize?: number | null): number {
     const // Internet Explorer sometimes struggles to read currentStyle until the element's document is accessed.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        /* eslint-disable @typescript-eslint/no-explicit-any */
         value = ((element as any).document &&
             (element as any).currentStyle[property].match(/([\d.]+)(%|cm|em|in|mm|pc|pt|)/)) || [0, 0, ""],
+        /* eslint-enable @typescript-eslint/no-explicit-any */
         size = value[1],
         suffix = value[2];
 
@@ -139,8 +140,9 @@ export { CSSStyleDeclaration };
 // <Global>.getComputedStyle
 export function getComputedStyle(element: Element, pseudoEl: string): CSSStyleDeclaration {
     // IE9 needs matchMedia support but already support getComputedStyle
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     return window.getComputedStyle
         ? window.getComputedStyle(element, pseudoEl)
         : new (CSSStyleDeclaration as any)(element);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 }

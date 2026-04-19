@@ -24,6 +24,7 @@ describe("worker/testplane", () => {
 
         Testplane = proxyquire("src/worker/testplane", {
             "expect-webdriverio": ExpectWebdriverio,
+            "./runner": Runner,
         }).Testplane;
 
         sandbox.stub(Config, "create").returns(makeConfigStub());

@@ -14,23 +14,23 @@ function clientRectSnapshot(el: Element): { top: number; left: number; width: nu
 function expectClientRectClose(
     a: { top: number; left: number; width: number; height: number },
     b: { top: number; left: number; width: number; height: number },
-    tol = 1,
+    tolerance = 1,
 ): void {
-    expect(a.top).toBeCloseTo(b.top, tol);
-    expect(a.left).toBeCloseTo(b.left, tol);
-    expect(a.width).toBeCloseTo(b.width, tol);
-    expect(a.height).toBeCloseTo(b.height, tol);
+    expect(a.top).toBeCloseTo(b.top, tolerance);
+    expect(a.left).toBeCloseTo(b.left, tolerance);
+    expect(a.width).toBeCloseTo(b.width, tolerance);
+    expect(a.height).toBeCloseTo(b.height, tolerance);
 }
 
 function coveringFullTop(selectors: string[]): number {
-    const specs = computeCaptureSpecs(selectors).captureSpecs;
+    const specs = computeCaptureSpecs(selectors);
     const area = getCoveringRect(specs.map(s => s.full));
     return area.top as number;
 }
 
 function expectCaptureAlignedToSafeArea(selectors: string[], scrollElement: Element | undefined): void {
     const top = coveringFullTop(selectors);
-    const safe = computeSafeArea(selectors, scrollElement).safeArea;
+    const safe = computeSafeArea(selectors, scrollElement);
     expect(top).toBeCloseTo(safe.top as number, 0);
 }
 
@@ -45,10 +45,15 @@ describe("scrollToCaptureAreaIfNeeded", () => {
         const { default: html } = await import("./fixtures/scroll-to-capture/below-fold-window.html?raw");
         document.body.innerHTML = html;
 
+        expect(() => scrollToCaptureAreaIfNeeded([".target"], false)).toThrow(OutsideOfViewportError);
+    });
+
+    it("should not try to scroll when the target is outside the viewport and captureElementFromTop is false", async () => {
+        const { default: html } = await import("./fixtures/scroll-to-capture/below-fold-window.html?raw");
+        document.body.innerHTML = html;
+
         const target = document.querySelector(".target")!;
         const before = clientRectSnapshot(target);
-
-        expect(() => scrollToCaptureAreaIfNeeded([".target"], false)).toThrow(OutsideOfViewportError);
 
         expectClientRectClose(clientRectSnapshot(target), before);
         expect(window.scrollY).toBe(0);

@@ -93,7 +93,7 @@ export class Calibrator {
                     top: 0,
                     left: result.left,
                     width: result.width,
-                    height: getHeight(0 as Coord<"image", "device", "y">, y),
+                    height: getHeight(0 as Coord<"image", "device", "y">, (y + 1) as Coord<"image", "device", "y">),
                 };
 
                 return getIntersection(topPart, bottomPart);
@@ -122,7 +122,7 @@ async function findMarkerXBandInRow(
 
     return {
         left: markerStart,
-        width: getWidth(markerStart, markerEnd),
+        width: getWidth(markerStart, (markerEnd + 1) as Coord<"image", "device", "x">),
     };
 }
 
