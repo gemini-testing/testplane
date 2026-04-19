@@ -1,0 +1,1 @@
+export const COMPOSITING_ITERATIONS_LIMIT = 50;

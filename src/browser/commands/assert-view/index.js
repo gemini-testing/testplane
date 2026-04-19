@@ -32,12 +32,9 @@ const getIgnoreDiffPixelCountRatio = value => {
 };
 
 module.exports.default = browser => {
-    const browserProperties = {
-        isWebdriverProtocol: browser.isWebdriverProtocol,
-        shouldUsePixelRatio: browser.shouldUsePixelRatio,
-        needsCompatLib: browser.needsCompatLib,
-    };
-    const screenShooterPromise = ElementsScreenShooter.create({
+    const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
+    const browserProperties = { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib };
+    const elementsScreenShooterPromise = ElementsScreenShooter.create({
         camera: browser.camera,
         browser: browser.publicAPI,
         browserProperties,
@@ -173,7 +170,7 @@ module.exports.default = browser => {
         debug(`[${debugId}] assertView selectors: %O`, selectors);
         debug(`[${debugId}] assertView opts: %O`, opts);
 
-        const screenShooter = await screenShooterPromise;
+        const screenShooter = await elementsScreenShooterPromise;
         const { image, meta } = await screenShooter.capture(selectors, opts);
 
         return compareScreenshot(state, image, meta, opts);
