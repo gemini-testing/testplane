@@ -25,10 +25,9 @@ import type {
 } from "../client-scripts/screen-shooter/types";
 import { isBrowserSideError } from "../isomorphic/types";
 import { CaptureAreaMovedError } from "./errors/capture-area-moved-error";
+import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
 
 const debug = makeDebug("testplane:screenshots:screen-shooter");
-
-const COMPOSITING_ITERATIONS_LIMIT = 50;
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
@@ -788,7 +787,6 @@ export class ElementsScreenShooter {
 
                     const captureStartTime = performance.now();
 
-                    // const viewport = { ...page.viewportSize, ...page.viewportOffset };
                     const viewportImage = await this._camera.captureViewportImage({
                         viewportSize: page.viewportSize,
                         viewportOffset: currentState.viewportOffset,
