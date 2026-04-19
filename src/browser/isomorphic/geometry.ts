@@ -117,6 +117,12 @@ export const getIntersection = <
 type GetUnit<T> = T extends Coord<Space, infer Unit, Axis> ? Unit : never;
 type GetAxis<T> = T extends Coord<Space, Unit, infer Axis> ? Axis : never;
 
+/*
+Note: width and height between a and b is computed inclusive of a, but exclusive of b. Width between 1 and 2 is 1.
+      bottom of rect with top=0 and height=1 is 1.
+      These conventions are very useful when dealing with 0-sized areas.
+*/
+
 export const getHeight = <T extends Coord<Space, Unit, "y">>(a: T, b: T): Length<GetUnit<T>, GetAxis<T>> => {
     return Math.abs(a - b) as Length<GetUnit<T>, GetAxis<T>>;
 };
