@@ -369,6 +369,7 @@ export class ElementsScreenShooter {
         let iterations = 0;
         let lastState: CaptureState = {
             captureSpecs: page.captureSpecs,
+            viewportOffset: page.viewportOffset,
             scrollOffset: page.scrollOffset,
             safeArea: page.safeArea,
             ignoreAreas: page.ignoreAreas,
@@ -749,6 +750,7 @@ export class ElementsScreenShooter {
         let restoreScrollPositionError: Error | null = null;
 
         let lastState: CaptureState = {
+            viewportOffset: page.viewportOffset,
             captureSpecs: page.captureSpecs,
             scrollOffset: page.scrollOffset,
             safeArea: page.safeArea,
@@ -789,7 +791,7 @@ export class ElementsScreenShooter {
                     // const viewport = { ...page.viewportSize, ...page.viewportOffset };
                     const viewportImage = await this._camera.captureViewportImage({
                         viewportSize: page.viewportSize,
-                        viewportOffset: page.viewportOffset,
+                        viewportOffset: currentState.viewportOffset,
                         screenshotDelay: opts.screenshotDelay,
                     });
 
