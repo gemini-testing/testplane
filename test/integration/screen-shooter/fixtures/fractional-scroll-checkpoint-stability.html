@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fractional scroll checkpoint stability</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+            }
+
+            html {
+                height: 2300.6px;
+            }
+
+            .Content {
+                width: 320px;
+                height: 2200.4px;
+                margin: 12.5px auto;
+                background: linear-gradient(180deg, #edf7ff 0%, #c7e4ff 100%);
+                border-radius: 8px;
+            }
+
+            .Content::before {
+                content: "";
+                display: block;
+                height: 100%;
+                background: repeating-linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.2) 0px,
+                    rgba(255, 255, 255, 0.2) 24px,
+                    rgba(0, 0, 0, 0.03) 24px,
+                    rgba(0, 0, 0, 0.03) 48px
+                );
+                border-radius: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="Content"></div>
+    </body>
+    <script>
+        window.scrollTo(0, 0.5);
+    </script>
+</html>

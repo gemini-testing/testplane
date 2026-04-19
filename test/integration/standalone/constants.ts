@@ -5,6 +5,7 @@ export const BROWSER_NAME = (process.env.BROWSER || "chrome").toLowerCase();
 export const BROWSER_CONFIG = {
     desiredCapabilities: {
         browserName: BROWSER_NAME,
+        browserVersion: "138.0",
     },
     headless: true,
     system: {

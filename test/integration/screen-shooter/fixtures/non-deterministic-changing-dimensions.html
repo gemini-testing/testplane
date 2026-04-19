@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Non-deterministic geometry changes</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background: #f3f5f7;
+                font-family: Arial, sans-serif;
+            }
+
+            .Modal {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.3);
+            }
+
+            .Modal-Wrapper {
+                position: absolute;
+                left: 80px;
+                top: 40px;
+                width: 640px;
+                height: 520px;
+                overflow-y: auto;
+                background: #fff;
+                border-radius: 12px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            }
+
+            .Modal-Content {
+                width: 560px;
+                height: 2200px;
+                margin: 24px auto;
+                background: linear-gradient(180deg, #fff0f0 0%, #ffd7d7 100%);
+                border-radius: 8px;
+                transform: translateY(0px);
+                will-change: transform, height;
+            }
+
+            .Modal-Content::before {
+                content: "";
+                display: block;
+                height: 100%;
+                background: repeating-linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.2) 0px,
+                    rgba(255, 255, 255, 0.2) 24px,
+                    rgba(0, 0, 0, 0.03) 24px,
+                    rgba(0, 0, 0, 0.03) 48px
+                );
+                border-radius: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="Modal">
+            <div class="Modal-Wrapper">
+                <div class="Modal-Content"></div>
+            </div>
+        </div>
+        <script>
+            const wrapper = document.querySelector(".Modal-Wrapper");
+            const content = document.querySelector(".Modal-Content");
+            let updateToken = 0;
+
+            wrapper.addEventListener("scroll", () => {
+                updateToken += 1;
+                const token = updateToken;
+
+                setTimeout(() => {
+                    if (token !== updateToken) {
+                        return;
+                    }
+
+                    const yOffset = Math.floor(Math.random() * 7);
+                    const heightOffset = Math.floor(Math.random() * 11);
+                    content.style.transform = `translateY(${yOffset}px)`;
+                    content.style.height = `${2200 + heightOffset}px`;
+                }, 0);
+            });
+        </script>
+    </body>
+</html>
