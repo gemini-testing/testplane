@@ -1,6 +1,6 @@
 {
     "extends": "../tsconfig.common.json",
-    "include": ["../typings", "../src/index.ts", "."],
+    "include": ["../typings", "../src/index.ts", "./types.ts", "src", "integration"],
     "exclude": ["../src/runner/browser-env/vite/browser-modules"],
     "compilerOptions": {
         "baseUrl": "..",
@@ -9,5 +9,19 @@
             "src/*": ["src/*"],
             "@isomorphic": ["src/browser/isomorphic/index.ts"]
         }
-    }
+    },
+    "references": [
+        {
+            "path": "../src/runner/browser-env/vite/browser-modules/tsconfig.json"
+        },
+        {
+            "path": "../src/browser/client-scripts/screen-shooter/tsconfig.json"
+        },
+        {
+            "path": "../src/browser/client-scripts/browser-utils/tsconfig.json"
+        },
+        {
+            "path": "../src/browser/isomorphic/tsconfig.json"
+        }
+    ]
 }

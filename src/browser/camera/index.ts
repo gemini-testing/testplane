@@ -1,6 +1,5 @@
 import os from "node:os";
 import path from "node:path";
-import _ from "lodash";
 import makeDebug from "debug";
 
 import { Image } from "../../image";

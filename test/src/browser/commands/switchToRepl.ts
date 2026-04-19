@@ -1,4 +1,4 @@
-import repl, { type REPLServer } from "node:repl";
+import { type REPLServer } from "node:repl";
 import net from "node:net";
 import { PassThrough } from "node:stream";
 import { EventEmitter } from "node:events";
@@ -19,10 +19,14 @@ describe('"switchToRepl" command', () => {
     const originalStdout = process.stdout;
 
     let ExistingBrowser: typeof ExistingBrowserOriginal;
+    let replStart: SinonStub;
+    let netCreateServerStub: SinonStub;
     let logStub: SinonStub;
     let warnStub: SinonStub;
     let webdriverioAttachStub: SinonStub;
     let clientBridgeBuildStub;
+    let replServer: REPLServer;
+    let netServer: net.Server;
     let netCreateServerCb: (socket: net.Socket) => void;
 
     const initBrowser_ = ({
@@ -41,8 +45,6 @@ describe('"switchToRepl" command', () => {
         const replServer = new EventEmitter() as REPLServer;
         (replServer.context as unknown) = {};
 
-        sandbox.stub(repl, "start").returns(replServer);
-
         return replServer;
     };
 
@@ -50,11 +52,6 @@ describe('"switchToRepl" command', () => {
         const netServer = new EventEmitter() as net.Server;
         netServer.listen = sandbox.stub().named("listen").returnsThis();
         netServer.close = sandbox.stub().named("close").returnsThis();
-
-        (sandbox.stub(net, "createServer") as SinonStub).callsFake(cb => {
-            netCreateServerCb = cb;
-            return netServer;
-        });
 
         return netServer;
     };
@@ -68,12 +65,10 @@ describe('"switchToRepl" command', () => {
         return socket;
     };
 
-    const switchToRepl_ = async ({
-        session = mkSessionStub_(),
-        replServer = mkReplServer_(),
-        ctx = {},
-    }): Promise<void> => {
+    const switchToRepl_ = async ({ session = mkSessionStub_(), ctx = {} }): Promise<void> => {
         const promise = session.switchToRepl(ctx);
+
+        await new Promise(resolve => setImmediate(resolve));
 
         replServer.emit("exit");
         await promise;
@@ -82,7 +77,11 @@ describe('"switchToRepl" command', () => {
     beforeEach(() => {
         logStub = sandbox.stub();
         warnStub = sandbox.stub();
+        replStart = sandbox.stub();
+        replServer = mkReplServer_();
+        netServer = mkNetServer_();
 
+        netCreateServerStub = sandbox.stub();
         webdriverioAttachStub = sandbox.stub();
         clientBridgeBuildStub = sandbox.stub().resolves();
 
@@ -95,6 +94,15 @@ describe('"switchToRepl" command', () => {
             },
             "../utils/logger": { warn: warnStub, log: logStub },
             "./commands/switchToRepl": proxyquire("src/browser/commands/switchToRepl", {
+                "node:repl": {
+                    start: replStart.returns(replServer),
+                },
+                "node:net": {
+                    createServer: netCreateServerStub.callsFake(cb => {
+                        netCreateServerCb = cb;
+                        return netServer;
+                    }),
+                },
                 "../../utils/logger": { warn: warnStub, log: logStub },
             }),
         }).ExistingBrowser;
@@ -117,7 +125,7 @@ describe('"switchToRepl" command', () => {
         sandbox.restore();
 
         Object.defineProperty(process, "stdin", { value: originalStdin });
-        Object.defineProperty(process, "sdout", { value: originalStdout });
+        Object.defineProperty(process, "stdout", { value: originalStdout });
     });
 
     it("should add command", async () => {
@@ -141,10 +149,7 @@ describe('"switchToRepl" command', () => {
     });
 
     describe("in REPL mode", async () => {
-        let netServer!: net.Server;
-
         beforeEach(() => {
-            netServer = mkNetServer_();
             (RuntimeConfig.getInstance as SinonStub).returns({
                 replMode: { enabled: true, port: 12345 },
                 extend: sinon.stub(),
@@ -163,7 +168,7 @@ describe('"switchToRepl" command', () => {
                     "You have entered to REPL mode via terminal (test execution timeout is disabled). Port to connect to REPL from other terminals: 12345",
                 ),
             );
-            assert.callOrder(logStub as SinonStub, repl.start as SinonStub);
+            assert.callOrder(logStub as SinonStub, replStart);
         });
 
         it("should change cwd to test directory before run repl server", async () => {
@@ -173,7 +178,7 @@ describe('"switchToRepl" command', () => {
             await initBrowser_({ session });
             await switchToRepl_({ session });
 
-            assert.callOrder((process.chdir as SinonStub).withArgs("/root/project/dir"), repl.start as SinonStub);
+            assert.callOrder((process.chdir as SinonStub).withArgs("/root/project/dir"), replStart);
         });
 
         it("should change cwd to its original value on close repl server", async () => {
@@ -182,11 +187,12 @@ describe('"switchToRepl" command', () => {
             const currCwd = process.cwd();
             const onExit = sandbox.spy();
 
-            const replServer = mkReplServer_();
             replServer.on("exit", onExit);
 
             await initBrowser_({ session });
             const promise = session.switchToRepl();
+
+            await new Promise(resolve => setImmediate(resolve));
 
             replServer.emit("exit");
             await promise;
@@ -198,31 +204,28 @@ describe('"switchToRepl" command', () => {
             const runtimeCfg = { replMode: { enabled: true }, extend: sinon.stub() };
             (RuntimeConfig.getInstance as SinonStub).returns(runtimeCfg);
 
-            const replServer = mkReplServer_();
             const session = mkSessionStub_();
 
             await initBrowser_({ session });
-            await switchToRepl_({ session, replServer });
+            await switchToRepl_({ session });
 
             assert.calledOnceWith(runtimeCfg.extend, { replServer });
         });
 
         it("should add browser instance to repl context by default", async () => {
             const session = mkSessionStub_();
-            const replServer = mkReplServer_();
 
             await initBrowser_({ session });
-            await switchToRepl_({ session, replServer });
+            await switchToRepl_({ session });
 
             assert.deepEqual(replServer.context.browser, session);
         });
 
         it("should not be able to overwrite browser instance in repl context", async () => {
             const session = mkSessionStub_();
-            const replServer = mkReplServer_();
 
             await initBrowser_({ session });
-            await switchToRepl_({ session, replServer });
+            await switchToRepl_({ session });
 
             try {
                 replServer.context.browser = "foo";
@@ -233,43 +236,43 @@ describe('"switchToRepl" command', () => {
 
         it("should add passed user context to repl server", async () => {
             const session = mkSessionStub_();
-            const replServer = mkReplServer_();
 
             await initBrowser_({ session });
-            await switchToRepl_({ session, replServer, ctx: { foo: "bar" } });
+            await switchToRepl_({ session, ctx: { foo: "bar" } });
 
             assert.equal(replServer.context.foo, "bar");
         });
 
         it("should not create new repl server if old one is already used", async () => {
-            const replServer = mkReplServer_();
             const session = mkSessionStub_();
 
             await initBrowser_({ session });
             const promise1 = session.switchToRepl();
+            await new Promise(resolve => setImmediate(resolve));
+
             const promise2 = session.switchToRepl();
+            await new Promise(resolve => setImmediate(resolve));
 
             replServer.emit("exit");
             await Promise.all([promise1, promise2]);
 
-            assert.calledOnce(repl.start as SinonStub);
+            assert.calledOnce(replStart);
             assert.calledOnceWith(warnStub, chalk.yellow("Testplane is already in REPL mode"));
         });
 
         ["const", "let"].forEach(decl => {
             describe(`"${decl}" declaration to var in order to reassign`, () => {
-                let replServer: REPLServer;
                 let onLine: SinonSpy;
 
                 beforeEach(async () => {
-                    replServer = mkReplServer_();
                     onLine = sandbox.spy();
                     replServer.on("line", onLine);
 
                     const session = mkSessionStub_();
 
                     await initBrowser_({ session });
-                    await switchToRepl_({ session, replServer });
+                    await switchToRepl_({ session });
+                    await new Promise(resolve => setImmediate(resolve));
                 });
 
                 describe("should modify", () => {
@@ -345,6 +348,8 @@ describe('"switchToRepl" command', () => {
                 await initBrowser_({ session });
                 await switchToRepl_({ session });
 
+                await new Promise(resolve => setImmediate(resolve));
+
                 netCreateServerCb(socket1);
                 netCreateServerCb(socket2);
                 socket1.emit("data", Buffer.from("o.O"));
@@ -374,10 +379,10 @@ describe('"switchToRepl" command', () => {
 
             it("should close net server on exit from repl", async () => {
                 const session = mkSessionStub_();
-                const replServer = mkReplServer_();
 
                 await initBrowser_({ session });
                 const promise = session.switchToRepl();
+                await new Promise(resolve => setImmediate(resolve));
                 replServer.emit("exit");
                 await promise;
 
@@ -388,15 +393,17 @@ describe('"switchToRepl" command', () => {
                 const socket1 = mkSocket_();
                 const socket2 = mkSocket_();
                 const session = mkSessionStub_();
-                const replServer = mkReplServer_();
 
                 await initBrowser_({ session });
                 const promise = session.switchToRepl();
+
+                await new Promise(resolve => setImmediate(resolve));
 
                 netCreateServerCb(socket1);
                 netCreateServerCb(socket2);
 
                 replServer.emit("exit");
+                await new Promise(resolve => setImmediate(resolve));
                 await promise;
 
                 assert.calledOnceWith(socket1.end, "The server was closed after the REPL was exited");

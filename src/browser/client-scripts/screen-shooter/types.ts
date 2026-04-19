@@ -9,6 +9,7 @@ export interface CaptureSpec<S extends Space, U extends Unit> {
 
 export interface CaptureState {
     scrollOffset: Coord<"page", "device", "y">;
+    viewportOffset: Point<"page", "device">;
     captureSpecs: CaptureSpec<"viewport", "device">[];
     ignoreAreas: Rect<"viewport", "device">[];
     safeArea: YBand<"viewport", "device">;
@@ -41,8 +42,6 @@ export interface PrepareScreenshotSuccess {
     // Area free of sticky elements, inside which it's safe to capture element that's interesting to us
     // Measured relative to browser viewport (not the whole page!)
     safeArea: YBand<"viewport", "device">;
-    // Current scroll position of the scroll element, if window is being used, this will always be 0
-    // scrollElementOffset: Point;
     // Boundaries of elements that we should ignore when comparing screenshots (these areas will be painted in black)
     ignoreAreas: Rect<"viewport", "device">[];
     // Element capture areas with full (unconstrained) and visible (clipped by ancestor overflow) rects
@@ -71,42 +70,6 @@ export type PrepareScreenshotResult = PrepareScreenshotSuccess | BrowserSideErro
 
 export interface ScrollToCaptureSpecResult {
     readableSelectorToScrollDescr?: string;
-}
-
-export interface ComputeCaptureSpecsResult {
-    captureSpecs: CaptureSpec<"viewport", "css">[];
-}
-
-export interface ComputeCaptureSpecResult {
-    captureArea: Rect<"viewport", "css">;
-}
-
-export interface ComputeIgnoreAreasResult {
-    ignoreAreas: Rect<"viewport", "css">[];
-}
-
-export interface ComputeSafeAreaResult {
-    safeArea: YBand<"viewport", "css">;
-}
-
-export interface ComputeDocumentSizeResult {
-    documentSize: Size<"css">;
-}
-
-export interface ComputeCanHaveCaretResult {
-    canHaveCaret: boolean;
-}
-
-export interface ComputePixelRatioResult {
-    pixelRatio: number;
-}
-
-export interface ComputeViewportSizeResult {
-    viewportSize: Size<"css">;
-}
-
-export interface ComputeViewportOffsetResult {
-    viewportOffset: Point<"page", "css">;
 }
 
 export type ElementPositionsProbe<U extends Unit> = Array<Rect<"viewport", U> | null>;
