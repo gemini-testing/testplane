@@ -118,6 +118,7 @@ export function scrollTo(
 ): ScrollResult {
     return safeCall((): ScrollResult => {
         const logger = createDebugLogger({ debug }, "scrollTo");
+        logger("Asked to scroll to with params: selectorsToCapture:", selectorsToCapture, "scrollOffset:", scrollOffset, "selectorToScroll:", selectorToScroll);
         const pixelRatio = computePixelRatio();
         const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);

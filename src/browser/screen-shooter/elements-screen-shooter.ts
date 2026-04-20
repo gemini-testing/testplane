@@ -27,7 +27,7 @@ import { isBrowserSideError } from "../isomorphic/types";
 import { CaptureAreaMovedError } from "./errors/capture-area-moved-error";
 import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
 
-const debug = makeDebug("testplane:screenshots:screen-shooter");
+const debug = makeDebug("testplane:screenshots:elements-screen-shooter");
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
@@ -547,21 +547,27 @@ export class ElementsScreenShooter {
         perfDebug(`Starting capture area stability validation.`);
         const startedAt = performance.now();
 
+        const enabledCaptureStateDebugTopics: string[] = [];
+        const browserCaptureStateDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
+        if (browserCaptureStateDebug.enabled) {
+            enabledCaptureStateDebugTopics.push("getCaptureState");
+        }
+
         const enabledScrollDebugTopics: string[] = [];
-        const browserScrollDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
+        const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollTo");
         if (browserScrollDebug.enabled) {
-            enabledScrollDebugTopics.push("getCaptureState");
+            enabledScrollDebugTopics.push("scrollTo");
         }
 
         const beforeCheckpointsValidationState = await this._browserSideScreenshooter.call("getCaptureState", [
             selectorsToCapture,
             selectorsToIgnore,
             opts.selectorToScroll,
-            enabledScrollDebugTopics,
+            enabledCaptureStateDebugTopics,
         ]);
         const beforeValidationDebugLog = beforeCheckpointsValidationState.debugLog;
         delete beforeCheckpointsValidationState.debugLog;
-        browserScrollDebug(beforeValidationDebugLog);
+        browserCaptureStateDebug(beforeValidationDebugLog);
 
         if (isBrowserSideError(beforeCheckpointsValidationState)) {
             throw new Error(
@@ -600,6 +606,7 @@ export class ElementsScreenShooter {
                 selectorsToCapture,
                 page.scrollOffset,
                 opts.selectorToScroll,
+                enabledScrollDebugTopics,
             ]);
 
             if (isBrowserSideError(restoreToInitialScrollOffsetResult)) {
@@ -701,11 +708,11 @@ export class ElementsScreenShooter {
                     selectorsToCapture,
                     beforeCheckpointsValidationState.scrollOffset,
                     opts.selectorToScroll,
-                    enabledScrollDebugTopics,
+                    enabledCaptureStateDebugTopics,
                 ]);
                 const restoreScrollDebugLog = restoreScrollResult.debugLog;
                 delete restoreScrollResult.debugLog;
-                browserScrollDebug(restoreScrollDebugLog);
+                browserCaptureStateDebug(restoreScrollDebugLog);
 
                 if (isBrowserSideError(restoreScrollResult)) {
                     restoreScrollPositionError = new Error(

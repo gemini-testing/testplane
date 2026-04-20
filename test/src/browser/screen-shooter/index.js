@@ -371,6 +371,7 @@ describe("ElementsScreenShooter", () => {
             const page = createMockPage();
             const state = createCaptureState({
                 captureSpecs: page.captureSpecs,
+                viewportOffset: page.viewportOffset,
                 ignoreAreas: page.ignoreAreas,
                 safeArea: page.safeArea,
             });
