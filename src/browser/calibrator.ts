@@ -7,6 +7,9 @@ import type { Image } from "../image";
 import { Coord, Length, Rect, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
 import * as logger from "../utils/logger";
 import os from "node:os";
+import makeDebug from "debug";
+
+const debug = makeDebug("testplane:screenshots:calibrator");
 
 interface BrowserFeatures {
     needsCompatLib: boolean;
@@ -33,8 +36,11 @@ export class Calibrator {
             return this._cache[browser.id];
         }
 
+        debug("calibrating browser %s", browser.id);
+
         await browser.open("about:blank");
         const features = await browser.evalScript<BrowserFeatures>(this._script);
+        debug("features: %O", features);
         const image = await browser.captureViewportImage();
 
         const { innerWidth, pixelRatio } = features;
