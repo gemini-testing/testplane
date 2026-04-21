@@ -20,6 +20,7 @@ import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
+import { WSDriverRequestAgent } from "./wsdriver";
 import type { ElementReference } from "@testplane/wdio-protocols";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
@@ -91,6 +92,7 @@ export class ExistingBrowser extends Browser {
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
     protected _cdp: CDP | null = null;
+    protected _wsDriver: WSDriverRequestAgent | null = null;
     protected _tags: Set<string> = new Set();
 
     constructor(config: Config, opts: BrowserOpts) {
@@ -162,6 +164,7 @@ export class ExistingBrowser extends Browser {
 
     quit(): void {
         this._cdp?.close();
+        this._wsDriver?.close();
         this._meta = this._initMeta();
     }
 
@@ -273,6 +276,21 @@ export class ExistingBrowser extends Browser {
             capabilities: { ...sessionOpts.capabilities, ...sessionCaps },
             requestedCapabilities: sessionOpts.capabilities,
         };
+
+        if (this._config.useWsDriver && sessionCaps && sessionCaps["se:wsdriver"]) {
+            const supportsWsDriverV1 = sessionCaps["se:wsdriverVersion"]?.split(", ").includes("1");
+
+            if (supportsWsDriverV1) {
+                this._wsDriver = WSDriverRequestAgent.create({
+                    sessionId,
+                    sessionCaps: sessionCaps as WebdriverIO.Capabilities,
+                    headers: sessionOpts.headers as Record<string, string>,
+                    browserConfig: this._config,
+                });
+
+                opts.customWdRequestAgent = this._wsDriver;
+            }
+        }
 
         return attach(opts);
     }
