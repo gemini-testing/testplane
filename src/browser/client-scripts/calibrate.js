@@ -1,6 +1,6 @@
 (function (window) {
     "use strict";
-    
+
     // HACK: ie8 does not need to reset the body border,
     // while any other browser does.
     // This hack is obsolete in standards mode, but
@@ -12,7 +12,7 @@
     function needsResetBorder() {
         return !/MSIE 8\.0/.test(navigator.userAgent);
     }
-    
+
     function resetZoom() {
         var meta = document.createElement("meta");
         meta.name = "viewport";

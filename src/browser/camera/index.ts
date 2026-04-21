@@ -32,6 +32,7 @@ export class Camera {
     private _screenshotMode: ScreenshotMode;
     private _takeScreenshot: () => Promise<string>;
     private _calibratedArea: Rect<"image", "device"> | null;
+    private _calibrationScreenshotSize: Size<"device"> | null;
     private _debugTmpDir: string | null = null;
 
     static create(screenshotMode: ScreenshotMode, takeScreenshot: () => Promise<string>): Camera {
@@ -42,6 +43,7 @@ export class Camera {
         this._screenshotMode = screenshotMode;
         this._takeScreenshot = takeScreenshot;
         this._calibratedArea = null;
+        this._calibrationScreenshotSize = null;
 
         if (process.env.TESTPLANE_DEBUG_SCREENSHOTS) {
             this._debugTmpDir = path.join(
@@ -52,9 +54,10 @@ export class Camera {
         }
     }
 
-    calibrate(calibratedArea: Rect<"image", "device">): void {
-        debug("Setting calibrated area: %O", calibratedArea);
+    calibrate(calibratedArea: Rect<"image", "device">, screenshotSize: Size<"device">): void {
+        debug("Setting calibrated area: %O for screenshot size: %O", calibratedArea, screenshotSize ?? null);
         this._calibratedArea = calibratedArea;
+        this._calibrationScreenshotSize = screenshotSize;
     }
 
     async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<Image> {
@@ -73,10 +76,15 @@ export class Camera {
             height,
         };
 
-        const calibratedArea = this._cropAreaToCalibratedArea(imageArea);
+        const shouldApplyCalibration =
+            this._calibrationScreenshotSize !== null &&
+            (this._calibrationScreenshotSize.width === width && this._calibrationScreenshotSize.height === height);
+        const calibrationArea = shouldApplyCalibration ? this._calibratedArea : null;
 
-        const viewportCroppedArea = this._cropAreaToViewport(calibratedArea, { width, height }, opts);
-        await utils.saveViewportImageForDebugIfNeeded(image, calibratedArea, this._debugTmpDir);
+        const calibratedImageArea = this._cropAreaToCalibratedArea(imageArea, calibrationArea);
+
+        const viewportCroppedArea = this._cropAreaToViewport(calibratedImageArea, { width, height }, calibrationArea, opts);
+        await utils.saveViewportImageForDebugIfNeeded(image, calibratedImageArea, this._debugTmpDir);
 
         if (viewportCroppedArea.width !== width || viewportCroppedArea.height !== height) {
             await image.crop(viewportCroppedArea);
@@ -85,18 +93,19 @@ export class Camera {
         return image;
     }
 
-    private _cropAreaToCalibratedArea(imageArea: Rect<"image", "device">): Rect<"image", "device"> {
-        if (!this._calibratedArea) {
+    private _cropAreaToCalibratedArea(
+        imageArea: Rect<"image", "device">,
+        calibrationArea: Rect<"image", "device"> | null,
+    ): Rect<"image", "device"> {
+        if (!calibrationArea) {
             return imageArea;
         }
 
-        const intersection = getIntersection(imageArea, this._calibratedArea);
+        const intersection = getIntersection(imageArea, calibrationArea);
         if (intersection === null) {
             logger.warn(
                 `No intersection found between image area and calibrated viewport area, falling back to original image area.\n` +
-                    `imageArea: ${prettyRect(imageArea)}, calibratedViewportArea: ${prettyRect(
-                        this._calibratedArea,
-                    )}\n` +
+                    `imageArea: ${prettyRect(imageArea)}, calibratedViewportArea: ${prettyRect(calibrationArea)}\n` +
                     `This likely means Testplane incorrectly determined area free of system UI elements. You can let us know at ${NEW_ISSUE_LINK}, providing this log and browser used.`,
             );
 
@@ -112,6 +121,7 @@ export class Camera {
     private _cropAreaToViewport(
         imageAreaToCrop: Rect<"image", "device">,
         originalImageSize: Size<"device">,
+        calibrationArea: Rect<"image", "device"> | null,
         opts?: CaptureViewportImageOpts,
     ): Rect<"image", "device"> {
         if (!opts?.viewportSize || !opts?.viewportOffset) {
@@ -121,7 +131,7 @@ export class Camera {
         const isFullPage = utils.isFullPage(
             imageAreaToCrop,
             originalImageSize,
-            this._calibratedArea ?? imageAreaToCrop,
+            calibrationArea ?? imageAreaToCrop,
             this._screenshotMode,
         );
         const cropArea = { ...opts.viewportSize, ...opts.viewportOffset };

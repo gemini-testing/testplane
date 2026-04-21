@@ -464,7 +464,7 @@ export class ExistingBrowser extends Browser {
 
         return calibrator.calibrate(this).then(calibration => {
             this._calibration = calibration;
-            this._camera.calibrate(calibration.viewportArea);
+            this._camera.calibrate(calibration.viewportArea, calibration.screenshotSize);
         });
     }
 

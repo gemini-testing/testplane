@@ -4,7 +4,7 @@ import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
 import type { Image } from "../image";
-import { Coord, Length, Rect, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
+import { Coord, Length, Rect, Size, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
 import * as logger from "../utils/logger";
 import os from "node:os";
 import makeDebug from "debug";
@@ -19,6 +19,7 @@ interface BrowserFeatures {
 
 export interface CalibrationResult extends BrowserFeatures {
     viewportArea: Rect<"image", "device">;
+    screenshotSize: Size<"device">;
     usePixelRatio: boolean;
 }
 
@@ -45,6 +46,7 @@ export class Calibrator {
 
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
+        const screenshotSize = (await image.getSize()) as Size<"device">;
         const imageFeatures = await this._findMarkerAreaInImage(image);
 
         if (!imageFeatures) {
@@ -63,6 +65,7 @@ export class Calibrator {
         const calibratedFeatures: CalibrationResult = {
             ...features,
             viewportArea: imageFeatures,
+            screenshotSize,
             usePixelRatio: hasPixelRatio && imageFeatures.width > innerWidth,
         };
 

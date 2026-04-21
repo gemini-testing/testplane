@@ -731,12 +731,12 @@ describe("ExistingBrowser", () => {
             it("should perform calibration if `calibrate` is turn on", async () => {
                 calibrator.calibrate
                     .withArgs(sinon.match.instanceOf(ExistingBrowser))
-                    .resolves({ viewportArea: { foo: "bar" } });
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
 
-                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" });
+                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" }, { width: 100, height: 200 });
             });
 
             it("should not perform calibration if `calibrate` is turn off", async () => {
@@ -750,7 +750,7 @@ describe("ExistingBrowser", () => {
             it("should perform calibration after attaching of a session", async () => {
                 calibrator.calibrate
                     .withArgs(sinon.match.instanceOf(ExistingBrowser))
-                    .resolves({ viewportArea: { foo: "bar" } });
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
@@ -762,7 +762,11 @@ describe("ExistingBrowser", () => {
 
         it("should initialize browser side utils", async () => {
             const calibrator = sinon.createStubInstance(Calibrator);
-            calibrator.calibrate.resolves({ needsCompatLib: true, viewportArea: { foo: "bar" } });
+            calibrator.calibrate.resolves({
+                needsCompatLib: true,
+                viewportArea: { foo: "bar" },
+                screenshotSize: { width: 100, height: 200 },
+            });
             const browser = mkBrowser_({ calibrate: true });
 
             await initBrowser_(browser, {}, calibrator);
