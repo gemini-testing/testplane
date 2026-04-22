@@ -47,6 +47,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 css: ["src/styles.css", "src/theme.css"],
                 js: ["src/app.js", "src/utils.js"],
                 modules: ["node_modules/react", "node_modules/lodash"],
+                png: [],
             };
 
             fileHashProviderMock.calculateForFile.returns(Promise.resolve("hash123"));
@@ -61,12 +62,30 @@ describe("CDP/Selectivity/HashWriter", () => {
             assert.calledWith(fileHashProviderMock.calculateForFile, "node_modules/lodash/package.json");
         });
 
+        it("should add png dependencies as file dependencies", () => {
+            const writer = new HashWriter("/test/selectivity", "none");
+            const dependencies = {
+                css: [],
+                js: [],
+                modules: [],
+                png: ["screenshots/ref1.png", "screenshots/ref2.png"],
+            };
+
+            fileHashProviderMock.calculateForFile.returns(Promise.resolve("hash123"));
+
+            writer.addTestDependencyHashes(dependencies);
+
+            assert.calledWith(fileHashProviderMock.calculateForFile, "screenshots/ref1.png");
+            assert.calledWith(fileHashProviderMock.calculateForFile, "screenshots/ref2.png");
+        });
+
         it("should not add duplicate dependencies", () => {
             const writer = new HashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
+                png: [],
             };
 
             fileHashProviderMock.calculateForFile.returns(Promise.resolve("hash123"));
@@ -85,6 +104,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 css: [],
                 js: [],
                 modules: [],
+                png: [],
             };
 
             fileHashProviderMock.calculateForFile.returns(Promise.resolve("hash123"));
@@ -109,7 +129,7 @@ describe("CDP/Selectivity/HashWriter", () => {
             const writer = new HashWriter("/test/selectivity", "none");
 
             readHashFileContentsStub.resolves(defaultValue);
-            writer.addTestDependencyHashes({ css: [], js: [], modules: [] });
+            writer.addTestDependencyHashes({ css: [], js: [], modules: [], png: [] });
 
             await writer.save();
 
@@ -123,6 +143,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
+                png: [],
             };
 
             readHashFileContentsStub.resolves(defaultValue);
@@ -156,6 +177,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 css: ["src/styles.css"],
                 js: [],
                 modules: [],
+                png: [],
             };
 
             const error = new Error("File not found");
@@ -167,12 +189,38 @@ describe("CDP/Selectivity/HashWriter", () => {
             await assert.isRejected(writer.save(), "File not found");
         });
 
+        it("should save png dependency hashes to files section", async () => {
+            const defaultValue = { files: {}, modules: {}, patterns: {} };
+            const writer = new HashWriter("/test/selectivity", "none");
+            const dependencies = {
+                css: [],
+                js: [],
+                modules: [],
+                png: ["screenshots/ref.png"],
+            };
+
+            readHashFileContentsStub.resolves(defaultValue);
+            fileHashProviderMock.calculateForFile.withArgs("screenshots/ref.png").resolves("png-hash");
+
+            writer.addTestDependencyHashes(dependencies);
+            await writer.save();
+
+            assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
+                files: {
+                    "screenshots/ref.png": "png-hash",
+                },
+                modules: {},
+                patterns: {},
+            });
+        });
+
         it("should not readHashFileContents when readExisting is false", async () => {
             const writer = new HashWriter("/test/selectivity", "none");
             const dependencies = {
                 css: ["src/styles.css"],
                 js: [],
                 modules: [],
+                png: [],
             };
 
             fileHashProviderMock.calculateForFile.withArgs("src/styles.css").resolves("css-hash");
@@ -194,6 +242,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
+                png: [],
             };
 
             readHashFileContentsStub.resolves(existingContents);

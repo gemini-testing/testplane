@@ -55,9 +55,10 @@ export class HashWriter {
     }
 
     addTestDependencyHashes(dependencies: NormalizedDependencies): void {
-        dependencies.css.forEach(dependency => this._addFileDependency(dependency));
-        dependencies.js.forEach(dependency => this._addFileDependency(dependency));
-        dependencies.modules.forEach(dependency => this._addModuleDependency(dependency));
+        dependencies.css?.forEach(dependency => this._addFileDependency(dependency));
+        dependencies.js?.forEach(dependency => this._addFileDependency(dependency));
+        dependencies.png?.forEach(dependency => this._addFileDependency(dependency));
+        dependencies.modules?.forEach(dependency => this._addModuleDependency(dependency));
     }
 
     async save(readExisting?: boolean): Promise<void> {

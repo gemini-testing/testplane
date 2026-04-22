@@ -100,10 +100,10 @@ describe("CDP/Selectivity/MergeDumps/MergeTests", () => {
             .resolves(["test1.json.gz"]);
 
         const content1: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: ["react"] } },
+            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: ["react"], png: [] } },
         };
         const content2: TestDependenciesFileContents = {
-            firefox: { browser: { css: ["b.css"], js: ["b.js"], modules: ["vue"] } },
+            firefox: { browser: { css: ["b.css"], js: ["b.js"], modules: ["vue"], png: [] } },
         };
 
         readJsonWithCompressionStub.onFirstCall().resolves(content1).onSecondCall().resolves(content2);
@@ -123,10 +123,10 @@ describe("CDP/Selectivity/MergeDumps/MergeTests", () => {
             .resolves(["test1.json"]);
 
         const content1: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["a.css"], js: [], modules: [] } },
+            chrome: { browser: { css: ["a.css"], js: [], modules: [], png: [] } },
         };
         const content2: TestDependenciesFileContents = {
-            firefox: { browser: { css: ["b.css"], js: [], modules: [] } },
+            firefox: { browser: { css: ["b.css"], js: [], modules: [], png: [] } },
         };
 
         readJsonWithCompressionStub.onFirstCall().resolves(content1).onSecondCall().resolves(content2);
@@ -146,10 +146,10 @@ describe("CDP/Selectivity/MergeDumps/MergeTests", () => {
             .resolves(["test1.json"]);
 
         const content1: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: [] } },
+            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: [], png: [] } },
         };
         const content2: TestDependenciesFileContents = {
-            chrome: { testplane: { css: ["b.css"], js: ["b.js"], modules: [] } },
+            chrome: { testplane: { css: ["b.css"], js: ["b.js"], modules: [], png: [] } },
         };
 
         readJsonWithCompressionStub.onFirstCall().resolves(content1).onSecondCall().resolves(content2);
@@ -170,10 +170,10 @@ describe("CDP/Selectivity/MergeDumps/MergeTests", () => {
             .resolves(["test1.json"]);
 
         const content1: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["common.css", "a.css"], js: ["common.js"], modules: ["react"] } },
+            chrome: { browser: { css: ["common.css", "a.css"], js: ["common.js"], modules: ["react"], png: [] } },
         };
         const content2: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["common.css", "b.css"], js: ["common.js"], modules: ["react"] } },
+            chrome: { browser: { css: ["common.css", "b.css"], js: ["common.js"], modules: ["react"], png: [] } },
         };
 
         readJsonWithCompressionStub.onFirstCall().resolves(content1).onSecondCall().resolves(content2);
@@ -194,10 +194,10 @@ describe("CDP/Selectivity/MergeDumps/MergeTests", () => {
             .resolves(["test1.json"]);
 
         const content1: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["z.css"], js: ["z.js"], modules: ["vue"] } },
+            chrome: { browser: { css: ["z.css"], js: ["z.js"], modules: ["vue"], png: [] } },
         };
         const content2: TestDependenciesFileContents = {
-            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: ["axios"] } },
+            chrome: { browser: { css: ["a.css"], js: ["a.js"], modules: ["axios"], png: [] } },
         };
 
         readJsonWithCompressionStub.onFirstCall().resolves(content1).onSecondCall().resolves(content2);

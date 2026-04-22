@@ -7,7 +7,7 @@ import type { NormalizedDependencies, SelectivityCompressionType } from "./types
 import { writeJsonWithCompression } from "./json-utils";
 
 const areDepsSame = (browserDepsA?: NormalizedDependencies, browserDepsB?: NormalizedDependencies): boolean => {
-    const props: Array<keyof NormalizedDependencies> = ["js", "css", "modules"] as const;
+    const props: Array<keyof NormalizedDependencies> = ["js", "css", "modules", "png"] as const;
 
     if (!browserDepsA || !browserDepsB) {
         return false;

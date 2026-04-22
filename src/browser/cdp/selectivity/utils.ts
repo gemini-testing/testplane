@@ -213,19 +213,24 @@ const warnUnsupportedProtocol = memoize((protocol: string, dependency: string): 
 });
 
 /**
- * @param cssDependencies set of css dependenciy URI's
- * @param jsDependencies set of js dependenciy URI's
+ * @param dependencies.css set of css dependency URI's
+ * @param dependencies.js set of js dependency URI's
+ * @param dependencies.png set of png dependency URI's
  * @returns sorted uniq arrays of relative paths
  */
 export const transformSourceDependencies = (
-    cssDependencies: Set<string> | null,
-    jsDependencies: Set<string> | null,
+    {
+        css: cssDependencies,
+        js: jsDependencies,
+        png: pngDependencies,
+    }: { css: Set<string> | null; js: Set<string> | null; png: Set<string> | null },
     mapDependencyPathFn?: null | ((relativePath: string) => string | void),
 ): NormalizedDependencies => {
     const nodeModulesLabel = "node_modules/";
     const cssSet: Set<string> = new Set();
     const jsSet: Set<string> = new Set();
     const modulesSet: Set<string> = new Set();
+    const pngSet: Set<string> = new Set();
 
     const classifyDependency = (dependency: string, typedResultSet: Set<string>): void => {
         dependency = decodeURIComponent(softFileURLToPath(dependency));
@@ -291,12 +296,19 @@ export const transformSourceDependencies = (
         }
     }
 
+    if (pngDependencies) {
+        for (const pngDependency of pngDependencies.values()) {
+            classifyDependency(pngDependency, pngSet);
+        }
+    }
+
     const cmpStr = (a: string, b: string): number => a.localeCompare(b);
 
     return {
         css: Array.from(cssSet).sort(cmpStr),
         js: Array.from(jsSet).sort(cmpStr),
         modules: Array.from(modulesSet).sort(cmpStr),
+        png: Array.from(pngSet).sort(cmpStr),
     };
 };
 
@@ -305,11 +317,25 @@ export const mergeSourceDependencies = (
     a: NormalizedDependencies,
     b: NormalizedDependencies,
 ): NormalizedDependencies => {
-    const result: NormalizedDependencies = { css: [], js: [], modules: [] };
+    const result: NormalizedDependencies = { css: [], js: [], modules: [], png: [] };
 
     for (const depType of Object.keys(result) as Array<keyof NormalizedDependencies>) {
         let aInd = 0,
             bInd = 0;
+
+        if (!a[depType]) {
+            if (!b[depType]) {
+                continue;
+            }
+
+            result[depType] = b[depType];
+
+            continue;
+        } else if (!b[depType]) {
+            result[depType] = a[depType];
+
+            continue;
+        }
 
         while (aInd < a[depType].length || bInd < b[depType].length) {
             let compareResult;
@@ -392,13 +418,30 @@ export const getTestDependenciesPath = (selectivityTestsPath: string, test: Test
     path.join(selectivityTestsPath, `${getTestSelectivityDumpId(test)}.json`);
 
 /** @returns `Promise<Record<BrowserID, Record<DepType, NormalizedDependencies>>>` */
-export const readTestDependencies = (
+export const readTestDependencies = async (
     selectivityTestsPath: string,
     test: Test,
     compression: SelectivityCompressionType,
-): Promise<TestDependenciesFileContents> =>
-    readJsonWithCompression(getTestDependenciesPath(selectivityTestsPath, test), compression, {
+): Promise<TestDependenciesFileContents> => {
+    const result = (await readJsonWithCompression(getTestDependenciesPath(selectivityTestsPath, test), compression, {
         defaultValue: {},
-    }).catch(() => ({}));
+    }).catch(() => ({}))) as Record<
+        string,
+        Record<string, Partial<NormalizedDependencies> & Pick<NormalizedDependencies, "css" | "js" | "modules" | "png">>
+    >;
+
+    for (const browserId in result) {
+        for (const depType in result[browserId]) {
+            const currentDeps = result[browserId][depType];
+
+            currentDeps.css ||= [];
+            currentDeps.js ||= [];
+            currentDeps.modules ||= [];
+            currentDeps.png ||= [];
+        }
+    }
+
+    return result;
+};
 
 export const isCachedOnFs = (value: unknown): value is CachedOnFs => value === true;
