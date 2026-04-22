@@ -103,6 +103,84 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
     });
 
+    describe("ignoreSourceMapUrls", () => {
+        it("should skip source map fetching for scripts matching ignore patterns", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, [
+                "https://cdn.example.com/**",
+            ]);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+            scriptParsedHandler(
+                {
+                    scriptId: "script-cdn",
+                    url: "https://cdn.example.com/lib/bundle.js",
+                    sourceMapURL: "bundle.js.map",
+                },
+                sessionId,
+            );
+
+            assert.notCalled(cdpMock.debugger.getScriptSource);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+
+        it("should still fetch source maps for scripts not matching ignore patterns", async () => {
+            const hasCachedResult = Promise.resolve(false);
+            hasCachedSelectivityFileStub.returns(hasCachedResult);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, [
+                "https://cdn.example.com/**",
+            ]);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+            scriptParsedHandler(
+                {
+                    scriptId: "script-own",
+                    url: "https://my-app.example.com/app.js",
+                    sourceMapURL: "app.js.map",
+                },
+                sessionId,
+            );
+
+            await hasCachedResult;
+
+            assert.calledOnce(cdpMock.debugger.getScriptSource);
+        });
+
+        it("should skip source map fetching in _ensureScriptsAreLoading for ignored URLs", async () => {
+            cdpMock.profiler.takePreciseCoverage.resolves({
+                timestamp: 100500,
+                result: [
+                    {
+                        scriptId: "script-cdn",
+                        url: "https://cdn.example.com/lib/bundle.js",
+                        functions: [
+                            {
+                                functionName: "foo",
+                                isBlockCoverage: false,
+                                ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                            },
+                        ],
+                    },
+                ],
+            });
+
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, [
+                "https://cdn.example.com/**",
+            ]);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+
+            assert.notCalled(cdpMock.debugger.getScriptSource);
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+        });
+    });
+
     describe("start", () => {
         it("should set up CDP connections and start coverage", async () => {
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);

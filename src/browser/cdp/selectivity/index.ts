@@ -135,7 +135,7 @@ const testplaneCoverageBreakScriptName = "__testplane_cdp_coverage_snapshot_paus
 const scriptToEvaluateOnNewDocument = `window.addEventListener("beforeunload", function ${testplaneCoverageBreakScriptName}() {debugger;});`;
 
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
-    const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath } =
+    const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath, ignoreSourceMapUrls } =
         browser.config.selectivity;
 
     if (!selectivityShouldWrite(enabled) || !browser.publicAPI.isChromium) {
@@ -169,8 +169,8 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
 
     const sessionId = await cdp.target.attachToTarget(cdpTargetId).then(r => r.sessionId);
 
-    const cssSelectivity = new CSSSelectivity(cdp, sessionId, sourceRoot);
-    const jsSelectivity = new JSSelectivity(cdp, sessionId, sourceRoot);
+    const cssSelectivity = new CSSSelectivity(cdp, sessionId, sourceRoot, ignoreSourceMapUrls);
+    const jsSelectivity = new JSSelectivity(cdp, sessionId, sourceRoot, ignoreSourceMapUrls);
 
     await Promise.all([
         cdp.dom.enable(sessionId).then(() => cdp.css.enable(sessionId)),

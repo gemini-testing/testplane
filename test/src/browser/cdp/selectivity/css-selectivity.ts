@@ -139,6 +139,47 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
     });
 
+    describe("ignoreSourceMapUrls", () => {
+        it("should skip source map fetching for stylesheets matching ignore patterns", async () => {
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, [
+                "https://cdn.example.com/**",
+            ]);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+
+            styleSheetAddedHandler(
+                {
+                    header: {
+                        ...styleSheetEvent.header,
+                        sourceURL: "https://cdn.example.com/styles/theme.css",
+                        sourceMapURL: "theme.css.map",
+                    },
+                },
+                sessionId,
+            );
+
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+            assert.notCalled(hasCachedSelectivityFileStub);
+        });
+
+        it("should still fetch source maps for stylesheets not matching ignore patterns", async () => {
+            hasCachedSelectivityFileStub.resolves(false);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, [
+                "https://cdn.example.com/**",
+            ]);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            assert.called(hasCachedSelectivityFileStub);
+        });
+    });
+
     describe("start", () => {
         it("should set up CDP connections and start rule usage tracking", async () => {
             const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
