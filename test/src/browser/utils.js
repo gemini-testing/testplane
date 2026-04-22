@@ -122,6 +122,7 @@ const mkSessionStub_ = () => {
         selector: ".selector",
         click: sinon.stub().named("click").resolves(),
         waitForExist: sinon.stub().named("waitForExist").resolves(),
+        waitForDisplayed: sinon.stub().named("waitForDisplayed").resolves(),
     };
 
     session.sessionId = "1234567890";
