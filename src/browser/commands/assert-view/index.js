@@ -163,15 +163,15 @@ module.exports.default = browser => {
         testplaneCtx.assertViewResults.add({ stateName: state, refImg: refImg });
     };
 
-    const waitSelectorsForExist = async (browser, selectors) => {
+    const waitSelectorsForDisplayed = async (browser, selectors) => {
         await Promise.all(
             [].concat(selectors).map(selector =>
                 browser
                     .$(selector)
-                    .then(el => el.waitForExist())
+                    .then(el => el.waitForDisplayed())
                     .catch(() => {
                         throw new Error(
-                            `element ("${selector}") still not existing after ${browser.options.waitforTimeout} ms`,
+                            `element ("${selector}") still not displayed after ${browser.options.waitforTimeout} ms`,
                         );
                     }),
             ),
@@ -179,7 +179,7 @@ module.exports.default = browser => {
     };
 
     const assertViewBySelector = async (browser, state, selectors, opts) => {
-        await waitSelectorsForExist(browser, selectors);
+        await waitSelectorsForDisplayed(browser, selectors);
 
         return assertView(state, selectors, opts);
     };
@@ -207,9 +207,9 @@ module.exports.default = browser => {
     session.addCommand(
         "assertView",
         async function (state, opts = {}) {
-            await this.waitForExist({ timeoutMsg: "custom timeout msg" }).catch(() => {
+            await this.waitForDisplayed({ timeoutMsg: "custom timeout msg" }).catch(() => {
                 throw new Error(
-                    `element ("${this.selector}") still not existing after ${this.options.waitforTimeout} ms`,
+                    `element ("${this.selector}") still not displayed after ${this.options.waitforTimeout} ms`,
                 );
             });
 
