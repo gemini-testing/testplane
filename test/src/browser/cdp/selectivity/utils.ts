@@ -562,6 +562,32 @@ describe("CDP/Selectivity/Utils", () => {
             const result = utils.transformSourceDependencies({ css: null, js: null, png: pngDeps });
 
             assert.deepEqual(result.png, ["screenshots/ref1.png", "screenshots/ref2.png"]);
+        });
+
+        it("should use original path when mapDependencyPathFn returns true", () => {
+            const mapFn = sinon.stub().returns(true);
+
+            const cssDeps = new Set<string>();
+            const jsDeps = new Set<string>(["src/app.js"]);
+
+            fsStub.existsSync.returns(true);
+
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
+
+            assert.calledOnce(mapFn);
+            assert.deepEqual(result.js, ["src/app.js"]);
+        });
+
+        it("should filter out dependencies when mapDependencyPathFn returns false", () => {
+            const mapFn = sinon.stub().returns(false);
+
+            const cssDeps = new Set(["src/styles.css"]);
+            const jsDeps = new Set(["src/app.js"]);
+
+            fsStub.existsSync.returns(true);
+
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
+
             assert.deepEqual(result.css, []);
             assert.deepEqual(result.js, []);
         });

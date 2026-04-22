@@ -310,12 +310,25 @@ export type StateOpts = {
  * @param {Object} dependency - Object with dependency scope and posix relative path
  * @param {"browser"|"testplane"|string} dependency.scope - Dependency scope
  * @param {string} dependency.relativePath - POSIX relative path
- * @returns {string|void} Updated POSIX relative path or falsy value, if dependency should be ignored.
+ * @returns mapped POSIX relative path, "true", if should be untouched, or "falsy", if should be ignored
  */
-type SelectivityMapDependencyRelativePathFn = (dependency: {
+export type SelectivityMapDependencyRelativePathFn = (dependency: {
     scope: "browser" | "testplane" | (string & NonNullable<unknown>);
     relativePath: string;
-}) => string | void;
+}) => string | boolean | void;
+
+/**
+ * @param {Object} assetInfo - Object with dependency asset info
+ * @param {"css"|"js"|string} assetInfo.type - Dependency type
+ * @param {string} assetInfo.sourceUrl - dependency absolute source url
+ * @param {string} assetInfo.sourceMapUrl - dependency absolute source map url
+ * @returns mapped source map url, "true", if should be untouched, or "falsy", if should be ignored
+ */
+export type SelectivityMapSourceMapUrlFn = (assetInfo: {
+    type: "css" | "js" | (string & NonNullable<unknown>);
+    sourceUrl: string;
+    sourceMapUrl: string;
+}) => string | boolean | void;
 
 export interface CommonConfig {
     configPath?: string;
@@ -411,6 +424,7 @@ export interface CommonConfig {
         compression: SelectivityCompressionType;
         disableSelectivityPatterns: string[];
         mapDependencyRelativePath: null | SelectivityMapDependencyRelativePathFn;
+        mapSourceMapUrl: null | SelectivityMapSourceMapUrlFn;
         reportPath: string;
     };
 

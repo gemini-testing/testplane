@@ -89,23 +89,9 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         sandbox.restore();
     });
 
-    describe("constructor", () => {
-        it("should initialize with correct parameters", () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
-
-            assert.isOk(jsSelectivity);
-        });
-
-        it("should initialize with default sourceRoot", () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId);
-
-            assert.isOk(jsSelectivity);
-        });
-    });
-
     describe("start", () => {
         it("should set up CDP connections and start coverage", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
 
@@ -118,7 +104,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should handle scriptParsed events when there is no cache", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
             const hasCachedSelectivityFileStubResult = Promise.resolve(false);
             const fetchTextWithBrowserFallbackStubResult = Promise.resolve("src");
             hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
@@ -145,7 +131,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should handle scriptParsed events when there is cache", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
             const hasCachedSelectivityFileStubResult = Promise.resolve(true);
             const getCachedSelectivityFileStubResult = Promise.resolve("src");
             hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
@@ -173,7 +159,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should handle scriptParsed events for inline source maps", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
             const hasCachedSelectivityFileStubResult = Promise.resolve(true);
             const getCachedSelectivityFileStubResult = Promise.resolve("src");
             hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
@@ -199,7 +185,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should handle scriptParsed events without URL or sourceMapURL", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
 
@@ -220,7 +206,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
     describe("takeCoverageSnapshot", () => {
         it("should call takePreciseCoverage with sessionId", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
             await jsSelectivity.takeCoverageSnapshot();
@@ -249,7 +235,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 scriptSource: "mock source\n//# sourceMappingURL=bundle.js.map",
             });
 
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
             await jsSelectivity.takeCoverageSnapshot();
@@ -275,7 +261,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
                 ],
             });
 
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
 
@@ -332,7 +318,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             });
             extractSourceFilesDepsStub.returns(new Set(["src/app.js"]));
 
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
             await jsSelectivity.takeCoverageSnapshot();
@@ -346,7 +332,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
     describe("stop", () => {
         it("should return empty array when drop is true", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             await jsSelectivity.start();
             const result = await jsSelectivity.stop(true);
@@ -356,7 +342,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should process coverage and return dependencies", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -401,7 +387,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should handle scripts without URL", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -441,7 +427,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         });
 
         it("should not rely on profiler.takePreciseCoverage provided URL", async () => {
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -491,7 +477,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         it("should pull sources from from fs-cache", async () => {
             hasCachedSelectivityFileStub.resolves(true);
             getCachedSelectivityFileStub.resolves("source-map");
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -528,7 +514,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         it("should handle missing scriptParsed events by fetching source manually", async () => {
             hasCachedSelectivityFileStub.resolves(false);
             getCachedSelectivityFileStub.resolves(null);
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -565,7 +551,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         it("should handle source fetch errors", async () => {
             hasCachedSelectivityFileStub.resolves(false);
             getCachedSelectivityFileStub.resolves(null);
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -599,7 +585,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
         it("should handle source map fetch errors", async () => {
             hasCachedSelectivityFileStub.resolves(false);
             getCachedSelectivityFileStub.resolves(null);
-            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot);
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
             const mockCoverage = {
                 timestamp: 100500,
@@ -631,6 +617,273 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             await jsSelectivity.start();
 
             await assert.isRejected(jsSelectivity.stop(), "JS Selectivity: Couldn't load source maps from app.js.map");
+        });
+    });
+
+    describe("mapSourceMapUrl", () => {
+        describe("scriptParsed event", () => {
+            it("should skip script when mapSourceMapUrl returns falsy", async () => {
+                const mapSourceMapUrl = sinon.stub().returns(false);
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                await jsSelectivity.start();
+
+                const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+                scriptParsedHandler(
+                    { scriptId: "script-123", url: "http://example.com/app.js", sourceMapURL: "app.js.map" },
+                    sessionId,
+                );
+
+                assert.calledOnceWith(mapSourceMapUrl, {
+                    type: "js",
+                    sourceUrl: "http://example.com/app.js",
+                    sourceMapUrl: "app.js.map",
+                });
+                assert.notCalled(cdpMock.debugger.getScriptSource);
+                assert.notCalled(fetchTextWithBrowserFallbackStub);
+            });
+
+            it("should mark script as processed when filtered so 'getScriptSource' will not be called", async () => {
+                const mapSourceMapUrl = sinon.stub().returns(false);
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                await jsSelectivity.start();
+
+                const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+                scriptParsedHandler(
+                    { scriptId: "script-123", url: "http://example.com/app.js", sourceMapURL: "app.js.map" },
+                    sessionId,
+                );
+
+                // Coverage refers to the same script that was filtered
+                cdpMock.profiler.takePreciseCoverage.resolves({
+                    timestamp: 100500,
+                    result: [
+                        {
+                            scriptId: "script-123",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "foo",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+
+                await jsSelectivity.takeCoverageSnapshot();
+
+                assert.notCalled(cdpMock.debugger.getScriptSource);
+            });
+
+            it("should replace source map URL when mapSourceMapUrl returns a string", async () => {
+                const mapSourceMapUrl = sinon.stub().returns("http://cdn.example.com/remapped-app.js.map");
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+                const fetchTextWithBrowserFallbackStubResult = Promise.resolve("source map");
+                hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+                fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
+
+                await jsSelectivity.start();
+
+                const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+                scriptParsedHandler(
+                    { scriptId: "script-123", url: "http://example.com/app.js", sourceMapURL: "app.js.map" },
+                    sessionId,
+                );
+
+                await hasCachedSelectivityFileStubResult;
+                await fetchTextWithBrowserFallbackStubResult;
+
+                assert.calledWith(
+                    fetchTextWithBrowserFallbackStub,
+                    "http://cdn.example.com/remapped-app.js.map",
+                    cdpMock.runtime,
+                    sessionId,
+                );
+            });
+
+            it("should pass through when mapSourceMapUrl returns true", async () => {
+                const mapSourceMapUrl = sinon.stub().returns(true);
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+                const fetchTextWithBrowserFallbackStubResult = Promise.resolve("source map");
+                hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+                fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
+
+                await jsSelectivity.start();
+
+                const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+                scriptParsedHandler(
+                    { scriptId: "script-123", url: "http://example.com/app.js", sourceMapURL: "app.js.map" },
+                    sessionId,
+                );
+
+                await hasCachedSelectivityFileStubResult;
+                await fetchTextWithBrowserFallbackStubResult;
+
+                // Should use the original resolved URL (urlResolveStub returns second arg)
+                assert.calledWith(fetchTextWithBrowserFallbackStub, "app.js.map", cdpMock.runtime, sessionId);
+            });
+        });
+
+        describe("coverage fallback", () => {
+            it("should skip script in fallback when mapSourceMapUrl returns falsy", async () => {
+                const mapSourceMapUrl = sinon.stub().returns(false);
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                const sourceWithSourceMap = `console.log("test");\n//# sourceMappingURL=app.js.map`;
+
+                cdpMock.profiler.takePreciseCoverage.resolves({
+                    timestamp: 100500,
+                    result: [
+                        {
+                            scriptId: "script-999",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "foo",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+                hasCachedSelectivityFileStub.resolves(false);
+                getCachedSelectivityFileStub.resolves(null);
+                cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithSourceMap });
+
+                await jsSelectivity.start();
+                const result = await jsSelectivity.stop();
+
+                assert.deepEqual(Array.from(result || []), []);
+            });
+
+            it("should replace source map URL in fallback when mapSourceMapUrl returns a string", async () => {
+                const mapSourceMapUrl = sinon.stub().returns("http://cdn.example.com/remapped.js.map");
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                const sourceWithSourceMap = `console.log("test");\n//# sourceMappingURL=app.js.map`;
+
+                cdpMock.profiler.takePreciseCoverage.resolves({
+                    timestamp: 100500,
+                    result: [
+                        {
+                            scriptId: "script-999",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "foo",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+                hasCachedSelectivityFileStub.resolves(false);
+                getCachedSelectivityFileStub.resolves(null);
+                cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithSourceMap });
+                extractSourceFilesDepsStub.returns(new Set(["src/app.js"]));
+
+                await jsSelectivity.start();
+                await jsSelectivity.stop();
+
+                assert.calledWith(
+                    fetchTextWithBrowserFallbackStub,
+                    "http://cdn.example.com/remapped.js.map",
+                    cdpMock.runtime,
+                    sessionId,
+                );
+            });
+
+            it("should recalculate source map when url is corrected and mapSourceMapUrl is set", async () => {
+                const mapSourceMapUrl = sinon.stub().returns(true);
+                const jsSelectivity = new JSSelectivity(
+                    cdpMock as unknown as CDP,
+                    sessionId,
+                    sourceRoot,
+                    mapSourceMapUrl,
+                );
+
+                const sourceWithSourceMap = `console.log("test");\n//# sourceMappingURL=app.js.map`;
+
+                await jsSelectivity.start();
+
+                const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+                scriptParsedHandler(
+                    { scriptId: "script-123", url: "", sourceMapURL: "" }, // Anonymous, no url specified
+                    sessionId,
+                );
+
+                // Coverage with a corrected URL
+                cdpMock.profiler.takePreciseCoverage.resolves({
+                    timestamp: 100500,
+                    result: [
+                        {
+                            scriptId: "script-123",
+                            url: "http://example.com/app.js",
+                            functions: [
+                                {
+                                    functionName: "foo",
+                                    isBlockCoverage: false,
+                                    ranges: [{ startOffset: 0, endOffset: 30, count: 1 }],
+                                },
+                            ],
+                        },
+                    ],
+                });
+                hasCachedSelectivityFileStub.resolves(false);
+                getCachedSelectivityFileStub.resolves(null);
+                cdpMock.debugger.getScriptSource.resolves({ scriptSource: sourceWithSourceMap });
+                extractSourceFilesDepsStub.returns(new Set(["src/app.js"]));
+
+                await jsSelectivity.stop();
+
+                assert.calledWith(
+                    mapSourceMapUrl,
+                    sinon.match({
+                        type: "js",
+                        sourceUrl: "http://example.com/app.js",
+                    }),
+                );
+            });
         });
     });
 });

@@ -137,6 +137,7 @@ module.exports = {
         compression: "gz",
         disableSelectivityPatterns: [],
         mapDependencyRelativePath: null,
+        mapSourceMapUrl: null,
         reportPath: "",
     },
 };

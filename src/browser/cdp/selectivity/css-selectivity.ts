@@ -15,22 +15,30 @@ import type { CDP } from "..";
 import type { CDPStyleSheetId, CDPSessionId } from "../types";
 import type { CssEvents, CSSRuleUsage } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
+import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
 export class CSSSelectivity {
     private readonly _cdp: CDP;
     private readonly _sessionId: CDPSessionId;
     private readonly _sourceRoot: string;
+    private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
     private _cssOnStyleSheetAddedFn:
         | ((params: CssEvents["styleSheetAdded"], cdpSessionId?: CDPSessionId) => void)
         | null = null;
-    private _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
-    private _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
-    private _coverageResult: CSSRuleUsage[] = [];
+    private readonly _stylesSourceMap: Record<CDPStyleSheetId, SelectivityAssetState> = {};
+    private readonly _styleSheetIdToSourceMapUrl: Record<CDPStyleSheetId, string | null> = {};
+    private readonly _coverageResult: CSSRuleUsage[] = [];
 
-    constructor(cdp: CDP, sessionId: CDPSessionId, sourceRoot = "") {
+    constructor(
+        cdp: CDP,
+        sessionId: CDPSessionId,
+        sourceRoot: string,
+        mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null,
+    ) {
         this._cdp = cdp;
         this._sessionId = sessionId;
         this._sourceRoot = sourceRoot;
+        this._mapSourceMapUrl = mapSourceMapUrl;
     }
 
     private _processStyle(
@@ -50,7 +58,20 @@ export class CSSSelectivity {
             return;
         }
 
-        const sourceMapResolvedUrl = urlResolve(sourceURL, sourceMapURL);
+        let sourceMapResolvedUrl = urlResolve(sourceURL, sourceMapURL);
+
+        const mapResult = this._mapSourceMapUrl
+            ? this._mapSourceMapUrl({ type: "css", sourceUrl: sourceURL, sourceMapUrl: sourceMapResolvedUrl })
+            : true;
+
+        if (!mapResult) {
+            this._stylesSourceMap[styleSheetId] ||= null;
+            return;
+        }
+
+        if (mapResult !== true) {
+            this._styleSheetIdToSourceMapUrl[styleSheetId] = sourceMapResolvedUrl = mapResult;
+        }
 
         // Embedded source maps are not cached on file system because of their large cache key
         if (isDataProtocol(sourceMapResolvedUrl)) {

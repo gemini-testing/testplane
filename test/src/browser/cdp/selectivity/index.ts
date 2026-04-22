@@ -44,6 +44,7 @@ describe("CDP/Selectivity", () => {
                 compression: "none";
                 disableSelectivityPatterns: string[];
                 mapDependencyRelativePath: null;
+                mapSourceMapUrl: null;
             };
         };
         publicAPI: { isChromium: boolean; getWindowHandle: SinonStub };
@@ -126,6 +127,7 @@ describe("CDP/Selectivity", () => {
                     compression: "none",
                     disableSelectivityPatterns: [],
                     mapDependencyRelativePath: null,
+                    mapSourceMapUrl: null,
                 },
             },
             publicAPI: {
