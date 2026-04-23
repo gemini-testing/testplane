@@ -481,9 +481,3 @@ export interface RuntimeConfig {
 declare module "." {
     export interface Config extends ConfigParsed {}
 }
-
-declare module "./browser-config" {
-    export interface BrowserConfig extends CommonConfig {
-        id: string;
-    }
-}
