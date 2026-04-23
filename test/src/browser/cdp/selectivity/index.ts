@@ -39,6 +39,7 @@ describe("CDP/Selectivity", () => {
         config: {
             selectivity: {
                 enabled: SelectivityModeValue;
+                saveIncompleteDumpOnFail: false;
                 sourceRoot: string;
                 testDependenciesPath: string;
                 compression: "none";
@@ -122,6 +123,7 @@ describe("CDP/Selectivity", () => {
             config: {
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     sourceRoot: "/test/source-root",
                     testDependenciesPath: "/test/dependencies",
                     compression: "none",
@@ -442,8 +444,10 @@ describe("CDP/Selectivity", () => {
                 configMock.forBrowser
                     .withArgs("chrome")
                     .returns({
+                        lastFailed: { only: false },
                         selectivity: {
                             enabled: mode,
+                            saveIncompleteDumpOnFail: false,
                             testDependenciesPath: "/test/path",
                             compression: "none",
                             disableSelectivityPatterns: ["src/**/*.js"],
@@ -451,8 +455,10 @@ describe("CDP/Selectivity", () => {
                     })
                     .withArgs("firefox")
                     .returns({
+                        lastFailed: { only: false },
                         selectivity: {
                             enabled: SelectivityMode.Enabled,
+                            saveIncompleteDumpOnFail: false,
                             testDependenciesPath: "/test/path",
                             compression: "none",
                             disableSelectivityPatterns: ["src/**/*.js"],
@@ -461,7 +467,7 @@ describe("CDP/Selectivity", () => {
 
                 hashReaderMock.patternHasChanged.resolves(true);
 
-                await updateSelectivityHashes(configMock as any);
+                await updateSelectivityHashes(configMock as any, false);
 
                 assert.calledOnceWith(getHashReaderStub, "/test/path", "none"); // Only for firefox
                 assert.calledOnceWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
@@ -472,8 +478,10 @@ describe("CDP/Selectivity", () => {
         it("should update hashes for changed patterns", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/path",
                     compression: "gz",
                     disableSelectivityPatterns: ["pattern1", "pattern2", "pattern3"],
@@ -488,7 +496,7 @@ describe("CDP/Selectivity", () => {
                 .withArgs("pattern3")
                 .resolves(true);
 
-            await updateSelectivityHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any, false);
 
             assert.calledWith(getHashReaderStub, "/test/path", "gz");
             assert.calledWith(getHashWriterStub, "/test/path", "gz");
@@ -501,8 +509,10 @@ describe("CDP/Selectivity", () => {
         it("should not add hashes for unchanged patterns", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: ["pattern1", "pattern2"],
@@ -511,7 +521,7 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(false);
 
-            await updateSelectivityHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any, false);
 
             assert.notCalled(hashWriterMock.addPatternDependencyHash);
             assert.calledOnce(hashWriterMock.save); // Still saves even if no patterns changed
@@ -522,8 +532,10 @@ describe("CDP/Selectivity", () => {
             configMock.forBrowser
                 .withArgs("chrome")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/chrome",
                         compression: "none",
                         disableSelectivityPatterns: ["chrome-pattern"],
@@ -531,8 +543,10 @@ describe("CDP/Selectivity", () => {
                 })
                 .withArgs("firefox")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/firefox",
                         compression: "gz",
                         disableSelectivityPatterns: ["firefox-pattern"],
@@ -541,7 +555,7 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(true);
 
-            await updateSelectivityHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any, false);
 
             assert.calledTwice(getHashReaderStub);
             assert.calledWith(getHashReaderStub.firstCall, "/test/chrome", "none");
@@ -553,8 +567,10 @@ describe("CDP/Selectivity", () => {
         it("should update hashes for WriteOnly mode", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.WriteOnly,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
@@ -563,9 +579,85 @@ describe("CDP/Selectivity", () => {
 
             hashReaderMock.patternHasChanged.resolves(true);
 
-            await updateSelectivityHashes(configMock as any);
+            await updateSelectivityHashes(configMock as any, false);
 
             assert.calledOnceWith(hashWriterMock.addPatternDependencyHash, "src/**/*.js");
+            assert.calledOnce(hashWriterMock.save);
+        });
+
+        it("should skip saving when run is failed and saveIncompleteDumpOnFail is false", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: [],
+                },
+            });
+
+            await updateSelectivityHashes(configMock as any, true);
+
+            assert.notCalled(getHashReaderStub);
+            assert.notCalled(getHashWriterStub);
+            assert.notCalled(hashWriterMock.save);
+        });
+
+        it("should save when run is failed and saveIncompleteDumpOnFail is true", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: true,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: [],
+                },
+            });
+
+            await updateSelectivityHashes(configMock as any, true);
+
+            assert.calledOnce(hashWriterMock.save);
+        });
+
+        it("should skip saving when lastFailed.only is true and saveIncompleteDumpOnFail is false", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: true },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: [],
+                },
+            });
+
+            await updateSelectivityHashes(configMock as any, false);
+
+            assert.notCalled(getHashReaderStub);
+            assert.notCalled(getHashWriterStub);
+            assert.notCalled(hashWriterMock.save);
+        });
+
+        it("should save when lastFailed.only is true and saveIncompleteDumpOnFail is true", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: true },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: true,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: [],
+                },
+            });
+
+            await updateSelectivityHashes(configMock as any, false);
+
             assert.calledOnce(hashWriterMock.save);
         });
     });
@@ -588,20 +680,24 @@ describe("CDP/Selectivity", () => {
             configMock.forBrowser
                 .withArgs("chrome")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Disabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/chrome",
                     },
                 })
                 .withArgs("firefox")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Disabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/firefox",
                     },
                 });
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
             assert.notCalled(getSelectivityTestsPathStub);
@@ -612,13 +708,15 @@ describe("CDP/Selectivity", () => {
         it("should skip browsers with selectivity in read-only mode", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.ReadOnly,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
             assert.notCalled(getSelectivityTestsPathStub);
@@ -628,15 +726,17 @@ describe("CDP/Selectivity", () => {
         it("should skip selectivity root when no dumps were used for it", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
 
             usedDumpsTrackerMock.usedDumpsFor.withArgs("/test/deps").returns(false);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnceWith(usedDumpsTrackerMock.usedDumpsFor, "/test/deps");
             assert.notCalled(getSelectivityTestsPathStub);
@@ -647,8 +747,10 @@ describe("CDP/Selectivity", () => {
         it("should process single browser with selectivity enabled", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -657,7 +759,7 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves([]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnceWith(getSelectivityTestsPathStub, "/test/deps");
             assert.calledOnceWith(fsStub.access, "/test/deps/tests", 6); // R_OK | W_OK = 4 | 2 = 6
@@ -669,15 +771,19 @@ describe("CDP/Selectivity", () => {
             configMock.forBrowser
                 .withArgs("chrome")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/shared",
                     },
                 })
                 .withArgs("firefox")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/shared",
                     },
                 });
@@ -686,7 +792,7 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves([]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnceWith(getSelectivityTestsPathStub, "/test/shared");
             assert.calledOnce(fsStub.access);
@@ -698,15 +804,19 @@ describe("CDP/Selectivity", () => {
             configMock.forBrowser
                 .withArgs("chrome")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/chrome",
                     },
                 })
                 .withArgs("firefox")
                 .returns({
+                    lastFailed: { only: false },
                     selectivity: {
                         enabled: SelectivityMode.Enabled,
+                        saveIncompleteDumpOnFail: false,
                         testDependenciesPath: "/test/firefox",
                     },
                 });
@@ -715,7 +825,7 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves([]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledTwice(getSelectivityTestsPathStub);
             assert.calledWith(getSelectivityTestsPathStub.firstCall, "/test/chrome");
@@ -727,8 +837,10 @@ describe("CDP/Selectivity", () => {
         it("should skip silently if directory does not exist (ENOENT)", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -739,7 +851,7 @@ describe("CDP/Selectivity", () => {
             enoentError.code = "ENOENT";
             fsStub.access.rejects(enoentError);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnce(fsStub.access);
             assert.notCalled(fsStub.readdir);
@@ -749,8 +861,10 @@ describe("CDP/Selectivity", () => {
         it("should log debug message for non-ENOENT access errors", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -760,7 +874,7 @@ describe("CDP/Selectivity", () => {
             const permissionError = new Error("EACCES: permission denied");
             fsStub.access.rejects(permissionError);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnce(fsStub.access);
             assert.notCalled(fsStub.readdir);
@@ -774,8 +888,10 @@ describe("CDP/Selectivity", () => {
         it("should handle empty directory", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -784,7 +900,7 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves([]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnce(fsStub.readdir);
             assert.notCalled(usedDumpsTrackerMock.wasUsed);
@@ -795,8 +911,10 @@ describe("CDP/Selectivity", () => {
         it("should delete unused files", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -807,7 +925,7 @@ describe("CDP/Selectivity", () => {
             fsStub.readdir.resolves(["stale-test-1.json", "stale-test-2.json"]);
             fsStub.unlink.resolves();
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledTwice(usedDumpsTrackerMock.wasUsed);
             assert.calledWith(usedDumpsTrackerMock.wasUsed.firstCall, "stale-test-1", "/test/deps");
@@ -824,8 +942,10 @@ describe("CDP/Selectivity", () => {
         it("should not delete used files", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -835,7 +955,7 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves(["used-test-1.json", "used-test-2.json"]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledTwice(usedDumpsTrackerMock.wasUsed);
             assert.notCalled(fsStub.unlink);
@@ -845,8 +965,10 @@ describe("CDP/Selectivity", () => {
         it("should handle mix of used and unused files", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -863,7 +985,7 @@ describe("CDP/Selectivity", () => {
             fsStub.readdir.resolves(["stale-test.json", "fresh-test.json", "another-stale.json"]);
             fsStub.unlink.resolves();
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledThrice(usedDumpsTrackerMock.wasUsed);
             assert.calledTwice(fsStub.unlink);
@@ -878,8 +1000,10 @@ describe("CDP/Selectivity", () => {
         it("should handle unlink errors gracefully", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -896,7 +1020,7 @@ describe("CDP/Selectivity", () => {
                 .withArgs("/test/deps/tests/stale-test-2.json")
                 .resolves();
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledTwice(fsStub.unlink);
             assert.calledTwice(debugSelectivityStub);
@@ -914,8 +1038,10 @@ describe("CDP/Selectivity", () => {
         it("should skip files without .json extension", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -926,7 +1052,7 @@ describe("CDP/Selectivity", () => {
             fsStub.readdir.resolves(["some-dir", "stale-file.json"]);
             fsStub.unlink.resolves();
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnceWith(usedDumpsTrackerMock.wasUsed, "stale-file", "/test/deps");
             assert.calledOnceWith(fsStub.unlink, "/test/deps/tests/stale-file.json");
@@ -939,8 +1065,10 @@ describe("CDP/Selectivity", () => {
         it("should not log if no files were deleted", async () => {
             configMock.getBrowserIds.returns(["chrome"]);
             configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
                     testDependenciesPath: "/test/deps",
                 },
             });
@@ -950,11 +1078,68 @@ describe("CDP/Selectivity", () => {
             fsStub.access.resolves();
             fsStub.readdir.resolves(["used-test.json"]);
 
-            await clearUnusedSelectivityDumps(configMock as any);
+            await clearUnusedSelectivityDumps(configMock as any, false);
 
             assert.calledOnce(usedDumpsTrackerMock.wasUsed);
             assert.notCalled(fsStub.unlink);
             assert.notCalled(debugSelectivityStub);
+        });
+
+        it("should skip cleanup when run is failed and saveIncompleteDumpOnFail is false", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            await clearUnusedSelectivityDumps(configMock as any, true);
+
+            assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
+            assert.notCalled(getSelectivityTestsPathStub);
+            assert.notCalled(fsStub.access);
+        });
+
+        it("should proceed with cleanup when run is failed and saveIncompleteDumpOnFail is true", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            usedDumpsTrackerMock.usedDumpsFor.returns(true);
+            fsStub.access.resolves();
+            fsStub.readdir.resolves([]);
+
+            await clearUnusedSelectivityDumps(configMock as any, true);
+
+            assert.calledOnce(usedDumpsTrackerMock.usedDumpsFor);
+            assert.calledOnce(fsStub.access);
+        });
+
+        it("should skip cleanup when lastFailed.only is true", async () => {
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: true },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: true,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            await clearUnusedSelectivityDumps(configMock as any, false);
+
+            assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
+            assert.notCalled(getSelectivityTestsPathStub);
+            assert.notCalled(fsStub.access);
         });
     });
 });

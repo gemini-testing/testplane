@@ -61,7 +61,7 @@ export class HashWriter {
         dependencies.modules?.forEach(dependency => this._addModuleDependency(dependency));
     }
 
-    async save(readExisting?: boolean): Promise<void> {
+    async save(): Promise<void> {
         const hasStaged = Boolean(
             this._stagedFileHashes.size || this._stagedModuleHashes.size || this._stagedPatternHashes.size,
         );
@@ -89,13 +89,7 @@ export class HashWriter {
             shallowSortObject(dest);
         };
 
-        const fileContents = readExisting
-            ? await readHashFileContents(this._selectivityHashesPath, this._compresion)
-            : {
-                  files: {},
-                  modules: {},
-                  patterns: {},
-              };
+        const fileContents = await readHashFileContents(this._selectivityHashesPath, this._compresion);
 
         await writeTo(this._stagedFileHashes, fileContents.files);
         await writeTo(this._stagedModuleHashes, fileContents.modules);

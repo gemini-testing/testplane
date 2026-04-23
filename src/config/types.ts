@@ -419,6 +419,7 @@ export interface CommonConfig {
 
     selectivity: {
         enabled: SelectivityModeValue;
+        saveIncompleteDumpOnFail: boolean;
         sourceRoot: string;
         testDependenciesPath: string;
         compression: SelectivityCompressionType;

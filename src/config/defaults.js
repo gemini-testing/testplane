@@ -132,6 +132,7 @@ module.exports = {
     timeTravel: TimeTravelMode.Off,
     selectivity: {
         enabled: false,
+        saveIncompleteDumpOnFail: false,
         sourceRoot: "",
         testDependenciesPath: ".testplane/selectivity",
         compression: "gz",

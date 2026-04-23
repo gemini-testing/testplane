@@ -16,7 +16,7 @@ describe("SelectivityRunner", () => {
     let getTestSelectivityDumpIdStub: SinonStub;
     let usedDumpsTrackerMock: { trackUsed: SinonStub; usedDumpsFor: SinonStub; wasUsed: SinonStub };
     let fsExtraStub: { outputJson: SinonStub };
-    let loggerStub: { error: SinonStub };
+    let loggerStub: { error: SinonStub; warn: SinonStub };
 
     let mainRunnerMock: { on: SinonStub };
     let configMock: { forBrowser: SinonStub; getBrowserIds: SinonStub };
@@ -31,7 +31,7 @@ describe("SelectivityRunner", () => {
         getHashWriterStub = sandbox.stub();
         getTestDependenciesReaderStub = sandbox.stub();
         fsExtraStub = { outputJson: sandbox.stub().resolves() };
-        loggerStub = { error: sandbox.stub() };
+        loggerStub = { error: sandbox.stub(), warn: sandbox.stub() };
 
         usedDumpsTrackerMock = {
             trackUsed: sandbox.stub(),
@@ -111,7 +111,9 @@ describe("SelectivityRunner", () => {
                 testDependenciesPath: string;
                 compression: string;
                 disableSelectivityPatterns: string[];
+                saveIncompleteDumpOnFail: boolean;
             };
+            lastFailed: { only: boolean };
         };
         let testMock: Test;
 
@@ -122,7 +124,9 @@ describe("SelectivityRunner", () => {
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: [],
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             testMock = {
                 id: "test-123",
@@ -373,7 +377,9 @@ describe("SelectivityRunner", () => {
                     testDependenciesPath: "/test/chrome",
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             const firefoxConfig = {
                 selectivity: {
@@ -381,7 +387,9 @@ describe("SelectivityRunner", () => {
                     testDependenciesPath: "/test/firefox",
                     compression: "gz",
                     disableSelectivityPatterns: ["test/**/*.js"],
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
 
             configMock.forBrowser.withArgs("chrome").returns(chromeConfig);
@@ -398,6 +406,96 @@ describe("SelectivityRunner", () => {
             await runner.runNecessaryTests();
 
             assert.notCalled(runTestFnMock);
+        });
+
+        it("should run all tests and log warning when lastFailed.only is true and saveIncompleteDumpOnFail is false", async () => {
+            browserConfigMock.lastFailed.only = true;
+            browserConfigMock.selectivity.saveIncompleteDumpOnFail = false;
+            browserConfigMock.selectivity.disableSelectivityPatterns = [];
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            await runner.runNecessaryTests();
+
+            assert.calledOnce(runTestFnMock);
+            assert.calledWith(loggerStub.warn, "Disabling selectivity for chrome: lastFailedOnly mode is enabled");
+        });
+
+        it("should run all tests and log debug message when lastFailed.only is true and saveIncompleteDumpOnFail is true", async () => {
+            const testMockB = { ...testMock, id: testMock.id + "_2" } as Test;
+            browserConfigMock.lastFailed.only = true;
+            browserConfigMock.selectivity.saveIncompleteDumpOnFail = true;
+            browserConfigMock.selectivity.disableSelectivityPatterns = [];
+
+            const testDepsA = { css: [], js: ["src/app.js"], modules: [] };
+            const testDepsB = { css: ["src/styles.css"], js: ["src/known.js"], modules: [] };
+            testDepsReaderMock.getFor.withArgs(testMock).resolves(testDepsA);
+            testDepsReaderMock.getFor.withArgs(testMockB).resolves(testDepsB);
+            hashReaderMock.getTestChangedDeps
+                .withArgs(testDepsA)
+                .resolves({ css: [], js: ["src/app.js"], modules: [] });
+            hashReaderMock.getTestChangedDeps.withArgs(testDepsB).resolves(null);
+
+            runner.startTestCheckToRun(testMock, "chrome");
+            runner.startTestCheckToRun(testMockB, "chrome");
+
+            await runner.runNecessaryTests();
+
+            assert.calledTwice(runTestFnMock);
+            assert.calledWith(runTestFnMock, testMock);
+            assert.calledWith(runTestFnMock, testMockB);
+            assert.notCalled(loggerStub.warn);
+            assert.calledWith(debugSelectivityStub, "Not skipping tests for chrome: lastFailedOnly mode controls it");
+        });
+
+        it("should not mix browsers cache with different lastFailed.only value", async () => {
+            browserConfigMock.selectivity.disableSelectivityPatterns = ["src/**/*.js"];
+            hashReaderMock.patternHasChanged.resolves(false);
+
+            const testDeps = { css: [], js: ["src/app.js"], modules: [] };
+            testDepsReaderMock.getFor.resolves(testDeps);
+            hashReaderMock.getTestChangedDeps.resolves(null);
+
+            const chromeConfigA = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    saveIncompleteDumpOnFail: false,
+                },
+                lastFailed: { only: false },
+            };
+            const chromeConfigB = {
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    testDependenciesPath: "/test/path",
+                    compression: "none",
+                    disableSelectivityPatterns: ["src/**/*.js"],
+                    saveIncompleteDumpOnFail: false,
+                },
+                lastFailed: { only: true },
+            };
+
+            configMock.forBrowser.withArgs("chromeA").returns(chromeConfigA);
+            configMock.forBrowser.withArgs("chromeB").returns(chromeConfigB);
+
+            const testA = { ...testMock, id: "test-a" } as Test;
+            const testB = { ...testMock, id: "test-b" } as Test;
+
+            runner.startTestCheckToRun(testB, "chromeB");
+            await runner.runNecessaryTests();
+
+            assert.notCalled(hashReaderMock.patternHasChanged);
+
+            runner.startTestCheckToRun(testA, "chromeA");
+
+            await runner.runNecessaryTests();
+
+            assert.calledOnce(hashReaderMock.patternHasChanged);
         });
     });
 
@@ -421,7 +519,9 @@ describe("SelectivityRunner", () => {
                     testDependenciesPath: "/test/path",
                     compression: "none",
                     disableSelectivityPatterns: [],
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             const testMock = {
                 id: "test-123",
@@ -479,7 +579,9 @@ describe("SelectivityRunner", () => {
                 compression: string;
                 disableSelectivityPatterns: string[];
                 reportPath: string;
+                saveIncompleteDumpOnFail: boolean;
             };
+            lastFailed: { only: boolean };
         };
         let testMock: Test;
 
@@ -491,7 +593,9 @@ describe("SelectivityRunner", () => {
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
                     reportPath: "/tmp/selectivity-report.json",
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             testMock = {
                 id: "test-123",
@@ -576,7 +680,9 @@ describe("SelectivityRunner", () => {
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
                     reportPath: "/tmp/selectivity-report.json",
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             const firefoxConfig = {
                 selectivity: {
@@ -585,7 +691,9 @@ describe("SelectivityRunner", () => {
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
                     reportPath: "/tmp/selectivity-report.json",
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
 
             configMock.forBrowser.withArgs("chrome").returns(chromeConfig);
@@ -625,7 +733,9 @@ describe("SelectivityRunner", () => {
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
                     reportPath: "/tmp/chrome-report.json",
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
             const firefoxConfig = {
                 selectivity: {
@@ -634,7 +744,9 @@ describe("SelectivityRunner", () => {
                     compression: "none",
                     disableSelectivityPatterns: ["src/**/*.js"],
                     reportPath: "/tmp/firefox-report.json",
+                    saveIncompleteDumpOnFail: false,
                 },
+                lastFailed: { only: false },
             };
 
             configMock.forBrowser.withArgs("chrome").returns(chromeConfig);

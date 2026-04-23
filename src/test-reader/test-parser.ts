@@ -98,9 +98,7 @@ export class TestParser extends EventEmitter {
                     }
                 }
             } catch {
-                logger.warn(
-                    `Could not read failed tests data at ${config.lastFailed.input}. Running all tests instead`,
-                );
+                logger.warn(`Could not read failed tests data at ${config.lastFailed.input}.`);
             }
         }
     }
