@@ -10,6 +10,7 @@ const { getCaptureProcessors } = require("./capture-processors");
 const RuntimeConfig = require("../../../config/runtime-config");
 const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
+const { addTestplaneSelectivityPngDependency } = require("../../cdp/selectivity/testplane-selectivity");
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -75,7 +76,7 @@ module.exports.default = browser => {
             disableAnimation: opts.disableAnimation,
         });
 
-        const { tempOpts } = RuntimeConfig.getInstance();
+        const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
         const screenshoterOpts = _.pick(opts, [
@@ -99,8 +100,14 @@ module.exports.default = browser => {
         if (!fs.existsSync(refImg.path)) {
             await currImgInst.save(currImg.path);
 
+            if (isUpdatingRefs) {
+                addTestplaneSelectivityPngDependency(refImg.path);
+            }
+
             return handleNoRefImage(currImg, refImg, state, { emitter }).catch(e => handleCaptureProcessorError(e));
         }
+
+        addTestplaneSelectivityPngDependency(refImg.path);
 
         const { canHaveCaret, pixelRatio } = page;
         const imageCompareOpts = {

@@ -15,7 +15,7 @@ export class TestDependenciesReader {
 
     async getFor(test: Test): Promise<NormalizedDependencies> {
         const testDeps = await readTestDependencies(this._selectivityTestsPath, test, this._compression);
-        let result: NormalizedDependencies = { css: [], js: [], modules: [] };
+        let result: NormalizedDependencies = { css: [], js: [], modules: [], png: [] };
 
         for (const browserId of Object.keys(testDeps)) {
             const depTypes = Object.keys(testDeps[browserId]);

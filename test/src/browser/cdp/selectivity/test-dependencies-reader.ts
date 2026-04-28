@@ -50,7 +50,7 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
 
             const result = await reader.getFor(mockTest);
 
-            assert.deepEqual(result, { css: [], js: [], modules: [] });
+            assert.deepEqual(result, { css: [], js: [], modules: [], png: [] });
             assert.calledWith(readTestDependenciesStub, "/test/selectivity/tests", mockTest, "none");
             assert.notCalled(mergeSourceDependenciesStub);
         });
@@ -70,7 +70,11 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
             const result = await reader.getFor(mockTest);
 
             assert.equal(result, expectedResult);
-            assert.calledWith(mergeSourceDependenciesStub, { css: [], js: [], modules: [] }, testDeps.chrome.browser);
+            assert.calledWith(
+                mergeSourceDependenciesStub,
+                { css: [], js: [], modules: [], png: [] },
+                testDeps.chrome.browser,
+            );
         });
 
         it("should merge dependencies for single browser with multiple dependency types", async () => {
@@ -106,7 +110,7 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
             );
             assert.calledWith(
                 mergeSourceDependenciesStub.secondCall,
-                { css: [], js: [], modules: [] },
+                { css: [], js: [], modules: [], png: [] },
                 mergedBrowserDeps,
             );
         });
@@ -137,7 +141,7 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
             assert.calledTwice(mergeSourceDependenciesStub);
             assert.calledWith(
                 mergeSourceDependenciesStub.firstCall,
-                { css: [], js: [], modules: [] },
+                { css: [], js: [], modules: [], png: [] },
                 testDeps.chrome.browser,
             );
             assert.calledWith(mergeSourceDependenciesStub.secondCall, chromeDeps, testDeps.firefox.browser);
@@ -202,7 +206,11 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
 
             assert.equal(result, firefoxDeps);
             assert.calledOnce(mergeSourceDependenciesStub);
-            assert.calledWith(mergeSourceDependenciesStub, { css: [], js: [], modules: [] }, testDeps.firefox.browser);
+            assert.calledWith(
+                mergeSourceDependenciesStub,
+                { css: [], js: [], modules: [], png: [] },
+                testDeps.firefox.browser,
+            );
         });
 
         it("should handle different compression types", async () => {
@@ -236,7 +244,11 @@ describe("CDP/Selectivity/TestDependenciesReader", () => {
             const result = await reader.getFor(mockTest);
 
             assert.equal(result, expectedResult);
-            assert.calledWith(mergeSourceDependenciesStub, { css: [], js: [], modules: [] }, testDeps.chrome.browser);
+            assert.calledWith(
+                mergeSourceDependenciesStub,
+                { css: [], js: [], modules: [], png: [] },
+                testDeps.chrome.browser,
+            );
         });
 
         it("should handle mixed empty and non-empty browsers", async () => {

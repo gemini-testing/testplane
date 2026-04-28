@@ -146,6 +146,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
+                png: [],
             };
             const hashFileContents = {
                 files: {
@@ -178,6 +179,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/styles.css", "src/theme.css"],
                 js: ["src/app.js"],
                 modules: ["node_modules/react"],
+                png: [],
             };
             const hashFileContents = {
                 files: {
@@ -208,6 +210,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/styles.css"],
                 js: ["src/app.js"],
                 modules: [],
+                png: [],
             });
         });
 
@@ -217,6 +220,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/styles.css"],
                 js: [],
                 modules: ["node_modules/react", "node_modules/lodash"],
+                png: [],
             };
             const hashFileContents = {
                 files: {
@@ -244,6 +248,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: [],
                 js: [],
                 modules: ["node_modules/react"],
+                png: [],
             });
         });
 
@@ -253,6 +258,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/new-file.css"],
                 js: ["src/new-app.js"],
                 modules: ["node_modules/new-lib"],
+                png: [],
             };
             const hashFileContents = {
                 files: {},
@@ -275,6 +281,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/new-file.css"],
                 js: ["src/new-app.js"],
                 modules: ["node_modules/new-lib"],
+                png: [],
             });
         });
 
@@ -284,6 +291,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: [],
                 js: [],
                 modules: [],
+                png: [],
             };
             const hashFileContents = {
                 files: {},
@@ -305,6 +313,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/changed.css", "src/unchanged.css"],
                 js: ["src/unchanged.js"],
                 modules: ["node_modules/changed-lib", "node_modules/unchanged-lib"],
+                png: [],
             };
             const hashFileContents = {
                 files: {
@@ -338,6 +347,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: ["src/changed.css"],
                 js: [],
                 modules: ["node_modules/changed-lib"],
+                png: [],
             });
         });
 
@@ -347,6 +357,7 @@ describe("CDP/Selectivity/HashReader", () => {
                 css: [],
                 js: [],
                 modules: ["node_modules/react"],
+                png: [],
             };
             const hashFileContents = {
                 files: {},
@@ -361,6 +372,63 @@ describe("CDP/Selectivity/HashReader", () => {
 
             assert.calledWith(pathStub.join, "node_modules/react", "package.json");
             assert.calledWith(hashProviderMock.calculateForFile, "node_modules/react/package.json");
+        });
+
+        it("should return changed png dependencies", async () => {
+            const reader = new HashReader("/test/selectivity", "none");
+            const testDeps = {
+                css: [],
+                js: [],
+                modules: [],
+                png: ["screenshots/ref.png"],
+            };
+            const hashFileContents = {
+                files: {
+                    "screenshots/ref.png": "old-png-hash",
+                },
+                modules: {},
+                patterns: {},
+            };
+
+            readHashFileContentsStub.resolves(hashFileContents);
+            hashProviderMock.calculateForFile.withArgs("screenshots/ref.png").resolves("new-png-hash");
+
+            const result = await reader.getTestChangedDeps(testDeps);
+
+            assert.deepEqual(result, {
+                css: [],
+                js: [],
+                modules: [],
+                png: ["screenshots/ref.png"],
+            });
+        });
+
+        it("should skip missing dep type for old format without png property", async () => {
+            const reader = new HashReader("/test/selectivity", "none");
+            const testDeps = {
+                css: ["src/styles.css"],
+                js: ["src/app.js"],
+                modules: [],
+            } as any;
+            const hashFileContents = {
+                files: {
+                    "src/styles.css": "css-hash",
+                    "src/app.js": "js-hash",
+                },
+                modules: {},
+                patterns: {},
+            };
+
+            readHashFileContentsStub.resolves(hashFileContents);
+            hashProviderMock.calculateForFile
+                .withArgs("src/styles.css")
+                .resolves("css-hash")
+                .withArgs("src/app.js")
+                .resolves("js-hash");
+
+            const result = await reader.getTestChangedDeps(testDeps);
+
+            assert.isNull(result);
         });
     });
 

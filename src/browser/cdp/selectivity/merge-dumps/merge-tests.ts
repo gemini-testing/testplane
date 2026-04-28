@@ -65,6 +65,7 @@ const mergeJsonTestContents = (
                     css: [],
                     js: [],
                     modules: [],
+                    png: [],
                 };
 
                 for (const dependencyType in testContent[browserId][dependencyScope]) {

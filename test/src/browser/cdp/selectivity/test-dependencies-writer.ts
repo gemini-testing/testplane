@@ -50,11 +50,13 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
             css: ["src/styles.css"],
             js: ["src/app.js"],
             modules: ["node_modules/react"],
+            png: [],
         };
         const mockEmptyDependencies = {
             css: [],
             js: [],
             modules: [],
+            png: [],
         };
 
         it("should create directory on first save", async () => {
@@ -151,11 +153,13 @@ describe("CDP/Selectivity/TestDependenciesWriter", () => {
                 css: ["a.css", "b.css"],
                 js: ["a.js", "b.js"],
                 modules: ["react", "lodash"],
+                png: [],
             };
             const deps2 = {
                 css: ["a.css", "b.css"],
                 js: ["a.js", "b.js"],
                 modules: ["react", "lodash"],
+                png: [],
             };
 
             const writer = new TestDependenciesWriter("/test/selectivity", "none");

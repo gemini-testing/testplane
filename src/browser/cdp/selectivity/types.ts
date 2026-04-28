@@ -5,6 +5,8 @@ export interface NormalizedDependencies {
     js: string[];
     /** Module names from node_modules (e.g. "react", "@remix-run/router") */
     modules: string[];
+    /** Reference paths */
+    png: string[];
 }
 
 export const Compression = {

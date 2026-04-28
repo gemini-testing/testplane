@@ -352,7 +352,11 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(cssSelectivityMock.stop, false);
             assert.calledWith(jsSelectivityMock.stop, false);
-            assert.calledWith(transformSourceDependenciesStub, new Set(["src/styles.css"]), new Set(["src/app.js"]));
+            assert.calledWith(transformSourceDependenciesStub, {
+                css: new Set(["src/styles.css"]),
+                js: new Set(["src/app.js"]),
+                png: null,
+            });
             assert.calledWith(getTestDependenciesWriterStub, "/test/dependencies");
             assert.calledWith(testDependenciesWriterMock.saveFor, mockTest, {
                 css: ["src/styles.css"],
@@ -403,7 +407,7 @@ describe("CDP/Selectivity", () => {
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, new Set(["src/styles.css"]), []);
+            assert.calledWith(transformSourceDependenciesStub, { css: new Set(["src/styles.css"]), js: [], png: null });
             assert.calledOnce(testDependenciesWriterMock.saveFor);
         });
 
@@ -412,7 +416,7 @@ describe("CDP/Selectivity", () => {
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, null, new Set(["src/app.js"]));
+            assert.calledWith(transformSourceDependenciesStub, { css: null, js: new Set(["src/app.js"]), png: null });
             assert.calledOnce(testDependenciesWriterMock.saveFor);
         });
     });

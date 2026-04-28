@@ -1,6 +1,7 @@
 import sinon, { SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
 import type { CDPRuntime } from "src/browser/cdp/domains/runtime";
+import { NormalizedDependencies, TestDependenciesFileContents } from "src/browser/cdp/selectivity/types";
 
 describe("CDP/Selectivity/Utils", () => {
     const sandbox = sinon.createSandbox();
@@ -489,7 +490,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies(cssDeps, jsDeps);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
 
             assert.deepEqual(result.css, ["src/styles.css"]);
             assert.deepEqual(result.js, ["src/app.js"]);
@@ -502,7 +503,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies(cssDeps, jsDeps);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
 
             assert.deepEqual(result.modules, ["node_modules/@scope/package"]);
         });
@@ -514,7 +515,7 @@ describe("CDP/Selectivity/Utils", () => {
             fsStub.existsSync.returns(false);
 
             assert.throws(() => {
-                utils.transformSourceDependencies(cssDeps, jsDeps);
+                utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
             }, /Selectivity: Couldn't find/);
         });
 
@@ -526,7 +527,7 @@ describe("CDP/Selectivity/Utils", () => {
             pathStub.posix.relative.returns("src/file with spaces.css");
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies(cssDeps, jsDeps);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
 
             assert.calledWith(softFileURLToPathStub, "src/file%20with%20spaces.css");
             assert.deepEqual(result.css, ["src/file with spaces.css"]);
@@ -548,43 +549,55 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies(cssDeps, jsDeps, mapFn);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
 
             assert.deepEqual(result.js, ["../bar"]);
+        });
+
+        it("should classify png dependencies", () => {
+            const pngDeps = new Set(["screenshots/ref1.png", "screenshots/ref2.png"]);
+
+            fsStub.existsSync.returns(true);
+
+            const result = utils.transformSourceDependencies({ css: null, js: null, png: pngDeps });
+
+            assert.deepEqual(result.png, ["screenshots/ref1.png", "screenshots/ref2.png"]);
+            assert.deepEqual(result.css, []);
+            assert.deepEqual(result.js, []);
         });
     });
 
     describe("mergeSourceDependencies", () => {
         it("should merge two empty dependency objects", () => {
-            const a = { css: [], js: [], modules: [] };
-            const b = { css: [], js: [], modules: [] };
+            const a = { css: [], js: [], modules: [], png: [] };
+            const b = { css: [], js: [], modules: [], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
-            assert.deepEqual(result, { css: [], js: [], modules: [] });
+            assert.deepEqual(result, { css: [], js: [], modules: [], png: [] });
         });
 
         it("should merge when first object is empty", () => {
-            const a = { css: [], js: [], modules: [] };
-            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+            const a = { css: [], js: [], modules: [], png: [] };
+            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
-            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] });
         });
 
         it("should merge when second object is empty", () => {
-            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
-            const b = { css: [], js: [], modules: [] };
+            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] };
+            const b = { css: [], js: [], modules: [], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
-            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] });
         });
 
         it("should merge sorted arrays maintaining order", () => {
-            const a = { css: ["a.css", "c.css"], js: ["a.js", "c.js"], modules: ["lodash", "react"] };
-            const b = { css: ["b.css", "d.css"], js: ["b.js", "d.js"], modules: ["axios", "vue"] };
+            const a = { css: ["a.css", "c.css"], js: ["a.js", "c.js"], modules: ["lodash", "react"], png: [] };
+            const b = { css: ["b.css", "d.css"], js: ["b.js", "d.js"], modules: ["axios", "vue"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
@@ -592,6 +605,7 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["a.css", "b.css", "c.css", "d.css"],
                 js: ["a.js", "b.js", "c.js", "d.js"],
                 modules: ["axios", "lodash", "react", "vue"],
+                png: [],
             });
         });
 
@@ -600,11 +614,13 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["common.css", "unique-a.css"],
                 js: ["common.js", "unique-a.js"],
                 modules: ["react", "unique-a"],
+                png: [],
             };
             const b = {
                 css: ["common.css", "unique-b.css"],
                 js: ["common.js", "unique-b.js"],
                 modules: ["react", "unique-b"],
+                png: [],
             };
 
             const result = utils.mergeSourceDependencies(a, b);
@@ -613,12 +629,13 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["common.css", "unique-a.css", "unique-b.css"],
                 js: ["common.js", "unique-a.js", "unique-b.js"],
                 modules: ["react", "unique-a", "unique-b"],
+                png: [],
             });
         });
 
         it("should handle arrays with consecutive duplicates", () => {
-            const a = { css: ["a.css", "a.css", "b.css"], js: ["a.js", "a.js"], modules: ["react", "react"] };
-            const b = { css: ["a.css", "c.css", "c.css"], js: ["b.js", "b.js"], modules: ["vue", "vue"] };
+            const a = { css: ["a.css", "a.css", "b.css"], js: ["a.js", "a.js"], modules: ["react", "react"], png: [] };
+            const b = { css: ["a.css", "c.css", "c.css"], js: ["b.js", "b.js"], modules: ["vue", "vue"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
@@ -626,12 +643,13 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["a.css", "b.css", "c.css"],
                 js: ["a.js", "b.js"],
                 modules: ["react", "vue"],
+                png: [],
             });
         });
 
         it("should handle mixed case sorting correctly", () => {
-            const a = { css: ["A.css", "c.css"], js: ["A.js", "c.js"], modules: ["React", "lodash"] };
-            const b = { css: ["B.css", "a.css"], js: ["B.js", "a.js"], modules: ["axios", "Vue"] };
+            const a = { css: ["A.css", "c.css"], js: ["A.js", "c.js"], modules: ["React", "lodash"], png: [] };
+            const b = { css: ["B.css", "a.css"], js: ["B.js", "a.js"], modules: ["axios", "Vue"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
@@ -639,12 +657,13 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["A.css", "B.css", "a.css", "c.css"],
                 js: ["A.js", "B.js", "a.js", "c.js"],
                 modules: ["axios", "React", "lodash", "Vue"],
+                png: [],
             });
         });
 
         it("should handle arrays of different lengths", () => {
-            const a = { css: ["a.css"], js: ["a.js", "b.js", "c.js", "d.js"], modules: ["react"] };
-            const b = { css: ["b.css", "c.css", "d.css"], js: ["e.js"], modules: ["axios", "lodash", "vue"] };
+            const a = { css: ["a.css"], js: ["a.js", "b.js", "c.js", "d.js"], modules: ["react"], png: [] };
+            const b = { css: ["b.css", "c.css", "d.css"], js: ["e.js"], modules: ["axios", "lodash", "vue"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
@@ -652,16 +671,17 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["a.css", "b.css", "c.css", "d.css"],
                 js: ["a.js", "b.js", "c.js", "d.js", "e.js"],
                 modules: ["axios", "lodash", "react", "vue"],
+                png: [],
             });
         });
 
         it("should handle identical arrays", () => {
-            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
-            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"] };
+            const a = { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] };
+            const b = { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] };
 
             const result = utils.mergeSourceDependencies(a, b);
 
-            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"] });
+            assert.deepEqual(result, { css: ["style.css"], js: ["app.js"], modules: ["react"], png: [] });
         });
 
         it("should handle complex real-world scenario", () => {
@@ -669,11 +689,13 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["src/components/button.css", "src/styles/main.css"],
                 js: ["src/components/button.js", "src/utils/helpers.js"],
                 modules: ["@babel/core", "react", "webpack"],
+                png: [],
             };
             const b = {
                 css: ["src/components/modal.css", "src/styles/main.css"],
                 js: ["src/components/modal.js", "src/utils/helpers.js"],
                 modules: ["lodash", "react", "vue"],
+                png: [],
             };
 
             const result = utils.mergeSourceDependencies(a, b);
@@ -682,12 +704,22 @@ describe("CDP/Selectivity/Utils", () => {
                 css: ["src/components/button.css", "src/components/modal.css", "src/styles/main.css"],
                 js: ["src/components/button.js", "src/components/modal.js", "src/utils/helpers.js"],
                 modules: ["@babel/core", "lodash", "react", "vue", "webpack"],
+                png: [],
             });
         });
 
+        it("should merge non-empty png arrays", () => {
+            const a = { css: [], js: [], modules: [], png: ["a.png", "c.png"] };
+            const b = { css: [], js: [], modules: [], png: ["b.png", "d.png"] };
+
+            const result = utils.mergeSourceDependencies(a, b);
+
+            assert.deepEqual(result.png, ["a.png", "b.png", "c.png", "d.png"]);
+        });
+
         it("should preserve original objects without mutation", () => {
-            const a = { css: ["a.css"], js: ["a.js"], modules: ["react"] };
-            const b = { css: ["b.css"], js: ["b.js"], modules: ["vue"] };
+            const a = { css: ["a.css"], js: ["a.js"], modules: ["react"], png: [] };
+            const b = { css: ["b.css"], js: ["b.js"], modules: ["vue"], png: [] };
             const originalA = JSON.parse(JSON.stringify(a));
             const originalB = JSON.parse(JSON.stringify(b));
 
@@ -861,10 +893,14 @@ describe("CDP/Selectivity/Utils", () => {
                 clone: sandbox.stub(),
                 assign: sandbox.stub(),
             } as any;
-            const mockDependencies = {
+            const mockDependencies: TestDependenciesFileContents = {
                 chrome: {
-                    css: { css: ["src/styles.css"], js: [], modules: [] },
-                    js: { css: [], js: ["src/app.js"], modules: ["react"] },
+                    browser: {
+                        css: ["src/styles.css"],
+                        js: ["src/app.js"],
+                        modules: ["react"],
+                        png: [],
+                    },
                 },
             };
             readJsonWithCompressionStub.resolves(mockDependencies);
@@ -906,7 +942,12 @@ describe("CDP/Selectivity/Utils", () => {
             } as any;
             const mockDependencies = {
                 firefox: {
-                    css: { css: ["src/theme.css"], js: [], modules: [] },
+                    browser: {
+                        css: ["src/theme.css"],
+                        js: [],
+                        modules: [],
+                        png: [],
+                    },
                 },
             };
             readJsonWithCompressionStub.resolves(mockDependencies);
@@ -931,12 +972,32 @@ describe("CDP/Selectivity/Utils", () => {
             } as any;
             const mockDependencies = {
                 chrome: {
-                    css: { css: ["src/styles.css", "src/components.css"], js: [], modules: ["styled-components"] },
-                    js: { css: [], js: ["src/app.js", "src/utils.js"], modules: ["react", "lodash"] },
+                    browser: {
+                        css: ["src/styles.css", "src/components.css"],
+                        js: [],
+                        modules: ["styled-components"],
+                        png: [],
+                    },
+                    testplane: {
+                        css: [],
+                        js: ["src/app.js", "src/utils.js"],
+                        modules: ["react", "lodash"],
+                        png: [],
+                    },
                 },
                 firefox: {
-                    css: { css: ["src/styles.css"], js: [], modules: [] },
-                    js: { css: [], js: ["src/app.js"], modules: ["react"] },
+                    browser: {
+                        css: ["src/styles.css"],
+                        js: [],
+                        modules: [],
+                        png: [],
+                    },
+                    testplane: {
+                        css: [],
+                        js: ["src/app.js"],
+                        modules: ["react"],
+                        png: [],
+                    },
                 },
             };
             readJsonWithCompressionStub.resolves(mockDependencies);
@@ -946,6 +1007,52 @@ describe("CDP/Selectivity/Utils", () => {
             assert.deepEqual(result, mockDependencies);
             assert.calledWith(readJsonWithCompressionStub, "/test/selectivity/tests/complex-test.json", "zstd", {
                 defaultValue: {},
+            });
+        });
+
+        it("should restore missing dependency properties", async () => {
+            const mockTest = {
+                id: "old-format-test",
+                title: "Old format test",
+                file: "test.js",
+                location: { line: 1, column: 1 },
+                fn: sandbox.stub(),
+                clone: sandbox.stub(),
+                assign: sandbox.stub(),
+            } as any;
+            const oldFormatDependencies = {
+                chrome: {
+                    browser: {
+                        css: ["src/styles.css"],
+                        modules: ["react"],
+                    },
+                    testplane: {
+                        js: ["src/utils.js"],
+                    },
+                },
+            };
+            readJsonWithCompressionStub.resolves(oldFormatDependencies);
+
+            const result = await utils.readTestDependencies("/test/selectivity/tests", mockTest, "none");
+            const completeExpectedBrowserDependencies: NormalizedDependencies = {
+                css: ["src/styles.css"],
+                js: [],
+                modules: ["react"],
+                png: [],
+            };
+
+            const completeExpectedTestplaneDependencies: NormalizedDependencies = {
+                css: [],
+                js: ["src/utils.js"],
+                modules: [],
+                png: [],
+            };
+
+            assert.deepEqual(result, {
+                chrome: {
+                    browser: completeExpectedBrowserDependencies,
+                    testplane: completeExpectedTestplaneDependencies,
+                },
             });
         });
     });

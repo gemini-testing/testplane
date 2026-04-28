@@ -35,19 +35,24 @@ export class HashReader {
 
     /** @returns changed deps or null, if nothing changed */
     async getTestChangedDeps(testDeps: NormalizedDependencies): Promise<NormalizedDependencies | null> {
-        const depFileTypes: Array<keyof NormalizedDependencies> = ["css", "js", "modules"] as const;
+        const depFileTypes: Array<keyof NormalizedDependencies> = ["css", "js", "modules", "png"] as const;
         const fileContents = await this._getHashFileContents();
 
         let result: NormalizedDependencies | null = null;
 
         const checkForDepFileType = async (depFileType: keyof NormalizedDependencies): Promise<void> => {
+            // Old selectivity dependency files did not have "png" property
+            if (!testDeps[depFileType]) {
+                return;
+            }
+
             for (const filePath of testDeps[depFileType]) {
                 const isChanged = this._fileStateCache.get(filePath);
 
                 if (isChanged === false) {
                     continue;
                 } else if (isChanged === true) {
-                    result ||= { css: [], js: [], modules: [] };
+                    result ||= { css: [], js: [], modules: [], png: [] };
                     result[depFileType].push(filePath);
                     continue;
                 }
@@ -65,7 +70,7 @@ export class HashReader {
                 }
 
                 if (cachedFileHash !== calculatedFileHash) {
-                    result ||= { css: [], js: [], modules: [] };
+                    result ||= { css: [], js: [], modules: [], png: [] };
                     result[depFileType].push(filePath);
                     this._fileStateCache.set(filePath, true);
                 } else {

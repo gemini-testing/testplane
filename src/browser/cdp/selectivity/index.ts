@@ -8,7 +8,7 @@ import type { Test, TestDepsContext, TestDepsData } from "../../../types";
 import { getSelectivityTestsPath, mergeSourceDependencies, transformSourceDependencies } from "./utils";
 import { getHashWriter } from "./hash-writer";
 import { Compression } from "./types";
-import { getCollectedTestplaneDependencies } from "./testplane-selectivity";
+import { getCollectedTestplaneJsDependencies, getCollectedTestplanePngDependencies } from "./testplane-selectivity";
 import { getHashReader } from "./hash-reader";
 import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
@@ -257,10 +257,12 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             : null;
 
         const testDependencyWriter = getTestDependenciesWriter(testDependenciesPath, compression);
-        const browserDeps = transformSourceDependencies(cssDependencies, jsDependencies, mapBrowserDepsRelativePath);
+        const browserDeps = transformSourceDependencies(
+            { css: cssDependencies, js: jsDependencies, png: null },
+            mapBrowserDepsRelativePath,
+        );
         const testplaneDeps = transformSourceDependencies(
-            null,
-            getCollectedTestplaneDependencies(),
+            { css: null, js: getCollectedTestplaneJsDependencies(), png: getCollectedTestplanePngDependencies() },
             mapTestplaneDepsRelativePath,
         );
 
