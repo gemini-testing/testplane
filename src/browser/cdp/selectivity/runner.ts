@@ -22,6 +22,16 @@ const shouldDisableBrowserSelectivity = _.memoize(
             return true;
         }
 
+        if (config.lastFailed.only) {
+            if (!config.selectivity.saveIncompleteDumpOnFail) {
+                logger.warn(`Disabling selectivity for ${browserId}: lastFailedOnly mode is enabled`);
+            } else {
+                debugSelectivity(`Not skipping tests for ${browserId}: lastFailedOnly mode controls it`);
+            }
+
+            return true;
+        }
+
         if (!config.selectivity.disableSelectivityPatterns.length) {
             return false;
         }
@@ -65,9 +75,10 @@ const shouldDisableBrowserSelectivity = _.memoize(
     },
     config => {
         const { enabled, testDependenciesPath, compression, disableSelectivityPatterns } = config.selectivity;
+        const lastFailed = config.lastFailed.only;
 
         return selectivityShouldRead(enabled)
-            ? testDependenciesPath + "#" + compression + "#" + disableSelectivityPatterns.join("#")
+            ? lastFailed + "#" + testDependenciesPath + "#" + compression + "#" + disableSelectivityPatterns.join("#")
             : "";
     },
 );

@@ -214,24 +214,7 @@ describe("CDP/Selectivity/HashWriter", () => {
             });
         });
 
-        it("should not readHashFileContents when readExisting is false", async () => {
-            const writer = new HashWriter("/test/selectivity", "none");
-            const dependencies = {
-                css: ["src/styles.css"],
-                js: [],
-                modules: [],
-                png: [],
-            };
-
-            fileHashProviderMock.calculateForFile.withArgs("src/styles.css").resolves("css-hash");
-
-            writer.addTestDependencyHashes(dependencies);
-            await writer.save(false);
-
-            assert.notCalled(readHashFileContentsStub);
-        });
-
-        it("should merge staged hashes with existing file contents when readExisting is true", async () => {
+        it("should merge staged hashes with existing file contents", async () => {
             const existingContents = {
                 files: { "src/old.css": "old-hash" },
                 modules: { "node_modules/old-module": "old-module-hash" },
@@ -255,7 +238,7 @@ describe("CDP/Selectivity/HashWriter", () => {
                 .resolves("module-hash");
 
             writer.addTestDependencyHashes(dependencies);
-            await writer.save(true);
+            await writer.save();
 
             assert.calledWith(writeJsonWithCompression, "/test/selectivity/hashes.json", {
                 files: {

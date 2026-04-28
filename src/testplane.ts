@@ -206,10 +206,10 @@ export class Testplane extends BaseTestplane {
             { shouldDisableSelectivity },
         );
 
-        if (!shouldDisableSelectivity && !this.isFailed()) {
+        if (!shouldDisableSelectivity) {
             const [updateResult, clearResult] = await Promise.allSettled([
-                updateSelectivityHashes(this.config),
-                clearUnusedSelectivityDumps(this.config),
+                updateSelectivityHashes(this.config, this.isFailed()),
+                clearUnusedSelectivityDumps(this.config, this.isFailed()),
             ]);
 
             if (updateResult.status === "rejected") {

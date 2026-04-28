@@ -12,7 +12,7 @@ import { getCollectedTestplaneJsDependencies, getCollectedTestplanePngDependenci
 import { getHashReader } from "./hash-reader";
 import type { Config } from "../../../config";
 import { MasterEvents } from "../../../events";
-import { selectivityShouldRead, selectivityShouldWrite } from "./modes";
+import { selectivityShouldWrite } from "./modes";
 import { debugSelectivity } from "./debug";
 import { getUsedDumpsTracker } from "./used-dumps-tracker";
 import { DebuggerEvents } from "../domains/debugger";
@@ -21,18 +21,22 @@ import { CDPSessionId } from "../types";
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
 /**
- * Called at the end of successfull testplane run
+ * Called at the end of testplane run
  * Not using "Promise.all" here because all hashes are already calculated and cached at the start
  */
-export const updateSelectivityHashes = async (config: Config): Promise<void> => {
+export const updateSelectivityHashes = async (config: Config, isRunFailed: boolean): Promise<void> => {
     const browserIds = config.getBrowserIds();
     const processedRoots = new Set();
 
     for (const browserId of browserIds) {
         const browserConfig = config.forBrowser(browserId);
-        const { enabled, testDependenciesPath, compression, disableSelectivityPatterns } = browserConfig.selectivity;
-        const shouldReadExistingHashes = selectivityShouldRead(enabled);
-        const rootKey = `${shouldReadExistingHashes}#${testDependenciesPath}#${compression}`;
+        const { enabled, testDependenciesPath, compression, disableSelectivityPatterns, saveIncompleteDumpOnFail } =
+            browserConfig.selectivity;
+        const rootKey = `${testDependenciesPath}#${compression}`;
+
+        if ((isRunFailed || browserConfig.lastFailed.only) && !saveIncompleteDumpOnFail) {
+            continue;
+        }
 
         if (!selectivityShouldWrite(enabled) || processedRoots.has(rootKey)) {
             continue;
@@ -50,7 +54,7 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
         }
 
         try {
-            await hashWriter.save(shouldReadExistingHashes);
+            await hashWriter.save();
         } catch (cause) {
             throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
         }
@@ -59,16 +63,21 @@ export const updateSelectivityHashes = async (config: Config): Promise<void> => 
     }
 };
 
-export const clearUnusedSelectivityDumps = async (config: Config): Promise<void> => {
+/**
+ * Called at the end of testplane run
+ */
+export const clearUnusedSelectivityDumps = async (config: Config, isRunFailed: boolean): Promise<void> => {
     const usedDumpsTracker = getUsedDumpsTracker();
     const browserIds = config.getBrowserIds();
     const selectivityRoots: string[] = [];
 
     for (const browserId of browserIds) {
         const browserConfig = config.forBrowser(browserId);
-        const { enabled, testDependenciesPath } = browserConfig.selectivity;
+        const { enabled, testDependenciesPath, saveIncompleteDumpOnFail } = browserConfig.selectivity;
 
-        if (selectivityShouldWrite(enabled) && !selectivityRoots.includes(testDependenciesPath)) {
+        if ((isRunFailed && !saveIncompleteDumpOnFail) || browserConfig.lastFailed.only) {
+            continue;
+        } else if (selectivityShouldWrite(enabled) && !selectivityRoots.includes(testDependenciesPath)) {
             selectivityRoots.push(testDependenciesPath);
         }
     }
