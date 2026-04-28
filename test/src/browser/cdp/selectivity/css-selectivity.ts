@@ -125,23 +125,9 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         sandbox.restore();
     });
 
-    describe("constructor", () => {
-        it("should initialize with correct parameters", () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
-
-            assert.isOk(cssSelectivity);
-        });
-
-        it("should initialize with default sourceRoot", () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId);
-
-            assert.isOk(cssSelectivity);
-        });
-    });
-
     describe("start", () => {
         it("should set up CDP connections and start rule usage tracking", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -154,7 +140,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             const fetchTextWithBrowserFallbackStubResult = Promise.resolve("src");
             hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
             fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -172,7 +158,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         it("should handle styleSheetAdded events when there is is cache", async () => {
             const hasCachedSelectivityFileStubResult = Promise.resolve(true);
             hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -187,7 +173,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
         it("should handle styleSheetAdded events for data urls", async () => {
             const sourceMapURL = "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ%3D%3D";
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -204,7 +190,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle styleSheetAdded events without sourceURL or sourceMapURL", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -236,7 +222,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should not process events if sessionId is not set", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, "", sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, "", sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -270,7 +256,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
     describe("takeCoverageSnapshot", () => {
         it("should call takeCoverageDelta with sessionId", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
             await cssSelectivity.takeCoverageSnapshot();
@@ -287,7 +273,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             });
             cdpMock.css.getStyleSheetText.resolves({ text: cssWithSourceMap });
 
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
             await cssSelectivity.takeCoverageSnapshot();
@@ -300,7 +286,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
                 coverage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 50, used: true }],
             });
 
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -326,7 +312,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
             });
             patchSourceMapSourcesStub.returns(mockSourceMap);
 
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
 
@@ -342,7 +328,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
 
     describe("stop", () => {
         it("should return empty array when drop is true", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             await cssSelectivity.start();
             const result = await cssSelectivity.stop(true);
@@ -352,7 +338,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should process rule usage and return dependencies", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -417,7 +403,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle missing styleSheetAdded events by fetching manually", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -448,7 +434,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle cached styleSheet source maps", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -476,7 +462,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle cache write fail for styleSheet source maps", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -506,7 +492,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle non-embedded source maps without stylesheet URL", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -526,7 +512,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle stylesheet text fetch errors", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -544,7 +530,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle source map fetch errors", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
@@ -586,7 +572,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should handle files with protocols", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123" }],
@@ -624,7 +610,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         });
 
         it("should return sorted and unique dependencies", async () => {
-            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
 
             const mockRuleUsage = {
                 ruleUsage: [{ styleSheetId: "stylesheet-123" }, { styleSheetId: "stylesheet-456" }],
@@ -675,6 +661,115 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
                 "/root/src/b-styles.css",
                 "/root/src/z-styles.css",
             ]);
+        });
+    });
+
+    describe("mapSourceMapUrl", () => {
+        it("should skip stylesheet when mapSourceMapUrl returns falsy", async () => {
+            const mapSourceMapUrl = sinon.stub().returns(false);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, mapSourceMapUrl);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            cdpMock.css.stopRuleUsageTracking.resolves({
+                ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
+            });
+
+            const result = await cssSelectivity.stop();
+
+            assert.calledOnceWith(mapSourceMapUrl, {
+                type: "css",
+                sourceUrl: "http://example.com/styles.css",
+                sourceMapUrl: "styles.css.map",
+            });
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+            assert.deepEqual(Array.from(result || []), []);
+        });
+
+        it("should not get filtered out stylesheets", async () => {
+            const mapSourceMapUrl = sinon.stub().returns(false);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, mapSourceMapUrl);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            // Coverage refers to the same stylesheet that was filtered
+            cdpMock.css.takeCoverageDelta.resolves({
+                coverage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 50, used: true }],
+            });
+
+            await cssSelectivity.takeCoverageSnapshot();
+
+            assert.notCalled(cdpMock.css.getStyleSheetText);
+        });
+
+        it("should replace source map URL when mapSourceMapUrl returns a string", async () => {
+            const mapSourceMapUrl = sinon.stub().returns("http://cdn.example.com/remapped-styles.css.map");
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, mapSourceMapUrl);
+
+            const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+            const fetchTextWithBrowserFallbackStubResult = Promise.resolve(JSON.stringify(mockSourceMap));
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            await hasCachedSelectivityFileStubResult;
+            await fetchTextWithBrowserFallbackStubResult;
+
+            assert.calledWith(
+                fetchTextWithBrowserFallbackStub,
+                "http://cdn.example.com/remapped-styles.css.map",
+                cdpMock.runtime,
+                sessionId,
+            );
+        });
+
+        it("should pass through when mapSourceMapUrl returns true", async () => {
+            const mapSourceMapUrl = sinon.stub().returns(true);
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, mapSourceMapUrl);
+
+            const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+            const fetchTextWithBrowserFallbackStubResult = Promise.resolve(JSON.stringify(mockSourceMap));
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            await hasCachedSelectivityFileStubResult;
+            await fetchTextWithBrowserFallbackStubResult;
+
+            assert.calledWith(fetchTextWithBrowserFallbackStub, "styles.css.map", cdpMock.runtime, sessionId);
+        });
+
+        it("should not call mapSourceMapUrl when no mapSourceMapUrl is provided", async () => {
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, sourceRoot, null);
+
+            const hasCachedSelectivityFileStubResult = Promise.resolve(false);
+            const fetchTextWithBrowserFallbackStubResult = Promise.resolve(JSON.stringify(mockSourceMap));
+            hasCachedSelectivityFileStub.returns(hasCachedSelectivityFileStubResult);
+            fetchTextWithBrowserFallbackStub.returns(fetchTextWithBrowserFallbackStubResult);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            await hasCachedSelectivityFileStubResult;
+            await fetchTextWithBrowserFallbackStubResult;
+
+            assert.calledWith(fetchTextWithBrowserFallbackStub, "styles.css.map", cdpMock.runtime, sessionId);
         });
     });
 });

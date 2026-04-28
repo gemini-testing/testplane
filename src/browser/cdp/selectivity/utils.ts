@@ -224,7 +224,7 @@ export const transformSourceDependencies = (
         js: jsDependencies,
         png: pngDependencies,
     }: { css: Set<string> | null; js: Set<string> | null; png: Set<string> | null },
-    mapDependencyPathFn?: null | ((relativePath: string) => string | void),
+    mapDependencyPathFn?: null | ((relativePath: string) => string | boolean | void),
 ): NormalizedDependencies => {
     const nodeModulesLabel = "node_modules/";
     const cssSet: Set<string> = new Set();
@@ -243,15 +243,14 @@ export const transformSourceDependencies = (
         }
 
         const initialDependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
+        const mapDependencyPathResult = mapDependencyPathFn ? mapDependencyPathFn(initialDependencyRelativePath) : true;
 
-        const dependencyRelativePath = mapDependencyPathFn
-            ? mapDependencyPathFn(initialDependencyRelativePath)
-            : initialDependencyRelativePath;
-
-        if (!dependencyRelativePath) {
+        if (!mapDependencyPathResult) {
             return;
         }
 
+        const dependencyRelativePath =
+            mapDependencyPathResult === true ? initialDependencyRelativePath : mapDependencyPathResult;
         const nodeModulesLabelPos = dependencyRelativePath.indexOf(nodeModulesLabel);
 
         if (nodeModulesLabelPos === -1) {
