@@ -101,9 +101,39 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             };
 
             const goToPage = async (): Promise<void> => {
-                await session.url(uri, { timeout }).finally(() => {
-                    restorePageLoadTimeout();
-                });
+                const promises: Promise<unknown>[] = [];
+
+                promises.push(
+                    session.url(uri, { timeout, _noFallbackOnCancel: true }).finally(() => {
+                        restorePageLoadTimeout();
+                    }),
+                );
+
+                let hardTimeoutId: NodeJS.Timeout | undefined;
+
+                /* BiDi doesn't respect pageLoadTimeout, so we need to set a hard timeout and cancel previous navigation
+                 * by navigating to about:blank */
+                if (session.isBidi) {
+                    promises.push(
+                        new Promise<never>((_, reject) => {
+                            hardTimeoutId = setTimeout(async () => {
+                                await session.url(emptyPageUrl);
+
+                                reject(
+                                    new Error(
+                                        `openAndWait timed out after ${timeout}ms while trying to navigate to ${uri}`,
+                                    ),
+                                );
+                            }, timeout);
+                        }),
+                    );
+                }
+
+                try {
+                    await Promise.race(promises);
+                } finally {
+                    clearTimeout(hardTimeoutId);
+                }
             };
 
             pageLoader.on("pageLoadError", handleError);
