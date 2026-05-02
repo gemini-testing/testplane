@@ -89,18 +89,6 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             await setPageLoadTimeout(timeout);
         }
 
-        // Create hard timeout promise to guarantee timeout is respected
-        // This is needed because WebDriver pageLoad timeout only affects the browser's
-        // page load event, not the HTTP connection/response time
-        let hardTimeoutId: NodeJS.Timeout | undefined;
-        const hardTimeoutPromise = timeout
-            ? new Promise<never>((_, reject) => {
-                  hardTimeoutId = setTimeout(() => {
-                      reject(new Error(`openAndWait timed out after ${timeout}ms`));
-                  }, timeout);
-              })
-            : null;
-
         const loadPromise = new Promise<void>((resolve, reject) => {
             const handleError = (err: Error): void => {
                 reject(new Error(`url: ${err.message}`));
@@ -113,7 +101,39 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             };
 
             const goToPage = async (): Promise<void> => {
-                await session.url(uri, { timeout });
+                const promises: Promise<unknown>[] = [];
+
+                promises.push(
+                    session.url(uri, { timeout, _noFallbackOnCancel: true }).finally(() => {
+                        restorePageLoadTimeout();
+                    }),
+                );
+
+                let hardTimeoutId: NodeJS.Timeout | undefined;
+
+                /* BiDi doesn't respect pageLoadTimeout, so we need to set a hard timeout and cancel previous navigation
+                 * by navigating to about:blank */
+                if (session.isBidi) {
+                    promises.push(
+                        new Promise<never>((_, reject) => {
+                            hardTimeoutId = setTimeout(async () => {
+                                await session.url(emptyPageUrl);
+
+                                reject(
+                                    new Error(
+                                        `openAndWait timed out after ${timeout}ms while trying to navigate to ${uri}`,
+                                    ),
+                                );
+                            }, timeout);
+                        }),
+                    );
+                }
+
+                try {
+                    await Promise.race(promises);
+                } finally {
+                    clearTimeout(hardTimeoutId);
+                }
             };
 
             pageLoader.on("pageLoadError", handleError);
@@ -148,19 +168,7 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
             pageLoader.load(goToPage).then(checkLoaded);
         });
 
-        const racePromises: Promise<void>[] = [loadPromise];
-        if (hardTimeoutPromise) {
-            racePromises.push(hardTimeoutPromise);
-        }
-
-        return Promise.race(racePromises).finally(() => {
-            if (hardTimeoutId) {
-                clearTimeout(hardTimeoutId);
-            }
-            // No await, because session might be stuck on url() command
-            pageLoader.unsubscribe();
-            restorePageLoadTimeout();
-        });
+        return loadPromise.finally(() => pageLoader.unsubscribe());
     };
 
 export type OpenAndWaitCommand = ReturnType<typeof makeOpenAndWaitCommand>;
