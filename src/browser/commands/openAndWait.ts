@@ -113,7 +113,7 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
 
                 /* BiDi doesn't respect pageLoadTimeout, so we need to set a hard timeout and cancel previous navigation
                  * by navigating to about:blank */
-                if (session.isBidi) {
+                if (session.isBidi && timeout > 0) {
                     promises.push(
                         new Promise<never>((_, reject) => {
                             hardTimeoutId = setTimeout(async () => {
