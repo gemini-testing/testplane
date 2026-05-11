@@ -182,6 +182,7 @@ export class Testplane extends BaseTestplane {
         eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
         eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
+        eventsUtils.passthroughEventAsync(signalHandler, this.runner, MasterEvents.EXIT);
 
         await this._startServersIfNeeded();
         await this._emitInitEventOnce();

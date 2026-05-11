@@ -604,7 +604,7 @@ describe("testplane", () => {
 
                     signalHandler.emitAndWait("exit");
 
-                    assert.calledOnce(onExit);
+                    assert.calledTwice(onExit);
                 });
             });
 
