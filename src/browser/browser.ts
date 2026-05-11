@@ -54,6 +54,7 @@ export class Browser {
     protected _customCommands: Set<CustomCommand>;
     protected _wdPool?: WebdriverPool;
     protected _wdProcess: WdProcess | null;
+    protected _exitError?: Error;
     /** This Promise is awaited after test is finished. Can be used for cleanup.
        Right now is used to wait for time travel snapshots to finish collecting */
     protected _snapshotsPromiseRef: history.PromiseRef;
@@ -213,5 +214,9 @@ export class Browser {
 
     get emitter(): AsyncEmitter {
         return this._emitter;
+    }
+
+    get exitError(): Error | undefined {
+        return this._exitError;
     }
 }
