@@ -72,7 +72,7 @@
     "@testplane/devtools": "8.32.5",
     "@testplane/wdio-protocols": "9.4.7",
     "@testplane/wdio-utils": "9.5.4",
-    "@testplane/webdriverio": "9.5.25",
+    "@testplane/webdriverio": "9.5.27",
     "@vitest/spy": "2.1.4",
     "buffer-crc32": "1.0.0",
     "chalk": "2.4.2",
