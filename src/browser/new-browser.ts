@@ -64,7 +64,7 @@ export class NewBrowser extends Browser {
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
 
-        signalHandler.on("exit", () => this.quit());
+        signalHandler.on("exit", (err?: Error) => this.quit(err));
     }
 
     async init(): Promise<NewBrowser> {
@@ -81,7 +81,9 @@ export class NewBrowser extends Browser {
         return Promise.resolve();
     }
 
-    async quit(): Promise<void> {
+    async quit(err?: Error): Promise<void> {
+        this._exitError = err;
+
         try {
             this.setHttpTimeout(this._config.sessionQuitTimeout);
             await this._session!.deleteSession();

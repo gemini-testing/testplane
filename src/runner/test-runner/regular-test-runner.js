@@ -38,9 +38,9 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
-            this._test.err = error;
+            this._test.err = this._browser?.exitError || error;
 
-            this._applyTestResults(error);
+            this._applyTestResults(this._test.err);
 
             this._emit(MasterEvents.TEST_FAIL);
         }

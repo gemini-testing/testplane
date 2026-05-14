@@ -92,6 +92,8 @@ export class MainRunner extends RunnableEmitter {
         this.workersRegistry.init();
         this.workers = this.registerWorkers(require.resolve("../worker"), ["runTest", "cancel"] as const) as Workers;
         this.browserPool = pool.create(this.config, this);
+
+        eventsUtils.passthroughEvent(this, this.workersRegistry, MasterEvents.EXIT);
     }
 
     _isRunning(): boolean {
