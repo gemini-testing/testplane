@@ -6,12 +6,28 @@ import type { Browser } from "../../types";
 import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { getOverridesProtocol, getWebdriverFrames, SaveStateData } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
-import { Cookie } from "@testplane/wdio-protocols";
 import { StateOpts } from "../../../config/types";
+import type { Cookie as WebdriverCookie } from "@testplane/wdio-protocols";
+import type { Cookie } from "../../../types";
 
 export type RestoreStateOptions = Omit<StateOpts, "keepFile"> & {
     data?: SaveStateData;
     refresh?: boolean;
+};
+
+const normalizeCookiePrefixConstraints = (cookie: Cookie): Cookie => {
+    if (cookie.name.startsWith("__Host-")) {
+        const cookieWithoutDomain = { ...cookie };
+        delete cookieWithoutDomain.domain;
+
+        return { ...cookieWithoutDomain, path: "/", secure: true };
+    }
+
+    if (cookie.name.startsWith("__Secure-")) {
+        return { ...cookie, secure: true };
+    }
+
+    return cookie;
 };
 
 export default (browser: Browser): void => {
@@ -40,13 +56,15 @@ export default (browser: Browser): void => {
             restoreState.cookies = restoreState?.cookies.filter(options.cookieFilter);
         }
 
+        const cookies = restoreState.cookies?.map(normalizeCookiePrefixConstraints);
+
         switch (getOverridesProtocol(browser)) {
             case WEBDRIVER_PROTOCOL: {
                 await session.switchToParentFrame();
 
-                if (restoreState.cookies && options.cookies) {
+                if (cookies && options.cookies) {
                     await session.setCookies(
-                        restoreState.cookies.map(
+                        cookies.map(
                             cookie =>
                                 ({
                                     ...cookie,
@@ -55,7 +73,7 @@ export default (browser: Browser): void => {
                                         cookie.sameSite && session.isBidi
                                             ? cookie.sameSite.toLowerCase()
                                             : cookie.sameSite,
-                                } as Cookie),
+                                } as WebdriverCookie),
                         ),
                     );
                 }
@@ -114,8 +132,8 @@ export default (browser: Browser): void => {
 
                 const frames = page.frames();
 
-                if (restoreState.cookies && options.cookies) {
-                    await page.setCookie(...restoreState.cookies);
+                if (cookies && options.cookies) {
+                    await page.setCookie(...cookies);
                 }
 
                 for (const frame of frames) {
