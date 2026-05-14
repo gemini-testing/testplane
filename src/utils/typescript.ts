@@ -3,6 +3,7 @@ import { addHook } from "pirates";
 import * as recast from "recast";
 import * as logger from "./logger";
 import { isRunInBrowserEnv } from "./config";
+import { instrumentReplBeforeTestIfNeeded } from "./repl-instrumentation";
 import type { CommonConfig } from "../config/types";
 
 const TESTPLANE_TRANSFORM_HOOK = Symbol.for("testplane.transform.hook");
@@ -58,7 +59,7 @@ export const transformCode = (
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { transformSync }: typeof import("@swc/core") = require("@swc/core");
             transformFunc = (code, sourceFile, sourceMaps): string => {
-                const preprocessedCode = shouldRemoveViteQueryImports ? removeViteQueryImports(code, sourceFile) : code;
+                const preprocessedCode = preprocessCode(code, sourceFile);
 
                 return transformSync(preprocessedCode, {
                     sourceFileName: sourceFile,
@@ -85,7 +86,7 @@ export const transformCode = (
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const { transformSync }: typeof import("esbuild") = require("esbuild");
             transformFunc = (code, sourceFile, sourceMaps): string => {
-                const preprocessedCode = shouldRemoveViteQueryImports ? removeViteQueryImports(code, sourceFile) : code;
+                const preprocessedCode = preprocessCode(code, sourceFile);
 
                 return transformSync(preprocessedCode, {
                     sourcefile: sourceFile,
@@ -169,6 +170,43 @@ export const enableSourceMaps = (): void => {
     processWithTranspileSymbol[TESTPLANE_TRANSFORM_HOOK].enableSourceMaps();
 };
 
+function preprocessCode(code: string, sourceFile: string): string {
+    let result = code;
+
+    if (shouldRemoveViteQueryImports) {
+        result = removeViteQueryImports(result, sourceFile);
+    }
+
+    return instrumentReplBeforeTestIfNeeded(result, sourceFile);
+}
+
+function mkBabelParser(): RecastParser | null {
+    try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const babelParser: typeof import("@babel/parser") = require("@babel/parser");
+
+        return {
+            parse(source: string): ReturnType<typeof babelParser.parse> {
+                return babelParser.parse(source, {
+                    sourceType: "unambiguous",
+                    plugins: [
+                        "typescript",
+                        "jsx",
+                        "decorators-legacy",
+                        "classProperties",
+                        "nullishCoalescingOperator",
+                        "optionalChaining",
+                        "topLevelAwait",
+                    ],
+                    tokens: true,
+                });
+            },
+        };
+    } catch {
+        return null;
+    }
+}
+
 function removeViteQueryImports(code: string, sourceFile: string): string {
     const extname = path.extname(sourceFile);
     const isJsxOrTsx = extname === ".jsx" || extname === ".tsx";
@@ -177,29 +215,9 @@ function removeViteQueryImports(code: string, sourceFile: string): string {
         return code;
     }
 
-    let parser: RecastParser | null = null;
+    const parser = mkBabelParser();
 
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const babelParser: typeof import("@babel/parser") = require("@babel/parser");
-
-        parser = {
-            parse(source: string): ReturnType<typeof babelParser.parse> {
-                return babelParser.parse(source, {
-                    sourceType: "module",
-                    plugins: [
-                        "typescript",
-                        "jsx",
-                        "decorators-legacy",
-                        "classProperties",
-                        "nullishCoalescingOperator",
-                        "optionalChaining",
-                    ],
-                    tokens: true,
-                });
-            },
-        };
-    } catch (err) {
+    if (!parser) {
         // If @babel/parser is not installed, return original code without transformation.
         // This is not a critical issue as the user may not be using Vite-style imports with query parameters.
         return code;

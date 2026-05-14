@@ -218,7 +218,9 @@ describe("testplane", () => {
                 },
             });
 
-            assert.calledOnce(RuntimeConfig.getInstance);
+            // Three calls is an observed value in practice (1 from testplane run and 2 from repl instrumentation),
+            // keeping this check to catch unexpected changes in the future
+            assert.calledThrice(RuntimeConfig.getInstance);
             assert.calledOnceWith(RuntimeConfig.getInstance.lastCall.returnValue.extend, {
                 updateRefs: true,
                 requireModules: ["foo"],
