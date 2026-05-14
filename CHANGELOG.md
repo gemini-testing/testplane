@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.44.2 (2026-05-14)
+
+
+### Bug Fixes
+
+* fix issues with openAndWait timeouts ([#1248](https://github.com/gemini-testing/testplane/issues/1248)) ([8c0eee7](https://github.com/gemini-testing/testplane/commit/8c0eee7f82ac372c61785a20831b57c89706fa92))
+
 ### 8.44.1 (2026-05-13)
 
 ## 8.44.0 (2026-04-28)
