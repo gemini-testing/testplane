@@ -4,6 +4,8 @@ const { promiseMethod, promiseTimeout } = require("../../../utils/promise");
 const RuntimeConfig = require("../../../config/runtime-config");
 const logger = require("../../../utils/logger");
 const { AbortOnReconnectError } = require("../../../errors/abort-on-reconnect-error");
+const { Hook } = require("../../../test-reader/test-object");
+const { REPL_SCOPED_FN_FLAG } = require("../../../constants/repl");
 
 module.exports = class ExecutionThread {
     static create(...args) {
@@ -46,7 +48,12 @@ module.exports = class ExecutionThread {
     async _call(runnable) {
         const { replMode } = this._runtimeConfig;
 
-        if (replMode?.beforeTest && !this._isReplBeforeTestOpened) {
+        if (
+            replMode?.beforeTest &&
+            !this._isReplBeforeTestOpened &&
+            !(runnable instanceof Hook) &&
+            !runnable.fn[REPL_SCOPED_FN_FLAG]
+        ) {
             await this._ctx.browser.switchToRepl();
             this._isReplBeforeTestOpened = true;
         }

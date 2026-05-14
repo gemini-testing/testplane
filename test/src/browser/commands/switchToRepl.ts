@@ -8,6 +8,7 @@ import sinon, { type SinonStub, type SinonSpy } from "sinon";
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 
 import RuntimeConfig from "src/config/runtime-config";
+import { REPL_SCOPED_EVAL_CONTEXT_KEY } from "src/constants/repl";
 
 import type { ExistingBrowser as ExistingBrowserOriginal } from "src/browser/existing-browser";
 
@@ -239,6 +240,34 @@ describe('"switchToRepl" command', () => {
             await switchToRepl_({ session, replServer, ctx: { foo: "bar" } });
 
             assert.equal(replServer.context.foo, "bar");
+        });
+
+        it("should evaluate commands with scoped eval if it is passed", async () => {
+            const session = mkSessionStub_();
+            const replServer = mkReplServer_();
+            const scopedEval = sandbox.stub().withArgs("SOME_CONST").resolves(42);
+
+            await initBrowser_({ session });
+            const promise = session.switchToRepl({ [REPL_SCOPED_EVAL_CONTEXT_KEY]: scopedEval, foo: "bar" });
+            const replEval = (repl.start as SinonStub).firstCall.args[0].eval;
+
+            const result = await new Promise((resolve, reject) => {
+                replEval("SOME_CONST\n", {}, "repl", (err: Error | null, value: unknown) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(value);
+                    }
+                });
+            });
+
+            replServer.emit("exit");
+            await promise;
+
+            assert.equal(result, 42);
+            assert.calledOnceWith(scopedEval, "SOME_CONST");
+            assert.equal(replServer.context.foo, "bar");
+            assert.notProperty(replServer.context, REPL_SCOPED_EVAL_CONTEXT_KEY);
         });
 
         it("should not create new repl server if old one is already used", async () => {

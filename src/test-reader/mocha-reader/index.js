@@ -1,7 +1,10 @@
 "use strict";
 
+const path = require("node:path");
+const { fileURLToPath } = require("node:url");
 const _ = require("lodash");
 const Mocha = require("mocha");
+const debugReplInstrumentation = require("debug")("testplane:repl-instrumentation");
 
 const { MochaEventBus } = require("./mocha-event-bus");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
@@ -10,6 +13,11 @@ const { MasterEvents } = require("../../events");
 const { getMethodsByInterface } = require("./utils");
 const logger = require("../../utils/logger");
 const { enableSourceMaps } = require("../../utils/typescript");
+const RuntimeConfig = require("../../config/runtime-config");
+
+// TS-family specs must hit the require hook when --repl-before-test injects scoped eval.
+const REPL_INSTRUMENTATION_FORCE_REQUIRE_EXTENSIONS = new Set([".ts", ".tsx", ".cts", ".mts"]);
+const REPL_INSTRUMENTATION_MISSING_FILE_SUFFIX = ".testplane-repl-force-require";
 
 function getTagParser(original) {
     return function (title, paramsOrFn, fn) {
@@ -56,10 +64,14 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     initBuildContext(eventBus);
     initEventListeners({ rootSuite: mocha.suite, outBus: eventBus, config, runnableOpts });
 
-    files.forEach(f => mocha.addFile(f));
+    files.forEach(f => {
+        debugReplInstrumentation("mocha add file %s", f);
+        mocha.addFile(f);
+    });
 
     try {
-        await mocha.loadFilesAsync({ esmDecorator });
+        // The wrapper preserves normal esmDecorator behavior, but can force Mocha's import->require fallback for REPL instrumentation.
+        await mocha.loadFilesAsync({ esmDecorator: mkEsmDecorator(esmDecorator) });
     } catch (err) {
         const errorMessage = (err.message || "").split("\n")[0].trim();
 
@@ -75,6 +87,53 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     }
 
     applyOnly(mocha.suite, eventBus);
+}
+
+function mkEsmDecorator(esmDecorator) {
+    if (!RuntimeConfig.getInstance()?.replMode?.beforeTest) {
+        return esmDecorator;
+    }
+
+    const decorate = esmDecorator || (file => file);
+
+    return file => {
+        const decoratedFile = decorate(file);
+        const sourceFile = getFilePath(file);
+
+        // Mocha passes file:// URLs here; use the original path to check the actual spec extension.
+        if (!sourceFile || !REPL_INSTRUMENTATION_FORCE_REQUIRE_EXTENSIONS.has(path.extname(sourceFile))) {
+            return decoratedFile;
+        }
+
+        debugReplInstrumentation("force require for REPL instrumentation %s", sourceFile);
+
+        return mkMissingFileUrl(decoratedFile);
+    };
+}
+
+function getFilePath(file) {
+    try {
+        return fileURLToPath(file);
+    } catch {
+        return String(file);
+    }
+}
+
+function mkMissingFileUrl(file) {
+    try {
+        const url = new URL(String(file));
+
+        if (url.protocol === "file:") {
+            // Importing this URL fails, then Mocha retries require(originalFile), which pirates transforms.
+            url.pathname += REPL_INSTRUMENTATION_MISSING_FILE_SUFFIX;
+
+            return url.toString();
+        }
+    } catch {
+        // If it is not a URL, fall through and make the module path unresolved.
+    }
+
+    return String(file) + REPL_INSTRUMENTATION_MISSING_FILE_SUFFIX;
 }
 
 function initBuildContext(outBus) {
@@ -111,7 +170,10 @@ function passthroughFileEvents(inBus, outBus) {
         [MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, MasterEvents.BEFORE_FILE_READ],
         [MochaEventBus.events.EVENT_FILE_POST_REQUIRE, MasterEvents.AFTER_FILE_READ],
     ].forEach(([mochaEvent, ourEvent]) => {
-        inBus.on(mochaEvent, (ctx, file) => outBus.emit(ourEvent, { file }));
+        inBus.on(mochaEvent, (ctx, file) => {
+            debugReplInstrumentation("%s %s", mochaEvent, file);
+            outBus.emit(ourEvent, { file });
+        });
     });
 }
 

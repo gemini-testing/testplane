@@ -10,6 +10,7 @@ const { MasterEvents: RunnerEvents } = require("src/events");
 const Mocha = require("mocha");
 const proxyquire = require("proxyquire").noCallThru();
 const { EventEmitter } = require("events");
+const { pathToFileURL } = require("url");
 
 describe("test-reader/mocha-reader", () => {
     const sandbox = sinon.createSandbox();
@@ -18,6 +19,7 @@ describe("test-reader/mocha-reader", () => {
     let SourceMapSupportStub;
     let getMethodsByInterfaceStub;
     let enableSourceMapsStub;
+    let RuntimeConfigStub;
     let readFiles;
     let loggerWarnStub;
 
@@ -50,6 +52,9 @@ describe("test-reader/mocha-reader", () => {
         };
         getMethodsByInterfaceStub = sinon.stub().returns({ suiteMethods: [], testMethods: [] });
         enableSourceMapsStub = sinon.stub();
+        RuntimeConfigStub = {
+            getInstance: sinon.stub().returns({}),
+        };
 
         loggerWarnStub = sinon.stub();
 
@@ -59,6 +64,7 @@ describe("test-reader/mocha-reader", () => {
             "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
             "../../utils/typescript": { enableSourceMaps: enableSourceMapsStub },
             "../../utils/logger": { warn: loggerWarnStub },
+            "../../config/runtime-config": RuntimeConfigStub,
         }).readFiles;
 
         sandbox.stub(MochaEventBus, "create").returns(Object.create(MochaEventBus.prototype));
@@ -171,6 +177,24 @@ describe("test-reader/mocha-reader", () => {
                 await readFiles_({ esmDecorator });
 
                 assert.calledWith(Mocha.prototype.loadFilesAsync, { esmDecorator });
+            });
+
+            it("should force require hook for ts files in repl before test mode", async () => {
+                RuntimeConfigStub.getInstance.returns({ replMode: { beforeTest: true } });
+                const esmDecorator = sinon.stub().callsFake(file => `${file}?rand=1`);
+
+                await readFiles_({ esmDecorator });
+
+                const passedEsmDecorator = Mocha.prototype.loadFilesAsync.lastCall.args[0].esmDecorator;
+
+                assert.equal(
+                    passedEsmDecorator(pathToFileURL("/tmp/spec.hermione.ts")),
+                    "file:///tmp/spec.hermione.ts?rand=1.testplane-repl-force-require",
+                );
+                assert.equal(
+                    passedEsmDecorator(pathToFileURL("/tmp/spec.hermione.mjs")),
+                    "file:///tmp/spec.hermione.mjs?rand=1",
+                );
             });
 
             describe("handle errors", () => {

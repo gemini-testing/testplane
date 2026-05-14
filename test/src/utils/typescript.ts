@@ -1,6 +1,8 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import _ from "lodash";
+import RuntimeConfig from "src/config/runtime-config";
+import { REPL_SCOPED_EVAL_CONTEXT_KEY, REPL_SCOPED_FN_FLAG } from "src/constants/repl";
 
 describe("utils/typescript", () => {
     const processEnvBackup = _.clone(process.env);
@@ -23,6 +25,7 @@ describe("utils/typescript", () => {
     afterEach(() => {
         _.set(process, TESTPLANE_TRANSFORM_HOOK, undefined);
         _.set(process, "env", processEnvBackup);
+        RuntimeConfig.getInstance().extend({ replMode: undefined });
     });
 
     describe("registerTransformHook", () => {
@@ -66,6 +69,63 @@ describe("utils/typescript", () => {
 
             assert.calledOnce(revertHookStub);
             assert.equal(addHookStub.callCount, addHookPrevCallCount + 1);
+        });
+    });
+
+    describe("transformCode", () => {
+        it("should instrument test callback with scoped REPL if repl before test mode is enabled", () => {
+            RuntimeConfig.getInstance().extend({ replMode: { enabled: true, beforeTest: true } });
+
+            const result = ts.transformCode(
+                `
+                    const SOME_CONST = 1;
+                    it("should work", async ({ browser }) => {
+                        await browser.url("about:blank");
+                    });
+                `,
+                { sourceFile: "/tmp/sample.testplane.ts", sourceMaps: false },
+            );
+
+            assert.include(result, REPL_SCOPED_EVAL_CONTEXT_KEY);
+            assert.include(result, REPL_SCOPED_FN_FLAG);
+            assert.match(result, /await __testplaneReplBrowser\.switchToRepl/);
+            assert.match(result, /await browser\.url\("about:blank"\)/);
+        });
+
+        it("should not read browser from TDZ if test callback declares local browser", () => {
+            RuntimeConfig.getInstance().extend({ replMode: { enabled: true, beforeTest: true } });
+
+            const result = ts.transformCode(
+                `
+                    const SOMETHING = 123;
+                    it("should work", async function() {
+                        const { browser } = this;
+
+                        console.log(SOMETHING);
+                        await browser.url("about:blank");
+                    });
+                `,
+                { sourceFile: "/tmp/sample.testplane.ts", sourceMaps: false },
+            );
+
+            assert.include(result, "this && this.browser || arguments[0]?.browser || globalThis.browser");
+            assert.notInclude(result, 'typeof browser !== "undefined" && browser || this.browser');
+        });
+
+        it("should not instrument test callback if repl before test mode is disabled", () => {
+            RuntimeConfig.getInstance().extend({ replMode: { enabled: true, beforeTest: false } });
+
+            const result = ts.transformCode(
+                `
+                    it("should work", async ({ browser }) => {
+                        await browser.url("about:blank");
+                    });
+                `,
+                { sourceFile: "/tmp/sample.testplane.ts", sourceMaps: false },
+            );
+
+            assert.notInclude(result, REPL_SCOPED_EVAL_CONTEXT_KEY);
+            assert.notInclude(result, REPL_SCOPED_FN_FLAG);
         });
     });
 });

@@ -1,19 +1,22 @@
 import path from "node:path";
-import type repl from "node:repl";
+import repl, { type REPLEval, type REPLServer, type ReplOptions } from "node:repl";
 import net from "node:net";
 import { Writable, Readable } from "node:stream";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
 import RuntimeConfig from "../../config/runtime-config";
 import * as logger from "../../utils/logger";
+import { REPL_SCOPED_EVAL_CONTEXT_KEY } from "../../constants/repl";
 import type { Browser } from "../types";
 
 const REPL_LINE_EVENT = "line";
 
+type ScopedEval = (cmd: string) => unknown | Promise<unknown>;
+
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    const applyContext = (replServer: repl.REPLServer, ctx: Record<string, unknown> = {}): void => {
+    const applyContext = (replServer: REPLServer, ctx: Record<string, unknown> = {}): void => {
         if (!ctx.browser) {
             ctx.browser = session;
         }
@@ -27,7 +30,7 @@ export default (browser: Browser): void => {
         }
     };
 
-    const handleLines = (replServer: repl.REPLServer): void => {
+    const handleLines = (replServer: REPLServer): void => {
         const lineEvents = getEventListeners(replServer, REPL_LINE_EVENT);
         replServer.removeAllListeners(REPL_LINE_EVENT);
 
@@ -47,9 +50,22 @@ export default (browser: Browser): void => {
         }
     };
 
+    const mkScopedEval =
+        (scopedEval: ScopedEval): REPLEval =>
+        async (cmd, _context, _filename, callback) => {
+            try {
+                callback(null, await scopedEval(cmd.replace(/\n$/, "")));
+            } catch (err) {
+                callback(err as Error, undefined);
+            }
+        };
+
     session.addCommand("switchToRepl", async function (ctx: Record<string, unknown> = {}) {
         const runtimeCfg = RuntimeConfig.getInstance();
         const { onReplMode } = browser.state;
+        const scopedEval = ctx[REPL_SCOPED_EVAL_CONTEXT_KEY];
+        const replContext = { ...ctx };
+        delete replContext[REPL_SCOPED_EVAL_CONTEXT_KEY];
 
         if (!runtimeCfg.replMode || !runtimeCfg.replMode.enabled) {
             throw new Error(
@@ -82,7 +98,13 @@ export default (browser: Browser): void => {
             },
         });
 
-        const replServer = await import("node:repl").then(repl => repl.start({ prompt: "> ", input, output }));
+        const replStartOptions: ReplOptions = { prompt: "> ", input, output };
+
+        if (typeof scopedEval === "function") {
+            replStartOptions.eval = mkScopedEval(scopedEval as ScopedEval);
+        }
+
+        const replServer = repl.start(replStartOptions);
 
         const netServer = net
             .createServer(socket => {
@@ -107,7 +129,7 @@ export default (browser: Browser): void => {
         browser.applyState({ onReplMode: true });
         runtimeCfg.extend({ replServer });
 
-        applyContext(replServer, ctx);
+        applyContext(replServer, replContext);
         handleLines(replServer);
 
         return new Promise<void>(resolve => {

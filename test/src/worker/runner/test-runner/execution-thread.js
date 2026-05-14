@@ -7,6 +7,7 @@ const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-scr
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
+const { REPL_SCOPED_FN_FLAG } = require("src/constants/repl");
 const { promiseDelay } = require("../../../../../src/utils/promise");
 
 describe("worker/runner/test-runner/execution-thread", () => {
@@ -357,6 +358,17 @@ describe("worker/runner/test-runner/execution-thread", () => {
                         await mkExecutionThread_({ browser }).run(runnable);
 
                         assert.callOrder(browser.publicAPI.switchToRepl, onRunnable);
+                    });
+
+                    it("should not switch to REPL before instrumented runnable", async () => {
+                        const browser = mkBrowser_();
+                        const runnable = mkRunnable_({ fn: sinon.stub() });
+                        runnable.fn[REPL_SCOPED_FN_FLAG] = true;
+
+                        await mkExecutionThread_({ browser }).run(runnable);
+
+                        assert.notCalled(browser.publicAPI.switchToRepl);
+                        assert.calledOnce(runnable.fn);
                     });
 
                     it("should switch to REPL only once for one execution thread", async () => {
