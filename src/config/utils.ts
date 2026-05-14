@@ -32,7 +32,7 @@ export const assertOptionalArray = (value: unknown, name: string): void => {
 
 export const assertNonNegativeInteger = (value: number, name: string): void => {
     if (!Number.isInteger(value) || value < 0) {
-        throw new Error(`"${name}" must be a non-negative integer`);
+        throw new Error(`"${name}" must be a non-negative integer, got ${value} of type ${typeof value}`);
     }
 };
 
