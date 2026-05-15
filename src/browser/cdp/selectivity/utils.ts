@@ -17,6 +17,11 @@ import type {
 import { WEBPACK_PROTOCOL } from "./constants";
 import { readJsonWithCompression } from "./json-utils";
 import type { Test } from "../../../types";
+import {
+    SelectivityDependencyReason,
+    SelectivityDependencyScope,
+    SelectivityMapDependencyRelativePathFn,
+} from "../../../config/types";
 
 /**
  * Tries to fetch text by url from node.js, then falls back to "fetch" from browser, if node.js fetch fails
@@ -224,7 +229,8 @@ export const transformSourceDependencies = (
         js: jsDependencies,
         png: pngDependencies,
     }: { css: Set<string> | null; js: Set<string> | null; png: Set<string> | null },
-    mapDependencyPathFn?: null | ((relativePath: string) => string | boolean | void),
+    mapDependencyPathFn: null | SelectivityMapDependencyRelativePathFn,
+    scope: SelectivityDependencyScope,
 ): NormalizedDependencies => {
     const nodeModulesLabel = "node_modules/";
     const cssSet: Set<string> = new Set();
@@ -232,7 +238,11 @@ export const transformSourceDependencies = (
     const modulesSet: Set<string> = new Set();
     const pngSet: Set<string> = new Set();
 
-    const classifyDependency = (dependency: string, typedResultSet: Set<string>): void => {
+    const classifyDependency = (
+        dependency: string,
+        typedResultSet: Set<string>,
+        reason: SelectivityDependencyReason,
+    ): void => {
         dependency = decodeURIComponent(softFileURLToPath(dependency));
 
         const protocol = getProtocol(dependency);
@@ -243,7 +253,13 @@ export const transformSourceDependencies = (
         }
 
         const initialDependencyRelativePath = path.posix.relative(path.posix.resolve(), path.posix.resolve(dependency));
-        const mapDependencyPathResult = mapDependencyPathFn ? mapDependencyPathFn(initialDependencyRelativePath) : true;
+        const mapDependencyPathResult = mapDependencyPathFn
+            ? mapDependencyPathFn({
+                  scope,
+                  reason,
+                  relativePath: initialDependencyRelativePath,
+              })
+            : true;
 
         if (!mapDependencyPathResult) {
             return;
@@ -285,19 +301,25 @@ export const transformSourceDependencies = (
 
     if (cssDependencies) {
         for (const cssDependency of cssDependencies.values()) {
-            classifyDependency(cssDependency, cssSet);
+            // Testplane can't have css dependencies
+            classifyDependency(cssDependency, cssSet, "browser-css-import");
         }
     }
 
     if (jsDependencies) {
         for (const jsDependency of jsDependencies.values()) {
-            classifyDependency(jsDependency, jsSet);
+            classifyDependency(
+                jsDependency,
+                jsSet,
+                scope === "browser" ? "browser-js-coverage" : "testplane-js-import",
+            );
         }
     }
 
     if (pngDependencies) {
         for (const pngDependency of pngDependencies.values()) {
-            classifyDependency(pngDependency, pngSet);
+            // Browser png dependencies are not tracked
+            classifyDependency(pngDependency, pngSet, "testplane-assert-view-reference");
         }
     }
 

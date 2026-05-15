@@ -257,24 +257,16 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             return;
         }
 
-        const mapBrowserDepsRelativePath = mapDependencyRelativePath
-            ? (relativePath: string): string | boolean | void =>
-                  mapDependencyRelativePath({ scope: "browser", relativePath })
-            : null;
-
-        const mapTestplaneDepsRelativePath = mapDependencyRelativePath
-            ? (relativePath: string): string | boolean | void =>
-                  mapDependencyRelativePath({ scope: "testplane", relativePath })
-            : null;
-
         const testDependencyWriter = getTestDependenciesWriter(testDependenciesPath, compression);
         const browserDeps = transformSourceDependencies(
             { css: cssDependencies, js: jsDependencies, png: null },
-            mapBrowserDepsRelativePath,
+            mapDependencyRelativePath,
+            "browser",
         );
         const testplaneDeps = transformSourceDependencies(
             { css: null, js: getCollectedTestplaneJsDependencies(), png: getCollectedTestplanePngDependencies() },
-            mapTestplaneDepsRelativePath,
+            mapDependencyRelativePath,
+            "testplane",
         );
 
         process.send?.({

@@ -356,11 +356,18 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(cssSelectivityMock.stop, false);
             assert.calledWith(jsSelectivityMock.stop, false);
-            assert.calledWith(transformSourceDependenciesStub, {
-                css: new Set(["src/styles.css"]),
-                js: new Set(["src/app.js"]),
-                png: null,
-            });
+            assert.calledWith(
+                transformSourceDependenciesStub,
+                { css: new Set(["src/styles.css"]), js: new Set(["src/app.js"]), png: null },
+                null,
+                "browser",
+            );
+            assert.calledWith(
+                transformSourceDependenciesStub,
+                { css: null, js: sinon.match.any, png: sinon.match.any },
+                null,
+                "testplane",
+            );
             assert.calledWith(getTestDependenciesWriterStub, "/test/dependencies");
             assert.calledWith(testDependenciesWriterMock.saveFor, mockTest, {
                 css: ["src/styles.css"],
@@ -370,8 +377,8 @@ describe("CDP/Selectivity", () => {
         });
 
         it("should not save when no dependencies are found", async () => {
-            cssSelectivityMock.stop.resolves([]);
-            jsSelectivityMock.stop.resolves([]);
+            cssSelectivityMock.stop.resolves(new Set());
+            jsSelectivityMock.stop.resolves(new Set());
 
             await stopFn(mockTest, false);
 
@@ -407,11 +414,16 @@ describe("CDP/Selectivity", () => {
         });
 
         it("should save dependencies when only CSS dependencies exist", async () => {
-            jsSelectivityMock.stop.resolves([]);
+            jsSelectivityMock.stop.resolves(new Set());
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, { css: new Set(["src/styles.css"]), js: [], png: null });
+            assert.calledWith(
+                transformSourceDependenciesStub,
+                { css: new Set(["src/styles.css"]), js: [], png: null },
+                null,
+                "browser",
+            );
             assert.calledOnce(testDependenciesWriterMock.saveFor);
         });
 
@@ -420,8 +432,47 @@ describe("CDP/Selectivity", () => {
 
             await stopFn(mockTest, false);
 
-            assert.calledWith(transformSourceDependenciesStub, { css: null, js: new Set(["src/app.js"]), png: null });
+            assert.calledWith(
+                transformSourceDependenciesStub,
+                { css: null, js: new Set(["src/app.js"]), png: null },
+                null,
+                "browser",
+            );
             assert.calledOnce(testDependenciesWriterMock.saveFor);
+        });
+
+        it("should call transformSourceDependencies with 'browser' scope for browser deps", async () => {
+            await stopFn(mockTest, false);
+
+            const browserCall = transformSourceDependenciesStub
+                .getCalls()
+                .find((call: sinon.SinonSpyCall) => call.args[2] === "browser");
+
+            assert.ok(browserCall, "expected a call with scope 'browser'");
+            assert.equal(browserCall!.args[2], "browser");
+        });
+
+        it("should call transformSourceDependencies with 'testplane' scope for testplane deps", async () => {
+            await stopFn(mockTest, false);
+
+            const testplaneCall = transformSourceDependenciesStub
+                .getCalls()
+                .find((call: sinon.SinonSpyCall) => call.args[2] === "testplane");
+
+            assert.ok(testplaneCall, "expected a call with scope 'testplane'");
+            assert.equal(testplaneCall!.args[2], "testplane");
+        });
+
+        it("should pass mapDependencyRelativePath directly to transformSourceDependencies", async () => {
+            const mapFn = sinon.stub().returns(true);
+            (browserMock.config.selectivity as any).mapDependencyRelativePath = mapFn;
+
+            // startSelectivity captures mapDependencyRelativePath via closure, so we must start a new session
+            const customStopFn = await startSelectivity(browserMock as unknown as ExistingBrowser);
+            await customStopFn(mockTest as unknown as import("src/types").Test, false);
+
+            assert.calledWith(transformSourceDependenciesStub, sinon.match.any, mapFn, "browser");
+            assert.calledWith(transformSourceDependenciesStub, sinon.match.any, mapFn, "testplane");
         });
     });
 
