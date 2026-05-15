@@ -306,6 +306,13 @@ export type StateOpts = {
     keepFile?: boolean;
 };
 
+export type SelectivityDependencyScope = "browser" | "testplane";
+export type SelectivityDependencyReason =
+    | "browser-css-import"
+    | "browser-js-coverage"
+    | "testplane-js-import"
+    | "testplane-assert-view-reference";
+
 /**
  * @param {Object} dependency - Object with dependency scope and posix relative path
  * @param {"browser"|"testplane"|string} dependency.scope - Dependency scope
@@ -313,7 +320,8 @@ export type StateOpts = {
  * @returns mapped POSIX relative path, "true", if should be untouched, or "falsy", if should be ignored
  */
 export type SelectivityMapDependencyRelativePathFn = (dependency: {
-    scope: "browser" | "testplane" | (string & NonNullable<unknown>);
+    scope: SelectivityDependencyScope;
+    reason: SelectivityDependencyReason;
     relativePath: string;
 }) => string | boolean | void;
 

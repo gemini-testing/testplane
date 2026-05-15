@@ -490,7 +490,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, null, "browser");
 
             assert.deepEqual(result.css, ["src/styles.css"]);
             assert.deepEqual(result.js, ["src/app.js"]);
@@ -503,7 +503,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, null, "browser");
 
             assert.deepEqual(result.modules, ["node_modules/@scope/package"]);
         });
@@ -515,7 +515,7 @@ describe("CDP/Selectivity/Utils", () => {
             fsStub.existsSync.returns(false);
 
             assert.throws(() => {
-                utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
+                utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, null, "browser");
             }, /Selectivity: Couldn't find/);
         });
 
@@ -527,14 +527,20 @@ describe("CDP/Selectivity/Utils", () => {
             pathStub.posix.relative.returns("src/file with spaces.css");
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null });
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, null, "browser");
 
             assert.calledWith(softFileURLToPathStub, "src/file%20with%20spaces.css");
             assert.deepEqual(result.css, ["src/file with spaces.css"]);
         });
 
         it("should map dependencies using passed function", () => {
-            const mapFn = (relativePath: string): string | void => {
+            const mapFn = ({
+                relativePath,
+            }: {
+                scope: string;
+                reason: string;
+                relativePath: string;
+            }): string | void => {
                 if (relativePath === "ignore") {
                     return;
                 }
@@ -549,7 +555,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn, "browser");
 
             assert.deepEqual(result.js, ["../bar"]);
         });
@@ -559,7 +565,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: null, js: null, png: pngDeps });
+            const result = utils.transformSourceDependencies({ css: null, js: null, png: pngDeps }, null, "testplane");
 
             assert.deepEqual(result.png, ["screenshots/ref1.png", "screenshots/ref2.png"]);
         });
@@ -572,7 +578,7 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn, "browser");
 
             assert.calledOnce(mapFn);
             assert.deepEqual(result.js, ["src/app.js"]);
@@ -586,10 +592,70 @@ describe("CDP/Selectivity/Utils", () => {
 
             fsStub.existsSync.returns(true);
 
-            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn);
+            const result = utils.transformSourceDependencies({ css: cssDeps, js: jsDeps, png: null }, mapFn, "browser");
 
             assert.deepEqual(result.css, []);
             assert.deepEqual(result.js, []);
+        });
+
+        it("should pass scope to mapDependencyPathFn for each dependency", () => {
+            const mapFn = sinon.stub().returns(true);
+            const jsDeps = new Set(["src/app.js"]);
+
+            fsStub.existsSync.returns(true);
+
+            utils.transformSourceDependencies({ css: null, js: jsDeps, png: null }, mapFn, "testplane");
+
+            assert.calledOnce(mapFn);
+            assert.calledWith(mapFn, sinon.match({ scope: "testplane" }));
+        });
+
+        it("should pass 'browser-css-import' reason for CSS dependencies", () => {
+            const mapFn = sinon.stub().returns(true);
+            const cssDeps = new Set(["src/styles.css"]);
+
+            fsStub.existsSync.returns(true);
+
+            utils.transformSourceDependencies({ css: cssDeps, js: null, png: null }, mapFn, "browser");
+
+            assert.calledOnce(mapFn);
+            assert.calledWith(mapFn, sinon.match({ reason: "browser-css-import" }));
+        });
+
+        it("should pass 'browser-js-coverage' reason for JS dependencies with browser scope", () => {
+            const mapFn = sinon.stub().returns(true);
+            const jsDeps = new Set(["src/app.js"]);
+
+            fsStub.existsSync.returns(true);
+
+            utils.transformSourceDependencies({ css: null, js: jsDeps, png: null }, mapFn, "browser");
+
+            assert.calledOnce(mapFn);
+            assert.calledWith(mapFn, sinon.match({ reason: "browser-js-coverage" }));
+        });
+
+        it("should pass 'testplane-js-import' reason for JS dependencies with testplane scope", () => {
+            const mapFn = sinon.stub().returns(true);
+            const jsDeps = new Set(["src/app.js"]);
+
+            fsStub.existsSync.returns(true);
+
+            utils.transformSourceDependencies({ css: null, js: jsDeps, png: null }, mapFn, "testplane");
+
+            assert.calledOnce(mapFn);
+            assert.calledWith(mapFn, sinon.match({ reason: "testplane-js-import" }));
+        });
+
+        it("should pass 'testplane-assert-view-reference' reason for PNG dependencies", () => {
+            const mapFn = sinon.stub().returns(true);
+            const pngDeps = new Set(["screenshots/ref.png"]);
+
+            fsStub.existsSync.returns(true);
+
+            utils.transformSourceDependencies({ css: null, js: null, png: pngDeps }, mapFn, "testplane");
+
+            assert.calledOnce(mapFn);
+            assert.calledWith(mapFn, sinon.match({ reason: "testplane-assert-view-reference" }));
         });
     });
 
