@@ -17,9 +17,20 @@ import type { CssEvents, CSSRuleUsage } from "../domains/css";
 import type { SelectivityAssetState } from "./types";
 import type { SelectivityMapSourceMapUrlFn } from "../../../config/types";
 
+interface CssSessionCache
+    extends Record<
+        CDPStyleSheetId,
+        {
+            sourceMap: Exclude<Awaited<SelectivityAssetState>, Error>;
+            sourceMapUrl: string | null;
+            isError: boolean;
+        }
+    > {}
+
 export class CSSSelectivity {
     private readonly _cdp: CDP;
-    private readonly _sessionId: CDPSessionId;
+    private readonly _cdpSessionId: CDPSessionId;
+    private readonly _wdSessionId: string;
     private readonly _sourceRoot: string;
     private readonly _mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null;
     private _cssOnStyleSheetAddedFn:
@@ -31,12 +42,14 @@ export class CSSSelectivity {
 
     constructor(
         cdp: CDP,
-        sessionId: CDPSessionId,
+        cdpSessionId: CDPSessionId,
+        wdSessionId: string,
         sourceRoot: string,
         mapSourceMapUrl: SelectivityMapSourceMapUrlFn | null,
     ) {
         this._cdp = cdp;
-        this._sessionId = sessionId;
+        this._cdpSessionId = cdpSessionId;
+        this._wdSessionId = wdSessionId;
         this._sourceRoot = sourceRoot;
         this._mapSourceMapUrl = mapSourceMapUrl;
     }
@@ -45,7 +58,7 @@ export class CSSSelectivity {
         { header: { styleSheetId, sourceURL, sourceMapURL } }: CssEvents["styleSheetAdded"],
         cdpSessionId?: CDPSessionId,
     ): void {
-        if (!this._sessionId || cdpSessionId !== this._sessionId) {
+        if (!this._cdpSessionId || cdpSessionId !== this._cdpSessionId) {
             return;
         }
 
@@ -79,7 +92,7 @@ export class CSSSelectivity {
             this._stylesSourceMap[styleSheetId] ||= fetchTextWithBrowserFallback(
                 sourceMapResolvedUrl,
                 this._cdp.runtime,
-                this._sessionId,
+                this._cdpSessionId,
             ).catch((err: Error) => err);
         } else {
             this._styleSheetIdToSourceMapUrl[styleSheetId] = sourceMapResolvedUrl;
@@ -89,7 +102,7 @@ export class CSSSelectivity {
             ).then(isCached => {
                 return isCached
                     ? true
-                    : fetchTextWithBrowserFallback(sourceMapResolvedUrl, this._cdp.runtime, this._sessionId)
+                    : fetchTextWithBrowserFallback(sourceMapResolvedUrl, this._cdp.runtime, this._cdpSessionId)
                           .then(data =>
                               setCachedSelectivityFile(CacheType.Asset, sourceMapResolvedUrl, data)
                                   .then(() => true as const)
@@ -113,12 +126,34 @@ export class CSSSelectivity {
                 return;
             }
 
-            const scriptSourcePromise = this._cdp.css
-                .getStyleSheetText(this._sessionId, styleSheetId)
-                .then(res => res.text)
-                .catch((err: Error) => err);
+            this._stylesSourceMap[styleSheetId] ||= (async (): Promise<string | Error | null> => {
+                // In case SourceMapUrl was restored from session-cache, but SourceMap itself wasn't
+                if (this._styleSheetIdToSourceMapUrl[styleSheetId]) {
+                    const sourceMapUrl = this._styleSheetIdToSourceMapUrl[styleSheetId] as string;
+                    const cachedSourceMap = await getCachedSelectivityFile(CacheType.Asset, sourceMapUrl);
 
-            this._stylesSourceMap[styleSheetId] ||= scriptSourcePromise.then(sourceCode => {
+                    if (cachedSourceMap) {
+                        return cachedSourceMap;
+                    }
+
+                    const sourceMap = await fetchTextWithBrowserFallback(
+                        sourceMapUrl,
+                        this._cdp.runtime,
+                        this._cdpSessionId,
+                    ).catch((err: Error) => err);
+
+                    if (!(sourceMap instanceof Error)) {
+                        setCachedSelectivityFile(CacheType.Asset, sourceMapUrl, sourceMap).catch(() => {});
+                    }
+
+                    return sourceMap;
+                }
+
+                const sourceCode = await this._cdp.css
+                    .getStyleSheetText(this._cdpSessionId, styleSheetId)
+                    .then(res => res.text)
+                    .catch((err: Error) => err);
+
                 if (sourceCode instanceof Error) {
                     return sourceCode;
                 }
@@ -153,10 +188,10 @@ export class CSSSelectivity {
                     );
                 }
 
-                return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._sessionId).catch(
+                return fetchTextWithBrowserFallback(sourceMapURL, this._cdp.runtime, this._cdpSessionId).catch(
                     (err: Error) => err,
                 );
-            });
+            })();
         });
     }
 
@@ -164,16 +199,97 @@ export class CSSSelectivity {
         await Promise.allSettled(Object.values(this._stylesSourceMap));
     }
 
+    private async _saveSessionCache(): Promise<void> {
+        const sessionCache: CssSessionCache = {};
+
+        for (const styleSheetId in this._styleSheetIdToSourceMapUrl) {
+            const sourceMapUrl = this._styleSheetIdToSourceMapUrl[styleSheetId];
+            const sourceMap = await this._stylesSourceMap[styleSheetId];
+
+            sessionCache[styleSheetId] = {
+                sourceMapUrl,
+                sourceMap: sourceMap instanceof Error ? sourceMap.message : sourceMap,
+                isError: sourceMap instanceof Error,
+            };
+        }
+
+        return setCachedSelectivityFile(
+            CacheType.CssSessionCache,
+            this._wdSessionId,
+            JSON.stringify(sessionCache),
+        ).catch(err => {
+            debugSelectivity(`Couldn't save session cache for session '%s': %O`, this._wdSessionId, err);
+        });
+    }
+
+    private async _loadSessionCache(): Promise<void> {
+        const sessionCacheString = await getCachedSelectivityFile(CacheType.CssSessionCache, this._wdSessionId);
+
+        if (!sessionCacheString) {
+            return;
+        }
+
+        let sessionCache: CssSessionCache | null = null;
+
+        try {
+            sessionCache = JSON.parse(sessionCacheString);
+        } catch (err) {
+            debugSelectivity("CSS Session cache is invalid JSON for session '%s': %O", this._wdSessionId, err);
+        }
+
+        if (!sessionCache) {
+            return;
+        }
+
+        for (const styleSheetId in sessionCache) {
+            const cachedData = sessionCache[styleSheetId];
+
+            this._styleSheetIdToSourceMapUrl[styleSheetId] = cachedData.sourceMapUrl;
+
+            if (!cachedData.isError) {
+                this._stylesSourceMap[styleSheetId] = Promise.resolve(cachedData.sourceMap);
+            } else {
+                // If source map url was received, we can try to restore cache
+                // If cache can't be restored, session should be considered as broken
+                if (!cachedData.sourceMapUrl) {
+                    const originalError = cachedData.sourceMap as string;
+                    const errorMessage = [
+                        "Selectivity: session is broken. Couldn't restore source map from previous test:",
+                        "\t- " + originalError.split("\n").pop(),
+                    ].join("\n");
+
+                    // Not throwing the error right away because we might not need
+                    this._stylesSourceMap[styleSheetId] = Promise.resolve(new Error(errorMessage));
+                }
+            }
+        }
+    }
+
     async start(): Promise<void> {
         const cssOnStyleSheetAdded = (this._cssOnStyleSheetAddedFn = this._processStyle.bind(this));
 
         this._cdp.css.on("styleSheetAdded", cssOnStyleSheetAdded);
 
-        await this._cdp.css.startRuleUsageTracking(this._sessionId);
+        const [startTrackingResult, loadSessionCacheResult] = await Promise.all([
+            this._cdp.css.startRuleUsageTracking(this._cdpSessionId).catch((err: Error) => err),
+            this._loadSessionCache().catch((err: Error) => err),
+        ]);
+
+        if (startTrackingResult instanceof Error) {
+            throw startTrackingResult;
+        }
+
+        if (loadSessionCacheResult instanceof Error) {
+            debugSelectivity(
+                "Couldn't load session cache for session '%s': %O",
+                this._wdSessionId,
+                loadSessionCacheResult,
+            );
+        }
     }
 
     async takeCoverageSnapshot(): Promise<void> {
-        const coveragePart = await this._cdp.css.takeCoverageDelta(this._sessionId);
+        const coveragePart = await this._cdp.css.takeCoverageDelta(this._cdpSessionId);
 
         this._ensureStylesAreLoading(coveragePart.coverage);
 
@@ -189,7 +305,7 @@ export class CSSSelectivity {
                 return null;
             }
 
-            const coverageLastPart = await this._cdp.css.stopRuleUsageTracking(this._sessionId);
+            const coverageLastPart = await this._cdp.css.stopRuleUsageTracking(this._cdpSessionId);
             const coverageStyles = [...this._coverageResult, ...coverageLastPart.ruleUsage];
 
             this._ensureStylesAreLoading(coverageLastPart.ruleUsage);
@@ -209,8 +325,10 @@ export class CSSSelectivity {
 
                     if (sourceMap instanceof Error) {
                         throw new Error(
-                            `CSS Selectivity: Couldn't load source maps for stylesheet id ${styleSheetId}`,
-                            { cause: sourceMap },
+                            [
+                                `CSS Selectivity: Couldn't load source maps for stylesheet id ${styleSheetId}:`,
+                                String(sourceMap),
+                            ].join("\n"),
                         );
                     }
 
@@ -245,6 +363,8 @@ export class CSSSelectivity {
                     });
                 }),
             );
+
+            await this._saveSessionCache();
 
             return totalDependingSourceFiles;
         } finally {
