@@ -276,7 +276,7 @@ describe("CDP/Selectivity/FsCache", () => {
             assert.calledWith(lockfileStub.lock, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}-ready`, {
                 stale: 5000,
                 update: 1000,
-                retries: { minTimeout: 50, maxTimeout: 50, retries: 1 },
+                retries: { factor: 2, minTimeout: 50, maxTimeout: 200, retries: 1 },
                 realpath: false,
             });
             assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}`, content, {
@@ -423,6 +423,118 @@ describe("CDP/Selectivity/FsCache", () => {
             });
             assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/cs${key}-ready`, "");
             assert.notCalled(getMD5Stub);
+        });
+
+        describe("overwrite option", () => {
+            it("should write cache even if it already exists when overwrite is true", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.TestFile;
+                const content = "new content";
+                const futureTime = Date.now() + 10000;
+                const releaseLockStub = sandbox.stub().resolves();
+
+                fsStub.stat.resolves({ mtimeMs: futureTime });
+                lockfileStub.lock.resolves(releaseLockStub);
+
+                await setCachedSelectivityFile(cacheType, key, content, { overwrite: true });
+
+                assert.calledOnce(fsStub.ensureDir);
+                assert.calledOnce(lockfileStub.lock);
+                assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}`, content, {
+                    encoding: "utf8",
+                });
+                assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}-ready`, "");
+                assert.calledOnce(releaseLockStub);
+            });
+
+            it("should not write cache if it already exists when overwrite is false", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.TestFile;
+                const content = "new content";
+                const futureTime = Date.now() + 10000;
+
+                fsStub.stat.resolves({ mtimeMs: futureTime });
+
+                await setCachedSelectivityFile(cacheType, key, content, { overwrite: false });
+
+                assert.notCalled(fsStub.ensureDir);
+                assert.notCalled(lockfileStub.lock);
+                assert.notCalled(fsStub.writeFile);
+            });
+
+            it("should use 10 lock retries when overwrite is true", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.TestFile;
+                const content = "test content";
+                const pastTime = 0;
+                const releaseLockStub = sandbox.stub().resolves();
+
+                fsStub.stat.resolves({ mtimeMs: pastTime });
+                lockfileStub.lock.resolves(releaseLockStub);
+
+                await setCachedSelectivityFile(cacheType, key, content, { overwrite: true });
+
+                assert.calledWith(lockfileStub.lock, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}-ready`, {
+                    stale: 5000,
+                    update: 1000,
+                    retries: { factor: 2, minTimeout: 50, maxTimeout: 200, retries: 30 },
+                    realpath: false,
+                });
+            });
+
+            it("should use 1 lock retry when overwrite is false", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.TestFile;
+                const content = "test content";
+                const pastTime = 0;
+                const releaseLockStub = sandbox.stub().resolves();
+
+                fsStub.stat.resolves({ mtimeMs: pastTime });
+                lockfileStub.lock.resolves(releaseLockStub);
+
+                await setCachedSelectivityFile(cacheType, key, content, { overwrite: false });
+
+                assert.calledWith(lockfileStub.lock, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/thash-of-${key}-ready`, {
+                    stale: 5000,
+                    update: 1000,
+                    retries: { factor: 2, minTimeout: 50, maxTimeout: 200, retries: 1 },
+                    realpath: false,
+                });
+            });
+
+            it("should write cache even if it was created while acquiring lock when overwrite is true", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.Asset;
+                const content = "new content";
+                const pastTime = 0;
+                const futureTime = Date.now() + 10000;
+                const releaseLockStub = sandbox.stub().resolves();
+
+                fsStub.stat.onCall(0).resolves({ mtimeMs: pastTime }); // Flag not ready
+                fsStub.stat.onCall(1).resolves({ mtimeMs: futureTime }); // Cache file exists after lock
+                lockfileStub.lock.resolves(releaseLockStub);
+
+                await setCachedSelectivityFile(cacheType, key, content, { overwrite: true });
+
+                assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/ahash-of-${key}`, content, {
+                    encoding: "utf8",
+                });
+                assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/ahash-of-${key}-ready`, "");
+                assert.calledOnce(releaseLockStub);
+            });
+
+            it("should default overwrite to false when options object is not provided", async () => {
+                const key = "test-key";
+                const cacheType = CacheType.TestFile;
+                const content = "test content";
+                const futureTime = Date.now() + 10000;
+
+                fsStub.stat.resolves({ mtimeMs: futureTime });
+
+                await setCachedSelectivityFile(cacheType, key, content);
+
+                assert.notCalled(fsStub.writeFile);
+            });
         });
     });
 });

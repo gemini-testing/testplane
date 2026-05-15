@@ -86,6 +86,7 @@ export const setCachedSelectivityFile = async (
     cacheType: CacheTypeValue,
     key: string,
     utf8Contents: string,
+    { overwrite = false }: { overwrite?: boolean } = {},
 ): Promise<void> => {
     if (!key) {
         throw new Error("Attepted to write cache with empty key");
@@ -96,7 +97,7 @@ export const setCachedSelectivityFile = async (
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
 
     // Cache was already written
-    if (await wasModifiedAfterProcessStart(flagFilePath)) {
+    if (!overwrite && (await wasModifiedAfterProcessStart(flagFilePath))) {
         return;
     }
 
@@ -106,7 +107,12 @@ export const setCachedSelectivityFile = async (
         .lock(flagFilePath, {
             stale: 5000,
             update: 1000,
-            retries: { minTimeout: 50, maxTimeout: 50, retries: 1 },
+            retries: {
+                factor: 2,
+                minTimeout: 50,
+                maxTimeout: 200,
+                retries: overwrite ? 30 : 1,
+            },
             realpath: false,
         })
         .catch(() => null);
@@ -117,7 +123,7 @@ export const setCachedSelectivityFile = async (
     }
 
     // Cache was written while trying to get lock
-    if (await wasModifiedAfterProcessStart(flagFilePath)) {
+    if (!overwrite && (await wasModifiedAfterProcessStart(flagFilePath))) {
         await releaseLock();
         return;
     }
