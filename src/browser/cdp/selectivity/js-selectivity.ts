@@ -298,15 +298,17 @@ export class JSSelectivity {
                     }
 
                     if (source instanceof Error) {
-                        throw new Error(`JS Selectivity: Couldn't load source code from ${sourceUrl}`, {
-                            cause: source,
-                        });
+                        throw new Error(
+                            [`JS Selectivity: Couldn't load source code from ${sourceUrl}:`, String(source)].join("\n"),
+                        );
                     }
 
                     if (sourceMaps instanceof Error) {
-                        throw new Error(`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, {
-                            cause: sourceMaps,
-                        });
+                        throw new Error(
+                            [`JS Selectivity: Couldn't load source maps from ${sourceMapUrl}`, String(sourceMaps)].join(
+                                "\n",
+                            ),
+                        );
                     }
 
                     if (isCachedOnFs(sourceMaps) && !sourceMapUrl) {
