@@ -34,7 +34,9 @@ function notifyAndExit(signalNo: number): (signal: NodeJS.Signals) => void {
         const err = new Error(`The process was terminated by a signal: ${signal}`);
 
         signalHandler.emitAndWait(MasterEvents.EXIT, err).then(() => {
-            process.exit(exitCode);
+            signalHandler.emitAndWait(MasterEvents.RUNNER_END, err).then(() => {
+                process.exit(exitCode);
+            });
         });
     };
 }
