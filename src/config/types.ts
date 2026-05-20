@@ -467,7 +467,7 @@ type PartialCommonConfig = Partial<
     selectivity?: Partial<CommonConfig["selectivity"]>;
 };
 
-export type HookType = (params: { config: Config }) => Promise<void> | undefined;
+export type HookType = (params: { config: Config }) => Promise<unknown> | unknown;
 
 // Only browsers desiredCapabilities are required in input config
 export type ConfigInput = Partial<PartialCommonConfig> & {
