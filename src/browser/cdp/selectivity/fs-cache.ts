@@ -10,6 +10,7 @@ import { SELECTIVITY_CACHE_DIRECTIRY, SELECTIVITY_CACHE_READY_SUFFIX } from "./c
 export const CacheType = {
     TestFile: "t",
     Asset: "a",
+    CssSessionCache: "cs",
 } as const;
 
 type CacheTypeValue = (typeof CacheType)[keyof typeof CacheType];
@@ -33,12 +34,17 @@ const wasModifiedAfterProcessStart = async (flagFilePath: string): Promise<boole
     }
 };
 
+const getHashName = (cacheType: CacheTypeValue, cacheKey: string): string => {
+    // Not hashing cache key for session cache as it will just increase collision chance without any profit
+    return cacheType + (cacheType === CacheType.CssSessionCache ? cacheKey : getMD5(cacheKey));
+};
+
 export const hasCachedSelectivityFile = async (cacheType: CacheTypeValue, key: string): Promise<boolean> => {
     if (!key) {
         throw new Error("Attepted to check existance of cache with empty key");
     }
 
-    const hashName = cacheType + getMD5(key);
+    const hashName = getHashName(cacheType, key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
 
@@ -50,7 +56,7 @@ export const getCachedSelectivityFile = async (cacheType: CacheTypeValue, key: s
         throw new Error("Attepted to read cache with empty key");
     }
 
-    const hashName = cacheType + getMD5(key);
+    const hashName = getHashName(cacheType, key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
 
@@ -85,7 +91,7 @@ export const setCachedSelectivityFile = async (
         throw new Error("Attepted to write cache with empty key");
     }
 
-    const hashName = cacheType + getMD5(key);
+    const hashName = getHashName(cacheType, key);
     const cacheFilePath = path.join(tmpDir, hashName);
     const flagFilePath = cacheFilePath + SELECTIVITY_CACHE_READY_SUFFIX;
 

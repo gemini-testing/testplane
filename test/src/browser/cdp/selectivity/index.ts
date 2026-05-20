@@ -36,6 +36,7 @@ describe("CDP/Selectivity", () => {
     let testDepsReaderMock: { getFor: SinonStub };
 
     let browserMock: {
+        sessionId: string;
         config: {
             selectivity: {
                 enabled: SelectivityModeValue;
@@ -120,6 +121,7 @@ describe("CDP/Selectivity", () => {
         getSelectivityTestsPathStub = sandbox.stub().callsFake((path: string) => `${path}/tests`);
 
         browserMock = {
+            sessionId: "wd-session-456",
             config: {
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
@@ -241,7 +243,13 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(browserMock.cdp!.target.getTargets);
             assert.calledWith(browserMock.cdp!.target.attachToTarget, "target-123");
-            assert.calledWith(CSSSelectivityStub, browserMock.cdp, "session-123", "/test/source-root");
+            assert.calledWith(
+                CSSSelectivityStub,
+                browserMock.cdp,
+                "session-123",
+                "wd-session-456",
+                "/test/source-root",
+            );
             assert.calledWith(JSSelectivityStub, browserMock.cdp, "session-123", "/test/source-root");
             assert.calledOnce(cssSelectivityMock.start);
             assert.calledOnce(jsSelectivityMock.start);

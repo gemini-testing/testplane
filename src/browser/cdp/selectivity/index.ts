@@ -56,7 +56,7 @@ export const updateSelectivityHashes = async (config: Config, isRunFailed: boole
         try {
             await hashWriter.save();
         } catch (cause) {
-            throw new Error("Selectivity: couldn't save test dependencies hash", { cause });
+            throw new Error(["Selectivity: couldn't save test dependencies hash", String(cause)].join("\n"));
         }
 
         processedRoots.add(rootKey);
@@ -176,17 +176,18 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         );
     }
 
-    const sessionId = await cdp.target.attachToTarget(cdpTargetId).then(r => r.sessionId);
+    const wdSessionId = browser.sessionId;
+    const cdpSessionId = await cdp.target.attachToTarget(cdpTargetId).then(r => r.sessionId);
 
-    const cssSelectivity = new CSSSelectivity(cdp, sessionId, sourceRoot, mapSourceMapUrl);
-    const jsSelectivity = new JSSelectivity(cdp, sessionId, sourceRoot, mapSourceMapUrl);
+    const cssSelectivity = new CSSSelectivity(cdp, cdpSessionId, wdSessionId, sourceRoot, mapSourceMapUrl);
+    const jsSelectivity = new JSSelectivity(cdp, cdpSessionId, sourceRoot, mapSourceMapUrl);
 
     await Promise.all([
-        cdp.dom.enable(sessionId).then(() => cdp.css.enable(sessionId)),
-        cdp.target.setAutoAttach(sessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
-        cdp.debugger.enable(sessionId),
-        cdp.page.enable(sessionId),
-        cdp.profiler.enable(sessionId),
+        cdp.dom.enable(cdpSessionId).then(() => cdp.css.enable(cdpSessionId)),
+        cdp.target.setAutoAttach(cdpSessionId, { autoAttach: true, waitForDebuggerOnStart: false }),
+        cdp.debugger.enable(cdpSessionId),
+        cdp.page.enable(cdpSessionId),
+        cdp.profiler.enable(cdpSessionId),
     ]);
 
     await Promise.allSettled([cssSelectivity.start(), jsSelectivity.start()]).then(async ([css, js]) => {
@@ -196,7 +197,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             const originalError =
                 css.status === "rejected" ? css.reason : js.status === "rejected" ? js.reason : "unknown reason";
 
-            throw new Error("Selectivity: Couldn't start selectivity", { cause: originalError });
+            throw new Error(["Selectivity: Couldn't start selectivity:", String(originalError)].join("\n"));
         }
     });
 
@@ -204,12 +205,12 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     let isSelectivityStopped = false;
 
     const debuggerPausedFn = ({ callFrames }: DebuggerEvents["paused"], eventCdpSessionId?: CDPSessionId): void => {
-        if (eventCdpSessionId !== sessionId) {
+        if (eventCdpSessionId !== cdpSessionId) {
             return;
         }
 
         if (callFrames[0]?.functionName !== testplaneCoverageBreakScriptName || isSelectivityStopped) {
-            cdp.debugger.resume(sessionId).catch(() => {});
+            cdp.debugger.resume(cdpSessionId).catch(() => {});
             return;
         }
 
@@ -219,14 +220,14 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
                     console.error("Selectivity: couldn't take snapshot while navigating:", err);
                 })
                 .then(() => {
-                    cdp.debugger.resume(sessionId).catch(() => {});
+                    cdp.debugger.resume(cdpSessionId).catch(() => {});
                 }),
         );
     };
 
     cdp.debugger.on("paused", debuggerPausedFn);
 
-    await cdp.page.addScriptToEvaluateOnNewDocument(sessionId, { source: scriptToEvaluateOnNewDocument });
+    await cdp.page.addScriptToEvaluateOnNewDocument(cdpSessionId, { source: scriptToEvaluateOnNewDocument });
 
     /** @param drop only performs cleanup without writing anything. Should be "true" if test is failed */
     return async function stopSelectivity(test: Test, drop: boolean): Promise<void> {
@@ -240,7 +241,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
         ]);
 
         cdp.debugger.off("paused", debuggerPausedFn);
-        cdp.target.detachFromTarget(sessionId).catch(() => {});
+        cdp.target.detachFromTarget(cdpSessionId).catch(() => {});
 
         if (jsDependenciesPromise.status === "rejected") {
             throw jsDependenciesPromise.reason;

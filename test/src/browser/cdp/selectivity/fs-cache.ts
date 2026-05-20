@@ -124,6 +124,23 @@ describe("CDP/Selectivity/FsCache", () => {
                 `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/ahash-of-${key}${SELECTIVITY_CACHE_READY_SUFFIX}`,
             );
         });
+
+        it("should use raw key without MD5 for CssSessionCache type", async () => {
+            const key = "session-abc-123";
+            const cacheType = CacheType.CssSessionCache;
+            const futureTime = Date.now() + 10000;
+
+            fsStub.stat.resolves({ mtimeMs: futureTime });
+
+            await hasCachedSelectivityFile(cacheType, key);
+
+            // CssSessionCache uses "cs" prefix + raw key, not hashed
+            assert.calledWith(
+                fsStub.stat,
+                `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/cs${key}${SELECTIVITY_CACHE_READY_SUFFIX}`,
+            );
+            assert.notCalled(getMD5Stub);
+        });
     });
 
     describe("getCachedSelectivityFile", () => {
@@ -213,6 +230,22 @@ describe("CDP/Selectivity/FsCache", () => {
 
             assert.callCount(fsStub.stat, 4);
             assert.equal(result, "cache-contents");
+        });
+
+        it("should use raw key without MD5 for CssSessionCache type", async () => {
+            const key = "session-abc-123";
+            const cacheType = CacheType.CssSessionCache;
+            const futureTime = Date.now() + 10000;
+            const cachedContent = "cached session data";
+
+            fsStub.stat.resolves({ mtimeMs: futureTime });
+            fsStub.readFile.resolves(cachedContent);
+
+            const result = await getCachedSelectivityFile(cacheType, key);
+
+            assert.equal(result, cachedContent);
+            assert.calledWith(fsStub.readFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/cs${key}`, "utf8");
+            assert.notCalled(getMD5Stub);
         });
     });
 
@@ -371,6 +404,25 @@ describe("CDP/Selectivity/FsCache", () => {
             await setCachedSelectivityFile(cacheType, key, content);
 
             assert.callOrder(fsStub.ensureDir, lockfileStub.lock, fsStub.writeFile);
+        });
+
+        it("should use raw key without MD5 for CssSessionCache type", async () => {
+            const key = "session-abc-123";
+            const cacheType = CacheType.CssSessionCache;
+            const content = '{"stylesheet-1": {"sourceMap": "data"}}';
+            const pastTime = 0;
+            const releaseLockStub = sandbox.stub().resolves();
+
+            fsStub.stat.resolves({ mtimeMs: pastTime });
+            lockfileStub.lock.resolves(releaseLockStub);
+
+            await setCachedSelectivityFile(cacheType, key, content);
+
+            assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/cs${key}`, content, {
+                encoding: "utf8",
+            });
+            assert.calledWith(fsStub.writeFile, `/tmp/${SELECTIVITY_CACHE_DIRECTIRY}/cs${key}-ready`, "");
+            assert.notCalled(getMD5Stub);
         });
     });
 });
