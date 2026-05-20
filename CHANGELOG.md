@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 8.45.0 (2026-05-20)
+
+
+### Features
+
+* handling process exit ([c38d857](https://github.com/gemini-testing/testplane/commit/c38d857c0fee8b2ba38408c7845b6ed8283c336b))
+
 ### 8.44.4 (2026-05-20)
 
 
