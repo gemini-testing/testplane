@@ -1,20 +1,27 @@
-"use strict";
-
-const crypto = require("crypto");
-const proxyquire = require("proxyquire");
-const signalHandler = require("src/signal-handler");
-const history = require("src/browser/history");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } = require("src/constants/config");
-const { X_REQUEST_ID_DELIMITER } = require("src/constants/browser");
-const RuntimeConfig = require("src/config/runtime-config");
-const { mkNewBrowser_, mkSessionStub_, mkWdPool_ } = require("./utils");
+import sinon, { SinonStub } from "sinon";
+import crypto from "crypto";
+import proxyquire from "proxyquire";
+import signalHandler from "src/signal-handler";
+import { runGroup } from "src/browser/history";
+import { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } from "src/constants/config";
+import { X_REQUEST_ID_DELIMITER } from "src/constants/browser";
+import RuntimeConfig from "src/config/runtime-config";
+import { mkNewBrowser_, mkSessionStub_, mkWdPool_ } from "./utils";
+import { Config } from "src/config";
+import { RequestOptions } from "node:https";
+import { DesiredCapabilities, SelenoidOptions } from "@testplane/wdio-types/build/Capabilities";
 
 describe("NewBrowser", () => {
     const sandbox = sinon.createSandbox();
-    let session;
-    let NewBrowser, webdriverioRemoteStub, runGroupStub, initCommandHistoryStub, installBrowserStub, warnStub;
+    let session: any;
+    let NewBrowser: any;
+    let webdriverioRemoteStub: SinonStub;
+    let runGroupStub: SinonStub;
+    let initCommandHistoryStub: SinonStub;
+    let installBrowserStub: SinonStub;
+    let warnStub: SinonStub;
 
-    const mkBrowser_ = (configOpts, opts) => {
+    const mkBrowser_ = (configOpts?: Partial<Config>, opts?: any): any => {
         return mkNewBrowser_(configOpts, opts, NewBrowser);
     };
 
@@ -23,7 +30,7 @@ describe("NewBrowser", () => {
         installBrowserStub = sandbox.stub().resolves("/browser/path");
         warnStub = sandbox.stub();
         webdriverioRemoteStub = sandbox.stub().resolves(session);
-        runGroupStub = sandbox.stub().callsFake(history.runGroup);
+        runGroupStub = sandbox.stub().callsFake(runGroup);
         initCommandHistoryStub = sandbox.stub();
 
         NewBrowser = proxyquire("src/browser/new-browser", {
@@ -74,7 +81,7 @@ describe("NewBrowser", () => {
         });
 
         it("should use devtools protocol if testplane runs in devtools mode", async () => {
-            RuntimeConfig.getInstance.returns({ devtools: true });
+            (RuntimeConfig.getInstance as SinonStub).returns({ devtools: true });
 
             await mkBrowser_().init();
 
@@ -281,7 +288,7 @@ describe("NewBrowser", () => {
 
         describe("transformRequest option", () => {
             beforeEach(() => {
-                sandbox.stub(crypto, "randomUUID").returns("00000");
+                sandbox.stub(crypto, "randomUUID").returns("0-0-0-0-0");
             });
 
             it("should call user handler from config", async () => {
@@ -297,9 +304,9 @@ describe("NewBrowser", () => {
             });
 
             it('should not add "X-Request-ID" header if it is already add by user', async () => {
-                const request = { headers: {} };
-                const transformRequestStub = req => {
-                    req.headers["X-Request-ID"] = "100500";
+                const request: RequestOptions = { headers: {} };
+                const transformRequestStub = (req: RequestOptions): RequestOptions => {
+                    (req.headers as Record<string, string>)["X-Request-ID"] = "100500";
                     return req;
                 };
 
@@ -308,20 +315,23 @@ describe("NewBrowser", () => {
                 const { transformRequest } = webdriverioRemoteStub.lastCall.args[0];
                 transformRequest(request);
 
-                assert.equal(request.headers["X-Request-ID"], "100500");
+                assert.equal((request.headers as Record<string, string>)["X-Request-ID"], "100500");
             });
 
             it('should add "X-Request-ID" header', async () => {
-                crypto.randomUUID.returns("67890");
+                (crypto.randomUUID as SinonStub).returns("67890");
                 const state = { testXReqId: "12345" };
-                const request = { headers: {} };
+                const request: RequestOptions = { headers: {} };
 
                 await mkBrowser_({}, { state }).init();
 
                 const { transformRequest } = webdriverioRemoteStub.lastCall.args[0];
                 transformRequest(request);
 
-                assert.equal(request.headers["X-Request-ID"], `12345${X_REQUEST_ID_DELIMITER}67890`);
+                assert.equal(
+                    (request.headers as Record<string, string>)["X-Request-ID"],
+                    `12345${X_REQUEST_ID_DELIMITER}67890`,
+                );
             });
         });
 
@@ -340,7 +350,7 @@ describe("NewBrowser", () => {
         });
 
         describe("set page load timeout if it is specified in a config", () => {
-            let browser;
+            let browser: any;
 
             beforeEach(() => {
                 browser = mkBrowser_({ pageLoadTimeout: 100500 });
@@ -380,7 +390,7 @@ describe("NewBrowser", () => {
         describe("should use local grid url", () => {
             it("if gridUrl is 'local'", async () => {
                 installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
-                RuntimeConfig.getInstance.returns({ local: false });
+                (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
                 const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
                 const browser = mkBrowser_(
                     {
@@ -413,7 +423,7 @@ describe("NewBrowser", () => {
 
             it("if local cli arg is set", async () => {
                 installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
-                RuntimeConfig.getInstance.returns({ local: true });
+                (RuntimeConfig.getInstance as SinonStub).returns({ local: true });
                 const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
                 const browser = mkBrowser_(
                     {
@@ -446,7 +456,7 @@ describe("NewBrowser", () => {
 
             it("should remove unknown capabilities", async () => {
                 installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
-                RuntimeConfig.getInstance.returns({ local: true });
+                (RuntimeConfig.getInstance as SinonStub).returns({ local: true });
                 const wdPool = mkWdPool_({ gridUrl: "http://localhost:23456/" });
                 const browser = mkBrowser_(
                     {
@@ -455,10 +465,10 @@ describe("NewBrowser", () => {
                         desiredCapabilities: {
                             browserName: "chrome",
                             browserVersion: "115.0",
-                            "selenoid:options": { baz: "qux" },
+                            "selenoid:options": { baz: "qux" } as SelenoidOptions,
                             "moz:firefoxOptions": {},
                             perfLoggingPrefs: { foo: "bar" },
-                        },
+                        } as DesiredCapabilities,
                     },
                     { wdPool },
                 );
@@ -516,7 +526,7 @@ describe("NewBrowser", () => {
         });
 
         it("should free webdriver session", async () => {
-            RuntimeConfig.getInstance.returns({ local: false });
+            (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
             const wdProcess = { gridUrl: "http://localhost:12345", free: sandbox.stub(), kill: sandbox.stub() };
             const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
             const browser = mkBrowser_(
@@ -540,7 +550,7 @@ describe("NewBrowser", () => {
         });
 
         it("should kill webdriver session if cant quit normally", async () => {
-            RuntimeConfig.getInstance.returns({ local: false });
+            (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
             session.deleteSession.rejects(new Error("failed end"));
             const wdProcess = { gridUrl: "http://localhost:12345", free: sandbox.stub(), kill: sandbox.stub() };
             const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };

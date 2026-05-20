@@ -156,6 +156,8 @@ module.exports = class WorkersRegistry extends EventEmitter {
             logger.error(`testplane:worker:${child.pid} terminated unexpectedly with ${errMsg}`);
         });
 
+        this.once(MasterEvents.EXIT, () => child.kill());
+
         child.on("message", (data = {}) => {
             switch (data.event) {
                 case WORKER_INIT:

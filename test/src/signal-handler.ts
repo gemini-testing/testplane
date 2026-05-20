@@ -1,25 +1,27 @@
-"use strict";
-
-const clearRequire = require("clear-require");
-const proxyquire = require("proxyquire");
-const { promiseDelay } = require("../../src/utils/promise");
+import sinon, { SinonSpyCall, SinonStub } from "sinon";
+import clearRequire from "clear-require";
+import proxyquire from "proxyquire";
+import { promiseDelay } from "../../src/utils/promise";
+import { AsyncEmitter } from "src/events";
 
 describe("src/signal-handler", () => {
     const sandbox = sinon.createSandbox();
 
-    let signalHandler;
+    let signalHandler: AsyncEmitter;
+    let processOnStub: SinonStub;
+    let processExitStub: SinonStub;
 
-    const getCallBySignal = sig => {
-        return process.on.getCalls().find(call => call.args[0] === sig);
+    const getCallBySignal = (sig: string): SinonSpyCall => {
+        return processOnStub.getCalls().find((call: SinonSpyCall) => call.args[0] === sig) as SinonSpyCall;
     };
 
-    const sendSignal = sig => {
+    const sendSignal = (sig: string): void => {
         getCallBySignal(sig).args[1]();
     };
 
     beforeEach(() => {
-        sandbox.stub(process, "on");
-        sandbox.stub(process, "exit");
+        processOnStub = sandbox.stub(process, "on") as SinonStub;
+        processExitStub = sandbox.stub(process, "exit") as SinonStub;
 
         clearRequire("src/signal-handler");
         signalHandler = proxyquire("src/signal-handler", {
@@ -38,7 +40,7 @@ describe("src/signal-handler", () => {
     ].forEach(({ signal, exitCode }) => {
         describe(signal, () => {
             it(`should subscribe to ${signal} event`, () => {
-                assert.calledWith(process.on, signal);
+                assert.calledWith(processOnStub, signal);
             });
 
             it("should emit and wait for exit", () => {
@@ -49,7 +51,7 @@ describe("src/signal-handler", () => {
                 sendSignal(signal);
 
                 return promiseDelay(20).then(() => {
-                    assert.callOrder(handler, afterHandler, process.exit);
+                    assert.callOrder(handler, afterHandler, processExitStub);
                 });
             });
 

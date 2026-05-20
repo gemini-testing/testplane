@@ -63,14 +63,17 @@ export class BasicPool implements Pool {
 
         this.log(`stop browser ${browser.fullId}`);
 
+        let error;
+
         try {
             await this._emit(MasterEvents.SESSION_END, browser);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (err: any) {
+            error = err;
             console.warn((err && err.stack) || err);
         }
 
-        await browser.quit();
+        await browser.quit(error);
     }
 
     private _emit(event: string, browser: Browser): Promise<unknown[]> {
