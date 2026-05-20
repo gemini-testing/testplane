@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.44.4 (2026-05-20)
+
+
+### Bug Fixes
+
+* do not enforce return types for beforeAll/afterAll hook ([#1258](https://github.com/gemini-testing/testplane/issues/1258)) ([9f7a519](https://github.com/gemini-testing/testplane/commit/9f7a519ed77b11273c10d7f9ee51e5e8861ab751))
+
 ### 8.44.3 (2026-05-20)
 
 ### 8.44.2 (2026-05-14)
