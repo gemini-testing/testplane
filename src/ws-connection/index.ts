@@ -1,5 +1,6 @@
 /* eslint-disable new-cap */
 import { IncomingMessage } from "node:http";
+import { text as consumeText } from "node:stream/consumers";
 import { WebSocket, type RawData } from "ws";
 import {
     WsTimeoutError,
@@ -146,6 +147,19 @@ export class WsConnection<
                     done(ws);
                 };
 
+                const onUnexpectedResponse = async (ws: WebSocket, res: IncomingMessage): Promise<void> => {
+                    closeWsConnection(ws);
+
+                    const reason = await consumeText(res).catch(() => "Unknown reason");
+
+                    done(
+                        new this._errors.ConnectionEstablishment({
+                            message: `Couldn't establish WS connection to "${endpoint}"\n\tReason: ${reason}`,
+                            statusCode: res.statusCode,
+                        }),
+                    );
+                };
+
                 const onError = (error: unknown): void => {
                     closeWsConnection(ws);
                     done(
@@ -169,6 +183,7 @@ export class WsConnection<
                 };
 
                 ws.on("open", onOpen);
+                ws.on("unexpected-response", onUnexpectedResponse);
                 ws.on("error", onError);
                 ws.on("close", onClose);
                 ws.on("upgrade", onUpgrade);
@@ -183,6 +198,7 @@ export class WsConnection<
                     isSettled = true;
                     clearTimeout(timeoutId);
                     ws.off("open", onOpen);
+                    ws.off("unexpected-response", onUnexpectedResponse);
                     ws.off("error", onError);
                     ws.off("close", onClose);
                     ws.off("upgrade", onUpgrade);
@@ -276,7 +292,7 @@ export class WsConnection<
                         throw result;
                     }
 
-                    this._debugFn(`⟳ ${result.message}; retries left: ${retriesLeft}`);
+                    this._debugFn(`⟳ ${result.message}; retries left: ${retriesLeft}; endpoint: "${this._endpoint}"`);
 
                     // Intentionally avoiding wait after timeout
                     if (result instanceof WsError && !(result instanceof WsTimeoutError)) {
@@ -383,7 +399,9 @@ export class WsConnection<
 
     provideResponseFor(requestId: number, data: ResponseMessageType | WsError): void {
         if (!this._pendingRequests[requestId]) {
-            this._debugFn(`! Received response to request ${requestId}, which is probably timed out already`);
+            this._debugFn(
+                `! Received response to request ${requestId}, which is probably timed out already; endpoint: "${this._endpoint}"`,
+            );
             return;
         }
 
@@ -508,7 +526,7 @@ export class WsConnection<
             if (isWaitingForPong && this._isWebSocketActive(ws)) {
                 isWaitingForPong = false;
 
-                this._debugFn("< PONG");
+                this._debugFn(`< PONG; endpoint: "${this._endpoint}"`);
 
                 clearTimeout(pongTimeout);
 
@@ -549,7 +567,7 @@ export class WsConnection<
 
             ws.ping();
 
-            this._debugFn("> PING");
+            this._debugFn(`> PING; endpoint: "${this._endpoint}"`);
 
             isWaitingForPong = true;
         }, WS_PING_INTERVAL).unref());

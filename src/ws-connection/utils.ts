@@ -6,5 +6,5 @@ export const exponentiallyWait = ({
 }: { baseDelay?: number; attempt?: number; factor?: number; jitter?: number } = {}): Promise<void> => {
     const delay = Math.round(baseDelay * factor ** attempt + Math.random() * jitter);
 
-    return new Promise(resolve => setTimeout(resolve, delay).unref());
+    return new Promise(resolve => setTimeout(resolve, delay));
 };
