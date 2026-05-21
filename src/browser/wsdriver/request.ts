@@ -63,7 +63,7 @@ export const constructWsDriverRequest = async (
         throw new Error("Not session-related request");
     }
 
-    const command = url.pathname.slice(commandStartIdx + connectionOptions.sessionPrefix.length);
+    const command = decodeURIComponent(url.pathname.slice(commandStartIdx + connectionOptions.sessionPrefix.length));
     const bodyPayload = requestOptions.json ? Buffer.from(JSON.stringify(requestOptions.json)) : Buffer.alloc(0);
     const shouldCompress =
         connectionOptions.compressionType !== WsDriverCompression.None &&

@@ -27,6 +27,22 @@ describe("wsdriver/request", () => {
         assert.equal(body, JSON.stringify(options.json));
     });
 
+    it("should decode percent-encoded characters in command", async () => {
+        const url = new URL("http://localhost/session/123/element/abc%3A123%2Fdef/value");
+        const options = { method: "GET" };
+        const connectionOptions = {
+            requestId: 1,
+            sessionPrefix: "/session/123/",
+            compressionType: WsDriverCompression.None,
+        };
+
+        const result = await constructWsDriverRequest(url, options as any, connectionOptions);
+
+        const commandEnd = result.indexOf(0, 8);
+        const command = result.toString("utf8", 8, commandEnd);
+        assert.equal(command, "element/abc:123/def/value");
+    });
+
     it("should construct request with compression if body is large enough", async () => {
         const url = new URL("http://localhost/session/123/element");
         const largeString = "a".repeat(WSD_COMPRESSION_THRESHOLD_BYTES);

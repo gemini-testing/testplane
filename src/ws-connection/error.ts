@@ -26,13 +26,17 @@ export abstract class WsError extends Error {
 }
 
 export class WsConnectionEstablishmentError extends WsError {
-    constructor({ message, requestId }: { message: string; requestId?: number }) {
-        super({ message, code: WS_ERROR_CODE.CONNECTION_ESTABLISHMENT, requestId });
+    constructor({ message, requestId, statusCode }: { message: string; requestId?: number; statusCode?: number }) {
+        super({ message, code: statusCode || WS_ERROR_CODE.CONNECTION_ESTABLISHMENT, requestId });
 
         this.name = this.constructor.name;
     }
 
     isRetryable(): boolean {
+        if (this.code && this.code >= 400 && this.code < 500) {
+            return false;
+        }
+
         return true;
     }
 }
