@@ -1,0 +1,29 @@
+name: Module Loading Tests
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+
+jobs:
+    module-loading:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Use Node.js 24.x
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 24.x
+                  cache: "npm"
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build project
+              run: npm run build
+
+            - name: Run module loading tests
+              run: npm run test-module-loading

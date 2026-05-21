@@ -1,7 +1,7 @@
 {
     "extends": "../tsconfig.common.json",
     "include": ["../typings", "../src/index.ts", "."],
-    "exclude": ["../src/runner/browser-env/vite/browser-modules"],
+    "exclude": ["../src/runner/browser-env/vite/browser-modules", "module-loading/test-projects"],
     "compilerOptions": {
         "baseUrl": "..",
         "noEmit": true,
