@@ -1,6 +1,9 @@
 "use strict";
 
+const fs = require("fs");
 const _ = require("lodash");
+const os = require("os");
+const path = require("path");
 const { MochaEventBus } = require("src/test-reader/mocha-reader/mocha-event-bus");
 const { TreeBuilderDecorator } = require("src/test-reader/mocha-reader/tree-builder-decorator");
 const { TreeBuilder } = require("src/test-reader/tree-builder");
@@ -65,6 +68,7 @@ describe("test-reader/mocha-reader", () => {
 
         sandbox.stub(Mocha.prototype, "fullTrace");
         sandbox.stub(Mocha.prototype, "addFile");
+        sandbox.stub(Mocha.prototype, "loadFiles");
         sandbox.stub(Mocha.prototype, "loadFilesAsync").resolves();
 
         sandbox.stub(Mocha.Suite.prototype, "hasOnly").returns(false);
@@ -88,6 +92,22 @@ describe("test-reader/mocha-reader", () => {
             eventBus: new EventEmitter(),
             ...opts,
         });
+    };
+
+    const withNativeTypeScript_ = async cb => {
+        const descriptor = Object.getOwnPropertyDescriptor(process.features, "typescript");
+
+        Object.defineProperty(process.features, "typescript", { configurable: true, value: "strip" });
+
+        try {
+            return await cb();
+        } finally {
+            if (descriptor) {
+                Object.defineProperty(process.features, "typescript", descriptor);
+            } else {
+                delete process.features.typescript;
+            }
+        }
     };
 
     describe("loadFiles", () => {
@@ -163,6 +183,89 @@ describe("test-reader/mocha-reader", () => {
                 await readFiles_(["foo/bar.js", "baz/qux.mjs"]);
 
                 assert.deepEqual(calls, ["addFile", "addFile", "loadFilesAsync"]);
+            });
+
+            it("should load typeless TypeScript files with require if Node.js supports TypeScript", async () => {
+                await withNativeTypeScript_(() => readFiles_(["foo/bar.ts"]));
+
+                assert.calledOnce(Mocha.prototype.loadFiles);
+                assert.notCalled(Mocha.prototype.loadFilesAsync);
+            });
+
+            it("should keep original async loading if escape hatch is enabled", async () => {
+                const originalEnv = process.env.TESTPLANE_LOAD_FILES_ASYNC;
+                process.env.TESTPLANE_LOAD_FILES_ASYNC = "1";
+
+                try {
+                    await withNativeTypeScript_(() => readFiles_(["foo/bar.ts"]));
+                } finally {
+                    if (originalEnv === undefined) {
+                        delete process.env.TESTPLANE_LOAD_FILES_ASYNC;
+                    } else {
+                        process.env.TESTPLANE_LOAD_FILES_ASYNC = originalEnv;
+                    }
+                }
+
+                assert.notCalled(Mocha.prototype.loadFiles);
+                assert.calledOnce(Mocha.prototype.loadFilesAsync);
+            });
+
+            it("should load TypeScript files in module packages with async ESM loader", async () => {
+                const packageDir = fs.mkdtempSync(path.join(os.tmpdir(), "testplane-mocha-reader-"));
+
+                fs.writeFileSync(path.join(packageDir, "package.json"), JSON.stringify({ type: "module" }));
+
+                try {
+                    await withNativeTypeScript_(() => readFiles_([path.join(packageDir, "test.ts")]));
+                } finally {
+                    fs.rmSync(packageDir, { recursive: true, force: true });
+                }
+
+                assert.notCalled(Mocha.prototype.loadFiles);
+                assert.calledOnce(Mocha.prototype.loadFilesAsync);
+            });
+
+            it("should preserve ESM support when typeless TypeScript and ESM files are loaded together", async () => {
+                const calls = [];
+
+                Mocha.prototype.addFile.callsFake(file => calls.push(`addFile:${file}`));
+                Mocha.prototype.loadFiles.callsFake(function () {
+                    calls.push(`loadFiles:${this.files[0]}`);
+                });
+                Mocha.prototype.loadFilesAsync.callsFake(function () {
+                    calls.push(`loadFilesAsync:${this.files[0]}`);
+                });
+
+                await withNativeTypeScript_(() => readFiles_(["foo/bar.ts", "baz/qux.mjs"]));
+
+                assert.deepEqual(calls, [
+                    "addFile:foo/bar.ts",
+                    "addFile:baz/qux.mjs",
+                    "loadFiles:foo/bar.ts",
+                    "loadFilesAsync:baz/qux.mjs",
+                ]);
+            });
+
+            ["ERR_REQUIRE_ESM", "ERR_REQUIRE_ASYNC_MODULE"].forEach(code => {
+                it(`should fallback to async loader on ${code}`, async () => {
+                    const error = new Error("require cannot load ESM");
+                    error.code = code;
+                    Mocha.prototype.loadFiles.throws(error);
+
+                    await withNativeTypeScript_(() => readFiles_(["foo/bar.ts"]));
+
+                    assert.calledOnce(Mocha.prototype.loadFiles);
+                    assert.calledOnce(Mocha.prototype.loadFilesAsync);
+                });
+            });
+
+            it("should not fallback to async loader on regular require errors", async () => {
+                Mocha.prototype.loadFiles.throws(new Error("Some error"));
+
+                await withNativeTypeScript_(() => assert.isRejected(readFiles_(["foo/bar.ts"]), "Some error"));
+
+                assert.calledOnce(Mocha.prototype.loadFiles);
+                assert.notCalled(Mocha.prototype.loadFilesAsync);
             });
 
             it("should passthrough esmDecorator to mocha", async () => {

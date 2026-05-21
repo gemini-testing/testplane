@@ -1,7 +1,9 @@
 "use strict";
 
+const fs = require("fs");
 const _ = require("lodash");
 const Mocha = require("mocha");
+const path = require("path");
 
 const { MochaEventBus } = require("./mocha-event-bus");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
@@ -10,6 +12,8 @@ const { MasterEvents } = require("../../events");
 const { getMethodsByInterface } = require("./utils");
 const logger = require("../../utils/logger");
 const { enableSourceMaps } = require("../../utils/typescript");
+
+const AMBIGUOUS_TYPESCRIPT_EXTENSIONS = new Set([".ts", ".tsx"]);
 
 function getTagParser(original) {
     return function (title, paramsOrFn, fn) {
@@ -59,7 +63,7 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     files.forEach(f => mocha.addFile(f));
 
     try {
-        await mocha.loadFilesAsync({ esmDecorator });
+        await loadMochaFiles(mocha, files, { esmDecorator });
     } catch (err) {
         const errorMessage = (err.message || "").split("\n")[0].trim();
 
@@ -75,6 +79,66 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     }
 
     applyOnly(mocha.suite, eventBus);
+}
+
+async function loadMochaFiles(mocha, files, { esmDecorator }) {
+    if (["true", "1"].includes(process.env.TESTPLANE_LOAD_FILES_ASYNC) || !files.some(shouldLoadWithRequire)) {
+        await mocha.loadFilesAsync({ esmDecorator });
+        return;
+    }
+
+    const originalFiles = mocha.files;
+    mocha.lazyLoadFiles(true);
+
+    try {
+        for (const file of files) {
+            mocha.files = [file];
+
+            if (!shouldLoadWithRequire(file)) {
+                await mocha.loadFilesAsync({ esmDecorator });
+                continue;
+            }
+
+            try {
+                mocha.loadFiles();
+            } catch (err) {
+                if (err.code !== "ERR_REQUIRE_ESM" && err.code !== "ERR_REQUIRE_ASYNC_MODULE") {
+                    throw err;
+                }
+
+                await mocha.loadFilesAsync({ esmDecorator });
+            }
+        }
+    } finally {
+        mocha.files = originalFiles;
+    }
+}
+
+function shouldLoadWithRequire(file) {
+    if (!process.features?.typescript || !AMBIGUOUS_TYPESCRIPT_EXTENSIONS.has(path.extname(file))) {
+        return false;
+    }
+
+    // Node.js 24 can import .ts files directly and warn before our require hook transpiles them.
+    return !isInsideEsmPackage(file);
+}
+
+function isInsideEsmPackage(file) {
+    let currentDir = path.dirname(path.resolve(file));
+    let parentDir;
+
+    while (currentDir !== parentDir) {
+        const packageJsonPath = path.join(currentDir, "package.json");
+
+        if (fs.existsSync(packageJsonPath)) {
+            return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")).type === "module";
+        }
+
+        parentDir = currentDir;
+        currentDir = path.dirname(currentDir);
+    }
+
+    return false;
 }
 
 function initBuildContext(outBus) {
