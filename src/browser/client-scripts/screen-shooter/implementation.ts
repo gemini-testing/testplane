@@ -6,11 +6,13 @@ import {
     Length,
     ceilCoords,
     floorCoords,
+    fromBcrToRect,
     fromCssToDevice,
     fromCssToDeviceNumber,
     fromDeviceToCssNumber,
     getBottom,
     getCoveringRect,
+    getIntersection,
     roundCoords
 } from "@isomorphic";
 import {
@@ -21,7 +23,8 @@ import {
     PrepareViewportScreenshotResult,
     ScrollFullPageResult,
     ScrollResult,
-    GetCaptureStateResult
+    GetCaptureStateResult,
+    TrackedElementData
 } from "./types";
 import { createDebugLogger } from "../shared/logger";
 import {
@@ -49,6 +52,101 @@ import { getCommonScrollParent, scrollElementBy, scrollElementToOffset } from ".
 declare global {
     // eslint-disable-next-line no-var
     var __cleanupAnimation: undefined | (() => void);
+}
+
+const MIN_ANCHOR_SAMPLE_SIZE = 3;
+const MAX_ANCHOR_TRACKED_ELEMENTS = 500;
+/** Tolerance in CSS pixels for binning observed viewport shift deltas */
+const ANCHOR_SHIFT_TOLERANCE_CSS = 1.5;
+
+function sampleRandom<T>(items: T[], maxCount: number): T[] {
+    if (items.length <= maxCount) return items.slice();
+    const arr = items.slice();
+    for (let i = 0; i < maxCount; i++) {
+        const j = i + Math.floor(Math.random() * (arr.length - i));
+        const tmp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = tmp;
+    }
+    return arr.slice(0, maxCount);
+}
+
+/** Finds the densest tolerance-wide window and returns its median value. */
+function computeShiftMode(deltas: number[], tolerance: number): number | null {
+    if (deltas.length === 0) {
+        return null;
+    }
+
+    const sortedDeltas = deltas.slice().sort((a, b) => a - b);
+    let bestWindowStartIndex = 0;
+    let bestWindowEndIndex = 0;
+
+    for (let startIndex = 0, endIndex = 0; startIndex < sortedDeltas.length; startIndex++) {
+        while (
+            endIndex + 1 < sortedDeltas.length &&
+            sortedDeltas[endIndex + 1] - sortedDeltas[startIndex] <= tolerance
+        ) {
+            endIndex++;
+        }
+
+        const currentWindowSize = endIndex - startIndex + 1;
+        const bestWindowSize = bestWindowEndIndex - bestWindowStartIndex + 1;
+        const shouldPreferCurrentWindow = currentWindowSize > bestWindowSize;
+
+        if (shouldPreferCurrentWindow) {
+            bestWindowStartIndex = startIndex;
+            bestWindowEndIndex = endIndex;
+        }
+    }
+
+    const dominantValues = sortedDeltas.slice(bestWindowStartIndex, bestWindowEndIndex + 1);
+    const middleIndex = Math.floor(dominantValues.length / 2);
+
+    if (dominantValues.length % 2 === 1) {
+        return dominantValues[middleIndex];
+    }
+
+    return (dominantValues[middleIndex - 1] + dominantValues[middleIndex]) / 2;
+}
+
+/** This function is useful to understand what actually is going on when capture area unexpectedly changes size/top position.
+ * It returns the actual shift of the capture area compared to the baseline.
+ * This shift can then be compared to the shift of the whole capture area to compute correction delta. */
+function computeActualShift(): Length<"css", "y"> | null {
+    const { trackedElementsData } = getScreenshooterNamespaceData();
+    if (!trackedElementsData || trackedElementsData.length === 0) {
+        return null;
+    }
+
+    const verticalDeltas: number[] = [];
+    for (const trackedElementData of trackedElementsData) {
+        if (!trackedElementData.element.isConnected) {
+            continue;
+        }
+
+        const currentRect = trackedElementData.element.getBoundingClientRect();
+        const baselineRect = trackedElementData.rect;
+
+        if (currentRect.width <= 0 || currentRect.height <= 0) {
+            continue;
+        }
+
+        if (
+            Math.abs(currentRect.width - baselineRect.width) > 1 ||
+            Math.abs(currentRect.height - baselineRect.height) > 1
+        ) {
+            continue;
+        }
+
+        verticalDeltas.push(currentRect.top - baselineRect.top);
+    }
+    if (verticalDeltas.length < MIN_ANCHOR_SAMPLE_SIZE) {
+        return null;
+    }
+
+    const shiftCss = computeShiftMode(verticalDeltas, ANCHOR_SHIFT_TOLERANCE_CSS);
+
+    return shiftCss === null ? null : (shiftCss as Length<"css", "y">);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -118,7 +216,14 @@ export function scrollTo(
 ): ScrollResult {
     return safeCall((): ScrollResult => {
         const logger = createDebugLogger({ debug }, "scrollTo");
-        logger("Asked to scroll to with params: selectorsToCapture:", selectorsToCapture, "scrollOffset:", scrollOffset, "selectorToScroll:", selectorToScroll);
+        logger(
+            "Asked to scroll to with params: selectorsToCapture:",
+            selectorsToCapture,
+            "scrollOffset:",
+            scrollOffset,
+            "selectorToScroll:",
+            selectorToScroll
+        );
         const pixelRatio = computePixelRatio();
         const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
@@ -171,6 +276,9 @@ export function getCaptureState(
         const scrollOffset = computeScrollOffset(scrollElement);
         const viewportOffset = computeViewportOffset();
 
+        const anchorShift = computeActualShift();
+        const anchorShiftDevice = anchorShift === null ? null : fromCssToDeviceNumber(anchorShift, pixelRatio);
+
         logger("scrollOffset:", scrollOffset);
 
         return {
@@ -179,6 +287,7 @@ export function getCaptureState(
             safeArea: fromCssToDevice(roundCoords(safeArea), pixelRatio),
             scrollOffset: fromCssToDeviceNumber(scrollOffset, pixelRatio),
             viewportOffset: fromCssToDevice(floorCoords(viewportOffset), pixelRatio),
+            anchorShift: anchorShiftDevice,
             readableSelectorToScrollDescr,
             debugLog: logger()
         };
@@ -309,7 +418,52 @@ export function cleanupPointerEvents(): void {
 }
 
 export function cleanupScrolls(): void {
+    getScreenshooterNamespaceData().trackedElementsData = [];
     cleanupSavedScrolls();
+}
+
+/**
+ * Records up to 500 random non-degenerate descendants of the capture elements as anchor baselines.
+ * Must be called once before the best-effort capture pass; getCaptureState will then return anchorShift.
+ */
+export function captureAnchorBaseline(selectorsToCapture: string[]): void | BrowserSideError {
+    return safeCall((): void => {
+        const captureSpecs = computeCaptureSpecs(selectorsToCapture);
+        const captureArea = captureSpecs.length > 0 ? getCoveringRect(captureSpecs.map(spec => spec.full)) : null;
+
+        const allDescendants: Element[] = [];
+        for (let si = 0; si < selectorsToCapture.length; si++) {
+            const el = document.querySelector(selectorsToCapture[si]);
+            if (!el) continue;
+            allDescendants.push(el);
+            const nodes = el.querySelectorAll("*");
+            for (let ni = 0; ni < nodes.length; ni++) allDescendants.push(nodes[ni]);
+        }
+
+        const nonDegenerate = allDescendants.filter(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0) {
+                return false;
+            }
+
+            if (!captureArea) {
+                return true;
+            }
+
+            const rect = fromBcrToRect(r);
+
+            return Boolean(getIntersection(captureArea, rect));
+        });
+
+        const sampled = sampleRandom(nonDegenerate, MAX_ANCHOR_TRACKED_ELEMENTS);
+        getScreenshooterNamespaceData().trackedElementsData = sampled.map((el): TrackedElementData => {
+            const r = el.getBoundingClientRect();
+            return {
+                element: el,
+                rect: fromBcrToRect(r)
+            };
+        });
+    });
 }
 
 function prepareElementsScreenshotUnsafe(

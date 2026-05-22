@@ -80,6 +80,7 @@ describe("ElementsScreenShooter", () => {
                 captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
                 ignoreAreas: [],
                 safeArea: band(0, 100),
+                anchorShift: null,
                 debugLog: "state debug",
             },
             overrides,
@@ -282,46 +283,44 @@ describe("ElementsScreenShooter", () => {
             assert.calledOnceWithExactly(operationsStubs.disableIframeAnimations, browser, browserSideScreenshooter);
         });
 
-        it("should retry retriable errors and validate capture area stability on retry", async () => {
-            const page = createMockPage();
-            const changedState = createCaptureState({
-                captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
-                safeArea: band(0, 100),
-            });
-            const stableState = createCaptureState({
-                captureSpecs: page.captureSpecs,
-                ignoreAreas: page.ignoreAreas,
-                safeArea: page.safeArea,
-            });
+        it("should preload and do best-effort capture when capture area size changes mid-capture", async () => {
+            const page = createMockPage({ captureSpecs: [captureSpec(rect(0, 0, 100, 80))] });
+            const changedState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
+            const preloadState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
+            const settledState = createCaptureState({ captureSpecs: page.captureSpecs, safeArea: page.safeArea });
 
             browserSideScreenshooter.call
                 .onCall(0)
-                .resolves(page)
+                .resolves(page) // prepareElementsScreenshot
                 .onCall(1)
-                .resolves(changedState)
+                .resolves(changedState) // getCaptureState phase 1 → size change
                 .onCall(2)
-                .resolves(page)
+                .resolves(preloadState) // getCaptureState in preload
                 .onCall(3)
-                .resolves(stableState)
+                .resolves({}) // scrollTo restore after preload
                 .onCall(4)
-                .resolves(stableState)
+                .resolves(undefined) // captureAnchorBaseline
                 .onCall(5)
-                .resolves(stableState);
+                .resolves(settledState); // getCaptureState phase 2
 
-            const result = await screenShooter.capture(".element", {}, 2);
+            const result = await screenShooter.capture(".element", { compositeImage: false });
 
             assert.deepEqual(
                 browserSideScreenshooter.call
                     .getCalls()
                     .map(call => call.args[0])
-                    .filter(method => method === "prepareElementsScreenshot"),
-                ["prepareElementsScreenshot", "prepareElementsScreenshot"],
+                    .filter(m => m === "prepareElementsScreenshot"),
+                ["prepareElementsScreenshot"],
+            );
+            assert.deepEqual(
+                browserSideScreenshooter.call
+                    .getCalls()
+                    .map(call => call.args[0])
+                    .filter(m => m === "captureAnchorBaseline"),
+                ["captureAnchorBaseline"],
             );
             assert.calledOnce(camera.captureViewportImage);
-            assert.deepEqual(result, {
-                image: renderedImage,
-                meta: page,
-            });
+            assert.deepEqual(result, { image: renderedImage, meta: page });
         });
 
         it("should return rendered image and page meta", async () => {
@@ -394,6 +393,7 @@ describe("ElementsScreenShooter", () => {
                 state.safeArea,
                 state.captureSpecs,
                 state.ignoreAreas,
+                0,
             );
             assert.deepEqual(result, {
                 image: renderedImage,
@@ -467,17 +467,14 @@ describe("ElementsScreenShooter", () => {
             ]);
         });
 
-        it("should continue capture on the last allowed attempt when capture area size changes", async () => {
-            const page = createMockPage({
-                captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
-            });
-            const changedState = createCaptureState({
-                captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
-            });
+        it("should pass correction delta to registerViewportImageAtOffset during best-effort pass", async () => {
+            const page = createMockPage({ captureSpecs: [captureSpec(rect(0, 34, 100, 80))], scrollOffset: 0 });
+            const changedState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 34, 100, 120))] });
+            const preloadState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 34, 100, 120))] });
             const settledState = createCaptureState({
-                captureSpecs: [captureSpec(rect(0, 100, 100, 20))],
-                safeArea: band(100, 100),
-                scrollOffset: 100,
+                captureSpecs: [captureSpec(rect(0, -246, 100, 80))],
+                scrollOffset: 280,
+                anchorShift: -287,
             });
 
             browserSideScreenshooter.call
@@ -486,20 +483,64 @@ describe("ElementsScreenShooter", () => {
                 .onCall(1)
                 .resolves(changedState)
                 .onCall(2)
-                .resolves({ debugLog: "scroll debug" })
+                .resolves(preloadState)
                 .onCall(3)
-                .resolves(settledState)
+                .resolves({})
                 .onCall(4)
+                .resolves(undefined)
+                .onCall(5)
+                .resolves(settledState)
+                .onCall(6)
                 .resolves({ debugLog: "restore debug" });
 
-            const result = await screenShooter.capture(".element", { compositeImage: true }, 1);
+            await screenShooter.capture(".element", { compositeImage: false });
 
-            assert.calledOnce(validationStubs.assertCorrectCaptureAreaBounds);
-            assert.calledTwice(camera.captureViewportImage);
-            assert.deepEqual(result, {
-                image: renderedImage,
-                meta: page,
+            assert.calledOnceWithExactly(
+                compositeImage.registerViewportImageAtOffset,
+                viewportImage,
+                settledState.safeArea,
+                settledState.captureSpecs,
+                settledState.ignoreAreas,
+                -7,
+            );
+        });
+
+        it("should pass zero correction when observed shift is unavailable", async () => {
+            const page = createMockPage({ captureSpecs: [captureSpec(rect(0, 34, 100, 80))], scrollOffset: 0 });
+            const changedState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 34, 100, 120))] });
+            const preloadState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 34, 100, 120))] });
+            const settledState = createCaptureState({
+                captureSpecs: [captureSpec(rect(0, -246, 100, 80))],
+                scrollOffset: 280,
+                anchorShift: null,
             });
+
+            browserSideScreenshooter.call
+                .onCall(0)
+                .resolves(page)
+                .onCall(1)
+                .resolves(changedState)
+                .onCall(2)
+                .resolves(preloadState)
+                .onCall(3)
+                .resolves({})
+                .onCall(4)
+                .resolves(undefined)
+                .onCall(5)
+                .resolves(settledState)
+                .onCall(6)
+                .resolves({ debugLog: "restore debug" });
+
+            await screenShooter.capture(".element", { compositeImage: false });
+
+            assert.calledOnceWithExactly(
+                compositeImage.registerViewportImageAtOffset,
+                viewportImage,
+                settledState.safeArea,
+                settledState.captureSpecs,
+                settledState.ignoreAreas,
+                0,
+            );
         });
 
         it("should warn when the captured area still overflows the viewport and allowViewportOverflow is false", async () => {

@@ -78,12 +78,18 @@ export class Camera {
 
         const shouldApplyCalibration =
             this._calibrationScreenshotSize !== null &&
-            (this._calibrationScreenshotSize.width === width && this._calibrationScreenshotSize.height === height);
+            this._calibrationScreenshotSize.width === width &&
+            this._calibrationScreenshotSize.height === height;
         const calibrationArea = shouldApplyCalibration ? this._calibratedArea : null;
 
         const calibratedImageArea = this._cropAreaToCalibratedArea(imageArea, calibrationArea);
 
-        const viewportCroppedArea = this._cropAreaToViewport(calibratedImageArea, { width, height }, calibrationArea, opts);
+        const viewportCroppedArea = this._cropAreaToViewport(
+            calibratedImageArea,
+            { width, height },
+            calibrationArea,
+            opts,
+        );
         await utils.saveViewportImageForDebugIfNeeded(image, calibratedImageArea, this._debugTmpDir);
 
         if (viewportCroppedArea.width !== width || viewportCroppedArea.height !== height) {

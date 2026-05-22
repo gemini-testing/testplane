@@ -7,12 +7,20 @@ export interface CaptureSpec<S extends Space, U extends Unit> {
     visible: Rect<S, U>;
 }
 
+export interface TrackedElementData {
+    element: Element;
+    /** baseline element rect in viewport CSS coordinates */
+    rect: Rect<"viewport", "css">;
+}
+
 export interface CaptureState {
     scrollOffset: Coord<"page", "device", "y">;
     viewportOffset: Point<"page", "device">;
     captureSpecs: CaptureSpec<"viewport", "device">[];
     ignoreAreas: Rect<"viewport", "device">[];
     safeArea: YBand<"viewport", "device">;
+    /** Observed viewport-space vertical movement of tracked elements vs baseline, in device px. */
+    anchorShift: number | null;
 }
 
 export interface SavedScrollPosition {
@@ -24,6 +32,7 @@ export interface SavedScrollPosition {
 export interface ScreenshooterNamespaceData {
     cleanupPointerEventsCb?: () => void;
     savedScrollPositions?: SavedScrollPosition[];
+    trackedElementsData?: TrackedElementData[];
 }
 
 export interface PrepareScreenshotOptions {
