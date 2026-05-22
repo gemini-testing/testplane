@@ -213,11 +213,9 @@ export class CSSSelectivity {
             };
         }
 
-        return setCachedSelectivityFile(
-            CacheType.CssSessionCache,
-            this._wdSessionId,
-            JSON.stringify(sessionCache),
-        ).catch(err => {
+        return setCachedSelectivityFile(CacheType.CssSessionCache, this._wdSessionId, JSON.stringify(sessionCache), {
+            overwrite: true,
+        }).catch(err => {
             debugSelectivity(`Couldn't save session cache for session '%s': %O`, this._wdSessionId, err);
         });
     }
