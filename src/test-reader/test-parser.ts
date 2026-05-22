@@ -21,6 +21,7 @@ import { isRunInBrowserEnv } from "../utils/config";
 import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
 import { TagFilter } from "../utils/cli";
+import { TestplaneGlobals } from "../types/globals";
 
 export type TestParserParseOpts = {
     browserId: string;
@@ -63,8 +64,8 @@ export class TestParser extends EventEmitter {
             also: AlsoController.create(eventBus),
         };
 
-        global.testplane = toolGlobals;
-        global.hermione = toolGlobals;
+        (globalThis as unknown as TestplaneGlobals).testplane = toolGlobals;
+        (globalThis as unknown as TestplaneGlobals).hermione = toolGlobals;
 
         this.#buildInstructions
             .push(Instructions.extendWithBrowserId)
