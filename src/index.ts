@@ -8,11 +8,11 @@ import "expect-webdriverio";
 // Overrides matchers return type
 import "./vendors/expect-webdriverio/matchers-overrides";
 
-import { GlobalHelper } from "./types";
 export { run as runCli } from "./cli";
 export { Testplane as default } from "./testplane";
 export { Key } from "@testplane/webdriverio";
 export * from "./mock";
+export * from "./globals";
 
 export * as unstable from "./unstable";
 
@@ -48,24 +48,3 @@ export type { SaveStateData } from "./browser/commands/saveState";
 
 import type { TestDefinition, SuiteDefinition, TestHookDefinition } from "./test-reader/test-object/types";
 export type { TestDefinition, SuiteDefinition, TestHookDefinition };
-
-declare global {
-    /* eslint-disable no-var */
-    // Here, we ignore clashes of types between Mocha and Testplane, because in production we don't include @types/mocha,
-    // but we need mocha types in development, so this is an issue only during development.
-    ///@ts-expect-error: see explanation above
-    var it: TestDefinition;
-    // @ts-expect-error: see explanation above
-    var describe: SuiteDefinition;
-    // @ts-expect-error: see explanation above
-    var beforeEach: TestHookDefinition;
-    // @ts-expect-error: see explanation above
-    var afterEach: TestHookDefinition;
-
-    var testplane: GlobalHelper;
-    /**
-     * @deprecated Use `testplane` instead
-     */
-    var hermione: GlobalHelper;
-    /* eslint-enable no-var */
-}
