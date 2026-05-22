@@ -18,6 +18,10 @@ import { closeServer, startFixtureServer } from "./utils";
 const SCREENSHOTS_PATH = path.join(__dirname, "screens");
 const HORIZONTAL_OVERFLOW_WARNING_PART = "outside of horizontal viewport bounds";
 const TEMP_DIR_PREFIX = "testplane-elements-screen-shooter-";
+const shouldUseLocalBrowser = Boolean(process.env.USE_LOCAL_BROWSER);
+const SCREENSHOOTER_BROWSER_CONFIG = shouldUseLocalBrowser
+    ? BROWSER_CONFIG
+    : { ...BROWSER_CONFIG, gridUrl: "http://127.0.0.1:4444/" };
 
 const createScreenShooter = async (browser: WdioBrowser): Promise<ElementsScreenShooter> => {
     const camera = Camera.create("auto", () => browser.takeScreenshot());
@@ -45,7 +49,7 @@ describe("ElementsScreenShooter integration", function () {
     beforeEach(async () => {
         tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
         browser = await launchBrowser({
-            ...BROWSER_CONFIG,
+            ...SCREENSHOOTER_BROWSER_CONFIG,
             windowSize: "1280x1000",
         });
     });
@@ -209,14 +213,19 @@ describe("ElementsScreenShooter integration", function () {
 
     it("keeps fractional checkpoint offsets stable during replay", async () => {
         assert.ok(browser);
-        const browserConfig = _.cloneDeep(BROWSER_CONFIG);
+        const browserConfig = _.cloneDeep(SCREENSHOOTER_BROWSER_CONFIG);
         // This test is only applicable to Chrome, it's hard to replicate the issue in firefox
         if (BROWSER_CONFIG.desiredCapabilities.browserName !== "chrome") {
             return;
         }
 
+        const chromeOptions = _.get(browserConfig.desiredCapabilities, "goog:chromeOptions", {});
+        const chromeArgs = _.get(chromeOptions, "args", []);
+
         _.set(browserConfig.desiredCapabilities, "goog:chromeOptions", {
+            ...chromeOptions,
             args: [
+                ...chromeArgs,
                 "--force-device-scale-factor=3",
                 "--high-dpi-support=1",
                 "--screen-info={devicePixelRatio=3}",
