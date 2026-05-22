@@ -106,7 +106,9 @@
             // After page loads, scroll to position the text block perfectly under the fixed overlay
             // Scroll to the calculated position
             setTimeout(() => {
-                window.scrollTo(0, 1197);
+                const overlayBlock = document.querySelector(".overlay-block");
+                const targetBlock = document.querySelector(".text-block");
+                window.scrollTo(0, targetBlock.getBoundingClientRect().y - overlayBlock.getBoundingClientRect().y);
             }, 10);
         </script>
     </body>

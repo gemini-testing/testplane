@@ -26,11 +26,8 @@ jobs:
                   node-version: ${{ matrix.node-version }}
                   cache: "npm"
             - run: npm ci
+            - run: npm run build
             - run: npm test
-
-            - name: Build
-              if: ${{ startsWith(matrix.node-version, '20') }}
-              run: npm run build
 
             - name: Publish
               if: ${{ startsWith(matrix.node-version, '20') }}

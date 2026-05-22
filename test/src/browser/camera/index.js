@@ -45,7 +45,7 @@ describe("browser/camera", () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
                     image.getSize.resolves({ width: 10, height: 10 });
 
-                    camera.calibrate({ top: 6, left: 4, width: 10, height: 10 });
+                    camera.calibrate({ top: 6, left: 4, width: 10, height: 10 }, { width: 10, height: 10 });
                     await camera.captureViewportImage();
 
                     assert.calledOnceWith(image.crop, {
@@ -54,6 +54,16 @@ describe("browser/camera", () => {
                         width: 10 - 4,
                         height: 10 - 6,
                     });
+                });
+
+                it("should not apply calibration when screenshot size differs from calibration screenshot size", async () => {
+                    const camera = Camera.create(null, sinon.stub().resolves());
+                    image.getSize.resolves({ width: 20, height: 20 });
+
+                    camera.calibrate({ top: 6, left: 4, width: 10, height: 10 }, { width: 10, height: 10 });
+                    await camera.captureViewportImage();
+
+                    assert.notCalled(image.crop);
                 });
             });
 

@@ -457,472 +457,475 @@ export const createScenario = async (
     return result;
 };
 
-const scenarios = [
-    createScenario({
-        id: "single-chunk-in-view",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "single-chunk-slightly-out-of-view",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 800 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "single-chunk-completely-out-of-view",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 1100 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "single-chunk-safe-area-expansion-top",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                top: 0,
-                height: 300,
-            },
-        ],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "single-chunk-safe-area-expansion-bottom",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                bottom: 0,
-                height: 600,
-            },
-        ],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "single-chunk-safe-area-expansion-top-and-bottom",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                top: 0,
-                height: 300,
-            },
-            {
-                bottom: 0,
-                height: 400,
-            },
-        ],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "two-chunks-with-gap",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [],
-        chunks: [
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-            },
-            {
-                height: 800 as Length<"device", "y">,
-                offsetTop: 500 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "two-chunks-relax-upper-bottom",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                bottom: 0,
-                height: 100,
-            },
-        ],
-        chunks: [
-            {
+// This is to prevent the script from running when it's imported by another script
+if (process.argv.includes("generate")) {
+    const scenarios = [
+        createScenario({
+            id: "single-chunk-in-view",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
                 height: 500 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
             },
-            {
+            ignoreAreas: [],
+            unsafeAreas: [],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "single-chunk-slightly-out-of-view",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 800 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
                 height: 500 as Length<"device", "y">,
-                offsetTop: 500 as Coord<"page", "device", "y">,
             },
-        ],
-    }),
-    createScenario({
-        id: "two-chunks-relax-lower-top",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                top: 0,
-                height: 100,
-            },
-        ],
-        chunks: [
-            {
+            ignoreAreas: [],
+            unsafeAreas: [],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "single-chunk-completely-out-of-view",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 1100 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
                 height: 500 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
             },
-            {
+            ignoreAreas: [],
+            unsafeAreas: [],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "single-chunk-safe-area-expansion-top",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
                 height: 500 as Length<"device", "y">,
-                offsetTop: 500 as Coord<"page", "device", "y">,
             },
-        ],
-    }),
-    createScenario({
-        id: "two-equal-chunks",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    top: 0,
+                    height: 300,
+                },
+            ],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "single-chunk-safe-area-expansion-bottom",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    bottom: 0,
+                    height: 600,
+                },
+            ],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "single-chunk-safe-area-expansion-top-and-bottom",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-        ],
-    }),
-    createScenario({
-        id: "multiple-overlapping-chunks-with-safe-areas",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                bottom: 0,
-                height: 100,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    top: 0,
+                    height: 300,
+                },
+                {
+                    bottom: 0,
+                    height: 400,
+                },
+            ],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "two-chunks-with-gap",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-        ],
-        chunks: [
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [],
+            chunks: [
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 800 as Length<"device", "y">,
+                    offsetTop: 500 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "two-chunks-relax-upper-bottom",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 100 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    bottom: 0,
+                    height: 100,
+                },
+            ],
+            chunks: [
+                {
+                    height: 500 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 500 as Length<"device", "y">,
+                    offsetTop: 500 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "two-chunks-relax-lower-top",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 200 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    top: 0,
+                    height: 100,
+                },
+            ],
+            chunks: [
+                {
+                    height: 500 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 500 as Length<"device", "y">,
+                    offsetTop: 500 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "two-equal-chunks",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1024 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 300 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "multiple-overlapping-chunks-with-safe-areas",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 400 as Coord<"page", "device", "y">,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    bottom: 0,
+                    height: 100,
+                },
+            ],
+            chunks: [
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 100 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 200 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 300 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 400 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "multiple-chunks-with-horizontal-shifts",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-        ],
-    }),
-    createScenario({
-        id: "multiple-chunks-with-horizontal-shifts",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [],
-        unsafeAreas: [
-            {
-                bottom: 0,
-                height: 100,
+            ignoreAreas: [],
+            unsafeAreas: [
+                {
+                    bottom: 0,
+                    height: 100,
+                },
+            ],
+            chunks: [
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 0 as Coord<"page", "device", "y">,
+                    width: 1000 as Length<"device", "x">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 100 as Coord<"page", "device", "y">,
+                    width: 800 as Length<"device", "x">,
+                    offsetLeft: 100 as Coord<"page", "device", "x">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 200 as Coord<"page", "device", "y">,
+                    width: 600 as Length<"device", "x">,
+                    offsetLeft: 150 as Coord<"page", "device", "x">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 300 as Coord<"page", "device", "y">,
+                    offsetLeft: 10 as Coord<"page", "device", "x">,
+                },
+                {
+                    height: 400 as Length<"device", "y">,
+                    offsetTop: 400 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        createScenario({
+            id: "multiple-chunks-with-safe-areas-and-ignore-areas",
+            pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
+            captureArea: {
+                left: 200 as Coord<"page", "device", "x">,
+                top: 200 as Coord<"page", "device", "y">,
+                width: 500 as Length<"device", "x">,
+                height: 500 as Length<"device", "y">,
             },
-        ],
-        chunks: [
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 0 as Coord<"page", "device", "y">,
-                width: 1000 as Length<"device", "x">,
-            },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 100 as Coord<"page", "device", "y">,
-                width: 800 as Length<"device", "x">,
-                offsetLeft: 100 as Coord<"page", "device", "x">,
-            },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 200 as Coord<"page", "device", "y">,
-                width: 600 as Length<"device", "x">,
-                offsetLeft: 150 as Coord<"page", "device", "x">,
-            },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 300 as Coord<"page", "device", "y">,
-                offsetLeft: 10 as Coord<"page", "device", "x">,
-            },
-            {
-                height: 400 as Length<"device", "y">,
-                offsetTop: 400 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    createScenario({
-        id: "multiple-chunks-with-safe-areas-and-ignore-areas",
-        pageSize: { width: 1024 as Length<"device", "x">, height: 1800 as Length<"device", "y"> },
-        captureArea: {
-            left: 200 as Coord<"page", "device", "x">,
-            top: 200 as Coord<"page", "device", "y">,
-            width: 500 as Length<"device", "x">,
-            height: 500 as Length<"device", "y">,
-        },
-        ignoreAreas: [
-            {
-                left: 300 as Coord<"page", "device", "x">,
-                top: 100 as Coord<"page", "device", "y">,
-                width: 100 as Length<"device", "x">,
-                height: 400 as Length<"device", "y">,
-            },
-        ],
-        unsafeAreas: [
-            {
-                top: 0,
-                height: 100,
-            },
-            {
-                bottom: 0,
-                height: 700,
-            },
-        ],
-        chunks: [
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 100 as Coord<"page", "device", "y">,
-            },
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 200 as Coord<"page", "device", "y">,
-            },
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 300 as Coord<"page", "device", "y">,
-            },
-            {
-                height: 1024 as Length<"device", "y">,
-                offsetTop: 400 as Coord<"page", "device", "y">,
-            },
-        ],
-    }),
-    (async (): Promise<ScenarioGenerationResult> => {
-        const id = "duplicate-chunks-with-offscreen-zero-visible-spec";
-        const scenarioDir = path.join(__dirname, id);
-        const chunksDir = path.join(scenarioDir, "chunks");
-        await fs.promises.mkdir(chunksDir, { recursive: true });
+            ignoreAreas: [
+                {
+                    left: 300 as Coord<"page", "device", "x">,
+                    top: 100 as Coord<"page", "device", "y">,
+                    width: 100 as Length<"device", "x">,
+                    height: 400 as Length<"device", "y">,
+                },
+            ],
+            unsafeAreas: [
+                {
+                    top: 0,
+                    height: 100,
+                },
+                {
+                    bottom: 0,
+                    height: 700,
+                },
+            ],
+            chunks: [
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 100 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 200 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 300 as Coord<"page", "device", "y">,
+                },
+                {
+                    height: 1024 as Length<"device", "y">,
+                    offsetTop: 400 as Coord<"page", "device", "y">,
+                },
+            ],
+        }),
+        (async (): Promise<ScenarioGenerationResult> => {
+            const id = "duplicate-chunks-with-offscreen-zero-visible-spec";
+            const scenarioDir = path.join(__dirname, id);
+            const chunksDir = path.join(scenarioDir, "chunks");
+            await fs.promises.mkdir(chunksDir, { recursive: true });
 
-        const viewportWidth = 1024 as Length<"device", "x">;
-        const viewportHeight = 1024 as Length<"device", "y">;
-        const safeArea = toViewportYBand(0, viewportHeight as number);
-        const fixedRect = toViewportRect({ left: 200, top: 620, width: 500, height: 260 });
-        const ignoreBoundingRects: Rect<"viewport", "device">[] = [];
-        const weirdChunkDefs = [120, -500, -800, -800];
-        const chunkResults: ScenarioGenerationResult["chunks"] = [];
-        let firstChunkRgba: Buffer | null = null;
+            const viewportWidth = 1024 as Length<"device", "x">;
+            const viewportHeight = 1024 as Length<"device", "y">;
+            const safeArea = toViewportYBand(0, viewportHeight as number);
+            const fixedRect = toViewportRect({ left: 200, top: 620, width: 500, height: 260 });
+            const ignoreBoundingRects: Rect<"viewport", "device">[] = [];
+            const weirdChunkDefs = [120, -500, -800, -800];
+            const chunkResults: ScenarioGenerationResult["chunks"] = [];
+            let firstChunkRgba: Buffer | null = null;
 
-        const drawVisibleSpec = (rgba: Buffer, visibleRect: Rect<"viewport", "device">): void => {
-            if ((visibleRect.width as number) <= 0 || (visibleRect.height as number) <= 0) {
-                return;
+            const drawVisibleSpec = (rgba: Buffer, visibleRect: Rect<"viewport", "device">): void => {
+                if ((visibleRect.width as number) <= 0 || (visibleRect.height as number) <= 0) {
+                    return;
+                }
+
+                drawCaptureArea(
+                    rgba,
+                    { width: viewportWidth, height: viewportHeight },
+                    {
+                        left: toPageX(visibleRect.left as number),
+                        top: toPageY(visibleRect.top as number),
+                        width: visibleRect.width as Length<"device", "x">,
+                        height: visibleRect.height as Length<"device", "y">,
+                    },
+                );
+            };
+
+            for (let chunkIndex = 0; chunkIndex < weirdChunkDefs.length; chunkIndex++) {
+                const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * 4);
+                fillRect(
+                    chunkRgba,
+                    viewportWidth,
+                    viewportHeight,
+                    {
+                        left: toPageX(0),
+                        top: toPageY(0),
+                        width: viewportWidth,
+                        height: viewportHeight,
+                    },
+                    WHITE,
+                );
+
+                const movingTop = weirdChunkDefs[chunkIndex];
+                const movingVisibleHeight = movingTop >= 0 ? 420 : 0;
+                const chunkPath = path.posix.join(chunksDir, `${chunkIndex}.png`);
+                const movingSpec = {
+                    full: toViewportRect({ left: 200, top: movingTop, width: 500, height: 420 }),
+                    visible: toViewportRect({
+                        left: 200,
+                        top: movingTop,
+                        width: 500,
+                        height: movingVisibleHeight,
+                    }),
+                };
+                const captureSpecs = [movingSpec, { full: fixedRect, visible: fixedRect }];
+
+                for (const spec of captureSpecs) {
+                    drawVisibleSpec(chunkRgba, spec.visible);
+                }
+
+                await saveRgbaAsPng(chunkPath, chunkRgba, viewportWidth, viewportHeight);
+
+                if (chunkIndex === 0) {
+                    firstChunkRgba = chunkRgba;
+                }
+
+                chunkResults.push({
+                    file: path.relative(__dirname, chunkPath),
+                    safeArea,
+                    captureSpecs,
+                    ignoreBoundingRects,
+                });
             }
 
-            drawCaptureArea(
-                rgba,
-                { width: viewportWidth, height: viewportHeight },
-                {
-                    left: toPageX(visibleRect.left as number),
-                    top: toPageY(visibleRect.top as number),
-                    width: visibleRect.width as Length<"device", "x">,
-                    height: visibleRect.height as Length<"device", "y">,
-                },
-            );
-        };
+            if (!firstChunkRgba) {
+                throw new Error(
+                    "Failed to build first chunk for duplicate-chunks-with-offscreen-zero-visible-spec scenario",
+                );
+            }
 
-        for (let chunkIndex = 0; chunkIndex < weirdChunkDefs.length; chunkIndex++) {
-            const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * 4);
-            fillRect(
-                chunkRgba,
+            const expectedRgba = crop(
+                firstChunkRgba,
                 viewportWidth,
                 viewportHeight,
-                {
-                    left: toPageX(0),
-                    top: toPageY(0),
-                    width: viewportWidth,
-                    height: viewportHeight,
-                },
-                WHITE,
+                toPageX(200),
+                toPageY(120),
+                500 as Length<"device", "x">,
+                760 as Length<"device", "y">,
             );
+            const expectedPath = path.posix.join(scenarioDir, "expected.png");
+            await saveRgbaAsPng(expectedPath, expectedRgba, 500 as Length<"device", "x">, 760 as Length<"device", "y">);
 
-            const movingTop = weirdChunkDefs[chunkIndex];
-            const movingVisibleHeight = movingTop >= 0 ? 420 : 0;
-            const chunkPath = path.posix.join(chunksDir, `${chunkIndex}.png`);
-            const movingSpec = {
-                full: toViewportRect({ left: 200, top: movingTop, width: 500, height: 420 }),
-                visible: toViewportRect({
-                    left: 200,
-                    top: movingTop,
-                    width: 500,
-                    height: movingVisibleHeight,
-                }),
+            const fullPagePath = path.posix.join(scenarioDir, "full-page.png");
+            await saveRgbaAsPng(fullPagePath, expectedRgba, 500 as Length<"device", "x">, 760 as Length<"device", "y">);
+
+            return {
+                id,
+                fullPage: path.relative(__dirname, fullPagePath),
+                expected: path.relative(__dirname, expectedPath),
+                chunks: chunkResults,
             };
-            const captureSpecs = [movingSpec, { full: fixedRect, visible: fixedRect }];
+        })(),
+    ] satisfies Promise<ScenarioGenerationResult>[];
 
-            for (const spec of captureSpecs) {
-                drawVisibleSpec(chunkRgba, spec.visible);
-            }
-
-            await saveRgbaAsPng(chunkPath, chunkRgba, viewportWidth, viewportHeight);
-
-            if (chunkIndex === 0) {
-                firstChunkRgba = chunkRgba;
-            }
-
-            chunkResults.push({
-                file: path.relative(__dirname, chunkPath),
-                safeArea,
-                captureSpecs,
-                ignoreBoundingRects,
-            });
-        }
-
-        if (!firstChunkRgba) {
-            throw new Error(
-                "Failed to build first chunk for duplicate-chunks-with-offscreen-zero-visible-spec scenario",
-            );
-        }
-
-        const expectedRgba = crop(
-            firstChunkRgba,
-            viewportWidth,
-            viewportHeight,
-            toPageX(200),
-            toPageY(120),
-            500 as Length<"device", "x">,
-            760 as Length<"device", "y">,
-        );
-        const expectedPath = path.posix.join(scenarioDir, "expected.png");
-        await saveRgbaAsPng(expectedPath, expectedRgba, 500 as Length<"device", "x">, 760 as Length<"device", "y">);
-
-        const fullPagePath = path.posix.join(scenarioDir, "full-page.png");
-        await saveRgbaAsPng(fullPagePath, expectedRgba, 500 as Length<"device", "x">, 760 as Length<"device", "y">);
-
-        return {
-            id,
-            fullPage: path.relative(__dirname, fullPagePath),
-            expected: path.relative(__dirname, expectedPath),
-            chunks: chunkResults,
-        };
-    })(),
-] satisfies Promise<ScenarioGenerationResult>[];
-
-Promise.all(scenarios).then(async results => {
-    await fs.promises.writeFile(path.join(__dirname, "data.json"), JSON.stringify(results, null, 4) + "\n");
-    console.log("Generation completed.");
-});
+    Promise.all(scenarios).then(async results => {
+        await fs.promises.writeFile(path.join(__dirname, "data.json"), JSON.stringify(results, null, 4) + "\n");
+        console.log("Generation of composite image fixtures completed.");
+    });
+}

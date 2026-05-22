@@ -139,10 +139,10 @@ export class Image {
         let bufferPointer = 0;
         let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
 
-        const actualWIdth = Math.min(rect.width, this._width - rect.left);
+        const actualWidth = Math.min(rect.width, this._width - rect.left);
         const actualHeight = Math.min(rect.height, this._height - rect.top);
 
-        const bytesToCopy = actualWIdth * RGBA_CHANNELS;
+        const bytesToCopy = actualWidth * RGBA_CHANNELS;
         const bytesToIterate = this._width * RGBA_CHANNELS;
 
         for (let i = 0; i < actualHeight; i++) {
@@ -153,7 +153,7 @@ export class Image {
         }
 
         this._imgData = imgData.subarray(0, bufferPointer);
-        this._width = actualWIdth;
+        this._width = actualWidth;
         this._height = actualHeight;
     }
 

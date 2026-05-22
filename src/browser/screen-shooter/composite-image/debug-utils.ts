@@ -13,12 +13,15 @@ export type ViewportDebugRect = {
     color: DebugRectColor;
 };
 
-/* This file is used for debugging purposes only, to produce images with capture areas, safe areas, etc. visible when TESTPLANE_DEBUG_SCREENSHOTS is set */
+/*
+This file is used for debugging purposes only, to produce images with capture areas, safe areas, etc. visible when TESTPLANE_DEBUG_SCREENSHOTS is set
+Green frame means safe area, red means area we want to capture.
+*/
 
 export const COMPOSITE_IMAGE_DEBUG_COLORS = {
-    safeArea: { r: 0, g: 255, b: 0, a: 255 },
-    captureSpecVisible: { r: 255, g: 0, b: 0, a: 255 },
-    visibleCoveringRect: { r: 255, g: 105, b: 180, a: 255 },
+    safeArea: { r: 0, g: 255, b: 0, a: 255 }, // green
+    captureSpecVisible: { r: 255, g: 0, b: 0, a: 255 }, // red
+    visibleCoveringRect: { r: 255, g: 105, b: 180, a: 255 }, // pink
 } as const;
 
 const initJsquashPromise = new Promise<unknown>(resolve => {

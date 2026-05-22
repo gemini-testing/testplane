@@ -1,5 +1,5 @@
 import path from "path";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import { requireModule as realRequireModule } from "../../../src/utils/module";
 

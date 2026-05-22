@@ -15,9 +15,15 @@ export default {
     sets: {
         assertView: {
             files: path.join(__dirname, "tests/assert-view.testplane.js"),
+            browsers: ["chrome"],
         },
         reportPageScreenshot: {
             files: path.join(__dirname, "tests/report-page-screenshot.testplane.js"),
+            browsers: ["chrome"],
+        },
+        calibrationResize: {
+            files: path.join(__dirname, "tests/calibration-resize.testplane.js"),
+            browsers: ["calibrated-chrome"],
         },
     },
 
@@ -32,6 +38,21 @@ export default {
                 ignoreDiffPixelCount: 4,
             },
             windowSize: "1280x1024",
+            desiredCapabilities: {
+                browserName: "chrome",
+                "goog:chromeOptions": {
+                    args: ["headless", "no-sandbox", "hide-scrollbars", "disable-dev-shm-usage"],
+                    binary: "/usr/bin/chromium",
+                },
+            },
+            waitTimeout: 3000,
+        },
+        "calibrated-chrome": {
+            assertViewOpts: {
+                ignoreDiffPixelCount: 4,
+            },
+            calibrate: true,
+            windowSize: "360x640",
             desiredCapabilities: {
                 browserName: "chrome",
                 "goog:chromeOptions": {

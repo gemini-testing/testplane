@@ -8,7 +8,7 @@ export default {
     gridUrl: shouldUseLocalBrowser ? "local" : "http://127.0.0.1:4444/",
     baseUrl: shouldUseLocalBrowser ? "http://localhost:5173" : "http://host.docker.internal:5173",
     sessionsPerBrowser: 1,
-    testsPerSession: 10,
+    testsPerSession: 50,
 
     screenshotsDir: "test/browser-env/screens",
 
@@ -33,10 +33,11 @@ export default {
         },
     },
 
+    headless: !shouldUseLocalBrowser,
+
     browsers: {
         chrome: {
             windowSize: { width: 1280, height: 1000 },
-            headless: !shouldUseLocalBrowser,
             desiredCapabilities: {
                 browserName: "chrome",
                 "goog:chromeOptions": {
@@ -47,7 +48,6 @@ export default {
             waitTimeout: 3000,
         },
         "chrome-mobile-dpr3": {
-            headless: !shouldUseLocalBrowser,
             desiredCapabilities: {
                 browserName: "chrome",
                 "goog:chromeOptions": {

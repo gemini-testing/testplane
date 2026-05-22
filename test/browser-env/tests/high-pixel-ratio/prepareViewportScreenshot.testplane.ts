@@ -25,12 +25,12 @@ describe("prepareViewportScreenshot in high pixel ratio mode", () => {
         window.scrollTo(0, 0);
     });
 
-    it("returns viewport and document dimensions translated to device pixels", async ({ browser }) => {
+    it("returns viewport and document dimensions translated to device pixels", async () => {
         window.scrollTo(0, 245);
 
-        const cssViewportSize = computeViewportSize().viewportSize;
-        const cssViewportOffset = computeViewportOffset().viewportOffset;
-        const cssDocumentSize = computeDocumentSize().documentSize;
+        const cssViewportSize = computeViewportSize();
+        const cssViewportOffset = computeViewportOffset();
+        const cssDocumentSize = computeDocumentSize();
 
         const result = getPrepareResult({ usePixelRatio: true });
 

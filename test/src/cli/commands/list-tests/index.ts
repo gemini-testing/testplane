@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Command } from "@gemini-testing/commander";
 import fs from "fs-extra";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 
 import { Formatters } from "../../../../../src/test-collection";

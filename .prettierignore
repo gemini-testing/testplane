@@ -18,3 +18,5 @@ coverage/**
 test/browser-env/report/**
 *.png
 *.DS_Store
+.claude
+tsc-out

@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import type { ExistingBrowser } from "src/browser/existing-browser";
 import type { Test } from "src/types";

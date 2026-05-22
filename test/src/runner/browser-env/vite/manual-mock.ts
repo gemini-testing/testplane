@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 
 import type { Stats } from "node:fs";
 import { ManualMock } from "../../../../../src/runner/browser-env/vite/manual-mock";

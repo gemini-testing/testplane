@@ -8,6 +8,7 @@
     // which is in quirks mode.
     // Needs to find a proper way to open calibration
     // page in standards mode.
+    /* global navigator, document, window */
     function needsResetBorder() {
         return !/MSIE 8\.0/.test(navigator.userAgent);
     }

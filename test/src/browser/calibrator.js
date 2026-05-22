@@ -56,6 +56,8 @@ describe("calibrator", () => {
         const result = await calibrator.calibrate(browser);
 
         assert.match(result.feature, "value");
+        assert.isAbove(result.screenshotSize.width, 0);
+        assert.isAbove(result.screenshotSize.height, 0);
     });
 
     it("should not perform the calibration process two times", async () => {

@@ -136,32 +136,30 @@ function applyTransformToRect(rect: Rect<"viewport", "css">, css: CSSStyleDeclar
     const matrix = parseTransformMatrix(css.transform);
     if (!matrix) return rect;
 
-    const w = rect.width as number;
-    const h = rect.height as number;
-    const origin = resolveTransformOrigin(css.transformOrigin, w, h);
-    const ox = (rect.left as number) + origin.x;
-    const oy = (rect.top as number) + origin.y;
+    const transformOrigin = resolveTransformOrigin(css.transformOrigin, rect.width, rect.height);
+    const originX = rect.left + transformOrigin.x;
+    const originY = rect.top + transformOrigin.y;
 
     const corners = [
-        [rect.left as number, rect.top as number],
-        [(rect.left as number) + w, rect.top as number],
-        [rect.left as number, (rect.top as number) + h],
-        [(rect.left as number) + w, (rect.top as number) + h]
+        [rect.left, rect.top],
+        [rect.left + rect.width, rect.top],
+        [rect.left, rect.top + rect.height],
+        [rect.left + rect.width, rect.top + rect.height]
     ];
 
     let minX = Infinity,
         minY = Infinity,
         maxX = -Infinity,
         maxY = -Infinity;
-    for (const [cx, cy] of corners) {
-        const dx = cx - ox,
-            dy = cy - oy;
-        const nx = matrix.a * dx + matrix.c * dy + matrix.tx + ox;
-        const ny = matrix.b * dx + matrix.d * dy + matrix.ty + oy;
-        minX = Math.min(minX, nx);
-        maxX = Math.max(maxX, nx);
-        minY = Math.min(minY, ny);
-        maxY = Math.max(maxY, ny);
+    for (const [cornerX, cornerY] of corners) {
+        const relativeX = cornerX - originX,
+            relativeY = cornerY - originY;
+        const transformedX = matrix.a * relativeX + matrix.c * relativeY + matrix.tx + originX;
+        const transformedY = matrix.b * relativeX + matrix.d * relativeY + matrix.ty + originY;
+        minX = Math.min(minX, transformedX);
+        maxX = Math.max(maxX, transformedX);
+        minY = Math.min(minY, transformedY);
+        maxY = Math.max(maxY, transformedY);
     }
 
     return {

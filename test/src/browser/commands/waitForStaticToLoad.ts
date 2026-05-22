@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import FakeTimers from "@sinonjs/fake-timers";
 
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ as mkSessionStubOrigin_ } from "../utils";

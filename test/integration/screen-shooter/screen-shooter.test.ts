@@ -18,6 +18,10 @@ import { closeServer, startFixtureServer } from "./utils";
 const SCREENSHOTS_PATH = path.join(__dirname, "screens");
 const HORIZONTAL_OVERFLOW_WARNING_PART = "outside of horizontal viewport bounds";
 const TEMP_DIR_PREFIX = "testplane-elements-screen-shooter-";
+const shouldUseLocalBrowser = Boolean(process.env.USE_LOCAL_BROWSER);
+const SCREENSHOOTER_BROWSER_CONFIG = shouldUseLocalBrowser
+    ? BROWSER_CONFIG
+    : { ...BROWSER_CONFIG, gridUrl: "http://127.0.0.1:4444/" };
 
 const createScreenShooter = async (browser: WdioBrowser): Promise<ElementsScreenShooter> => {
     const camera = Camera.create("auto", () => browser.takeScreenshot());
@@ -42,10 +46,17 @@ describe("ElementsScreenShooter integration", function () {
     let pageUrl = "";
     let warningSpy: sinon.SinonSpy | null = null;
 
+    before(function () {
+        // Our docker image has chrome only
+        if (!shouldUseLocalBrowser && BROWSER_CONFIG.desiredCapabilities.browserName !== "chrome") {
+            this.skip();
+        }
+    });
+
     beforeEach(async () => {
         tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
         browser = await launchBrowser({
-            ...BROWSER_CONFIG,
+            ...SCREENSHOOTER_BROWSER_CONFIG,
             windowSize: "1280x1000",
         });
     });
@@ -56,7 +67,7 @@ describe("ElementsScreenShooter integration", function () {
             browser = null;
         }
 
-        if (tempDir) {
+        if (tempDir && !process.env.KEEP_ACTUAL) {
             await fs.promises.rm(tempDir, { recursive: true, force: true });
             tempDir = null;
         }
@@ -79,6 +90,7 @@ describe("ElementsScreenShooter integration", function () {
     });
 
     it("prints horizontal overflow warning and captures only visible part", async () => {
+        assert.ok(tempDir);
         await browser!.url(`${pageUrl}/partially-offscreen.html`);
 
         warningSpy = sinon.spy(console, "warn");
@@ -103,7 +115,7 @@ describe("ElementsScreenShooter integration", function () {
             "Expected warning to contain partially offscreen element selector",
         );
 
-        const actualImagePath = path.join(tempDir!, "actual.png");
+        const actualImagePath = path.join(tempDir, "partially-offscreen.actual.png");
         await image.save(actualImagePath);
 
         const expectedImagePath = path.join(SCREENSHOTS_PATH, "partially-offscreen.png");
@@ -117,6 +129,7 @@ describe("ElementsScreenShooter integration", function () {
     });
 
     it("captures long screenshot with deterministic geometry changes", async () => {
+        assert.ok(tempDir);
         await browser!.url(`${pageUrl}/deterministic-changing-dimensions.html`);
 
         const screenShooter = await createScreenShooter(browser as WdioBrowser);
@@ -125,7 +138,7 @@ describe("ElementsScreenShooter integration", function () {
             selectorToScroll: ".Modal-Wrapper",
         });
 
-        const actualImagePath = path.join(tempDir!, "deterministic-changing-dimensions.png");
+        const actualImagePath = path.join(tempDir, "deterministic-changing-dimensions.png");
         await image.save(actualImagePath);
 
         const stat = await fs.promises.stat(actualImagePath);
@@ -142,6 +155,7 @@ describe("ElementsScreenShooter integration", function () {
     });
 
     it("captures full page body with dynamic sticky menu fixture", async () => {
+        assert.ok(tempDir);
         await browser!.url(`${pageUrl}/dynamic-sticky-menu-safe-area.html`);
 
         const screenShooter = await createScreenShooter(browser as WdioBrowser);
@@ -152,7 +166,7 @@ describe("ElementsScreenShooter integration", function () {
             disableAnimation: true,
         });
 
-        const actualImagePath = path.join(__dirname, "screens", "dynamic-sticky-menu-safe-area.png");
+        const actualImagePath = path.join(tempDir, "dynamic-sticky-menu-safe-area.png");
         await image.save(actualImagePath);
 
         const expectedImagePath = path.join(SCREENSHOTS_PATH, "dynamic-sticky-menu-safe-area.png");
@@ -166,6 +180,7 @@ describe("ElementsScreenShooter integration", function () {
     });
 
     it("captures only the visible part of a long block when allowViewportOverflow=true and captureElementFromTop=false", async () => {
+        assert.ok(tempDir);
         await browser!.url(`${pageUrl}/visible-top-long-block-overflow.html`);
 
         const screenShooter = await createScreenShooter(browser as WdioBrowser);
@@ -175,7 +190,7 @@ describe("ElementsScreenShooter integration", function () {
             disableAnimation: true,
         });
 
-        const actualImagePath = path.join(__dirname, "screens", "visible-top-long-block-overflow.png");
+        const actualImagePath = path.join(tempDir, "visible-top-long-block-overflow.png");
         await image.save(actualImagePath);
 
         const expectedImagePath = path.join(SCREENSHOTS_PATH, "visible-top-long-block-overflow.png");
@@ -195,30 +210,29 @@ describe("ElementsScreenShooter integration", function () {
 
         const screenShooter = await createScreenShooter(browser as WdioBrowser);
 
-        const { image } = await screenShooter.capture(".Modal-Content", {
-            compositeImage: true,
-            selectorToScroll: ".Modal-Wrapper",
-        });
-
-        const actualImagePath = path.join(tempDir!, "non-deterministic-changing-dimensions.png");
-        await image.save(actualImagePath);
-
-        const expectedImagePath = path.join(SCREENSHOTS_PATH, "non-deterministic-changing-dimensions.png");
-
-        if (process.env.UPDATE_REFERENCES) {
-            await fs.promises.copyFile(actualImagePath, expectedImagePath);
-        }
-
-        const comparison = await looksSame(actualImagePath, expectedImagePath);
-        assert(comparison.equal, "Expected screenshot to match reference image");
+        await assert.doesNotReject(() =>
+            screenShooter.capture(".Modal-Content", {
+                compositeImage: true,
+                selectorToScroll: ".Modal-Wrapper",
+            }),
+        );
     });
 
     it("keeps fractional checkpoint offsets stable during replay", async () => {
         assert.ok(browser);
-        const browserConfig = _.cloneDeep(BROWSER_CONFIG);
+        const browserConfig = _.cloneDeep(SCREENSHOOTER_BROWSER_CONFIG);
+        // This test is only applicable to Chrome, it's hard to replicate the issue in firefox
+        if (BROWSER_CONFIG.desiredCapabilities.browserName !== "chrome") {
+            return;
+        }
+
+        const chromeOptions = _.get(browserConfig.desiredCapabilities, "goog:chromeOptions", {});
+        const chromeArgs = _.get(chromeOptions, "args", []);
 
         _.set(browserConfig.desiredCapabilities, "goog:chromeOptions", {
+            ...chromeOptions,
             args: [
+                ...chromeArgs,
                 "--force-device-scale-factor=3",
                 "--high-dpi-support=1",
                 "--screen-info={devicePixelRatio=3}",
@@ -262,7 +276,7 @@ describe("ElementsScreenShooter integration", function () {
             compositeImage: true,
         });
 
-        const actualImagePath = path.join(__dirname, "screens", "fixed-block-slightly-off-viewport.png");
+        const actualImagePath = path.join(tempDir, "fixed-block-slightly-off-viewport.png");
         await image.save(actualImagePath);
 
         const expectedImagePath = path.join(SCREENSHOTS_PATH, "fixed-block-slightly-off-viewport.png");

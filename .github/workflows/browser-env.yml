@@ -91,7 +91,7 @@ jobs:
               uses: thollander/actions-comment-pull-request@v3
               with:
                   message: ${{ env.PR_COMMENT }}
-                  comment-tag: testplane_results
+                  comment-tag: testplane_browser_env_results
 
             - name: Fail the job if any Testplane job is failed
               if: ${{ steps.testplane.outcome != 'success' }}

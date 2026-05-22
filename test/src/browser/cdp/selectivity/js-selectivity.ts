@@ -1,4 +1,4 @@
-import sinon, { SinonStub, type SinonStubbedInstance } from "sinon";
+import sinon, { type SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
 import type { CDPTarget } from "src/browser/cdp/domains/target";
 import type { CDPDebugger } from "src/browser/cdp/domains/debugger";
