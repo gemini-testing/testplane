@@ -3,13 +3,13 @@ import { computePixelRatio } from "../../../../../src/browser/client-scripts/scr
 describe("computePixelRatio", () => {
     testplane.only.in("chrome-mobile-dpr3");
     it("returns emulated mobile pixel ratio from window.devicePixelRatio", () => {
-        const pixelRatio = computePixelRatio().pixelRatio;
+        const pixelRatio = computePixelRatio();
         expect(pixelRatio).toBe(3);
     });
 
     testplane.only.in("chrome-mobile-dpr3");
     it("returns 1 when usePixelRatio is disabled", () => {
-        const pixelRatio = computePixelRatio(false).pixelRatio;
+        const pixelRatio = computePixelRatio(false);
         expect(pixelRatio).toBe(1);
     });
 });

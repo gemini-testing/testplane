@@ -1,7 +1,7 @@
 import path from "node:path";
 import _ from "lodash";
 import proxyquire from "proxyquire";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 
 import { TestCollection, Formatters, AVAILABLE_FORMATTERS } from "../../../src/test-collection";
 import { Test } from "../../../src/test-reader/test-object";

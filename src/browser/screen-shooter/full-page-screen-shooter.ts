@@ -17,6 +17,7 @@ import {
     preparePointerForScreenshot,
 } from "./operations";
 import { runWithoutHistory } from "../history";
+import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
 
 const debug = makeDebug("testplane:screenshots:full-page-screen-shooter");
 
@@ -81,8 +82,6 @@ export class FullPageScreenShooter {
     }
 
     private async _captureImpl(opts: FullPageCaptureOpts): Promise<Image> {
-        const COMPOSITING_ITERATIONS_LIMIT = 50;
-
         const prepareResult = await this._browserSideScreenshooter.call("prepareFullPageScreenshot", [
             {
                 usePixelRatio: this._browserProperties.shouldUsePixelRatio,

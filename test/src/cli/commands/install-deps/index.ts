@@ -18,7 +18,7 @@ describe("cli/commands/install-deps", () => {
         process.argv = ["foo/bar/node", "foo/bar/script", "install-deps", ...argv.split(" ")].filter(Boolean);
         cli.run();
 
-        await (Command.prototype.action as SinonStub).lastCall.returnValue;
+        await new Promise(resolve => setImmediate(resolve));
     };
 
     const mkBrowser_ = (browserName: string, browserVersion: string): Config["browsers"][string] =>

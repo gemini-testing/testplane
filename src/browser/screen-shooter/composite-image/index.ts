@@ -35,6 +35,8 @@ interface CompositeChunk {
     safeArea: YBand<"viewport", "device">;
     captureSpecs: CaptureSpec<"viewport", "device">[];
     boundingRectsToIgnore: Rect<"viewport", "device">[];
+    /** Anchor correction delta in device px. */
+    anchorShift: number | null;
 }
 
 /** Chunk enriched with render-time computed anchor top. */
@@ -91,6 +93,7 @@ export class CompositeImage {
         safeArea: YBand<"viewport", "device">,
         captureSpecs: CaptureSpec<"viewport", "device">[],
         ignoreBoundingRects: Rect<"viewport", "device">[],
+        anchorShift: number | null = null,
     ): Promise<void> {
         const visibleCoveringRect =
             this._getVisibleCoveringRect({ captureSpecs }) ?? getCoveringRect(captureSpecs.map(s => s.visible));
@@ -129,6 +132,7 @@ export class CompositeImage {
             safeArea,
             captureSpecs,
             boundingRectsToIgnore: ignoreBoundingRects,
+            anchorShift,
         });
     }
 
@@ -208,10 +212,17 @@ export class CompositeImage {
     }
 
     /**
-     * Computes anchor tops for all chunks by comparing element rects against a reference chunk
-     * (the one with the highest covering rect top). Reference chunk gets anchorTop = its covering rect top.
-     * Other chunks get anchorTop = referenceCoveringRectTop - maxDelta, where maxDelta is the max
-     * downward movement of any element rect compared to the reference.
+     * Computes anchor tops for all chunks.
+     *
+     * The reference chunk is the one with the highest captureSpec covering-rect top (= the first
+     * scroll position, which has the most positive viewport-space top).
+     *
+     * For each non-reference chunk the base anchorTop is computed from captureSpec deltas (same as
+     * before). When per-chunk correction data is available, the anchor is additionally corrected.
+     *
+     *   anchorTop_corrected = anchorTop_from_specs + (chunkAnchorShift - referenceAnchorShift)
+     *
+     * In the stable case correction values are 0 for all chunks.
      */
     private _computeAnchoredChunks(): AnchoredChunk[] {
         let referenceIndex = 0;
@@ -225,7 +236,9 @@ export class CompositeImage {
             }
         }
 
-        const referenceCaptureSpecs = this._compositeChunks[referenceIndex].captureSpecs;
+        const referenceChunk = this._compositeChunks[referenceIndex];
+        const referenceCaptureSpecs = referenceChunk.captureSpecs;
+        const referenceAnchorShift = referenceChunk.anchorShift;
 
         const anchoredChunks = this._compositeChunks.map((chunk, index) => {
             if (index === referenceIndex) {
@@ -248,74 +261,23 @@ export class CompositeImage {
                 }
             }
 
+            const anchorTopFromSpecs = (referenceCoveringRectTop as number) - maxDelta;
+
+            // Apply content-shift correction when anchor tracking data is available (best-effort pass).
+            const shiftCorrection =
+                chunk.anchorShift !== null && referenceAnchorShift !== null
+                    ? chunk.anchorShift - referenceAnchorShift
+                    : 0;
+
             return {
                 ...chunk,
-                anchorTop: ((referenceCoveringRectTop as number) - maxDelta) as Coord<"viewport", "device", "y">,
+                anchorTop: (anchorTopFromSpecs + shiftCorrection) as Coord<"viewport", "device", "y">,
             };
         });
 
         debug("Anchored chunks: %O", anchoredChunks);
 
-        this._applyHeightChangeAnchorFixups(anchoredChunks);
-
         return anchoredChunks;
-    }
-
-    private _applyHeightChangeAnchorFixups(chunks: AnchoredChunk[]): void {
-        if (chunks.length < 2) {
-            return;
-        }
-
-        debug("Applying height change anchor fixups");
-
-        const sortedChunks = chunks.slice().sort((a, b) => subtractCoords(b.anchorTop, a.anchorTop));
-
-        for (let i = 1; i < sortedChunks.length; i++) {
-            const previousChunk = sortedChunks[i - 1];
-            const currentChunk = sortedChunks[i];
-            const heightDelta = this._getHeightDeltaFromDifferingCaptureSpec(previousChunk, currentChunk);
-
-            if (!this._shouldTreatHeightChangeAsStartShift(heightDelta)) {
-                continue;
-            }
-
-            debug(
-                "Shifting anchor top for chunk %d by %d. Old anchor top: %d, new anchor top: %d",
-                i,
-                heightDelta,
-                currentChunk.anchorTop,
-                currentChunk.anchorTop - heightDelta,
-            );
-            currentChunk.anchorTop = ((currentChunk.anchorTop as number) - heightDelta) as Coord<
-                "viewport",
-                "device",
-                "y"
-            >;
-        }
-    }
-
-    private _getHeightDeltaFromDifferingCaptureSpec(
-        previousChunk: AnchoredChunk,
-        currentChunk: AnchoredChunk,
-    ): number | null {
-        const minLength = Math.min(previousChunk.captureSpecs.length, currentChunk.captureSpecs.length);
-
-        for (let i = 0; i < minLength; i++) {
-            const previousSpecHeight = previousChunk.captureSpecs[i].full.height as number;
-            const currentSpecHeight = currentChunk.captureSpecs[i].full.height as number;
-
-            if (previousSpecHeight !== currentSpecHeight) {
-                return previousSpecHeight - currentSpecHeight;
-            }
-        }
-
-        return null;
-    }
-
-    private _shouldTreatHeightChangeAsStartShift(heightDelta: number | null): heightDelta is number {
-        const shouldShiftFromStart = true;
-
-        return shouldShiftFromStart && typeof heightDelta === "number" && heightDelta > 0;
     }
 
     private _isRenderableCaptureSpec(spec: CaptureSpec<"viewport", "device">): boolean {

@@ -1,5 +1,5 @@
 import fs from "fs";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import { exists } from "../../../src/utils/fs";
 
 describe("utils/fs", () => {

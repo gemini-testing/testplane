@@ -182,11 +182,7 @@ export class ExistingBrowser extends Browser {
         return this._calibration ? this._calibration.needsCompatLib : false;
     }
 
-    async captureViewportImage(opts?: CaptureViewportImageOpts, screenshotDelay?: number): Promise<Image> {
-        if (screenshotDelay) {
-            await new Promise(resolve => setTimeout(resolve, screenshotDelay));
-        }
-
+    async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<Image> {
         return this._camera.captureViewportImage(opts);
     }
 
@@ -486,7 +482,7 @@ export class ExistingBrowser extends Browser {
 
         return calibrator.calibrate(this).then(calibration => {
             this._calibration = calibration;
-            this._camera.calibrate(calibration.viewportArea);
+            this._camera.calibrate(calibration.viewportArea, calibration.screenshotSize);
         });
     }
 

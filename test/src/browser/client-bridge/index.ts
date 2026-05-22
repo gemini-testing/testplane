@@ -115,9 +115,10 @@ describe("ClientBridge", () => {
             const modulePath = require.resolve("src/browser/client-bridge");
             // This is needed to clear the cache of the client-bridge module
             delete require.cache[modulePath];
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            /* eslint-disable @typescript-eslint/no-var-requires */
             const { ClientBridge: IsolatedClientBridge } =
                 require("src/browser/client-bridge") as typeof import("src/browser/client-bridge");
+            /* eslint-enable @typescript-eslint/no-var-requires */
 
             const readFileStub = fs.promises.readFile as unknown as SinonStub;
             readFileStub.callsFake(async (filePath: fs.PathOrFileDescriptor) => {

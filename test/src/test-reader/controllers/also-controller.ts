@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import { AlsoController } from "../../../../src/test-reader/controllers/also-controller";
 import { TreeBuilder } from "../../../../src/test-reader/tree-builder";
 import { ConfigurableTestObject } from "../../../../src/test-reader/test-object/configurable-test-object";

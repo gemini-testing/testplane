@@ -10,8 +10,8 @@ describe("utils/promise", () => {
     });
 
     afterEach(() => {
-        clock.restore();
         sandbox.restore();
+        clock.restore();
     });
 
     describe("promiseMethod", () => {
@@ -118,8 +118,8 @@ describe("utils/promise", () => {
         });
 
         it("should work with await syntax", async () => {
-            const beforeTime = Date.now();
             clock.tick(1000);
+            const beforeTime = Date.now();
 
             const delayPromise = promiseDelay(500);
             clock.tick(500);

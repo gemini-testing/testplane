@@ -21,7 +21,7 @@ describe("computeCaptureSpecs", () => {
     describe("empty results", () => {
         it("should return empty array when selector matches nothing", () => {
             const result = computeCaptureSpecs([".nonexistent"]);
-            expect(result.captureSpecs).toEqual([]);
+            expect(result).toEqual([]);
         });
 
         it("should return empty array when all matched elements are hidden", async () => {
@@ -34,7 +34,7 @@ describe("computeCaptureSpecs", () => {
                 ".hidden-opacity",
                 ".hidden-zero-size",
             ]);
-            expect(result.captureSpecs).toEqual([]);
+            expect(result).toEqual([]);
         });
     });
 
@@ -44,9 +44,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("single-element");
         });
 
@@ -55,9 +55,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".shadow-target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("box-shadow");
         });
 
@@ -66,9 +66,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".inset-shadow-target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("inset-box-shadow");
         });
 
@@ -77,9 +77,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".outline-target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("outline");
         });
 
@@ -89,7 +89,7 @@ describe("computeCaptureSpecs", () => {
 
             const elementResult = computeCaptureSpecs([".pseudo-target"]);
 
-            visualizeCaptureSpecs(elementResult.captureSpecs);
+            visualizeCaptureSpecs(elementResult);
             await browser.assertView("pseudo-elements");
         });
 
@@ -98,9 +98,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".pseudo-target::before", ".pseudo-target::after"]);
-            expect(result.captureSpecs).toHaveLength(2);
+            expect(result).toHaveLength(2);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("pseudo-elements");
         });
 
@@ -111,9 +111,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".parent::before", ".parent::after"]);
-            expect(result.captureSpecs).toHaveLength(2);
+            expect(result).toHaveLength(2);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("pseudo-elements-ancestor-cb");
         });
 
@@ -124,9 +124,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target::before", ".target::after"]);
-            expect(result.captureSpecs).toHaveLength(2);
+            expect(result).toHaveLength(2);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("transformed-pseudo-elements");
         });
 
@@ -137,9 +137,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".rotated", ".scaled", ".translated", ".skewed", ".combined"]);
-            expect(result.captureSpecs).toHaveLength(5);
+            expect(result).toHaveLength(5);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("transformed-elements");
         });
     });
@@ -150,9 +150,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".a", ".b", ".c"]);
-            expect(result.captureSpecs).toHaveLength(3);
+            expect(result).toHaveLength(3);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("multiple-selectors");
         });
 
@@ -161,9 +161,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".item"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("multiple-matches");
         });
 
@@ -173,10 +173,10 @@ describe("computeCaptureSpecs", () => {
 
             // Both selectors match the same .target element
             const result = computeCaptureSpecs([".target", "div.target"]);
-            expect(result.captureSpecs).toHaveLength(2);
+            expect(result).toHaveLength(2);
 
             // Both rects should be identical
-            expect(result.captureSpecs[0]).toEqual(result.captureSpecs[1]);
+            expect(result[0]).toEqual(result[1]);
         });
 
         it("should only return visible elements from a mix of visible and hidden", async ({ browser }) => {
@@ -190,9 +190,9 @@ describe("computeCaptureSpecs", () => {
                 ".hidden-opacity",
                 ".hidden-zero-size",
             ]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("mixed-visibility");
         });
     });
@@ -206,9 +206,9 @@ describe("computeCaptureSpecs", () => {
             container.scrollTop = 200;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("scrollable-container-scrolled");
         });
     });
@@ -219,9 +219,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".box-model-target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("margin-padding-border");
         });
 
@@ -230,9 +230,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".offscreen"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("offscreen");
         });
 
@@ -243,9 +243,9 @@ describe("computeCaptureSpecs", () => {
             window.scrollTo(0, 560);
 
             const result = computeCaptureSpecs([".long-target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("partially-visible-after-scroll");
         });
 
@@ -254,9 +254,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".fractional", ".transformed"]);
-            expect(result.captureSpecs).toHaveLength(2);
+            expect(result).toHaveLength(2);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("fractional-positions");
         });
     });
@@ -268,7 +268,7 @@ describe("computeCaptureSpecs", () => {
 
             const result = computeCaptureSpecs([".parent", ".child"]);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("nested-elements");
         });
     });
@@ -281,9 +281,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("overflow-hidden");
         });
 
@@ -293,9 +293,9 @@ describe("computeCaptureSpecs", () => {
 
             const logger = createDebugLogger({ debug: ["screen-shooter"] }, "screen-shooter");
             const result = computeCaptureSpecs([".target"], logger);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("overflow-scroll");
         });
 
@@ -304,14 +304,14 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            const spec = result.captureSpecs[0];
+            const spec = result[0];
             // Fixed element escapes overflow clipping — full and visible should be the same
             expect(spec.full.width).toBe(spec.visible.width);
             expect(spec.full.height).toBe(spec.visible.height);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("fixed-in-overflow");
         });
 
@@ -320,9 +320,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("fixed-parent-in-overflow-hidden-external-containing-block");
         });
 
@@ -335,9 +335,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("target");
         });
 
@@ -348,9 +348,9 @@ describe("computeCaptureSpecs", () => {
             document.body.innerHTML = html;
 
             const result = computeCaptureSpecs([".target"]);
-            expect(result.captureSpecs).toHaveLength(1);
+            expect(result).toHaveLength(1);
 
-            visualizeCaptureSpecs(result.captureSpecs);
+            visualizeCaptureSpecs(result);
             await browser.assertView("target");
         });
     });

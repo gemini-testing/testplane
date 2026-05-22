@@ -3,6 +3,7 @@ import getPort from "get-port";
 import path from "node:path";
 import fs from "node:fs";
 const FIXTURES_DIR = path.join(__dirname, "fixtures");
+const shouldUseLocalBrowser = Boolean(process.env.USE_LOCAL_BROWSER);
 
 export const closeServer = (server: http.Server): Promise<void> =>
     new Promise((resolve, reject) => {
@@ -37,11 +38,14 @@ export const startFixtureServer = async (): Promise<{ server: http.Server; pageU
     await new Promise<void>((resolve, reject) => {
         const onError = (error: Error): void => reject(error);
         server.once("error", onError);
-        server.listen(port, "127.0.0.1", () => {
+        server.listen(port, shouldUseLocalBrowser ? "127.0.0.1" : "0.0.0.0", () => {
             server.off("error", onError);
             resolve();
         });
     });
 
-    return { server, pageUrl: `http://127.0.0.1:${port}` };
+    return {
+        server,
+        pageUrl: `http://${shouldUseLocalBrowser ? "127.0.0.1" : "host.docker.internal"}:${port}`,
+    };
 };

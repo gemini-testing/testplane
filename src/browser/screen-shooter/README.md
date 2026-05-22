@@ -7,6 +7,12 @@
 
 ![](./terminology.svg)
 
+### Debugging
+
+Screenshots logic is heavily covered by debug logs. You can turn them on by setting `DEBUG` environment variable to `testplane:screenshots*`, various namespaces are available.
+
+You can also use `TESTPLANE_DEBUG_SCREENSHOTS` environment variable to save viewport images with debug rectangles to a directory (the directory will be created and logged to console).
+
 ### Algorithm overview
 
 Overall, we have two stages: coordinates computation and screenshot capturing itself.

@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 
 import { mkExistingBrowser_ as mkBrowser_, mkSessionStub_ } from "../utils";
 

@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import { EventEmitter } from "events";
 

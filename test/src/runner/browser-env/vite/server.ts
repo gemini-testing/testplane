@@ -1,5 +1,5 @@
 import proxyquire from "proxyquire";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import Vite from "vite";
 import chalk from "chalk";
 

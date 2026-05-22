@@ -4,9 +4,12 @@ import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
 import type { Image } from "../image";
-import { Coord, Length, Rect, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
+import { Coord, Length, Rect, Size, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
 import * as logger from "../utils/logger";
 import os from "node:os";
+import makeDebug from "debug";
+
+const debug = makeDebug("testplane:screenshots:calibrator");
 
 interface BrowserFeatures {
     needsCompatLib: boolean;
@@ -16,6 +19,7 @@ interface BrowserFeatures {
 
 export interface CalibrationResult extends BrowserFeatures {
     viewportArea: Rect<"image", "device">;
+    screenshotSize: Size<"device">;
     usePixelRatio: boolean;
 }
 
@@ -33,12 +37,16 @@ export class Calibrator {
             return this._cache[browser.id];
         }
 
+        debug("calibrating browser %s", browser.id);
+
         await browser.open("about:blank");
         const features = await browser.evalScript<BrowserFeatures>(this._script);
+        debug("features: %O", features);
         const image = await browser.captureViewportImage();
 
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
+        const screenshotSize = (await image.getSize()) as Size<"device">;
         const imageFeatures = await this._findMarkerAreaInImage(image);
 
         if (!imageFeatures) {
@@ -57,6 +65,7 @@ export class Calibrator {
         const calibratedFeatures: CalibrationResult = {
             ...features,
             viewportArea: imageFeatures,
+            screenshotSize,
             usePixelRatio: hasPixelRatio && imageFeatures.width > innerWidth,
         };
 
@@ -93,7 +102,7 @@ export class Calibrator {
                     top: 0,
                     left: result.left,
                     width: result.width,
-                    height: getHeight(0 as Coord<"image", "device", "y">, y),
+                    height: getHeight(0 as Coord<"image", "device", "y">, (y + 1) as Coord<"image", "device", "y">),
                 };
 
                 return getIntersection(topPart, bottomPart);
@@ -122,7 +131,7 @@ async function findMarkerXBandInRow(
 
     return {
         left: markerStart,
-        width: getWidth(markerStart, markerEnd),
+        width: getWidth(markerStart, (markerEnd + 1) as Coord<"image", "device", "x">),
     };
 }
 

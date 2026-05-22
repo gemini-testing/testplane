@@ -1,12 +1,23 @@
 "use strict";
 
 const _ = require("lodash");
-
-const { assertCorrectCaptureAreaBounds } = require("src/browser/screen-shooter/validation");
-const { VerticalOverflowError } = require("src/browser/screen-shooter/errors/vertical-overflow-error");
-const { HorizontalOverflowError } = require("src/browser/screen-shooter/errors/horizontal-overflow-error");
+const proxyquire = require("proxyquire");
 
 describe("assertCorrectCaptureAreaBounds", () => {
+    const loggerWarnStub = sinon.stub();
+    let assertCorrectCaptureAreaBounds;
+
+    beforeEach(() => {
+        loggerWarnStub.resetHistory();
+        loggerWarnStub.resetBehavior();
+
+        ({ assertCorrectCaptureAreaBounds } = proxyquire("src/browser/screen-shooter/validation", {
+            "../../../utils/logger": {
+                warn: loggerWarnStub,
+            },
+        }));
+    });
+
     function validate_(areaModification, opts = {}) {
         const viewport = {
             left: 0,
@@ -31,84 +42,97 @@ describe("assertCorrectCaptureAreaBounds", () => {
 
         const viewportOffset = { top: 0, left: 0 };
 
-        return assertCorrectCaptureAreaBounds("test browser", viewport, viewportOffset, captureArea, opts);
+        return assertCorrectCaptureAreaBounds("test browser", viewport, viewportOffset, [captureArea], opts);
     }
 
-    describe("validation failed", () => {
-        it("if crop area left boundary is outside of viewport", () => {
-            assert.throws(() => validate_({ left: -1 }), HorizontalOverflowError);
+    describe("validation warnings", () => {
+        it("should warn if crop area left boundary is outside of viewport", () => {
+            validate_({ left: -1 });
+
+            assert.calledOnceWithMatch(loggerWarnStub, sinon.match("outside of horizontal viewport bounds"));
         });
 
-        it("if crop area top boundary is outside of viewport", () => {
-            // Note: The current implementation checks top < 0 in the horizontal overflow check
-            assert.throws(() => validate_({ top: -1 }), HorizontalOverflowError);
+        it("should not warn if crop area top boundary is outside of viewport", () => {
+            validate_({ top: -1 });
+
+            assert.notCalled(loggerWarnStub);
         });
 
-        it("if crop area right boundary is outside of viewport", () => {
-            assert.throws(() => validate_({ width: +1 }), HorizontalOverflowError);
+        it("should warn if crop area right boundary is outside of viewport", () => {
+            validate_({ width: +1 });
+
+            assert.calledOnceWithMatch(loggerWarnStub, sinon.match("outside of horizontal viewport bounds"));
         });
 
-        it("if crop area height bigger than viewport height", () => {
-            assert.throws(() => validate_({ height: +1 }), VerticalOverflowError);
+        it("should warn if crop area height bigger than viewport height", () => {
+            validate_({ height: +1 });
+
+            assert.calledOnceWithMatch(loggerWarnStub, sinon.match("larger than viewport height"));
         });
     });
 
     it('should not throw any errors if option "allowViewportOverflow" is set and "compositeImage" is not', () => {
         const opts = { allowViewportOverflow: true, compositeImage: false };
 
-        assert.doesNotThrow(() => validate_({ left: -1, height: +1 }, opts));
+        validate_({ left: -1, height: +1 }, opts);
+
+        assert.notCalled(loggerWarnStub);
     });
 
     it("should not throw OffsetViewportError if option allowViewportOverflow is set", () => {
         const opts = { allowViewportOverflow: true };
 
-        assert.doesNotThrow(() => validate_({ left: -1 }, opts));
+        validate_({ left: -1 }, opts);
+
+        assert.notCalled(loggerWarnStub);
     });
 
     it('should not throw if crop area height bigger than viewport height and "compositeImage" is set', () => {
         const opts = { compositeImage: true };
 
-        assert.doesNotThrow(() => validate_({ height: +1 }, opts));
+        validate_({ height: +1 }, opts);
+
+        assert.notCalled(loggerWarnStub);
     });
 
     it("should not throw on passed validation", () => {
-        const fn = () => validate_({ left: 0 });
+        validate_({ left: 0 });
 
-        return assert.doesNotThrow(fn);
+        assert.notCalled(loggerWarnStub);
     });
 
     describe("comprehensive validation tests", () => {
-        it("should not throw for valid bounds", () => {
+        it("should not warn for valid bounds", () => {
             const viewportSize = { width: 100, height: 100 };
             const viewportOffset = { left: 0, top: 0 };
             const captureArea = { left: 10, top: 10, width: 50, height: 50 };
             const opts = {};
 
-            assert.doesNotThrow(() => {
-                assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, captureArea, opts);
-            });
+            assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, [captureArea], opts);
+
+            assert.notCalled(loggerWarnStub);
         });
 
-        it("should throw HorizontalOverflowError when capture area overflows horizontally", () => {
+        it("should warn when capture area overflows horizontally", () => {
             const viewportSize = { width: 100, height: 100 };
             const viewportOffset = { left: 0, top: 0 };
             const captureArea = { left: 90, top: 10, width: 50, height: 50 }; // overflows right
             const opts = {};
 
-            assert.throws(() => {
-                assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, captureArea, opts);
-            }, HorizontalOverflowError);
+            assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, [captureArea], opts);
+
+            assert.calledOnceWithMatch(loggerWarnStub, sinon.match("outside of horizontal viewport bounds"));
         });
 
-        it("should throw VerticalOverflowError when capture area overflows vertically", () => {
+        it("should warn when capture area overflows vertically", () => {
             const viewportSize = { width: 100, height: 100 };
             const viewportOffset = { left: 0, top: 0 };
             const captureArea = { left: 10, top: 90, width: 50, height: 50 }; // overflows bottom
             const opts = {};
 
-            assert.throws(() => {
-                assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, captureArea, opts);
-            }, VerticalOverflowError);
+            assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, [captureArea], opts);
+
+            assert.calledOnceWithMatch(loggerWarnStub, sinon.match("larger than viewport height"));
         });
 
         it("should not throw when allowViewportOverflow is set and compositeImage is false", () => {
@@ -117,9 +141,9 @@ describe("assertCorrectCaptureAreaBounds", () => {
             const captureArea = { left: 90, top: 10, width: 50, height: 50 }; // would overflow
             const opts = { allowViewportOverflow: true, compositeImage: false };
 
-            assert.doesNotThrow(() => {
-                assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, captureArea, opts);
-            });
+            assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, [captureArea], opts);
+
+            assert.notCalled(loggerWarnStub);
         });
 
         it("should not throw when compositeImage is true", () => {
@@ -128,9 +152,9 @@ describe("assertCorrectCaptureAreaBounds", () => {
             const captureArea = { left: 10, top: 90, width: 50, height: 50 }; // would overflow vertically
             const opts = { compositeImage: true };
 
-            assert.doesNotThrow(() => {
-                assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, captureArea, opts);
-            });
+            assertCorrectCaptureAreaBounds("test capture area", viewportSize, viewportOffset, [captureArea], opts);
+
+            assert.notCalled(loggerWarnStub);
         });
     });
 });

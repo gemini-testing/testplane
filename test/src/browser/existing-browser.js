@@ -73,7 +73,9 @@ describe("ExistingBrowser", () => {
                 attach: webdriverioAttachStub,
             },
             "./client-bridge": {
-                build: clientBridgeBuildStub,
+                ClientBridge: {
+                    create: clientBridgeBuildStub,
+                },
             },
             "../utils/logger": {
                 warn: loggerWarnStub,
@@ -741,12 +743,14 @@ describe("ExistingBrowser", () => {
             });
 
             it("should perform calibration if `calibrate` is turn on", async () => {
-                calibrator.calibrate.withArgs(sinon.match.instanceOf(ExistingBrowser)).resolves({ foo: "bar" });
+                calibrator.calibrate
+                    .withArgs(sinon.match.instanceOf(ExistingBrowser))
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
 
-                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" });
+                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" }, { width: 100, height: 200 });
             });
 
             it("should not perform calibration if `calibrate` is turn off", async () => {
@@ -758,6 +762,9 @@ describe("ExistingBrowser", () => {
             });
 
             it("should perform calibration after attaching of a session", async () => {
+                calibrator.calibrate
+                    .withArgs(sinon.match.instanceOf(ExistingBrowser))
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
@@ -767,14 +774,18 @@ describe("ExistingBrowser", () => {
             });
         });
 
-        it("should build client scripts", async () => {
+        it("should initialize browser side utils", async () => {
             const calibrator = sinon.createStubInstance(Calibrator);
-            calibrator.calibrate.resolves({ foo: "bar" });
+            calibrator.calibrate.resolves({
+                needsCompatLib: true,
+                viewportArea: { foo: "bar" },
+                screenshotSize: { width: 100, height: 200 },
+            });
             const browser = mkBrowser_({ calibrate: true });
 
             await initBrowser_(browser, {}, calibrator);
 
-            assert.calledOnceWith(clientBridgeBuildStub, browser, { calibration: { foo: "bar" } });
+            assert.calledOnceWith(clientBridgeBuildStub, session, "browser-utils", { needsCompatLib: true });
         });
     });
 
@@ -880,17 +891,17 @@ describe("ExistingBrowser", () => {
     describe("captureViewportImage", () => {
         beforeEach(() => {
             sandbox.stub(Camera.prototype, "captureViewportImage");
-            sandbox.stub(global, "setTimeout").callsFake(fn => fn());
         });
 
-        it("should delay capturing on the passed time", () => {
-            Camera.prototype.captureViewportImage.withArgs({ foo: "bar" }).resolves({ some: "image" });
+        it("should pass screenshotDelay to camera object", () => {
+            Camera.prototype.captureViewportImage
+                .withArgs({ foo: "bar", screenshotDelay: 2000 })
+                .resolves({ some: "image" });
 
             return mkBrowser_({ screenshotDelay: 100500 })
-                .captureViewportImage({ foo: "bar" }, 2000)
+                .captureViewportImage({ foo: "bar", screenshotDelay: 2000 })
                 .then(() => {
-                    assert.calledOnceWith(global.setTimeout, sinon.match.any, 2000);
-                    assert.callOrder(global.setTimeout, Camera.prototype.captureViewportImage);
+                    assert.calledOnceWith(Camera.prototype.captureViewportImage, { foo: "bar", screenshotDelay: 2000 });
                 });
         });
 
