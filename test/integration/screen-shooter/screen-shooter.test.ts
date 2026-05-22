@@ -46,6 +46,13 @@ describe("ElementsScreenShooter integration", function () {
     let pageUrl = "";
     let warningSpy: sinon.SinonSpy | null = null;
 
+    before(function () {
+        // Our docker image has chrome only
+        if (!shouldUseLocalBrowser && BROWSER_CONFIG.desiredCapabilities.browserName !== "chrome") {
+            this.skip();
+        }
+    });
+
     beforeEach(async () => {
         tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), TEMP_DIR_PREFIX));
         browser = await launchBrowser({
