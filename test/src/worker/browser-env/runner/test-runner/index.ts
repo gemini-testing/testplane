@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import clearRequire from "clear-require";
 import { EventEmitter } from "node:stream";
 import _ from "lodash";
-import sinon, { SinonStub, SinonFakeTimers } from "sinon";
+import sinon, { type SinonStub, type SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";
 
 import type NodejsEnvRunnerOriginal from "../../../../../../src/worker/runner/test-runner";

@@ -1,5 +1,5 @@
 import proxyquire from "proxyquire";
-import sinon, { SinonStub, SinonSpy } from "sinon";
+import sinon, { type SinonStub, type SinonSpy } from "sinon";
 import FakeTimers from "@sinonjs/fake-timers";
 import { mkSessionStub_, mkMockStub_ } from "../browser/utils";
 import type PageLoaderType from "../../../src/utils/page-loader";

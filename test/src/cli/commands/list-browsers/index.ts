@@ -1,5 +1,5 @@
 import { Command } from "@gemini-testing/commander";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 
 import { Testplane } from "../../../../../src/testplane";
 import * as testplaneCliOriginal from "../../../../../src/cli";
