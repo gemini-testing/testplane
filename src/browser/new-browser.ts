@@ -18,7 +18,6 @@ import {
 } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
-import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
 import { BrowserName, type W3CBrowserName } from "./types";
 
 export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
@@ -153,7 +152,7 @@ export class NewBrowser extends Browser {
         } else {
             // if automationProtocol is not "webdriver", fallback to default grid url from "local"
             // because in "devtools" protocol we dont need gridUrl, but it still has to be valid URL
-            gridUrl = config.gridUrl === LOCAL_GRID_URL ? DEFAULT_GRID_URL : config.gridUrl;
+            gridUrl = config.gridUrl === LOCAL_GRID_URL ? "http://localhost:4444/wd/hub" : config.gridUrl;
         }
 
         const gridUri = new URI(gridUrl);
