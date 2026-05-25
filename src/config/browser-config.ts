@@ -3,8 +3,12 @@ import * as _ from "lodash";
 import type { Test } from "../types";
 import type { CommonConfig } from "./types";
 
+export interface BrowserConfig extends CommonConfig {
+    id: string;
+}
+
 export class BrowserConfig {
-    constructor(browserOptions: CommonConfig) {
+    constructor(browserOptions: CommonConfig & { id: string }) {
         _.extend(this, browserOptions);
     }
 
