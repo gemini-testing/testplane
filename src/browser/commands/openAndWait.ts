@@ -40,9 +40,8 @@ const makeOpenAndWaitCommand = (config: BrowserConfig, session: WebdriverIO.Brow
     ): Promise<string | void> {
         const PageLoader = await import("../../utils/page-loader").then(m => m.default);
         const isChrome = config.desiredCapabilities?.browserName === "chrome";
-        const isCDP = config.automationProtocol === "devtools";
 
-        waitNetworkIdle &&= isChrome || isCDP;
+        waitNetworkIdle &&= isChrome;
 
         const originalPageLoadTimeout = config.pageLoadTimeout;
         const shouldUpdateTimeout = timeout && timeout !== originalPageLoadTimeout;

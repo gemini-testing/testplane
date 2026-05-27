@@ -324,7 +324,7 @@ type SelectivityMapDependencyRelativePathFn = (dependency: {
 
 export interface CommonConfig {
     configPath?: string;
-    automationProtocol: "webdriver" | "devtools";
+    automationProtocol: "webdriver";
     desiredCapabilities: WebdriverIO.Capabilities | null;
     sessionEnvFlags: Record<
         "isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone",

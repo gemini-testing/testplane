@@ -84,7 +84,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
             Number,
             0,
         )
-        .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
         .option("--keep-browser", "do not close browser session after test completion")
         .option("--keep-browser-on-fail", "do not close browser session when test fails")
@@ -102,7 +101,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     inspectBrk,
                     replBeforeTest,
                     replOnFail,
-                    devtools,
                     local,
                     keepBrowser,
                     keepBrowserOnFail,
@@ -123,7 +121,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                         onFail: replOnFail,
                         port: await getReplPort(program),
                     },
-                    devtools: devtools || false,
                     local: local || false,
                     keepBrowserMode: {
                         enabled: keepBrowser || keepBrowserOnFail || false,

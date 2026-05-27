@@ -2,7 +2,6 @@ import fs from "fs-extra";
 
 import _ from "lodash";
 import { dumpStorage, StorageData } from "./dumpStorage";
-import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
 import { ExistingBrowser, getActivePuppeteerPage } from "../../existing-browser";
 import * as logger from "../../../utils/logger";
 import { Cookie } from "../../../types";
@@ -18,13 +17,9 @@ export type SaveStateData = {
     framesData: Record<string, FrameData>;
 };
 
-// in case when we use webdriver protocol, bidi and isolation
-// we have to force change protocol to devtools, for use puppeteer,
-// because we use it for create incognito window
-export const getOverridesProtocol = (browser: Browser): typeof WEBDRIVER_PROTOCOL | typeof DEVTOOLS_PROTOCOL =>
-    browser.config.automationProtocol === WEBDRIVER_PROTOCOL && browser.publicAPI.isBidi && browser.config.isolation
-        ? DEVTOOLS_PROTOCOL
-        : browser.config.automationProtocol;
+// in case when we use bidi and isolation
+// we have to use puppeteer, because we use it for creating incognito window
+export const isBidiWithIsolation = (browser: Browser): boolean => browser.publicAPI.isBidi && browser.config.isolation;
 
 export const getWebdriverFrames = async (session: WebdriverIO.Browser): Promise<string[]> =>
     session.execute<string[], []>(() =>
@@ -49,8 +44,8 @@ export default (browser: ExistingBrowser): void => {
             framesData: {},
         };
 
-        switch (getOverridesProtocol(browser)) {
-            case WEBDRIVER_PROTOCOL: {
+        switch (isBidiWithIsolation(browser)) {
+            case false: {
                 if (options.cookies) {
                     const cookies = await session.getAllCookies();
 
@@ -106,7 +101,7 @@ export default (browser: ExistingBrowser): void => {
                 data.framesData = framesData;
                 break;
             }
-            case DEVTOOLS_PROTOCOL: {
+            case true: {
                 if (options.cookies) {
                     const cookies = await session.getAllCookies();
 

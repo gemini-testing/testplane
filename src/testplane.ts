@@ -43,7 +43,6 @@ interface RunOpts {
         onFail: boolean;
         port: number;
     };
-    devtools: boolean;
     local: boolean;
     keepBrowserMode: {
         enabled: boolean;
@@ -139,7 +138,6 @@ export class Testplane extends BaseTestplane {
             requireModules,
             inspectMode,
             replMode,
-            devtools,
             local,
             keepBrowserMode,
             reporters = [],
@@ -152,7 +150,6 @@ export class Testplane extends BaseTestplane {
             requireModules,
             inspectMode,
             replMode,
-            devtools,
             local,
             keepBrowserMode,
         });

@@ -9,7 +9,7 @@ import {
     GeckoProtocol,
     WebDriverBidiProtocol,
 } from "@testplane/wdio-protocols";
-import { webdriverMonad, sessionEnvironmentDetector, devtoolsEnvironmentDetector } from "@testplane/wdio-utils";
+import { webdriverMonad, sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { getEnvironmentVars } from "@testplane/webdriver";
 import { SOCKET_MAX_TIMEOUT, SOCKET_TIMED_OUT_ERROR, MAX_ARGS_LENGTH } from "./constants.js";
 import { BrowserEventNames } from "./types.js";
@@ -144,15 +144,12 @@ function mockCommand(commandName: string): ProtocolCommandFn {
 }
 
 function getEnvironmentFlags(): Record<string, PropertyDescriptor> {
-    const { capabilities, requestedCapabilities, config } = window.__testplane__;
+    const { capabilities, requestedCapabilities } = window.__testplane__;
 
-    const environment =
-        config.automationProtocol === "devtools"
-            ? devtoolsEnvironmentDetector(capabilities as WebdriverIO.Capabilities)
-            : sessionEnvironmentDetector({
-                  capabilities,
-                  requestedCapabilities: requestedCapabilities as WebdriverIO.Capabilities,
-              });
+    const environment = sessionEnvironmentDetector({
+        capabilities,
+        requestedCapabilities: requestedCapabilities as WebdriverIO.Capabilities,
+    });
 
     return getEnvironmentVars(environment);
 }
