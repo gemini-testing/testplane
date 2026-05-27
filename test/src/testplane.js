@@ -210,7 +210,6 @@ describe("testplane", () => {
                 replMode: {
                     enabled: true,
                 },
-                devtools: true,
                 local: false,
                 keepBrowserMode: {
                     enabled: false,
@@ -224,7 +223,6 @@ describe("testplane", () => {
                 requireModules: ["foo"],
                 inspectMode: { inspect: true },
                 replMode: { enabled: true },
-                devtools: true,
                 local: false,
                 keepBrowserMode: { enabled: false, onFail: false },
             });

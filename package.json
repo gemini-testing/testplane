@@ -78,7 +78,6 @@
     "@jspm/core": "2.0.1",
     "@jsquash/png": "3.1.1",
     "@puppeteer/browsers": "2.7.1",
-    "@testplane/devtools": "8.32.5",
     "@testplane/wdio-protocols": "9.4.7",
     "@testplane/wdio-utils": "9.5.4",
     "@testplane/webdriverio": "9.5.28",

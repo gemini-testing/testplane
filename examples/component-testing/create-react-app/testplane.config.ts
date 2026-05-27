@@ -1,7 +1,7 @@
 export default {
     gridUrl: "local",
     baseUrl: "http://localhost",
-    automationProtocol: "devtools",
+    automationProtocol: "webdriver",
     sessionsPerBrowser: 1,
     testsPerSession: 10,
     windowSize: "1280x720",

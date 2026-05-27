@@ -5,7 +5,7 @@ const fs = require("fs-extra");
 
 const { Config, TimeTravelMode } = require("src/config");
 const defaults = require("src/config/defaults");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
+const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE } = require("src/constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("src/constants/browser");
 
 describe("config browser-options", () => {
@@ -326,7 +326,7 @@ describe("config browser-options", () => {
             assert.throws(() => createConfig(), Error, /"automationProtocol" must be a string/);
         });
 
-        it(`should throw an error if option value is not "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`, () => {
+        it(`should throw an error if option value is not "${WEBDRIVER_PROTOCOL}"`, () => {
             const readConfig = {
                 browsers: {
                     b1: mkBrowser_({ automationProtocol: "foo bar" }),
@@ -338,24 +338,20 @@ describe("config browser-options", () => {
             assert.throws(
                 () => createConfig(),
                 Error,
-                new RegExp(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`),
+                new RegExp(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}"`),
             );
         });
 
-        describe("should not throw an error if option value is", () => {
-            [WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL].forEach(value => {
-                it(`${value}`, () => {
-                    const readConfig = {
-                        browsers: {
-                            b1: mkBrowser_({ automationProtocol: value }),
-                        },
-                    };
+        it("should not throw an error if option value is WEBDRIVER_PROTOCOL", () => {
+            const readConfig = {
+                browsers: {
+                    b1: mkBrowser_({ automationProtocol: WEBDRIVER_PROTOCOL }),
+                },
+            };
 
-                    Config.read.returns(readConfig);
+            Config.read.returns(readConfig);
 
-                    assert.doesNotThrow(() => createConfig());
-                });
-            });
+            assert.doesNotThrow(() => createConfig());
         });
 
         it("should set a default value if it is not set in config", () => {
@@ -370,23 +366,6 @@ describe("config browser-options", () => {
             const config = createConfig();
 
             assert.equal(config.automationProtocol, defaults.automationProtocol);
-        });
-
-        it("should override option for browser", () => {
-            const readConfig = {
-                automationProtocol: WEBDRIVER_PROTOCOL,
-                browsers: {
-                    b1: mkBrowser_(),
-                    b2: mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL }),
-                },
-            };
-
-            Config.read.returns(readConfig);
-
-            const config = createConfig();
-
-            assert.equal(config.browsers.b1.automationProtocol, WEBDRIVER_PROTOCOL);
-            assert.equal(config.browsers.b2.automationProtocol, DEVTOOLS_PROTOCOL);
         });
     });
 

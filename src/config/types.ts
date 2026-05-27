@@ -358,7 +358,7 @@ export type SelectivityMapSourceMapUrlFn = (assetInfo: {
 
 export interface CommonConfig {
     configPath?: string;
-    automationProtocol: "webdriver" | "devtools";
+    automationProtocol: "webdriver";
     desiredCapabilities: WebdriverIO.Capabilities | null;
     sessionEnvFlags: Partial<
         Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
