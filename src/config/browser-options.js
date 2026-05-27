@@ -6,7 +6,7 @@ const { option, section } = require("gemini-configparser");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
 const utils = require("./utils");
-const { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES } = require("../constants/config");
+const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, ENV_PREFIXES } = require("../constants/config");
 const { BROWSERS_SUPPORT_BIDI } = require("../constants/browser");
 const { isSupportIsolation } = require("../utils/browser");
 const { TimeTravelMode } = require("./types");
@@ -103,8 +103,16 @@ function buildBrowserOptions(defaultFactory, extra) {
             validate: value => {
                 is("string", "automationProtocol")(value);
 
-                if (value !== WEBDRIVER_PROTOCOL && value !== DEVTOOLS_PROTOCOL) {
-                    throw new Error(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}" or "${DEVTOOLS_PROTOCOL}"`);
+                if (value === "devtools") {
+                    throw new Error([
+                        "Testplane@9 does not support 'automationProtocol: devtools' anymore",
+                        "Use 'gridUrl: local' to easily run tests with local browsers",
+                        "Details: https://testplane.io/blog/local-browsers-intro",
+                    ]);
+                }
+
+                if (value !== WEBDRIVER_PROTOCOL) {
+                    throw new Error(`"automationProtocol" must be "${WEBDRIVER_PROTOCOL}"`);
                 }
             },
         }),

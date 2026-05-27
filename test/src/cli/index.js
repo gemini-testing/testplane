@@ -397,12 +397,6 @@ describe("cli", () => {
         });
     });
 
-    it("should turn on devtools mode from cli", async () => {
-        await run_("--devtools");
-
-        assert.calledWithMatch(Testplane.prototype.run, any, { devtools: true });
-    });
-
     it("should turn on local mode from cli", async () => {
         await run_("--local");
 
