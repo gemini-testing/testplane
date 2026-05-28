@@ -39,6 +39,57 @@ export async function installRrwebAndCollectEvents(
     });
 }
 
+export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Callstack): Promise<void> {
+    try {
+        await runWithoutHistory<Promise<void>>({ callstack }, () =>
+            session.execute(() => {
+                try {
+                    // @ts-expect-error
+                    const rrwebEvents = window.rrwebEvents;
+                    const rrwebData = rrwebEvents?.testplane;
+
+                    if (rrwebData?.stopRecording) {
+                        try {
+                            rrwebData.stopRecording();
+                        } catch (e) {
+                            /**/
+                        }
+                    }
+
+                    try {
+                        const colorSchemeMedia = rrwebData?.colorSchemeMedia;
+                        const colorSchemeListener = rrwebData?.colorSchemeListener;
+
+                        if (colorSchemeMedia && colorSchemeListener) {
+                            colorSchemeMedia.removeEventListener("change", colorSchemeListener);
+                        }
+                    } catch (e) {
+                        /**/
+                    }
+
+                    if (rrwebData?.isInstalledByTestplane) {
+                        // @ts-expect-error
+                        delete window.rrweb;
+
+                        // @ts-expect-error
+                        delete window.lastProcessedRrwebEvent;
+                        // @ts-expect-error
+                        delete window.rrwebEvents;
+                    } else if (rrwebEvents) {
+                        delete rrwebEvents.testplane;
+                    }
+                } catch (e) {
+                    /**/
+                }
+            }),
+        );
+    } catch (e) {
+        /**/
+    } finally {
+        sessionsWithRrwebRequested.delete(session);
+    }
+}
+
 function collectRrwebEvents(
     session: WebdriverIO.Browser,
     rrwebRecordFnCode: string | null,
@@ -113,9 +164,16 @@ function collectRrwebEvents(
                     window.lastProcessedRrwebEvent = -1;
                     // @ts-expect-error
                     window.rrwebEvents = [];
+                    // @ts-expect-error
+                    Object.defineProperty(window.rrwebEvents, "testplane", {
+                        configurable: true,
+                        value: {
+                            isInstalledByTestplane: true,
+                        },
+                    });
 
                     // @ts-expect-error
-                    window.rrweb.record({
+                    window.rrwebEvents.testplane.stopRecording = window.rrweb.record({
                         // @ts-expect-error
                         emit(event) {
                             event.timestamp = getRealTimestamp(serverTime);
@@ -125,21 +183,27 @@ function collectRrwebEvents(
                         },
                     });
 
+                    const colorSchemeMedia = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+
                     // @ts-expect-error
                     window.rrweb.record.addCustomEvent("color-scheme-change", {
-                        colorScheme:
-                            window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-                                ? "dark"
-                                : "light",
+                        colorScheme: colorSchemeMedia && colorSchemeMedia.matches ? "dark" : "light",
                     });
 
-                    window.matchMedia &&
-                        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
+                    if (colorSchemeMedia) {
+                        const colorSchemeListener = (event: MediaQueryListEvent): void => {
                             // @ts-expect-error
                             window.rrweb.record.addCustomEvent("color-scheme-change", {
                                 colorScheme: event.matches ? "dark" : "light",
                             });
-                        });
+                        };
+
+                        colorSchemeMedia.addEventListener("change", colorSchemeListener);
+                        // @ts-expect-error
+                        window.rrwebEvents.testplane.colorSchemeMedia = colorSchemeMedia;
+                        // @ts-expect-error
+                        window.rrwebEvents.testplane.colorSchemeListener = colorSchemeListener;
+                    }
                 }
             } catch (e) {
                 /**/

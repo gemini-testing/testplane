@@ -5,7 +5,7 @@ import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } fr
 import { BrowserConfig } from "../../config/browser-config";
 import { TestStepKey } from "../../types";
 import type { Test, TestStep } from "../../types";
-import { filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
+import { cleanupRrweb, filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
 import { getHistoryContext, runWithHistoryContext } from "./async-local-storage";
 
 const debug = makeDebug("testplane:browser:history");
@@ -103,6 +103,20 @@ export const requestDomSnapshots = ({
         }
     } catch (e) {
         debug("An error occurred during capturing snapshots in browser: %O", e);
+    }
+};
+
+type CleanupDomSnapshotsData = Pick<HooksData, "session" | "callstack">;
+
+export const cleanupDomSnapshots = async ({ session, callstack }: CleanupDomSnapshotsData): Promise<void> => {
+    if (!callstack) {
+        return;
+    }
+
+    try {
+        await cleanupRrweb(session, callstack);
+    } catch (e) {
+        debug("An error occurred during cleaning up snapshots in browser: %O", e);
     }
 };
 

@@ -236,8 +236,16 @@ module.exports = class TestRunner {
             const collectingSnapshotsMessageTimeout = setTimeout(() => {
                 console.log("Collecting Time Travel snapshots takes longer than expected. Waiting...");
             }, 2000);
-            await this._browser.snapshotsPromiseRef.current;
-            clearTimeout(collectingSnapshotsMessageTimeout);
+
+            try {
+                await this._browser.snapshotsPromiseRef.current;
+            } finally {
+                clearTimeout(collectingSnapshotsMessageTimeout);
+                await history.cleanupDomSnapshots({
+                    callstack: callstackHistory,
+                    session: this._browser.publicAPI,
+                });
+            }
         }
 
         return error;
