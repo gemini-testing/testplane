@@ -3,7 +3,8 @@ import { Callstack } from "./callstack";
 import * as cmds from "./commands";
 import { isGroup, normalizeCommandArgs, runWithHooks, shouldRecordSnapshots } from "./utils";
 import { BrowserConfig } from "../../config/browser-config";
-import { TestStep, TestStepKey } from "../../types";
+import { TestStepKey } from "../../types";
+import type { Test, TestStep } from "../../types";
 import { filterEvents, installRrwebAndCollectEvents, sendFilteredEvents } from "./rrweb";
 import { getHistoryContext, runWithHistoryContext } from "./async-local-storage";
 
@@ -61,8 +62,48 @@ interface RunWithHistoryHooksData<T> extends HooksData {
     fn: () => T;
 }
 
+interface RequestDomSnapshotsData extends HooksData {
+    attempt?: number;
+    currentTest?: Test;
+}
+
 export const runWithoutHistory = async <T>(_: unknown, fn: () => T): Promise<T> => {
     return runWithHistoryContext({ shouldBypassHistory: true }, fn) as T;
+};
+
+export const requestDomSnapshots = ({
+    session,
+    callstack,
+    snapshotsPromiseRef,
+    config,
+    attempt,
+    currentTest,
+}: RequestDomSnapshotsData): void => {
+    try {
+        if (!callstack) {
+            return;
+        }
+
+        const timeTravelMode = config.timeTravel.mode;
+        const isRetry = (attempt ?? session.executionContext?.ctx?.attempt ?? 0) > 0;
+        const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
+        const test = currentTest ?? session.executionContext?.ctx?.currentTest;
+
+        if (shouldRecord && process.send && test) {
+            const rrwebPromise = installRrwebAndCollectEvents(session, callstack)
+                .then(rrwebEvents => {
+                    const rrwebEventsFiltered = filterEvents(rrwebEvents);
+                    sendFilteredEvents(test, rrwebEventsFiltered);
+                })
+                .catch(e => {
+                    debug("An error occurred during capturing snapshots in browser: %O", e);
+                });
+
+            snapshotsPromiseRef.current = snapshotsPromiseRef.current.then(() => rrwebPromise);
+        }
+    } catch (e) {
+        debug("An error occurred during capturing snapshots in browser: %O", e);
+    }
 };
 
 const runWithHistoryHooks = <T>({
@@ -88,30 +129,14 @@ const runWithHistoryHooks = <T>({
 
             if (typeof (result as Promise<unknown> | undefined)?.then === "function") {
                 try {
-                    const timeTravelMode = config.timeTravel.mode;
-                    const isRetry = (session.executionContext?.ctx?.attempt ?? 0) > 0;
-                    const shouldRecord = shouldRecordSnapshots(timeTravelMode, isRetry);
                     const isInterestingStep =
                         !nodeData.name.startsWith("is") &&
                         !nodeData.name.startsWith("get") &&
                         !nodeData.name.startsWith("$") &&
                         !nodeData.name.startsWith("wait");
 
-                    if (
-                        shouldRecord &&
-                        process.send &&
-                        session.executionContext?.ctx?.currentTest &&
-                        isInterestingStep
-                    ) {
-                        const rrwebPromise = installRrwebAndCollectEvents(session, callstack)
-                            ?.then(rrwebEvents => {
-                                const rrwebEventsFiltered = filterEvents(rrwebEvents);
-                                sendFilteredEvents(session, rrwebEventsFiltered);
-                            })
-                            .catch(e => {
-                                debug("An error occurred during capturing snapshots in browser: %O", e);
-                            });
-                        snapshotsPromiseRef.current = snapshotsPromiseRef.current.then(() => rrwebPromise);
+                    if (isInterestingStep) {
+                        requestDomSnapshots({ session, callstack, snapshotsPromiseRef, config });
                     }
                 } catch (e) {
                     debug("An error occurred during capturing snapshots in browser: %O", e);

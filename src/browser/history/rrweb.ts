@@ -2,7 +2,7 @@ import fs from "fs";
 import { eventWithTime } from "@rrweb/types";
 import type { Callstack } from "./callstack";
 import { MasterEvents } from "../../events";
-import { SnapshotsData, TestContext } from "../../types";
+import type { SnapshotsData, Test, TestContext } from "../../types";
 import { runWithoutHistory } from "./index";
 import path from "path";
 
@@ -173,8 +173,7 @@ export function filterEvents(rrwebEvents: eventWithTime[]): eventWithTime[] {
     });
 }
 
-export function sendFilteredEvents(session: WebdriverIO.Browser, rrwebEvents: eventWithTime[]): void {
-    const currentTest = session.executionContext?.ctx?.currentTest;
+export function sendFilteredEvents(currentTest: Test | undefined, rrwebEvents: eventWithTime[]): void {
     if (rrwebEvents.length > 0 && process.send && currentTest) {
         process.send({
             event: MasterEvents.DOM_SNAPSHOTS,
