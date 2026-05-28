@@ -119,7 +119,7 @@ describe("assertView command", () => {
         assert.equal(error.refImg.path, "/ref/invalid");
     });
 
-    it("should wait for all selectors to be displayed", async () => {
+    it("should wait for all selectors to exist", async () => {
         const browser = await initBrowser_();
         const element = await browser.publicAPI.$(".selector");
 
@@ -127,16 +127,16 @@ describe("assertView command", () => {
 
         assert.calledWith(browser.publicAPI.$, ".selector1");
         assert.calledWith(browser.publicAPI.$, ".selector2");
-        assert.calledTwice(element.waitForDisplayed);
+        assert.calledTwice(element.waitForExist);
     });
 
-    it("should wait for element to be displayed", async () => {
+    it("should wait for element to exist", async () => {
         const browser = await initBrowser_();
         const element = await browser.publicAPI.$(".selector");
 
         await element.assertView("plain");
 
-        assert.calledOnce(element.waitForDisplayed);
+        assert.calledOnce(element.waitForExist);
     });
 
     it("should fail on duplicate name of the state on mixed scopes", async () => {
