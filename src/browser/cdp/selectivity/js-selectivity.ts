@@ -52,7 +52,7 @@ export class JSSelectivity {
 
         this._scriptIdToSourceUrl[scriptId] ||= url;
 
-        if (!url || !sourceMapURL) {
+        if (!url || !sourceMapURL || url.startsWith("chrome-error://")) {
             this._scriptsSource[scriptId] ||= null;
             this._scriptsSourceMap[scriptId] ||= null;
             return;

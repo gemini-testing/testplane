@@ -62,7 +62,7 @@ export class CSSSelectivity {
             return;
         }
 
-        if (!sourceURL || !sourceMapURL) {
+        if (!sourceURL || !sourceMapURL || sourceURL.startsWith("chrome-error://")) {
             this._stylesSourceMap[styleSheetId] ||= null;
             return;
         }
@@ -350,6 +350,12 @@ export class CSSSelectivity {
                     // But we dont, because if stylesheet was not used, it could be used after change
                     // So its safe to think "if stylesheet was loaded, it was used"
                     rawSourceMap.sources.forEach(sourceFilePath => {
+                        // Ignore generated postcss styles:
+                        // https://github.com/postcss/postcss/blob/eae46db765d752cf8f40c4fa2b0b85030079c43d/lib/map-generator.js#L122
+                        if (sourceFilePath === "<no source>") {
+                            return;
+                        }
+
                         // "Each entry is either a string that is a (potentially relative) URL", so we are using posix.jojn
                         // https://tc39.es/ecma426/#sec-source-map-format
                         // Except for file path with protocol ("turbopack://", "file://")
