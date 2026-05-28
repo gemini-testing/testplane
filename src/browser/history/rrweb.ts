@@ -10,94 +10,52 @@ import path from "path";
 // PR: https://github.com/rrweb-io/rrweb/pull/1735
 // Issue: https://github.com/rrweb-io/rrweb/issues/1734
 const rrwebCode = fs.readFileSync(path.join(__dirname, "../client-scripts/rrweb-record.min.js"), "utf-8");
+const sessionsWithRrwebRequested = new WeakSet<WebdriverIO.Browser>();
 
+interface CollectRrwebEventsResult {
+    isRrwebInstalled: boolean;
+    rrwebEvents: eventWithTime[];
+}
+
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 export async function installRrwebAndCollectEvents(
     session: WebdriverIO.Browser,
     callstack: Callstack,
 ): Promise<eventWithTime[]> {
-    /* eslint-disable @typescript-eslint/ban-ts-comment */
-    return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, () =>
-        session.execute(
-            (rrwebRecordFnCode, serverTime) => {
-                const getRealTimestamp = (fallbackTime: number = 0): number => {
-                    const nativeCode = "[native code]";
+    return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, async () => {
+        const shouldSendRrwebCode = !sessionsWithRrwebRequested.has(session);
 
-                    try {
-                        if (Date.now.toString().includes(nativeCode)) {
-                            return Date.now();
-                        }
-                    } catch (e) {
-                        /**/
-                    }
+        if (shouldSendRrwebCode) {
+            sessionsWithRrwebRequested.add(session);
+        }
 
-                    try {
-                        if (new Date().getTime.toString().includes(nativeCode)) {
-                            return new Date().getTime();
-                        }
-                    } catch (e) {
-                        /**/
-                    }
+        const result = await collectRrwebEvents(session, shouldSendRrwebCode ? rrwebCode : null);
 
-                    try {
-                        if (new Date().valueOf.toString().includes(nativeCode)) {
-                            return new Date().valueOf();
-                        }
-                    } catch (e) {
-                        /**/
-                    }
+        if (result.isRrwebInstalled || shouldSendRrwebCode) {
+            return result.rrwebEvents;
+        }
 
-                    try {
-                        if (performance.now.toString().includes(nativeCode)) {
-                            return Math.floor(performance.timeOrigin + performance.now());
-                        }
-                    } catch (e) {
-                        /**/
-                    }
+        return (await collectRrwebEvents(session, rrwebCode)).rrwebEvents;
+    });
+}
 
-                    return fallbackTime;
-                };
-
+function collectRrwebEvents(
+    session: WebdriverIO.Browser,
+    rrwebRecordFnCode: string | null,
+): Promise<CollectRrwebEventsResult> {
+    return session.execute(
+        (rrwebRecordFnCode, serverTime) => {
+            const isRrwebInstalled = (): boolean => {
                 try {
                     // @ts-expect-error
-                    if (!window.rrweb) {
-                        window.eval(rrwebRecordFnCode);
-                        // @ts-expect-error
-                        window.lastProcessedRrwebEvent = -1;
-                        // @ts-expect-error
-                        window.rrwebEvents = [];
-
-                        // @ts-expect-error
-                        window.rrweb.record({
-                            // @ts-expect-error
-                            emit(event) {
-                                event.timestamp = getRealTimestamp(serverTime);
-
-                                // @ts-expect-error
-                                window.rrwebEvents.push(event);
-                            },
-                        });
-
-                        // @ts-expect-error
-                        window.rrweb.record.addCustomEvent("color-scheme-change", {
-                            colorScheme:
-                                window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
-                                    ? "dark"
-                                    : "light",
-                        });
-
-                        window.matchMedia &&
-                            window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
-                                // @ts-expect-error
-                                window.rrweb.record.addCustomEvent("color-scheme-change", {
-                                    colorScheme: event.matches ? "dark" : "light",
-                                });
-                            });
-                    }
-                } catch (e) {
-                    /**/
+                    return Boolean(window.rrweb);
+                } catch {
+                    return false;
                 }
+            };
 
-                let result;
+            const getRrwebEvents = (): eventWithTime[] => {
+                let result: eventWithTime[];
                 try {
                     // @ts-expect-error
                     result = window.rrwebEvents.slice(window.lastProcessedRrwebEvent + 1);
@@ -108,13 +66,102 @@ export async function installRrwebAndCollectEvents(
                 }
 
                 return result;
-            },
-            rrwebCode,
-            Date.now(),
-        ),
+            };
+
+            const getRealTimestamp = (fallbackTime: number = 0): number => {
+                const nativeCode = "[native code]";
+
+                try {
+                    if (Date.now.toString().includes(nativeCode)) {
+                        return Date.now();
+                    }
+                } catch (e) {
+                    /**/
+                }
+
+                try {
+                    if (new Date().getTime.toString().includes(nativeCode)) {
+                        return new Date().getTime();
+                    }
+                } catch (e) {
+                    /**/
+                }
+
+                try {
+                    if (new Date().valueOf.toString().includes(nativeCode)) {
+                        return new Date().valueOf();
+                    }
+                } catch (e) {
+                    /**/
+                }
+
+                try {
+                    if (performance.now.toString().includes(nativeCode)) {
+                        return Math.floor(performance.timeOrigin + performance.now());
+                    }
+                } catch (e) {
+                    /**/
+                }
+
+                return fallbackTime;
+            };
+
+            try {
+                if (!isRrwebInstalled() && rrwebRecordFnCode) {
+                    window.eval(rrwebRecordFnCode);
+                    // @ts-expect-error
+                    window.lastProcessedRrwebEvent = -1;
+                    // @ts-expect-error
+                    window.rrwebEvents = [];
+
+                    // @ts-expect-error
+                    window.rrweb.record({
+                        // @ts-expect-error
+                        emit(event) {
+                            event.timestamp = getRealTimestamp(serverTime);
+
+                            // @ts-expect-error
+                            window.rrwebEvents.push(event);
+                        },
+                    });
+
+                    // @ts-expect-error
+                    window.rrweb.record.addCustomEvent("color-scheme-change", {
+                        colorScheme:
+                            window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
+                                ? "dark"
+                                : "light",
+                    });
+
+                    window.matchMedia &&
+                        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", event => {
+                            // @ts-expect-error
+                            window.rrweb.record.addCustomEvent("color-scheme-change", {
+                                colorScheme: event.matches ? "dark" : "light",
+                            });
+                        });
+                }
+            } catch (e) {
+                /**/
+            }
+
+            if (!isRrwebInstalled()) {
+                return {
+                    isRrwebInstalled: false,
+                    rrwebEvents: [],
+                };
+            }
+
+            return {
+                isRrwebInstalled: true,
+                rrwebEvents: getRrwebEvents(),
+            };
+        },
+        rrwebRecordFnCode,
+        Date.now(),
     );
-    /* eslint-enable @typescript-eslint/ban-ts-comment */
 }
+/* eslint-enable @typescript-eslint/ban-ts-comment */
 
 export function filterEvents(rrwebEvents: eventWithTime[]): eventWithTime[] {
     return rrwebEvents.filter(e => {
