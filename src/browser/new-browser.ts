@@ -9,16 +9,9 @@ import signalHandler from "../signal-handler";
 import { warn } from "../utils/logger";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { getInstance } from "../config/runtime-config";
-import {
-    DEVTOOLS_PROTOCOL,
-    WEBDRIVER_PROTOCOL,
-    LOCAL_GRID_URL,
-    W3C_CAPABILITIES,
-    VENDOR_CAPABILITIES,
-} from "../constants/config";
+import { LOCAL_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
-import { gridUrl as DEFAULT_GRID_URL } from "../config/defaults";
 import { BrowserName, type W3CBrowserName } from "./types";
 
 export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
@@ -144,21 +137,15 @@ export class NewBrowser extends Browser {
     protected async _getSessionOpts(): Promise<Capabilities.WebdriverIOConfig> {
         const config = this._config;
 
-        let gridUrl;
+        let gridUrl = config.gridUrl;
 
-        if (this._isLocalGridUrl() && config.automationProtocol === WEBDRIVER_PROTOCOL) {
+        if (this._isLocalGridUrl()) {
             gridUrl = await this._getLocalWebdriverGridUrl();
-        } else {
-            // if automationProtocol is not "webdriver", fallback to default grid url from "local"
-            // because in "devtools" protocol we dont need gridUrl, but it still has to be valid URL
-            gridUrl = config.gridUrl === LOCAL_GRID_URL ? DEFAULT_GRID_URL : config.gridUrl;
         }
 
         const gridUri = new URI(gridUrl);
 
         const capabilities = await this._extendCapabilities(config);
-
-        const { devtools } = getInstance();
 
         const options = {
             protocol: gridUri.protocol(),
@@ -167,7 +154,7 @@ export class NewBrowser extends Browser {
             path: gridUri.path(),
             queryParams: this._getQueryParams(gridUri.query()),
             capabilities,
-            automationProtocol: devtools ? DEVTOOLS_PROTOCOL : config.automationProtocol,
+            automationProtocol: config.automationProtocol,
             connectionRetryTimeout: config.sessionRequestTimeout || config.httpTimeout,
             connectionRetryCount: 3,
             baseUrl: config.baseUrl,

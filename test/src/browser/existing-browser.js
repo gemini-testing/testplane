@@ -10,7 +10,6 @@ const history = require("src/browser/history");
 const {
     SAVE_HISTORY_MODE,
     WEBDRIVER_PROTOCOL,
-    DEVTOOLS_PROTOCOL,
     NODEJS_TEST_RUN_ENV,
     BROWSER_TEST_RUN_ENV,
 } = require("src/constants/config");
@@ -270,27 +269,6 @@ describe("ExistingBrowser", () => {
                 transformResponse(response);
 
                 assert.calledOnceWith(transformResponseStub, response);
-            });
-        });
-
-        describe('in order to correctly work with "devtools" protocol', () => {
-            it('should attach to browser with "options" property from master session', async () => {
-                const sessionOpts = { foo: "bar", automationProtocol: "devtools" };
-
-                await initBrowser_(mkBrowser_(), { sessionOpts });
-
-                assert.calledOnceWith(webdriverioAttachStub, sinon.match.has("options", sessionOpts));
-            });
-
-            it("should attach to browser with caps merged from master session opts and caps", async () => {
-                const capabilities = { browserName: "yabro" };
-                const sessionCaps = { "goog:chromeOptions": { debuggerAddress: "localhost:12345" } };
-
-                await initBrowser_(mkBrowser_(), { sessionCaps, sessionOpts: { capabilities } });
-
-                assert.calledWithMatch(webdriverioAttachStub, {
-                    capabilities: { ...capabilities, ...sessionCaps },
-                });
             });
         });
 
@@ -620,17 +598,6 @@ describe("ExistingBrowser", () => {
 
                     assert.calledOnceWith(session.switchToWindow, "window_456");
                     assert.callOrder(CDPStub.target.createTarget, session.getWindowHandles);
-                });
-            });
-
-            describe(`in "${DEVTOOLS_PROTOCOL}" protocol`, () => {
-                it("should not switch to incognito window", async () => {
-                    const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
-                    const sessionOpts = { automationProtocol: DEVTOOLS_PROTOCOL };
-
-                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
-
-                    assert.notCalled(session.switchToWindow);
                 });
             });
 
