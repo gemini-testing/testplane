@@ -223,12 +223,29 @@ module.exports = class TestRunner {
         } catch (e) {
             error = error || e;
         } finally {
+            history.requestDomSnapshots({
+                callstack: callstackHistory,
+                snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
+                config: this._config,
+                session: this._browser.publicAPI,
+                currentTest: test,
+                attempt: this._attempt,
+            });
+
             // If collecting time travel snapshots takes a lot of time, make it obvious by writing a message
             const collectingSnapshotsMessageTimeout = setTimeout(() => {
                 console.log("Collecting Time Travel snapshots takes longer than expected. Waiting...");
             }, 2000);
-            await this._browser.snapshotsPromiseRef.current;
-            clearTimeout(collectingSnapshotsMessageTimeout);
+
+            try {
+                await this._browser.snapshotsPromiseRef.current;
+            } finally {
+                clearTimeout(collectingSnapshotsMessageTimeout);
+                await history.cleanupDomSnapshots({
+                    callstack: callstackHistory,
+                    session: this._browser.publicAPI,
+                });
+            }
         }
 
         return error;
