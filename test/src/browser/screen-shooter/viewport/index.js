@@ -23,7 +23,7 @@ describe("Viewport", () => {
 
     beforeEach(() => {
         image = sandbox.createStubInstance(Image);
-        image.getSize.resolves({ width: 100500, height: 500100 });
+        image.getSize.returns({ width: 100500, height: 500100 });
     });
 
     afterEach(() => sandbox.restore());
@@ -176,7 +176,7 @@ describe("Viewport", () => {
         });
 
         describe("should crop to captureArea", () => {
-            beforeEach(() => image.getSize.resolves({ width: 7, height: 10 }));
+            beforeEach(() => image.getSize.returns({ width: 7, height: 10 }));
 
             it("with default area", async () => {
                 const vieport = createViewport({
@@ -270,7 +270,7 @@ describe("Viewport", () => {
             newImage = sinon.createStubInstance(Image);
 
             newImage.crop.resolves();
-            newImage.getSize.resolves({});
+            newImage.getSize.returns({});
         });
 
         it("should increase viewport height value by scroll height", async () => {
@@ -285,7 +285,7 @@ describe("Viewport", () => {
         });
 
         it("should crop new image by passed scroll height", async () => {
-            newImage.getSize.resolves({ height: 4, width: 2 });
+            newImage.getSize.returns({ height: 4, width: 2 });
             const viewport = createViewport({
                 captureArea: { left: 0, top: 0, width: 4, height: 20 },
                 viewport: { left: 0, top: 0, width: 4, height: 8 },

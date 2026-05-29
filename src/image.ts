@@ -80,12 +80,39 @@ export const extractBase64PngSize = (base64EncodedPng: string): ImageSize => {
     };
 };
 
+const hasICCPChunk = (buffer: Buffer): boolean => {
+    const auxChunkSizeBytes = 12; // 4 bytes for length, 4 bytes for type, 4 bytes for crc
+    const iCCPChunkType = Buffer.from("iCCP", "ascii").readUInt32BE(0);
+    const IDATChunkType = Buffer.from("IDAT", "ascii").readUInt32BE(0);
+    const PLTEChunkType = Buffer.from("PLTE", "ascii").readUInt32BE(0);
+
+    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes; ) {
+        const chunkLength = buffer.readUInt32BE(nextChunkPointer);
+        const chunkType = buffer.readUInt32BE(nextChunkPointer + 4);
+
+        if (chunkType === iCCPChunkType) {
+            return true;
+        }
+
+        // If the iCCP chunk appears, it must precede the first IDAT chunk, and it must also precede the PLTE chunk if present
+        // https://libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.iCCP
+        if (chunkType === IDATChunkType || chunkType === PLTEChunkType) {
+            return false;
+        }
+
+        nextChunkPointer += chunkLength + auxChunkSizeBytes;
+    }
+
+    return false;
+};
+
 export class Image {
     private _imgDataPromise: Promise<Buffer>;
     private _imgData: Buffer | null = null;
     private _width: number;
     private _height: number;
     private _composeImages: this[] = [];
+    private _hasICCPChunk: boolean = false;
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
@@ -94,9 +121,14 @@ export class Image {
     constructor(buffer: Buffer) {
         this._width = buffer.readUInt32BE(PNG_WIDTH_OFFSET);
         this._height = buffer.readUInt32BE(PNG_HEIGHT_OFFSET);
+        this._hasICCPChunk = hasICCPChunk(buffer);
         this._imgDataPromise = jsquashDecode(buffer).then(({ data }) => {
             return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
         });
+    }
+
+    public get hasICCPChunk(): boolean {
+        return this._hasICCPChunk;
     }
 
     async _getImgData(): Promise<Buffer> {
@@ -120,7 +152,7 @@ export class Image {
         }
     }
 
-    async getSize(): Promise<ImageSize> {
+    getSize(): ImageSize {
         this._ensureImagesHaveSameWidth();
 
         const height = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
