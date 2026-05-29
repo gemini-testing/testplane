@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.46.3 (2026-05-29)
+
+
+### Bug Fixes
+
+* do not send rrweb script on each snapshot request ([#1266](https://github.com/gemini-testing/testplane/issues/1266)) ([17f5a97](https://github.com/gemini-testing/testplane/commit/17f5a97e28ab2ba8e7978a29d8b718b0db816453))
+
 ### 8.46.2 (2026-05-29)
 
 ### 8.46.1 (2026-05-28)
