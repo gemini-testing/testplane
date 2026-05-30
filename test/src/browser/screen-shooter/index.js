@@ -16,10 +16,20 @@ const operationsStubs = {
     cleanupPointerEvents: sinon.stub(),
     cleanupScrolls: sinon.stub(),
     preparePointerForScreenshot: sinon.stub(),
+    waitForSelectorsToSettle: sinon.stub(),
 };
 
 const clientBridgeCreateStub = sinon.stub();
 const compositeImageCreateStub = sinon.stub();
+const { waitForSelectorsToSettle } = proxyquire("src/browser/screen-shooter/operations/wait-for-selectors-to-settle", {
+    "node:timers": {
+        setTimeout: fn => {
+            fn();
+
+            return { unref: () => {} };
+        },
+    },
+});
 
 const { ElementsScreenShooter } = proxyquire("src/browser/screen-shooter/elements-screen-shooter", {
     "./validation": validationStubs,
@@ -123,7 +133,9 @@ describe("ElementsScreenShooter", () => {
         });
 
         browser = {
-            execute: sandbox.stub().resolves(undefined),
+            execute: sandbox.stub().resolves({ setTimeoutStubbed: false }),
+            getTimeouts: sandbox.stub().resolves({ implicit: 0, pageLoad: 300000, script: 30000 }),
+            setTimeout: sandbox.stub().resolves(),
         };
         browserProperties = {
             isWebdriverProtocol: true,
@@ -630,6 +642,62 @@ describe("ElementsScreenShooter", () => {
                 true,
             );
             assert.calledOnceWithExactly(operationsStubs.cleanupPointerEvents, browserSideScreenshooter);
+        });
+    });
+
+    describe("waitForSelectorsToSettle", () => {
+        it("should fall back to Node-side polling when browser-side code detects stubbed setTimeout", async () => {
+            browser.execute
+                .onCall(0)
+                .resolves({ setTimeoutStubbed: true })
+                .onCall(1)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(2)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(3)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(4)
+                .resolves([{ top: 1, height: 2 }]);
+
+            await waitForSelectorsToSettle(browser, [".element"]);
+
+            assert.calledOnce(browser.getTimeouts);
+            assert.calledTwice(browser.setTimeout);
+            assert.calledWithExactly(browser.setTimeout.firstCall, { script: 3000 });
+            assert.calledWithExactly(browser.setTimeout.secondCall, { script: 30000 });
+            assert.callCount(browser.execute, 5);
+        });
+
+        it("should fall back to Node-side polling when browser-side code hits script timeout", async () => {
+            const scriptTimeoutError = new Error("script timeout");
+
+            browser.execute
+                .onCall(0)
+                .rejects(scriptTimeoutError)
+                .onCall(1)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(2)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(3)
+                .resolves([{ top: 1, height: 2 }])
+                .onCall(4)
+                .resolves([{ top: 1, height: 2 }]);
+
+            await waitForSelectorsToSettle(browser, [".element"]);
+
+            assert.calledTwice(browser.setTimeout);
+            assert.calledWithExactly(browser.setTimeout.firstCall, { script: 3000 });
+            assert.calledWithExactly(browser.setTimeout.secondCall, { script: 30000 });
+            assert.callCount(browser.execute, 5);
+        });
+
+        it("should propagate non-timeout browser-side errors", async () => {
+            browser.execute.rejects(new Error("boom"));
+
+            await assert.isRejected(waitForSelectorsToSettle(browser, [".element"]), /boom/);
+
+            assert.calledTwice(browser.setTimeout);
+            assert.calledOnce(browser.execute);
         });
     });
 });

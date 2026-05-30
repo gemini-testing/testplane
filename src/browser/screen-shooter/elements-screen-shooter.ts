@@ -10,6 +10,7 @@ import {
     cleanupPointerEvents,
     cleanupScrolls,
     preparePointerForScreenshot,
+    waitForSelectorsToSettle,
 } from "./operations";
 import { NEW_ISSUE_LINK } from "../../constants/help";
 import { Coord, Length, getBottom } from "../isomorphic/geometry";
@@ -269,45 +270,6 @@ export class ElementsScreenShooter {
         });
     }
 
-    private async _waitForCaptureAreaToSettle(selectorsToCapture: string[]): Promise<void> {
-        await this._browser.execute(async selectorsToCapture => {
-            const PAGE_SETTLE_MAX_WAIT_MS = 50;
-            const PAGE_SETTLE_MAX_ITERATIONS = 50000;
-            const PAGE_SETTLE_MATCHES_THRESHOLD = 3;
-            const startedAt = performance.now();
-            let iterations = 0;
-
-            let matches = 0;
-
-            let lastBoundingClientRects = selectorsToCapture.map(selector =>
-                document.querySelector(selector)?.getBoundingClientRect(),
-            );
-            while (
-                performance.now() - startedAt < PAGE_SETTLE_MAX_WAIT_MS &&
-                iterations < PAGE_SETTLE_MAX_ITERATIONS &&
-                matches < PAGE_SETTLE_MATCHES_THRESHOLD
-            ) {
-                const currentBoundingClientRects = selectorsToCapture.map(selector =>
-                    document.querySelector(selector)?.getBoundingClientRect(),
-                );
-                if (
-                    currentBoundingClientRects.every(
-                        (rect, index) =>
-                            rect?.top === lastBoundingClientRects[index]?.top &&
-                            rect?.height === lastBoundingClientRects[index]?.height,
-                    )
-                ) {
-                    matches++;
-                } else {
-                    matches = 0;
-                }
-                lastBoundingClientRects = currentBoundingClientRects;
-                iterations++;
-                await new Promise(resolve => setTimeout(resolve, 5));
-            }
-        }, selectorsToCapture);
-    }
-
     /** Scrolls through the entire capture area to trigger lazy loading, then restores scroll and records anchor baselines. */
     private async _preloadCaptureArea(
         selectorsToCapture: string[],
@@ -357,7 +319,7 @@ export class ElementsScreenShooter {
                 debug(`========== Starting compositing iteration #${iterations} ==========`);
 
                 const waitForSettleStartTime = performance.now();
-                await this._waitForCaptureAreaToSettle(selectorsToCapture);
+                await waitForSelectorsToSettle(this._browser, selectorsToCapture);
                 waitForSettleTime += performance.now() - waitForSettleStartTime;
 
                 const recomputeStartTime = performance.now();
