@@ -14,9 +14,12 @@ describe("cli/commands/list-browsers", () => {
     let loggerErrorStub: SinonStub;
     let consoleInfoStub: SinonStub;
 
-    const listBrowsers_ = async (options: string[] = [], cli: { run: VoidFunction } = testplaneCli): Promise<void> => {
+    const listBrowsers_ = async (
+        options: string[] = [],
+        cli: { run: () => Promise<void> } = testplaneCli,
+    ): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "list-browsers", ...options];
-        cli.run();
+        await cli.run();
 
         await (Command.prototype.action as SinonStub).lastCall.returnValue;
     };
@@ -56,7 +59,7 @@ describe("cli/commands/list-browsers", () => {
             configurable: true,
         });
 
-        sandbox.stub(Testplane, "create").returns(testplaneStub);
+        sandbox.stub(Testplane, "create").resolves(testplaneStub);
 
         consoleInfoStub = sandbox.stub(console, "info");
         sandbox.stub(process, "exit");

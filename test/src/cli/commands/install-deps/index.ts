@@ -9,14 +9,14 @@ import type { Config } from "../../../../../src/config";
 describe("cli/commands/install-deps", () => {
     const sandbox = sinon.createSandbox();
 
-    let cli: { run: () => void };
+    let cli: { run: () => Promise<void> };
     let loggerStub: { log: SinonStub; warn: SinonStub; error: SinonStub };
     let testplaneStub: Writable<Testplane>;
     let installBrowsersWithDriversStub: SinonStub;
 
     const installBrowsers_ = async (argv: string = ""): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "install-deps", ...argv.split(" ")].filter(Boolean);
-        cli.run();
+        await cli.run();
 
         await new Promise(resolve => setImmediate(resolve));
     };
@@ -36,7 +36,7 @@ describe("cli/commands/install-deps", () => {
             configurable: true,
         });
 
-        sandbox.stub(Testplane, "create").returns(testplaneStub as Testplane);
+        sandbox.stub(Testplane, "create").resolves(testplaneStub as Testplane);
 
         sandbox.stub(process, "exit");
 

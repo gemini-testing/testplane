@@ -58,7 +58,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
     }
 
     const configPath = preparseOption(program, "config") as string;
-    testplane = Testplane.create(configPath);
+    testplane = await Testplane.create(configPath);
 
     withCommonCliOptions({ cmd: program, actionName: "run" })
         .on("--help", () => console.log(configOverriding(opts)))

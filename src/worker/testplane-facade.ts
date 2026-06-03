@@ -69,13 +69,15 @@ module.exports = class TestplaneFacade {
                             });
                         }
 
-                        promise = promise.then(() => {
-                            RuntimeConfig.getInstance().extend(runtimeConfig);
-                            const testplane = Testplane.create(configPath);
+                        promise = promise
+                            .then(async () => {
+                                RuntimeConfig.getInstance().extend(runtimeConfig);
+                                const testplane = await Testplane.create(configPath);
 
-                            debug("worker initialized");
-                            resolve(testplane);
-                        });
+                                debug("worker initialized");
+                                resolve(testplane);
+                            })
+                            .catch(reject);
                     } catch (e) {
                         debug("worker initialization failed");
                         reject(e);

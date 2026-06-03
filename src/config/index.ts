@@ -1,65 +1,103 @@
-import * as path from "path";
-import * as _ from "lodash";
+import path from "path";
+import _ from "lodash";
 import defaults from "./defaults";
 import { BrowserConfig } from "./browser-config";
 import parseOptions from "./options";
 import * as logger from "../utils/logger";
-import { ConfigInput, ConfigParsed } from "./types";
+import { ConfigInput, ConfigInputData, ConfigParsed } from "./types";
 import { addUserAgentToArgs } from "./utils";
 
 export { TimeTravelMode } from "./types";
 
 export class Config {
-    configPath!: string;
+    configPath?: string;
 
-    static create(config?: string | ConfigInput): Config {
-        return new Config(config);
+    static async create(config?: string | ConfigInput): Promise<Config> {
+        try {
+            const { configPath, options } = await Config._resolve(config);
+
+            await Config._prepareEnvironment(options);
+
+            return new Config(options, configPath);
+        } catch (e: unknown) {
+            const error = new Error(`Got an error while trying to read config: ${(e as Error).message}`);
+            error.stack = (e as Error).stack;
+            error.cause = (e as Error).cause;
+
+            throw error;
+        }
     }
 
-    static read(configPath: string): unknown {
+    static async read(configPath: string): Promise<ConfigInputData> {
         try {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const configModule = require(path.resolve(process.cwd(), configPath));
+            const exported = (configModule.__esModule ? configModule.default : configModule) as ConfigInput;
 
-            return configModule.__esModule ? configModule.default : configModule;
+            return await Config._resolveExportedConfig(exported);
         } catch (e) {
             logger.error(`Unable to read config from path ${configPath}`);
             throw e;
         }
     }
 
-    constructor(config?: string | ConfigInput) {
-        let options: ConfigInput;
-        if (_.isObjectLike(config)) {
-            options = config as ConfigInput;
-        } else if (typeof config === "string") {
-            this.configPath = config;
-            options = Config.read(config) as ConfigInput;
-        } else {
-            for (const configPath of defaults.configPaths) {
-                try {
-                    const resolvedConfigPath = path.resolve(configPath);
-                    require(resolvedConfigPath);
-                    this.configPath = resolvedConfigPath;
-
-                    break;
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } catch (err: any) {
-                    if (err.code !== "MODULE_NOT_FOUND") {
-                        throw err;
-                    }
-                }
-            }
-
-            if (!this.configPath) {
-                throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
-            }
-
-            options = Config.read(this.configPath) as ConfigInput;
+    private static async _resolve(
+        config?: string | ConfigInput,
+    ): Promise<{ configPath?: string; options: ConfigInputData }> {
+        if (typeof config === "function") {
+            return { options: await Config._resolveExportedConfig(config) };
         }
 
+        if (_.isObjectLike(config)) {
+            return { options: config as ConfigInputData };
+        }
+
+        if (typeof config === "string") {
+            return { configPath: config, options: await Config.read(config) };
+        }
+
+        const located = Config._locateConfigPath();
+
+        if (!located) {
+            throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
+        }
+
+        return { configPath: located, options: await Config.read(located) };
+    }
+
+    private static _locateConfigPath(): string | null {
+        for (const configPath of defaults.configPaths) {
+            try {
+                const resolvedConfigPath = path.resolve(configPath);
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                require(resolvedConfigPath);
+
+                return resolvedConfigPath;
+            } catch (err: unknown) {
+                if ((err as { code?: string }).code !== "MODULE_NOT_FOUND") {
+                    throw err;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static async _resolveExportedConfig(exported: ConfigInput): Promise<ConfigInputData> {
+        const resolved = typeof exported === "function" ? await (exported as () => unknown)() : exported;
+
+        return resolved as ConfigInputData;
+    }
+
+    private static async _prepareEnvironment(options: ConfigInputData): Promise<void> {
         if (_.isFunction(options.prepareEnvironment)) {
-            options.prepareEnvironment();
+            await options.prepareEnvironment();
+        }
+    }
+
+    constructor(options: ConfigInputData, configPath?: string) {
+        if (configPath) {
+            this.configPath = configPath;
         }
 
         const parsedOptions = parseOptions({
