@@ -25,9 +25,9 @@ describe("testplane", () => {
     const sandbox = sinon.createSandbox();
     let Testplane, initReporters, signalHandler, loggerWarnStub, loggerErrorStub;
 
-    const mkTestplane_ = config => {
-        Config.create.returns(config || makeConfigStub());
-        return Testplane.create();
+    const mkTestplane_ = async config => {
+        Config.create.resolves(config || makeConfigStub());
+        return await Testplane.create();
     };
 
     const mkRunner_ = runFn => {
@@ -88,13 +88,13 @@ describe("testplane", () => {
                 { debug: true, WDIO_LOG_LEVEL: "trace" },
                 { debug: false, WDIO_LOG_LEVEL: "error" },
                 { WDIO_LOG_LEVEL: "error" },
-            ].forEach(({ debug, WDIO_LOG_LEVEL }) => {
-                it(`should be "${WDIO_LOG_LEVEL}" if "debug" is "${debug}"`, () => {
+            ].forEach(async ({ debug, WDIO_LOG_LEVEL }) => {
+                it(`should be "${WDIO_LOG_LEVEL}" if "debug" is "${debug}"`, async () => {
                     const previousWdioLogLevel = process.env.WDIO_LOG_LEVEL;
                     delete process.env.WDIO_LOG_LEVEL;
-                    Config.create.returns(makeConfigStub({ system: { debug } }));
+                    Config.create.resolves(makeConfigStub({ system: { debug } }));
 
-                    Testplane.create("some-config-path.js");
+                    await Testplane.create("some-config-path.js");
 
                     assert.equal(process.env.WDIO_LOG_LEVEL, WDIO_LOG_LEVEL);
                     process.env.WDIO_LOG_LEVEL = previousWdioLogLevel;
@@ -102,35 +102,35 @@ describe("testplane", () => {
             });
         });
 
-        it("should create a config from the passed path", () => {
-            Testplane.create("some-config-path.js");
+        it("should create a config from the passed path", async () => {
+            await Testplane.create("some-config-path.js");
 
             assert.calledOnceWith(Config.create, "some-config-path.js");
         });
 
-        it("should load plugins", () => {
-            Testplane.create();
+        it("should load plugins", async () => {
+            await Testplane.create();
 
             assert.calledOnce(pluginsLoader.load);
         });
 
-        it("should load plugins for testplane instance", () => {
-            Testplane.create();
+        it("should load plugins for testplane instance", async () => {
+            await Testplane.create();
 
             assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Testplane));
         });
 
-        it("should load plugins from config", () => {
-            Config.create.returns(makeConfigStub({ plugins: { "some-plugin": true } }));
+        it("should load plugins from config", async () => {
+            Config.create.resolves(makeConfigStub({ plugins: { "some-plugin": true } }));
 
-            Testplane.create();
+            await Testplane.create();
 
             assert.calledWith(pluginsLoader.load, sinon.match.any, { "some-plugin": true });
         });
 
         // testplane does not support its own plugin prefixes.
-        it("should load plugins with deprecated hermione prefix", () => {
-            Testplane.create();
+        it("should load plugins with deprecated hermione prefix", async () => {
+            await Testplane.create();
 
             assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, "hermione-");
         });
@@ -138,7 +138,7 @@ describe("testplane", () => {
 
     describe("extendCli", () => {
         it("should emit CLI event with passed parser", async () => {
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
             const onCli = sinon.spy().named("onCli");
             const parser = { foo: "bar" };
 
@@ -151,32 +151,32 @@ describe("testplane", () => {
     });
 
     describe("run", () => {
-        const runTestplane = (paths, opts) => mkTestplane_().run(paths, opts);
+        const runTestplane = async (paths, opts) => (await mkTestplane_()).run(paths, opts);
 
         beforeEach(() => {
             sandbox.stub(TestCollection.prototype, "getBrowsers").returns([]);
             sandbox.stub(Testplane.prototype, "halt");
         });
 
-        it("should create runner", () => {
+        it("should create runner", async () => {
             mkRunner_();
 
             return runTestplane().then(() => assert.calledOnce(MainRunner.create));
         });
 
-        it("should create runner with config", () => {
+        it("should create runner with config", async () => {
             mkRunner_();
 
             const config = makeConfigStub();
-            Config.create.returns(config);
+            Config.create.resolves(config);
 
-            return mkTestplane_(config).run(() => assert.calledWith(MainRunner.create, config));
+            return (await mkTestplane_(config)).run(() => assert.calledWith(MainRunner.create, config));
         });
 
         it("should create runner with interceptors", async () => {
             mkRunner_();
 
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
             const fooHandler = () => {};
             const barHandler = () => {};
 
@@ -190,7 +190,7 @@ describe("testplane", () => {
             ]);
         });
 
-        it("should warn about unknown browsers from cli", () => {
+        it("should warn about unknown browsers from cli", async () => {
             mkRunner_();
 
             return runTestplane([], { browsers: ["bro3"] }).then(() =>
@@ -232,7 +232,7 @@ describe("testplane", () => {
         describe("repl mode", () => {
             it("should not reset test timeout to 0 if run not in repl", async () => {
                 mkRunner_();
-                const testplane = mkTestplane_(
+                const testplane = await mkTestplane_(
                     makeConfigStub({
                         lastFailed: { only: false },
                         system: { mochaOpts: { timeout: 100500 } },
@@ -246,7 +246,7 @@ describe("testplane", () => {
 
             it("should reset test timeout to 0 if run in repl", async () => {
                 mkRunner_();
-                const testplane = mkTestplane_(
+                const testplane = await mkTestplane_(
                     makeConfigStub({
                         lastFailed: { only: false },
                         system: { mochaOpts: { timeout: 100500 } },
@@ -262,36 +262,36 @@ describe("testplane", () => {
         describe("INIT", () => {
             beforeEach(() => mkRunner_());
 
-            it("should emit INIT on run", () => {
+            it("should emit INIT on run", async () => {
                 const onInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, onInit);
 
                 return testplane.run().then(() => assert.calledOnce(onInit));
             });
 
-            it("should reject on INIT handler fail", () => {
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => Promise.reject("o.O"));
+            it("should reject on INIT handler fail", async () => {
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, () => Promise.reject("o.O"));
 
                 return assert.isRejected(testplane.run(), /o.O/);
             });
 
-            it("should wait INIT handler before running tests", () => {
+            it("should wait INIT handler before running tests", async () => {
                 const afterInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
 
                 return testplane.run().then(() => assert.callOrder(afterInit, MainRunner.prototype.run));
             });
 
-            it("should init runner after emit INIT", () => {
+            it("should init runner after emit INIT", async () => {
                 const onInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, onInit);
 
                 return testplane.run().then(() => assert.callOrder(onInit, MainRunner.prototype.init));
             });
 
-            it("should send INIT event only once", () => {
+            it("should send INIT event only once", async () => {
                 const onInit = sinon.spy().named("onInit");
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
                 testplane.on(RunnerEvents.INIT, onInit);
 
                 return testplane
@@ -302,7 +302,7 @@ describe("testplane", () => {
 
             describe("vite server", () => {
                 it(`should do nothing if testRunEnv is ${NODEJS_TEST_RUN_ENV}`, async () => {
-                    const testplane = mkTestplane_({ system: { testRunEnv: NODEJS_TEST_RUN_ENV } });
+                    const testplane = await mkTestplane_({ system: { testRunEnv: NODEJS_TEST_RUN_ENV } });
 
                     await testplane.run();
 
@@ -312,7 +312,7 @@ describe("testplane", () => {
 
                 it("should create vite server", async () => {
                     const config = makeConfigStub({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } });
-                    const testplane = mkTestplane_(config);
+                    const testplane = await mkTestplane_(config);
 
                     await testplane.run();
 
@@ -320,7 +320,7 @@ describe("testplane", () => {
                 });
 
                 it("should start vite server", async () => {
-                    const testplane = mkTestplane_({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } });
+                    const testplane = await mkTestplane_({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } });
 
                     await testplane.run();
 
@@ -330,7 +330,7 @@ describe("testplane", () => {
                 it("should throw error if vite server failed", async () => {
                     ViteServer.prototype.start.rejects(new Error("o.O"));
 
-                    const testplane = mkTestplane_({
+                    const testplane = await mkTestplane_({
                         system: { testRunEnv: BROWSER_TEST_RUN_ENV },
                     });
 
@@ -348,8 +348,8 @@ describe("testplane", () => {
 
             it("should initialize passed reporters", async () => {
                 const options = { reporters: ["reporter"] };
-                Config.create.returns(makeConfigStub());
-                const testplane = Testplane.create();
+                Config.create.resolves(makeConfigStub());
+                const testplane = await Testplane.create();
 
                 await testplane.run(null, options);
 
@@ -358,8 +358,8 @@ describe("testplane", () => {
 
             it("should initialize reporters before run tests", async () => {
                 const options = { reporters: ["reporter"] };
-                Config.create.returns(makeConfigStub());
-                const testplane = Testplane.create();
+                Config.create.resolves(makeConfigStub());
+                const testplane = await Testplane.create();
 
                 await testplane.run(null, options);
 
@@ -419,7 +419,7 @@ describe("testplane", () => {
         });
 
         describe("running of tests", () => {
-            it("should run tests", () => {
+            it("should run tests", async () => {
                 mkRunner_();
 
                 return runTestplane().then(() => assert.calledOnce(MainRunner.prototype.run));
@@ -439,7 +439,7 @@ describe("testplane", () => {
             it("should create runner stats", async () => {
                 mkRunner_();
 
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 await testplane.run();
 
@@ -456,13 +456,13 @@ describe("testplane", () => {
                 assert.calledWith(MainRunner.prototype.run, sinon.match.any, "foo bar");
             });
 
-            it('should return "true" if there are no failed tests', () => {
+            it('should return "true" if there are no failed tests', async () => {
                 mkRunner_();
 
                 return runTestplane().then(success => assert.isTrue(success));
             });
 
-            it('should return "false" if there are failed tests', () => {
+            it('should return "false" if there are failed tests', async () => {
                 const results = {
                     fullTitle: () => "Title",
                     browserId: "chrome",
@@ -473,8 +473,8 @@ describe("testplane", () => {
                 return runTestplane().then(success => assert.isFalse(success));
             });
 
-            it("should halt if there were some errors", () => {
-                const testplane = mkTestplane_();
+            it("should halt if there were some errors", async () => {
+                const testplane = await mkTestplane_();
                 const err = new Error();
 
                 mkRunner_(runner => runner.emit(RunnerEvents.ERROR, err));
@@ -505,9 +505,9 @@ describe("testplane", () => {
         });
 
         describe("should passthrough", () => {
-            it("all synchronous runner events", () => {
+            it("all synchronous runner events", async () => {
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
                     _.forEach(CommonSyncEvents, (event, name) => {
@@ -521,10 +521,10 @@ describe("testplane", () => {
                 });
             });
 
-            it('synchronous runner events before "Runner.run" called', () => {
+            it('synchronous runner events before "Runner.run" called', async () => {
                 sandbox.stub(eventsUtils, "passthroughEvent");
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
                     assert.calledWith(
@@ -537,9 +537,9 @@ describe("testplane", () => {
                 });
             });
 
-            it("all asynchronous runner events", () => {
+            it("all asynchronous runner events", async () => {
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
                     _.forEach(MasterAsyncEvents, (event, name) => {
@@ -553,10 +553,10 @@ describe("testplane", () => {
                 });
             });
 
-            it('asynchronous runner events before "Runner.run" called', () => {
+            it('asynchronous runner events before "Runner.run" called', async () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
                     assert.calledWith(
@@ -569,9 +569,9 @@ describe("testplane", () => {
                 });
             });
 
-            it("all runner events with passed event data", () => {
+            it("all runner events with passed event data", async () => {
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
                 const results = {
                     fullTitle: () => "Title",
                     browserId: "chrome",
@@ -591,10 +591,10 @@ describe("testplane", () => {
                 });
             });
 
-            it("exit event from signalHandler", () => {
+            it("exit event from signalHandler", async () => {
                 mkRunner_();
 
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
                 const onExit = sinon.spy().named("onExit");
 
                 return testplane.run().then(() => {
@@ -606,11 +606,11 @@ describe("testplane", () => {
                 });
             });
 
-            it('exit event before "Runner.run" called', () => {
+            it('exit event before "Runner.run" called', async () => {
                 sandbox.stub(eventsUtils, "passthroughEventAsync");
 
                 const runner = mkRunner_();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
                     assert.calledWith(
@@ -628,7 +628,7 @@ describe("testplane", () => {
     describe("addTestToRun", () => {
         it("should pass test to the existing runner", async () => {
             const runner = mkRunner_();
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
             const test = {};
 
             await testplane.run();
@@ -637,9 +637,9 @@ describe("testplane", () => {
             assert.calledOnceWith(runner.addTestToRun, test, "bro");
         });
 
-        it("should return false when testplane is not running", () => {
+        it("should return false when testplane is not running", async () => {
             const runner = mkRunner_();
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
 
             const added = testplane.addTestToRun({});
 
@@ -660,17 +660,17 @@ describe("testplane", () => {
         it("should create test reader", async () => {
             const config = makeConfigStub();
 
-            const testplane = mkTestplane_(config);
+            const testplane = await mkTestplane_(config);
 
             await testplane.readTests();
 
             assert.calledOnceWith(TestReader.create, config);
         });
 
-        ["BEFORE_FILE_READ", "AFTER_FILE_READ"].forEach(event => {
+        ["BEFORE_FILE_READ", "AFTER_FILE_READ"].forEach(async event => {
             it(`should passthrough ${event} event from test reader`, async () => {
                 const eventHandler = sandbox.stub();
-                const testplane = mkTestplane_().on(RunnerEvents[event], eventHandler);
+                const testplane = (await mkTestplane_()).on(RunnerEvents[event], eventHandler);
 
                 TestReader.prototype.read.callsFake(function () {
                     this.emit(RunnerEvents[event], { foo: "bar" });
@@ -683,7 +683,7 @@ describe("testplane", () => {
 
             it(`should not passthrough ${event} event from test reader with silent option`, async () => {
                 const eventHandler = sandbox.stub();
-                const testplane = mkTestplane_().on(RunnerEvents[event], eventHandler);
+                const testplane = (await mkTestplane_()).on(RunnerEvents[event], eventHandler);
 
                 TestReader.prototype.read.callsFake(function () {
                     this.emit(RunnerEvents[event]);
@@ -696,7 +696,7 @@ describe("testplane", () => {
         });
 
         it("should read passed test files", async () => {
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
 
             await testplane.readTests(["foo/bar"], {
                 browsers: ["bro"],
@@ -733,7 +733,7 @@ describe("testplane", () => {
             const testCollection = TestCollection.create();
             TestCollection.create.withArgs(tests).returns(testCollection);
 
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
             const result = await testplane.readTests();
 
             assert.equal(result, testCollection);
@@ -744,7 +744,7 @@ describe("testplane", () => {
             const config = makeConfigStub({ browsers });
             config.forBrowser("bar").strictTestsOrder = true;
 
-            const testplane = mkTestplane_(config);
+            const testplane = await mkTestplane_(config);
             TestCollection.prototype.getBrowsers.returns(browsers);
 
             await testplane.readTests();
@@ -757,7 +757,7 @@ describe("testplane", () => {
             const config = makeConfigStub({ browsers });
             config.forBrowser("foo").strictTestsOrder = true;
 
-            const testplane = mkTestplane_(config);
+            const testplane = await mkTestplane_(config);
             TestCollection.prototype.getBrowsers.returns(browsers);
 
             await testplane.readTests();
@@ -771,22 +771,22 @@ describe("testplane", () => {
         describe("INIT", () => {
             it("should emit INIT on read", async () => {
                 const onInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, onInit);
 
                 await testplane.readTests();
 
                 assert.calledOnce(onInit);
             });
 
-            it("should reject on INIT handler fail", () => {
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => Promise.reject("o.O"));
+            it("should reject on INIT handler fail", async () => {
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, () => Promise.reject("o.O"));
 
                 return assert.isRejected(testplane.readTests(), /o.O/);
             });
 
             it("should wait INIT handler before reading tests", async () => {
                 const afterInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, () => promiseDelay(20).then(afterInit));
 
                 await testplane.readTests();
 
@@ -795,7 +795,7 @@ describe("testplane", () => {
 
             it("should not emit INIT on silent read", async () => {
                 const onInit = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.INIT, onInit);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.INIT, onInit);
 
                 await testplane.readTests(null, { silent: true });
 
@@ -804,7 +804,7 @@ describe("testplane", () => {
 
             it("should send INIT event only once", async () => {
                 const onInit = sinon.spy();
-                const testplane = mkTestplane_();
+                const testplane = await mkTestplane_();
                 testplane.on(RunnerEvents.INIT, onInit);
 
                 await testplane.readTests();
@@ -817,7 +817,7 @@ describe("testplane", () => {
         describe("AFTER_TESTS_READ", () => {
             it("should emit AFTER_TESTS_READ on read", async () => {
                 const onAfterTestsRead = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 await testplane.readTests();
 
@@ -826,7 +826,7 @@ describe("testplane", () => {
 
             it("should pass test collection with AFTER_TESTS_READ event", async () => {
                 const onAfterTestsRead = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 const collection = await testplane.readTests();
 
@@ -835,7 +835,7 @@ describe("testplane", () => {
 
             it("should not emit AFTER_TESTS_READ in silent mode", async () => {
                 const onAfterTestsRead = sinon.spy();
-                const testplane = mkTestplane_().on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
+                const testplane = (await mkTestplane_()).on(RunnerEvents.AFTER_TESTS_READ, onAfterTestsRead);
 
                 await testplane.readTests(null, { silent: true });
 
@@ -845,41 +845,41 @@ describe("testplane", () => {
     });
 
     describe("should provide access to", () => {
-        it("testplane events", () => {
+        it("testplane events", async () => {
             const expectedEvents = _.extend(
                 { NEW_BROWSER: "newBrowser", UPDATE_REFERENCE: "updateReference" },
                 RunnerEvents,
             );
 
-            assert.deepEqual(mkTestplane_().events, expectedEvents);
+            assert.deepEqual((await mkTestplane_()).events, expectedEvents);
         });
 
-        it("testplane configuration", () => {
+        it("testplane configuration", async () => {
             const config = makeConfigStub();
 
-            assert.deepEqual(mkTestplane_(config).config, config);
+            assert.deepEqual((await mkTestplane_(config)).config, config);
         });
 
-        it("testplane errors", () => {
-            assert.deepEqual(mkTestplane_().errors, Errors);
+        it("testplane errors", async () => {
+            assert.deepEqual((await mkTestplane_()).errors, Errors);
         });
     });
 
     describe("isFailed", () => {
-        it('should return "false" by default', () => {
-            assert.isFalse(mkTestplane_().isFailed());
+        it('should return "false" by default', async () => {
+            assert.isFalse((await mkTestplane_()).isFailed());
         });
 
-        it('should return "false" if there are no failed tests or errors', () => {
+        it('should return "false" if there are no failed tests or errors', async () => {
             mkRunner_();
 
-            const testplane = mkTestplane_();
+            const testplane = await mkTestplane_();
 
             return testplane.run().then(() => assert.isFalse(testplane.isFailed()));
         });
 
-        it('should return "true" after some test fail', () => {
-            const testplane = mkTestplane_();
+        it('should return "true" after some test fail', async () => {
+            const testplane = await mkTestplane_();
 
             const results = {
                 fullTitle: () => "Title",
@@ -898,8 +898,8 @@ describe("testplane", () => {
     });
 
     describe("isWorker", () => {
-        it('should return "false"', () => {
-            const testplane = mkTestplane_();
+        it('should return "false"', async () => {
+            const testplane = await mkTestplane_();
 
             assert.isFalse(testplane.isWorker());
         });
@@ -908,15 +908,15 @@ describe("testplane", () => {
     describe("halt", () => {
         let testplane;
 
-        beforeEach(() => {
-            testplane = mkTestplane_();
+        beforeEach(async () => {
+            testplane = await mkTestplane_();
 
             sandbox.stub(process, "exit");
             sandbox.stub(MainRunner.prototype, "run").callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
             sandbox.stub(MainRunner.prototype, "cancel");
         });
 
-        it("should log provided error", () => {
+        it("should log provided error", async () => {
             const err = new Error("test error");
 
             testplane.on(RunnerEvents.RUNNER_START, () => {
@@ -929,7 +929,7 @@ describe("testplane", () => {
         });
 
         it("should close vite server", async () => {
-            testplane = mkTestplane_(makeConfigStub({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } }));
+            testplane = await mkTestplane_(makeConfigStub({ system: { testRunEnv: BROWSER_TEST_RUN_ENV } }));
 
             await testplane.run();
 
@@ -938,13 +938,13 @@ describe("testplane", () => {
             assert.calledOnce(ViteServer.prototype.close);
         });
 
-        it("should not cancel test runner if runner is not inited", () => {
+        it("should not cancel test runner if runner is not inited", async () => {
             testplane.halt(new Error("test error"));
 
             assert.notCalled(MainRunner.prototype.cancel);
         });
 
-        it("should cancel test runner", () => {
+        it("should cancel test runner", async () => {
             testplane.on(RunnerEvents.RUNNER_START, () => {
                 testplane.halt(new Error("test error"));
             });
@@ -954,7 +954,7 @@ describe("testplane", () => {
             });
         });
 
-        it("should mark test run as failed", () => {
+        it("should mark test run as failed", async () => {
             testplane.on(RunnerEvents.RUNNER_START, () => {
                 testplane.halt(new Error("test error"));
             });
@@ -976,7 +976,7 @@ describe("testplane", () => {
                 assert.callOrder(global.setTimeout, MainRunner.prototype.cancel);
             });
 
-            it("should force exit if timeout is reached", () => {
+            it("should force exit if timeout is reached", async () => {
                 testplane.on(RunnerEvents.RUNNER_START, () => {
                     testplane.halt(new Error("test error"), 250);
                 });
@@ -990,7 +990,7 @@ describe("testplane", () => {
                     });
             });
 
-            it("should do nothing if timeout is set to zero", () => {
+            it("should do nothing if timeout is set to zero", async () => {
                 sandbox.spy(global, "setTimeout");
                 testplane.on(RunnerEvents.RUNNER_START, () => {
                     testplane.halt(new Error("test error"), 0);
