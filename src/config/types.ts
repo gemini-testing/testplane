@@ -497,20 +497,22 @@ type PartialCommonConfig = Partial<
 export type HookType = (params: { config: Config }) => Promise<unknown> | unknown;
 
 // Only browsers desiredCapabilities are required in input config
-export type ConfigInput = Partial<PartialCommonConfig> & {
+export type ConfigInputData = Partial<PartialCommonConfig> & {
     browsers: Record<string, PartialCommonConfig & { desiredCapabilities: WebdriverIO.Capabilities }>;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
-    prepareEnvironment?: () => void | null;
+    prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
 };
+
+export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Promise<ConfigInputData>);
 
 export interface ConfigParsed extends CommonConfig {
     browsers: Record<string, BrowserConfig>;
     plugins: Record<string, Record<string, unknown>>;
     sets: Record<string, SetsConfigParsed>;
-    prepareEnvironment?: () => void | null;
+    prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
 }

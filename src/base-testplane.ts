@@ -17,24 +17,33 @@ import { ConfigInput } from "./config/types";
 
 export abstract class BaseTestplane extends AsyncEmitter {
     protected _interceptors: Interceptor[] = [];
-    protected _config: Config;
+    protected _config!: Config;
     protected _initEventEmited: boolean = false;
+    private _pendingConfig?: string | ConfigInput;
 
-    static create<T extends BaseTestplane>(
+    static async create<T extends BaseTestplane>(
         this: new (config?: string | ConfigInput) => T,
         config?: string | ConfigInput,
-    ): T {
-        return new this(config);
+    ): Promise<T> {
+        const instance = new this(config);
+
+        await instance._setup();
+
+        return instance;
     }
 
     protected constructor(config?: string | ConfigInput) {
         super();
 
         this._interceptors = [];
+        this._pendingConfig = config;
+    }
 
+    protected async _setup(): Promise<void> {
         registerReplModuleHooks();
         registerTransformHook(this.isWorker());
-        this._config = Config.create(config);
+        this._config = await Config.create(this._pendingConfig);
+        this._pendingConfig = undefined;
         updateTransformHook(this._config);
 
         this._setLogLevel();

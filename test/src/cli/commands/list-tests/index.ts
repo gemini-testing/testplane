@@ -36,7 +36,7 @@ describe("cli/commands/list-tests", () => {
                 },
             ),
         });
-        sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
+        sandbox.stub(Testplane, "create").resolves(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "readTests").resolves(TestCollection.create({}));
 
         sandbox.stub(fs, "ensureDir").resolves();
