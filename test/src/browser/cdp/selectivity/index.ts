@@ -728,10 +728,16 @@ describe("CDP/Selectivity", () => {
         };
 
         beforeEach(() => {
+            delete process.env.TESTPLANE_SELECTIVITY_CLEAR_UNUSED_DUMPS;
+
             configMock = {
                 getBrowserIds: sandbox.stub(),
                 forBrowser: sandbox.stub(),
             };
+        });
+
+        afterEach(() => {
+            delete process.env.TESTPLANE_SELECTIVITY_CLEAR_UNUSED_DUMPS;
         });
 
         it("should skip browsers with selectivity disabled", async () => {
@@ -1199,6 +1205,28 @@ describe("CDP/Selectivity", () => {
             assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
             assert.notCalled(getSelectivityTestsPathStub);
             assert.notCalled(fsStub.access);
+        });
+
+        it("should skip cleanup when TESTPLANE_SELECTIVITY_CLEAR_UNUSED_DUMPS env var is 'false'", async () => {
+            process.env.TESTPLANE_SELECTIVITY_CLEAR_UNUSED_DUMPS = "false";
+
+            configMock.getBrowserIds.returns(["chrome"]);
+            configMock.forBrowser.withArgs("chrome").returns({
+                lastFailed: { only: false },
+                selectivity: {
+                    enabled: SelectivityMode.Enabled,
+                    saveIncompleteDumpOnFail: false,
+                    testDependenciesPath: "/test/deps",
+                },
+            });
+
+            await clearUnusedSelectivityDumps(configMock as any, false);
+
+            assert.notCalled(configMock.getBrowserIds);
+            assert.notCalled(usedDumpsTrackerMock.usedDumpsFor);
+            assert.notCalled(getSelectivityTestsPathStub);
+            assert.notCalled(fsStub.readdir);
+            assert.notCalled(fsStub.unlink);
         });
     });
 });
