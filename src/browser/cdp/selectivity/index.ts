@@ -67,6 +67,10 @@ export const updateSelectivityHashes = async (config: Config, isRunFailed: boole
  * Called at the end of testplane run
  */
 export const clearUnusedSelectivityDumps = async (config: Config, isRunFailed: boolean): Promise<void> => {
+    if (process.env.TESTPLANE_SELECTIVITY_CLEAR_UNUSED_DUMPS === "false") {
+        return;
+    }
+
     const usedDumpsTracker = getUsedDumpsTracker();
     const browserIds = config.getBrowserIds();
     const selectivityRoots: string[] = [];
