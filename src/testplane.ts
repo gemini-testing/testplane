@@ -101,8 +101,8 @@ export class Testplane extends BaseTestplane {
         this.testsTracker = null;
     }
 
-    extendCli(parser: Command): void {
-        this.emit(MasterEvents.CLI, parser);
+    async extendCli(parser: Command): Promise<void> {
+        await this.emitAndWait(MasterEvents.CLI, parser);
     }
 
     addFileToRemove(path: string): void {

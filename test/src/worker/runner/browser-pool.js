@@ -1,11 +1,10 @@
 "use strict";
 
-const EventEmitter = require("events").EventEmitter;
 const _ = require("lodash");
 const { ExistingBrowser } = require("src/browser/existing-browser");
 const BrowserPool = require("src/worker/runner/browser-pool");
 const { Calibrator } = require("src/browser/calibrator");
-const { WorkerEvents: RunnerEvents } = require("src/events");
+const { WorkerEvents: RunnerEvents, AsyncEmitter } = require("src/events");
 const ipc = require("src/utils/ipc");
 
 describe("worker/browser-pool", () => {
@@ -20,7 +19,7 @@ describe("worker/browser-pool", () => {
     const createPool = opts => {
         opts = _.defaults(opts || {}, {
             config: stubConfig(),
-            emitter: new EventEmitter(),
+            emitter: new AsyncEmitter(),
         });
 
         return BrowserPool.create(opts.config, opts.emitter);
@@ -48,7 +47,7 @@ describe("worker/browser-pool", () => {
     describe("getBrowser", () => {
         it("should create browser with correct args", async () => {
             const config = stubConfig();
-            const emitter = new EventEmitter();
+            const emitter = new AsyncEmitter();
             const browserPool = createPool({ config, emitter });
             ExistingBrowser.create.returns(stubBrowser({ browserId: "bro-id" }));
 
@@ -81,7 +80,7 @@ describe("worker/browser-pool", () => {
         });
 
         it('should emit "NEW_BROWSER" event on creating of a browser', async () => {
-            const emitter = new EventEmitter();
+            const emitter = new AsyncEmitter();
             const onNewBrowser = sandbox.spy().named("onNewBrowser");
             const browserPool = createPool({ emitter });
 
