@@ -145,7 +145,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
         registerCmd(program, testplane);
     }
 
-    testplane.extendCli(program);
+    await testplane.extendCli(program);
 
     program.parse(process.argv);
 };

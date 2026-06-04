@@ -137,14 +137,14 @@ describe("testplane", () => {
     });
 
     describe("extendCli", () => {
-        it("should emit CLI event with passed parser", () => {
+        it("should emit CLI event with passed parser", async () => {
             const testplane = mkTestplane_();
             const onCli = sinon.spy().named("onCli");
             const parser = { foo: "bar" };
 
             testplane.on(RunnerEvents.CLI, onCli);
 
-            testplane.extendCli(parser);
+            await testplane.extendCli(parser);
 
             assert.calledOnceWith(onCli, parser);
         });

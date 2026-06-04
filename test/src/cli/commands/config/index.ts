@@ -11,9 +11,9 @@ describe("cli/commands/config", () => {
     let consoleInfoStub: SinonStub;
     let jsonStringifyStub: SinonSpy;
 
-    const config_ = async (options: string[] = [], cli: { run: VoidFunction } = testplaneCli): Promise<void> => {
+    const config_ = async (options: string[] = [], cli: { run: () => Promise<void> } = testplaneCli): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "config", ...options];
-        cli.run();
+        await cli.run();
 
         await (Command.prototype.action as SinonStub).lastCall.returnValue;
     };

@@ -27,7 +27,10 @@ module.exports = class BrowserPool {
         try {
             await browser.init({ sessionId, sessionCaps, sessionOpts }, this._calibrator);
 
-            this._emitter.emit(WorkerEvents.NEW_BROWSER, browser.publicAPI, { browserId: browser.id, browserVersion });
+            await this._emitter.emitAndWait(WorkerEvents.NEW_BROWSER, browser.publicAPI, {
+                browserId: browser.id,
+                browserVersion,
+            });
 
             return browser;
         } catch (error) {
