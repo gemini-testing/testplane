@@ -27,7 +27,7 @@ describe("worker/testplane-facade", () => {
             init: sandbox.spy().named("testplaneInit"),
             config,
         });
-        sandbox.stub(Testplane, "create").returns(testplane);
+        sandbox.stub(Testplane, "create").resolves(testplane);
 
         testplaneFacade = TestplaneFacade.create();
     });

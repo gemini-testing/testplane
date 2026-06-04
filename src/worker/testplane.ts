@@ -41,10 +41,14 @@ export interface Testplane {
 }
 
 export class Testplane extends BaseTestplane {
-    protected runner: Runner;
+    protected runner!: Runner;
 
     constructor(config?: string | ConfigInput) {
         super(config);
+    }
+
+    protected async _setup(): Promise<void> {
+        await super._setup();
 
         this.runner = Runner.create(this._config);
 

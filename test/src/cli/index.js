@@ -45,7 +45,7 @@ describe("cli", () => {
             "get-port": getPortStub,
         });
 
-        sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
+        sandbox.stub(Testplane, "create").resolves(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "run").resolves();
         sandbox.stub(Testplane.prototype, "extendCli");
 
