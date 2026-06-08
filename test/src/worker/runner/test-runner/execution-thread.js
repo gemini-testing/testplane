@@ -7,6 +7,7 @@ const OneTimeScreenshooter = require("src/worker/runner/test-runner/one-time-scr
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
 const { AbortOnReconnectError } = require("src/errors/abort-on-reconnect-error");
+const { REPL_INSTRUMENTED_FN_FLAG } = require("src/constants/repl");
 const { promiseDelay } = require("../../../../../src/utils/promise");
 
 describe("worker/runner/test-runner/execution-thread", () => {
@@ -333,8 +334,8 @@ describe("worker/runner/test-runner/execution-thread", () => {
 
         describe("REPL mode", () => {
             describe("beforeTest", () => {
-                it("should do nothing if flag is not specified", async () => {
-                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: false } });
+                it("should not switch to REPL before runnable", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
 
                     const browser = mkBrowser_();
                     const runnable = mkRunnable_({ fn: () => Promise.resolve() });
@@ -342,47 +343,6 @@ describe("worker/runner/test-runner/execution-thread", () => {
                     await mkExecutionThread_({ browser }).run(runnable);
 
                     assert.notCalled(browser.publicAPI.switchToRepl);
-                });
-
-                describe("if flag is specified", () => {
-                    beforeEach(() => {
-                        RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
-                    });
-
-                    it("should switch to REPL before execute runnable", async () => {
-                        const browser = mkBrowser_();
-                        const onRunnable = sandbox.stub().named("runnable");
-                        const runnable = mkRunnable_({ fn: onRunnable });
-
-                        await mkExecutionThread_({ browser }).run(runnable);
-
-                        assert.callOrder(browser.publicAPI.switchToRepl, onRunnable);
-                    });
-
-                    it("should switch to REPL only once for one execution thread", async () => {
-                        const browser = mkBrowser_();
-                        const runnable1 = mkRunnable_({ fn: () => Promise.resolve() });
-                        const runnable2 = mkRunnable_({ fn: () => Promise.resolve() });
-                        const executionThread = mkExecutionThread_({ browser });
-
-                        await executionThread.run(runnable1);
-                        await executionThread.run(runnable2);
-
-                        await assert.calledOnce(browser.publicAPI.switchToRepl);
-                    });
-
-                    it("should switch to REPL for each new execution thread", async () => {
-                        const browser = mkBrowser_();
-                        const runnable1 = mkRunnable_({ fn: () => Promise.resolve() });
-                        const runnable2 = mkRunnable_({ fn: () => Promise.resolve() });
-                        const executionThread1 = mkExecutionThread_({ browser });
-                        const executionThread2 = mkExecutionThread_({ browser });
-
-                        await executionThread1.run(runnable1);
-                        await executionThread2.run(runnable2);
-
-                        await assert.calledTwice(browser.publicAPI.switchToRepl);
-                    });
                 });
             });
 
@@ -412,6 +372,20 @@ describe("worker/runner/test-runner/execution-thread", () => {
                         const runnable = mkRunnable_({
                             fn: () => Promise.reject(new Error()),
                         });
+
+                        await mkExecutionThread_({ browser })
+                            .run(runnable)
+                            .catch(() => {});
+
+                        await assert.calledOnce(browser.publicAPI.switchToRepl);
+                    });
+
+                    it("should switch to REPL on error for instrumented runnable", async () => {
+                        const browser = mkBrowser_();
+                        const runnable = mkRunnable_({
+                            fn: () => Promise.reject(new Error()),
+                        });
+                        runnable.fn[REPL_INSTRUMENTED_FN_FLAG] = true;
 
                         await mkExecutionThread_({ browser })
                             .run(runnable)

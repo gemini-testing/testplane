@@ -218,7 +218,7 @@ describe("testplane", () => {
                 },
             });
 
-            assert.calledOnce(RuntimeConfig.getInstance);
+            assert.called(RuntimeConfig.getInstance);
             assert.calledOnceWith(RuntimeConfig.getInstance.lastCall.returnValue.extend, {
                 updateRefs: true,
                 requireModules: ["foo"],
