@@ -10,7 +10,7 @@ type TestContext = {
 const rootValue: number = 1000;
 void rootValue;
 
-const pageUrl: string = pathToFileURL(path.join(__dirname, "..", "page.html")).href;
+const pageUrl: string = pathToFileURL(path.join(process.cwd(), "page.html")).href;
 
 // @ts-expect-error Testplane passes a context object into Mocha test callbacks.
 it("opens repl from test code", async ({ browser }: TestContext): Promise<void> => {
