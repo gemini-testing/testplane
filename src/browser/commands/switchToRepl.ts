@@ -4,6 +4,7 @@ import net from "node:net";
 import { Writable, Readable } from "node:stream";
 import { getEventListeners } from "node:events";
 import chalk from "chalk";
+import { merge } from "lodash";
 import RuntimeConfig from "../../config/runtime-config";
 import * as logger from "../../utils/logger";
 import type { Browser } from "../types";
@@ -13,7 +14,8 @@ const REPL_LINE_EVENT = "line";
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    const applyContext = (replServer: repl.REPLServer, ctx: Record<string, unknown> = {}): void => {
+    const applyContext = (replServer: repl.REPLServer, contexts: Record<string, unknown>[]): void => {
+        const ctx = merge({}, ...contexts);
         if (!ctx.browser) {
             ctx.browser = session;
         }
@@ -47,7 +49,7 @@ export default (browser: Browser): void => {
         }
     };
 
-    session.addCommand("switchToRepl", async function (ctx: Record<string, unknown> = {}) {
+    session.addCommand("switchToRepl", async function (...contexts: Record<string, unknown>[]) {
         const runtimeCfg = RuntimeConfig.getInstance();
         const { onReplMode } = browser.state;
 
@@ -71,6 +73,7 @@ export default (browser: Browser): void => {
         const currCwd = process.cwd();
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
         process.chdir(testCwd);
+        browser.applyState({ onReplMode: true });
 
         let allSockets: net.Socket[] = [];
 
@@ -104,10 +107,9 @@ export default (browser: Browser): void => {
             input.push(data);
         });
 
-        browser.applyState({ onReplMode: true });
         runtimeCfg.extend({ replServer });
 
-        applyContext(replServer, ctx);
+        applyContext(replServer, contexts);
         handleLines(replServer);
 
         return new Promise<void>(resolve => {

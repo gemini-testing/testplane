@@ -20,3 +20,4 @@ bundle.compat.js
 bundle.native.js
 wt/**
 tmp/**
+test/e2e/**/fixture-project/.testplane/
