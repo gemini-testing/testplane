@@ -21,7 +21,7 @@ export class CDPRequestTimeoutError extends WsRequestTimeoutError {}
 
 export class CDPRequestError extends WsError {
     isRetryable(): boolean {
-        if (!this.code) {
+        if (typeof this.code !== "number") {
             return true;
         }
 

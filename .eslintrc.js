@@ -21,6 +21,14 @@ module.exports = {
             },
         },
         {
+            // Generated 1:1 WebDriver BiDi protocol typings contain forward and recursive
+            // type references, which TypeScript hoists safely.
+            files: ["src/browser/bidi/types/**/*.ts"],
+            rules: {
+                "no-use-before-define": "off",
+            },
+        },
+        {
             files: ["test/**"],
             rules: {
                 "@typescript-eslint/no-empty-function": "off",
