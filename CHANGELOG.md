@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 8.47.1 (2026-06-09)
+
+
+### Bug Fixes
+
+* correctly handle __Host and __Secure cookies when restoring state ([#1255](https://github.com/gemini-testing/testplane/issues/1255)) ([e3eca80](https://github.com/gemini-testing/testplane/commit/e3eca80977d3b2408a5f375a58a1a10bdd654dc7))
+
 ## 8.47.0 (2026-06-04)
 
 ### 8.46.4 (2026-06-02)
