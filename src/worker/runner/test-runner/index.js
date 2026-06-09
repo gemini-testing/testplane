@@ -8,6 +8,8 @@ const OneTimeScreenshooter = require("./one-time-screenshooter");
 const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
+const { REPL_INSTRUMENTED_FN_FLAG } = require("../../../constants/repl");
+const RuntimeConfig = require("../../../config/runtime-config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { TestplaneInternalError } = require("../../../errors");
@@ -196,6 +198,7 @@ module.exports = class TestRunner {
                 );
             }
 
+            await this._runReplBeforeTestIfNeeded(test, executionThread);
             await executionThread.run(test);
         } catch (e) {
             error = e;
@@ -249,6 +252,25 @@ module.exports = class TestRunner {
         }
 
         return error;
+    }
+
+    async _runReplBeforeTestIfNeeded(test, executionThread) {
+        const { replMode } = RuntimeConfig.getInstance();
+
+        // REPL_INSTRUMENTED_FN_FLAG means that we already embedded the switchToRepl call into source via transform,
+        // so we don't need to run it again here. However, if typescript was not available, we need to run it here.
+        if (replMode?.beforeTest && !test.fn[REPL_INSTRUMENTED_FN_FLAG]) {
+            await executionThread.run(
+                Object.create(test, {
+                    timeout: {
+                        value: 0,
+                    },
+                    fn: {
+                        value: () => this._browser.publicAPI.switchToRepl(),
+                    },
+                }),
+            );
+        }
     }
 
     _getPreparePageActions(browser, history) {

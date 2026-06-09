@@ -20,7 +20,6 @@ module.exports = class ExecutionThread {
         };
 
         this._runtimeConfig = RuntimeConfig.getInstance();
-        this._isReplBeforeTestOpened = false;
     }
 
     async run(runnable) {
@@ -45,11 +44,6 @@ module.exports = class ExecutionThread {
 
     async _call(runnable) {
         const { replMode } = this._runtimeConfig;
-
-        if (replMode?.beforeTest && !this._isReplBeforeTestOpened) {
-            await this._ctx.browser.switchToRepl();
-            this._isReplBeforeTestOpened = true;
-        }
 
         let fnPromise = promiseMethod(runnable.fn).call(this._ctx, this._ctx);
 

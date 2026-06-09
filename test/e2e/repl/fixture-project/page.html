@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>REPL fixture</title>
+    </head>
+    <body>
+        <h1 id="title">REPL fixture page</h1>
+        <button id="action" type="button">Click</button>
+        <div id="message">Initial fixture text</div>
+
+        <script>
+            document.getElementById("action").addEventListener("click", () => {
+                document.getElementById("message").textContent = "Clicked from fixture";
+            });
+        </script>
+    </body>
+</html>

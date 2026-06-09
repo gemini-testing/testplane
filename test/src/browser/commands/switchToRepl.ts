@@ -68,13 +68,20 @@ describe('"switchToRepl" command', () => {
         return socket;
     };
 
+    const waitForReplStart_ = async (): Promise<void> => {
+        for (let attempt = 0; attempt < 10 && !(repl.start as SinonStub).called; attempt++) {
+            await new Promise(resolve => setImmediate(resolve));
+        }
+    };
+
     const switchToRepl_ = async ({
         session = mkSessionStub_(),
         replServer = mkReplServer_(),
-        ctx = {},
+        contexts = [{}],
     }): Promise<void> => {
-        const promise = session.switchToRepl(ctx);
+        const promise = session.switchToRepl(...contexts);
 
+        await waitForReplStart_();
         replServer.emit("exit");
         await promise;
     };
@@ -188,6 +195,7 @@ describe('"switchToRepl" command', () => {
             await initBrowser_({ session });
             const promise = session.switchToRepl();
 
+            await waitForReplStart_();
             replServer.emit("exit");
             await promise;
 
@@ -236,9 +244,35 @@ describe('"switchToRepl" command', () => {
             const replServer = mkReplServer_();
 
             await initBrowser_({ session });
-            await switchToRepl_({ session, replServer, ctx: { foo: "bar" } });
+            await switchToRepl_({ session, replServer, contexts: [{ foo: "bar" }] });
 
             assert.equal(replServer.context.foo, "bar");
+        });
+
+        it("should preserve accessor descriptors from passed context", async () => {
+            const session = mkSessionStub_();
+            const replServer = mkReplServer_();
+            const context = {};
+            let value = 1;
+
+            Object.defineProperty(context, "foo", {
+                enumerable: true,
+                get: () => value,
+                set: nextValue => {
+                    value = nextValue;
+                },
+            });
+
+            await initBrowser_({ session });
+            await switchToRepl_({ session, replServer, contexts: [context] });
+
+            assert.equal(replServer.context.foo, 1);
+
+            value = 2;
+            assert.equal(replServer.context.foo, 2);
+
+            replServer.context.foo = 3;
+            assert.equal(value, 3);
         });
 
         it("should not create new repl server if old one is already used", async () => {
@@ -249,6 +283,7 @@ describe('"switchToRepl" command', () => {
             const promise1 = session.switchToRepl();
             const promise2 = session.switchToRepl();
 
+            await waitForReplStart_();
             replServer.emit("exit");
             await Promise.all([promise1, promise2]);
 
@@ -378,6 +413,7 @@ describe('"switchToRepl" command', () => {
 
                 await initBrowser_({ session });
                 const promise = session.switchToRepl();
+                await waitForReplStart_();
                 replServer.emit("exit");
                 await promise;
 
@@ -393,6 +429,7 @@ describe('"switchToRepl" command', () => {
                 await initBrowser_({ session });
                 const promise = session.switchToRepl();
 
+                await waitForReplStart_();
                 netCreateServerCb(socket1);
                 netCreateServerCb(socket2);
 

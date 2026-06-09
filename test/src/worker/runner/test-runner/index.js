@@ -11,6 +11,8 @@ const AssertViewResults = require("src/browser/commands/assert-view/assert-view-
 const { Suite, Test } = require("src/test-reader/test-object");
 const history = require("src/browser/history");
 const { SAVE_HISTORY_MODE } = require("src/constants/config");
+const RuntimeConfig = require("src/config/runtime-config");
+const { REPL_INSTRUMENTED_FN_FLAG } = require("src/constants/repl");
 const { makeConfigStub } = require("../../../../utils");
 const { promiseDelay } = require("../../../../../src/utils/promise");
 
@@ -63,6 +65,7 @@ describe("worker/runner/test-runner", () => {
             assertView: sandbox.stub().named("assertView").resolves(),
             moveToElement: sandbox.stub().named("moveToElement").resolves(),
             action: sandbox.stub().named("getSize").returns(mkActionAPI_()),
+            switchToRepl: sandbox.stub().named("switchToRepl").resolves(),
             isW3C: true,
         });
         config = _.defaults(config, { resetCursor: true });
@@ -98,6 +101,7 @@ describe("worker/runner/test-runner", () => {
 
         sandbox.stub(BrowserAgent.prototype, "getBrowser").resolves(mkBrowser_());
         sandbox.stub(BrowserAgent.prototype, "freeBrowser");
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ replMode: {} });
 
         sandbox.stub(ExecutionThread, "create").returns(Object.create(ExecutionThread.prototype));
         sandbox.stub(ExecutionThread.prototype, "run").callsFake(runnable => runnable.fn());
@@ -275,6 +279,61 @@ describe("worker/runner/test-runner", () => {
             await run_({ test });
 
             assert.notProperty(test, "foo");
+        });
+
+        describe("REPL mode", () => {
+            describe("beforeTest", () => {
+                it("should switch to REPL after beforeEach hooks and before test body", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
+
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.hasBeforeEachHooks.returns(true);
+
+                    const afterBeforeEach = sandbox.stub().named("afterBeforeEach");
+                    HookRunner.prototype.runBeforeEachHooks.callsFake(async () => afterBeforeEach());
+
+                    const test = mkTest_({ fn: sandbox.stub().named("test") });
+
+                    await run_({ test });
+
+                    assert.callOrder(afterBeforeEach, browser.publicAPI.switchToRepl, test.fn);
+                    assert.calledTwice(ExecutionThread.prototype.run);
+                    assert.notEqual(ExecutionThread.prototype.run.firstCall.args[0].fn, test.fn);
+                });
+
+                it("should not switch to REPL before instrumented test body", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
+
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+
+                    const test = mkTest_({ fn: sandbox.stub() });
+                    test.fn[REPL_INSTRUMENTED_FN_FLAG] = true;
+
+                    await run_({ test });
+
+                    assert.notCalled(browser.publicAPI.switchToRepl);
+                    assert.calledOnce(ExecutionThread.prototype.run);
+                    assert.calledOnce(test.fn);
+                });
+
+                it("should not switch to REPL if beforeEach hooks failed", async () => {
+                    RuntimeConfig.getInstance.returns({ replMode: { beforeTest: true } });
+
+                    const browser = mkBrowser_();
+                    BrowserAgent.prototype.getBrowser.resolves(browser);
+                    HookRunner.prototype.hasBeforeEachHooks.returns(true);
+                    HookRunner.prototype.runBeforeEachHooks.rejects(new Error());
+
+                    const test = mkTest_({ fn: sandbox.stub() });
+
+                    await run_({ test }).catch(() => {});
+
+                    assert.notCalled(browser.publicAPI.switchToRepl);
+                    assert.notCalled(test.fn);
+                });
+            });
         });
 
         describe("cursor position", () => {

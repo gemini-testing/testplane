@@ -9,20 +9,45 @@ import * as logger from "../../utils/logger";
 import type { Browser } from "../types";
 
 const REPL_LINE_EVENT = "line";
+type ReplContext = Record<string, unknown>;
 
 export default (browser: Browser): void => {
     const { publicAPI: session } = browser;
 
-    const applyContext = (replServer: repl.REPLServer, ctx: Record<string, unknown> = {}): void => {
-        if (!ctx.browser) {
-            ctx.browser = session;
+    const getContextDescriptors = (contexts: ReplContext[]): PropertyDescriptorMap => {
+        const descriptors: PropertyDescriptorMap = {};
+
+        for (const context of contexts) {
+            if (!context) {
+                continue;
+            }
+
+            Object.assign(descriptors, Object.getOwnPropertyDescriptors(context));
         }
 
-        for (const [key, value] of Object.entries(ctx)) {
-            Object.defineProperty(replServer.context, key, {
+        if (!Object.prototype.hasOwnProperty.call(descriptors, "browser")) {
+            descriptors.browser = {
+                value: session,
+            };
+        }
+
+        return descriptors;
+    };
+
+    const applyContext = (replServer: repl.REPLServer, contexts: ReplContext[]): void => {
+        for (const [key, descriptor] of Object.entries(getContextDescriptors(contexts))) {
+            const replDescriptor = {
+                ...descriptor,
                 configurable: false,
                 enumerable: true,
-                value,
+            };
+
+            if ("value" in replDescriptor) {
+                replDescriptor.writable = false;
+            }
+
+            Object.defineProperty(replServer.context, key, {
+                ...replDescriptor,
             });
         }
     };
@@ -47,7 +72,7 @@ export default (browser: Browser): void => {
         }
     };
 
-    session.addCommand("switchToRepl", async function (ctx: Record<string, unknown> = {}) {
+    session.addCommand("switchToRepl", async function (...contexts: ReplContext[]) {
         const runtimeCfg = RuntimeConfig.getInstance();
         const { onReplMode } = browser.state;
 
@@ -71,6 +96,7 @@ export default (browser: Browser): void => {
         const currCwd = process.cwd();
         const testCwd = path.dirname(session.executionContext.ctx.currentTest.file!);
         process.chdir(testCwd);
+        browser.applyState({ onReplMode: true });
 
         let allSockets: net.Socket[] = [];
 
@@ -104,10 +130,9 @@ export default (browser: Browser): void => {
             input.push(data);
         });
 
-        browser.applyState({ onReplMode: true });
         runtimeCfg.extend({ replServer });
 
-        applyContext(replServer, ctx);
+        applyContext(replServer, contexts);
         handleLines(replServer);
 
         return new Promise<void>(resolve => {

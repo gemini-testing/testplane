@@ -12,6 +12,7 @@ import {
 } from "./events";
 import Errors from "./errors";
 import { registerTransformHook, updateTransformHook } from "./utils/typescript";
+import { registerReplModuleHooks } from "./utils/repl-module-hooks";
 import { ConfigInput } from "./config/types";
 
 export abstract class BaseTestplane extends AsyncEmitter {
@@ -31,6 +32,7 @@ export abstract class BaseTestplane extends AsyncEmitter {
 
         this._interceptors = [];
 
+        registerReplModuleHooks();
         registerTransformHook(this.isWorker());
         this._config = Config.create(config);
         updateTransformHook(this._config);
