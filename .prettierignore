@@ -10,4 +10,5 @@ bundle.compat.js
 bundle.native.js
 wt/**
 test/e2e/report
+test/e2e/**/fixture-project/.testplane/
 tmp/**
