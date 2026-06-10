@@ -1,0 +1,122 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 1400px;
+        font-family: Arial, sans-serif;
+        background: #eef2f7;
+    }
+
+    .page-content {
+        height: 1400px;
+        padding: 48px;
+        box-sizing: border-box;
+        background: repeating-linear-gradient(
+            135deg,
+            rgba(99, 122, 154, 0.12) 0,
+            rgba(99, 122, 154, 0.12) 16px,
+            rgba(255, 255, 255, 0.35) 16px,
+            rgba(255, 255, 255, 0.35) 32px
+        );
+    }
+
+    .target-modal {
+        position: fixed;
+        top: 96px;
+        left: 180px;
+        width: 720px;
+        height: 420px;
+        overflow: visible;
+        background: #ffffff;
+        box-sizing: border-box;
+        z-index: 10;
+    }
+
+    .modal-body {
+        position: relative;
+        height: 100%;
+        padding: 88px 56px 92px;
+        box-sizing: border-box;
+        background: linear-gradient(180deg, #ffffff 0%, #f4f7fb 100%);
+    }
+
+    .fixed-element {
+        position: fixed;
+        top: 100px;
+        left: 300px;
+        width: 100px;
+        height: 50px;
+        background: rgba(255, 0, 0, 0.2);
+        box-sizing: border-box;
+    }
+
+    .sticky-toolbar {
+        position: sticky;
+        top: 0;
+        height: 60px;
+        margin: -88px -56px 28px;
+        background: rgba(66, 111, 176, 0.2);
+        border-bottom: 2px solid rgba(66, 111, 176, 0.55);
+        box-sizing: border-box;
+    }
+
+    .sticky-actions {
+        position: sticky;
+        bottom: 0;
+        height: 72px;
+        margin: 40px -56px -92px;
+        background: rgba(52, 0, 101, 0.18);
+        border: 1px solid rgba(52, 133, 101, 0.5);
+        box-sizing: border-box;
+    }
+
+    .absolute-ribbon {
+        position: absolute;
+        top: 24px;
+        right: 28px;
+        width: 132px;
+        height: 34px;
+        background: rgba(237, 151, 59, 0.32);
+    }
+
+    .absolute-note {
+        position: absolute;
+        top: 180px;
+        left: 30px;
+        width: 86px;
+        height: 120px;
+        background: rgba(162, 113, 214, 0.22);
+    }
+
+    .absolute-badge {
+        position: absolute;
+        right: 48px;
+        bottom: 116px;
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        background: rgba(56, 147, 195, 0.25);
+    }
+
+    .content-card {
+        height: 148px;
+        background: #ffffff;
+        border: 2px solid #b8c4d6;
+        box-sizing: border-box;
+    }
+</style>
+
+<div class="page-content"></div>
+<div class="target-modal">
+    <div class="modal-body">
+        <div class="fixed-element"></div>
+        <div class="sticky-toolbar"></div>
+        <div class="absolute-ribbon"></div>
+        <div class="absolute-note"></div>
+        <div class="absolute-badge"></div>
+        <div class="content-card"></div>
+        <div class="sticky-actions"></div>
+    </div>
+</div>

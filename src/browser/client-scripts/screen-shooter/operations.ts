@@ -190,7 +190,6 @@ export function computeSafeArea(
         return { top: viewportRect.top, height: viewportRect.height };
     }
 
-    const captureArea = getCoveringRect(captureSpecs);
     const scrollEl = scrollElement ?? document.documentElement;
 
     // 1. Base safe area equals the visible rectangle of the scroll container
@@ -225,6 +224,21 @@ export function computeSafeArea(
 
     const originalSafeArea = { ...safeArea };
 
+    // 1.1 If all capture elements are fixed or inside non-scrollable fixed elements, scrolling will not move them,
+    // so no point in computing safe area
+    if (
+        captureElements.every(
+            el =>
+                getComputedStyle(el).position === "fixed" ||
+                (findFixedPositionedParent(el) !== null && getScrollParent(el) === null)
+        )
+    ) {
+        logger?.("all capture elements are fixed or inside non-scrollable fixed subtree, skipping interferences");
+        return { top: originalSafeArea.top, height: originalSafeArea.height };
+    }
+
+    const captureArea = getCoveringRect(captureSpecs);
+
     // 2. Build z-index chains for all capture elements
     //    One z-chain is a list of objects: { stacking context, z-index } -> { stacking context, z-index } -> ...
     //    It is used to determine which element is on top of the other
@@ -241,7 +255,7 @@ export function computeSafeArea(
         const el = allElements[idx];
 
         // Skip elements that contain capture elements
-        if (captureElements.some(capEl => el !== capEl && el.contains(capEl))) continue;
+        if (captureElements.some(capEl => el.contains(capEl))) continue;
 
         const computedStyle = getComputedStyle(el);
         const position = computedStyle.position;
