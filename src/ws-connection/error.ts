@@ -1,10 +1,10 @@
 import { WS_ERROR_CODE } from "./constants";
 
 export abstract class WsError extends Error {
-    public code?: number;
+    public code?: number | string;
     public requestId?: number;
 
-    constructor({ message, code, requestId }: { message: string; code?: number; requestId?: number }) {
+    constructor({ message, code, requestId }: { message: string; code?: number | string; requestId?: number }) {
         let errorMessage = message;
 
         if (code) {
@@ -33,7 +33,7 @@ export class WsConnectionEstablishmentError extends WsError {
     }
 
     isRetryable(): boolean {
-        if (this.code && this.code >= 400 && this.code < 500) {
+        if (typeof this.code === "number" && this.code >= 400 && this.code < 500) {
             return false;
         }
 

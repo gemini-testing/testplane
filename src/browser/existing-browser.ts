@@ -19,6 +19,7 @@ import { NEW_ISSUE_LINK } from "../constants/help";
 import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Page } from "puppeteer-core";
+import { BIDI } from "./bidi";
 import { CDP } from "./cdp";
 import { WSDriverRequestAgent } from "./wsdriver";
 import type { ElementReference } from "@testplane/wdio-protocols";
@@ -91,6 +92,7 @@ export class ExistingBrowser extends Browser {
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
     protected _clientBridge?: ClientBridge;
+    protected _bidi: BIDI | null = null;
     protected _cdp: CDP | null = null;
     protected _wsDriver: WSDriverRequestAgent | null = null;
     protected _tags: Set<string> = new Set();
@@ -105,6 +107,8 @@ export class ExistingBrowser extends Browser {
 
     async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
         this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
+
+        this._bidi = BIDI.create(this);
 
         const cdpPromise = CDP.create(this).then(cdp => {
             this._cdp = cdp;
@@ -164,6 +168,7 @@ export class ExistingBrowser extends Browser {
 
     quit(): void {
         this._cdp?.close();
+        this._bidi?.close();
         this._wsDriver?.close();
         this._meta = this._initMeta();
     }
@@ -618,6 +623,10 @@ export class ExistingBrowser extends Browser {
 
     get tags(): string[] {
         return [...this._tags];
+    }
+
+    get bidi(): BIDI | null {
+        return this._bidi;
     }
 
     get cdp(): CDP | null {
