@@ -2,7 +2,7 @@ import makeDebug from "debug";
 import { CompositeImage } from "./composite-image";
 import { Image } from "../../image";
 import { Coord, Rect, Size, Point } from "../isomorphic/geometry";
-import type { DisableHoverMode } from "../isomorphic/types";
+import { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
 import { Camera } from "../camera";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
@@ -67,6 +67,13 @@ export class FullPageScreenShooter {
     }
 
     async capture(opts: FullPageCaptureOpts = {}): Promise<Image> {
+        if (!opts.disableHover) {
+            opts.disableHover = DisableHoverMode.WhenScrollingNeeded;
+        }
+        if (opts.disableAnimation === undefined) {
+            opts.disableAnimation = true;
+        }
+
         try {
             return await this._captureImpl(opts);
         } finally {
