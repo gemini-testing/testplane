@@ -369,6 +369,7 @@ export interface CommonConfig {
     meta: { [name: string]: unknown };
     windowSize: { width: number; height: number } | `${number}x${number}` | null;
     orientation: "landscape" | "portrait" | null;
+    /** Was changed from "true" to "false" in testplane@9 */
     resetCursor: boolean;
     headers: Record<string, string> | null;
 

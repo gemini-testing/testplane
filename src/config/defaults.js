@@ -91,7 +91,7 @@ module.exports = {
     tempDir: "",
     orientation: null,
     waitOrientationChange: true,
-    resetCursor: true,
+    resetCursor: false,
     strictTestsOrder: false,
     saveHistoryMode: SAVE_HISTORY_MODE.ALL,
     fileExtensions: [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"],
