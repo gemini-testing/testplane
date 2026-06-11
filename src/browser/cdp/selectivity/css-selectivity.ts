@@ -62,7 +62,7 @@ export class CSSSelectivity {
             return;
         }
 
-        if (!sourceURL || !sourceMapURL || sourceURL.startsWith("chrome-error://")) {
+        if (!sourceMapURL || sourceURL.startsWith("chrome-error://")) {
             this._stylesSourceMap[styleSheetId] ||= null;
             return;
         }
@@ -72,6 +72,11 @@ export class CSSSelectivity {
         }
 
         let sourceMapResolvedUrl = urlResolve(sourceURL, sourceMapURL);
+
+        if (!URL.canParse(sourceMapResolvedUrl)) {
+            this._stylesSourceMap[styleSheetId] ||= null;
+            return;
+        }
 
         const mapResult = this._mapSourceMapUrl
             ? this._mapSourceMapUrl({ type: "css", sourceUrl: sourceURL, sourceMapUrl: sourceMapResolvedUrl })

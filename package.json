@@ -50,7 +50,7 @@
   },
   "homepage": "https://testplane.io/",
   "engines": {
-    "node": ">= 18.0.0"
+    "node": ">= 18.17.0"
   },
   "keywords": [
     "testplane",

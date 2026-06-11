@@ -25,6 +25,7 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
     let pathStub: { posix: { join: SinonStub } };
     let hasProtocolStub: SinonStub;
     let isDataProtocolStub: SinonStub;
+    let canParseStub: SinonStub;
     let debugSelectivityStub: SinonStub;
 
     const CacheType = { Asset: "a", CssSessionCache: "cs" };
@@ -99,6 +100,9 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
         };
         hasProtocolStub = sandbox.stub().returns(false);
         isDataProtocolStub = sandbox.stub().callsFake((url: string) => url.startsWith("data:"));
+        // In production "urlResolve" yields an absolute (parseable) url; the stub above returns a relative one,
+        // so we stub the global "URL.canParse" to mirror the production "parseable" outcome by default.
+        canParseStub = sandbox.stub(URL, "canParse").returns(true);
         debugSelectivityStub = sandbox.stub();
 
         getCachedSelectivityFileStub = sandbox.stub().resolves(JSON.stringify(mockSourceMap));
@@ -1172,6 +1176,58 @@ describe("CDP/Selectivity/CSSSelectivity", () => {
                     sinon.match.any,
                 );
             });
+        });
+    });
+
+    describe("anonymous stylesheets with embedded source maps", () => {
+        const embeddedSourceMapUrl = "data:application/json;base64,eyJ2ZXJzaW9uIjozfQ==";
+        const anonymousStyleSheetEvent = {
+            header: {
+                ...styleSheetEvent.header,
+                sourceURL: "", // anonymous stylesheet (e.g. injected <style>)
+                sourceMapURL: embeddedSourceMapUrl,
+            },
+        };
+
+        it("should fetch the embedded source map for a stylesheet without a sourceURL", async () => {
+            patchSourceMapSourcesStub.returns({ sources: ["src/styles.css"], sourceRoot: "/root" });
+            cdpMock.css.stopRuleUsageTracking.resolves({
+                ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
+            });
+
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, sourceRoot, null);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(anonymousStyleSheetEvent, sessionId);
+
+            const result = await cssSelectivity.stop();
+
+            // Embedded (data:) source maps are fetched directly and never offloaded to fs-cache
+            assert.calledWith(fetchTextWithBrowserFallbackStub, embeddedSourceMapUrl, cdpMock.runtime, sessionId);
+            assert.neverCalledWith(hasCachedSelectivityFileStub, CacheType.Asset, embeddedSourceMapUrl);
+            assert.neverCalledWith(setCachedSelectivityFileStub, CacheType.Asset, embeddedSourceMapUrl);
+            assert.deepEqual(Array.from(result || []).sort(), ["/root/src/styles.css"]);
+        });
+
+        it("should skip the stylesheet when the resolved source map url is not parseable", async () => {
+            canParseStub.returns(false);
+            cdpMock.css.stopRuleUsageTracking.resolves({
+                ruleUsage: [{ styleSheetId: "stylesheet-123", startOffset: 0, endOffset: 100, used: true }],
+            });
+
+            const cssSelectivity = new CSSSelectivity(cdpMock as any, sessionId, wdSessionId, sourceRoot, null);
+
+            await cssSelectivity.start();
+
+            const styleSheetAddedHandler = cdpMock.css.on.getCall(0).args[1];
+            styleSheetAddedHandler(styleSheetEvent, sessionId);
+
+            const result = await cssSelectivity.stop();
+
+            assert.notCalled(fetchTextWithBrowserFallbackStub);
+            assert.deepEqual(Array.from(result || []), []);
         });
     });
 });
