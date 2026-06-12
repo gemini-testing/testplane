@@ -133,7 +133,7 @@ export function computeCaptureSpecs(
                 width: 0 as typeof full.width,
                 height: 0 as typeof full.height
             };
-            return { full, visible };
+            return { full, visible, clip };
         })
         .filter(function (r): r is NonNullable<typeof r> {
             return r !== null;

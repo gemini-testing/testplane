@@ -70,27 +70,12 @@ describe("computeSafeArea", () => {
         }
 
         const selectors = [".target-modal"];
-        let log = '';
-        const safeArea = computeSafeArea(selectors, modal, (...msg) => {
-            for (const arg of msg) {
-                if (typeof arg === "object" && arg !== null) {
-                    try {
-                        log += JSON.stringify(arg, null, 2) + "\n";
-                    } catch (e) {
-                        log += "failed to log message due to an error: " + e;
-                    }
-                } else {
-                    log += String(arg) + "\n";
-                }
-            }
-        });
-        // const safeArea = computeSafeArea(selectors, modal, (msg) => log += msg);
+        const safeArea = computeSafeArea(selectors, modal);
         const captureSpecs = computeCaptureSpecs(selectors);
 
         visualizeCaptureSpecs(captureSpecs);
         visualizeSafeArea(safeArea.top, safeArea.height);
         await browser.assertView("compute-safe-area-non-scrollable-modal-with-positioned-children");
-        console.log(log);
     });
 
     it("should ignore fixed help button with no horizontal overlap", async ({ browser }) => {

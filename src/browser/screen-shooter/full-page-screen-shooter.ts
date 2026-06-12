@@ -137,7 +137,7 @@ export class FullPageScreenShooter {
         await compositeImage.registerViewportImageAtOffset(
             viewportImage,
             safeArea,
-            [{ full: fullPageRect, visible: fullPageRect }],
+            [{ full: fullPageRect, clip: fullPageRect, visible: fullPageRect }],
             [],
         );
 
@@ -191,7 +191,7 @@ export class FullPageScreenShooter {
             await compositeImage.registerViewportImageAtOffset(
                 chunkImage,
                 safeArea,
-                [{ full: updatedFullPageRect, visible: updatedFullPageRect }],
+                [{ full: updatedFullPageRect, clip: updatedFullPageRect, visible: updatedFullPageRect }],
                 [],
             );
 

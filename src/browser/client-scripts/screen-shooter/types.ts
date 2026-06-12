@@ -3,6 +3,8 @@ import { BrowserSideError, Coord, DisableHoverMode, Point, Rect, Size, Space, Un
 export interface CaptureSpec<S extends Space, U extends Unit> {
     /** Full element rect, unconstrained by ancestor overflow clipping */
     full: Rect<S, U>;
+    /** Clip rect used to compute visible portion */
+    clip: Rect<S, U>;
     /** Visible portion: full rect intersected with all ancestor overflow clip boundaries */
     visible: Rect<S, U>;
 }

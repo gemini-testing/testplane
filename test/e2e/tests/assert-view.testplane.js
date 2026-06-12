@@ -67,6 +67,21 @@ describe("assertView", () => {
         });
     });
 
+    it("should take a screenshot of distant blocks inside a scrollable container", async ({ browser }) => {
+        await browser.url("two-blocks-inside-scrollable-container.html");
+
+        await browser.assertView("two-blocks", ["[data-testid=first-block]", "[data-testid=second-block]"]);
+    });
+
+    it("should take a screenshot of space between distant blocks with compositeImage=false", async ({ browser }) => {
+        await browser.url("two-blocks-inside-scrollable-container-clipped.html");
+
+        await browser.assertView("two-blocks", ["[data-testid=first-block]", "[data-testid=second-block]"], {
+            allowViewportOverflow: true,
+            compositeImage: false,
+        });
+    });
+
     it("should work with ignoreAreas", async ({ browser }) => {
         await browser.url("simple-ignore-areas-test.html");
 

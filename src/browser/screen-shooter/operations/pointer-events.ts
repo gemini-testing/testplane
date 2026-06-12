@@ -27,7 +27,8 @@ export async function preparePointerForScreenshot(
             return;
         }
 
-        const chromeOptions = browser.requestedCapabilities?.["goog:chromeOptions"] ?? browser.capabilities?.["goog:chromeOptions"];
+        const chromeOptions =
+            browser.requestedCapabilities?.["goog:chromeOptions"] ?? browser.capabilities?.["goog:chromeOptions"];
         const isChromeMobileEmulation = Boolean(chromeOptions?.mobileEmulation);
         if (browser.isMobile || browser.isIOS || browser.isAndroid || isChromeMobileEmulation) {
             pointerDebug("Skipping pointer move because session is on mobile");

@@ -271,6 +271,7 @@ export function getCaptureState(
         const captureSpecsAfterCss = computeCaptureSpecs(selectorsToCapture, logger);
         const captureSpecs = captureSpecsAfterCss.map(spec => ({
             full: fromCssToDevice(roundCoords(spec.full), pixelRatio),
+            clip: fromCssToDevice(roundCoords(spec.clip), pixelRatio),
             visible: fromCssToDevice(roundCoords(spec.visible), pixelRatio)
         }));
         const scrollOffset = computeScrollOffset(scrollElement);
@@ -526,6 +527,7 @@ function prepareElementsScreenshotUnsafe(
         ignoreAreas: ignoreAreas.map(area => fromCssToDevice(roundCoords(area), pixelRatio)),
         captureSpecs: captureSpecs.map(s => ({
             full: fromCssToDevice(roundCoords(s.full), pixelRatio),
+            clip: fromCssToDevice(roundCoords(s.clip), pixelRatio),
             visible: fromCssToDevice(roundCoords(s.visible), pixelRatio)
         })),
         viewportSize: fromCssToDevice(viewportSize, pixelRatio),
