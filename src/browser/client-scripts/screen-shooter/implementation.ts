@@ -24,7 +24,8 @@ import {
     ScrollFullPageResult,
     ScrollResult,
     GetCaptureStateResult,
-    TrackedElementData
+    TrackedElementData,
+    ElementPositionsProbe
 } from "./types";
 import { createDebugLogger } from "../shared/logger";
 import {
@@ -196,9 +197,7 @@ export function scrollBy(
                 : `${selectorToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
             : `auto-detected ${readableAutoScrollElementDescr}`;
 
-        // Subtracting 1px to avoid a case when element boundary gets rounded up and it appears during screenshots stitching
-        const scrollHeightCss = (fromDeviceToCssNumber(scrollDelta as Coord<"page", "device", "y">, pixelRatio) -
-            1) as Coord<"page", "css", "y">;
+        const scrollHeightCss = fromDeviceToCssNumber(scrollDelta as Coord<"page", "device", "y">, pixelRatio);
         scrollElementBy(scrollElement, scrollHeightCss);
 
         return {
@@ -327,8 +326,9 @@ export function prepareFullPageScreenshot(
             }
         }
 
-        const elementPositionsProbe = computeElementPositionsProbe().map(rect =>
-            rect ? fromCssToDevice(roundCoords(rect), pixelRatio) : null
+        const elementPositionsProbe: ElementPositionsProbe<"device">[] = computeElementPositionsProbe().map(
+            (rect: ElementPositionsProbe<"css">): ElementPositionsProbe<"device"> =>
+                rect ? { ...fromCssToDevice(roundCoords(rect), pixelRatio), elementDescr: rect.elementDescr } : null
         );
 
         return {
@@ -355,8 +355,9 @@ export function scrollFullPage(
         scrollElementBy(document.documentElement, scrollHeightCss);
 
         const viewportOffset = computeViewportOffset();
-        const elementPositionsProbe = computeElementPositionsProbe().map(rect =>
-            rect ? fromCssToDevice(roundCoords(rect), pixelRatio) : null
+        const elementPositionsProbe: ElementPositionsProbe<"device">[] = computeElementPositionsProbe().map(
+            (rect: ElementPositionsProbe<"css">): ElementPositionsProbe<"device"> =>
+                rect ? { ...fromCssToDevice(roundCoords(rect), pixelRatio), elementDescr: rect.elementDescr } : null
         );
 
         return {

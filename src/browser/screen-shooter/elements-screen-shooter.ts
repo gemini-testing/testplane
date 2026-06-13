@@ -34,6 +34,7 @@ class CaptureAreaSizeChangeError extends Error {
 }
 
 const debug = makeDebug("testplane:screenshots:elements-screen-shooter");
+const SCROLL_OVERLAP = 1;
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
@@ -94,6 +95,46 @@ function getExpectedTotalMoveFromBaseline(
     }
 
     return getMedian(shifts) ?? 0;
+}
+
+function getMovingCaptureSpecs(currentState: CaptureState, lastState: CaptureState): CaptureState["captureSpecs"] {
+    if (currentState.scrollOffset === lastState.scrollOffset) {
+        return currentState.captureSpecs;
+    }
+
+    return currentState.captureSpecs.filter((spec, index) => {
+        const lastSpec = lastState.captureSpecs[index];
+
+        return lastSpec && spec.full.top !== lastSpec.full.top;
+    });
+}
+
+function getRemainingCaptureAreaHeight(
+    captureSpecs: CaptureState["captureSpecs"],
+    safeArea: CaptureState["safeArea"],
+): Length<"device", "y"> {
+    if (captureSpecs.length === 0) {
+        return 0 as Length<"device", "y">;
+    }
+
+    const safeAreaBottom = getBottom(safeArea);
+    const captureAreaBottom = Math.max(...captureSpecs.map(spec => getBottom(spec.full)));
+
+    return Math.max(0, captureAreaBottom - safeAreaBottom) as Length<"device", "y">;
+}
+
+function getScrollDelta(
+    safeAreaHeight: Length<"device", "y">,
+    remainingCaptureAreaHeight: Length<"device", "y">,
+): Length<"device", "y"> {
+    if (remainingCaptureAreaHeight <= safeAreaHeight) {
+        return remainingCaptureAreaHeight;
+    }
+
+    return (safeAreaHeight > SCROLL_OVERLAP ? safeAreaHeight - SCROLL_OVERLAP : safeAreaHeight) as Length<
+        "device",
+        "y"
+    >;
 }
 
 export class ElementsScreenShooter {
@@ -405,7 +446,8 @@ export class ElementsScreenShooter {
                 await onNextScroll(currentState);
                 callbackTime += performance.now() - callbackStartTime;
 
-                hasCapturedTheWholeArea = currentState.captureSpecs.every(
+                const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
+                hasCapturedTheWholeArea = movingCaptureSpecs.every(
                     s => getBottom(s.full) <= getBottom(currentState.safeArea),
                 );
 
@@ -423,12 +465,28 @@ export class ElementsScreenShooter {
                     break;
                 }
 
-                debug("asking to scroll by %dpx", currentState.safeArea.height);
+                const remainingCaptureAreaHeight = getRemainingCaptureAreaHeight(
+                    movingCaptureSpecs,
+                    currentState.safeArea,
+                );
+                const scrollDelta = getScrollDelta(currentState.safeArea.height, remainingCaptureAreaHeight);
+
+                if (scrollDelta <= 0) {
+                    hasCapturedTheWholeArea = true;
+                    break;
+                }
+
+                debug(
+                    "asking to scroll by %dpx (safeArea.height: %d, remaining moving capture area: %d)",
+                    scrollDelta,
+                    currentState.safeArea.height,
+                    remainingCaptureAreaHeight,
+                );
 
                 const scrollStartTime = performance.now();
                 const scrollResult = await this._browserSideScreenshooter.call("scrollBy", [
                     selectorsToCapture,
-                    currentState.safeArea.height,
+                    scrollDelta,
                     opts.selectorToScroll,
                     enabledScrollDebugTopics,
                 ]);
@@ -556,7 +614,10 @@ export class ElementsScreenShooter {
                     );
 
                     hasReachedScrollLimit = iterations > 0 && currentState.scrollOffset <= lastState.scrollOffset;
-                    hasCapturedTheWholeArea = newCaptureSpecs.every(s => getBottom(s.full) <= getBottom(newSafeArea));
+                    const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
+                    hasCapturedTheWholeArea = movingCaptureSpecs.every(
+                        s => getBottom(s.full) <= getBottom(newSafeArea),
+                    );
                     isOverflowingViewport = newCaptureSpecs.some(s => getBottom(s.full) > page.viewportSize.height);
 
                     if (currentState.scrollOffset !== page.scrollOffset) {

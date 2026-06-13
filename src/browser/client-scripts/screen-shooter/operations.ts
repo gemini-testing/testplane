@@ -82,18 +82,26 @@ function getProbeAxisCoordinates(length: number, gridSize: number): number[] {
 
 export function computeElementPositionsProbe(
     gridSize = ELEMENT_POSITIONS_PROBE_GRID_SIZE
-): Array<Rect<"viewport", "css"> | null> {
+): Array<(Rect<"viewport", "css"> & { elementDescr?: string }) | null> {
     const viewportSize = computeViewportSize();
     const xCoordinates = getProbeAxisCoordinates(viewportSize.width as number, gridSize);
     const yCoordinates = getProbeAxisCoordinates(viewportSize.height as number, gridSize);
-    const probe: Array<Rect<"viewport", "css"> | null> = [];
+    const probe: Array<(Rect<"viewport", "css"> & { elementDescr?: string }) | null> = [];
 
     for (let yIndex = 0; yIndex < yCoordinates.length; yIndex++) {
         for (let xIndex = 0; xIndex < xCoordinates.length; xIndex++) {
             const x = xCoordinates[xIndex];
             const y = yCoordinates[yIndex];
-            const bcr = document.elementFromPoint(x, y)?.getBoundingClientRect() ?? null;
-            probe.push(bcr ? fromBcrToRect(bcr) : null);
+            const element = document.elementFromPoint(x, y);
+            if (!element) {
+                probe.push(null);
+                continue;
+            }
+
+            probe.push({
+                ...fromBcrToRect(element.getBoundingClientRect()),
+                elementDescr: getReadableElementDescriptor(element)
+            });
         }
     }
 
@@ -254,8 +262,9 @@ export function computeSafeArea(
     for (let idx = 0; idx < allElements.length; idx++) {
         const el = allElements[idx];
 
-        // Skip elements that contain capture elements
-        if (captureElements.some(capEl => el.contains(capEl))) continue;
+        if (scrollEl === el || el.contains(scrollEl)) {
+            continue;
+        }
 
         const computedStyle = getComputedStyle(el);
         const position = computedStyle.position;
@@ -277,15 +286,18 @@ export function computeSafeArea(
         if (getIntersection(fromBcrToRect(bcr), viewportRect) === null) continue;
 
         let likelyInterferes = false;
+        let skipZIndexCheck = false;
         let adjustedRect: Rect<"viewport", "css"> = domRectToViewportCss(bcr);
 
         const fixedPositionedParent = findFixedPositionedParent(el);
+        const isInsideScrollContextFixedParent =
+            fixedPositionedParent !== null &&
+            (fixedPositionedParent === scrollEl || fixedPositionedParent.contains(scrollEl));
 
-        if (
-            position === "fixed" ||
-            (fixedPositionedParent && !captureElements.some(capEl => fixedPositionedParent.contains(capEl)))
-        ) {
+        if (position === "fixed" || (fixedPositionedParent && !isInsideScrollContextFixedParent)) {
             likelyInterferes = true;
+            // If the fixed element is inside a capture element, it's almost certainly interfering
+            skipZIndexCheck = captureElements.some(capEl => capEl.contains(el));
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
             if (captureElements.some(capEl => capEl.contains(el))) continue;
@@ -305,6 +317,8 @@ export function computeSafeArea(
             logger?.("scrollParent:", getReadableElementDescriptor(scrollParent));
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
+            skipZIndexCheck =
+                scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl));
 
             if (!isNaN(topValue)) {
                 adjustedRect = {
@@ -332,7 +346,7 @@ export function computeSafeArea(
         if (!likelyInterferes) continue;
 
         const candChain = buildZChain(el);
-        const behindAll = targetChains.every(tChain => isChainBehind(candChain, tChain));
+        const behindAll = !skipZIndexCheck && targetChains.every(tChain => isChainBehind(candChain, tChain));
 
         if (!behindAll) {
             const extRect = getExtRect(computedStyle, adjustedRect);
@@ -374,7 +388,7 @@ export function computeSafeArea(
             logger?.("decided to shrink bottom");
         }
 
-        if (resultingHeight < origHeight / 2) {
+        if (resultingHeight < origHeight * 0.3) {
             logger?.("decided to skip, because shrinking is too large");
             continue;
         }
@@ -385,8 +399,8 @@ export function computeSafeArea(
         safeHeight = resultingHeight;
     }
 
-    // 5. Ensure we didn't shrink more than 50% of original height
-    if (safeHeight < origHeight / 2) {
+    // 5. Ensure we didn't shrink below 30% of original height
+    if (safeHeight < origHeight * 0.3) {
         safeTop = originalSafeArea.top;
         safeHeight = originalSafeArea.height;
     }

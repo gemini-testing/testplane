@@ -206,8 +206,8 @@ export class FullPageScreenShooter {
     }
 
     private _isElementPositionsProbeEqual(
-        leftProbe: ElementPositionsProbe<"device">,
-        rightProbe: ElementPositionsProbe<"device">,
+        leftProbe: ElementPositionsProbe<"device">[],
+        rightProbe: ElementPositionsProbe<"device">[],
     ): boolean {
         if (leftProbe.length !== rightProbe.length) {
             return false;

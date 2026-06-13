@@ -45,6 +45,15 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=test-block]", { captureElementFromTop: false });
     });
 
+    it("should treat sticky content inside capture target as interference", async ({ browser }) => {
+        await browser.url("sticky-interference-behind-capture-target.html");
+
+        await browser.assertView("sticky-interference", ".OrgIntentContainer", {
+            selectorToScroll: ".scroll-container",
+            captureElementFromTop: true,
+        });
+    });
+
     it("should take a screenshot of a long block inside a scrollable container with captureElementFromTop", async ({
         browser,
     }) => {
@@ -80,6 +89,34 @@ describe("assertView", () => {
             allowViewportOverflow: true,
             compositeImage: false,
         });
+    });
+
+    it("should take one screenshot for mixed scrollable and fixed selected blocks", async ({ browser }) => {
+        await browser.url("fixed-and-scrollable-selected-blocks.html");
+
+        await browser.assertView(
+            "mixed-fixed-and-scrollable-blocks",
+            ["[data-testid=movable-block]", "[data-testid=fixed-block]"],
+            {
+                captureElementFromTop: false,
+                allowViewportOverflow: true,
+                compositeImage: true,
+            },
+        );
+    });
+
+    it("should avoid duplicating stable selected overlay content", async ({ browser }) => {
+        await browser.url("fixed-overlay-content-and-scrollable-block.html");
+
+        await browser.assertView(
+            "fixed-overlay-content-and-scrollable-block",
+            ["[data-testid=movable-block]", "[data-testid=stable-overlay-content]"],
+            {
+                captureElementFromTop: false,
+                allowViewportOverflow: true,
+                compositeImage: true,
+            },
+        );
     });
 
     it("should work with ignoreAreas", async ({ browser }) => {

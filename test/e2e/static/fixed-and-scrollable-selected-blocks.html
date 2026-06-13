@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fixed And Scrollable Selected Blocks</title>
+        <style>
+            body {
+                margin: 0;
+                min-height: 3200px;
+                background: repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 79px, #eeeeee 79px, #eeeeee 80px);
+                font-family: Arial, sans-serif;
+            }
+
+            .movable-block {
+                position: relative;
+                top: 140px;
+                left: 24px;
+                width: 260px;
+                height: 900px;
+                background: #2f6fed;
+                border: 2px solid #000000;
+                color: #ffffff;
+                box-sizing: border-box;
+                padding: 12px;
+            }
+
+            .fixed-block {
+                position: fixed;
+                left: 24px;
+                right: 24px;
+                bottom: 0;
+                height: 160px;
+                z-index: 10;
+                background: #20a464;
+                color: #ffffff;
+                box-sizing: border-box;
+                padding: 12px;
+            }
+
+            .fixed-interference {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 56px;
+                z-index: 20;
+                background: #d93025;
+                color: #ffffff;
+                box-sizing: border-box;
+                padding: 12px 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="movable-block" data-testid="movable-block">movable selected block</div>
+        <div class="fixed-block" data-testid="fixed-block">fixed selected block</div>
+        <div class="fixed-interference">fixed interference</div>
+    </body>
+</html>

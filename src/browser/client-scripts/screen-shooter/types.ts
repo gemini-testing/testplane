@@ -83,14 +83,14 @@ export interface ScrollToCaptureSpecResult {
     readableSelectorToScrollDescr?: string;
 }
 
-export type ElementPositionsProbe<U extends Unit> = Array<Rect<"viewport", U> | null>;
+export type ElementPositionsProbe<U extends Unit> = (Rect<"viewport", U> & { elementDescr?: string }) | null;
 
 export interface PrepareFullPageScreenshotSuccess {
     documentSize: Size<"device">;
     viewportSize: Size<"device">;
     viewportOffset: Point<"page", "device">;
     safeArea: YBand<"viewport", "device">;
-    elementPositionsProbe: ElementPositionsProbe<"device">;
+    elementPositionsProbe: ElementPositionsProbe<"device">[];
     pixelRatio: number;
     pointerEventsDisabled?: boolean;
 }
@@ -99,7 +99,7 @@ export type PrepareFullPageScreenshotResult = PrepareFullPageScreenshotSuccess |
 
 export interface ScrollFullPageSuccess {
     viewportOffset: Point<"page", "device">;
-    elementPositionsProbe: ElementPositionsProbe<"device">;
+    elementPositionsProbe: ElementPositionsProbe<"device">[];
 }
 
 export interface PrepareViewportScreenshotSuccess {
