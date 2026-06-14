@@ -277,7 +277,8 @@ export function computeSafeArea(
             (bcr.width === 1 && bcr.height === 1) ||
             computedStyle.visibility === "hidden" ||
             computedStyle.display === "none" ||
-            parseFloat(computedStyle.opacity) < 0.0001
+            parseFloat(computedStyle.opacity) < 0.0001 ||
+            /opacity\(\s*0(?:\.0+)?%?\s*\)/.test(computedStyle.filter)
         )
             continue;
         // Skip elements that don't horizontally intersect with capture area
