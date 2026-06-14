@@ -44,10 +44,17 @@ async function waitForSelectorsToSettleInBrowser(
     selectors: string[],
 ): Promise<BrowserSelectorsSettleResult> {
     const originalTimeouts = await browser.getTimeouts();
+    const originalScriptTimeout = originalTimeouts.script;
+    const shouldRestoreScriptTimeout = typeof originalScriptTimeout === "number";
+
     let executionError: unknown = null;
     let result: BrowserSelectorsSettleResult | undefined;
 
-    await browser.setTimeout({ script: SELECTORS_SETTLE_BROWSER_TIMEOUT_MS });
+    if (shouldRestoreScriptTimeout) {
+        await browser.setTimeout({ script: SELECTORS_SETTLE_BROWSER_TIMEOUT_MS });
+    } else {
+        debug("Browser does not report script timeout, running browser-side polling without timeout override");
+    }
 
     try {
         result = await browser.execute(async selectors => {
@@ -103,16 +110,18 @@ async function waitForSelectorsToSettleInBrowser(
         executionError = err;
     }
 
-    try {
-        await browser.setTimeout({ script: originalTimeouts.script });
-    } catch (restoreError) {
-        if (executionError) {
-            debug(
-                "Failed to restore original script timeout after selectors settle error: %s",
-                restoreError instanceof Error ? restoreError.message : String(restoreError),
-            );
-        } else {
-            throw restoreError;
+    if (shouldRestoreScriptTimeout) {
+        try {
+            await browser.setTimeout({ script: originalScriptTimeout });
+        } catch (restoreError) {
+            if (executionError) {
+                debug(
+                    "Failed to restore original script timeout after selectors settle error: %s",
+                    restoreError instanceof Error ? restoreError.message : String(restoreError),
+                );
+            } else {
+                throw restoreError;
+            }
         }
     }
 
