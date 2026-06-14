@@ -140,6 +140,17 @@ function getScrollDelta(
     >;
 }
 
+function getEmptyCaptureSpecsErrorMessage(selectorsToCapture: string[]): string {
+    return (
+        `Failed to capture element screenshot for selectors: ${selectorsToCapture.join("; ")}.\n` +
+        `Could not determine coordinates of the matched elements.\n` +
+        `Most likely the matched element became hidden, zero-sized, detached, moved offscreen, ` +
+        `or was clipped after scrolling/waiting for layout to settle.\n` +
+        `If you are capturing element sensitive to scrolling, like a tooltip, it could be hidden due to auto-scrolling on our side.\n` +
+        `Make sure the selector stays visible during the screenshot or disable scrolling via compositeImage/captureElementFromTop options.`
+    );
+}
+
 export class ElementsScreenShooter {
     private _browser: WdioBrowser;
     private _camera: Camera;
@@ -565,6 +576,10 @@ export class ElementsScreenShooter {
                 page,
                 opts,
                 async currentState => {
+                    if (currentState.captureSpecs.length === 0) {
+                        throw new Error(getEmptyCaptureSpecsErrorMessage(selectorsToCapture));
+                    }
+
                     const hasCaptureAreaSizeChanged =
                         lastState.captureSpecs.length !== currentState.captureSpecs.length ||
                         lastState.captureSpecs.some(
