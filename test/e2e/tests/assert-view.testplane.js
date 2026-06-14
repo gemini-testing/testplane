@@ -45,6 +45,14 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=test-block]", { captureElementFromTop: false });
     });
 
+    it("should keep capturing when safe area shrinks after scroll without creating a gap", async ({ browser }) => {
+        await browser.url("sticky-header-appears-after-scroll.html");
+
+        await browser.assertView("sticky-safe-area-rollback", "[data-testid=capture-target]", {
+            captureElementFromTop: true,
+        });
+    });
+
     it("should treat sticky content inside capture target as interference", async ({ browser }) => {
         await browser.url("sticky-interference-behind-capture-target.html");
 

@@ -140,6 +140,30 @@ function getScrollDelta(
     >;
 }
 
+function getCaptureAreaTop(captureSpecs: CaptureState["captureSpecs"]): Coord<"viewport", "device", "y"> | null {
+    if (captureSpecs.length === 0) {
+        return null;
+    }
+
+    return Math.min(...captureSpecs.map(spec => spec.full.top as number)) as Coord<"viewport", "device", "y">;
+}
+
+function getSafeAreaRollbackDistance(lastState: CaptureState, currentState: CaptureState): Length<"device", "y"> {
+    const previousCaptureAreaTop = getCaptureAreaTop(lastState.captureSpecs);
+    const currentCaptureAreaTop = getCaptureAreaTop(currentState.captureSpecs);
+
+    if (previousCaptureAreaTop === null || currentCaptureAreaTop === null) {
+        return 0 as Length<"device", "y">;
+    }
+
+    const previousVisibleBottom = Math.max(...lastState.captureSpecs.map(spec => getBottom(spec.visible)));
+    const previousSafeBottom = getBottom(lastState.safeArea);
+    const previousCoveredBottom = Math.min(previousVisibleBottom, previousSafeBottom) - (previousCaptureAreaTop as number);
+    const currentSafeAreaTop = (currentState.safeArea.top as number) - (currentCaptureAreaTop as number);
+
+    return Math.max(0, currentSafeAreaTop - previousCoveredBottom) as Length<"device", "y">;
+}
+
 function getEmptyCaptureSpecsErrorMessage(selectorsToCapture: string[]): string {
     return (
         `Failed to capture element screenshot for selectors: ${selectorsToCapture.join("; ")}.\n` +
@@ -416,44 +440,50 @@ export class ElementsScreenShooter {
                 >;
 
                 if (safeAreaShrink > 0) {
-                    debug("safe area shrank after scroll, rolling back", {
+                    // Roll back only if the new safe-area start would leave a gap after the previous chunk.
+                    const rollbackDistance = getSafeAreaRollbackDistance(lastState, currentState);
+
+                    debug("safe area shrank after scroll", {
                         previousSafeArea: lastState.safeArea,
                         newSafeArea: currentState.safeArea,
                         safeAreaShrink,
+                        rollbackDistance,
                         previousOffset: lastState.scrollOffset,
                         scrolledOffset: currentState.scrollOffset,
                     });
 
-                    await this._browserSideScreenshooter.call("scrollBy", [
-                        selectorsToCapture,
-                        -safeAreaShrink as Coord<"page", "device", "y">,
-                        opts.selectorToScroll,
-                    ]);
-                    const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
-                        selectorsToCapture,
-                        selectorsToIgnore,
-                        opts.selectorToScroll,
-                    ]);
+                    if (rollbackDistance > 0) {
+                        await this._browserSideScreenshooter.call("scrollBy", [
+                            selectorsToCapture,
+                            -rollbackDistance as Coord<"page", "device", "y">,
+                            opts.selectorToScroll,
+                        ]);
+                        const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
+                            selectorsToCapture,
+                            selectorsToIgnore,
+                            opts.selectorToScroll,
+                        ]);
 
-                    if (isBrowserSideError(afterRollbackState)) {
-                        throw new Error(
-                            `Failed to rollback and recompute areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}, error type '${afterRollbackState.errorCode}' and error message: ${
-                                afterRollbackState.message
-                            }`,
-                        );
+                        if (isBrowserSideError(afterRollbackState)) {
+                            throw new Error(
+                                `Failed to rollback and recompute areas while compositing image of selectors: ${selectorsToCapture.join(
+                                    ", ",
+                                )}, error type '${afterRollbackState.errorCode}' and error message: ${
+                                    afterRollbackState.message
+                                }`,
+                            );
+                        }
+
+                        if (!afterRollbackState.safeArea || !afterRollbackState.ignoreAreas) {
+                            throw new Error(
+                                `Failed to rollback and recompute full areas while compositing image of selectors: ${selectorsToCapture.join(
+                                    ", ",
+                                )}`,
+                            );
+                        }
+
+                        currentState = afterRollbackState;
                     }
-
-                    if (!afterRollbackState.safeArea || !afterRollbackState.ignoreAreas) {
-                        throw new Error(
-                            `Failed to rollback and recompute full areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}`,
-                        );
-                    }
-
-                    currentState = afterRollbackState;
                 }
 
                 const callbackStartTime = performance.now();
