@@ -262,7 +262,7 @@ export class CompositeImage {
                 hasRenderableDelta = true;
             }
 
-            if (!hasRenderableDelta) {
+            if (!hasRenderableDelta || maxDelta === 0) {
                 for (let i = 0; i < minLength; i++) {
                     const referenceSpec = referenceCaptureSpecs[i];
                     const chunkSpec = chunk.captureSpecs[i];

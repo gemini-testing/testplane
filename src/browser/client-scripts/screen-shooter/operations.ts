@@ -147,36 +147,12 @@ export function computeCaptureSpecs(
         return { full, visible, clip };
     }
 
-    const fixedDescendants: Element[] = [];
     const captureSpecs: CaptureSpec<"viewport", "css">[] = [];
 
     for (const { element, pseudoElement } of elements) {
         const captureSpec = getCaptureSpec(element, pseudoElement);
         if (captureSpec) {
             captureSpecs.push(captureSpec);
-        }
-
-        if (pseudoElement !== null) {
-            continue;
-        }
-
-        const descendants = element.querySelectorAll("*");
-        for (let index = 0; index < descendants.length; index++) {
-            const descendant = descendants[index];
-
-            if (fixedDescendants.indexOf(descendant) !== -1 || getComputedStyle(descendant).position !== "fixed") {
-                continue;
-            }
-
-            const descendantCaptureSpec = getCaptureSpec(descendant, null);
-            if (
-                descendantCaptureSpec &&
-                descendantCaptureSpec.visible.width > 0 &&
-                descendantCaptureSpec.visible.height > 0
-            ) {
-                captureSpecs.push(descendantCaptureSpec);
-                fixedDescendants.push(descendant);
-            }
         }
     }
 
