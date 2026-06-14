@@ -128,24 +128,57 @@ export function computeCaptureSpecs(
         }
     }
 
-    const captureSpecs = elements
-        .map(function ({ element, pseudoElement }) {
-            const full = pseudoElement
-                ? getPseudoElementCaptureRect(element, pseudoElement)
-                : getElementCaptureRect(element, logger);
-            if (!full) return null;
-            const clip = getClipRect(element, logger);
-            const visible = getIntersection(full, clip) ?? {
-                top: full.top,
-                left: full.left,
-                width: 0 as typeof full.width,
-                height: 0 as typeof full.height
-            };
-            return { full, visible, clip };
-        })
-        .filter(function (r): r is NonNullable<typeof r> {
-            return r !== null;
-        });
+    function getCaptureSpec(
+        element: Element,
+        pseudoElement: PseudoElementSelector | null
+    ): CaptureSpec<"viewport", "css"> | null {
+        const full = pseudoElement
+            ? getPseudoElementCaptureRect(element, pseudoElement)
+            : getElementCaptureRect(element, logger);
+        if (!full) return null;
+        const clip = getClipRect(element, logger);
+        const visible = getIntersection(full, clip) ?? {
+            top: full.top,
+            left: full.left,
+            width: 0 as typeof full.width,
+            height: 0 as typeof full.height
+        };
+
+        return { full, visible, clip };
+    }
+
+    const fixedDescendants: Element[] = [];
+    const captureSpecs: CaptureSpec<"viewport", "css">[] = [];
+
+    for (const { element, pseudoElement } of elements) {
+        const captureSpec = getCaptureSpec(element, pseudoElement);
+        if (captureSpec) {
+            captureSpecs.push(captureSpec);
+        }
+
+        if (pseudoElement !== null) {
+            continue;
+        }
+
+        const descendants = element.querySelectorAll("*");
+        for (let index = 0; index < descendants.length; index++) {
+            const descendant = descendants[index];
+
+            if (fixedDescendants.indexOf(descendant) !== -1 || getComputedStyle(descendant).position !== "fixed") {
+                continue;
+            }
+
+            const descendantCaptureSpec = getCaptureSpec(descendant, null);
+            if (
+                descendantCaptureSpec &&
+                descendantCaptureSpec.visible.width > 0 &&
+                descendantCaptureSpec.visible.height > 0
+            ) {
+                captureSpecs.push(descendantCaptureSpec);
+                fixedDescendants.push(descendant);
+            }
+        }
+    }
 
     logger?.("captureSpecs:", captureSpecs);
 
@@ -258,11 +291,16 @@ export function computeSafeArea(
     // 3. Detect interfering elements
     const interferences: { element: Element; rect: Rect<"viewport", "css"> }[] = [];
     const allElements = document.documentElement.querySelectorAll("*");
+    const singleCaptureElement = captureElements.length === 1 ? captureElements[0] : null;
 
     for (let idx = 0; idx < allElements.length; idx++) {
         const el = allElements[idx];
 
         if (scrollEl === el || el.contains(scrollEl)) {
+            continue;
+        }
+
+        if (singleCaptureElement && (el === singleCaptureElement || el.contains(singleCaptureElement))) {
             continue;
         }
 
@@ -470,8 +508,15 @@ export function scrollToCaptureAreaIfNeeded(
     const captureSpecsResult = computeCaptureSpecs(selectorsToCapture);
     if (!captureSpecsResult) return {};
 
+    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
+    const selectorsForScrollParentSearch = selectorsToCapture.map(
+        selector => parseCaptureSelector(selector).elementSelector
+    );
+    const initialScrollElem = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
+    const readableSelectorToScrollDescr = selectorToScroll ?? getReadableElementDescriptor(initialScrollElem);
+
     const captureArea = getCoveringRect(captureSpecsResult.map(s => s.full));
-    const safeArea = computeSafeArea(selectorsToCapture);
+    const safeArea = computeSafeArea(selectorsToCapture, initialScrollElem, logger);
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
     const captureAndViewportIntersection = getIntersection(captureArea, viewport);
@@ -511,12 +556,6 @@ export function scrollToCaptureAreaIfNeeded(
         return {};
     }
 
-    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-    const selectorsForScrollParentSearch = selectorsToCapture.map(
-        selector => parseCaptureSelector(selector).elementSelector
-    );
-    const initialScrollElem = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
-    const readableSelectorToScrollDescr = selectorToScroll ?? getReadableElementDescriptor(initialScrollElem);
     logger?.("scrollToCaptureAreaIfNeeded: scrolling is required", {
         scrollElement: readableSelectorToScrollDescr,
         requestedSelectorToScroll: selectorToScroll ?? null,

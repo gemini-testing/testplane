@@ -65,6 +65,15 @@ describe("assertView", () => {
         });
     });
 
+    it("should include a fixed footer child of a long capture element", async ({ browser }) => {
+        await browser.url("long-block-with-fixed-footer-child.html");
+
+        await browser.assertView("long-block-with-fixed-footer-child", "[data-testid=capture-target]", {
+            selectorToScroll: ".scrollable-container",
+            captureElementFromTop: true,
+        });
+    });
+
     it("should take a screenshot of a long block inside a scrollable container that is not in view at page load", async ({
         browser,
     }) => {

@@ -149,6 +149,24 @@ describe("computeSafeArea", () => {
         await browser.assertView("compute-safe-area-target-element-inside-fixed");
     });
 
+    it("should keep full panel safe area when capturing content inside absolute popup", async ({ browser }) => {
+        const { default: html } = await import("./fixtures/safe-areas/absolute-popup-capture-target.html?raw");
+        document.body.innerHTML = html;
+
+        const panel = document.querySelector(".ScrollPanel");
+        if (!panel) {
+            throw new Error("Failed to find .ScrollPanel");
+        }
+
+        const selectors = [".FloatingPopup .PopupContent"];
+        const safeArea = computeSafeArea(selectors, panel);
+        const captureSpecs = computeCaptureSpecs(selectors);
+
+        visualizeCaptureSpecs(captureSpecs);
+        visualizeSafeArea(safeArea.top, safeArea.height);
+        await browser.assertView("compute-safe-area-absolute-popup-capture-target");
+    });
+
     it("should handle sticky header with shadow", async ({ browser }) => {
         const { default: html } = await import("./fixtures/safe-areas/sticky-header-with-shadow.html?raw");
         document.body.innerHTML = html;
@@ -178,7 +196,9 @@ describe("computeSafeArea", () => {
         await browser.assertView("compute-safe-area-fixed-element-outside-of-viewport");
     });
 
-    it("should ignore obstruction if shrinking would exceed half of original safe area", async ({ browser }) => {
+    it("should ignore obstruction if shrinking would result in less than 30% of original safe area", async ({
+        browser,
+    }) => {
         const { default: html } = await import("./fixtures/safe-areas/huge-fixed-banner.html?raw");
         document.body.innerHTML = html;
 
