@@ -91,7 +91,10 @@ function getExpectedTotalMoveFromBaseline(
             continue;
         }
 
-        shifts.push((currentSpec.full.top as number) - (baselineSpec.full.top as number));
+        const shift = (currentSpec.full.top as number) - (baselineSpec.full.top as number);
+        if (shift !== 0) {
+            shifts.push(shift);
+        }
     }
 
     return getMedian(shifts) ?? 0;
