@@ -520,8 +520,9 @@ export function scrollToCaptureAreaIfNeeded(
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
     const captureAndViewportIntersection = getIntersection(captureArea, viewport);
+    const expectedVisibleHeight = Math.min(captureArea.height, safeArea.height);
     const isIntersectionWithSafeAreaTooSmall =
-        !captureAndSafeAreasIntersection || captureAndSafeAreasIntersection.height < captureArea.height / 2;
+        !captureAndSafeAreasIntersection || captureAndSafeAreasIntersection.height < expectedVisibleHeight / 2;
     const isCaptureAreaStartVisible = captureArea.top >= safeArea.top;
     logger?.("scrollToCaptureAreaIfNeeded: intersection check", {
         captureArea,
