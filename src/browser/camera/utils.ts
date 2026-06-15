@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs";
 import type { ScreenshotMode } from ".";
 import { Image } from "../../image";
-import { Coord, Rect, Size, getBottom } from "../isomorphic/geometry";
+import { Rect, Size, getBottom } from "../isomorphic/geometry";
 import { saveViewportImageWithDebugRects } from "../screen-shooter/composite-image/debug-utils";
 
 export interface CropMargins {
@@ -33,7 +33,7 @@ export const isFullPage = (
     }
 };
 
-export const normalizeCropMargins = (cropMargins: CropMargins | undefined): NormalizedCropMargins => {
+export const normalizeCropMargins = (cropMargins?: CropMargins): NormalizedCropMargins => {
     const result = {
         top: cropMargins?.top ?? 0,
         right: cropMargins?.right ?? 0,
@@ -55,16 +55,16 @@ export const normalizeCropMargins = (cropMargins: CropMargins | undefined): Norm
 
 export const cropMarginsToRect = (
     imageArea: Rect<"image", "device">,
-    cropMargins: CropMargins | undefined,
+    cropMargins?: CropMargins,
 ): Rect<"image", "device"> => {
     const margins = normalizeCropMargins(cropMargins);
 
     return {
-        top: margins.top as Coord<"image", "device", "y">,
-        left: margins.left as Coord<"image", "device", "x">,
-        width: ((imageArea.width as number) - margins.left - margins.right) as typeof imageArea.width,
-        height: ((imageArea.height as number) - margins.top - margins.bottom) as typeof imageArea.height,
-    };
+        top: margins.top,
+        left: margins.left,
+        width: imageArea.width - margins.left - margins.right,
+        height: imageArea.height - margins.top - margins.bottom,
+    } as Rect<"image", "device">;
 };
 
 export async function saveViewportImageForDebugIfNeeded(

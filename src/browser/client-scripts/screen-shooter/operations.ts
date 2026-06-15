@@ -301,7 +301,7 @@ export function computeSafeArea(
         if (getIntersection(fromBcrToRect(bcr), viewportRect) === null) continue;
 
         let likelyInterferes = false;
-        let skipZIndexCheck = false;
+        let shouldSkipZIndexCheck = false;
         let adjustedRect: Rect<"viewport", "css"> = domRectToViewportCss(bcr);
 
         const fixedPositionedParent = findFixedPositionedParent(el);
@@ -312,7 +312,7 @@ export function computeSafeArea(
         if (position === "fixed" || (fixedPositionedParent && !isInsideScrollContextFixedParent)) {
             likelyInterferes = true;
             // If the fixed element is inside a capture element, it's almost certainly interfering
-            skipZIndexCheck = captureElements.some(capEl => capEl.contains(el));
+            shouldSkipZIndexCheck = captureElements.some(capEl => capEl.contains(el));
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
             if (captureElements.some(capEl => capEl.contains(el))) continue;
@@ -332,7 +332,7 @@ export function computeSafeArea(
             logger?.("scrollParent:", getReadableElementDescriptor(scrollParent));
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
-            skipZIndexCheck =
+            shouldSkipZIndexCheck =
                 scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl));
 
             if (!isNaN(topValue)) {
@@ -361,7 +361,7 @@ export function computeSafeArea(
         if (!likelyInterferes) continue;
 
         const candChain = buildZChain(el);
-        const behindAll = !skipZIndexCheck && targetChains.every(tChain => isChainBehind(candChain, tChain));
+        const behindAll = !shouldSkipZIndexCheck && targetChains.every(tChain => isChainBehind(candChain, tChain));
 
         if (!behindAll) {
             const extRect = getExtRect(computedStyle, adjustedRect);
@@ -403,6 +403,7 @@ export function computeSafeArea(
             logger?.("decided to shrink bottom");
         }
 
+        // We don't want to shrink the safe area less than 30% of original height
         if (resultingHeight < origHeight * 0.3) {
             logger?.("decided to skip, because shrinking is too large");
             continue;

@@ -68,10 +68,12 @@ export class CompositeImage {
     private _compositeChunks: CompositeChunk[];
     private _debugTmpDir: string | null = null;
 
+    /** Creates a composite renderer instance while preserving subclass construction. */
     static create(...args: ConstructorParameters<typeof CompositeImage>): CompositeImage {
         return new this(...args);
     }
 
+    /** Initializes chunk storage and an optional debug-output directory. */
     constructor() {
         this._captureAreaSize = null;
         this._compositeChunks = [];
@@ -307,10 +309,12 @@ export class CompositeImage {
         return anchoredChunks;
     }
 
+    /** Checks whether a capture spec contributes visible pixels in the current chunk. */
     private _isRenderableCaptureSpec(spec: CaptureSpec<"viewport", "device">): boolean {
         return spec.visible.width > 0 && spec.visible.height > 0;
     }
 
+    /** Returns the bounding rect that covers all visible capture-spec parts for a chunk. */
     private _getVisibleCoveringRect(chunk: Pick<CompositeChunk, "captureSpecs">): Rect<"viewport", "device"> | null {
         const visibleRects = chunk.captureSpecs
             .filter(spec => this._isRenderableCaptureSpec(spec))
@@ -323,6 +327,7 @@ export class CompositeImage {
         return getCoveringRect(visibleRects);
     }
 
+    /** Builds a segment candidate, listing all possible options, e.g. strictly follow safe area, relax top/bottom edges, ignore safe area at all. */
     private _buildCandidate(chunk: AnchoredChunk): SegmentCandidate {
         const strict = this._getYBandForMode(chunk, "strict");
         const relaxTop = this._getYBandForMode(chunk, "relaxTop");
@@ -339,6 +344,7 @@ export class CompositeImage {
         };
     }
 
+    /** Computes a usable vertical band for a specific mode: e.g. what if we expand the top edge of the safe area? */
     private _getYBandForMode(
         chunk: AnchoredChunk,
         mode: "strict" | "relaxTop" | "relaxBottom" | "full",
@@ -379,6 +385,7 @@ export class CompositeImage {
         return resultingBand;
     }
 
+    /** Chooses the best vertical band per chunk, relaxing edges only where needed to avoid gaps. */
     private _chooseBestCandidates(candidates: SegmentCandidate[]): void {
         if (!candidates.length) {
             return;
@@ -451,6 +458,7 @@ export class CompositeImage {
         }
     }
 
+    /** Expansion for cases when capture elements are far apart and not fit one viewport. */
     private _expandCandidatesToFullArea(candidates: SegmentCandidate[]): void {
         if (candidates.some(candidate => this._doesVisibleAreaCoverFullArea(candidate.chunk))) {
             return;
@@ -489,6 +497,7 @@ export class CompositeImage {
         }
     }
 
+    /** Checks whether visible capture-spec pixels cover the complete requested capture area. */
     private _doesVisibleAreaCoverFullArea(chunk: AnchoredChunk): boolean {
         const visibleCoveringRect = this._getVisibleCoveringRect(chunk);
 
@@ -504,6 +513,8 @@ export class CompositeImage {
         );
     }
 
+    /** Given a list of best possible segments, builds a list of image pieces, inserting gaps when needed,
+     * ensuring resulting array is a vertically continuous sequence of pieces. */
     private _buildRenderPieces(candidates: SegmentCandidate[]): RenderPiece[] {
         const pieces: RenderPiece[] = [];
 
@@ -560,6 +571,7 @@ export class CompositeImage {
         return pieces;
     }
 
+    /** Fills an uncovered capture-area gap with usable chunk areas or black fallback slices. */
     private _buildGapPieces(
         candidates: SegmentCandidate[],
         gapTop: Coord<"capture", "device", "y">,
@@ -620,6 +632,7 @@ export class CompositeImage {
         return pieces;
     }
 
+    /** Returns the horizontal viewport band occupied by visible capture-spec pixels. */
     private _getChunkHorizontalArea(
         chunk: Pick<AnchoredChunk, "captureSpecs" | "imageSize">,
     ): XBand<"viewport", "device"> | null {
@@ -635,6 +648,7 @@ export class CompositeImage {
         return intersectXBands(viewportHorizontalArea, visibleCoveringRect);
     }
 
+    /** Computes a shared horizontal crop band when chunks cannot safely use the original width. */
     private _computeCommonHorizontalAreaIfNeeded(
         candidates: SegmentCandidate[],
         captureWidth: Length<"device", "x">,
@@ -664,6 +678,7 @@ export class CompositeImage {
         };
     }
 
+    /** Selects the horizontal band that should be used for a candidate chunk. */
     private _getCandidateHorizontalArea(candidate: SegmentCandidate): XBand<"viewport", "device"> | null {
         if (!candidate.expanded) {
             return this._getChunkHorizontalArea(candidate.chunk);
@@ -672,6 +687,7 @@ export class CompositeImage {
         return this._getExpandedChunkHorizontalArea(candidate.chunk) ?? this._getChunkHorizontalArea(candidate.chunk);
     }
 
+    /** Computes a horizontal band for expanded chunks using requested full rects and clip bounds. */
     private _getExpandedChunkHorizontalArea(chunk: AnchoredChunk): XBand<"viewport", "device"> | null {
         const viewportHorizontalArea = {
             left: 0 as Coord<"viewport", "device", "x">,
@@ -684,6 +700,7 @@ export class CompositeImage {
         return intersectXBands(fullHorizontalArea, clipCoveringRect);
     }
 
+    /** Crops one viewport chunk into a render piece after clearing ignored regions. */
     private async _createChunkPiece(
         chunk: AnchoredChunk,
         verticalArea: YBand<"viewport", "device">,
@@ -731,6 +748,7 @@ export class CompositeImage {
         return image;
     }
 
+    /** Creates a black fallback image piece for areas that no chunk can provide. */
     private async _createBlackPiece(height: Length<"device", "y">, width: Length<"device", "x">): Promise<Image> {
         return new Image({ width, height });
     }

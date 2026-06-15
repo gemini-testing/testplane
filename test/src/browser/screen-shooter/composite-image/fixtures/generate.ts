@@ -53,6 +53,7 @@ export interface ScenarioGenerationResult {
 }
 
 type RGBA = [number, number, number, number];
+const RGBA_CHANNELS = 4;
 
 const WHITE: RGBA = [255, 255, 255, 255];
 const GRAY: RGBA = [128, 128, 128, 255];
@@ -109,7 +110,7 @@ const setPixel = (
         return;
     }
 
-    const offset = (y * width + x) * 4;
+    const offset = (y * width + x) * RGBA_CHANNELS;
     data[offset] = color[0];
     data[offset + 1] = color[1];
     data[offset + 2] = color[2];
@@ -242,7 +243,7 @@ const crop = (
     const topNumber = top as number;
     const widthNumber = width as number;
     const heightNumber = height as number;
-    const target = Buffer.alloc(widthNumber * heightNumber * 4);
+    const target = Buffer.alloc(widthNumber * heightNumber * RGBA_CHANNELS);
 
     for (let y = 0; y < heightNumber; y++) {
         const sourceY = topNumber + y;
@@ -256,8 +257,8 @@ const crop = (
                 continue;
             }
 
-            const sourceOffset = (sourceY * sourceWidthNumber + sourceX) * 4;
-            const targetOffset = (y * widthNumber + x) * 4;
+            const sourceOffset = (sourceY * sourceWidthNumber + sourceX) * RGBA_CHANNELS;
+            const targetOffset = (y * widthNumber + x) * RGBA_CHANNELS;
             target[targetOffset] = source[sourceOffset];
             target[targetOffset + 1] = source[sourceOffset + 1];
             target[targetOffset + 2] = source[sourceOffset + 2];
@@ -350,7 +351,7 @@ export const createScenario = async (
     const chunksDir = path.join(scenarioDir, "chunks");
     await fs.promises.mkdir(chunksDir, { recursive: true });
 
-    const page = Buffer.alloc((input.pageSize.width as number) * (input.pageSize.height as number) * 4);
+    const page = Buffer.alloc((input.pageSize.width as number) * (input.pageSize.height as number) * RGBA_CHANNELS);
     fillRect(
         page,
         input.pageSize.width as Length<"device", "x">,
@@ -855,7 +856,7 @@ if (process.argv.includes("generate")) {
             };
 
             for (let chunkIndex = 0; chunkIndex < weirdChunkDefs.length; chunkIndex++) {
-                const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * 4);
+                const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * RGBA_CHANNELS);
                 fillRect(
                     chunkRgba,
                     viewportWidth,
@@ -965,7 +966,7 @@ if (process.argv.includes("generate")) {
                 height: 20 as Length<"device", "y">,
             };
 
-            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * 4);
+            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * RGBA_CHANNELS);
             fillRect(
                 page,
                 pageWidth,
@@ -1088,7 +1089,7 @@ if (process.argv.includes("generate")) {
                 height: 70 as Length<"device", "y">,
             };
 
-            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * 4);
+            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * RGBA_CHANNELS);
             fillRect(
                 page,
                 pageWidth,

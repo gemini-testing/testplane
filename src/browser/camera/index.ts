@@ -92,7 +92,7 @@ export class Camera {
         if (croppedImageArea === null) {
             throw new Error(
                 `Invalid cropMargins option: resulting screenshot crop area is empty. ` +
-                    `imageSize: ${prettySize(imageArea)}, cropMargins: ${JSON.stringify(opts?.cropMargins ?? {})}`,
+                    `imageSize: ${prettySize(imageArea)}, cropMargins: ${JSON.stringify(opts?.cropMargins)}`,
             );
         }
 

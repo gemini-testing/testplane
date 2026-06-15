@@ -35,7 +35,7 @@ class CaptureAreaSizeChangeError extends Error {
 }
 
 const debug = makeVerboseScreenshotsDebug("testplane:screenshots:elements-screen-shooter");
-const SCROLL_OVERLAP = 1;
+const SCROLL_OVERLAP_PX = 1;
 const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
 
 interface ScreenShooterOpts extends AssertViewOpts {
@@ -136,7 +136,7 @@ function getScrollDelta(
         return remainingCaptureAreaHeight;
     }
 
-    return (safeAreaHeight > SCROLL_OVERLAP ? safeAreaHeight - SCROLL_OVERLAP : safeAreaHeight) as Length<
+    return (safeAreaHeight > SCROLL_OVERLAP_PX ? safeAreaHeight - SCROLL_OVERLAP_PX : safeAreaHeight) as Length<
         "device",
         "y"
     >;

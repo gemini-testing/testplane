@@ -71,9 +71,8 @@ export class FullPageScreenShooter {
         if (!opts.disableHover) {
             opts.disableHover = DisableHoverMode.WhenScrollingNeeded;
         }
-        if (opts.disableAnimation === undefined) {
-            opts.disableAnimation = true;
-        }
+
+        opts.disableAnimation ??= true;
 
         try {
             return await this._captureImpl(opts);
@@ -209,16 +208,16 @@ export class FullPageScreenShooter {
     }
 
     private _isElementPositionsProbeEqual(
-        leftProbe: ElementPositionsProbe<"device">[],
-        rightProbe: ElementPositionsProbe<"device">[],
+        leftProbes: ElementPositionsProbe<"device">[],
+        rightProbes: ElementPositionsProbe<"device">[],
     ): boolean {
-        if (leftProbe.length !== rightProbe.length) {
+        if (leftProbes.length !== rightProbes.length) {
             return false;
         }
 
-        for (let i = 0; i < leftProbe.length; i++) {
-            const left = leftProbe[i];
-            const right = rightProbe[i];
+        for (let i = 0; i < leftProbes.length; i++) {
+            const left = leftProbes[i];
+            const right = rightProbes[i];
 
             if (left === null || right === null) {
                 if (left !== right) {
