@@ -262,10 +262,24 @@ export class CompositeImage {
                 hasRenderableDelta = true;
             }
 
-            if (!hasRenderableDelta || maxDelta === 0) {
+            if (!hasRenderableDelta) {
                 for (let i = 0; i < minLength; i++) {
                     const referenceSpec = referenceCaptureSpecs[i];
                     const chunkSpec = chunk.captureSpecs[i];
+
+                    const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
+                    if (delta > maxDelta) {
+                        maxDelta = delta;
+                    }
+                }
+            } else if (maxDelta === 0) {
+                for (let i = 0; i < minLength; i++) {
+                    const referenceSpec = referenceCaptureSpecs[i];
+                    const chunkSpec = chunk.captureSpecs[i];
+
+                    if (!this._isRenderableCaptureSpec(chunkSpec)) {
+                        continue;
+                    }
 
                     const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
                     if (delta > maxDelta) {

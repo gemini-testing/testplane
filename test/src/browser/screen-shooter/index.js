@@ -398,6 +398,7 @@ describe("ElementsScreenShooter", () => {
                 viewportSize: page.viewportSize,
                 viewportOffset: page.viewportOffset,
                 screenshotDelay: 500,
+                cropMargins: undefined,
             });
             assert.calledOnceWithExactly(
                 compositeImage.registerViewportImageAtOffset,
@@ -450,7 +451,7 @@ describe("ElementsScreenShooter", () => {
             const secondState = createCaptureState({
                 captureSpecs: page.captureSpecs,
                 safeArea: band(0, 150),
-                scrollOffset: 100,
+                scrollOffset: 50,
             });
 
             browserSideScreenshooter.call
@@ -471,7 +472,7 @@ describe("ElementsScreenShooter", () => {
             assert.calledTwice(compositeImage.registerViewportImageAtOffset);
             assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
                 "scrollBy",
-                [[".element"], 100, undefined, []],
+                [[".element"], 50, undefined, []],
             ]);
             assert.deepEqual(browserSideScreenshooter.call.getCall(4).args, [
                 "scrollTo",
