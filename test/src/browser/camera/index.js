@@ -70,7 +70,7 @@ describe("browser/camera", () => {
             describe("cropMargins", () => {
                 it("should crop raw screenshot using user margins", async () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
-                    image.getSize.resolves({ width: 20, height: 15 });
+                    image.getSize.returns({ width: 20, height: 15 });
 
                     await camera.captureViewportImage({
                         cropMargins: { top: 1, right: 8, bottom: 2, left: 4 },
@@ -86,7 +86,7 @@ describe("browser/camera", () => {
 
                 it("should merge calibration and user margins using max value for each side", async () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
-                    image.getSize.resolves({ width: 20, height: 20 });
+                    image.getSize.returns({ width: 20, height: 20 });
 
                     camera.calibrate({ top: 2, left: 4, width: 12, height: 16 }, { width: 20, height: 20 });
                     await camera.captureViewportImage({
@@ -103,7 +103,7 @@ describe("browser/camera", () => {
 
                 it("should throw if margins produce empty crop area", async () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
-                    image.getSize.resolves({ width: 20, height: 20 });
+                    image.getSize.returns({ width: 20, height: 20 });
 
                     await assert.isRejected(
                         camera.captureViewportImage({
