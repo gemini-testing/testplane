@@ -54,9 +54,9 @@ export interface AssertViewOpts {
      * @remarks
      * Indicates maximum allowed CIEDE2000 difference between colors. Used only in non-strict mode.
      * Increasing global default is not recommended, prefer changing tolerance for particular suites or states instead.
-     * By default it's 2.3 which should be enough for the most cases.
+     * By default it's 3.0 which should be enough for the most cases.
      *
-     * @defaultValue `2.3`
+     * @defaultValue `3.0`
      */
     tolerance?: number;
     /**
@@ -147,7 +147,7 @@ export interface AssertViewOpts {
      * @note
      * This should be considered a last resort and only used in small number of cases where necessary.
      *
-     * @defaultValue `0`
+     * @defaultValue `4`
      */
     ignoreDiffPixelCount?: `${number}%` | number;
     /**

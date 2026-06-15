@@ -116,7 +116,7 @@ declare global {
              *     await this.browser.url('some/url');
              *     await this.browser.assertView('plain', '.button', {
              *         ignoreElements: ['.link'],
-             *         tolerance: 2.3,
+             *         tolerance: 3.0,
              *         antialiasingTolerance: 4,
              *         allowViewportOverflow: true,
              *         captureElementFromTop: true,
@@ -207,7 +207,7 @@ declare global {
              *     const button = await this.browser.$('.button');
              *     await button.assertView('plain', {
              *         ignoreElements: ['.link'],
-             *         tolerance: 2.3,
+             *         tolerance: 3.0,
              *         antialiasingTolerance: 4,
              *         allowViewportOverflow: true,
              *         captureElementFromTop: true,

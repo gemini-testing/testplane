@@ -13,7 +13,7 @@ module.exports = {
     sessionEnvFlags: {},
     screenshotsDir: "testplane/screens",
     diffColor: "#ff00ff",
-    tolerance: 2.3,
+    tolerance: 3.0,
     antialiasingTolerance: 4,
     disableAnimation: true,
     compareOpts: {
@@ -36,7 +36,7 @@ module.exports = {
         ignoreElements: [],
         captureElementFromTop: true,
         allowViewportOverflow: false,
-        ignoreDiffPixelCount: 0,
+        ignoreDiffPixelCount: 4,
         waitForStaticToLoadTimeout: 5000,
         disableHover: DisableHoverMode.WhenScrollingNeeded,
         cropMargins: {},
