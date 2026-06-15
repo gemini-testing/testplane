@@ -69,7 +69,7 @@ export interface WorkerInitializePayload {
     customCommands: { name: string; elementScope: boolean }[];
     // TODO: use BrowserConfig type after migrate to esm
     config: {
-        automationProtocol: "webdriver" | "devtools";
+        automationProtocol: "webdriver";
         urlHttpTimeout: number | null;
         httpTimeout: number;
     };
