@@ -39,6 +39,7 @@ module.exports = {
         ignoreDiffPixelCount: 0,
         waitForStaticToLoadTimeout: 5000,
         disableHover: DisableHoverMode.WhenScrollingNeeded,
+        cropMargins: {},
     },
     openAndWaitOpts: {
         waitNetworkIdle: true,

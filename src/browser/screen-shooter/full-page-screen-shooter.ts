@@ -4,7 +4,7 @@ import { Image } from "../../image";
 import { Coord, Rect, Size, Point } from "../isomorphic/geometry";
 import { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
-import { Camera } from "../camera";
+import { Camera, type CropMargins } from "../camera";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
 import type { ElementPositionsProbe } from "../client-scripts/screen-shooter/types";
 import { ClientBridge } from "../client-bridge";
@@ -41,6 +41,7 @@ interface FullPageCaptureOpts {
     screenshotDelay?: number;
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
+    cropMargins?: CropMargins;
 }
 
 export class FullPageScreenShooter {
@@ -131,6 +132,7 @@ export class FullPageScreenShooter {
             viewportSize,
             viewportOffset,
             screenshotDelay: opts.screenshotDelay,
+            cropMargins: opts.cropMargins,
         });
 
         const compositeImage = CompositeImage.create();
@@ -186,6 +188,7 @@ export class FullPageScreenShooter {
                 viewportSize,
                 viewportOffset,
                 screenshotDelay: opts.screenshotDelay,
+                cropMargins: opts.cropMargins,
             });
 
             await compositeImage.registerViewportImageAtOffset(

@@ -2,7 +2,7 @@ import makeDebug from "debug";
 import { Image } from "../../image";
 import type { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
-import { Camera } from "../camera";
+import { Camera, type CropMargins } from "../camera";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
 import { ClientBridge } from "../client-bridge";
 import { isBrowserSideError } from "../isomorphic/types";
@@ -37,6 +37,7 @@ interface ViewportCaptureOpts {
     screenshotDelay?: number;
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
+    cropMargins?: CropMargins;
 }
 
 interface ViewportCaptureResult {
@@ -122,6 +123,7 @@ export class ViewportScreenShooter {
             viewportSize,
             viewportOffset,
             screenshotDelay: opts.screenshotDelay,
+            cropMargins: opts.cropMargins,
         });
 
         return {

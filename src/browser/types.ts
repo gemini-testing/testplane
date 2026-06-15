@@ -122,6 +122,7 @@ declare global {
              *         captureElementFromTop: true,
              *         compositeImage: true,
              *         screenshotDelay: 600,
+             *         cropMargins: { top: 2, right: 4, bottom: 2, left: 4 },
              *         selectorToScroll: '.modal'
              *     });
              *});
@@ -131,7 +132,7 @@ declare global {
              * @param selectors DOM-node selector that you need to capture
              * @param opts additional options, currently available:
              * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
-             * "compositeImage", "screenshotDelay", "selectorToScroll"
+             * "compositeImage", "screenshotDelay", "cropMargins", "selectorToScroll"
              */
             assertView: AssertViewCommand;
 
@@ -212,6 +213,7 @@ declare global {
              *         captureElementFromTop: true,
              *         compositeImage: true,
              *         screenshotDelay: 600,
+             *         cropMargins: { top: 2, right: 4, bottom: 2, left: 4 },
              *         selectorToScroll: '.modal'
              *     });
              *});
@@ -220,7 +222,7 @@ declare global {
              * @param state state name, should be unique within one test
              * @param opts additional options, currently available:
              * "ignoreElements", "tolerance", "antialiasingTolerance", "allowViewportOverflow", "captureElementFromTop",
-             * "compositeImage", "screenshotDelay", "selectorToScroll"
+             * "compositeImage", "screenshotDelay", "cropMargins", "selectorToScroll"
              */
             assertView: AssertViewElementCommand;
 

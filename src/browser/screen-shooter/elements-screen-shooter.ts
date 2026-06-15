@@ -635,6 +635,7 @@ export class ElementsScreenShooter {
                         viewportSize: page.viewportSize,
                         viewportOffset: currentState.viewportOffset,
                         screenshotDelay: opts.screenshotDelay,
+                        cropMargins: opts.cropMargins,
                     });
 
                     timeSpentOnCapture += performance.now() - captureStartTime;

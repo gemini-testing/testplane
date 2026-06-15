@@ -1,9 +1,18 @@
 import path from "path";
 import fs from "fs";
-import { ScreenshotMode } from ".";
+import type { ScreenshotMode } from ".";
 import { Image } from "../../image";
-import { Rect, Size, getBottom } from "../isomorphic/geometry";
+import { Coord, Rect, Size, getBottom } from "../isomorphic/geometry";
 import { saveViewportImageWithDebugRects } from "../screen-shooter/composite-image/debug-utils";
+
+export interface CropMargins {
+    top?: number;
+    right?: number;
+    bottom?: number;
+    left?: number;
+}
+
+type NormalizedCropMargins = Required<CropMargins>;
 
 export const isFullPage = (
     imageSize: Rect<"image", "device">,
@@ -22,6 +31,40 @@ export const isFullPage = (
         case "auto":
             return imageSize.height > viewportSize.height + systemUiHeight;
     }
+};
+
+export const normalizeCropMargins = (cropMargins: CropMargins | undefined): NormalizedCropMargins => {
+    const result = {
+        top: cropMargins?.top ?? 0,
+        right: cropMargins?.right ?? 0,
+        bottom: cropMargins?.bottom ?? 0,
+        left: cropMargins?.left ?? 0,
+    };
+
+    for (const side of ["top", "right", "bottom", "left"] as const) {
+        const value = result[side];
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || Math.floor(value) !== value) {
+            throw new Error(
+                `Invalid cropMargins.${side} option: expected a non-negative integer, got ${String(value)}`,
+            );
+        }
+    }
+
+    return result;
+};
+
+export const cropMarginsToRect = (
+    imageArea: Rect<"image", "device">,
+    cropMargins: CropMargins | undefined,
+): Rect<"image", "device"> => {
+    const margins = normalizeCropMargins(cropMargins);
+
+    return {
+        top: margins.top as Coord<"image", "device", "y">,
+        left: margins.left as Coord<"image", "device", "x">,
+        width: ((imageArea.width as number) - margins.left - margins.right) as typeof imageArea.width,
+        height: ((imageArea.height as number) - margins.top - margins.bottom) as typeof imageArea.height,
+    };
 };
 
 export async function saveViewportImageForDebugIfNeeded(

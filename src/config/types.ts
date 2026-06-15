@@ -5,6 +5,7 @@ import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
+import type { CropMargins } from "../browser/camera";
 import { DisableHoverMode } from "../browser/isomorphic/types";
 
 export interface CompareOptsConfig {
@@ -88,6 +89,14 @@ export interface AssertViewOpts {
      * @defaultValue `0`
      */
     screenshotDelay?: number;
+    /**
+     * Additional raw screenshot margins to crop, in physical pixels.
+     *
+     * Values are applied to every raw browser screenshot and merged with automatic calibration margins
+     * by taking the larger margin for each side.
+     * Useful to crop off the scrollbar, or the browser UI on exotic mobile devices.
+     */
+    cropMargins?: CropMargins;
     /**
      * Ability to set DOM-node selector which should be scroll when the captured element does not completely fit on the screen.
      *
