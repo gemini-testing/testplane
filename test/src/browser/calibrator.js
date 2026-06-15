@@ -20,8 +20,11 @@ describe("calibrator", () => {
     const setScreenshot = imageName => {
         const imgPath = path.join(__dirname, "..", "..", "fixtures", imageName);
         const imgData = fs.readFileSync(imgPath);
+        const image = new Image(imgData);
 
-        browser.captureViewportImage.returns(Promise.resolve(new Image(imgData)));
+        browser.captureViewportImage.returns(Promise.resolve(image));
+
+        return image;
     };
 
     beforeEach(() => {
@@ -87,5 +90,58 @@ describe("calibrator", () => {
         setScreenshot("calibrate-broken.png");
 
         return assert.isRejected(calibrator.calibrate(browser), CoreError);
+    });
+
+    describe("when image has iCCP chunk", () => {
+        it("should use the color at the center of the image as the marker search color", async () => {
+            const image = setScreenshot("calibrate.png");
+            // Color profile shifts the rendered marker color away from the hardcoded green
+            const markerColor = { R: 50, G: 100, B: 150 };
+            const markerLeft = 4;
+            const markerTop = 4;
+            const markerRight = 6;
+            const markerBottom = 6;
+
+            image._hasICCPChunk = true;
+
+            sinon.stub(image, "getSize").returns({ width: 10, height: 10 });
+            sinon.stub(image, "getRGB").callsFake(async (x, y) => {
+                const insideMarker = x >= markerLeft && x <= markerRight && y >= markerTop && y <= markerBottom;
+
+                return insideMarker ? markerColor : { R: 0, G: 0, B: 0 };
+            });
+
+            const result = await calibrator.calibrate(browser);
+
+            // The center pixel (5, 5) lies inside the marker, so its (shifted) color is used to find the marker
+            assert.calledWith(image.getRGB, 5, 5);
+            assert.equal(result.viewportArea.top, markerTop);
+            assert.equal(result.viewportArea.left, markerLeft);
+        });
+    });
+
+    describe("when image does not have iCCP chunk", () => {
+        it("should use the hardcoded green color as the marker search color", async () => {
+            const image = setScreenshot("calibrate.png");
+            const greenColor = { R: 148, G: 250, B: 0 };
+            const markerLeft = 3;
+            const markerTop = 5;
+            const markerRight = 6;
+            const markerBottom = 6;
+
+            image._hasICCPChunk = false;
+
+            sinon.stub(image, "getSize").returns({ width: 10, height: 10 });
+            sinon.stub(image, "getRGB").callsFake(async (x, y) => {
+                const insideMarker = x >= markerLeft && x <= markerRight && y >= markerTop && y <= markerBottom;
+
+                return insideMarker ? greenColor : { R: 0, G: 0, B: 0 };
+            });
+
+            const result = await calibrator.calibrate(browser);
+
+            assert.equal(result.viewportArea.top, markerTop);
+            assert.equal(result.viewportArea.left, markerLeft);
+        });
     });
 });

@@ -151,33 +151,33 @@ describe("Image", () => {
     });
 
     describe("getSize", () => {
-        it("should return size of single image", async () => {
+        it("should return size of single image", () => {
             const buffer = createMockPngBuffer(100, 50);
             const image = new Image(buffer);
 
-            const size = await image.getSize();
+            const size = image.getSize();
 
             assert.deepEqual(size, { width: 100, height: 50 });
         });
 
-        it("should return combined height for composed images", async () => {
+        it("should return combined height for composed images", () => {
             const buffer = createMockPngBuffer(100, 50);
             const image = new Image(buffer);
             const attachedImage1 = new Image(createMockPngBuffer(100, 30));
             const attachedImage2 = new Image(createMockPngBuffer(100, 20));
             image._composeImages = [attachedImage1, attachedImage2];
 
-            const size = await image.getSize();
+            const size = image.getSize();
 
             assert.deepEqual(size, { width: 100, height: 100 }); // 50 + 30 + 20
         });
 
-        it("should ensure images have same width before calculating size", async () => {
+        it("should ensure images have same width before calculating size", () => {
             const buffer = createMockPngBuffer(100, 50);
             const image = new Image(buffer);
             sandbox.spy(image, "_ensureImagesHaveSameWidth");
 
-            await image.getSize();
+            image.getSize();
 
             assert.calledOnce(image._ensureImagesHaveSameWidth);
         });

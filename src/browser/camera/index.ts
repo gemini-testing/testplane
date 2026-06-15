@@ -68,7 +68,7 @@ export class Camera {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
-        const { width, height } = (await image.getSize()) as Size<"device">;
+        const { width, height } = image.getSize() as Size<"device">;
         const imageArea: Rect<"image", "device"> = {
             left: 0 as Coord<"image", "device", "x">,
             top: 0 as Coord<"image", "device", "y">,

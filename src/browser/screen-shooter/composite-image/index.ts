@@ -106,7 +106,7 @@ export class CompositeImage {
             throw new Error("Capture area size cannot be zero or negative. Got: " + prettySize(this._captureAreaSize));
         }
 
-        const imageSize = (await viewportImage.getSize()) as Size<"device">;
+        const imageSize = viewportImage.getSize() as Size<"device">;
 
         debug(
             "Captured the next chunk.\n  captureSpecs: %O\n  visibleCoveringRect: %O\n  ignoreBoundingRects: %O\n  viewportImageSize: %O",
