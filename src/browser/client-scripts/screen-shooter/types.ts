@@ -3,6 +3,8 @@ import { BrowserSideError, Coord, DisableHoverMode, Point, Rect, Size, Space, Un
 export interface CaptureSpec<S extends Space, U extends Unit> {
     /** Full element rect, unconstrained by ancestor overflow clipping */
     full: Rect<S, U>;
+    /** Clip rect used to compute visible portion */
+    clip: Rect<S, U>;
     /** Visible portion: full rect intersected with all ancestor overflow clip boundaries */
     visible: Rect<S, U>;
 }
@@ -81,14 +83,14 @@ export interface ScrollToCaptureSpecResult {
     readableSelectorToScrollDescr?: string;
 }
 
-export type ElementPositionsProbe<U extends Unit> = Array<Rect<"viewport", U> | null>;
+export type ElementPositionsProbe<U extends Unit> = (Rect<"viewport", U> & { elementDescr?: string }) | null;
 
 export interface PrepareFullPageScreenshotSuccess {
     documentSize: Size<"device">;
     viewportSize: Size<"device">;
     viewportOffset: Point<"page", "device">;
     safeArea: YBand<"viewport", "device">;
-    elementPositionsProbe: ElementPositionsProbe<"device">;
+    elementPositionsProbe: ElementPositionsProbe<"device">[];
     pixelRatio: number;
     pointerEventsDisabled?: boolean;
 }
@@ -97,7 +99,7 @@ export type PrepareFullPageScreenshotResult = PrepareFullPageScreenshotSuccess |
 
 export interface ScrollFullPageSuccess {
     viewportOffset: Point<"page", "device">;
-    elementPositionsProbe: ElementPositionsProbe<"device">;
+    elementPositionsProbe: ElementPositionsProbe<"device">[];
 }
 
 export interface PrepareViewportScreenshotSuccess {

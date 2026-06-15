@@ -17,6 +17,7 @@ const fixturesData = JSON.parse(
 
 type CaptureSpecFixture = {
     full: Rect<"viewport", "device">;
+    clip: Rect<"viewport", "device">;
     visible: Rect<"viewport", "device">;
 };
 
@@ -37,6 +38,7 @@ describe("CompositeImage", () => {
                     [
                         {
                             full: { left: 0, top: 0, width: 0, height: 100 } as Rect<"viewport", "device">,
+                            clip: { left: 0, top: 0, width: 0, height: 100 } as Rect<"viewport", "device">,
                             visible: { left: 0, top: 0, width: 0, height: 100 } as Rect<"viewport", "device">,
                         },
                     ],
@@ -85,6 +87,7 @@ describe("CompositeImage", () => {
                 [
                     {
                         full: { left: 0, top: 0, width: 100, height: 100 } as Rect<"viewport", "device">,
+                        clip: { left: 0, top: 0, width: 100, height: 100 } as Rect<"viewport", "device">,
                         visible: { left: 0, top: 0, width: 100, height: 100 } as Rect<"viewport", "device">,
                     },
                 ],

@@ -39,6 +39,7 @@ interface GeneratedChunk {
     safeArea: YBand<"viewport", "device">;
     captureSpecs: Array<{
         full: Rect<"viewport", "device">;
+        clip: Rect<"viewport", "device">;
         visible: Rect<"viewport", "device">;
     }>;
     ignoreBoundingRects: Rect<"viewport", "device">[];
@@ -52,6 +53,7 @@ export interface ScenarioGenerationResult {
 }
 
 type RGBA = [number, number, number, number];
+const RGBA_CHANNELS = 4;
 
 const WHITE: RGBA = [255, 255, 255, 255];
 const GRAY: RGBA = [128, 128, 128, 255];
@@ -108,7 +110,7 @@ const setPixel = (
         return;
     }
 
-    const offset = (y * width + x) * 4;
+    const offset = (y * width + x) * RGBA_CHANNELS;
     data[offset] = color[0];
     data[offset + 1] = color[1];
     data[offset + 2] = color[2];
@@ -241,7 +243,7 @@ const crop = (
     const topNumber = top as number;
     const widthNumber = width as number;
     const heightNumber = height as number;
-    const target = Buffer.alloc(widthNumber * heightNumber * 4);
+    const target = Buffer.alloc(widthNumber * heightNumber * RGBA_CHANNELS);
 
     for (let y = 0; y < heightNumber; y++) {
         const sourceY = topNumber + y;
@@ -255,8 +257,8 @@ const crop = (
                 continue;
             }
 
-            const sourceOffset = (sourceY * sourceWidthNumber + sourceX) * 4;
-            const targetOffset = (y * widthNumber + x) * 4;
+            const sourceOffset = (sourceY * sourceWidthNumber + sourceX) * RGBA_CHANNELS;
+            const targetOffset = (y * widthNumber + x) * RGBA_CHANNELS;
             target[targetOffset] = source[sourceOffset];
             target[targetOffset + 1] = source[sourceOffset + 1];
             target[targetOffset + 2] = source[sourceOffset + 2];
@@ -349,7 +351,7 @@ export const createScenario = async (
     const chunksDir = path.join(scenarioDir, "chunks");
     await fs.promises.mkdir(chunksDir, { recursive: true });
 
-    const page = Buffer.alloc((input.pageSize.width as number) * (input.pageSize.height as number) * 4);
+    const page = Buffer.alloc((input.pageSize.width as number) * (input.pageSize.height as number) * RGBA_CHANNELS);
     fillRect(
         page,
         input.pageSize.width as Length<"device", "x">,
@@ -410,6 +412,12 @@ export const createScenario = async (
         const chunkPng = convertRgbaToPng(chunkRgba, chunkWidth as number, chunkHeight as number);
         const chunkImage = Image.create(chunkPng);
         const safeArea = computeSafeArea(chunkHeight, input.unsafeAreas);
+        const viewportClipRect = toViewportRect({
+            left: 0,
+            top: 0,
+            width: chunkWidth as number,
+            height: chunkHeight as number,
+        });
         const captureBoundingRect = toViewportRect({
             left: (input.captureArea.left as number) - (chunkOffsetLeft as number),
             top: (input.captureArea.top as number) - (chunkOffsetTop as number),
@@ -431,14 +439,14 @@ export const createScenario = async (
         await compositeImage.registerViewportImageAtOffset(
             chunkImage,
             safeArea,
-            [{ full: captureBoundingRect, visible: captureBoundingRect }],
+            [{ full: captureBoundingRect, clip: viewportClipRect, visible: captureBoundingRect }],
             ignoreBoundingRects,
         );
 
         chunkResults.push({
             file: path.relative(rootDir, chunkPath),
             safeArea,
-            captureSpecs: [{ full: captureBoundingRect, visible: captureBoundingRect }],
+            captureSpecs: [{ full: captureBoundingRect, clip: viewportClipRect, visible: captureBoundingRect }],
             ignoreBoundingRects,
         });
     }
@@ -848,7 +856,7 @@ if (process.argv.includes("generate")) {
             };
 
             for (let chunkIndex = 0; chunkIndex < weirdChunkDefs.length; chunkIndex++) {
-                const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * 4);
+                const chunkRgba = Buffer.alloc((viewportWidth as number) * (viewportHeight as number) * RGBA_CHANNELS);
                 fillRect(
                     chunkRgba,
                     viewportWidth,
@@ -865,8 +873,15 @@ if (process.argv.includes("generate")) {
                 const movingTop = weirdChunkDefs[chunkIndex];
                 const movingVisibleHeight = movingTop >= 0 ? 420 : 0;
                 const chunkPath = path.posix.join(chunksDir, `${chunkIndex}.png`);
+                const viewportClipRect = toViewportRect({
+                    left: 0,
+                    top: 0,
+                    width: viewportWidth as number,
+                    height: viewportHeight as number,
+                });
                 const movingSpec = {
                     full: toViewportRect({ left: 200, top: movingTop, width: 500, height: 420 }),
+                    clip: viewportClipRect,
                     visible: toViewportRect({
                         left: 200,
                         top: movingTop,
@@ -874,7 +889,7 @@ if (process.argv.includes("generate")) {
                         height: movingVisibleHeight,
                     }),
                 };
-                const captureSpecs = [movingSpec, { full: fixedRect, visible: fixedRect }];
+                const captureSpecs = [movingSpec, { full: fixedRect, clip: viewportClipRect, visible: fixedRect }];
 
                 for (const spec of captureSpecs) {
                     drawVisibleSpec(chunkRgba, spec.visible);
@@ -914,6 +929,291 @@ if (process.argv.includes("generate")) {
 
             const fullPagePath = path.posix.join(scenarioDir, "full-page.png");
             await saveRgbaAsPng(fullPagePath, expectedRgba, 500 as Length<"device", "x">, 760 as Length<"device", "y">);
+
+            return {
+                id,
+                fullPage: path.relative(__dirname, fullPagePath),
+                expected: path.relative(__dirname, expectedPath),
+                chunks: chunkResults,
+            };
+        })(),
+        (async (): Promise<ScenarioGenerationResult> => {
+            const id = "single-chunk-expands-tail-to-full-area";
+            const scenarioDir = path.join(__dirname, id);
+            const chunksDir = path.join(scenarioDir, "chunks");
+            await fs.promises.mkdir(chunksDir, { recursive: true });
+
+            const pageWidth = 220 as Length<"device", "x">;
+            const pageHeight = 420 as Length<"device", "y">;
+            const viewportHeight = 300 as Length<"device", "y">;
+            const safeArea = toViewportYBand(20, 240);
+            const clip = toViewportRect({
+                left: 0,
+                top: 0,
+                width: pageWidth as number,
+                height: viewportHeight as number,
+            });
+            const visibleBox = {
+                left: toPageX(20),
+                top: toPageY(80),
+                width: 80 as Length<"device", "x">,
+                height: 20 as Length<"device", "y">,
+            };
+            const offscreenBox = {
+                left: toPageX(100),
+                top: toPageY(340),
+                width: 80 as Length<"device", "x">,
+                height: 20 as Length<"device", "y">,
+            };
+
+            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * RGBA_CHANNELS);
+            fillRect(
+                page,
+                pageWidth,
+                pageHeight,
+                {
+                    left: toPageX(0),
+                    top: toPageY(0),
+                    width: pageWidth,
+                    height: pageHeight,
+                },
+                WHITE,
+            );
+
+            for (let y = 0; y < (pageHeight as number); y += 30) {
+                drawLine(
+                    page,
+                    pageWidth,
+                    pageHeight,
+                    toPageX(0),
+                    toPageY(y),
+                    toPageX((pageWidth as number) - 1),
+                    toPageY(y),
+                    ORANGE,
+                );
+            }
+
+            fillRect(page, pageWidth, pageHeight, visibleBox, GRAY);
+            drawRectangle(page, pageWidth, pageHeight, visibleBox, BLUE);
+            fillRect(page, pageWidth, pageHeight, offscreenBox, GRAY);
+            drawRectangle(page, pageWidth, pageHeight, offscreenBox, BLUE);
+
+            const chunkRgba = crop(page, pageWidth, pageHeight, toPageX(0), toPageY(0), pageWidth, viewportHeight);
+            const chunkPath = path.posix.join(chunksDir, "0.png");
+            await saveRgbaAsPng(chunkPath, chunkRgba, pageWidth, viewportHeight);
+
+            const captureSpecs = [
+                {
+                    full: toViewportRect({
+                        left: visibleBox.left as number,
+                        top: visibleBox.top as number,
+                        width: visibleBox.width as number,
+                        height: visibleBox.height as number,
+                    }),
+                    clip,
+                    visible: toViewportRect({
+                        left: visibleBox.left as number,
+                        top: visibleBox.top as number,
+                        width: visibleBox.width as number,
+                        height: visibleBox.height as number,
+                    }),
+                },
+                {
+                    full: toViewportRect({
+                        left: offscreenBox.left as number,
+                        top: offscreenBox.top as number,
+                        width: offscreenBox.width as number,
+                        height: offscreenBox.height as number,
+                    }),
+                    clip,
+                    visible: toViewportRect({
+                        left: offscreenBox.left as number,
+                        top: offscreenBox.top as number,
+                        width: 0,
+                        height: 0,
+                    }),
+                },
+            ];
+
+            const fullPagePath = path.posix.join(scenarioDir, "full-page.png");
+            await saveRgbaAsPng(fullPagePath, page, pageWidth, pageHeight);
+
+            const expectedRgba = crop(
+                page,
+                pageWidth,
+                pageHeight,
+                toPageX(20),
+                toPageY(80),
+                160 as Length<"device", "x">,
+                180 as Length<"device", "y">,
+            );
+            const expectedPath = path.posix.join(scenarioDir, "expected.png");
+            await saveRgbaAsPng(expectedPath, expectedRgba, 160 as Length<"device", "x">, 180 as Length<"device", "y">);
+
+            return {
+                id,
+                fullPage: path.relative(__dirname, fullPagePath),
+                expected: path.relative(__dirname, expectedPath),
+                chunks: [
+                    {
+                        file: path.relative(__dirname, chunkPath),
+                        safeArea,
+                        captureSpecs,
+                        ignoreBoundingRects: [],
+                    },
+                ],
+            };
+        })(),
+        (async (): Promise<ScenarioGenerationResult> => {
+            const id = "distant-selectors-without-common-visible-spec";
+            const scenarioDir = path.join(__dirname, id);
+            const chunksDir = path.join(scenarioDir, "chunks");
+            await fs.promises.mkdir(chunksDir, { recursive: true });
+
+            const pageWidth = 640 as Length<"device", "x">;
+            const pageHeight = 2270 as Length<"device", "y">;
+            const viewportHeight = 1136 as Length<"device", "y">;
+            const safeArea = toViewportYBand(0, viewportHeight as number);
+            const expectedHeight = 1518 as Length<"device", "y">;
+            const chunkResults: ScenarioGenerationResult["chunks"] = [];
+            const topBox = {
+                left: toPageX(30),
+                top: toPageY(0),
+                width: 580 as Length<"device", "x">,
+                height: 248 as Length<"device", "y">,
+            };
+            const bottomBox = {
+                left: toPageX(0),
+                top: toPageY(1448),
+                width: 640 as Length<"device", "x">,
+                height: 70 as Length<"device", "y">,
+            };
+
+            const page = Buffer.alloc((pageWidth as number) * (pageHeight as number) * RGBA_CHANNELS);
+            fillRect(
+                page,
+                pageWidth,
+                pageHeight,
+                {
+                    left: toPageX(0),
+                    top: toPageY(0),
+                    width: pageWidth,
+                    height: pageHeight,
+                },
+                WHITE,
+            );
+            fillRect(page, pageWidth, pageHeight, topBox, GRAY);
+            drawRectangle(page, pageWidth, pageHeight, topBox, BLUE);
+            fillRect(page, pageWidth, pageHeight, bottomBox, GRAY);
+            drawRectangle(page, pageWidth, pageHeight, bottomBox, BLUE);
+
+            const viewportClipRect = toViewportRect({
+                left: 0,
+                top: 0,
+                width: pageWidth as number,
+                height: viewportHeight as number,
+            });
+            const chunkDefinitions = [
+                {
+                    offsetTop: 0,
+                    captureSpecs: [
+                        {
+                            full: toViewportRect({
+                                left: topBox.left as number,
+                                top: topBox.top as number,
+                                width: topBox.width as number,
+                                height: topBox.height as number,
+                            }),
+                            clip: viewportClipRect,
+                            visible: toViewportRect({
+                                left: topBox.left as number,
+                                top: topBox.top as number,
+                                width: topBox.width as number,
+                                height: topBox.height as number,
+                            }),
+                        },
+                        {
+                            full: toViewportRect({
+                                left: bottomBox.left as number,
+                                top: bottomBox.top as number,
+                                width: bottomBox.width as number,
+                                height: bottomBox.height as number,
+                            }),
+                            clip: viewportClipRect,
+                            visible: toViewportRect({
+                                left: bottomBox.left as number,
+                                top: bottomBox.top as number,
+                                width: 0,
+                                height: 0,
+                            }),
+                        },
+                    ],
+                },
+                {
+                    offsetTop: 1134,
+                    captureSpecs: [
+                        {
+                            full: toViewportRect({
+                                left: topBox.left as number,
+                                top: (topBox.top as number) - 1134,
+                                width: topBox.width as number,
+                                height: topBox.height as number,
+                            }),
+                            clip: viewportClipRect,
+                            visible: toViewportRect({
+                                left: topBox.left as number,
+                                top: (topBox.top as number) - 1134,
+                                width: 0,
+                                height: 0,
+                            }),
+                        },
+                        {
+                            full: toViewportRect({
+                                left: bottomBox.left as number,
+                                top: (bottomBox.top as number) - 1134,
+                                width: bottomBox.width as number,
+                                height: bottomBox.height as number,
+                            }),
+                            clip: viewportClipRect,
+                            visible: toViewportRect({
+                                left: bottomBox.left as number,
+                                top: (bottomBox.top as number) - 1134,
+                                width: bottomBox.width as number,
+                                height: bottomBox.height as number,
+                            }),
+                        },
+                    ],
+                },
+            ];
+
+            for (let chunkIndex = 0; chunkIndex < chunkDefinitions.length; chunkIndex++) {
+                const chunkDefinition = chunkDefinitions[chunkIndex];
+                const chunkRgba = crop(
+                    page,
+                    pageWidth,
+                    pageHeight,
+                    toPageX(0),
+                    toPageY(chunkDefinition.offsetTop),
+                    pageWidth,
+                    viewportHeight,
+                );
+                const chunkPath = path.posix.join(chunksDir, `${chunkIndex}.png`);
+                await saveRgbaAsPng(chunkPath, chunkRgba, pageWidth, viewportHeight);
+
+                chunkResults.push({
+                    file: path.relative(__dirname, chunkPath),
+                    safeArea,
+                    captureSpecs: chunkDefinition.captureSpecs,
+                    ignoreBoundingRects: [],
+                });
+            }
+
+            const fullPagePath = path.posix.join(scenarioDir, "full-page.png");
+            await saveRgbaAsPng(fullPagePath, page, pageWidth, pageHeight);
+
+            const expectedRgba = crop(page, pageWidth, pageHeight, toPageX(0), toPageY(0), pageWidth, expectedHeight);
+            const expectedPath = path.posix.join(scenarioDir, "expected.png");
+            await saveRgbaAsPng(expectedPath, expectedRgba, pageWidth, expectedHeight);
 
             return {
                 id,

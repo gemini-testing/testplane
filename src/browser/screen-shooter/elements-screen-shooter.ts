@@ -10,6 +10,7 @@ import {
     cleanupPointerEvents,
     cleanupScrolls,
     preparePointerForScreenshot,
+    waitForSelectorsToSettle,
 } from "./operations";
 import { NEW_ISSUE_LINK } from "../../constants/help";
 import { Coord, Length, getBottom } from "../isomorphic/geometry";
@@ -24,6 +25,7 @@ import type {
 } from "../client-scripts/screen-shooter/types";
 import { isBrowserSideError } from "../isomorphic/types";
 import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
+import { makeVerboseScreenshotsDebug } from "./debug";
 
 class CaptureAreaSizeChangeError extends Error {
     constructor() {
@@ -32,7 +34,9 @@ class CaptureAreaSizeChangeError extends Error {
     }
 }
 
-const debug = makeDebug("testplane:screenshots:elements-screen-shooter");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:elements-screen-shooter");
+const SCROLL_OVERLAP_PX = 1;
+const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
@@ -89,10 +93,89 @@ function getExpectedTotalMoveFromBaseline(
             continue;
         }
 
-        shifts.push((currentSpec.full.top as number) - (baselineSpec.full.top as number));
+        const shift = (currentSpec.full.top as number) - (baselineSpec.full.top as number);
+        if (shift !== 0) {
+            shifts.push(shift);
+        }
     }
 
     return getMedian(shifts) ?? 0;
+}
+
+function getMovingCaptureSpecs(currentState: CaptureState, lastState: CaptureState): CaptureState["captureSpecs"] {
+    if (currentState.scrollOffset === lastState.scrollOffset) {
+        return currentState.captureSpecs;
+    }
+
+    return currentState.captureSpecs.filter((spec, index) => {
+        const lastSpec = lastState.captureSpecs[index];
+
+        return lastSpec && spec.full.top !== lastSpec.full.top;
+    });
+}
+
+function getRemainingCaptureAreaHeight(
+    captureSpecs: CaptureState["captureSpecs"],
+    safeArea: CaptureState["safeArea"],
+): Length<"device", "y"> {
+    if (captureSpecs.length === 0) {
+        return 0 as Length<"device", "y">;
+    }
+
+    const safeAreaBottom = getBottom(safeArea);
+    const captureAreaBottom = Math.max(...captureSpecs.map(spec => getBottom(spec.full)));
+
+    return Math.max(0, captureAreaBottom - safeAreaBottom) as Length<"device", "y">;
+}
+
+function getScrollDelta(
+    safeAreaHeight: Length<"device", "y">,
+    remainingCaptureAreaHeight: Length<"device", "y">,
+): Length<"device", "y"> {
+    if (remainingCaptureAreaHeight <= safeAreaHeight) {
+        return remainingCaptureAreaHeight;
+    }
+
+    return (safeAreaHeight > SCROLL_OVERLAP_PX ? safeAreaHeight - SCROLL_OVERLAP_PX : safeAreaHeight) as Length<
+        "device",
+        "y"
+    >;
+}
+
+function getCaptureAreaTop(captureSpecs: CaptureState["captureSpecs"]): Coord<"viewport", "device", "y"> | null {
+    if (captureSpecs.length === 0) {
+        return null;
+    }
+
+    return Math.min(...captureSpecs.map(spec => spec.full.top as number)) as Coord<"viewport", "device", "y">;
+}
+
+function getSafeAreaRollbackDistance(lastState: CaptureState, currentState: CaptureState): Length<"device", "y"> {
+    const previousCaptureAreaTop = getCaptureAreaTop(lastState.captureSpecs);
+    const currentCaptureAreaTop = getCaptureAreaTop(currentState.captureSpecs);
+
+    if (previousCaptureAreaTop === null || currentCaptureAreaTop === null) {
+        return 0 as Length<"device", "y">;
+    }
+
+    const previousVisibleBottom = Math.max(...lastState.captureSpecs.map(spec => getBottom(spec.visible)));
+    const previousSafeBottom = getBottom(lastState.safeArea);
+    const previousCoveredBottom =
+        Math.min(previousVisibleBottom, previousSafeBottom) - (previousCaptureAreaTop as number);
+    const currentSafeAreaTop = (currentState.safeArea.top as number) - (currentCaptureAreaTop as number);
+
+    return Math.max(0, currentSafeAreaTop - previousCoveredBottom) as Length<"device", "y">;
+}
+
+function getEmptyCaptureSpecsErrorMessage(selectorsToCapture: string[]): string {
+    return (
+        `Failed to capture element screenshot for selectors: ${selectorsToCapture.join("; ")}.\n` +
+        `Could not determine coordinates of the matched elements.\n` +
+        `Most likely the matched element became hidden, zero-sized, detached, moved offscreen, ` +
+        `or was clipped after scrolling/waiting for layout to settle.\n` +
+        `If you are capturing element sensitive to scrolling, like a tooltip, it could be hidden due to auto-scrolling on our side.\n` +
+        `Make sure the selector stays visible during the screenshot or disable scrolling via compositeImage/captureElementFromTop options.`
+    );
 }
 
 export class ElementsScreenShooter {
@@ -130,7 +213,7 @@ export class ElementsScreenShooter {
         }
 
         try {
-            perfDebug(`Starting capture.`);
+            perfDebug("capture: begin");
 
             const page = await this._prepareScreenshot(selectorsToCapture, {
                 ignoreSelectors: selectorsToIgnore,
@@ -169,7 +252,7 @@ export class ElementsScreenShooter {
                     throw error;
                 }
 
-                perfDebug(`Capture area size changed. Preloading area and switching to best-effort pass.`);
+                perfDebug("capture: retrying in best-effort mode");
                 await this._preloadCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts);
                 compositeImage = await this._performCaptureAttempt(
                     selectorsToCapture,
@@ -182,7 +265,7 @@ export class ElementsScreenShooter {
 
             const renderedImage = await compositeImage.render();
 
-            perfDebug(`Total time spent on capture: ${performance.now() - globalStartedAt}ms`);
+            perfDebug(`capture: end in ${formatDuration(performance.now() - globalStartedAt)}`);
 
             return {
                 image: renderedImage,
@@ -208,7 +291,9 @@ export class ElementsScreenShooter {
     ): Promise<PrepareScreenshotSuccess> {
         return runWithoutHistory({}, async () => {
             const enabledDebugTopics: string[] = [];
-            const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
+            const browserPrepareScreenshotDebug = makeVerboseScreenshotsDebug(
+                "testplane:screenshots:browser:prepareScreenshot",
+            );
             if (browserPrepareScreenshotDebug.enabled) {
                 enabledDebugTopics.push("prepareElementsScreenshot");
             }
@@ -225,7 +310,7 @@ export class ElementsScreenShooter {
             ]);
 
             const { debugLog, ...resultRest } = result;
-            makeDebug("testplane:screenshots:browser:prepareScreenshot")(debugLog);
+            browserPrepareScreenshotDebug(debugLog);
             debug("prepareElementsScreenshot result: %O", resultRest);
 
             if (isBrowserSideError(result)) {
@@ -269,45 +354,6 @@ export class ElementsScreenShooter {
         });
     }
 
-    private async _waitForCaptureAreaToSettle(selectorsToCapture: string[]): Promise<void> {
-        await this._browser.execute(async selectorsToCapture => {
-            const PAGE_SETTLE_MAX_WAIT_MS = 50;
-            const PAGE_SETTLE_MAX_ITERATIONS = 50000;
-            const PAGE_SETTLE_MATCHES_THRESHOLD = 3;
-            const startedAt = performance.now();
-            let iterations = 0;
-
-            let matches = 0;
-
-            let lastBoundingClientRects = selectorsToCapture.map(selector =>
-                document.querySelector(selector)?.getBoundingClientRect(),
-            );
-            while (
-                performance.now() - startedAt < PAGE_SETTLE_MAX_WAIT_MS &&
-                iterations < PAGE_SETTLE_MAX_ITERATIONS &&
-                matches < PAGE_SETTLE_MATCHES_THRESHOLD
-            ) {
-                const currentBoundingClientRects = selectorsToCapture.map(selector =>
-                    document.querySelector(selector)?.getBoundingClientRect(),
-                );
-                if (
-                    currentBoundingClientRects.every(
-                        (rect, index) =>
-                            rect?.top === lastBoundingClientRects[index]?.top &&
-                            rect?.height === lastBoundingClientRects[index]?.height,
-                    )
-                ) {
-                    matches++;
-                } else {
-                    matches = 0;
-                }
-                lastBoundingClientRects = currentBoundingClientRects;
-                iterations++;
-                await new Promise(resolve => setTimeout(resolve, 5));
-            }
-        }, selectorsToCapture);
-    }
-
     /** Scrolls through the entire capture area to trigger lazy loading, then restores scroll and records anchor baselines. */
     private async _preloadCaptureArea(
         selectorsToCapture: string[],
@@ -315,15 +361,22 @@ export class ElementsScreenShooter {
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
     ): Promise<void> {
-        await this._scrollThroughCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts, async () => {});
+        const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
 
-        await this._browserSideScreenshooter.call("scrollTo", [
-            selectorsToCapture,
-            page.scrollOffset,
-            opts.selectorToScroll ?? null,
-        ]);
+        perfDebug("preload capture area: begin");
+        try {
+            await this._scrollThroughCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts, async () => {});
 
-        await this._browserSideScreenshooter.call("captureAnchorBaseline", [selectorsToCapture]);
+            await this._browserSideScreenshooter.call("scrollTo", [
+                selectorsToCapture,
+                page.scrollOffset,
+                opts.selectorToScroll ?? null,
+            ]);
+
+            await this._browserSideScreenshooter.call("captureAnchorBaseline", [selectorsToCapture]);
+        } finally {
+            perfDebug("preload capture area: end");
+        }
     }
 
     private async _scrollThroughCaptureArea(
@@ -357,13 +410,13 @@ export class ElementsScreenShooter {
                 debug(`========== Starting compositing iteration #${iterations} ==========`);
 
                 const waitForSettleStartTime = performance.now();
-                await this._waitForCaptureAreaToSettle(selectorsToCapture);
+                await waitForSelectorsToSettle(this._browser, selectorsToCapture);
                 waitForSettleTime += performance.now() - waitForSettleStartTime;
 
                 const recomputeStartTime = performance.now();
 
                 const enabledScrollDebugTopics: string[] = [];
-                const browserScrollDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
+                const browserScrollDebug = makeVerboseScreenshotsDebug("testplane:screenshots:browser:getCaptureState");
                 if (browserScrollDebug.enabled) {
                     enabledScrollDebugTopics.push("getCaptureState");
                 }
@@ -399,51 +452,58 @@ export class ElementsScreenShooter {
                 >;
 
                 if (safeAreaShrink > 0) {
-                    debug("safe area shrank after scroll, rolling back", {
+                    // Roll back only if the new safe-area start would leave a gap after the previous chunk.
+                    const rollbackDistance = getSafeAreaRollbackDistance(lastState, currentState);
+
+                    debug("safe area shrank after scroll", {
                         previousSafeArea: lastState.safeArea,
                         newSafeArea: currentState.safeArea,
                         safeAreaShrink,
+                        rollbackDistance,
                         previousOffset: lastState.scrollOffset,
                         scrolledOffset: currentState.scrollOffset,
                     });
 
-                    await this._browserSideScreenshooter.call("scrollBy", [
-                        selectorsToCapture,
-                        -safeAreaShrink as Coord<"page", "device", "y">,
-                        opts.selectorToScroll,
-                    ]);
-                    const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
-                        selectorsToCapture,
-                        selectorsToIgnore,
-                        opts.selectorToScroll,
-                    ]);
+                    if (rollbackDistance > 0) {
+                        await this._browserSideScreenshooter.call("scrollBy", [
+                            selectorsToCapture,
+                            -rollbackDistance as Coord<"page", "device", "y">,
+                            opts.selectorToScroll,
+                        ]);
+                        const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
+                            selectorsToCapture,
+                            selectorsToIgnore,
+                            opts.selectorToScroll,
+                        ]);
 
-                    if (isBrowserSideError(afterRollbackState)) {
-                        throw new Error(
-                            `Failed to rollback and recompute areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}, error type '${afterRollbackState.errorCode}' and error message: ${
-                                afterRollbackState.message
-                            }`,
-                        );
+                        if (isBrowserSideError(afterRollbackState)) {
+                            throw new Error(
+                                `Failed to rollback and recompute areas while compositing image of selectors: ${selectorsToCapture.join(
+                                    ", ",
+                                )}, error type '${afterRollbackState.errorCode}' and error message: ${
+                                    afterRollbackState.message
+                                }`,
+                            );
+                        }
+
+                        if (!afterRollbackState.safeArea || !afterRollbackState.ignoreAreas) {
+                            throw new Error(
+                                `Failed to rollback and recompute full areas while compositing image of selectors: ${selectorsToCapture.join(
+                                    ", ",
+                                )}`,
+                            );
+                        }
+
+                        currentState = afterRollbackState;
                     }
-
-                    if (!afterRollbackState.safeArea || !afterRollbackState.ignoreAreas) {
-                        throw new Error(
-                            `Failed to rollback and recompute full areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}`,
-                        );
-                    }
-
-                    currentState = afterRollbackState;
                 }
 
                 const callbackStartTime = performance.now();
                 await onNextScroll(currentState);
                 callbackTime += performance.now() - callbackStartTime;
 
-                hasCapturedTheWholeArea = currentState.captureSpecs.every(
+                const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
+                hasCapturedTheWholeArea = movingCaptureSpecs.every(
                     s => getBottom(s.full) <= getBottom(currentState.safeArea),
                 );
 
@@ -461,12 +521,28 @@ export class ElementsScreenShooter {
                     break;
                 }
 
-                debug("asking to scroll by %dpx", currentState.safeArea.height);
+                const remainingCaptureAreaHeight = getRemainingCaptureAreaHeight(
+                    movingCaptureSpecs,
+                    currentState.safeArea,
+                );
+                const scrollDelta = getScrollDelta(currentState.safeArea.height, remainingCaptureAreaHeight);
+
+                if (scrollDelta <= 0) {
+                    hasCapturedTheWholeArea = true;
+                    break;
+                }
+
+                debug(
+                    "asking to scroll by %dpx (safeArea.height: %d, remaining moving capture area: %d)",
+                    scrollDelta,
+                    currentState.safeArea.height,
+                    remainingCaptureAreaHeight,
+                );
 
                 const scrollStartTime = performance.now();
                 const scrollResult = await this._browserSideScreenshooter.call("scrollBy", [
                     selectorsToCapture,
-                    currentState.safeArea.height,
+                    scrollDelta,
                     opts.selectorToScroll,
                     enabledScrollDebugTopics,
                 ]);
@@ -489,16 +565,16 @@ export class ElementsScreenShooter {
                 iterations++;
             }
         } finally {
-            perfDebug(`Time spent on waiting for capture area to settle: ${waitForSettleTime}ms`);
-            perfDebug(`Time spent on recomputing areas: ${recomputeTime}ms`);
-            perfDebug(`Time spent on scrolling: ${scrollTime}ms`);
-            perfDebug(`Time spent on callback: ${callbackTime}ms`);
+            perfDebug(`  wait for stable capture area: ${formatDuration(waitForSettleTime)}`);
+            perfDebug(`  recompute capture areas: ${formatDuration(recomputeTime)}`);
+            perfDebug(`  scroll between chunks: ${formatDuration(scrollTime)}`);
+            perfDebug(`  process current chunk: ${formatDuration(callbackTime)}`);
             perfDebug(
-                `Time spent on other operations: ${
-                    performance.now() - startTime - (waitForSettleTime + recomputeTime + scrollTime + callbackTime)
-                }ms`,
+                `  loop overhead: ${formatDuration(
+                    performance.now() - startTime - (waitForSettleTime + recomputeTime + scrollTime + callbackTime),
+                )}`,
             );
-            perfDebug(`Total time spent: ${performance.now() - startTime}ms`);
+            perfDebug(`  scroll loop total: ${formatDuration(performance.now() - startTime)}`);
 
             debug(
                 `Scrolling finished after ${iterations} iterations, hasCapturedTheWholeArea: ${hasCapturedTheWholeArea}, hasReachedScrollLimit: ${hasReachedScrollLimit}`,
@@ -514,6 +590,7 @@ export class ElementsScreenShooter {
         shouldThrowOnCaptureAreaSizeChange: boolean,
     ): Promise<CompositeImage> {
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
+        const attemptMode = shouldThrowOnCaptureAreaSizeChange ? "strict" : "best-effort";
         const image = CompositeImage.create();
 
         let timeSpentOnCapture = 0;
@@ -535,6 +612,7 @@ export class ElementsScreenShooter {
 
         let shouldRestoreScrollPosition = false;
 
+        perfDebug(`capture attempt (${attemptMode}): begin`);
         try {
             await this._scrollThroughCaptureArea(
                 selectorsToCapture,
@@ -542,6 +620,10 @@ export class ElementsScreenShooter {
                 page,
                 opts,
                 async currentState => {
+                    if (currentState.captureSpecs.length === 0) {
+                        throw new Error(getEmptyCaptureSpecsErrorMessage(selectorsToCapture));
+                    }
+
                     const hasCaptureAreaSizeChanged =
                         lastState.captureSpecs.length !== currentState.captureSpecs.length ||
                         lastState.captureSpecs.some(
@@ -566,6 +648,7 @@ export class ElementsScreenShooter {
                         viewportSize: page.viewportSize,
                         viewportOffset: currentState.viewportOffset,
                         screenshotDelay: opts.screenshotDelay,
+                        cropMargins: opts.cropMargins,
                     });
 
                     timeSpentOnCapture += performance.now() - captureStartTime;
@@ -594,7 +677,10 @@ export class ElementsScreenShooter {
                     );
 
                     hasReachedScrollLimit = iterations > 0 && currentState.scrollOffset <= lastState.scrollOffset;
-                    hasCapturedTheWholeArea = newCaptureSpecs.every(s => getBottom(s.full) <= getBottom(newSafeArea));
+                    const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
+                    hasCapturedTheWholeArea = movingCaptureSpecs.every(
+                        s => getBottom(s.full) <= getBottom(newSafeArea),
+                    );
                     isOverflowingViewport = newCaptureSpecs.some(s => getBottom(s.full) > page.viewportSize.height);
 
                     if (currentState.scrollOffset !== page.scrollOffset) {
@@ -610,7 +696,7 @@ export class ElementsScreenShooter {
                 },
             );
         } finally {
-            perfDebug(`Done capturing composite image. Time spent on raw viewport captures: ${timeSpentOnCapture}ms`);
+            perfDebug(`  raw viewport screenshots: ${formatDuration(timeSpentOnCapture)}`);
             if (shouldRestoreScrollPosition) {
                 const enabledScrollDebugTopics: string[] = [];
                 const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollTo");
@@ -638,6 +724,7 @@ export class ElementsScreenShooter {
                     );
                 }
             }
+            perfDebug(`capture attempt (${attemptMode}): end`);
         }
 
         if (restoreScrollPositionError) {

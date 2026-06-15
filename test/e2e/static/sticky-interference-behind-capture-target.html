@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sticky Interference Inside Capture Target</title>
+        <style>
+            body {
+                margin: 0;
+                background: #f2f2f2;
+                font-family: Arial, sans-serif;
+            }
+
+            .stacking-context-root {
+                position: relative;
+                z-index: 2;
+                width: 360px;
+                height: 260px;
+                margin: 24px;
+                overflow: hidden;
+                border: 2px solid #444;
+                background: #fff;
+            }
+
+            .scroll-container {
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+            }
+
+            .OrgIntentContainer {
+                box-sizing: border-box;
+                width: 320px;
+                height: 1400px;
+                margin: 0 auto;
+                border: 2px solid #111;
+                background: #fff;
+                z-index: 2;
+            }
+
+            .sticky-stack {
+                position: relative;
+                z-index: 0;
+                min-height: 100%;
+            }
+
+            .ReviewViewer-SortAndAspects {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                display: flex;
+                align-items: center;
+                box-sizing: border-box;
+                width: 100%;
+                height: 72px;
+                padding: 0 16px;
+                color: #fff;
+                background: green;
+                font-weight: 700;
+            }
+
+            .content-row {
+                height: 96px;
+                border-bottom: 1px solid #d0d0d0;
+                background: linear-gradient(90deg, #fff 0 48%, #dff0ff 48% 52%, #fff 52% 100%);
+                color: #222;
+                line-height: 96px;
+                text-align: center;
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="stacking-context-root">
+            <div class="scroll-container">
+                <div class="OrgIntentContainer" data-testid="capture-target">
+                    <div class="sticky-stack">
+                        <div class="ReviewViewer-SortAndAspects">Sticky header inside capture target</div>
+
+                        <div class="content-row">row 01</div>
+                        <div class="content-row">row 02</div>
+                        <div class="content-row">row 03</div>
+                        <div class="content-row">row 04</div>
+                        <div class="content-row">row 05</div>
+                        <div class="content-row">row 06</div>
+                        <div class="content-row">row 07</div>
+                        <div class="content-row">row 08</div>
+                        <div class="content-row">row 09</div>
+                        <div class="content-row">row 10</div>
+                        <div class="content-row">row 11</div>
+                        <div class="content-row">row 12</div>
+                        <div class="content-row">row 13</div>
+                        <div class="content-row">row 14</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

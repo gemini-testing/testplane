@@ -4,6 +4,7 @@ import makeDebug from "debug";
 
 import { Image } from "../../image";
 import * as utils from "./utils";
+import type { CropMargins } from "./utils";
 import * as logger from "../../utils/logger";
 import {
     getIntersection,
@@ -20,12 +21,15 @@ import { NEW_ISSUE_LINK } from "../../constants/help";
 const debug = makeDebug("testplane:screenshots:camera");
 
 export type ScreenshotMode = "fullpage" | "viewport" | "auto";
+export type { CropMargins } from "./utils";
 
 export interface CaptureViewportImageOpts {
     viewportOffset: Point<"page", "device">;
     viewportSize: Size<"device">;
     /** Delay before taking the screenshot, in milliseconds. */
     screenshotDelay?: number;
+    /** Additional raw screenshot margins to crop, in physical pixels. */
+    cropMargins?: CropMargins;
 }
 
 export class Camera {
@@ -82,15 +86,23 @@ export class Camera {
             this._calibrationScreenshotSize.height === height;
         const calibrationArea = shouldApplyCalibration ? this._calibratedArea : null;
 
-        const calibratedImageArea = this._cropAreaToCalibratedArea(imageArea, calibrationArea);
+        const calibratedImageArea = this._cropAreaToIntersection(imageArea, calibrationArea);
+        const cropMarginsArea = utils.cropMarginsToRect(imageArea, opts?.cropMargins);
+        const croppedImageArea = getIntersection(calibratedImageArea, cropMarginsArea);
+        if (croppedImageArea === null) {
+            throw new Error(
+                `Invalid cropMargins option: resulting screenshot crop area is empty. ` +
+                    `imageSize: ${prettySize(imageArea)}, cropMargins: ${JSON.stringify(opts?.cropMargins)}`,
+            );
+        }
 
         const viewportCroppedArea = this._cropAreaToViewport(
-            calibratedImageArea,
+            croppedImageArea,
             { width, height },
-            calibrationArea,
+            croppedImageArea,
             opts,
         );
-        await utils.saveViewportImageForDebugIfNeeded(image, calibratedImageArea, this._debugTmpDir);
+        await utils.saveViewportImageForDebugIfNeeded(image, croppedImageArea, this._debugTmpDir);
 
         if (viewportCroppedArea.width !== width || viewportCroppedArea.height !== height) {
             await image.crop(viewportCroppedArea);
@@ -99,19 +111,19 @@ export class Camera {
         return image;
     }
 
-    private _cropAreaToCalibratedArea(
+    private _cropAreaToIntersection(
         imageArea: Rect<"image", "device">,
-        calibrationArea: Rect<"image", "device"> | null,
+        cropArea: Rect<"image", "device"> | null,
     ): Rect<"image", "device"> {
-        if (!calibrationArea) {
+        if (!cropArea) {
             return imageArea;
         }
 
-        const intersection = getIntersection(imageArea, calibrationArea);
+        const intersection = getIntersection(imageArea, cropArea);
         if (intersection === null) {
             logger.warn(
-                `No intersection found between image area and calibrated viewport area, falling back to original image area.\n` +
-                    `imageArea: ${prettyRect(imageArea)}, calibratedViewportArea: ${prettyRect(calibrationArea)}\n` +
+                `No intersection found between image area and crop area, falling back to original image area.\n` +
+                    `imageArea: ${prettyRect(imageArea)}, cropArea: ${prettyRect(cropArea)}\n` +
                     `This likely means Testplane incorrectly determined area free of system UI elements. You can let us know at ${NEW_ISSUE_LINK}, providing this log and browser used.`,
             );
 

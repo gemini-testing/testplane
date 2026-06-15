@@ -1,10 +1,9 @@
-import makeDebug from "debug";
 import { CompositeImage } from "./composite-image";
 import { Image } from "../../image";
 import { Coord, Rect, Size, Point } from "../isomorphic/geometry";
-import type { DisableHoverMode } from "../isomorphic/types";
+import { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
-import { Camera } from "../camera";
+import { Camera, type CropMargins } from "../camera";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
 import type { ElementPositionsProbe } from "../client-scripts/screen-shooter/types";
 import { ClientBridge } from "../client-bridge";
@@ -18,8 +17,9 @@ import {
 } from "./operations";
 import { runWithoutHistory } from "../history";
 import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
+import { makeVerboseScreenshotsDebug } from "./debug";
 
-const debug = makeDebug("testplane:screenshots:full-page-screen-shooter");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:full-page-screen-shooter");
 
 interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;
@@ -41,6 +41,7 @@ interface FullPageCaptureOpts {
     screenshotDelay?: number;
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
+    cropMargins?: CropMargins;
 }
 
 export class FullPageScreenShooter {
@@ -67,6 +68,12 @@ export class FullPageScreenShooter {
     }
 
     async capture(opts: FullPageCaptureOpts = {}): Promise<Image> {
+        if (!opts.disableHover) {
+            opts.disableHover = DisableHoverMode.WhenScrollingNeeded;
+        }
+
+        opts.disableAnimation ??= true;
+
         try {
             return await this._captureImpl(opts);
         } finally {
@@ -124,13 +131,14 @@ export class FullPageScreenShooter {
             viewportSize,
             viewportOffset,
             screenshotDelay: opts.screenshotDelay,
+            cropMargins: opts.cropMargins,
         });
 
         const compositeImage = CompositeImage.create();
         await compositeImage.registerViewportImageAtOffset(
             viewportImage,
             safeArea,
-            [{ full: fullPageRect, visible: fullPageRect }],
+            [{ full: fullPageRect, clip: fullPageRect, visible: fullPageRect }],
             [],
         );
 
@@ -179,12 +187,13 @@ export class FullPageScreenShooter {
                 viewportSize,
                 viewportOffset,
                 screenshotDelay: opts.screenshotDelay,
+                cropMargins: opts.cropMargins,
             });
 
             await compositeImage.registerViewportImageAtOffset(
                 chunkImage,
                 safeArea,
-                [{ full: updatedFullPageRect, visible: updatedFullPageRect }],
+                [{ full: updatedFullPageRect, clip: updatedFullPageRect, visible: updatedFullPageRect }],
                 [],
             );
 
@@ -199,16 +208,16 @@ export class FullPageScreenShooter {
     }
 
     private _isElementPositionsProbeEqual(
-        leftProbe: ElementPositionsProbe<"device">,
-        rightProbe: ElementPositionsProbe<"device">,
+        leftProbes: ElementPositionsProbe<"device">[],
+        rightProbes: ElementPositionsProbe<"device">[],
     ): boolean {
-        if (leftProbe.length !== rightProbe.length) {
+        if (leftProbes.length !== rightProbes.length) {
             return false;
         }
 
-        for (let i = 0; i < leftProbe.length; i++) {
-            const left = leftProbe[i];
-            const right = rightProbe[i];
+        for (let i = 0; i < leftProbes.length; i++) {
+            const left = leftProbes[i];
+            const right = rightProbes[i];
 
             if (left === null || right === null) {
                 if (left !== right) {

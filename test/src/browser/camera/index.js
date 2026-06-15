@@ -67,6 +67,64 @@ describe("browser/camera", () => {
                 });
             });
 
+            describe("cropMargins", () => {
+                it("should crop raw screenshot using user margins", async () => {
+                    const camera = Camera.create(null, sinon.stub().resolves());
+                    image.getSize.returns({ width: 20, height: 15 });
+
+                    await camera.captureViewportImage({
+                        cropMargins: { top: 1, right: 8, bottom: 2, left: 4 },
+                    });
+
+                    assert.calledOnceWith(image.crop, {
+                        left: 4,
+                        top: 1,
+                        width: 8,
+                        height: 12,
+                    });
+                });
+
+                it("should merge calibration and user margins using max value for each side", async () => {
+                    const camera = Camera.create(null, sinon.stub().resolves());
+                    image.getSize.returns({ width: 20, height: 20 });
+
+                    camera.calibrate({ top: 2, left: 4, width: 12, height: 16 }, { width: 20, height: 20 });
+                    await camera.captureViewportImage({
+                        cropMargins: { top: 1, right: 8 },
+                    });
+
+                    assert.calledOnceWith(image.crop, {
+                        left: 4,
+                        top: 2,
+                        width: 8,
+                        height: 16,
+                    });
+                });
+
+                it("should throw if margins produce empty crop area", async () => {
+                    const camera = Camera.create(null, sinon.stub().resolves());
+                    image.getSize.returns({ width: 20, height: 20 });
+
+                    await assert.isRejected(
+                        camera.captureViewportImage({
+                            cropMargins: { left: 10, right: 10 },
+                        }),
+                        /resulting screenshot crop area is empty/,
+                    );
+                });
+
+                it("should throw if margin is not a non-negative integer", async () => {
+                    const camera = Camera.create(null, sinon.stub().resolves());
+
+                    await assert.isRejected(
+                        camera.captureViewportImage({
+                            cropMargins: { top: 1.5 },
+                        }),
+                        /Invalid cropMargins\.top option/,
+                    );
+                });
+            });
+
             describe("crop to viewport", () => {
                 let viewportOffset;
                 let viewportSize;
