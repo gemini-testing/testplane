@@ -21,7 +21,7 @@ describe("cli/commands/config", () => {
     beforeEach(() => {
         testplaneStub = Object.create(Testplane.prototype);
 
-        sandbox.stub(Testplane, "create").returns(testplaneStub);
+        sandbox.stub(Testplane, "create").resolves(testplaneStub);
 
         consoleInfoStub = sandbox.stub(console, "info");
         jsonStringifyStub = sandbox.spy(JSON, "stringify");

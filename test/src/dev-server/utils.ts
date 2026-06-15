@@ -237,6 +237,7 @@ describe("dev-server/utlls", () => {
 
             it("should throw error when url is not a string", async () => {
                 const readinessProbe = createReadinessProbe_({ url: null });
+                fetchStub.resetHistory();
 
                 try {
                     await utils.probeServer(readinessProbe);

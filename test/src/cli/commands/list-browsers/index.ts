@@ -59,7 +59,7 @@ describe("cli/commands/list-browsers", () => {
             configurable: true,
         });
 
-        sandbox.stub(Testplane, "create").returns(testplaneStub);
+        sandbox.stub(Testplane, "create").resolves(testplaneStub);
 
         consoleInfoStub = sandbox.stub(console, "info");
         sandbox.stub(process, "exit");
