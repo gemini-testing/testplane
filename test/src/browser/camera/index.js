@@ -21,7 +21,7 @@ describe("browser/camera", () => {
         }).Camera;
 
         image = sinon.createStubInstance(Image);
-        image.getSize.resolves({ width: 100500, height: 500100 });
+        image.getSize.returns({ width: 100500, height: 500100 });
         image.crop.resolves();
 
         sandbox.stub(Image, "fromBase64").returns(image);
@@ -43,7 +43,7 @@ describe("browser/camera", () => {
             describe("calibration", () => {
                 it("should apply calibration on taken screenshot", async () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
-                    image.getSize.resolves({ width: 10, height: 10 });
+                    image.getSize.returns({ width: 10, height: 10 });
 
                     camera.calibrate({ top: 6, left: 4, width: 10, height: 10 }, { width: 10, height: 10 });
                     await camera.captureViewportImage();
@@ -58,7 +58,7 @@ describe("browser/camera", () => {
 
                 it("should not apply calibration when screenshot size differs from calibration screenshot size", async () => {
                     const camera = Camera.create(null, sinon.stub().resolves());
-                    image.getSize.resolves({ width: 20, height: 20 });
+                    image.getSize.returns({ width: 20, height: 20 });
 
                     camera.calibrate({ top: 6, left: 4, width: 10, height: 10 }, { width: 10, height: 10 });
                     await camera.captureViewportImage();

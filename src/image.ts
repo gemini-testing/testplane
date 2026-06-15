@@ -3,7 +3,7 @@ import looksSame from "looks-same";
 import { loadEsm } from "./utils/preload-utils";
 import { DiffOptions, ImageSize } from "./types";
 import { convertRgbaToPng } from "./utils/eight-bit-rgba-to-png";
-import { BITS_IN_BYTE, PNG_HEIGHT_OFFSET, PNG_WIDTH_OFFSET, RGBA_CHANNELS } from "./constants/png";
+import { BITS_IN_BYTE, PNG_HEIGHT_OFFSET, PNG_SIGNATURE, PNG_WIDTH_OFFSET, RGBA_CHANNELS } from "./constants/png";
 
 interface PngImageData {
     data: Buffer;
@@ -61,6 +61,32 @@ const jsquashDecode = (buffer: ArrayBuffer): Promise<ImageData> => {
     ]).then(([mod]) => mod.decode(buffer, { bitDepth: BITS_IN_BYTE }));
 };
 
+const hasICCPChunk = (buffer: Buffer): boolean => {
+    const auxChunkSizeBytes = 12; // 4 bytes for length, 4 bytes for type, 4 bytes for crc
+    const iCCPChunkType = Buffer.from("iCCP", "ascii").readUInt32BE(0);
+    const IDATChunkType = Buffer.from("IDAT", "ascii").readUInt32BE(0);
+    const PLTEChunkType = Buffer.from("PLTE", "ascii").readUInt32BE(0);
+
+    for (let nextChunkPointer = PNG_SIGNATURE.byteLength; nextChunkPointer <= buffer.length - auxChunkSizeBytes; ) {
+        const chunkLength = buffer.readUInt32BE(nextChunkPointer);
+        const chunkType = buffer.readUInt32BE(nextChunkPointer + 4);
+
+        if (chunkType === iCCPChunkType) {
+            return true;
+        }
+
+        // If the iCCP chunk appears, it must precede the first IDAT chunk, and it must also precede the PLTE chunk if present
+        // https://libpng.org/pub/png/spec/1.2/PNG-Chunks.html#C.iCCP
+        if (chunkType === IDATChunkType || chunkType === PLTEChunkType) {
+            return false;
+        }
+
+        nextChunkPointer += chunkLength + auxChunkSizeBytes;
+    }
+
+    return false;
+};
+
 export class Image {
     private _imgDataPromise: Promise<Buffer | null>;
     private _imgData: Buffer | null = null;
@@ -69,6 +95,7 @@ export class Image {
     private _composeImages: this[] = [];
     private _clearAreas: Rect[] = [];
     private _decodeError: Error | null = null;
+    private _hasICCPChunk: boolean = false;
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
@@ -80,6 +107,7 @@ export class Image {
         if (Buffer.isBuffer(bufferOrSize)) {
             this._width = bufferOrSize.readUInt32BE(PNG_WIDTH_OFFSET);
             this._height = bufferOrSize.readUInt32BE(PNG_HEIGHT_OFFSET);
+            this._hasICCPChunk = hasICCPChunk(bufferOrSize);
             this._imgDataPromise = jsquashDecode(bufferOrSize)
                 .then(({ data }) => {
                     return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
@@ -98,6 +126,10 @@ export class Image {
         this._imgData = Buffer.alloc(this._width * this._height * RGBA_CHANNELS);
         this._imgData.fill(blackRgbaPixel);
         this._imgDataPromise = Promise.resolve(this._imgData);
+    }
+
+    public get hasICCPChunk(): boolean {
+        return this._hasICCPChunk;
     }
 
     async _getImgData(): Promise<Buffer> {
@@ -125,7 +157,7 @@ export class Image {
         }
     }
 
-    async getSize(): Promise<ImageSize> {
+    getSize(): ImageSize {
         this._ensureImagesHaveSameWidth();
 
         const height = this._composeImages.reduce((acc, img) => acc + img._height, this._height);

@@ -44,7 +44,7 @@ async function captureScreenshot(browser: ExistingBrowser, config: ExistingBrows
             },
         });
         const image = await screenshooter.capture();
-        const size = await image.getSize();
+        const size = image.getSize();
         const buffer = await image.toPngBuffer({ resolveWithObject: false });
 
         return { base64: buffer.toString("base64"), size };
@@ -52,7 +52,7 @@ async function captureScreenshot(browser: ExistingBrowser, config: ExistingBrows
 
     const base64 = await browser.publicAPI.takeScreenshot();
     const image = Image.fromBase64(base64);
-    const size = await image.getSize();
+    const size = image.getSize();
 
     return { base64, size };
 }
