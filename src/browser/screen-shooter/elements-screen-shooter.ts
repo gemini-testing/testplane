@@ -25,6 +25,7 @@ import type {
 } from "../client-scripts/screen-shooter/types";
 import { isBrowserSideError } from "../isomorphic/types";
 import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
+import { makeVerboseScreenshotsDebug } from "./debug";
 
 class CaptureAreaSizeChangeError extends Error {
     constructor() {
@@ -33,8 +34,9 @@ class CaptureAreaSizeChangeError extends Error {
     }
 }
 
-const debug = makeDebug("testplane:screenshots:elements-screen-shooter");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:elements-screen-shooter");
 const SCROLL_OVERLAP = 1;
+const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
@@ -211,7 +213,7 @@ export class ElementsScreenShooter {
         }
 
         try {
-            perfDebug(`Starting capture.`);
+            perfDebug("capture: begin");
 
             const page = await this._prepareScreenshot(selectorsToCapture, {
                 ignoreSelectors: selectorsToIgnore,
@@ -250,7 +252,7 @@ export class ElementsScreenShooter {
                     throw error;
                 }
 
-                perfDebug(`Capture area size changed. Preloading area and switching to best-effort pass.`);
+                perfDebug("capture: retrying in best-effort mode");
                 await this._preloadCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts);
                 compositeImage = await this._performCaptureAttempt(
                     selectorsToCapture,
@@ -263,7 +265,7 @@ export class ElementsScreenShooter {
 
             const renderedImage = await compositeImage.render();
 
-            perfDebug(`Total time spent on capture: ${performance.now() - globalStartedAt}ms`);
+            perfDebug(`capture: end in ${formatDuration(performance.now() - globalStartedAt)}`);
 
             return {
                 image: renderedImage,
@@ -289,7 +291,9 @@ export class ElementsScreenShooter {
     ): Promise<PrepareScreenshotSuccess> {
         return runWithoutHistory({}, async () => {
             const enabledDebugTopics: string[] = [];
-            const browserPrepareScreenshotDebug = makeDebug("testplane:screenshots:browser:prepareScreenshot");
+            const browserPrepareScreenshotDebug = makeVerboseScreenshotsDebug(
+                "testplane:screenshots:browser:prepareScreenshot",
+            );
             if (browserPrepareScreenshotDebug.enabled) {
                 enabledDebugTopics.push("prepareElementsScreenshot");
             }
@@ -306,7 +310,7 @@ export class ElementsScreenShooter {
             ]);
 
             const { debugLog, ...resultRest } = result;
-            makeDebug("testplane:screenshots:browser:prepareScreenshot")(debugLog);
+            browserPrepareScreenshotDebug(debugLog);
             debug("prepareElementsScreenshot result: %O", resultRest);
 
             if (isBrowserSideError(result)) {
@@ -357,15 +361,22 @@ export class ElementsScreenShooter {
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
     ): Promise<void> {
-        await this._scrollThroughCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts, async () => {});
+        const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
 
-        await this._browserSideScreenshooter.call("scrollTo", [
-            selectorsToCapture,
-            page.scrollOffset,
-            opts.selectorToScroll ?? null,
-        ]);
+        perfDebug("preload capture area: begin");
+        try {
+            await this._scrollThroughCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts, async () => {});
 
-        await this._browserSideScreenshooter.call("captureAnchorBaseline", [selectorsToCapture]);
+            await this._browserSideScreenshooter.call("scrollTo", [
+                selectorsToCapture,
+                page.scrollOffset,
+                opts.selectorToScroll ?? null,
+            ]);
+
+            await this._browserSideScreenshooter.call("captureAnchorBaseline", [selectorsToCapture]);
+        } finally {
+            perfDebug("preload capture area: end");
+        }
     }
 
     private async _scrollThroughCaptureArea(
@@ -405,7 +416,7 @@ export class ElementsScreenShooter {
                 const recomputeStartTime = performance.now();
 
                 const enabledScrollDebugTopics: string[] = [];
-                const browserScrollDebug = makeDebug("testplane:screenshots:browser:getCaptureState");
+                const browserScrollDebug = makeVerboseScreenshotsDebug("testplane:screenshots:browser:getCaptureState");
                 if (browserScrollDebug.enabled) {
                     enabledScrollDebugTopics.push("getCaptureState");
                 }
@@ -554,16 +565,16 @@ export class ElementsScreenShooter {
                 iterations++;
             }
         } finally {
-            perfDebug(`Time spent on waiting for capture area to settle: ${waitForSettleTime}ms`);
-            perfDebug(`Time spent on recomputing areas: ${recomputeTime}ms`);
-            perfDebug(`Time spent on scrolling: ${scrollTime}ms`);
-            perfDebug(`Time spent on callback: ${callbackTime}ms`);
+            perfDebug(`  wait for stable capture area: ${formatDuration(waitForSettleTime)}`);
+            perfDebug(`  recompute capture areas: ${formatDuration(recomputeTime)}`);
+            perfDebug(`  scroll between chunks: ${formatDuration(scrollTime)}`);
+            perfDebug(`  process current chunk: ${formatDuration(callbackTime)}`);
             perfDebug(
-                `Time spent on other operations: ${
-                    performance.now() - startTime - (waitForSettleTime + recomputeTime + scrollTime + callbackTime)
-                }ms`,
+                `  loop overhead: ${formatDuration(
+                    performance.now() - startTime - (waitForSettleTime + recomputeTime + scrollTime + callbackTime),
+                )}`,
             );
-            perfDebug(`Total time spent: ${performance.now() - startTime}ms`);
+            perfDebug(`  scroll loop total: ${formatDuration(performance.now() - startTime)}`);
 
             debug(
                 `Scrolling finished after ${iterations} iterations, hasCapturedTheWholeArea: ${hasCapturedTheWholeArea}, hasReachedScrollLimit: ${hasReachedScrollLimit}`,
@@ -579,6 +590,7 @@ export class ElementsScreenShooter {
         shouldThrowOnCaptureAreaSizeChange: boolean,
     ): Promise<CompositeImage> {
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
+        const attemptMode = shouldThrowOnCaptureAreaSizeChange ? "strict" : "best-effort";
         const image = CompositeImage.create();
 
         let timeSpentOnCapture = 0;
@@ -600,6 +612,7 @@ export class ElementsScreenShooter {
 
         let shouldRestoreScrollPosition = false;
 
+        perfDebug(`capture attempt (${attemptMode}): begin`);
         try {
             await this._scrollThroughCaptureArea(
                 selectorsToCapture,
@@ -683,7 +696,7 @@ export class ElementsScreenShooter {
                 },
             );
         } finally {
-            perfDebug(`Done capturing composite image. Time spent on raw viewport captures: ${timeSpentOnCapture}ms`);
+            perfDebug(`  raw viewport screenshots: ${formatDuration(timeSpentOnCapture)}`);
             if (shouldRestoreScrollPosition) {
                 const enabledScrollDebugTopics: string[] = [];
                 const browserScrollDebug = makeDebug("testplane:screenshots:browser:scrollTo");
@@ -711,6 +724,7 @@ export class ElementsScreenShooter {
                     );
                 }
             }
+            perfDebug(`capture attempt (${attemptMode}): end`);
         }
 
         if (restoreScrollPositionError) {

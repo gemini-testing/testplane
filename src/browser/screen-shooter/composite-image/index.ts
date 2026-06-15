@@ -1,6 +1,5 @@
 import os from "node:os";
 import path from "node:path";
-import makeDebug from "debug";
 import { Image } from "../../../image";
 import {
     YBand,
@@ -25,8 +24,9 @@ import {
 } from "../../isomorphic/geometry";
 import type { CaptureSpec } from "../../client-scripts/screen-shooter/types";
 import { saveRenderedPiecesForDebugIfNeeded, saveViewportImageForDebugIfNeeded } from "./debug-utils";
+import { makeVerboseScreenshotsDebug } from "../debug";
 
-const debug = makeDebug("testplane:screenshots:composite-image");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:composite-image");
 
 /** Raw chunk data as registered by the caller. */
 interface CompositeChunk {

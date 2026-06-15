@@ -1,4 +1,3 @@
-import makeDebug from "debug";
 import { CompositeImage } from "./composite-image";
 import { Image } from "../../image";
 import { Coord, Rect, Size, Point } from "../isomorphic/geometry";
@@ -18,8 +17,9 @@ import {
 } from "./operations";
 import { runWithoutHistory } from "../history";
 import { COMPOSITING_ITERATIONS_LIMIT } from "./constants";
+import { makeVerboseScreenshotsDebug } from "./debug";
 
-const debug = makeDebug("testplane:screenshots:full-page-screen-shooter");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:full-page-screen-shooter");
 
 interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;

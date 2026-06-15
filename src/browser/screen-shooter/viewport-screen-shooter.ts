@@ -1,4 +1,3 @@
-import makeDebug from "debug";
 import { Image } from "../../image";
 import type { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
@@ -14,8 +13,9 @@ import {
     preparePointerForScreenshot,
 } from "./operations";
 import { runWithoutHistory } from "../history";
+import { makeVerboseScreenshotsDebug } from "./debug";
 
-const debug = makeDebug("testplane:screenshots:viewport-screen-shooter");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:viewport-screen-shooter");
 
 interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;
