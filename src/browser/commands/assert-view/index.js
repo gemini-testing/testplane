@@ -90,7 +90,7 @@ module.exports.default = browser => {
         const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
 
-        const currSize = await currImgInst.getSize();
+        const currSize = currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
         const refImgAbsolutePath = config.getScreenshotPath(test, state);

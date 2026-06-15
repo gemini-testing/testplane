@@ -1,5 +1,5 @@
 import { FullPageScreenShooter } from "../../../browser/screen-shooter/full-page-screen-shooter";
-import { Image, extractBase64PngSize } from "../../../image";
+import { extractBase64PngSize } from "../../../image";
 import * as logger from "../../../utils/logger";
 import { promiseTimeout } from "../../../utils/promise";
 import type { ExistingBrowser } from "../../../browser/existing-browser";
@@ -44,7 +44,7 @@ async function captureScreenshot(browser: ExistingBrowser, config: ExistingBrows
             },
         });
         const image = await screenshooter.capture();
-        const size = await image.getSize();
+        const size = image.getSize();
         const buffer = await image.toPngBuffer({ resolveWithObject: false });
 
         return { base64: buffer.toString("base64"), size };

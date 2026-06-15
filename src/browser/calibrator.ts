@@ -3,7 +3,7 @@ import path from "path";
 import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
-import type { Image } from "../image";
+import type { Image, RGB } from "../image";
 import { Coord, Length, Rect, Size, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
 import * as logger from "../utils/logger";
 import os from "node:os";
@@ -46,8 +46,11 @@ export class Calibrator {
 
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-        const screenshotSize = (await image.getSize()) as Size<"device">;
-        const imageFeatures = await this._findMarkerAreaInImage(image);
+        const screenshotSize = image.getSize() as Size<"device">;
+        const searchColor: RGB = image.hasICCPChunk
+            ? await image.getRGB(Math.floor(screenshotSize.width / 2), Math.floor(screenshotSize.height / 2))
+            : { R: 148, G: 250, B: 0 };
+        const imageFeatures = await this._findMarkerAreaInImage(image, searchColor);
 
         if (!imageFeatures) {
             const screenshotPath = path.join(os.tmpdir(), "testplane-calibration-page.png");
@@ -73,13 +76,13 @@ export class Calibrator {
         return calibratedFeatures;
     }
 
-    private async _findMarkerAreaInImage(image: Image): Promise<Rect<"image", "device"> | null> {
-        const imageHeight = (await image.getSize()).height;
+    private async _findMarkerAreaInImage(image: Image, searchColor: RGB): Promise<Rect<"image", "device"> | null> {
+        const imageHeight = image.getSize().height;
 
         let topPart: Rect<"image", "device"> | null = null;
 
         for (let y = 0 as Coord<"image", "device", "y">; y < imageHeight; y++) {
-            const result = await findMarkerXBandInRow(y, image);
+            const result = await findMarkerXBandInRow(y, image, searchColor);
             if (result) {
                 topPart = {
                     top: y,
@@ -96,7 +99,7 @@ export class Calibrator {
         }
 
         for (let y = (imageHeight - 1) as Coord<"image", "device", "y">; y >= 0; y--) {
-            const result = await findMarkerXBandInRow(y, image);
+            const result = await findMarkerXBandInRow(y, image, searchColor);
             if (result) {
                 const bottomPart = {
                     top: 0,
@@ -116,14 +119,15 @@ export class Calibrator {
 async function findMarkerXBandInRow(
     row: Coord<"image", "device", "y">,
     image: Image,
+    searchColor: RGB,
 ): Promise<XBand<"image", "device"> | null> {
-    const markerStart = await findMarkerStartInRow(row, image);
+    const markerStart = await findMarkerStartInRow(row, image, searchColor);
 
     if (markerStart === null) {
         return null;
     }
 
-    const markerEnd = await findMarkerEndInRow(row, image);
+    const markerEnd = await findMarkerEndInRow(row, image, searchColor);
 
     if (markerEnd === null) {
         return null;
@@ -139,8 +143,8 @@ async function isMarkerColorAtPoint(
     image: Image,
     x: Coord<"image", "device", "x">,
     y: Coord<"image", "device", "y">,
+    searchColor: RGB,
 ): Promise<boolean> {
-    const searchColor = { R: 148, G: 250, B: 0 };
     const color = await image.getRGB(x, y);
 
     return looksSame.colors(color, searchColor);
@@ -149,11 +153,12 @@ async function isMarkerColorAtPoint(
 async function findMarkerStartInRow(
     row: Coord<"image", "device", "y">,
     image: Image,
+    searchColor: RGB,
 ): Promise<Coord<"image", "device", "x"> | null> {
-    const imageWidth = (await image.getSize()).width;
+    const imageWidth = image.getSize().width;
 
     for (let x = 0 as Coord<"image", "device", "x">; x < imageWidth; x++) {
-        if (await isMarkerColorAtPoint(image, x, row)) {
+        if (await isMarkerColorAtPoint(image, x, row, searchColor)) {
             return x;
         }
     }
@@ -164,11 +169,12 @@ async function findMarkerStartInRow(
 async function findMarkerEndInRow(
     row: Coord<"image", "device", "y">,
     image: Image,
+    searchColor: RGB,
 ): Promise<Coord<"image", "device", "x"> | null> {
-    const imageWidth = (await image.getSize()).width;
+    const imageWidth = image.getSize().width;
 
     for (let x = (imageWidth - 1) as Coord<"image", "device", "x">; x >= 0; x--) {
-        if (await isMarkerColorAtPoint(image, x, row)) {
+        if (await isMarkerColorAtPoint(image, x, row, searchColor)) {
             return x;
         }
     }
