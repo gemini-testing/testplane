@@ -2,6 +2,7 @@
 
 const fs = require("fs-extra");
 const path = require("path");
+const crypto = require("crypto");
 const _ = require("lodash");
 const { pngValidator: validatePng } = require("png-validator");
 const { Image } = require("../../../image");
@@ -17,6 +18,8 @@ const { AssertViewError } = require("./errors/assert-view-error");
 
 const makeDebug = require("debug");
 const debug = makeDebug("testplane:screenshots:assert-view");
+
+const getShortDebugId = debugId => crypto.createHash("sha1").update(debugId).digest("hex").slice(0, 7);
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -177,8 +180,10 @@ module.exports.default = browser => {
         let debugId = "debugId";
         try {
             const test = session.executionContext.ctx.currentTest;
-            debugId = `${test.fullTitle()}.${browser.id}.${state}`;
+            const fullDebugId = `${test.fullTitle()}.${browser.id}.${state}`;
+            debugId = getShortDebugId(fullDebugId);
             opts.debugId = debugId;
+            debug(`[${debugId}] assertView id: ${fullDebugId}`);
         } catch {
             /**/
         }

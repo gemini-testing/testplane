@@ -24,6 +24,15 @@ export async function preparePointerForScreenshot(
     return runWithoutHistory({}, async () => {
         if (!browser.isW3C) {
             pointerDebug("Skipping pointer move because session is not W3C");
+            return;
+        }
+
+        const chromeOptions =
+            browser.requestedCapabilities?.["goog:chromeOptions"] ?? browser.capabilities?.["goog:chromeOptions"];
+        const isChromeMobileEmulation = Boolean(chromeOptions?.mobileEmulation);
+        if (browser.isMobile || browser.isIOS || browser.isAndroid || isChromeMobileEmulation) {
+            pointerDebug("Skipping pointer move because session is on mobile");
+            return;
         }
 
         try {

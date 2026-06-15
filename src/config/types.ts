@@ -5,6 +5,7 @@ import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
+import type { CropMargins } from "../browser/camera";
 import { DisableHoverMode } from "../browser/isomorphic/types";
 
 export interface CompareOptsConfig {
@@ -53,9 +54,9 @@ export interface AssertViewOpts {
      * @remarks
      * Indicates maximum allowed CIEDE2000 difference between colors. Used only in non-strict mode.
      * Increasing global default is not recommended, prefer changing tolerance for particular suites or states instead.
-     * By default it's 2.3 which should be enough for the most cases.
+     * By default it's 3.0 which should be enough for the most cases.
      *
-     * @defaultValue `2.3`
+     * @defaultValue `3.0`
      */
     tolerance?: number;
     /**
@@ -88,6 +89,14 @@ export interface AssertViewOpts {
      * @defaultValue `0`
      */
     screenshotDelay?: number;
+    /**
+     * Additional raw screenshot margins to crop, in physical pixels.
+     *
+     * Values are applied to every raw browser screenshot and merged with automatic calibration margins
+     * by taking the larger margin for each side.
+     * Useful to crop off the scrollbar, or the browser UI on exotic mobile devices.
+     */
+    cropMargins?: CropMargins;
     /**
      * Ability to set DOM-node selector which should be scroll when the captured element does not completely fit on the screen.
      *
@@ -138,7 +147,7 @@ export interface AssertViewOpts {
      * @note
      * This should be considered a last resort and only used in small number of cases where necessary.
      *
-     * @defaultValue `0`
+     * @defaultValue `4`
      */
     ignoreDiffPixelCount?: `${number}%` | number;
     /**

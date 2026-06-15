@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fixed Overlay Content And Scrollable Block</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 2400px;
+                font-family: Arial, sans-serif;
+            }
+
+            body {
+                background: repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 79px, #e6e6e6 79px, #e6e6e6 80px);
+            }
+
+            .movable-block {
+                position: relative;
+                top: 180px;
+                left: 0;
+                width: 320px;
+                height: 1100px;
+                box-sizing: border-box;
+                border: 2px solid #111111;
+                background: linear-gradient(#2f6fed, #174ea6);
+                color: #ffffff;
+                padding: 12px;
+            }
+
+            .fixed-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 10;
+                pointer-events: none;
+            }
+
+            .stable-overlay-content {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 288px;
+                box-sizing: border-box;
+                border: 2px solid #111111;
+                background: rgba(32, 164, 100, 0.96);
+                color: #ffffff;
+                padding: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="movable-block" data-testid="movable-block">movable selected content</div>
+
+        <div class="fixed-overlay">
+            <div class="stable-overlay-content" data-testid="stable-overlay-content">
+                stable selected overlay content
+            </div>
+        </div>
+    </body>
+</html>

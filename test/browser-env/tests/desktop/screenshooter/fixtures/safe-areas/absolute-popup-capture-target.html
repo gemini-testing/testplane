@@ -1,0 +1,88 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        font-family: Arial, sans-serif;
+        background: #eef2f7;
+    }
+
+    .ScrollPanel {
+        height: 640px;
+        overflow: auto;
+        background: #f6f8fc;
+    }
+
+    .ItemList {
+        min-height: 1400px;
+        padding: 32px 96px;
+        box-sizing: border-box;
+    }
+
+    .ItemCard {
+        width: 520px;
+        min-height: 220px;
+        margin-bottom: 24px;
+        padding: 24px;
+        box-sizing: border-box;
+        background: #ffffff;
+        border: 1px solid #ccd6e3;
+    }
+
+    .FloatingPopup {
+        position: absolute;
+        inset: 120px auto auto 136px;
+        width: 240px;
+        margin: 0;
+        z-index: 31001;
+        background: #ffffff;
+        border: 1px solid #9fb1c7;
+        box-shadow: 0 10px 28px rgba(20, 33, 61, 0.22);
+    }
+
+    .PopupContent {
+        padding: 16px;
+        box-sizing: border-box;
+    }
+
+    .PopupContent-Row {
+        display: flex;
+        justify-content: space-between;
+        height: 26px;
+        font-size: 14px;
+    }
+</style>
+
+<div class="ScrollPanel">
+    <div class="ItemList">
+        <h3 class="ItemList-Title">Items</h3>
+        <div class="ItemCard">
+            <a class="ItemCard-Title" href="#">First item</a>
+            <div class="ItemCard-Controls">
+                <button class="ItemCard-Trigger">Open menu</button>
+            </div>
+        </div>
+        <div class="ItemCard">
+            <a class="ItemCard-Title" href="#">Second item</a>
+            <div class="ItemCard-Controls">
+                <button class="ItemCard-Trigger">Open menu</button>
+            </div>
+            <div class="FloatingPopup">
+                <div class="PopupContent">
+                    <div class="PopupContent-Row"><span>Row 1</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 2</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 3</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 4</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 5</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 6</span><span>Value</span></div>
+                    <div class="PopupContent-Row"><span>Row 7</span><span>Value</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="ItemCard">
+            <a class="ItemCard-Title" href="#">Third item</a>
+        </div>
+    </div>
+</div>

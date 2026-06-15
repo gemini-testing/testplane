@@ -82,18 +82,26 @@ function getProbeAxisCoordinates(length: number, gridSize: number): number[] {
 
 export function computeElementPositionsProbe(
     gridSize = ELEMENT_POSITIONS_PROBE_GRID_SIZE
-): Array<Rect<"viewport", "css"> | null> {
+): Array<(Rect<"viewport", "css"> & { elementDescr?: string }) | null> {
     const viewportSize = computeViewportSize();
     const xCoordinates = getProbeAxisCoordinates(viewportSize.width as number, gridSize);
     const yCoordinates = getProbeAxisCoordinates(viewportSize.height as number, gridSize);
-    const probe: Array<Rect<"viewport", "css"> | null> = [];
+    const probe: Array<(Rect<"viewport", "css"> & { elementDescr?: string }) | null> = [];
 
     for (let yIndex = 0; yIndex < yCoordinates.length; yIndex++) {
         for (let xIndex = 0; xIndex < xCoordinates.length; xIndex++) {
             const x = xCoordinates[xIndex];
             const y = yCoordinates[yIndex];
-            const bcr = document.elementFromPoint(x, y)?.getBoundingClientRect() ?? null;
-            probe.push(bcr ? fromBcrToRect(bcr) : null);
+            const element = document.elementFromPoint(x, y);
+            if (!element) {
+                probe.push(null);
+                continue;
+            }
+
+            probe.push({
+                ...fromBcrToRect(element.getBoundingClientRect()),
+                elementDescr: getReadableElementDescriptor(element)
+            });
         }
     }
 
@@ -120,24 +128,33 @@ export function computeCaptureSpecs(
         }
     }
 
-    const captureSpecs = elements
-        .map(function ({ element, pseudoElement }) {
-            const full = pseudoElement
-                ? getPseudoElementCaptureRect(element, pseudoElement)
-                : getElementCaptureRect(element, logger);
-            if (!full) return null;
-            const clip = getClipRect(element, logger);
-            const visible = getIntersection(full, clip) ?? {
-                top: full.top,
-                left: full.left,
-                width: 0 as typeof full.width,
-                height: 0 as typeof full.height
-            };
-            return { full, visible };
-        })
-        .filter(function (r): r is NonNullable<typeof r> {
-            return r !== null;
-        });
+    function getCaptureSpec(
+        element: Element,
+        pseudoElement: PseudoElementSelector | null
+    ): CaptureSpec<"viewport", "css"> | null {
+        const full = pseudoElement
+            ? getPseudoElementCaptureRect(element, pseudoElement)
+            : getElementCaptureRect(element, logger);
+        if (!full) return null;
+        const clip = getClipRect(element, logger);
+        const visible = getIntersection(full, clip) ?? {
+            top: full.top,
+            left: full.left,
+            width: 0 as typeof full.width,
+            height: 0 as typeof full.height
+        };
+
+        return { full, visible, clip };
+    }
+
+    const captureSpecs: CaptureSpec<"viewport", "css">[] = [];
+
+    for (const { element, pseudoElement } of elements) {
+        const captureSpec = getCaptureSpec(element, pseudoElement);
+        if (captureSpec) {
+            captureSpecs.push(captureSpec);
+        }
+    }
 
     logger?.("captureSpecs:", captureSpecs);
 
@@ -190,7 +207,6 @@ export function computeSafeArea(
         return { top: viewportRect.top, height: viewportRect.height };
     }
 
-    const captureArea = getCoveringRect(captureSpecs);
     const scrollEl = scrollElement ?? document.documentElement;
 
     // 1. Base safe area equals the visible rectangle of the scroll container
@@ -225,6 +241,21 @@ export function computeSafeArea(
 
     const originalSafeArea = { ...safeArea };
 
+    // 1.1 If all capture elements are fixed or inside non-scrollable fixed elements, scrolling will not move them,
+    // so no point in computing safe area
+    if (
+        captureElements.every(
+            el =>
+                getComputedStyle(el).position === "fixed" ||
+                (findFixedPositionedParent(el) !== null && getScrollParent(el) === null)
+        )
+    ) {
+        logger?.("all capture elements are fixed or inside non-scrollable fixed subtree, skipping interferences");
+        return { top: originalSafeArea.top, height: originalSafeArea.height };
+    }
+
+    const captureArea = getCoveringRect(captureSpecs);
+
     // 2. Build z-index chains for all capture elements
     //    One z-chain is a list of objects: { stacking context, z-index } -> { stacking context, z-index } -> ...
     //    It is used to determine which element is on top of the other
@@ -236,12 +267,18 @@ export function computeSafeArea(
     // 3. Detect interfering elements
     const interferences: { element: Element; rect: Rect<"viewport", "css"> }[] = [];
     const allElements = document.documentElement.querySelectorAll("*");
+    const singleCaptureElement = captureElements.length === 1 ? captureElements[0] : null;
 
     for (let idx = 0; idx < allElements.length; idx++) {
         const el = allElements[idx];
 
-        // Skip elements that contain capture elements
-        if (captureElements.some(capEl => el !== capEl && el.contains(capEl))) continue;
+        if (scrollEl === el || el.contains(scrollEl)) {
+            continue;
+        }
+
+        if (singleCaptureElement && (el === singleCaptureElement || el.contains(singleCaptureElement))) {
+            continue;
+        }
 
         const computedStyle = getComputedStyle(el);
         const position = computedStyle.position;
@@ -254,7 +291,8 @@ export function computeSafeArea(
             (bcr.width === 1 && bcr.height === 1) ||
             computedStyle.visibility === "hidden" ||
             computedStyle.display === "none" ||
-            parseFloat(computedStyle.opacity) < 0.0001
+            parseFloat(computedStyle.opacity) < 0.0001 ||
+            /opacity\(\s*0(?:\.0+)?%?\s*\)/.test(computedStyle.filter)
         )
             continue;
         // Skip elements that don't horizontally intersect with capture area
@@ -263,15 +301,18 @@ export function computeSafeArea(
         if (getIntersection(fromBcrToRect(bcr), viewportRect) === null) continue;
 
         let likelyInterferes = false;
+        let shouldSkipZIndexCheck = false;
         let adjustedRect: Rect<"viewport", "css"> = domRectToViewportCss(bcr);
 
         const fixedPositionedParent = findFixedPositionedParent(el);
+        const isInsideScrollContextFixedParent =
+            fixedPositionedParent !== null &&
+            (fixedPositionedParent === scrollEl || fixedPositionedParent.contains(scrollEl));
 
-        if (
-            position === "fixed" ||
-            (fixedPositionedParent && !captureElements.some(capEl => fixedPositionedParent.contains(capEl)))
-        ) {
+        if (position === "fixed" || (fixedPositionedParent && !isInsideScrollContextFixedParent)) {
             likelyInterferes = true;
+            // If the fixed element is inside a capture element, it's almost certainly interfering
+            shouldSkipZIndexCheck = captureElements.some(capEl => capEl.contains(el));
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
             if (captureElements.some(capEl => capEl.contains(el))) continue;
@@ -291,6 +332,8 @@ export function computeSafeArea(
             logger?.("scrollParent:", getReadableElementDescriptor(scrollParent));
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
+            shouldSkipZIndexCheck =
+                scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl));
 
             if (!isNaN(topValue)) {
                 adjustedRect = {
@@ -318,7 +361,7 @@ export function computeSafeArea(
         if (!likelyInterferes) continue;
 
         const candChain = buildZChain(el);
-        const behindAll = targetChains.every(tChain => isChainBehind(candChain, tChain));
+        const behindAll = !shouldSkipZIndexCheck && targetChains.every(tChain => isChainBehind(candChain, tChain));
 
         if (!behindAll) {
             const extRect = getExtRect(computedStyle, adjustedRect);
@@ -360,7 +403,8 @@ export function computeSafeArea(
             logger?.("decided to shrink bottom");
         }
 
-        if (resultingHeight < origHeight / 2) {
+        // We don't want to shrink the safe area less than 30% of original height
+        if (resultingHeight < origHeight * 0.3) {
             logger?.("decided to skip, because shrinking is too large");
             continue;
         }
@@ -371,8 +415,8 @@ export function computeSafeArea(
         safeHeight = resultingHeight;
     }
 
-    // 5. Ensure we didn't shrink more than 50% of original height
-    if (safeHeight < origHeight / 2) {
+    // 5. Ensure we didn't shrink below 30% of original height
+    if (safeHeight < origHeight * 0.3) {
         safeTop = originalSafeArea.top;
         safeHeight = originalSafeArea.height;
     }
@@ -441,13 +485,21 @@ export function scrollToCaptureAreaIfNeeded(
     const captureSpecsResult = computeCaptureSpecs(selectorsToCapture);
     if (!captureSpecsResult) return {};
 
+    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
+    const selectorsForScrollParentSearch = selectorsToCapture.map(
+        selector => parseCaptureSelector(selector).elementSelector
+    );
+    const initialScrollElem = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
+    const readableSelectorToScrollDescr = selectorToScroll ?? getReadableElementDescriptor(initialScrollElem);
+
     const captureArea = getCoveringRect(captureSpecsResult.map(s => s.full));
-    const safeArea = computeSafeArea(selectorsToCapture);
+    const safeArea = computeSafeArea(selectorsToCapture, initialScrollElem, logger);
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
     const captureAndViewportIntersection = getIntersection(captureArea, viewport);
+    const expectedVisibleHeight = Math.min(captureArea.height, safeArea.height);
     const isIntersectionWithSafeAreaTooSmall =
-        !captureAndSafeAreasIntersection || captureAndSafeAreasIntersection.height < captureArea.height / 2;
+        !captureAndSafeAreasIntersection || captureAndSafeAreasIntersection.height < expectedVisibleHeight / 2;
     const isCaptureAreaStartVisible = captureArea.top >= safeArea.top;
     logger?.("scrollToCaptureAreaIfNeeded: intersection check", {
         captureArea,
@@ -482,12 +534,6 @@ export function scrollToCaptureAreaIfNeeded(
         return {};
     }
 
-    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-    const selectorsForScrollParentSearch = selectorsToCapture.map(
-        selector => parseCaptureSelector(selector).elementSelector
-    );
-    const initialScrollElem = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
-    const readableSelectorToScrollDescr = selectorToScroll ?? getReadableElementDescriptor(initialScrollElem);
     logger?.("scrollToCaptureAreaIfNeeded: scrolling is required", {
         scrollElement: readableSelectorToScrollDescr,
         requestedSelectorToScroll: selectorToScroll ?? null,

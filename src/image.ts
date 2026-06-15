@@ -196,6 +196,17 @@ export class Image {
         return { height, width: this._width };
     }
 
+    async clone(): Promise<Image> {
+        const imgData = await this._getImgData();
+        const image = new Image({ width: this._width, height: this._height });
+        image._imgData = Buffer.from(imgData);
+        image._imgDataPromise = Promise.resolve(image._imgData);
+        image._clearAreas = this._clearAreas.slice();
+        image._composeImages = this._composeImages.slice();
+
+        return image;
+    }
+
     async crop(rect: Rect): Promise<void> {
         const imgData = await this._getImgData();
 

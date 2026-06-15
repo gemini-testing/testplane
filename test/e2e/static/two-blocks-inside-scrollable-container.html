@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Two Blocks Inside Scrollable Container</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 32px;
+                background: #ffffff;
+                font-family: Arial, sans-serif;
+            }
+
+            .scrollable-container {
+                width: 240px;
+                height: 200px;
+                overflow-y: auto;
+                overflow-x: hidden;
+                border: 2px solid #222222;
+                background: #ffffff;
+            }
+
+            .scrollable-content {
+                position: relative;
+                width: 220px;
+                height: 800px;
+                background: repeating-linear-gradient(to bottom, #ffffff 0, #ffffff 49px, #eeeeee 49px, #eeeeee 50px);
+            }
+
+            .target-block {
+                position: absolute;
+                width: 100px;
+                height: 20px;
+                background: #2f6fed;
+                border: 0;
+            }
+
+            .target-block_first {
+                left: 20px;
+                top: 50px;
+            }
+
+            .target-block_second {
+                left: 50px;
+                top: 700px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="scrollable-container">
+            <div class="scrollable-content">
+                <div class="target-block target-block_first" data-testid="first-block"></div>
+                <div class="target-block target-block_second" data-testid="second-block"></div>
+            </div>
+        </div>
+    </body>
+</html>

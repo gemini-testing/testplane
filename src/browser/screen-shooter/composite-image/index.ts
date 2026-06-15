@@ -1,6 +1,5 @@
 import os from "node:os";
 import path from "node:path";
-import makeDebug from "debug";
 import { Image } from "../../../image";
 import {
     YBand,
@@ -25,8 +24,9 @@ import {
 } from "../../isomorphic/geometry";
 import type { CaptureSpec } from "../../client-scripts/screen-shooter/types";
 import { saveRenderedPiecesForDebugIfNeeded, saveViewportImageForDebugIfNeeded } from "./debug-utils";
+import { makeVerboseScreenshotsDebug } from "../debug";
 
-const debug = makeDebug("testplane:screenshots:composite-image");
+const debug = makeVerboseScreenshotsDebug("testplane:screenshots:composite-image");
 
 /** Raw chunk data as registered by the caller. */
 interface CompositeChunk {
@@ -56,6 +56,7 @@ interface SegmentCandidate {
     full: YBand<"viewport", "device"> | null;
     /** Chosen vertical crop area candidate, which will be used to crop the viewport image. */
     chosen: YBand<"viewport", "device"> | null;
+    expanded?: boolean;
 }
 
 type RenderPiece =
@@ -67,10 +68,12 @@ export class CompositeImage {
     private _compositeChunks: CompositeChunk[];
     private _debugTmpDir: string | null = null;
 
+    /** Creates a composite renderer instance while preserving subclass construction. */
     static create(...args: ConstructorParameters<typeof CompositeImage>): CompositeImage {
         return new this(...args);
     }
 
+    /** Initializes chunk storage and an optional debug-output directory. */
     constructor() {
         this._captureAreaSize = null;
         this._compositeChunks = [];
@@ -157,12 +160,6 @@ export class CompositeImage {
         }
 
         const anchoredChunks = this._computeAnchoredChunks();
-        const commonHorizontalArea = this._computeCommonHorizontalAreaIfNeeded(
-            anchoredChunks,
-            this._captureAreaSize.width,
-        );
-        const captureWidth = commonHorizontalArea?.width ?? this._captureAreaSize.width;
-
         const sortedChunks = anchoredChunks.slice().sort((a, b) => subtractCoords(b.anchorTop, a.anchorTop));
 
         const candidates = sortedChunks.map(chunk => this._buildCandidate(chunk));
@@ -170,6 +167,10 @@ export class CompositeImage {
         debug("Candidates: %O", candidates);
 
         this._chooseBestCandidates(candidates);
+        this._expandCandidatesToFullArea(candidates);
+
+        const commonHorizontalArea = this._computeCommonHorizontalAreaIfNeeded(candidates, this._captureAreaSize.width);
+        const captureWidth = commonHorizontalArea?.width ?? this._captureAreaSize.width;
 
         debug("Chosen best candidates: %O", candidates);
 
@@ -246,6 +247,7 @@ export class CompositeImage {
             }
 
             let maxDelta = 0;
+            let hasRenderableDelta = false;
             const minLength = Math.min(chunk.captureSpecs.length, referenceCaptureSpecs.length);
             for (let i = 0; i < minLength; i++) {
                 const referenceSpec = referenceCaptureSpecs[i];
@@ -258,6 +260,33 @@ export class CompositeImage {
                 const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
                 if (delta > maxDelta) {
                     maxDelta = delta;
+                }
+                hasRenderableDelta = true;
+            }
+
+            if (!hasRenderableDelta) {
+                for (let i = 0; i < minLength; i++) {
+                    const referenceSpec = referenceCaptureSpecs[i];
+                    const chunkSpec = chunk.captureSpecs[i];
+
+                    const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
+                    if (delta > maxDelta) {
+                        maxDelta = delta;
+                    }
+                }
+            } else if (maxDelta === 0) {
+                for (let i = 0; i < minLength; i++) {
+                    const referenceSpec = referenceCaptureSpecs[i];
+                    const chunkSpec = chunk.captureSpecs[i];
+
+                    if (!this._isRenderableCaptureSpec(chunkSpec)) {
+                        continue;
+                    }
+
+                    const delta = subtractCoords(referenceSpec.full.top, chunkSpec.full.top);
+                    if (delta > maxDelta) {
+                        maxDelta = delta;
+                    }
                 }
             }
 
@@ -280,10 +309,12 @@ export class CompositeImage {
         return anchoredChunks;
     }
 
+    /** Checks whether a capture spec contributes visible pixels in the current chunk. */
     private _isRenderableCaptureSpec(spec: CaptureSpec<"viewport", "device">): boolean {
         return spec.visible.width > 0 && spec.visible.height > 0;
     }
 
+    /** Returns the bounding rect that covers all visible capture-spec parts for a chunk. */
     private _getVisibleCoveringRect(chunk: Pick<CompositeChunk, "captureSpecs">): Rect<"viewport", "device"> | null {
         const visibleRects = chunk.captureSpecs
             .filter(spec => this._isRenderableCaptureSpec(spec))
@@ -296,6 +327,7 @@ export class CompositeImage {
         return getCoveringRect(visibleRects);
     }
 
+    /** Builds a segment candidate, listing all possible options, e.g. strictly follow safe area, relax top/bottom edges, ignore safe area at all. */
     private _buildCandidate(chunk: AnchoredChunk): SegmentCandidate {
         const strict = this._getYBandForMode(chunk, "strict");
         const relaxTop = this._getYBandForMode(chunk, "relaxTop");
@@ -312,6 +344,7 @@ export class CompositeImage {
         };
     }
 
+    /** Computes a usable vertical band for a specific mode: e.g. what if we expand the top edge of the safe area? */
     private _getYBandForMode(
         chunk: AnchoredChunk,
         mode: "strict" | "relaxTop" | "relaxBottom" | "full",
@@ -352,6 +385,7 @@ export class CompositeImage {
         return resultingBand;
     }
 
+    /** Chooses the best vertical band per chunk, relaxing edges only where needed to avoid gaps. */
     private _chooseBestCandidates(candidates: SegmentCandidate[]): void {
         if (!candidates.length) {
             return;
@@ -424,6 +458,63 @@ export class CompositeImage {
         }
     }
 
+    /** Expansion for cases when capture elements are far apart and not fit one viewport. */
+    private _expandCandidatesToFullArea(candidates: SegmentCandidate[]): void {
+        if (candidates.some(candidate => this._doesVisibleAreaCoverFullArea(candidate.chunk))) {
+            return;
+        }
+
+        for (const candidate of candidates) {
+            if (!candidate.chosen) {
+                continue;
+            }
+
+            const safeAreaBand = candidate.chunk.safeArea;
+
+            const fullCoveringRect = getCoveringRect(candidate.chunk.captureSpecs.map(spec => spec.full));
+            const safeAreaBottom = getBottom(safeAreaBand);
+            const fullBottom = getBottom(fullCoveringRect);
+            const chosenBottom = getBottom(candidate.chosen);
+
+            let top = candidate.chosen.top;
+            let bottom = chosenBottom;
+
+            if (fullCoveringRect.top < safeAreaBand.top && top > safeAreaBand.top) {
+                top = safeAreaBand.top;
+            }
+
+            if (fullBottom > safeAreaBottom && bottom < safeAreaBottom) {
+                bottom = safeAreaBottom;
+            }
+
+            if (top !== candidate.chosen.top || bottom !== chosenBottom) {
+                candidate.chosen = {
+                    top,
+                    height: getHeight(top, bottom),
+                };
+                candidate.expanded = true;
+            }
+        }
+    }
+
+    /** Checks whether visible capture-spec pixels cover the complete requested capture area. */
+    private _doesVisibleAreaCoverFullArea(chunk: AnchoredChunk): boolean {
+        const visibleCoveringRect = this._getVisibleCoveringRect(chunk);
+
+        if (!visibleCoveringRect) {
+            return false;
+        }
+
+        const fullCoveringRect = getCoveringRect(chunk.captureSpecs.map(spec => spec.full));
+
+        return (
+            visibleCoveringRect.top <= fullCoveringRect.top &&
+            getBottom(visibleCoveringRect) >= getBottom(fullCoveringRect)
+        );
+    }
+
+    /** Given a list of best possible segments, builds a list of image pieces, inserting gaps when needed,
+     * ensuring resulting array is a vertically continuous sequence of pieces. */
     private _buildRenderPieces(candidates: SegmentCandidate[]): RenderPiece[] {
         const pieces: RenderPiece[] = [];
 
@@ -459,7 +550,7 @@ export class CompositeImage {
             const topRelativeToCaptureArea = getMaxCoord(chosenRelativeToCaptureArea.top, cursor);
 
             if (topRelativeToCaptureArea > cursor) {
-                pieces.push({ type: "black", height: getHeight(cursor, topRelativeToCaptureArea) });
+                pieces.push(...this._buildGapPieces(candidates, cursor, topRelativeToCaptureArea));
             }
 
             const cursorRelativeToViewport = fromCaptureAreaToViewport(cursor, candidate.chunk.anchorTop);
@@ -480,6 +571,68 @@ export class CompositeImage {
         return pieces;
     }
 
+    /** Fills an uncovered capture-area gap with usable chunk areas or black fallback slices. */
+    private _buildGapPieces(
+        candidates: SegmentCandidate[],
+        gapTop: Coord<"capture", "device", "y">,
+        gapBottom: Coord<"capture", "device", "y">,
+    ): RenderPiece[] {
+        const pieces: RenderPiece[] = [];
+        const usableAreas = candidates
+            .map(candidate => {
+                const safeArea = candidate.chunk.safeArea;
+
+                return {
+                    chunk: candidate.chunk,
+                    area: {
+                        top: fromViewportToCaptureArea(safeArea.top, candidate.chunk.anchorTop),
+                        height: safeArea.height,
+                    } as YBand<"capture", "device">,
+                };
+            })
+            .sort((a, b) => subtractCoords(a.area.top, b.area.top));
+
+        let cursor = gapTop;
+
+        for (const { chunk, area } of usableAreas) {
+            const areaBottom = getBottom(area);
+
+            if (areaBottom <= cursor || area.top >= gapBottom) {
+                continue;
+            }
+
+            const top = getMaxCoord(area.top, cursor);
+            const bottom = getMinCoord(areaBottom, gapBottom);
+
+            if (top > cursor) {
+                pieces.push({ type: "black", height: getHeight(cursor, top) });
+            }
+
+            if (bottom > top) {
+                pieces.push({
+                    type: "chunk",
+                    chunk,
+                    verticalArea: {
+                        top: fromCaptureAreaToViewport(top, chunk.anchorTop),
+                        height: getHeight(top, bottom),
+                    },
+                });
+                cursor = bottom;
+            }
+
+            if (cursor >= gapBottom) {
+                break;
+            }
+        }
+
+        if (cursor < gapBottom) {
+            pieces.push({ type: "black", height: getHeight(cursor, gapBottom) });
+        }
+
+        return pieces;
+    }
+
+    /** Returns the horizontal viewport band occupied by visible capture-spec pixels. */
     private _getChunkHorizontalArea(
         chunk: Pick<AnchoredChunk, "captureSpecs" | "imageSize">,
     ): XBand<"viewport", "device"> | null {
@@ -495,21 +648,24 @@ export class CompositeImage {
         return intersectXBands(viewportHorizontalArea, visibleCoveringRect);
     }
 
+    /** Computes a shared horizontal crop band when chunks cannot safely use the original width. */
     private _computeCommonHorizontalAreaIfNeeded(
-        chunks: AnchoredChunk[],
+        candidates: SegmentCandidate[],
         captureWidth: Length<"device", "x">,
     ): XBand<"viewport", "device"> | null {
-        const chunkHorizontalAreas = chunks
-            .map(chunk => this._getChunkHorizontalArea(chunk))
+        const chunkHorizontalAreas = candidates
+            .map(candidate => this._getCandidateHorizontalArea(candidate))
             .filter((area): area is XBand<"viewport", "device"> => Boolean(area));
 
         if (chunkHorizontalAreas.length === 0) {
             return null;
         }
 
+        const hasMultipleCaptureSpecs = candidates.some(candidate => candidate.chunk.captureSpecs.length > 1);
+        const hasExpandedCandidate = candidates.some(candidate => candidate.expanded);
         const hasWidthMismatch = chunkHorizontalAreas.some(area => area.width !== captureWidth);
 
-        if (!hasWidthMismatch) {
+        if (!hasMultipleCaptureSpecs && !hasExpandedCandidate && !hasWidthMismatch) {
             return null;
         }
 
@@ -522,6 +678,29 @@ export class CompositeImage {
         };
     }
 
+    /** Selects the horizontal band that should be used for a candidate chunk. */
+    private _getCandidateHorizontalArea(candidate: SegmentCandidate): XBand<"viewport", "device"> | null {
+        if (!candidate.expanded) {
+            return this._getChunkHorizontalArea(candidate.chunk);
+        }
+
+        return this._getExpandedChunkHorizontalArea(candidate.chunk) ?? this._getChunkHorizontalArea(candidate.chunk);
+    }
+
+    /** Computes a horizontal band for expanded chunks using requested full rects and clip bounds. */
+    private _getExpandedChunkHorizontalArea(chunk: AnchoredChunk): XBand<"viewport", "device"> | null {
+        const viewportHorizontalArea = {
+            left: 0 as Coord<"viewport", "device", "x">,
+            width: chunk.imageSize.width as number as Length<"device", "x">,
+        };
+        const fullCoveringRect = getCoveringRect(chunk.captureSpecs.map(spec => spec.full));
+        const clipCoveringRect = getCoveringRect(chunk.captureSpecs.map(spec => spec.clip));
+        const fullHorizontalArea = intersectXBands(viewportHorizontalArea, fullCoveringRect);
+
+        return intersectXBands(fullHorizontalArea, clipCoveringRect);
+    }
+
+    /** Crops one viewport chunk into a render piece after clearing ignored regions. */
     private async _createChunkPiece(
         chunk: AnchoredChunk,
         verticalArea: YBand<"viewport", "device">,
@@ -558,15 +737,18 @@ export class CompositeImage {
             width: horizonalArea.width,
         };
 
-        for (const ignoreRect of chunk.boundingRectsToIgnore) {
-            await chunk.image.addClear(ignoreRect);
-        }
-        await chunk.image.applyJoin();
-        await chunk.image.crop(cropArea);
+        const image = await chunk.image.clone();
 
-        return chunk.image;
+        for (const ignoreRect of chunk.boundingRectsToIgnore) {
+            await image.addClear(ignoreRect);
+        }
+        await image.applyJoin();
+        await image.crop(cropArea);
+
+        return image;
     }
 
+    /** Creates a black fallback image piece for areas that no chunk can provide. */
     private async _createBlackPiece(height: Length<"device", "y">, width: Length<"device", "x">): Promise<Image> {
         return new Image({ width, height });
     }
