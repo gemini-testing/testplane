@@ -3,7 +3,7 @@ import path from "path";
 import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
-import type { Image, RGB } from "../image";
+import type { Image } from "../image";
 
 const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" } as const;
 
@@ -49,11 +49,7 @@ export class Calibrator {
 
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-        const { width: imageWidth, height: imageHeight } = image.getSize();
-        const searchColor = image.hasICCPChunk
-            ? await image.getRGB(Math.floor(imageWidth / 2), Math.floor(imageHeight / 2))
-            : { R: 148, G: 250, B: 0 };
-        const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio, searchColor });
+        const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio });
 
         if (!imageFeatures) {
             throw new CoreError(
@@ -74,9 +70,9 @@ export class Calibrator {
 
     private async _analyzeImage(
         image: Image,
-        params: { calculateColorLength?: boolean; searchColor: RGB },
+        params: { calculateColorLength?: boolean },
     ): Promise<ImageAnalysisResult | null> {
-        const imageHeight = image.getSize().height;
+        const imageHeight = (await image.getSize()).height;
 
         for (let y = 0; y < imageHeight; y++) {
             const result = await analyzeRow(y, image, params);
@@ -92,9 +88,9 @@ export class Calibrator {
 async function analyzeRow(
     row: number,
     image: Image,
-    params: { calculateColorLength?: boolean; searchColor: RGB },
+    params: { calculateColorLength?: boolean } = {},
 ): Promise<ImageAnalysisResult | null> {
-    const markerStart = await findMarkerInRow(row, image, DIRECTION.FORWARD, params.searchColor);
+    const markerStart = await findMarkerInRow(row, image, DIRECTION.FORWARD);
 
     if (markerStart === -1) {
         return null;
@@ -106,19 +102,15 @@ async function analyzeRow(
         return result;
     }
 
-    const markerEnd = await findMarkerInRow(row, image, DIRECTION.REVERSE, params.searchColor);
+    const markerEnd = await findMarkerInRow(row, image, DIRECTION.REVERSE);
     const colorLength = markerEnd - markerStart + 1;
 
     return { ...result, colorLength };
 }
 
-async function findMarkerInRow(
-    row: number,
-    image: Image,
-    searchDirection: "forward" | "reverse",
-    searchColor: RGB,
-): Promise<number> {
-    const imageWidth = image.getSize().width;
+async function findMarkerInRow(row: number, image: Image, searchDirection: "forward" | "reverse"): Promise<number> {
+    const imageWidth = (await image.getSize()).width;
+    const searchColor = { R: 148, G: 250, B: 0 };
 
     if (searchDirection === DIRECTION.REVERSE) {
         return searchReverse_();

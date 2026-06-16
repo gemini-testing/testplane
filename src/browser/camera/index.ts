@@ -45,7 +45,7 @@ export class Camera {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
-        const { width, height } = image.getSize();
+        const { width, height } = await image.getSize();
         const imageArea: ImageArea = { left: 0, top: 0, width, height };
 
         const calibratedArea = this._calibrateArea(imageArea);

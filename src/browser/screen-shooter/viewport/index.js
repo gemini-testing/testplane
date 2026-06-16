@@ -35,7 +35,7 @@ module.exports = class Viewport {
     }
 
     async handleImage(image, area = {}) {
-        const { width, height } = image.getSize();
+        const { width, height } = await image.getSize();
         _.defaults(area, { left: 0, top: 0, width, height });
         const capturedArea = this._transformToCaptureArea(area);
 
@@ -57,7 +57,7 @@ module.exports = class Viewport {
 
     async extendBy(physicalScrollHeight, newImage) {
         this._viewport.height += physicalScrollHeight;
-        const { width, height } = newImage.getSize();
+        const { width, height } = await newImage.getSize();
 
         await this.handleImage(newImage, {
             left: 0,

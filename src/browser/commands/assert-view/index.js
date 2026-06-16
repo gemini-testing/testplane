@@ -88,7 +88,7 @@ module.exports.default = browser => {
         const currImgInst = await screenShooter
             .capture(page, screenshoterOpts)
             .finally(() => browser.cleanupScreenshot(opts));
-        const currSize = currImgInst.getSize();
+        const currSize = await currImgInst.getSize();
         const currImg = { path: temp.path(Object.assign(tempOpts, { suffix: ".png" })), size: currSize };
 
         const test = session.executionContext.ctx.currentTest;
