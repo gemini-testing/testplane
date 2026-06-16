@@ -70,6 +70,16 @@ module.exports.default = browser => {
             disableAnimation,
         });
 
+    const waitForStaticToLoad = async opts => {
+        if (opts.waitForStaticToLoadTimeout) {
+            // Interval between checks is "waitPageReadyTimeout / 10" ms, but at least 50ms and not more than 500ms
+            await session.waitForStaticToLoad({
+                timeout: opts.waitForStaticToLoadTimeout,
+                interval: Math.min(Math.max(50, opts.waitForStaticToLoadTimeout / 10), 500),
+            });
+        }
+    };
+
     const compareScreenshot = async (state, currImgInst, currImgMeta, opts) => {
         const { testplaneCtx } = session.executionContext;
         const test = session.executionContext.ctx.currentTest;
@@ -77,14 +87,6 @@ module.exports.default = browser => {
 
         if (testplaneCtx.assertViewResults.hasState(state)) {
             return Promise.reject(new AssertViewError(`duplicate name for "${state}" state`));
-        }
-
-        if (opts.waitForStaticToLoadTimeout) {
-            // Interval between checks is "waitPageReadyTimeout / 10" ms, but at least 50ms and not more than 500ms
-            await session.waitForStaticToLoad({
-                timeout: opts.waitForStaticToLoadTimeout,
-                interval: Math.min(Math.max(50, opts.waitForStaticToLoadTimeout / 10), 500),
-            });
         }
 
         const handleCaptureProcessorError = e =>
@@ -191,6 +193,7 @@ module.exports.default = browser => {
         debug(`[${debugId}] assertView opts: %O`, opts);
 
         const screenShooter = await elementsScreenShooterPromise;
+        await waitForStaticToLoad(opts);
         const { image, meta } = await screenShooter.capture(selectors, opts);
 
         return compareScreenshot(state, image, meta, opts);
@@ -236,6 +239,7 @@ module.exports.default = browser => {
         debug(`assertViewByViewport state: ${state}, opts: %O`, opts);
 
         const vpScreenShooter = await viewportScreenShooterPromise;
+        await waitForStaticToLoad(opts);
         const { image, meta } = await vpScreenShooter.capture(opts);
 
         return compareScreenshot(state, image, meta, opts);
