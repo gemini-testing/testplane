@@ -59,6 +59,8 @@ describe("worker/browser-env/runner/test-runner", () => {
     let socketClientStub: SinonStub;
     let wrapExecutionThreadStub: SinonStub;
     let historyRunGroupStub: SinonStub;
+    let historyRequestDomSnapshotsStub: SinonStub;
+    let historyCleanupDomSnapshotsStub: SinonStub;
     let extendWithCodeSnippetStub: SinonStub;
     let startSelectivityStub: SinonStub;
     let NodejsEnvRunner: typeof NodejsEnvRunnerOriginal;
@@ -198,11 +200,15 @@ describe("worker/browser-env/runner/test-runner", () => {
             .stub()
             .callsFake((socket, throwIfAborted) => wrapExecutionThread(socket, throwIfAborted));
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
+        historyRequestDomSnapshotsStub = sandbox.stub();
+        historyCleanupDomSnapshotsStub = sandbox.stub().resolves();
         extendWithCodeSnippetStub = sandbox.stub().callsFake(err => Promise.resolve(err));
         startSelectivityStub = sandbox.stub().resolves(() => Promise.resolve());
         NodejsEnvRunner = strictProxyquire("../../../../../../src/worker/runner/test-runner", {
             "../../../browser/history": {
                 runGroup: historyRunGroupStub,
+                requestDomSnapshots: historyRequestDomSnapshotsStub,
+                cleanupDomSnapshots: historyCleanupDomSnapshotsStub,
             },
             "../../../error-snippets": {
                 extendWithCodeSnippet: extendWithCodeSnippetStub,

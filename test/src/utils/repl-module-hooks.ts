@@ -10,33 +10,38 @@ describe("utils/repl-module-hooks", () => {
     let addHookStub: SinonStub;
     let instrumentStub: SinonStub;
     let loggerWarnStub: SinonStub;
-    let RuntimeConfigStub: { getInstance: SinonStub };
     let replModuleHooks: typeof import("src/utils/repl-module-hooks");
+    let isReplModeEnabled: boolean;
+
+    const cleanupHook_ = (): void => {
+        const processWithHook = process as typeof process & { [TESTPLANE_REPL_MODULE_HOOK]?: { revert: () => void } };
+
+        processWithHook[TESTPLANE_REPL_MODULE_HOOK]?.revert();
+        delete processWithHook[TESTPLANE_REPL_MODULE_HOOK];
+    };
 
     const loadModule_ = ({ hasRegisterHooks = false }: { hasRegisterHooks?: boolean } = {}): void => {
+        cleanupHook_();
+
         deregisterStub = sinon.stub();
         registerHooksStub = sinon.stub().returns({ deregister: deregisterStub });
         addHookStub = sinon.stub().returns(sinon.stub());
-        instrumentStub = sinon.stub().callsFake((code: string) => `${code}\n/* instrumented */`);
-        RuntimeConfigStub = {
-            getInstance: sinon.stub().returns({ replMode: { enabled: true, beforeTest: false } }),
-        };
+        isReplModeEnabled = true;
+        instrumentStub = sinon.stub().callsFake((code: string) => {
+            return isReplModeEnabled ? `${code}\n/* instrumented */` : code;
+        });
         loggerWarnStub = sinon.stub();
 
         replModuleHooks = proxyquire.noCallThru().load("src/utils/repl-module-hooks", {
             "node:module": hasRegisterHooks ? { registerHooks: registerHooksStub } : {},
             pirates: { addHook: addHookStub },
-            "../config/runtime-config": RuntimeConfigStub,
             "./repl-instrumentation": { instrumentReplIfNeeded: instrumentStub },
             "./logger": { warn: loggerWarnStub },
         });
     };
 
     afterEach(() => {
-        const processWithHook = process as typeof process & { [TESTPLANE_REPL_MODULE_HOOK]?: { revert: () => void } };
-
-        processWithHook[TESTPLANE_REPL_MODULE_HOOK]?.revert();
-        delete processWithHook[TESTPLANE_REPL_MODULE_HOOK];
+        cleanupHook_();
         sinon.restore();
     });
 
@@ -79,7 +84,7 @@ describe("utils/repl-module-hooks", () => {
 
     it("should not instrument sources outside repl mode", () => {
         loadModule_();
-        RuntimeConfigStub.getInstance.returns({ replMode: { enabled: false, beforeTest: true } });
+        isReplModeEnabled = false;
 
         replModuleHooks.registerReplModuleHooks();
 
@@ -87,12 +92,12 @@ describe("utils/repl-module-hooks", () => {
         const result = hook("it('a', () => {})", "/tmp/spec.hermione.ts");
 
         assert.equal(result, "it('a', () => {})");
-        assert.notCalled(instrumentStub);
+        assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.ts");
     });
 
     it("should not instrument registerHooks sources outside repl mode", () => {
         loadModule_({ hasRegisterHooks: true });
-        RuntimeConfigStub.getInstance.returns({ replMode: { enabled: false, beforeTest: true } });
+        isReplModeEnabled = false;
 
         replModuleHooks.registerReplModuleHooks();
 
@@ -104,7 +109,7 @@ describe("utils/repl-module-hooks", () => {
         }));
 
         assert.equal(result.source, "it('a', () => {})");
-        assert.notCalled(instrumentStub);
+        assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.mjs");
     });
 
     it("should keep original source if instrumentation fails", () => {

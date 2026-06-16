@@ -1,4 +1,4 @@
-import sinon, { SinonSpyCall, SinonStub } from "sinon";
+import sinon, { SinonFakeTimers, SinonSpyCall, SinonStub } from "sinon";
 import clearRequire from "clear-require";
 import proxyquire from "proxyquire";
 import { promiseDelay } from "../../src/utils/promise";
@@ -8,6 +8,7 @@ describe("src/signal-handler", () => {
     const sandbox = sinon.createSandbox();
 
     let signalHandler: AsyncEmitter;
+    let clock: SinonFakeTimers;
     let processOnStub: SinonStub;
     let processExitStub: SinonStub;
 
@@ -20,6 +21,7 @@ describe("src/signal-handler", () => {
     };
 
     beforeEach(() => {
+        clock = sandbox.useFakeTimers({ now: 1000 });
         processOnStub = sandbox.stub(process, "on") as SinonStub;
         processExitStub = sandbox.stub(process, "exit") as SinonStub;
 
@@ -28,7 +30,7 @@ describe("src/signal-handler", () => {
             "./utils/logger": {
                 log: sandbox.stub(),
             },
-        });
+        }).default;
     });
 
     afterEach(() => sandbox.restore());
@@ -50,13 +52,14 @@ describe("src/signal-handler", () => {
 
                 sendSignal(signal);
 
-                return promiseDelay(20).then(() => {
+                return clock.tickAsync(20).then(() => {
                     assert.callOrder(handler, afterHandler, processExitStub);
                 });
             });
 
             it("should force quit on second call", () => {
                 sendSignal(signal);
+                clock.tick(11);
                 sendSignal(signal);
 
                 assert.calledOnceWith(process.exit, exitCode);

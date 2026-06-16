@@ -1,4 +1,4 @@
-import { type REPLServer } from "node:repl";
+import repl, { type REPLServer } from "node:repl";
 import net from "node:net";
 import { PassThrough } from "node:stream";
 import { EventEmitter } from "node:events";
@@ -20,7 +20,6 @@ describe('"switchToRepl" command', () => {
 
     let ExistingBrowser: typeof ExistingBrowserOriginal;
     let replStart: SinonStub;
-    let netCreateServerStub: SinonStub;
     let logStub: SinonStub;
     let warnStub: SinonStub;
     let webdriverioAttachStub: SinonStub;
@@ -73,13 +72,14 @@ describe('"switchToRepl" command', () => {
 
     const switchToRepl_ = async ({
         session = mkSessionStub_(),
-        replServer = mkReplServer_(),
+        replServer: server = replServer,
         contexts = [{}],
     }): Promise<void> => {
+        replStart.returns(server);
         const promise = session.switchToRepl(...contexts);
 
         await waitForReplStart_();
-        replServer.emit("exit");
+        server.emit("exit");
         await promise;
     };
 
@@ -90,7 +90,11 @@ describe('"switchToRepl" command', () => {
         replServer = mkReplServer_();
         netServer = mkNetServer_();
 
-        netCreateServerStub = sandbox.stub();
+        replStart = sandbox.stub(repl, "start").returns(replServer);
+        sandbox.stub(net, "createServer").callsFake(cb => {
+            netCreateServerCb = cb as typeof netCreateServerCb;
+            return netServer;
+        });
         webdriverioAttachStub = sandbox.stub();
         clientBridgeBuildStub = sandbox.stub().resolves();
 
@@ -103,15 +107,6 @@ describe('"switchToRepl" command', () => {
             },
             "../utils/logger": { warn: warnStub, log: logStub },
             "./commands/switchToRepl": proxyquire("src/browser/commands/switchToRepl", {
-                "node:repl": {
-                    start: replStart.returns(replServer),
-                },
-                "node:net": {
-                    createServer: netCreateServerStub.callsFake(cb => {
-                        netCreateServerCb = cb;
-                        return netServer;
-                    }),
-                },
                 "../../utils/logger": { warn: warnStub, log: logStub },
             }),
         }).ExistingBrowser;
