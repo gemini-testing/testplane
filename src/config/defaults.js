@@ -131,7 +131,7 @@ module.exports = {
         },
     },
     passive: false,
-    useWsDriver: false,
+    useWsDriver: true,
     timeTravel: TimeTravelMode.Off,
     selectivity: {
         enabled: false,
