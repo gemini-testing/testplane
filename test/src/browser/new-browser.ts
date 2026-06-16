@@ -3,7 +3,7 @@ import crypto from "crypto";
 import proxyquire from "proxyquire";
 import signalHandler from "src/signal-handler";
 import { runGroup } from "src/browser/history";
-import { WEBDRIVER_PROTOCOL, DEVTOOLS_PROTOCOL } from "src/constants/config";
+import { WEBDRIVER_PROTOCOL } from "src/constants/config";
 import { X_REQUEST_ID_DELIMITER } from "src/constants/browser";
 import RuntimeConfig from "src/config/runtime-config";
 import { mkNewBrowser_, mkSessionStub_, mkWdPool_ } from "./utils";
@@ -50,7 +50,7 @@ describe("NewBrowser", () => {
             }),
         }).NewBrowser;
 
-        sandbox.stub(RuntimeConfig, "getInstance").returns({ devtools: undefined, local: undefined });
+        sandbox.stub(RuntimeConfig, "getInstance").returns({ local: undefined });
     });
 
     afterEach(() => sandbox.restore());
@@ -78,14 +78,6 @@ describe("NewBrowser", () => {
                 baseUrl: "http://base_url",
                 transformRequest: sinon.match.func,
             });
-        });
-
-        it("should use devtools protocol if testplane runs in devtools mode", async () => {
-            (RuntimeConfig.getInstance as SinonStub).returns({ devtools: true });
-
-            await mkBrowser_().init();
-
-            assert.calledWithMatch(webdriverioRemoteStub, { automationProtocol: DEVTOOLS_PROTOCOL });
         });
 
         it("should pass default port if it is not specified in grid url", async () => {

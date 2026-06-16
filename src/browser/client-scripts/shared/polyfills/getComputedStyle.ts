@@ -1,0 +1,148 @@
+/**
+ * Adapted from: https://raw.githubusercontent.com/Financial-Times/polyfill-service
+ */
+function getComputedStylePixel(element: Element, property: string, fontSize?: number | null): number {
+    const // Internet Explorer sometimes struggles to read currentStyle until the element's document is accessed.
+        /* eslint-disable @typescript-eslint/no-explicit-any */
+        value = ((element as any).document &&
+            (element as any).currentStyle[property].match(/([\d.]+)(%|cm|em|in|mm|pc|pt|)/)) || [0, 0, ""],
+        /* eslint-enable @typescript-eslint/no-explicit-any */
+        size = value[1],
+        suffix = value[2];
+
+    fontSize = !fontSize
+        ? fontSize
+        : /%|em/.test(suffix) && element.parentElement
+        ? getComputedStylePixel(element.parentElement, "fontSize", null)
+        : 16;
+    const rootSize =
+        property === "fontSize" ? fontSize : /width/i.test(property) ? element.clientWidth : element.clientHeight;
+
+    return suffix === "%"
+        ? (size / 100) * (rootSize as number)
+        : suffix === "cm"
+        ? size * 0.3937 * 96
+        : suffix === "em"
+        ? size * (fontSize as number)
+        : suffix === "in"
+        ? size * 96
+        : suffix === "mm"
+        ? (size * 0.3937 * 96) / 10
+        : suffix === "pc"
+        ? (size * 12 * 96) / 72
+        : suffix === "pt"
+        ? (size * 96) / 72
+        : size;
+}
+
+function setShortStyleProperty(style: CSSStyleDeclaration, property: string & keyof CSSStyleDeclaration): void {
+    const borderSuffix = property === "border" ? "Width" : "",
+        t = (property + "Top" + borderSuffix) as keyof CSSStyleDeclaration,
+        r = (property + "Right" + borderSuffix) as keyof CSSStyleDeclaration,
+        b = (property + "Bottom" + borderSuffix) as keyof CSSStyleDeclaration,
+        l = (property + "Left" + borderSuffix) as keyof CSSStyleDeclaration;
+
+    // @ts-expect-error This is a polyfill, we need manual overrides here
+    style[property] = (
+        style[t] === style[r] && style[t] === style[b] && style[t] === style[l]
+            ? [style[t]]
+            : style[t] === style[b] && style[l] === style[r]
+            ? [style[t], style[r]]
+            : style[l] === style[r]
+            ? [style[t], style[r], style[b]]
+            : [style[t], style[r], style[b], style[l]]
+    ).join(" ");
+}
+
+// <CSSStyleDeclaration>
+function CSSStyleDeclaration(this: CSSStyleDeclaration, element: Element): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const currentStyle = (element as any).currentStyle,
+        fontSize = getComputedStylePixel(element, "fontSize"),
+        unCamelCase = function (match: string): string {
+            return "-" + match.toLowerCase();
+        };
+    let property: string;
+
+    for (property in currentStyle) {
+        Array.prototype.push.call(this, property === "styleFloat" ? "float" : property.replace(/[A-Z]/, unCamelCase));
+
+        if (property === "width") {
+            this[property] = (element as HTMLElement).offsetWidth + "px";
+        } else if (property === "height") {
+            this[property] = (element as HTMLElement).offsetHeight + "px";
+        } else if (property === "styleFloat") {
+            this.float = currentStyle[property];
+        } else if (
+            /margin.|padding.|border.+W/.test(property) &&
+            this[property as keyof CSSStyleDeclaration] !== "auto"
+        ) {
+            // @ts-expect-error This is a polyfill, we need manual overrides here
+            this[property] = Math.round(getComputedStylePixel(element, property, fontSize)) + "px";
+        } else if (/^outline/.test(property)) {
+            // errors on checking outline
+            try {
+                // @ts-expect-error This is a polyfill, we need manual overrides here
+                this[property] = currentStyle[property];
+            } catch (error) {
+                this.outlineColor = currentStyle.color;
+                this.outlineStyle = this.outlineStyle || "none";
+                this.outlineWidth = this.outlineWidth || "0px";
+                this.outline = [this.outlineColor, this.outlineWidth, this.outlineStyle].join(" ");
+            }
+        } else {
+            // @ts-expect-error This is a polyfill, we need manual overrides here
+            this[property] = currentStyle[property];
+        }
+    }
+
+    setShortStyleProperty(this, "margin");
+    setShortStyleProperty(this, "padding");
+    setShortStyleProperty(this, "border");
+
+    this.fontSize = Math.round(fontSize) + "px";
+}
+
+CSSStyleDeclaration.prototype = {
+    constructor: CSSStyleDeclaration,
+    // <CSSStyleDeclaration>.getPropertyPriority
+    getPropertyPriority: function (): never {
+        throw new Error("NotSupportedError: DOM Exception 9");
+    },
+    // <CSSStyleDeclaration>.getPropertyValue
+    getPropertyValue: function (property: string): string {
+        return this[
+            property.replace(/-\w/g, function (match: string): string {
+                return match[1].toUpperCase();
+            })
+        ];
+    },
+    // <CSSStyleDeclaration>.item
+    item: function (index: number): string {
+        return this[index];
+    },
+    // <CSSStyleDeclaration>.removeProperty
+    removeProperty: function (): never {
+        throw new Error("NoModificationAllowedError: DOM Exception 7");
+    },
+    // <CSSStyleDeclaration>.setProperty
+    setProperty: function (): never {
+        throw new Error("NoModificationAllowedError: DOM Exception 7");
+    },
+    // <CSSStyleDeclaration>.getPropertyCSSValue
+    getPropertyCSSValue: function (): never {
+        throw new Error("NotSupportedError: DOM Exception 9");
+    }
+};
+
+export { CSSStyleDeclaration };
+
+// <Global>.getComputedStyle
+export function getComputedStyle(element: Element, pseudoEl: string): CSSStyleDeclaration {
+    // IE9 needs matchMedia support but already support getComputedStyle
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    return window.getComputedStyle
+        ? window.getComputedStyle(element, pseudoEl)
+        : new (CSSStyleDeclaration as any)(element);
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+}

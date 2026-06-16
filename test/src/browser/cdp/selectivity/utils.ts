@@ -1,4 +1,4 @@
-import sinon, { SinonStub, type SinonStubbedInstance } from "sinon";
+import sinon, { type SinonStub, type SinonStubbedInstance } from "sinon";
 import proxyquire from "proxyquire";
 import type { CDPRuntime } from "src/browser/cdp/domains/runtime";
 import { NormalizedDependencies, TestDependenciesFileContents } from "src/browser/cdp/selectivity/types";

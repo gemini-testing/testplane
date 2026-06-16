@@ -1,8 +1,7 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import FakeTimers from "@sinonjs/fake-timers";
 import PageLoader from "src/utils/page-loader";
-import { DEVTOOLS_PROTOCOL } from "src/constants/config";
 import { mkSessionStub_ as mkSessionStubOrigin_, mkExistingBrowser_ } from "../utils";
 import type { ExistingBrowser } from "src/browser/existing-browser";
 import { Calibrator } from "src/browser/calibrator";
@@ -120,7 +119,7 @@ describe('"openAndWait" command', () => {
     });
 
     it("should wait for network idle", async () => {
-        const browser = mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL });
+        const browser = mkBrowser_({ desiredCapabilities: { browserName: "chrome" } });
         const session = mkSessionStub_();
         stubLoad_(mkEmitAfter_("networkResolved", 100));
 
@@ -132,7 +131,7 @@ describe('"openAndWait" command', () => {
     });
 
     it("should unsubscribe to pageLoader", async () => {
-        const browser = mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL });
+        const browser = mkBrowser_();
         const session = mkSessionStub_();
         stubLoad_(mkEmitAfter_("networkResolved", 100));
 
@@ -147,7 +146,7 @@ describe('"openAndWait" command', () => {
 
     ["pageLoadError", "selectorsError", "predicateError"].forEach(event => {
         it(`should handle '${event}' event`, async () => {
-            const browser = mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL });
+            const browser = mkBrowser_();
             const session = mkSessionStub_();
             stubLoad_(mkEmitAfter_(event, 100, new Error("error message")));
 
@@ -165,7 +164,7 @@ describe('"openAndWait" command', () => {
 
     describe("should handle 'networkError' event", () => {
         it("should not throw", async () => {
-            const browser = mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL });
+            const browser = mkBrowser_({ desiredCapabilities: { browserName: "chrome" } });
             const session = mkSessionStub_();
             stubLoad_(function (this: PageLoader): Promise<void> {
                 setTimeout(() => this.emit("networkError", { url: "content.url", statusCode: 404 }), 50);
@@ -186,7 +185,7 @@ describe('"openAndWait" command', () => {
         });
 
         it("should throw", async () => {
-            const browser = mkBrowser_({ automationProtocol: DEVTOOLS_PROTOCOL });
+            const browser = mkBrowser_({ desiredCapabilities: { browserName: "chrome" } });
             const session = mkSessionStub_();
             stubLoad_(mkEmitAfter_("networkError", 100, { url: "content.url", statusCode: 404 }));
 

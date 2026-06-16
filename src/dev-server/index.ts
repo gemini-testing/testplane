@@ -6,7 +6,11 @@ import { findCwd, pipeLogsWithPrefix, probeServer, waitDevServerReady } from "./
 import * as logger from "../utils/logger";
 import type { Testplane } from "../testplane";
 
-export type DevServerOpts = { testplane: Testplane; devServerConfig: Config["devServer"]; configPath: string };
+export type DevServerOpts = {
+    testplane: Testplane;
+    devServerConfig: Config["devServer"];
+    configPath?: string;
+};
 
 export type InitDevServer = (opts: DevServerOpts) => Promise<void>;
 
@@ -45,7 +49,7 @@ export const initDevServer: InitDevServer = async ({ testplane, devServerConfig,
 
     const devServer = spawn(devServerConfig.command, devServerConfig.args, {
         env: { ...process.env, ...devServerConfig.env },
-        cwd: devServerConfig.cwd || findCwd(configPath),
+        cwd: devServerConfig.cwd || (configPath ? findCwd(configPath) : process.cwd()),
         shell: true,
         windowsHide: true,
     });

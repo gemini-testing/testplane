@@ -7,9 +7,12 @@ on:
 jobs:
     integration-test:
         runs-on: ubuntu-latest
+        env:
+            DOCKER_IMAGE_NAME: html-reporter-browsers
+
         strategy:
             matrix:
-                node-version: [20.18.1]
+                node-version: [24.x]
                 browser: [chrome, firefox]
 
         steps:
@@ -36,7 +39,35 @@ jobs:
             - name: Build project
               run: npm run build
 
+            - name: "Prepare screenshot tests: Cache browser docker image"
+              if: ${{ matrix.browser == 'chrome' }}
+              uses: actions/cache@v3
+              with:
+                  path: ~/.docker/cache
+                  key: docker-browser-image-testplane
+
+            - name: "Prepare screenshot tests: Pull browser docker image"
+              if: ${{ matrix.browser == 'chrome' }}
+              run: |
+                  mkdir -p ~/.docker/cache
+                  if [ -f ~/.docker/cache/image.tar ]; then
+                    docker load -i ~/.docker/cache/image.tar
+                  else
+                    docker pull yinfra/html-reporter-browsers
+                    docker save yinfra/html-reporter-browsers -o ~/.docker/cache/image.tar
+                  fi
+
+            - name: "Prepare screenshot tests: Run browser docker image"
+              if: ${{ matrix.browser == 'chrome' }}
+              run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) yinfra/html-reporter-browsers
+
             - name: Run integration tests for ${{ matrix.browser }}
               env:
                   BROWSER: ${{ matrix.browser }}
               run: npm run test-integration
+
+            - name: "Screenshot tests: Stop browser docker image"
+              if: ${{ always() && matrix.browser == 'chrome' }}
+              run: |
+                  docker kill ${{ env.DOCKER_IMAGE_NAME }} || true
+                  docker rm ${{ env.DOCKER_IMAGE_NAME }} || true

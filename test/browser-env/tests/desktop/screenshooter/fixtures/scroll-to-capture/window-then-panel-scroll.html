@@ -1,0 +1,53 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    .page-top-spacer {
+        height: 1800px;
+        background: repeating-linear-gradient(to bottom, #eceff1 0px, #eceff1 18px, #cfd8dc 18px, #cfd8dc 36px);
+    }
+    #capture-panel {
+        width: 360px;
+        height: 268px;
+        margin-left: 40px;
+        margin-bottom: 24px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        border: 3px solid #37474f;
+        background: #fff;
+    }
+    .inner-lead {
+        height: 540px;
+        background: repeating-linear-gradient(to bottom, #fff3e0 0px, #fff3e0 14px, #ffe0b2 14px, #ffe0b2 28px);
+    }
+    .target {
+        width: 220px;
+        height: 84px;
+        margin: 14px;
+        background-color: #00897b;
+        border: 2px solid #004d40;
+        color: #fff;
+        font-family: sans-serif;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .inner-tail {
+        height: 420px;
+        background: #b2dfdb;
+    }
+    .page-bottom-spacer {
+        height: 1800px;
+        background: #eceff1;
+    }
+</style>
+<div class="page-top-spacer"></div>
+<div id="capture-panel">
+    <div class="inner-lead"></div>
+    <div class="target">Panel + window</div>
+    <div class="inner-tail"></div>
+</div>
+<div class="page-bottom-spacer"></div>

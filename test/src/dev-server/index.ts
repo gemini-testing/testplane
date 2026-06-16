@@ -197,7 +197,7 @@ describe("dev-server", () => {
             } catch (error) {
                 assert.match(
                     (error as Error).message,
-                    /When 'reuseExisting' is set to 'true' in 'devServer' config, it is required to set 'devServer.readinessProbe.url'/,
+                    /When 'reuseExisting' option is set in 'devServer' config, it is required to set 'devServer\.readinessProbe\.url' option/,
                 );
             }
 
@@ -219,7 +219,7 @@ describe("dev-server", () => {
             } catch (error) {
                 assert.match(
                     (error as Error).message,
-                    /When 'reuseExisting' is set to 'true' in 'devServer' config, it is required to set 'devServer.readinessProbe.url'/,
+                    /When 'reuseExisting' option is set in 'devServer' config, it is required to set 'devServer\.readinessProbe\.url' option/,
                 );
             }
 

@@ -1,0 +1,37 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    .pseudo-target {
+        width: 150px;
+        height: 100px;
+        background-color: #4caf50;
+        margin: 80px;
+        position: relative;
+        padding: 10px 20px 30px 40px;
+    }
+    .pseudo-target::before {
+        content: "before";
+        position: absolute;
+        top: -40px;
+        left: -40px;
+        width: 60px;
+        height: 60px;
+        background-color: #ff9800;
+        outline: 5px solid green;
+    }
+    .pseudo-target::after {
+        content: "after";
+
+        margin-top: 100px;
+        /* bottom: -40px;
+        right: -40px; */
+        display: block;
+        width: 60px;
+        height: 60px;
+        background-color: #2196f3;
+        box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.3);
+    }
+</style>
+<div class="pseudo-target">Pseudo-element target</div>

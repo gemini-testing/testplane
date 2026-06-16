@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import type { SelectivityRunner } from "src/browser/cdp/selectivity/runner";
 import type { Test } from "src/types";

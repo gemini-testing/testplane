@@ -10,7 +10,7 @@ describe("config", () => {
 
     let parseOptions;
 
-    const initConfig = opts => {
+    const initConfig = async opts => {
         opts = opts || {};
         parseOptions = sandbox.stub().returns(opts.configParserReturns);
         const config = Object.prototype.hasOwnProperty.call(opts, "config") ? opts.config : "some-config-path";
@@ -31,20 +31,20 @@ describe("config", () => {
     afterEach(() => sandbox.restore());
 
     describe("constructor", () => {
-        it("should parse options", () => {
-            initConfig({ configParserReturns: {} });
+        it("should parse options", async () => {
+            await initConfig({ configParserReturns: {} });
 
             assert.calledOnce(parseOptions);
         });
 
-        it("should parse config from file", () => {
-            initConfig({ configParserReturns: {}, requireConfigReturns: "some-options" });
+        it("should parse config from file", async () => {
+            await initConfig({ configParserReturns: {}, requireConfigReturns: "some-options" });
 
             assert.calledWithMatch(parseOptions, { options: "some-options", env: process.env, argv: process.argv });
         });
 
-        it("should support default export", () => {
-            initConfig({
+        it("should support default export", async () => {
+            await initConfig({
                 configParserReturns: {},
                 requireConfigReturns: { __esModule: true, default: { foo: "bar" } },
             });
@@ -52,8 +52,47 @@ describe("config", () => {
             assert.calledWithMatch(parseOptions, { options: { foo: "bar" }, env: process.env, argv: process.argv });
         });
 
-        it("should parse config from object", () => {
-            initConfig({ configParserReturns: {}, config: { someOption: "some-value" } });
+        it("should resolve async config function export", async () => {
+            await initConfig({
+                configParserReturns: {},
+                requireConfigReturns: async () => ({ async: "value" }),
+            });
+
+            assert.calledWithMatch(parseOptions, {
+                options: { async: "value" },
+                env: process.env,
+                argv: process.argv,
+            });
+        });
+
+        it("should resolve sync config function export", async () => {
+            await initConfig({
+                configParserReturns: {},
+                requireConfigReturns: () => ({ sync: "value" }),
+            });
+
+            assert.calledWithMatch(parseOptions, {
+                options: { sync: "value" },
+                env: process.env,
+                argv: process.argv,
+            });
+        });
+
+        it("should resolve config function passed directly", async () => {
+            await initConfig({
+                configParserReturns: {},
+                config: async () => ({ direct: "value" }),
+            });
+
+            assert.calledWithMatch(parseOptions, {
+                options: { direct: "value" },
+                env: process.env,
+                argv: process.argv,
+            });
+        });
+
+        it("should parse config from object", async () => {
+            await initConfig({ configParserReturns: {}, config: { someOption: "some-value" } });
 
             assert.calledWithMatch(parseOptions, {
                 options: { someOption: "some-value" },
@@ -62,18 +101,18 @@ describe("config", () => {
             });
         });
 
-        it("should create config", () => {
-            assert.include(initConfig({ configParserReturns: { some: "option" } }), { some: "option" });
+        it("should create config", async () => {
+            assert.include(await initConfig({ configParserReturns: { some: "option" } }), { some: "option" });
         });
 
-        it("should extend config with a config path", () => {
-            assert.include(initConfig({ configParserReturns: {}, config: "config-path" }), {
+        it("should extend config with a config path", async () => {
+            assert.include(await initConfig({ configParserReturns: {}, config: "config-path" }), {
                 configPath: "config-path",
             });
         });
 
-        it('should wrap browser config with "BrowserConfig" instance', () => {
-            const config = initConfig({
+        it('should wrap browser config with "BrowserConfig" instance', async () => {
+            const config = await initConfig({
                 configParserReturns: {
                     browsers: {
                         bro1: {},
@@ -84,15 +123,15 @@ describe("config", () => {
             assert.instanceOf(config.forBrowser("bro1"), BrowserConfig);
         });
 
-        it("should extend browser config with its id", () => {
-            const config = initConfig({ configParserReturns: { browsers: { bro: { some: "option" } } } });
+        it("should extend browser config with its id", async () => {
+            const config = await initConfig({ configParserReturns: { browsers: { bro: { some: "option" } } } });
 
             assert.include(config.forBrowser("bro"), { id: "bro" });
         });
 
         for (const configPath of defaults.configPaths) {
-            it(`should look for ${configPath} by default`, () => {
-                const config = initConfig({
+            it(`should look for ${configPath} by default`, async () => {
+                const config = await initConfig({
                     config: null,
                     configParserReturns: {
                         system: { fileExtensions: [] },
@@ -108,24 +147,24 @@ describe("config", () => {
     });
 
     describe("forBrowser", () => {
-        it("should get config for a browser", () => {
-            const config = initConfig({ configParserReturns: { browsers: { bro: { some: "option" } } } });
+        it("should get config for a browser", async () => {
+            const config = await initConfig({ configParserReturns: { browsers: { bro: { some: "option" } } } });
 
             assert.include(config.forBrowser("bro"), { some: "option" });
         });
     });
 
     describe("getBrowserIds", () => {
-        it("should get browser ids", () => {
-            const config = initConfig({ configParserReturns: { browsers: { bro1: {}, bro2: {} } } });
+        it("should get browser ids", async () => {
+            const config = await initConfig({ configParserReturns: { browsers: { bro1: {}, bro2: {} } } });
 
             assert.deepEqual(config.getBrowserIds(), ["bro1", "bro2"]);
         });
     });
 
     describe("serialize", () => {
-        it("should delegate browsers serialization to browser config", () => {
-            const config = initConfig({
+        it("should delegate browsers serialization to browser config", async () => {
+            const config = await initConfig({
                 configParserReturns: {
                     browsers: {
                         bro: {},
@@ -147,16 +186,16 @@ describe("config", () => {
     });
 
     describe("mergeWith", () => {
-        it("should deeply merge config with another one", () => {
-            const config = initConfig({ configParserReturns: { some: { deep: { option: "foo" } } } });
+        it("should deeply merge config with another one", async () => {
+            const config = await initConfig({ configParserReturns: { some: { deep: { option: "foo" } } } });
 
             config.mergeWith({ some: { deep: { option: "bar" } } });
 
             assert.deepInclude(config, { some: { deep: { option: "bar" } } });
         });
 
-        it("should not merge values of different types", () => {
-            const config = initConfig({ configParserReturns: { option: 100500 } });
+        it("should not merge values of different types", async () => {
+            const config = await initConfig({ configParserReturns: { option: 100500 } });
 
             config.mergeWith({ option: "100500" });
 

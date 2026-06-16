@@ -24,6 +24,7 @@ describe("worker/testplane", () => {
 
         Testplane = proxyquire("src/worker/testplane", {
             "expect-webdriverio": ExpectWebdriverio,
+            "./runner": Runner,
         }).Testplane;
 
         sandbox.stub(Config, "create").returns(makeConfigStub());
@@ -39,23 +40,23 @@ describe("worker/testplane", () => {
     });
 
     describe("constructor", () => {
-        it("should create a config from the passed path", () => {
-            Testplane.create("some-config-path.js");
+        it("should create a config from the passed path", async () => {
+            await Testplane.create("some-config-path.js");
 
             assert.calledOnceWith(Config.create, "some-config-path.js");
         });
 
-        it("should create a runner instance", () => {
+        it("should create a runner instance", async () => {
             const config = makeConfigStub();
-            Config.create.returns(config);
+            Config.create.resolves(config);
 
-            Testplane.create();
+            await Testplane.create();
 
             assert.calledOnceWith(Runner.create, config);
         });
 
-        it("should passthrough all runner events", () => {
-            const testplane = Testplane.create();
+        it("should passthrough all runner events", async () => {
+            const testplane = await Testplane.create();
 
             _.forEach(
                 {
@@ -77,29 +78,29 @@ describe("worker/testplane", () => {
         });
 
         describe("loading of plugins", () => {
-            it("should load plugins", () => {
-                Testplane.create();
+            it("should load plugins", async () => {
+                await Testplane.create();
 
                 assert.calledOnce(pluginsLoader.load);
             });
 
-            it("should load plugins for testplane instance", () => {
-                Testplane.create();
+            it("should load plugins for testplane instance", async () => {
+                await Testplane.create();
 
                 assert.calledWith(pluginsLoader.load, sinon.match.instanceOf(Testplane));
             });
 
-            it("should load plugins from config", () => {
-                Config.create.returns(makeConfigStub({ plugins: { "some-plugin": true } }));
+            it("should load plugins from config", async () => {
+                Config.create.resolves(makeConfigStub({ plugins: { "some-plugin": true } }));
 
-                Testplane.create();
+                await Testplane.create();
 
                 assert.calledWith(pluginsLoader.load, sinon.match.any, { "some-plugin": true });
             });
 
             // testplane does not support its own plugin prefixes.
-            it("should load plugins with deprecated hermione prefix", () => {
-                Testplane.create();
+            it("should load plugins with deprecated hermione prefix", async () => {
+                await Testplane.create();
 
                 assert.calledWith(pluginsLoader.load, sinon.match.any, sinon.match.any, "hermione-");
             });
@@ -107,22 +108,28 @@ describe("worker/testplane", () => {
     });
 
     describe("should provide access to", () => {
-        it("testplane events", () => {
+        it("testplane events", async () => {
             const expectedEvents = _.extend({}, RunnerEvents, WorkerRunnerEvents);
 
-            assert.deepEqual(Testplane.create(makeConfigStub()).events, expectedEvents);
+            const testplane = await Testplane.create(makeConfigStub());
+
+            assert.deepEqual(testplane.events, expectedEvents);
         });
 
-        it("testplane configuration", () => {
+        it("testplane configuration", async () => {
             const config = makeConfigStub();
 
-            Config.create.returns(config);
+            Config.create.resolves(config);
 
-            assert.deepEqual(Testplane.create().config, config);
+            const testplane = await Testplane.create(makeConfigStub());
+
+            assert.deepEqual(testplane.config, config);
         });
 
-        it("testplane errors", () => {
-            assert.deepEqual(Testplane.create().errors, Errors);
+        it("testplane errors", async () => {
+            const testplane = await Testplane.create();
+
+            assert.deepEqual(testplane.errors, Errors);
         });
     });
 
@@ -131,55 +138,60 @@ describe("worker/testplane", () => {
             delete global.expect;
         });
 
-        it('should emit "INIT"', () => {
-            const testplane = Testplane.create();
+        it('should emit "INIT"', async () => {
+            const testplane = await Testplane.create();
 
             const onInit = sinon.spy();
             testplane.on(WorkerRunnerEvents.INIT, onInit);
 
-            return testplane.init().then(() => assert.calledOnce(onInit));
+            await testplane.init();
+
+            assert.calledOnce(onInit);
         });
 
-        it('should reject on "INIT" handler fail', () => {
-            const testplane = Testplane.create().on(WorkerRunnerEvents.INIT, () => Promise.reject("o.O"));
+        it('should reject on "INIT" handler fail', async () => {
+            const testplane = await Testplane.create();
+            testplane.on(WorkerRunnerEvents.INIT, () => Promise.reject("o.O"));
 
-            return assert.isRejected(testplane.init(), /o.O/);
+            await assert.isRejected(testplane.init(), /o.O/);
         });
 
         it("should not init expect-webdriverio if global.expect already set", async () => {
             global.expect = {};
 
-            await Testplane.create().init();
+            const testplane = await Testplane.create();
+            await testplane.init();
 
             assert.notCalled(ExpectWebdriverio.setOptions);
         });
 
         it("should not init expect-webdriverio if global.expect not set", async () => {
-            Config.create.returns({
+            Config.create.resolves({
                 system: {
                     expectOpts: { foo: "bar" },
                 },
             });
 
-            await Testplane.create().init();
+            const testplane = await Testplane.create();
+            await testplane.init();
 
             assert.calledOnceWith(ExpectWebdriverio.setOptions, { foo: "bar" });
         });
     });
 
     describe("runTest", () => {
-        it("should run test", () => {
+        it("should run test", async () => {
             Runner.prototype.runTest.withArgs("fullTitle", { some: "options" }).resolves("foo bar");
 
-            const testplane = Testplane.create();
+            const testplane = await Testplane.create();
 
             return testplane.runTest("fullTitle", { some: "options" }).then(result => assert.equal(result, "foo bar"));
         });
     });
 
     describe("isWorker", () => {
-        it('should return "true"', () => {
-            const testplane = Testplane.create();
+        it('should return "true"', async () => {
+            const testplane = await Testplane.create();
 
             assert.isTrue(testplane.isWorker());
         });

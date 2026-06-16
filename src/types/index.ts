@@ -256,7 +256,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["DOM_SNAPSHOTS"], callback: (context: TestContext, data: SnapshotsData) => void): T;
     (event: Events["TEST_DEPENDENCIES"], callback: (context: TestDepsContext, data: TestDepsData) => void): T;
 
-    (event: Events["CLI"], callback: (commander: commander.CommanderStatic) => void): T;
+    (event: Events["CLI"], callback: (commander: commander.CommanderStatic) => void | Promise<void>): T;
     (event: Events["BEGIN"], callback: () => void): T;
     (event: Events["END"], callback: () => void): T;
     (event: Events["BEFORE_FILE_READ"], callback: (data: BeforeFileReadData) => void): T;
@@ -268,7 +268,6 @@ export type MasterEventHandler<T extends BaseTestplane> = {
 
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
     (event: Events["ADD_FILE_TO_REMOVE"], callback: (path: string) => void): T;
-    (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
 };
 
 export type WorkerEventHandler<T extends BaseTestplane> = {
@@ -278,7 +277,7 @@ export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["AFTER_TESTS_READ"], callback: (collection: TestCollection) => void): T;
 
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
-    (event: Events["NEW_BROWSER"], callback: SyncSessionEventCallback): T;
+    (event: Events["NEW_BROWSER"], callback: AsyncSessionEventCallback): T;
 };
 
 export type CookieSameSite = "Strict" | "Lax" | "None";

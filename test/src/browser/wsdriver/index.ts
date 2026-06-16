@@ -1,4 +1,5 @@
 /* eslint-disable no-bitwise */
+import { URL } from "node:url";
 import { WebSocket, WebSocketServer } from "ws";
 import sinon, { SinonStub, SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";

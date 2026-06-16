@@ -3,8 +3,7 @@ import fs from "fs-extra";
 import { restoreStorage } from "./restoreStorage";
 
 import type { Browser } from "../../types";
-import { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } from "../../../constants/config";
-import { getOverridesProtocol, getWebdriverFrames, SaveStateData } from "../saveState";
+import { isBidiWithIsolation, getWebdriverFrames, SaveStateData } from "../saveState";
 import { getActivePuppeteerPage } from "../../existing-browser";
 import { StateOpts } from "../../../config/types";
 import type { Cookie as WebdriverCookie } from "@testplane/wdio-protocols";
@@ -58,8 +57,8 @@ export default (browser: Browser): void => {
 
         const cookies = restoreState.cookies?.map(normalizeCookiePrefixConstraints);
 
-        switch (getOverridesProtocol(browser)) {
-            case WEBDRIVER_PROTOCOL: {
+        switch (isBidiWithIsolation(browser)) {
+            case false: {
                 await session.switchToParentFrame();
 
                 if (cookies && options.cookies) {
@@ -123,7 +122,7 @@ export default (browser: Browser): void => {
 
                 break;
             }
-            case DEVTOOLS_PROTOCOL: {
+            case true: {
                 const page = await getActivePuppeteerPage(session);
 
                 if (!page) {

@@ -1,0 +1,50 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    body {
+        background: #f5f5f5;
+    }
+
+    .outer {
+        position: relative;
+        width: 760px;
+        height: 220px;
+        margin: 24px;
+        outline: 2px solid #999;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .container {
+        width: 280px;
+        height: 140px;
+        margin: 100px 0 0 220px;
+        overflow: hidden;
+        border: 1px solid black;
+        background: rgba(255, 204, 204, 0.35);
+    }
+
+    .absolute-parent {
+        position: absolute;
+        top: 118px;
+        left: 140px;
+    }
+
+    .target {
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+        width: 360px;
+        height: 120px;
+        background: rgba(76, 175, 80, 0.8);
+    }
+</style>
+
+<div class="outer">
+    <div class="container">
+        <div class="absolute-parent">
+            <div class="target"></div>
+        </div>
+    </div>
+</div>

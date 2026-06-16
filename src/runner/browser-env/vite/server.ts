@@ -54,6 +54,16 @@ export class ViteServer {
                     "rgb2hex",
                     "ws",
                 ],
+                exclude: [
+                    // These packages must not be pre-bundled: esbuild would inline Node.js-only
+                    // deps (puppeteer-core, node:events, etc.) before Vite's resolveId stubs/
+                    // polyfills can intercept them, causing "extends undefined" crashes.
+                    "@testplane/webdriverio",
+                    "@testplane/webdriver",
+                    "@testplane/wdio-utils",
+                    "@testplane/wdio-protocols",
+                    "puppeteer-core",
+                ],
                 esbuildOptions: {
                     logLevel: "silent",
                 },

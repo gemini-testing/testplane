@@ -17,17 +17,29 @@ interface PngImageData {
     size: ImageSize;
 }
 
-export interface Rect {
-    width: number;
-    height: number;
+export interface Point {
     top: number;
     left: number;
 }
+
+export interface Size {
+    width: number;
+    height: number;
+}
+
+export type Rect = Point & Size;
 
 export interface RGB {
     R: number;
     G: number;
     B: number;
+}
+
+export interface RGBA {
+    r: number;
+    g: number;
+    b: number;
+    a: number;
 }
 
 interface CompareOptions {
@@ -107,24 +119,44 @@ const hasICCPChunk = (buffer: Buffer): boolean => {
 };
 
 export class Image {
-    private _imgDataPromise: Promise<Buffer>;
+    private _imgDataPromise: Promise<Buffer | null>;
     private _imgData: Buffer | null = null;
     private _width: number;
     private _height: number;
     private _composeImages: this[] = [];
+    private _clearAreas: Rect[] = [];
+    private _decodeError: Error | null = null;
     private _hasICCPChunk: boolean = false;
 
     static create(buffer: Buffer): Image {
         return new this(buffer);
     }
 
-    constructor(buffer: Buffer) {
-        this._width = buffer.readUInt32BE(PNG_WIDTH_OFFSET);
-        this._height = buffer.readUInt32BE(PNG_HEIGHT_OFFSET);
-        this._hasICCPChunk = hasICCPChunk(buffer);
-        this._imgDataPromise = jsquashDecode(buffer).then(({ data }) => {
-            return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
-        });
+    constructor(buffer: Buffer);
+    constructor(size: Size);
+    constructor(bufferOrSize: Buffer | Size) {
+        if (Buffer.isBuffer(bufferOrSize)) {
+            this._width = bufferOrSize.readUInt32BE(PNG_WIDTH_OFFSET);
+            this._height = bufferOrSize.readUInt32BE(PNG_HEIGHT_OFFSET);
+            this._hasICCPChunk = hasICCPChunk(bufferOrSize);
+            this._imgDataPromise = jsquashDecode(bufferOrSize)
+                .then(({ data }) => {
+                    return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+                })
+                .catch(error => {
+                    this._decodeError = error;
+                    return null;
+                });
+            return;
+        }
+
+        this._width = Math.max(0, Math.floor(bufferOrSize.width));
+        this._height = Math.max(0, Math.floor(bufferOrSize.height));
+
+        const blackRgbaPixel = Buffer.from([0, 0, 0, 255]);
+        this._imgData = Buffer.alloc(this._width * this._height * RGBA_CHANNELS);
+        this._imgData.fill(blackRgbaPixel);
+        this._imgDataPromise = Promise.resolve(this._imgData);
     }
 
     public get hasICCPChunk(): boolean {
@@ -136,7 +168,11 @@ export class Image {
             return this._imgData;
         }
 
-        return (this._imgData = await this._imgDataPromise);
+        this._imgData = await this._imgDataPromise;
+        if (!this._imgData) {
+            throw new Error("Failed to decode image", { cause: this._decodeError });
+        }
+        return this._imgData;
     }
 
     _ensureImagesHaveSameWidth(): void {
@@ -160,16 +196,30 @@ export class Image {
         return { height, width: this._width };
     }
 
+    async clone(): Promise<Image> {
+        const imgData = await this._getImgData();
+        const image = new Image({ width: this._width, height: this._height });
+        image._imgData = Buffer.from(imgData);
+        image._imgDataPromise = Promise.resolve(image._imgData);
+        image._clearAreas = this._clearAreas.slice();
+        image._composeImages = this._composeImages.slice();
+
+        return image;
+    }
+
     async crop(rect: Rect): Promise<void> {
         const imgData = await this._getImgData();
 
         let bufferPointer = 0;
         let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
 
-        const bytesToCopy = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const actualWidth = Math.min(rect.width, this._width - rect.left);
+        const actualHeight = Math.min(rect.height, this._height - rect.top);
+
+        const bytesToCopy = actualWidth * RGBA_CHANNELS;
         const bytesToIterate = this._width * RGBA_CHANNELS;
 
-        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+        for (let i = 0; i < actualHeight; i++) {
             imgData.copy(imgData, bufferPointer, sourceOffset, sourceOffset + bytesToCopy);
 
             bufferPointer += bytesToCopy;
@@ -177,8 +227,8 @@ export class Image {
         }
 
         this._imgData = imgData.subarray(0, bufferPointer);
-        this._width = rect.width;
-        this._height = rect.height;
+        this._width = actualWidth;
+        this._height = actualHeight;
     }
 
     addJoin(attachedImages: this[]): void {
@@ -186,32 +236,64 @@ export class Image {
     }
 
     async applyJoin(): Promise<void> {
-        if (!this._composeImages.length) return;
+        if (this._composeImages.length) {
+            this._ensureImagesHaveSameWidth();
 
-        this._ensureImagesHaveSameWidth();
+            const resultHeight = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
+            const imageBuffers = await Promise.all([this, ...this._composeImages].map(img => img._getImgData()));
 
-        const resultHeight = this._composeImages.reduce((acc, img) => acc + img._height, this._height);
-        const imageBuffers = await Promise.all([this, ...this._composeImages].map(img => img._getImgData()));
+            this._imgData = Buffer.concat(imageBuffers);
+            this._height = resultHeight;
+            this._composeImages = [];
+        }
 
-        this._imgData = Buffer.concat(imageBuffers);
-        this._height = resultHeight;
-        this._composeImages = [];
+        for (const rect of this._clearAreas) {
+            await this.clearArea(rect);
+        }
+        this._clearAreas = [];
     }
 
     async clearArea(rect: Rect): Promise<void> {
+        const clippedRect = this._clipRect(rect);
+        if (!clippedRect) {
+            return;
+        }
+
         const imgData = await this._getImgData();
 
-        let sourceOffset = (rect.top * this._width + rect.left) * RGBA_CHANNELS;
+        let sourceOffset = (clippedRect.top * this._width + clippedRect.left) * RGBA_CHANNELS;
 
-        const bytesToCopyAmount = Math.min(rect.width, this._width - rect.left) * RGBA_CHANNELS;
+        const bytesToCopyAmount = clippedRect.width * RGBA_CHANNELS;
         const bytesToIterate = this._width * RGBA_CHANNELS;
         const bytesToFill = Buffer.from([0, 0, 0, 255]); // black RGBA
 
-        for (let i = 0; i < Math.min(rect.height, this._height - rect.top); i++) {
+        for (let i = 0; i < clippedRect.height; i++) {
             imgData.fill(bytesToFill, sourceOffset, sourceOffset + bytesToCopyAmount);
 
             sourceOffset += bytesToIterate;
         }
+    }
+
+    async addClear(rect: Rect): Promise<void> {
+        this._clearAreas.push(rect);
+    }
+
+    private _clipRect(rect: Rect): Rect | null {
+        const left = Math.max(0, Math.floor(rect.left));
+        const top = Math.max(0, Math.floor(rect.top));
+        const right = Math.min(this._width, Math.ceil(rect.left + rect.width));
+        const bottom = Math.min(this._height, Math.ceil(rect.top + rect.height));
+
+        if (right <= left || bottom <= top) {
+            return null;
+        }
+
+        return {
+            left,
+            top,
+            width: right - left,
+            height: bottom - top,
+        };
     }
 
     async getRGB(x: number, y: number): Promise<RGB> {
@@ -228,7 +310,18 @@ export class Image {
     async _getPngBuffer(): Promise<Buffer> {
         const imageData = await this._getImgData();
 
-        return convertRgbaToPng(imageData, this._width, this._height);
+        try {
+            return convertRgbaToPng(imageData, this._width, this._height);
+        } catch (e) {
+            const baseMessage =
+                `Failed to convert image buffer to PNG.\n` +
+                `Expected image size (formatted as height x width): ${this._height} x ${this._width}.\n` +
+                `Actual data present in buffer (formatted as height x width): ${this._height} x ${
+                    imageData.length / (this._height * RGBA_CHANNELS)
+                } or ${imageData.length / (this._width * RGBA_CHANNELS)} x ${this._width}.\n` +
+                `This means the data is malformed or image size doesn't match actual image dimensions.\n`;
+            throw new Error(baseMessage, { cause: e });
+        }
     }
 
     async save(file: string): Promise<void> {

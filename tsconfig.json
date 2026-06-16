@@ -15,6 +15,15 @@
     "references": [
         {
             "path": "./src/runner/browser-env/vite/browser-modules/tsconfig.json"
+        },
+        {
+            "path": "./src/browser/client-scripts/screen-shooter/tsconfig.json"
+        },
+        {
+            "path": "./src/browser/client-scripts/browser-utils/tsconfig.json"
+        },
+        {
+            "path": "./src/browser/isomorphic/tsconfig.json"
         }
     ]
 }

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Small Block at Bottom</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+            }
+
+            .scrollable-container {
+                border: 3px solid blue;
+                height: 400px;
+                overflow-y: auto;
+                padding: 20px;
+                background-color: #f0f0f0;
+            }
+
+            .long-content {
+                height: 1500px;
+                background: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 100%);
+                padding: 20px;
+                margin-bottom: 20px;
+            }
+
+            .bottom-block {
+                border: 3px solid red;
+                padding: 20px;
+                background-color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Scrollable Container with Bottom Block</h1>
+
+        <div class="scrollable-container">
+            <div class="long-content">
+                <p>This is very long content. Scroll down to see the block at the bottom.</p>
+                <p>Keep scrolling...</p>
+            </div>
+
+            <div class="bottom-block" data-testid="bottom-block">
+                I'm a block at the bottom of the scrollable container (red border)
+            </div>
+        </div>
+    </body>
+</html>

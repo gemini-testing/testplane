@@ -1,3 +1,5 @@
+import { URL } from "node:url";
+
 import { constructWsDriverRequest } from "src/browser/wsdriver/request";
 import { WsDriverCompression } from "src/browser/wsdriver/types";
 import { WSD_COMPRESSION_THRESHOLD_BYTES } from "src/browser/wsdriver/constants";

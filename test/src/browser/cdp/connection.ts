@@ -1,5 +1,5 @@
 import { WebSocket, WebSocketServer } from "ws";
-import sinon, { SinonStub, SinonFakeTimers } from "sinon";
+import sinon, { type SinonStub, type SinonFakeTimers } from "sinon";
 import proxyquire from "proxyquire";
 import { CDPConnection } from "src/browser/cdp/connection";
 import { CDPError, CDPRequestError } from "src/browser/cdp/error";

@@ -1,17 +1,17 @@
 "use strict";
 
 const restoreStateCommand = require("src/browser/commands/restoreState").default;
-const { DEVTOOLS_PROTOCOL, WEBDRIVER_PROTOCOL } = require("src/constants/config");
+const { WEBDRIVER_PROTOCOL } = require("src/constants/config");
 const { mkSessionStub_ } = require("../utils");
 
 describe('"restoreState" command', () => {
     const sandbox = sinon.createSandbox();
 
-    const mkBrowser_ = ({ session, automationProtocol = WEBDRIVER_PROTOCOL } = {}) => ({
+    const mkBrowser_ = ({ session, automationProtocol = WEBDRIVER_PROTOCOL, isolation = false } = {}) => ({
         publicAPI: session,
         config: {
             automationProtocol,
-            isolation: false,
+            isolation,
             stateOpts: {
                 cookies: true,
                 localStorage: true,
@@ -32,7 +32,7 @@ describe('"restoreState" command', () => {
         return session;
     };
 
-    const initDevtoolsSession_ = () => {
+    const initBidiIsolationSession_ = () => {
         const session = mkSessionStub_();
         const page = {
             setCookie: sandbox.stub().named("setCookie").resolves(),
@@ -42,12 +42,13 @@ describe('"restoreState" command', () => {
         };
 
         session.getUrl.resolves("https://example.com/page");
+        session.isBidi = true;
         session.getWindowHandle = sandbox.stub().named("getWindowHandle").resolves("active-target");
         session.getPuppeteer.resolves({
             pages: sandbox.stub().named("pages").resolves([page]),
         });
 
-        restoreStateCommand(mkBrowser_({ session, automationProtocol: DEVTOOLS_PROTOCOL }));
+        restoreStateCommand(mkBrowser_({ session, isolation: true }));
 
         return { page, session };
     };
@@ -142,8 +143,8 @@ describe('"restoreState" command', () => {
         ]);
     });
 
-    it("should normalize cookie prefix constraints before devtools restore", async () => {
-        const { page, session } = initDevtoolsSession_();
+    it("should normalize cookie prefix constraints before BiDi isolation restore", async () => {
+        const { page, session } = initBidiIsolationSession_();
         const ordinaryCookie = {
             name: "regular",
             value: "regular-value",

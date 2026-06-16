@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sticky Element Test</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+            }
+
+            .parent-block {
+                /* border: 3px solid blue;
+            padding: 20px; */
+                overflow-y: auto;
+                background-color: #f0f0f0;
+            }
+
+            .sticky-element {
+                position: sticky;
+                top: 100px;
+                border: 3px solid red;
+                padding: 15px;
+                background-color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Sticky Element Demo</h1>
+
+        <div class="parent-block" data-testid="parent-block">
+            <div class="sticky-element">I'm a sticky element (red border) - I'll stick to the top when you scroll!</div>
+        </div>
+    </body>
+</html>

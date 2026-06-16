@@ -1,0 +1,8 @@
+{
+    "extends": "../tsconfig.compat.common.json",
+    "include": [".", "../../isomorphic", "../shared"],
+    "exclude": ["./tsc-out", "../shared/lib.native.ts"],
+    "compilerOptions": {
+        "outDir": "./tsc-out"
+    }
+}

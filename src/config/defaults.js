@@ -1,18 +1,19 @@
 "use strict";
 
-const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, NODEJS_TEST_RUN_ENV } = require("../constants/config");
+const { DisableHoverMode } = require("../browser/isomorphic");
+const { WEBDRIVER_PROTOCOL, SAVE_HISTORY_MODE, NODEJS_TEST_RUN_ENV, LOCAL_GRID_URL } = require("../constants/config");
 const { TimeTravelMode } = require("./types");
 
 module.exports = {
     baseUrl: "http://localhost",
-    gridUrl: "http://localhost:4444/wd/hub",
+    gridUrl: LOCAL_GRID_URL,
     browserWSEndpoint: null,
     desiredCapabilities: null,
     automationProtocol: WEBDRIVER_PROTOCOL,
     sessionEnvFlags: {},
     screenshotsDir: "testplane/screens",
     diffColor: "#ff00ff",
-    tolerance: 2.3,
+    tolerance: 3.0,
     antialiasingTolerance: 4,
     disableAnimation: true,
     compareOpts: {
@@ -35,8 +36,10 @@ module.exports = {
         ignoreElements: [],
         captureElementFromTop: true,
         allowViewportOverflow: false,
-        ignoreDiffPixelCount: 0,
+        ignoreDiffPixelCount: 4,
         waitForStaticToLoadTimeout: 5000,
+        disableHover: DisableHoverMode.WhenScrollingNeeded,
+        cropMargins: {},
     },
     openAndWaitOpts: {
         waitNetworkIdle: true,
@@ -89,7 +92,7 @@ module.exports = {
     tempDir: "",
     orientation: null,
     waitOrientationChange: true,
-    resetCursor: true,
+    resetCursor: false,
     strictTestsOrder: false,
     saveHistoryMode: SAVE_HISTORY_MODE.ALL,
     fileExtensions: [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"],
@@ -128,7 +131,7 @@ module.exports = {
         },
     },
     passive: false,
-    useWsDriver: false,
+    useWsDriver: true,
     timeTravel: TimeTravelMode.Off,
     selectivity: {
         enabled: false,

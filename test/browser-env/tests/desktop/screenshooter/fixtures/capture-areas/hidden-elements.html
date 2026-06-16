@@ -1,0 +1,40 @@
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    .visible {
+        width: 100px;
+        height: 100px;
+        background-color: #4caf50;
+        margin: 10px;
+    }
+    .hidden-display {
+        width: 100px;
+        height: 100px;
+        background-color: #f44336;
+        display: none;
+    }
+    .hidden-visibility {
+        width: 100px;
+        height: 100px;
+        background-color: #f44336;
+        visibility: hidden;
+    }
+    .hidden-opacity {
+        width: 100px;
+        height: 100px;
+        background-color: #f44336;
+        opacity: 0;
+    }
+    .hidden-zero-size {
+        width: 0;
+        height: 0;
+        background-color: #f44336;
+    }
+</style>
+<div class="visible">Visible</div>
+<div class="hidden-display">Hidden (display:none)</div>
+<div class="hidden-visibility">Hidden (visibility:hidden)</div>
+<div class="hidden-opacity">Hidden (opacity:0)</div>
+<div class="hidden-zero-size"></div>

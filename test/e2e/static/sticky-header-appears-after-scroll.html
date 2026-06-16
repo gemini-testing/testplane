@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Sticky Header Appears After Scroll</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 2400px;
+                font-family: Arial, sans-serif;
+                background: #eef1f5;
+            }
+
+            .appearing-header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 100;
+                display: none;
+                width: 390px;
+                height: 165px;
+                box-sizing: border-box;
+                padding: 20px;
+                border-bottom: 4px solid #203047;
+                background: #f7cd4c;
+                color: #203047;
+                font-size: 28px;
+                font-weight: 700;
+            }
+
+            body.scrolled .appearing-header {
+                display: flex;
+                align-items: center;
+            }
+
+            .capture-target {
+                position: absolute;
+                top: 360px;
+                left: 0;
+                width: 384px;
+                height: 1178px;
+                box-sizing: border-box;
+                border: 4px solid #162134;
+                background: linear-gradient(135deg, transparent 49.8%, #162134 50%, transparent 50.2%),
+                    linear-gradient(45deg, transparent 49.8%, #162134 50%, transparent 50.2%), #ffffff;
+            }
+
+            .section {
+                position: absolute;
+                left: 16px;
+                right: 16px;
+                box-sizing: border-box;
+                padding: 18px;
+                border: 2px solid #6b7a90;
+                background: rgba(255, 255, 255, 0.9);
+                color: #162134;
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            .top {
+                top: 24px;
+            }
+
+            .middle {
+                top: 520px;
+            }
+
+            .bottom {
+                bottom: 24px;
+                background: #b7f0d4;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="appearing-header">Appearing sticky header</div>
+
+        <main class="capture-target" data-testid="capture-target">
+            <div class="section top">Target top</div>
+            <div class="section middle">Target middle</div>
+            <div class="section bottom">Target bottom must be visible</div>
+        </main>
+
+        <script>
+            function updateHeaderVisibility() {
+                document.body.classList.toggle("scrolled", window.scrollY >= 400);
+            }
+
+            window.addEventListener("scroll", updateHeaderVisibility, { passive: true });
+            updateHeaderVisibility();
+        </script>
+    </body>
+</html>

@@ -8,6 +8,7 @@ const ipc = require("./ipc");
 const { shouldIgnoreUnhandledRejection } = require("./errors");
 const { utilInspectSafe } = require("./secret-replacer");
 const { preloadWebdriverIO, preloadMochaReader } = require("./preload-utils.js");
+const { serializeWorkerError } = require("./worker-error-serialization");
 
 process.on("uncaughtException", err => {
     if (err.code === "EPIPE" || err.code === "ERR_IPC_CHANNEL_CLOSED") {
@@ -56,9 +57,9 @@ exports.execute = async (moduleName, methodName, args, cb) => {
 
 function sendError(err, cb) {
     try {
-        cb(err);
+        cb(serializeWorkerError(err));
     } catch {
-        const shortenedErr = _.pick(err, [
+        const shortenedErr = _.pick(err || {}, [
             "message",
             "stack",
             "code",
@@ -70,6 +71,6 @@ function sendError(err, cb) {
             "history",
         ]);
 
-        cb(shortenedErr);
+        cb(serializeWorkerError(shortenedErr));
     }
 }

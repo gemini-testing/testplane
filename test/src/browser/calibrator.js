@@ -47,8 +47,8 @@ describe("calibrator", () => {
 
             const result = await calibrator.calibrate(browser);
 
-            assert.match(result.top, 2);
-            assert.match(result.left, 2);
+            assert.match(result.viewportArea.top, 2);
+            assert.match(result.viewportArea.left, 2);
         });
     });
 
@@ -59,6 +59,8 @@ describe("calibrator", () => {
         const result = await calibrator.calibrate(browser);
 
         assert.match(result.feature, "value");
+        assert.isAbove(result.screenshotSize.width, 0);
+        assert.isAbove(result.screenshotSize.height, 0);
     });
 
     it("should not perform the calibration process two times", async () => {
@@ -77,10 +79,11 @@ describe("calibrator", () => {
 
         const result = await calibrator.calibrate(browser);
 
-        await calibrator.calibrate(browser);
+        const cachedResult = await calibrator.calibrate(browser);
 
-        assert.match(result.top, 2);
-        assert.match(result.left, 2);
+        assert.equal(cachedResult, result);
+        assert.match(result.viewportArea.top, 2);
+        assert.match(result.viewportArea.left, 2);
     });
 
     it("should fail on broken calibration page", () => {
@@ -90,51 +93,55 @@ describe("calibrator", () => {
     });
 
     describe("when image has iCCP chunk", () => {
-        it("should use color at the center of the image to detect marker", async () => {
+        it("should use the color at the center of the image as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
-            const { width, height } = image.getSize();
-            const centerX = Math.floor(width / 2);
-            const centerY = Math.floor(height / 2);
-            const centerColor = { R: 50, G: 100, B: 150 };
-            const markerLeft = 7;
+            // Color profile shifts the rendered marker color away from the hardcoded green
+            const markerColor = { R: 50, G: 100, B: 150 };
+            const markerLeft = 4;
             const markerTop = 4;
+            const markerRight = 6;
+            const markerBottom = 6;
 
             image._hasICCPChunk = true;
 
+            sinon.stub(image, "getSize").returns({ width: 10, height: 10 });
             sinon.stub(image, "getRGB").callsFake(async (x, y) => {
-                if (x === centerX && y === centerY) {
-                    return centerColor;
-                }
+                const insideMarker = x >= markerLeft && x <= markerRight && y >= markerTop && y <= markerBottom;
 
-                if (x === markerLeft && y === markerTop) {
-                    return centerColor;
-                }
-
-                return { R: 0, G: 0, B: 0 };
+                return insideMarker ? markerColor : { R: 0, G: 0, B: 0 };
             });
 
             const result = await calibrator.calibrate(browser);
 
-            assert.equal(result.top, markerTop);
-            assert.equal(result.left, markerLeft);
+            // The center pixel (5, 5) lies inside the marker, so its (shifted) color is used to find the marker
+            assert.calledWith(image.getRGB, 5, 5);
+            assert.equal(result.viewportArea.top, markerTop);
+            assert.equal(result.viewportArea.left, markerLeft);
         });
     });
 
     describe("when image does not have iCCP chunk", () => {
-        it("should use hardcoded green color as search color", async () => {
+        it("should use the hardcoded green color as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
-            sinon.stub(image, "getRGB").callsFake(async (x, y) => {
-                if (x === 3 && y === 5) {
-                    return { R: 148, G: 250, B: 0 };
-                }
+            const greenColor = { R: 148, G: 250, B: 0 };
+            const markerLeft = 3;
+            const markerTop = 5;
+            const markerRight = 6;
+            const markerBottom = 6;
 
-                return { R: 0, G: 0, B: 0 };
+            image._hasICCPChunk = false;
+
+            sinon.stub(image, "getSize").returns({ width: 10, height: 10 });
+            sinon.stub(image, "getRGB").callsFake(async (x, y) => {
+                const insideMarker = x >= markerLeft && x <= markerRight && y >= markerTop && y <= markerBottom;
+
+                return insideMarker ? greenColor : { R: 0, G: 0, B: 0 };
             });
 
             const result = await calibrator.calibrate(browser);
 
-            assert.equal(result.top, 5);
-            assert.equal(result.left, 3);
+            assert.equal(result.viewportArea.top, markerTop);
+            assert.equal(result.viewportArea.left, markerLeft);
         });
     });
 });

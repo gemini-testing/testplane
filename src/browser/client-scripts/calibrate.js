@@ -8,6 +8,7 @@
     // which is in quirks mode.
     // Needs to find a proper way to open calibration
     // page in standards mode.
+    /* global navigator, document, window */
     function needsResetBorder() {
         return !/MSIE 8\.0/.test(navigator.userAgent);
     }
@@ -28,7 +29,18 @@
             bodyStyle.border = 0;
         }
 
-        bodyStyle.backgroundColor = "#96fa00";
+        // For example of how this looks, see https://github.com/gemini-testing/testplane/pull/1239
+        bodyStyle.backgroundColor = "#ff0000";
+
+        var fullPageElement = document.createElement("div");
+        fullPageElement.style.width = "100vw";
+        fullPageElement.style.height = "100vh";
+        fullPageElement.style.position = "fixed";
+        fullPageElement.style.top = "0";
+        fullPageElement.style.left = "0";
+        fullPageElement.style.zIndex = "999999";
+        fullPageElement.style.backgroundColor = "#96fa00";
+        document.body.appendChild(fullPageElement);
     }
 
     function hasCSS3Selectors() {

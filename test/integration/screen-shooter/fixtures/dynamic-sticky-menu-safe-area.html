@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Dynamic sticky menu safe-area fixture</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family: Arial, sans-serif;
+                color: #1f2937;
+                background: #f3f5f7;
+            }
+
+            .Hero {
+                height: 300px;
+                padding: 36px 28px;
+                background: linear-gradient(180deg, #f9fbff 0%, #e7eef8 100%);
+                border-bottom: 1px solid #d6dfeb;
+            }
+
+            .Hero h1 {
+                font-size: 30px;
+                line-height: 1.2;
+                margin-bottom: 12px;
+            }
+
+            .Hero p {
+                max-width: 760px;
+                line-height: 1.5;
+                color: #4b5563;
+            }
+
+            #menu-slot {
+                min-height: 66px;
+            }
+
+            .TopMenu {
+                min-height: 66px;
+                padding: 12px 18px;
+                border-bottom: 1px solid #c8d2df;
+                background: #fff;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                z-index: 30;
+            }
+
+            body.is-fixed .TopMenu {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+            }
+
+            .TopMenu-Item {
+                height: 34px;
+                padding: 0 12px;
+                border-radius: 17px;
+                border: 1px solid #b8c3d1;
+                background: #eef2f8;
+                display: inline-flex;
+                align-items: center;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+
+            .Layout {
+                width: min(1100px, calc(100% - 32px));
+                margin: 22px auto 0;
+                display: flex;
+                gap: 18px;
+            }
+
+            .Sidebar {
+                width: 240px;
+                min-height: 900px;
+                padding: 16px;
+                border: 1px solid #d7dde7;
+                border-radius: 12px;
+                background: #fff;
+                color: #6b7280;
+                line-height: 1.5;
+            }
+
+            .Feed {
+                flex: 1;
+                min-height: 1700px;
+                padding: 16px;
+                border: 1px solid #d7dde7;
+                border-radius: 12px;
+                background: #fff;
+            }
+
+            .Feed-LongBlock {
+                width: 100%;
+                min-height: 1300px;
+                padding: 20px;
+                border-radius: 10px;
+                border: 2px solid #5b8ec7;
+                background: repeating-linear-gradient(to bottom, #eaf3ff 0px, #eaf3ff 26px, #dbe9fa 26px, #dbe9fa 52px);
+            }
+
+            .Feed-LongBlock h2 {
+                margin-bottom: 12px;
+                font-size: 26px;
+            }
+
+            .Feed-LongBlock p {
+                max-width: 720px;
+                margin-bottom: 16px;
+                line-height: 1.5;
+                color: #374151;
+            }
+        </style>
+    </head>
+    <body>
+        <section class="Hero">
+            <h1>Product feed with sticky top menu</h1>
+            <p>
+                The top menu is static at first, then switches to fixed right when it reaches viewport top. This fixture
+                is intended to surface dynamic safe-area behavior while compositing long screenshots.
+            </p>
+        </section>
+
+        <div id="menu-slot">
+            <nav id="top-menu" class="TopMenu">
+                <span class="TopMenu-Item">All</span>
+                <span class="TopMenu-Item">News</span>
+                <span class="TopMenu-Item">Videos</span>
+                <span class="TopMenu-Item">Docs</span>
+                <span class="TopMenu-Item">Guides</span>
+                <span class="TopMenu-Item">Community</span>
+            </nav>
+        </div>
+
+        <main class="Layout">
+            <aside class="Sidebar">
+                <strong>Left panel</strong><br /><br />
+                Filters, stats and helper cards imitate a realistic layout around the main feed block.
+            </aside>
+            <section class="Feed">
+                <article class="Feed-LongBlock">
+                    <h2>Long capture target</h2>
+                    <p>
+                        This block is intentionally tall and should be captured as a composite image. As scrolling
+                        progresses, the menu above turns fixed and starts occupying the top viewport area.
+                    </p>
+                </article>
+            </section>
+        </main>
+
+        <script>
+            (function () {
+                var menu = document.getElementById("top-menu");
+                var slot = document.getElementById("menu-slot");
+
+                function syncSlotHeight() {
+                    var isFixed = document.body.classList.contains("is-fixed");
+                    if (isFixed) {
+                        document.body.classList.remove("is-fixed");
+                    }
+                    slot.style.height = menu.offsetHeight + "px";
+                    if (isFixed) {
+                        document.body.classList.add("is-fixed");
+                    }
+                }
+
+                function updateMenuMode() {
+                    var shouldFix = slot.getBoundingClientRect().top <= 0;
+
+                    if (shouldFix) {
+                        if (!document.body.classList.contains("is-fixed")) {
+                            document.body.classList.add("is-fixed");
+                        }
+                        return;
+                    }
+
+                    if (document.body.classList.contains("is-fixed")) {
+                        document.body.classList.remove("is-fixed");
+                    }
+                }
+
+                window.addEventListener("scroll", updateMenuMode, { passive: true });
+                window.addEventListener("resize", function () {
+                    syncSlotHeight();
+                    updateMenuMode();
+                });
+                syncSlotHeight();
+                updateMenuMode();
+            })();
+        </script>
+    </body>
+</html>

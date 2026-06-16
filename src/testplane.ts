@@ -43,7 +43,6 @@ interface RunOpts {
         onFail: boolean;
         port?: number;
     };
-    devtools: boolean;
     local: boolean;
     keepBrowserMode: {
         enabled: boolean;
@@ -101,8 +100,8 @@ export class Testplane extends BaseTestplane {
         this.testsTracker = null;
     }
 
-    extendCli(parser: Command): void {
-        this.emit(MasterEvents.CLI, parser);
+    async extendCli(parser: Command): Promise<void> {
+        await this.emitAndWait(MasterEvents.CLI, parser);
     }
 
     addFileToRemove(path: string): void {
@@ -137,7 +136,6 @@ export class Testplane extends BaseTestplane {
             requireModules,
             inspectMode,
             replMode,
-            devtools,
             local,
             keepBrowserMode,
             reporters = [],
@@ -150,7 +148,6 @@ export class Testplane extends BaseTestplane {
             requireModules,
             inspectMode,
             replMode,
-            devtools,
             local,
             keepBrowserMode,
         });

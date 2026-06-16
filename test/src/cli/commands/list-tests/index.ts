@@ -1,7 +1,7 @@
 import path from "node:path";
 import { Command } from "@gemini-testing/commander";
 import fs from "fs-extra";
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 
 import { Formatters } from "../../../../../src/test-collection";
@@ -13,9 +13,9 @@ describe("cli/commands/list-tests", () => {
     const sandbox = sinon.createSandbox();
     let testplaneCli: typeof testplaneCliOriginal;
 
-    const listTests_ = async (argv: string = "", cli: { run: VoidFunction } = testplaneCli): Promise<void> => {
+    const listTests_ = async (argv: string = "", cli: { run: () => Promise<void> } = testplaneCli): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "list-tests", ...argv.split(" ")].filter(Boolean);
-        cli.run();
+        await cli.run();
 
         await (Command.prototype.action as SinonStub).lastCall.returnValue;
     };
@@ -36,7 +36,7 @@ describe("cli/commands/list-tests", () => {
                 },
             ),
         });
-        sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
+        sandbox.stub(Testplane, "create").resolves(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "readTests").resolves(TestCollection.create({}));
 
         sandbox.stub(fs, "ensureDir").resolves();

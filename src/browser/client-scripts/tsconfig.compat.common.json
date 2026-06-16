@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "module": "CommonJS",
+        "composite": true,
+        "target": "ES3",
+        "lib": ["es5", "dom"],
+        "moduleResolution": "node",
+        "rootDir": "..",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "ignoreDeprecations": "5.0", // TODO: latest versions of TypeScript don't support ES3. We should migrate to babel build instead of emitting ES3 code!
+        "types": [],
+        "paths": {
+            "@lib": ["./shared/lib.compat.ts"],
+            "@isomorphic": ["../isomorphic/index.ts"]
+        }
+    },
+    "references": [
+        {
+            "path": "../isomorphic/tsconfig.json"
+        }
+    ]
+}

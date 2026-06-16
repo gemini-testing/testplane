@@ -130,30 +130,29 @@ describe("Jsonl reporter", () => {
             });
 
             it(`should add "error" field with "stack" from ${testStates[event]} test`, async () => {
+                const error = new Error("o.O");
+                error.stack = "o.O";
                 const test = mkTest_({
-                    err: {
-                        stack: "o.O",
-                        message: "O.o",
-                    },
+                    err: error,
                 });
 
                 await createJsonlReporter();
                 emit(RunnerEvents[event], test);
 
-                assert.equal(informer.log.firstCall.args[0].error, "o.O");
+                assert.equal(informer.log.firstCall.args[0].error, "[o.O]");
             });
 
             it(`should add "error" field with "message" from ${testStates[event]} test if "stack" does not exist`, async () => {
+                const error = new Error("O.o");
+                error.stack = undefined;
                 const test = mkTest_({
-                    err: {
-                        message: "O.o",
-                    },
+                    err: error,
                 });
 
                 await createJsonlReporter();
                 emit(RunnerEvents[event], test);
 
-                assert.equal(informer.log.firstCall.args[0].error, "O.o");
+                assert.equal(informer.log.firstCall.args[0].error, "[Error: O.o]");
             });
 
             it(`should add "error" field if it's specified as string in ${testStates[event]} test`, async () => {
@@ -164,23 +163,23 @@ describe("Jsonl reporter", () => {
                 await createJsonlReporter();
                 emit(RunnerEvents[event], test);
 
-                assert.equal(informer.log.firstCall.args[0].error, "o.O");
+                assert.equal(informer.log.firstCall.args[0].error, "'o.O'");
             });
 
             it(`should add "error" field with original selenium error if it exists in ${testStates[event]} test`, async () => {
+                const error = new Error("O.o");
+                error.stack = "O.o";
+                error.seleniumStack = {
+                    orgStatusMessage: "some original message",
+                };
                 const test = mkTest_({
-                    err: {
-                        message: "O.o",
-                        seleniumStack: {
-                            orgStatusMessage: "some original message",
-                        },
-                    },
+                    err: error,
                 });
 
                 await createJsonlReporter();
                 emit(RunnerEvents[event], test);
 
-                assert.equal(informer.log.firstCall.args[0].error, "O.o (some original message)");
+                assert.equal(informer.log.firstCall.args[0].error, "[O.o] (some original message)");
             });
         });
     });

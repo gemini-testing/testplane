@@ -58,7 +58,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
     }
 
     const configPath = preparseOption(program, "config") as string;
-    testplane = Testplane.create(configPath);
+    testplane = await Testplane.create(configPath);
 
     withCommonCliOptions({ cmd: program, actionName: "run" })
         .on("--help", () => console.log(configOverriding(opts)))
@@ -84,7 +84,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
             Number,
             0,
         )
-        .option("--devtools", "switches the browser to the devtools mode with using CDP protocol")
         .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
         .option("--keep-browser", "do not close browser session after test completion")
         .option("--keep-browser-on-fail", "do not close browser session when test fails")
@@ -102,7 +101,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     inspectBrk,
                     replBeforeTest,
                     replOnFail,
-                    devtools,
                     local,
                     keepBrowser,
                     keepBrowserOnFail,
@@ -123,7 +121,6 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                         onFail: replOnFail,
                         port: await getReplPort(program),
                     },
-                    devtools: devtools || false,
                     local: local || false,
                     keepBrowserMode: {
                         enabled: keepBrowser || keepBrowserOnFail || false,
@@ -145,7 +142,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
         registerCmd(program, testplane);
     }
 
-    testplane.extendCli(program);
+    await testplane.extendCli(program);
 
     program.parse(process.argv);
 };

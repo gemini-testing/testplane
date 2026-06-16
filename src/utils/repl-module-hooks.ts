@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { addHook } from "pirates";
 import { instrumentReplIfNeeded } from "./repl-instrumentation";
+import * as logger from "./logger";
 
 const TESTPLANE_REPL_MODULE_HOOK = Symbol.for("testplane.repl.module.hook");
 const TRANSFORM_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts"];
@@ -43,7 +44,7 @@ function registerNodeModuleHooks(): { revert: () => void } | null {
 }
 
 function registerPiratesHook(): { revert: () => void } {
-    const revert = addHook((code, sourceFile) => instrumentReplIfNeeded(code, sourceFile), {
+    const revert = addHook((code, sourceFile) => safeInstrumentRepl(code, sourceFile), {
         exts: TRANSFORM_CODE_EXTENSIONS,
         ignoreNodeModules: true,
     });
@@ -64,7 +65,16 @@ function instrumentLoadResult(url: string, result: LoadFnOutput): LoadFnOutput {
         return result;
     }
 
-    return { ...result, source: instrumentReplIfNeeded(source, sourceFile) };
+    return { ...result, source: safeInstrumentRepl(source, sourceFile) };
+}
+
+function safeInstrumentRepl(source: string, sourceFile: string): string {
+    try {
+        return instrumentReplIfNeeded(source, sourceFile);
+    } catch (err) {
+        logger.warn(`Failed to instrument ${sourceFile} for REPL mode: ${(err as Error).message}.`);
+        return source;
+    }
 }
 
 function getSourceFileFromUrl(url: string): string | null {

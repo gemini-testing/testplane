@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "target": "esnext",
+        "lib": ["dom", "dom.iterable", "esnext"],
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "types": [],
+        "paths": {
+            "@isomorphic": ["../../src/browser/isomorphic/index.ts"]
+        }
+    },
+    "include": ["testplane.config.ts", "tests", "types.d.ts"]
+}

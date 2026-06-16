@@ -4,29 +4,23 @@ import looksSame from "looks-same";
 import { CoreError } from "./core-error";
 import { ExistingBrowser } from "./existing-browser";
 import type { Image, RGB } from "../image";
+import { Coord, Length, Rect, Size, XBand, getHeight, getIntersection, getWidth } from "./isomorphic";
+import * as logger from "../utils/logger";
+import os from "node:os";
+import makeDebug from "debug";
 
-const DIRECTION = { FORWARD: "forward", REVERSE: "reverse" } as const;
+const debug = makeDebug("testplane:screenshots:calibrator");
 
 interface BrowserFeatures {
     needsCompatLib: boolean;
     pixelRatio: number;
-    innerWidth: number;
+    innerWidth: Length<"css", "x">;
 }
 
 export interface CalibrationResult extends BrowserFeatures {
-    top: number;
-    left: number;
+    viewportArea: Rect<"image", "device">;
+    screenshotSize: Size<"device">;
     usePixelRatio: boolean;
-}
-
-interface ViewportStart {
-    x: number;
-    y: number;
-}
-
-interface ImageAnalysisResult {
-    viewportStart: ViewportStart;
-    colorLength?: number;
 }
 
 export class Calibrator {
@@ -43,19 +37,29 @@ export class Calibrator {
             return this._cache[browser.id];
         }
 
+        debug("calibrating browser %s", browser.id);
+
         await browser.open("about:blank");
         const features = await browser.evalScript<BrowserFeatures>(this._script);
+        debug("features: %O", features);
         const image = await browser.captureViewportImage();
 
         const { innerWidth, pixelRatio } = features;
         const hasPixelRatio = Boolean(pixelRatio && pixelRatio > 1.0);
-        const { width: imageWidth, height: imageHeight } = image.getSize();
-        const searchColor = image.hasICCPChunk
-            ? await image.getRGB(Math.floor(imageWidth / 2), Math.floor(imageHeight / 2))
+        const screenshotSize = image.getSize() as Size<"device">;
+        const searchColor: RGB = image.hasICCPChunk
+            ? await image.getRGB(Math.floor(screenshotSize.width / 2), Math.floor(screenshotSize.height / 2))
             : { R: 148, G: 250, B: 0 };
-        const imageFeatures = await this._analyzeImage(image, { calculateColorLength: hasPixelRatio, searchColor });
+        const imageFeatures = await this._findMarkerAreaInImage(image, searchColor);
 
         if (!imageFeatures) {
+            const screenshotPath = path.join(os.tmpdir(), "testplane-calibration-page.png");
+            await image.save(screenshotPath);
+            logger.error(
+                "Could not calibrate, because marker area was not found. See calibration page screenshot for details: " +
+                    screenshotPath,
+            );
+            await image.save(screenshotPath);
             throw new CoreError(
                 "Could not calibrate. This could be due to calibration page has failed to open properly",
             );
@@ -63,25 +67,48 @@ export class Calibrator {
 
         const calibratedFeatures: CalibrationResult = {
             ...features,
-            top: imageFeatures.viewportStart.y,
-            left: imageFeatures.viewportStart.x,
-            usePixelRatio: hasPixelRatio && imageFeatures.colorLength! > innerWidth,
+            viewportArea: imageFeatures,
+            screenshotSize,
+            usePixelRatio: hasPixelRatio && imageFeatures.width > innerWidth,
         };
 
         this._cache[browser.id] = calibratedFeatures;
         return calibratedFeatures;
     }
 
-    private async _analyzeImage(
-        image: Image,
-        params: { calculateColorLength?: boolean; searchColor: RGB },
-    ): Promise<ImageAnalysisResult | null> {
+    private async _findMarkerAreaInImage(image: Image, searchColor: RGB): Promise<Rect<"image", "device"> | null> {
         const imageHeight = image.getSize().height;
 
-        for (let y = 0; y < imageHeight; y++) {
-            const result = await analyzeRow(y, image, params);
+        let topPart: Rect<"image", "device"> | null = null;
+
+        for (let y = 0 as Coord<"image", "device", "y">; y < imageHeight; y++) {
+            const result = await findMarkerXBandInRow(y, image, searchColor);
             if (result) {
-                return result;
+                topPart = {
+                    top: y,
+                    left: result.left,
+                    width: result.width,
+                    height: getHeight(y, imageHeight as Coord<"image", "device", "y">),
+                };
+                break;
+            }
+        }
+
+        if (topPart === null) {
+            return null;
+        }
+
+        for (let y = (imageHeight - 1) as Coord<"image", "device", "y">; y >= 0; y--) {
+            const result = await findMarkerXBandInRow(y, image, searchColor);
+            if (result) {
+                const bottomPart = {
+                    top: 0,
+                    left: result.left,
+                    width: result.width,
+                    height: getHeight(0 as Coord<"image", "device", "y">, (y + 1) as Coord<"image", "device", "y">),
+                };
+
+                return getIntersection(topPart, bottomPart);
             }
         }
 
@@ -89,63 +116,68 @@ export class Calibrator {
     }
 }
 
-async function analyzeRow(
-    row: number,
+async function findMarkerXBandInRow(
+    row: Coord<"image", "device", "y">,
     image: Image,
-    params: { calculateColorLength?: boolean; searchColor: RGB },
-): Promise<ImageAnalysisResult | null> {
-    const markerStart = await findMarkerInRow(row, image, DIRECTION.FORWARD, params.searchColor);
+    searchColor: RGB,
+): Promise<XBand<"image", "device"> | null> {
+    const markerStart = await findMarkerStartInRow(row, image, searchColor);
 
-    if (markerStart === -1) {
+    if (markerStart === null) {
         return null;
     }
 
-    const result: ImageAnalysisResult = { viewportStart: { x: markerStart, y: row } };
+    const markerEnd = await findMarkerEndInRow(row, image, searchColor);
 
-    if (!params.calculateColorLength) {
-        return result;
+    if (markerEnd === null) {
+        return null;
     }
 
-    const markerEnd = await findMarkerInRow(row, image, DIRECTION.REVERSE, params.searchColor);
-    const colorLength = markerEnd - markerStart + 1;
-
-    return { ...result, colorLength };
+    return {
+        left: markerStart,
+        width: getWidth(markerStart, (markerEnd + 1) as Coord<"image", "device", "x">),
+    };
 }
 
-async function findMarkerInRow(
-    row: number,
+async function isMarkerColorAtPoint(
     image: Image,
-    searchDirection: "forward" | "reverse",
+    x: Coord<"image", "device", "x">,
+    y: Coord<"image", "device", "y">,
     searchColor: RGB,
-): Promise<number> {
+): Promise<boolean> {
+    const color = await image.getRGB(x, y);
+
+    return looksSame.colors(color, searchColor);
+}
+
+async function findMarkerStartInRow(
+    row: Coord<"image", "device", "y">,
+    image: Image,
+    searchColor: RGB,
+): Promise<Coord<"image", "device", "x"> | null> {
     const imageWidth = image.getSize().width;
 
-    if (searchDirection === DIRECTION.REVERSE) {
-        return searchReverse_();
-    } else {
-        return searchForward_();
-    }
-
-    async function searchForward_(): Promise<number> {
-        for (let x = 0; x < imageWidth; x++) {
-            if (await compare_(x)) {
-                return x;
-            }
+    for (let x = 0 as Coord<"image", "device", "x">; x < imageWidth; x++) {
+        if (await isMarkerColorAtPoint(image, x, row, searchColor)) {
+            return x;
         }
-        return -1;
     }
 
-    async function searchReverse_(): Promise<number> {
-        for (let x = imageWidth - 1; x >= 0; x--) {
-            if (await compare_(x)) {
-                return x;
-            }
+    return null;
+}
+
+async function findMarkerEndInRow(
+    row: Coord<"image", "device", "y">,
+    image: Image,
+    searchColor: RGB,
+): Promise<Coord<"image", "device", "x"> | null> {
+    const imageWidth = image.getSize().width;
+
+    for (let x = (imageWidth - 1) as Coord<"image", "device", "x">; x >= 0; x--) {
+        if (await isMarkerColorAtPoint(image, x, row, searchColor)) {
+            return x;
         }
-        return -1;
     }
 
-    async function compare_(x: number): Promise<boolean> {
-        const color = await image.getRGB(x, row);
-        return looksSame.colors(color, searchColor);
-    }
+    return null;
 }

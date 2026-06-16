@@ -45,7 +45,7 @@ describe("cli", () => {
             "get-port": getPortStub,
         });
 
-        sandbox.stub(Testplane, "create").returns(Object.create(Testplane.prototype));
+        sandbox.stub(Testplane, "create").resolves(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "run").resolves();
         sandbox.stub(Testplane.prototype, "extendCli");
 
@@ -395,12 +395,6 @@ describe("cli", () => {
                 },
             });
         });
-    });
-
-    it("should turn on devtools mode from cli", async () => {
-        await run_("--devtools");
-
-        assert.calledWithMatch(Testplane.prototype.run, any, { devtools: true });
     });
 
     it("should turn on local mode from cli", async () => {

@@ -5,6 +5,8 @@ import type { ChildProcessWithoutNullStreams } from "child_process";
 import type { RequestOptions } from "https";
 import type { Config } from "./index";
 import type { SelectivityCompressionType } from "../browser/cdp/selectivity/types";
+import type { CropMargins } from "../browser/camera";
+import { DisableHoverMode } from "../browser/isomorphic/types";
 
 export interface CompareOptsConfig {
     shouldCluster: boolean;
@@ -52,9 +54,9 @@ export interface AssertViewOpts {
      * @remarks
      * Indicates maximum allowed CIEDE2000 difference between colors. Used only in non-strict mode.
      * Increasing global default is not recommended, prefer changing tolerance for particular suites or states instead.
-     * By default it's 2.3 which should be enough for the most cases.
+     * By default it's 3.0 which should be enough for the most cases.
      *
-     * @defaultValue `2.3`
+     * @defaultValue `3.0`
      */
     tolerance?: number;
     /**
@@ -88,6 +90,14 @@ export interface AssertViewOpts {
      */
     screenshotDelay?: number;
     /**
+     * Additional raw screenshot margins to crop, in physical pixels.
+     *
+     * Values are applied to every raw browser screenshot and merged with automatic calibration margins
+     * by taking the larger margin for each side.
+     * Useful to crop off the scrollbar, or the browser UI on exotic mobile devices.
+     */
+    cropMargins?: CropMargins;
+    /**
      * Ability to set DOM-node selector which should be scroll when the captured element does not completely fit on the screen.
      *
      * @remarks
@@ -109,6 +119,23 @@ export interface AssertViewOpts {
      */
     disableAnimation?: boolean;
     /**
+     * Controls whether hover effects should be disabled while making a screenshot
+     * Works by injecting a style that sets pointer-events: none on all elements.
+     *
+     * @remarks
+     * When capturing long screenshots that require scrolling, the mouse cursor stays at its original position
+     * and can cause unwanted hover effects on captured chunks.
+     *
+     * - `"always"` — always injects the style, disabling hovers for every screenshot capture.
+     * - `"when-scrolling-needed"` — only injects the style when the captured area requires scrolling
+     *   (long screenshots, needing compositing). Hovers are disabled for the entire capture duration, including
+     *   the first chunk. Single-viewport screenshots are unaffected.
+     * - `"never"` — never injects the style.
+     *
+     * @defaultValue `"when-scrolling-needed"`
+     */
+    disableHover?: DisableHoverMode;
+    /**
      * Ability to ignore a small amount of different pixels to classify screenshots as being "identical"
      *
      * @example 5
@@ -120,7 +147,7 @@ export interface AssertViewOpts {
      * @note
      * This should be considered a last resort and only used in small number of cases where necessary.
      *
-     * @defaultValue `0`
+     * @defaultValue `4`
      */
     ignoreDiffPixelCount?: `${number}%` | number;
     /**
@@ -340,7 +367,7 @@ export type SelectivityMapSourceMapUrlFn = (assetInfo: {
 
 export interface CommonConfig {
     configPath?: string;
-    automationProtocol: "webdriver" | "devtools";
+    automationProtocol: "webdriver";
     desiredCapabilities: WebdriverIO.Capabilities | null;
     sessionEnvFlags: Partial<
         Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
@@ -384,6 +411,7 @@ export interface CommonConfig {
     meta: { [name: string]: unknown };
     windowSize: { width: number; height: number } | `${number}x${number}` | null;
     orientation: "landscape" | "portrait" | null;
+    /** Was changed from "true" to "false" in testplane@9 */
     resetCursor: boolean;
     headers: Record<string, string> | null;
 
@@ -478,20 +506,22 @@ type PartialCommonConfig = Partial<
 export type HookType = (params: { config: Config }) => Promise<unknown> | unknown;
 
 // Only browsers desiredCapabilities are required in input config
-export type ConfigInput = Partial<PartialCommonConfig> & {
+export type ConfigInputData = Partial<PartialCommonConfig> & {
     browsers: Record<string, PartialCommonConfig & { desiredCapabilities: WebdriverIO.Capabilities }>;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
-    prepareEnvironment?: () => void | null;
+    prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
 };
+
+export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Promise<ConfigInputData>);
 
 export interface ConfigParsed extends CommonConfig {
     browsers: Record<string, BrowserConfig>;
     plugins: Record<string, Record<string, unknown>>;
     sets: Record<string, SetsConfigParsed>;
-    prepareEnvironment?: () => void | null;
+    prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
 }

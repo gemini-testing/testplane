@@ -15,7 +15,7 @@ jobs:
 
         strategy:
             matrix:
-                node-version: [18.x, 20.18.1, 22.x, 24.x]
+                node-version: [22.x, 24.x]
                 # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
         steps:
@@ -26,12 +26,9 @@ jobs:
                   node-version: ${{ matrix.node-version }}
                   cache: "npm"
             - run: npm ci
+            - run: npm run build
             - run: npm test
 
-            - name: Build
-              if: ${{ startsWith(matrix.node-version, '20') }}
-              run: npm run build
-
             - name: Publish
-              if: ${{ startsWith(matrix.node-version, '20') }}
+              if: ${{ startsWith(matrix.node-version, '24') }}
               run: npx pkg-pr-new publish

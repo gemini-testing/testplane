@@ -10,7 +10,6 @@ const history = require("src/browser/history");
 const {
     SAVE_HISTORY_MODE,
     WEBDRIVER_PROTOCOL,
-    DEVTOOLS_PROTOCOL,
     NODEJS_TEST_RUN_ENV,
     BROWSER_TEST_RUN_ENV,
 } = require("src/constants/config");
@@ -44,14 +43,6 @@ describe("ExistingBrowser", () => {
         return browser.init(sessionData, calibrator);
     };
 
-    const stubClientBridge_ = () => {
-        const bridge = { call: sandbox.stub().resolves({}) };
-
-        clientBridgeBuildStub.resolves(bridge);
-
-        return bridge;
-    };
-
     beforeEach(() => {
         session = mkSessionStub_();
         webdriverioAttachStub = sandbox.stub().resolves(session);
@@ -81,7 +72,9 @@ describe("ExistingBrowser", () => {
                 attach: webdriverioAttachStub,
             },
             "./client-bridge": {
-                build: clientBridgeBuildStub,
+                ClientBridge: {
+                    create: clientBridgeBuildStub,
+                },
             },
             "../utils/logger": {
                 warn: loggerWarnStub,
@@ -290,27 +283,6 @@ describe("ExistingBrowser", () => {
                 transformResponse(response);
 
                 assert.calledOnceWith(transformResponseStub, response);
-            });
-        });
-
-        describe('in order to correctly work with "devtools" protocol', () => {
-            it('should attach to browser with "options" property from master session', async () => {
-                const sessionOpts = { foo: "bar", automationProtocol: "devtools" };
-
-                await initBrowser_(mkBrowser_(), { sessionOpts });
-
-                assert.calledOnceWith(webdriverioAttachStub, sinon.match.has("options", sessionOpts));
-            });
-
-            it("should attach to browser with caps merged from master session opts and caps", async () => {
-                const capabilities = { browserName: "yabro" };
-                const sessionCaps = { "goog:chromeOptions": { debuggerAddress: "localhost:12345" } };
-
-                await initBrowser_(mkBrowser_(), { sessionCaps, sessionOpts: { capabilities } });
-
-                assert.calledWithMatch(webdriverioAttachStub, {
-                    capabilities: { ...capabilities, ...sessionCaps },
-                });
             });
         });
 
@@ -643,17 +615,6 @@ describe("ExistingBrowser", () => {
                 });
             });
 
-            describe(`in "${DEVTOOLS_PROTOCOL}" protocol`, () => {
-                it("should not switch to incognito window", async () => {
-                    const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
-                    const sessionOpts = { automationProtocol: DEVTOOLS_PROTOCOL };
-
-                    await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps, sessionOpts });
-
-                    assert.notCalled(session.switchToWindow);
-                });
-            });
-
             it("should close pages in default browser context", async () => {
                 CDPStub.target.getBrowserContexts.resolves({ browserContextIds: ["other-browser-id"] });
 
@@ -749,12 +710,14 @@ describe("ExistingBrowser", () => {
             });
 
             it("should perform calibration if `calibrate` is turn on", async () => {
-                calibrator.calibrate.withArgs(sinon.match.instanceOf(ExistingBrowser)).resolves({ foo: "bar" });
+                calibrator.calibrate
+                    .withArgs(sinon.match.instanceOf(ExistingBrowser))
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
 
-                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" });
+                assert.calledOnceWith(Camera.prototype.calibrate, { foo: "bar" }, { width: 100, height: 200 });
             });
 
             it("should not perform calibration if `calibrate` is turn off", async () => {
@@ -766,6 +729,9 @@ describe("ExistingBrowser", () => {
             });
 
             it("should perform calibration after attaching of a session", async () => {
+                calibrator.calibrate
+                    .withArgs(sinon.match.instanceOf(ExistingBrowser))
+                    .resolves({ viewportArea: { foo: "bar" }, screenshotSize: { width: 100, height: 200 } });
                 const browser = mkBrowser_({ calibrate: true });
 
                 await initBrowser_(browser, {}, calibrator);
@@ -775,14 +741,18 @@ describe("ExistingBrowser", () => {
             });
         });
 
-        it("should build client scripts", async () => {
+        it("should initialize browser side utils", async () => {
             const calibrator = sinon.createStubInstance(Calibrator);
-            calibrator.calibrate.resolves({ foo: "bar" });
+            calibrator.calibrate.resolves({
+                needsCompatLib: true,
+                viewportArea: { foo: "bar" },
+                screenshotSize: { width: 100, height: 200 },
+            });
             const browser = mkBrowser_({ calibrate: true });
 
             await initBrowser_(browser, {}, calibrator);
 
-            assert.calledOnceWith(clientBridgeBuildStub, browser, { calibration: { foo: "bar" } });
+            assert.calledOnceWith(clientBridgeBuildStub, session, "browser-utils", { needsCompatLib: true });
         });
     });
 
@@ -856,212 +826,6 @@ describe("ExistingBrowser", () => {
         });
     });
 
-    describe("prepareScreenshot", () => {
-        it("should prepare screenshot", async () => {
-            const clientBridge = stubClientBridge_();
-            clientBridge.call.withArgs("prepareScreenshot").resolves({ foo: "bar" });
-
-            const browser = await initBrowser_();
-
-            await assert.becomes(browser.prepareScreenshot(), { foo: "bar" });
-        });
-
-        it("should prepare screenshot for passed selectors", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_();
-
-            await browser.prepareScreenshot([".foo", ".bar"]);
-            const selectors = clientBridge.call.lastCall.args[1][0];
-
-            assert.deepEqual(selectors, [".foo", ".bar"]);
-        });
-
-        it("should prepare screenshot using passed options", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_();
-
-            await browser.prepareScreenshot([], { foo: "bar" });
-            const opts = clientBridge.call.lastCall.args[1][1];
-
-            assert.propertyVal(opts, "foo", "bar");
-        });
-
-        it("should extend options by calibration results", async () => {
-            const clientBridge = stubClientBridge_();
-            const calibrator = sinon.createStubInstance(Calibrator);
-            calibrator.calibrate.resolves({ usePixelRatio: false });
-
-            const browser = mkBrowser_({ calibrate: true });
-            await initBrowser_(browser, {}, calibrator);
-
-            await browser.prepareScreenshot();
-
-            const opts = clientBridge.call.lastCall.args[1][1];
-            assert.propertyVal(opts, "usePixelRatio", false);
-        });
-
-        it("should use pixel ratio by default if calibration was not met", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = mkBrowser_({ calibrate: false });
-            await initBrowser_(browser);
-
-            await browser.prepareScreenshot();
-            const opts = clientBridge.call.lastCall.args[1][1];
-
-            assert.propertyVal(opts, "usePixelRatio", true);
-        });
-
-        it("should throw error from browser", async () => {
-            const clientBridge = stubClientBridge_();
-            clientBridge.call.withArgs("prepareScreenshot").resolves({ error: "JS", message: "stub error" });
-
-            const browser = await initBrowser_();
-
-            await assert.isRejected(
-                browser.prepareScreenshot(),
-                "Prepare screenshot failed with error type 'JS' and error message: stub error",
-            );
-        });
-
-        describe("'disableAnimation: true' and 'automationProtocol: webdriver'", () => {
-            it("should disable animations on displayed iframes", async () => {
-                const clientBridge = stubClientBridge_();
-                const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-                const iframeElement1 = { "element-12345": "67890_element_1" };
-                const iframeElement2 = { "element-54321": "09876_element_2" };
-                const elementStub = (browser.publicAPI.$ = sandbox.stub());
-                elementStub.withArgs(iframeElement1).returns({ isDisplayed: () => Promise.resolve(false) });
-                elementStub.withArgs(iframeElement2).returns({ isDisplayed: () => Promise.resolve(true) });
-                browser.publicAPI.findElements
-                    .withArgs("css selector", "iframe[src]")
-                    .resolves([iframeElement1, iframeElement2]);
-
-                await browser.prepareScreenshot(".selector", { disableAnimation: true });
-
-                assert.callOrder(
-                    clientBridge.call.withArgs("prepareScreenshot", [
-                        ".selector",
-                        sinon.match({ disableAnimation: true }),
-                    ]),
-                    browser.publicAPI.switchToFrame.withArgs(iframeElement2),
-                    clientBridge.call.withArgs("disableFrameAnimations"),
-                    browser.publicAPI.switchToFrame.withArgs(null),
-                );
-                assert.neverCalledWithMatch(browser.publicAPI.switchToFrame, iframeElement1);
-            });
-        });
-
-        it("should not disable iframe animations if 'disableAnimation: true' and 'automationProtocol: devtools'", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "devtools" }));
-
-            await browser.prepareScreenshot(".selector", { disableAnimation: true });
-
-            assert.calledWith(clientBridge.call, "prepareScreenshot", [
-                ".selector",
-                sinon.match({ disableAnimation: true }),
-            ]);
-            assert.notCalled(browser.publicAPI.switchToFrame);
-            assert.neverCalledWith(clientBridge.call, "disableFrameAnimations");
-        });
-
-        it("should not disable animations if 'disableAnimation: false'", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-            const iframeElement = { "element-12345": "67890_element_1" };
-            browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
-            browser.publicAPI.$ = sandbox
-                .stub()
-                .withArgs(iframeElement)
-                .returns({ isDisplayed: () => Promise.resolve(true) });
-
-            await browser.prepareScreenshot(".selector", { disableAnimation: false });
-
-            assert.neverCalledWith(clientBridge.call, "prepareScreenshot", [
-                ".selector",
-                sinon.match({ disableAnimation: true }),
-            ]);
-            assert.neverCalledWith(browser.publicAPI.switchToFrame, iframeElement);
-            assert.neverCalledWith(clientBridge.call, "disableFrameAnimations");
-        });
-    });
-
-    describe("cleanupScreenshot", () => {
-        it("should cleanup parent frame if 'disableAnimation: true'", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-
-            await browser.cleanupScreenshot({ disableAnimation: true });
-
-            assert.calledWith(clientBridge.call, "cleanupFrameAnimations");
-        });
-
-        it("should not cleanup frames if 'disableAnimation: false'", async () => {
-            const clientBridge = stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-
-            await browser.cleanupScreenshot({ disableAnimation: false });
-
-            assert.neverCalledWith(clientBridge.call, "cleanupFrameAnimations");
-        });
-
-        it("should not cleanup animations in iframe if 'automationProtocol: devtools'", async () => {
-            stubClientBridge_();
-            const browser = await initBrowser_(mkBrowser_({ automationProtocol: "devtools" }));
-
-            await browser.cleanupScreenshot({ disableAnimation: true });
-
-            assert.notCalled(browser.publicAPI.switchToFrame);
-        });
-
-        describe("'automationProtocol: webdriver'", () => {
-            it("should cleanup animations in iframe", async () => {
-                const clientBridge = stubClientBridge_();
-                const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-                const iframeElement = { "element-12345": "67890_element_1" };
-                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
-                browser.publicAPI.$ = sandbox
-                    .stub()
-                    .withArgs(iframeElement)
-                    .returns({ isDisplayed: () => Promise.resolve(true) });
-
-                await browser.cleanupScreenshot({ disableAnimation: true });
-
-                assert.calledWith(browser.publicAPI.switchToFrame, iframeElement);
-                assert.calledWith(clientBridge.call, "cleanupFrameAnimations");
-                assert.callOrder(browser.publicAPI.switchToFrame, clientBridge.call);
-            });
-
-            it("should switch to parent frame after clean animations in iframe", async () => {
-                stubClientBridge_();
-                const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-                const iframeElement = { "element-12345": "67890_element_1" };
-                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([iframeElement]);
-                browser.publicAPI.$ = sandbox
-                    .stub()
-                    .withArgs(iframeElement)
-                    .returns({ isDisplayed: () => Promise.resolve(true) });
-
-                await browser.cleanupScreenshot({ disableAnimation: true });
-
-                assert.callOrder(
-                    browser.publicAPI.switchToFrame.withArgs(iframeElement),
-                    browser.publicAPI.switchToFrame.withArgs(null),
-                );
-            });
-
-            it("should not switch to any frame if there are no iframes on the page ", async () => {
-                stubClientBridge_();
-                const browser = await initBrowser_(mkBrowser_({ automationProtocol: "webdriver" }));
-                browser.publicAPI.findElements.withArgs("css selector", "iframe[src]").resolves([]);
-
-                await browser.cleanupScreenshot({ disableAnimation: true });
-
-                assert.notCalled(browser.publicAPI.switchToFrame);
-            });
-        });
-    });
-
     describe("open", () => {
         it("should open URL", async () => {
             const browser = await initBrowser_();
@@ -1094,17 +858,17 @@ describe("ExistingBrowser", () => {
     describe("captureViewportImage", () => {
         beforeEach(() => {
             sandbox.stub(Camera.prototype, "captureViewportImage");
-            sandbox.stub(global, "setTimeout").callsFake(fn => fn());
         });
 
-        it("should delay capturing on the passed time", () => {
-            Camera.prototype.captureViewportImage.withArgs({ foo: "bar" }).resolves({ some: "image" });
+        it("should pass screenshotDelay to camera object", () => {
+            Camera.prototype.captureViewportImage
+                .withArgs({ foo: "bar", screenshotDelay: 2000 })
+                .resolves({ some: "image" });
 
             return mkBrowser_({ screenshotDelay: 100500 })
-                .captureViewportImage({ foo: "bar" }, 2000)
+                .captureViewportImage({ foo: "bar", screenshotDelay: 2000 })
                 .then(() => {
-                    assert.calledOnceWith(global.setTimeout, sinon.match.any, 2000);
-                    assert.callOrder(global.setTimeout, Camera.prototype.captureViewportImage);
+                    assert.calledOnceWith(Camera.prototype.captureViewportImage, { foo: "bar", screenshotDelay: 2000 });
                 });
         });
 

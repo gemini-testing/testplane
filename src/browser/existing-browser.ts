@@ -4,8 +4,8 @@ import { attach, type AttachOptions, type ElementArray } from "@testplane/webdri
 import { sessionEnvironmentDetector } from "@testplane/wdio-utils";
 import { Browser, BrowserOpts } from "./browser";
 import { customCommandFileNames } from "./commands";
-import { Camera, PageMeta } from "./camera";
-import { type ClientBridge, build as buildClientBridge } from "./client-bridge";
+import { Camera, CaptureViewportImageOpts } from "./camera";
+import { ClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
 import { WEBDRIVER_PROTOCOL } from "../constants/config";
@@ -13,27 +13,16 @@ import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
 import { Config } from "../config";
-import { Image, Rect } from "../image";
+import { Image } from "../image";
 import type { CalibrationResult, Calibrator } from "./calibrator";
 import { NEW_ISSUE_LINK } from "../constants/help";
-import { runWithoutHistory } from "./history";
 import type { SessionOptions } from "./types";
 import { Page } from "puppeteer-core";
 import { CDP } from "./cdp";
 import { WSDriverRequestAgent } from "./wsdriver";
-import type { ElementReference } from "@testplane/wdio-protocols";
+import type * as browserSideUtilsImplementation from "./client-scripts/browser-utils/implementation";
 
 const OPTIONAL_SESSION_OPTS = ["transformRequest", "transformResponse"];
-
-interface PrepareScreenshotOpts {
-    disableAnimation?: boolean;
-    // TODO: specify the rest of the options
-}
-
-interface ClientBridgeErrorData {
-    error: string;
-    message: string;
-}
 
 interface ScrollByParams {
     x: number;
@@ -43,7 +32,6 @@ interface ScrollByParams {
 
 const BROWSER_SESSION_HINT = "browser session";
 const CDP_CONNECTION_HINT = "cdp connection";
-const CLIENT_BRIDGE_HINT = "client bridge";
 
 function ensure<T>(value: T | undefined | null, hint?: string): asserts value is T {
     if (!value) {
@@ -55,10 +43,6 @@ function ensure<T>(value: T | undefined | null, hint?: string): asserts value is
         );
     }
 }
-
-const isClientBridgeErrorData = (data: unknown): data is ClientBridgeErrorData => {
-    return Boolean(data && (data as ClientBridgeErrorData).error && (data as ClientBridgeErrorData).message);
-};
 
 export const getActivePuppeteerPage = async (session: WebdriverIO.Browser): Promise<Page | undefined> => {
     const puppeteer = await session.getPuppeteer();
@@ -90,7 +74,7 @@ export class ExistingBrowser extends Browser {
     protected _camera: Camera;
     protected _meta: Record<string, unknown>;
     protected _calibration?: CalibrationResult;
-    protected _clientBridge?: ClientBridge;
+    protected _browserSideUtils?: ClientBridge<typeof browserSideUtilsImplementation>;
     protected _cdp: CDP | null = null;
     protected _wsDriver: WSDriverRequestAgent | null = null;
     protected _tags: Set<string> = new Set();
@@ -143,7 +127,7 @@ export class ExistingBrowser extends Browser {
 
                 await this._prepareSession();
                 await this._performCalibration(calibrator);
-                await this._buildClientScripts();
+                await this._initBrowserSideUtils();
             },
         );
 
@@ -168,38 +152,6 @@ export class ExistingBrowser extends Browser {
         this._meta = this._initMeta();
     }
 
-    async prepareScreenshot(selectors: string[] | Rect[], opts: PrepareScreenshotOpts = {}): Promise<unknown> {
-        // Running this fragment with history causes rrweb snapshots to break on pages with iframes
-        return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
-            opts = _.extend(opts, {
-                usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true,
-            });
-
-            ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-            const result = await this._clientBridge.call("prepareScreenshot", [selectors, opts]);
-            if (isClientBridgeErrorData(result)) {
-                throw new Error(
-                    `Prepare screenshot failed with error type '${result.error}' and error message: ${result.message}`,
-                );
-            }
-
-            // https://github.com/webdriverio/webdriverio/issues/11396
-            if (this._config.automationProtocol === WEBDRIVER_PROTOCOL && opts.disableAnimation) {
-                await this._disableIframeAnimations();
-            }
-
-            return result;
-        });
-    }
-
-    async cleanupScreenshot(opts: { disableAnimation?: boolean } = {}): Promise<void> {
-        if (opts.disableAnimation) {
-            return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
-                await this._cleanupPageAnimations();
-            });
-        }
-    }
-
     open(url: string): Promise<WebdriverIO.Request | string | void> {
         ensure(this._session, BROWSER_SESSION_HINT);
 
@@ -218,12 +170,20 @@ export class ExistingBrowser extends Browser {
         return this._session.execute(script);
     }
 
-    async captureViewportImage(page?: PageMeta, screenshotDelay?: number): Promise<Image> {
-        if (screenshotDelay) {
-            await new Promise(resolve => setTimeout(resolve, screenshotDelay));
-        }
+    get shouldUsePixelRatio(): boolean {
+        return this._calibration ? this._calibration.usePixelRatio : true;
+    }
 
-        return this._camera.captureViewportImage(page);
+    get isWebdriverProtocol(): boolean {
+        return this._config.automationProtocol === WEBDRIVER_PROTOCOL;
+    }
+
+    get needsCompatLib(): boolean {
+        return this._calibration ? this._calibration.needsCompatLib : false;
+    }
+
+    async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<Image> {
+        return this._camera.captureViewportImage(opts);
     }
 
     scrollBy(params: ScrollByParams): Promise<void> {
@@ -380,8 +340,8 @@ export class ExistingBrowser extends Browser {
                     this.restoreHttpTimeout();
                 }
 
-                if (this._clientBridge) {
-                    await this._clientBridge.call("resetZoom");
+                if (this._browserSideUtils) {
+                    await this._browserSideUtils.call("resetZoom", []);
                 }
 
                 return result;
@@ -522,78 +482,14 @@ export class ExistingBrowser extends Browser {
 
         return calibrator.calibrate(this).then(calibration => {
             this._calibration = calibration;
-            this._camera.calibrate(calibration);
+            this._camera.calibrate(calibration.viewportArea, calibration.screenshotSize);
         });
     }
 
-    protected async _buildClientScripts(): Promise<ClientBridge> {
-        return buildClientBridge(this, { calibration: this._calibration }).then(
-            clientBridge => (this._clientBridge = clientBridge),
-        );
-    }
-
-    protected async _runInEachDisplayedIframe(cb: (...args: unknown[]) => unknown): Promise<void> {
-        ensure(this._session, BROWSER_SESSION_HINT);
-        const session = this._session;
-        const iframes = await session.findElements("css selector", "iframe[src]");
-        const displayedIframes: ElementReference[] = [];
-
-        await Promise.all(
-            iframes.map(async iframe => {
-                const isIframeDisplayed = await session.$(iframe).isDisplayed();
-
-                if (isIframeDisplayed) {
-                    displayedIframes.push(iframe);
-                }
-            }),
-        );
-
-        try {
-            for (const iframe of displayedIframes) {
-                await session.switchToFrame(iframe);
-                await cb();
-                // switchToParentFrame does not work in ios - https://github.com/appium/appium/issues/14882
-                await session.switchToFrame(null);
-            }
-        } catch (e) {
-            await session.switchToFrame(null);
-            throw e;
-        }
-    }
-
-    protected async _disableFrameAnimations(): Promise<void> {
-        ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-        const result = await this._clientBridge.call<void>("disableFrameAnimations");
-
-        if (isClientBridgeErrorData(result)) {
-            throw new Error(
-                `Disable animations failed with error type '${result.error}' and error message: ${result.message}`,
-            );
-        }
-
-        return result;
-    }
-
-    protected async _disableIframeAnimations(): Promise<void> {
-        await this._runInEachDisplayedIframe(() => this._disableFrameAnimations());
-    }
-
-    protected async _cleanupFrameAnimations(): Promise<void> {
-        ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
-
-        return this._clientBridge.call("cleanupFrameAnimations");
-    }
-
-    protected async _cleanupIframeAnimations(): Promise<void> {
-        await this._runInEachDisplayedIframe(() => this._cleanupFrameAnimations());
-    }
-
-    protected async _cleanupPageAnimations(): Promise<void> {
-        await this._cleanupFrameAnimations();
-
-        if (this._config.automationProtocol === WEBDRIVER_PROTOCOL) {
-            await this._cleanupIframeAnimations();
-        }
+    protected async _initBrowserSideUtils(): Promise<ClientBridge<typeof browserSideUtilsImplementation>> {
+        return ClientBridge.create(this._session!, "browser-utils", {
+            needsCompatLib: this._calibration?.needsCompatLib,
+        }).then(clientBridge => (this._browserSideUtils = clientBridge));
     }
 
     _stubCommands(): void {
@@ -622,5 +518,9 @@ export class ExistingBrowser extends Browser {
 
     get cdp(): CDP | null {
         return this._cdp;
+    }
+
+    get camera(): Camera {
+        return this._camera;
     }
 }

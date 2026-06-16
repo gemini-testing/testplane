@@ -4,7 +4,7 @@
 const _ = require("lodash");
 const HookRunner = require("./hook-runner");
 const ExecutionThread = require("./execution-thread");
-const OneTimeScreenshooter = require("./one-time-screenshooter");
+const { captureFailScreenshot } = require("./capture-fail-screenshot");
 const { AssertViewError } = require("../../../browser/commands/assert-view/errors/assert-view-error");
 const history = require("../../../browser/history");
 const { SAVE_HISTORY_MODE } = require("../../../constants/config");
@@ -12,7 +12,6 @@ const { REPL_INSTRUMENTED_FN_FLAG } = require("../../../constants/repl");
 const RuntimeConfig = require("../../../config/runtime-config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
-const { TestplaneInternalError } = require("../../../errors");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 
 module.exports = class TestRunner {
@@ -86,14 +85,11 @@ module.exports = class TestRunner {
         if (!error && assertViewResults && assertViewResults.hasFails()) {
             error = new AssertViewError();
 
-            if (!this._screenshooter) {
-                throw new TestplaneInternalError(
-                    "OneTimeScreenshooter instance must be initialized before finish test run",
-                );
-            }
-
-            if (this._screenshooter.getScreenshot()) {
-                error.screenshot = this._screenshooter.getScreenshot();
+            if (this._config.takeScreenshotOnFails.assertViewFail) {
+                const screenshot = await captureFailScreenshot(this._browser);
+                if (screenshot) {
+                    error.screenshot = screenshot;
+                }
             }
         }
 
@@ -161,13 +157,11 @@ module.exports = class TestRunner {
         const test = this._test;
         const testplaneCtx = test.testplaneCtx || {};
 
-        this._screenshooter = OneTimeScreenshooter.create(this._config, this._browser);
         const executionThread = ExecutionThreadCls.create({
             test,
             browser: this._browser,
             testplaneCtx,
             hermioneCtx: testplaneCtx,
-            screenshooter: this._screenshooter,
             attempt: this._attempt,
         });
         const hookRunner = HookRunner.create(test, executionThread);

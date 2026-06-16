@@ -4,13 +4,25 @@ const path = require("path");
 const chalk = require("chalk");
 const stripAnsi = require("strip-ansi");
 const _ = require("lodash");
+const util = require("util");
 
 const getSkipReason = test => test && (getSkipReason(test.parent) || test.skipReason);
 const getFilePath = test => (test && test.file) || (test.parent && getFilePath(test.parent));
 const getRelativeFilePath = file => (file ? path.relative(process.cwd(), file) : undefined);
 
+function toPrintableError(err) {
+    if (!(err instanceof Error)) return err;
+
+    const cause = err.cause instanceof Error ? toPrintableError(err.cause) : err.cause;
+
+    const result = cause ? new Error(err.message, { cause }) : new Error(err.message);
+    result.stack = err.stack;
+
+    return result;
+}
+
 const getTestError = test => {
-    let error = test.err ? test.err.stack || test.err.message || test.err : undefined;
+    let error = test.err ? util.inspect(toPrintableError(test.err)) : undefined;
 
     if (test.err && test.err.seleniumStack) {
         error = error.replace(/$/m, ` (${test.err.seleniumStack.orgStatusMessage})`);
