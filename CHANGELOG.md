@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [9.0.0](https://github.com/gemini-testing/testplane/compare/v8.47.2...v9.0.0) (2026-06-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* release testplane v9 (#1279)
+* bump required node version to 22
+* useWsDriver is turned on by default
+* add async function config support
+* purge devtools
+* remove global helpers (it,describe,...)
+* set default resetCursor value to false
+* use gridUrl: "local" by default
+* implement new assertView version
+
+### Features
+
+* add async function config support ([b96f12a](https://github.com/gemini-testing/testplane/commit/b96f12a74559351cf86a5472f833492b90cdfb54))
+* implement disableHover, improve safeArea computation and other assertView fixes ([#1205](https://github.com/gemini-testing/testplane/issues/1205)) ([3805d68](https://github.com/gemini-testing/testplane/commit/3805d681f6af0af6d0025613e22f26da8cae8333))
+* implement new assertView version ([ba99d2f](https://github.com/gemini-testing/testplane/commit/ba99d2f9cf03051c01ec6279df429d3b11631eec))
+* implement type-safe isomorphic coords helpers ([#1233](https://github.com/gemini-testing/testplane/issues/1233)) ([bd8f184](https://github.com/gemini-testing/testplane/commit/bd8f1843be22854142b70499a4ebcf99c86afd2e))
+* improve and refactor screen-shooter and split it into 3 versions ([#1240](https://github.com/gemini-testing/testplane/issues/1240)) ([4c22b41](https://github.com/gemini-testing/testplane/commit/4c22b41328a8e6e66c86020bef4a25a4b48a3156))
+* improve calibrator to work correctly on ios simulators and camera cropping logic ([#1239](https://github.com/gemini-testing/testplane/issues/1239)) ([9f8661a](https://github.com/gemini-testing/testplane/commit/9f8661ab90c39b76a1c5bb0af56e7bf564330ff1))
+* make CLI and NEW_BROWSER events async ([2f8f10f](https://github.com/gemini-testing/testplane/commit/2f8f10fa8bb142f12b1f1b0bed3c1d4f7360a003))
+* release testplane v9 ([#1279](https://github.com/gemini-testing/testplane/issues/1279)) ([dd9bb22](https://github.com/gemini-testing/testplane/commit/dd9bb225e530afb1f62c254835342747a4849cb4)), closes [#1205](https://github.com/gemini-testing/testplane/issues/1205) [#1233](https://github.com/gemini-testing/testplane/issues/1233) [#1235](https://github.com/gemini-testing/testplane/issues/1235) [#1236](https://github.com/gemini-testing/testplane/issues/1236) [#1237](https://github.com/gemini-testing/testplane/issues/1237) [#1238](https://github.com/gemini-testing/testplane/issues/1238) [#1239](https://github.com/gemini-testing/testplane/issues/1239) [#1240](https://github.com/gemini-testing/testplane/issues/1240) [#1241](https://github.com/gemini-testing/testplane/issues/1241) [#1242](https://github.com/gemini-testing/testplane/issues/1242) [#1277](https://github.com/gemini-testing/testplane/issues/1277)
+* rewrite client-scripts to typescript and refactor them ([#1236](https://github.com/gemini-testing/testplane/issues/1236)) ([ae138de](https://github.com/gemini-testing/testplane/commit/ae138dead1787316fab1884aed01931dff47711e))
+* rewrite composite-image and implement robust unit tests ([#1238](https://github.com/gemini-testing/testplane/issues/1238)) ([143fac4](https://github.com/gemini-testing/testplane/commit/143fac495f5f12674071bccd5d90e199678ee953))
+* useWsDriver is turned on by default ([0e79a9e](https://github.com/gemini-testing/testplane/commit/0e79a9e7e18e7b0b7788e4cd7b516d421620276d))
+
+
+### Bug Fixes
+
+* calibrate errors (port) ([345a527](https://github.com/gemini-testing/testplane/commit/345a52766927761bd1809adfb28ab4c0760402c6))
+* fix image decoding issues and safe area computation ([90145da](https://github.com/gemini-testing/testplane/commit/90145da5171614e254baf3417e83255f1b179f5d))
+* fix remaining issues and checks ([#1242](https://github.com/gemini-testing/testplane/issues/1242)) ([37580cb](https://github.com/gemini-testing/testplane/commit/37580cba64175e90dbd06b78298c1e53fece9235))
+* fix remaining issues in new assertView algorithm and implement cropMargins options ([#1277](https://github.com/gemini-testing/testplane/issues/1277)) ([24cf1fe](https://github.com/gemini-testing/testplane/commit/24cf1fe3352d22aff83f4f88c679ec2c047d1ce8))
+* perform waitForStaticToLoad call at the correct stage during assertView ([49caaf2](https://github.com/gemini-testing/testplane/commit/49caaf245c03e456ffc8c08eb72ce10fff3e01e6))
+* remove global helpers (it,describe,...) ([7344202](https://github.com/gemini-testing/testplane/commit/73442023ff9bdda563f269584ef4323cc54aea06))
+* revert rounding changes ([969e5cb](https://github.com/gemini-testing/testplane/commit/969e5cbb36fe6093bbd3e2874be485bc1af6745c))
+* set default resetCursor value to false ([0ec40df](https://github.com/gemini-testing/testplane/commit/0ec40df504eb5007826d83760dc85e062ea8ee80))
+* use gridUrl: "local" by default ([b7cb47a](https://github.com/gemini-testing/testplane/commit/b7cb47a8293343f4caa4cfa9fe671318d5696ce3))
+
+
+* bump required node version to 22 ([76e63fe](https://github.com/gemini-testing/testplane/commit/76e63fe7ff9005463fe2d9bcca9d0f15ec1caf66))
+* purge devtools ([cba3d88](https://github.com/gemini-testing/testplane/commit/cba3d88dfc9639f3ca809c3778c7057256e01ffe))
+
 ### 8.47.2 (2026-06-11)
 
 ### 8.47.1 (2026-06-09)
