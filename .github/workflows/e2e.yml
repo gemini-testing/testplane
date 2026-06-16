@@ -2,7 +2,7 @@ name: Testplane E2E
 
 on:
     pull_request:
-        branches: [testplane@9]
+        branches: [master]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
