@@ -1,6 +1,7 @@
 import * as nodeModule from "node:module";
 import type { LoadFnOutput, ModuleHooks, ModuleSource } from "node:module";
 import { Command } from "@gemini-testing/commander";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { addHook } from "pirates";
@@ -73,11 +74,15 @@ function registerPiratesHook(): { revert: () => void } {
 function instrumentLoadResult(url: string, result: LoadFnOutput): LoadFnOutput {
     const sourceFile = getSourceFileFromUrl(url);
 
-    if (!sourceFile || !result.source || !shouldHandleSourceFile(sourceFile)) {
+    if (!sourceFile || !shouldHandleSourceFile(sourceFile)) {
         return result;
     }
 
-    const source = moduleSourceToString(result.source);
+    const resultSource = result.source as ModuleSource | null | undefined;
+    const source =
+        resultSource === null || resultSource === undefined
+            ? readSourceFile(sourceFile)
+            : moduleSourceToString(resultSource);
 
     if (source === null) {
         return result;
@@ -92,6 +97,14 @@ function safeInstrumentRepl(source: string, sourceFile: string): string {
     } catch (err) {
         logger.warn(`Failed to instrument ${sourceFile} for REPL mode: ${(err as Error).message}.`);
         return source;
+    }
+}
+
+function readSourceFile(sourceFile: string): string | null {
+    try {
+        return readFileSync(sourceFile, "utf8");
+    } catch {
+        return null;
     }
 }
 

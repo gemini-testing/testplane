@@ -11,6 +11,7 @@ describe("utils/repl-module-hooks", () => {
     let addHookStub: SinonStub;
     let instrumentStub: SinonStub;
     let loggerWarnStub: SinonStub;
+    let readFileSyncStub: SinonStub;
     let replModuleHooks: typeof import("src/utils/repl-module-hooks");
     let isReplModeEnabled: boolean;
 
@@ -33,6 +34,7 @@ describe("utils/repl-module-hooks", () => {
         deregisterStub = sinon.stub();
         registerHooksStub = sinon.stub().returns({ deregister: deregisterStub });
         addHookStub = sinon.stub().returns(sinon.stub());
+        readFileSyncStub = sinon.stub();
         isReplModeEnabled = true;
         instrumentStub = sinon.stub().callsFake((code: string) => {
             return isReplModeEnabled ? `${code}\n/* instrumented */` : code;
@@ -41,6 +43,7 @@ describe("utils/repl-module-hooks", () => {
 
         replModuleHooks = proxyquire.noCallThru().load("src/utils/repl-module-hooks", {
             "node:module": hasRegisterHooks ? { registerHooks: registerHooksStub } : {},
+            "node:fs": { readFileSync: readFileSyncStub },
             pirates: { addHook: addHookStub },
             "./repl-instrumentation": { instrumentReplIfNeeded: instrumentStub },
             "./logger": { warn: loggerWarnStub },
@@ -79,6 +82,41 @@ describe("utils/repl-module-hooks", () => {
 
         assert.equal(result.source, "it('a', () => {})\n/* instrumented */");
         assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.mjs");
+    });
+
+    it("should read file source when registerHooks returns null source", () => {
+        loadModule_({ hasRegisterHooks: true });
+        readFileSyncStub.returns("it('a', () => {})");
+
+        replModuleHooks.registerReplModuleHooks();
+
+        const loadHook = registerHooksStub.firstCall.args[0].load;
+        const fileUrl = pathToFileURL("/tmp/spec.hermione.js").href;
+        const result = loadHook(fileUrl, { format: "commonjs" }, () => ({
+            format: "commonjs",
+            source: null,
+        }));
+
+        assert.equal(result.source, "it('a', () => {})\n/* instrumented */");
+        assert.calledOnceWith(readFileSyncStub, "/tmp/spec.hermione.js", "utf8");
+        assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.js");
+    });
+
+    it("should keep original registerHooks result if null source cannot be read", () => {
+        loadModule_({ hasRegisterHooks: true });
+        readFileSyncStub.throws(new Error("boom"));
+
+        replModuleHooks.registerReplModuleHooks();
+
+        const loadHook = registerHooksStub.firstCall.args[0].load;
+        const fileUrl = pathToFileURL("/tmp/spec.hermione.js").href;
+        const result = loadHook(fileUrl, { format: "commonjs" }, () => ({
+            format: "commonjs",
+            source: null,
+        }));
+
+        assert.deepEqual(result, { format: "commonjs", source: null });
+        assert.notCalled(instrumentStub);
     });
 
     it("should fallback to pirates when registerHooks is not available", () => {
