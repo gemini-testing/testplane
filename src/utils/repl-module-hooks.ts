@@ -28,7 +28,7 @@ export const registerReplModuleHooks = (): void => {
 function registerNodeModuleHooks(): { revert: () => void } | null {
     const registerHooks = nodeModule.registerHooks;
 
-    if (typeof registerHooks !== "function") {
+    if (typeof registerHooks !== "function" || hasBrokenMixedModuleHookValidation()) {
         return null;
     }
 
@@ -41,6 +41,14 @@ function registerNodeModuleHooks(): { revert: () => void } | null {
     });
 
     return { revert: () => hooks.deregister() };
+}
+
+function hasBrokenMixedModuleHookValidation(): boolean {
+    const [major, minor] = process.versions.node.split(".").map(Number);
+
+    // https://github.com/nodejs/node/issues/57327
+    // Fixed for REPL instrumentation in Node 24.13.0; older versions mishandle CJS sources with mixed sync/async hooks.
+    return major < 24 || (major === 24 && minor < 13);
 }
 
 function registerPiratesHook(): { revert: () => void } {

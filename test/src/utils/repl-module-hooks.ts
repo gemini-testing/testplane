@@ -20,8 +20,12 @@ describe("utils/repl-module-hooks", () => {
         delete processWithHook[TESTPLANE_REPL_MODULE_HOOK];
     };
 
-    const loadModule_ = ({ hasRegisterHooks = false }: { hasRegisterHooks?: boolean } = {}): void => {
+    const loadModule_ = ({
+        hasRegisterHooks = false,
+        nodeVersion = "24.13.0",
+    }: { hasRegisterHooks?: boolean; nodeVersion?: string } = {}): void => {
         cleanupHook_();
+        sinon.stub(process.versions, "node").value(nodeVersion);
 
         deregisterStub = sinon.stub();
         registerHooksStub = sinon.stub().returns({ deregister: deregisterStub });
@@ -80,6 +84,24 @@ describe("utils/repl-module-hooks", () => {
 
         assert.equal(result, "it('a', () => {})\n/* instrumented */");
         assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.ts");
+    });
+
+    it("should fallback to pirates when registerHooks has broken mixed hook validation", () => {
+        loadModule_({ hasRegisterHooks: true, nodeVersion: "22.18.0" });
+
+        replModuleHooks.registerReplModuleHooks();
+
+        assert.notCalled(registerHooksStub);
+        assert.calledOnce(addHookStub);
+    });
+
+    it("should fallback to pirates on Node 24 versions before the instrumentation fix", () => {
+        loadModule_({ hasRegisterHooks: true, nodeVersion: "24.12.0" });
+
+        replModuleHooks.registerReplModuleHooks();
+
+        assert.notCalled(registerHooksStub);
+        assert.calledOnce(addHookStub);
     });
 
     it("should not instrument sources outside repl mode", () => {

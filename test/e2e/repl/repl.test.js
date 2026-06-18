@@ -3,12 +3,14 @@
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 const assert = require("node:assert/strict");
+const { pathToFileURL } = require("node:url");
 const getPort = require("get-port");
 const { runReplCommand, exitRepl } = require("./repl-client");
 
 const ROOT_DIR = path.resolve(__dirname, "../../..");
 const FIXTURE_DIR = path.join(__dirname, "fixture-project");
 const TESTPLANE_BIN = path.join(ROOT_DIR, "bin", "testplane");
+const CONFLICTING_ASYNC_LOADER = path.join(__dirname, "conflicting-async-loader.mjs");
 const REPL_WAIT_TIMEOUT = 60000;
 const EXIT_TIMEOUT = 60000;
 const runningProcesses = new Set();
@@ -86,7 +88,13 @@ async function startTestplane(args) {
         [TESTPLANE_BIN, "--config", "testplane.config.js", "--local", "--repl-port", String(port), ...args],
         {
             cwd: FIXTURE_DIR,
-            env: { ...process.env, FORCE_COLOR: "0" },
+            env: {
+                ...process.env,
+                FORCE_COLOR: "0",
+                NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import=${pathToFileURL(CONFLICTING_ASYNC_LOADER).href}`]
+                    .filter(Boolean)
+                    .join(" "),
+            },
             stdio: ["ignore", "pipe", "pipe"],
         },
     );
