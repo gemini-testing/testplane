@@ -1,8 +1,10 @@
 import * as nodeModule from "node:module";
 import type { LoadFnOutput, ModuleHooks, ModuleSource } from "node:module";
+import { Command } from "@gemini-testing/commander";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { addHook } from "pirates";
+import { addReplOptions, isReplModeEnabled } from "../cli/repl-options";
 import { instrumentReplIfNeeded } from "./repl-instrumentation";
 import * as logger from "./logger";
 
@@ -17,6 +19,14 @@ export const registerReplModuleHooks = (): void => {
     const processWithHook = process as ProcessWithReplModuleHook;
 
     if (processWithHook[TESTPLANE_REPL_MODULE_HOOK]) {
+        return;
+    }
+
+    const program = addReplOptions(new Command("testplane").allowUnknownOption().option("-h, --help"));
+
+    program.parse(process.argv);
+
+    if (!isReplModeEnabled(program)) {
         return;
     }
 

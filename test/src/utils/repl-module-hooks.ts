@@ -4,6 +4,7 @@ import sinon, { type SinonStub } from "sinon";
 
 describe("utils/repl-module-hooks", () => {
     const TESTPLANE_REPL_MODULE_HOOK = Symbol.for("testplane.repl.module.hook");
+    const originalArgv = process.argv;
 
     let registerHooksStub: SinonStub;
     let deregisterStub: SinonStub;
@@ -23,8 +24,10 @@ describe("utils/repl-module-hooks", () => {
     const loadModule_ = ({
         hasRegisterHooks = false,
         nodeVersion = "24.13.0",
-    }: { hasRegisterHooks?: boolean; nodeVersion?: string } = {}): void => {
+        argv = ["--repl"],
+    }: { hasRegisterHooks?: boolean; nodeVersion?: string; argv?: string[] } = {}): void => {
         cleanupHook_();
+        process.argv = ["node", "testplane", ...argv];
         sinon.stub(process.versions, "node").value(nodeVersion);
 
         deregisterStub = sinon.stub();
@@ -46,7 +49,17 @@ describe("utils/repl-module-hooks", () => {
 
     afterEach(() => {
         cleanupHook_();
+        process.argv = originalArgv;
         sinon.restore();
+    });
+
+    it("should not register hooks outside repl mode", () => {
+        loadModule_({ hasRegisterHooks: true, argv: [] });
+
+        replModuleHooks.registerReplModuleHooks();
+
+        assert.notCalled(registerHooksStub);
+        assert.notCalled(addHookStub);
     });
 
     it("should use node module registerHooks when it is available", () => {
