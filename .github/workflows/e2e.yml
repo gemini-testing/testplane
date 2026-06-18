@@ -22,10 +22,10 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Use Node.js 20
+            - name: Use Node.js 24
               uses: actions/setup-node@v4
               with:
-                  node-version: 20
+                  node-version: 24
                   cache: "npm"
 
             - name: Install dependencies
@@ -62,7 +62,7 @@ jobs:
             - name: "e2e: Run Testplane"
               id: "testplane"
               continue-on-error: true
-              run: npm run test-e2e
+              run: npm run test-e2e:run-tests
 
             - name: "e2e: Stop browser docker image"
               run: |

@@ -36,4 +36,4 @@ jobs:
               run: npm run build
 
             - name: Run REPL e2e tests
-              run: npm run test-e2e -- --grep "REPL e2e"
+              run: npm run test-e2e-repl
