@@ -4,7 +4,7 @@ module.exports = {
     gridUrl: "local",
     headless: "new",
     sets: {
-        default: { files: ["tests/**/*.test.[jt]s"] },
+        default: { files: ["tests/**/*.test.[jt]s", "tests/**/*.test.cts"] },
     },
     browsers: {
         chrome: {

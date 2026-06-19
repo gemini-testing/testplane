@@ -1,5 +1,5 @@
 import * as nodeModule from "node:module";
-import type { LoadFnOutput, ModuleHooks, ModuleSource } from "node:module";
+import type { LoadFnOutput, LoadHookContext, ModuleHooks, ModuleSource } from "node:module";
 import { Command } from "@gemini-testing/commander";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -39,27 +39,27 @@ export const registerReplModuleHooks = (): void => {
 function registerNodeModuleHooks(): { revert: () => void } | null {
     const registerHooks = nodeModule.registerHooks;
 
-    if (typeof registerHooks !== "function" || hasBrokenMixedModuleHookValidation()) {
+    if (typeof registerHooks !== "function") {
         return null;
     }
 
     const hooks: ModuleHooks = registerHooks({
         load(url, context, nextLoad) {
-            const result = nextLoad(url, context);
+            let result: LoadFnOutput;
+
+            try {
+                result = nextLoad(url, context);
+            } catch (err) {
+                // https://github.com/nodejs/node/issues/57327
+                // Fixed for REPL instrumentation in Node 24.13.0; older versions mishandle CJS sources with mixed sync/async hooks.
+                return instrumentLoadAfterFailedLoad(url, context, err);
+            }
 
             return instrumentLoadResult(url, result);
         },
     });
 
     return { revert: () => hooks.deregister() };
-}
-
-function hasBrokenMixedModuleHookValidation(): boolean {
-    const [major, minor] = process.versions.node.split(".").map(Number);
-
-    // https://github.com/nodejs/node/issues/57327
-    // Fixed for REPL instrumentation in Node 24.13.0; older versions mishandle CJS sources with mixed sync/async hooks.
-    return major < 24 || (major === 24 && minor < 13);
 }
 
 function registerPiratesHook(): { revert: () => void } {
@@ -69,6 +69,26 @@ function registerPiratesHook(): { revert: () => void } {
     });
 
     return { revert };
+}
+
+function instrumentLoadAfterFailedLoad(url: string, context: LoadHookContext, err: unknown): LoadFnOutput {
+    const sourceFile = getSourceFileFromUrl(url);
+
+    if (!isInvalidLoadSourceError(err) || !sourceFile || !shouldReadSourceFile(sourceFile)) {
+        throw err;
+    }
+
+    const source = readSourceFile(sourceFile);
+
+    if (source === null) {
+        throw err;
+    }
+
+    return {
+        format: getFallbackFormat(context, sourceFile),
+        shortCircuit: true,
+        source: shouldHandleSourceFile(sourceFile) ? safeInstrumentRepl(source, sourceFile) : source,
+    };
 }
 
 function instrumentLoadResult(url: string, result: LoadFnOutput): LoadFnOutput {
@@ -108,6 +128,43 @@ function readSourceFile(sourceFile: string): string | null {
     }
 }
 
+function isInvalidLoadSourceError(err: unknown): boolean {
+    if (!(err instanceof Error)) {
+        return false;
+    }
+
+    const error = err as Error & { code?: string };
+
+    return (
+        error.code === "ERR_INVALID_RETURN_PROPERTY_VALUE" &&
+        error.message.includes('"source"') &&
+        error.message.includes('"load" hook')
+    );
+}
+
+function shouldReadSourceFile(sourceFile: string): boolean {
+    return TRANSFORM_CODE_EXTENSIONS.includes(path.extname(sourceFile));
+}
+
+function getFallbackFormat(context: LoadHookContext, sourceFile: string): string {
+    if (context.format) {
+        return context.format;
+    }
+
+    switch (path.extname(sourceFile)) {
+        case ".mjs":
+            return "module";
+        case ".mts":
+            return "module-typescript";
+        case ".ts":
+        case ".tsx":
+        case ".cts":
+            return "commonjs-typescript";
+        default:
+            return "commonjs";
+    }
+}
+
 function getSourceFileFromUrl(url: string): string | null {
     try {
         return url.startsWith("file:") ? fileURLToPath(url) : null;
@@ -118,8 +175,7 @@ function getSourceFileFromUrl(url: string): string | null {
 
 function shouldHandleSourceFile(sourceFile: string): boolean {
     return (
-        TRANSFORM_CODE_EXTENSIONS.includes(path.extname(sourceFile)) &&
-        !sourceFile.includes(`${path.sep}node_modules${path.sep}`)
+        shouldReadSourceFile(sourceFile) && !sourceFile.includes(`${path.sep}node_modules${path.sep}`)
     );
 }
 
