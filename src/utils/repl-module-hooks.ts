@@ -174,9 +174,7 @@ function getSourceFileFromUrl(url: string): string | null {
 }
 
 function shouldHandleSourceFile(sourceFile: string): boolean {
-    return (
-        shouldReadSourceFile(sourceFile) && !sourceFile.includes(`${path.sep}node_modules${path.sep}`)
-    );
+    return shouldReadSourceFile(sourceFile) && !sourceFile.includes(`${path.sep}node_modules${path.sep}`);
 }
 
 function moduleSourceToString(source: ModuleSource): string | null {

@@ -50,6 +50,15 @@ describe("utils/repl-module-hooks", () => {
         });
     };
 
+    const createInvalidLoadSourceError_ = (): Error & { code: string } => {
+        return Object.assign(
+            new TypeError(
+                'Expected a string, an ArrayBuffer, or a TypedArray to be returned for the "source" from the "load" hook but got null.',
+            ),
+            { code: "ERR_INVALID_RETURN_PROPERTY_VALUE" },
+        );
+    };
+
     afterEach(() => {
         cleanupHook_();
         process.argv = originalArgv;
@@ -137,22 +146,52 @@ describe("utils/repl-module-hooks", () => {
         assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.ts");
     });
 
-    it("should fallback to pirates when registerHooks has broken mixed hook validation", () => {
+    it("should recover from broken mixed hook validation on Node 22", () => {
         loadModule_({ hasRegisterHooks: true, nodeVersion: "22.18.0" });
+        readFileSyncStub.returns("it('a', () => {})");
 
         replModuleHooks.registerReplModuleHooks();
 
-        assert.notCalled(registerHooksStub);
-        assert.calledOnce(addHookStub);
+        assert.calledOnce(registerHooksStub);
+        assert.notCalled(addHookStub);
+
+        const loadHook = registerHooksStub.firstCall.args[0].load;
+        const fileUrl = pathToFileURL("/tmp/spec.hermione.ts").href;
+        const result = loadHook(fileUrl, { format: "commonjs-typescript" }, () => {
+            throw createInvalidLoadSourceError_();
+        });
+
+        assert.deepEqual(result, {
+            format: "commonjs-typescript",
+            shortCircuit: true,
+            source: "it('a', () => {})\n/* instrumented */",
+        });
+        assert.calledOnceWith(readFileSyncStub, "/tmp/spec.hermione.ts", "utf8");
+        assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.ts");
     });
 
-    it("should fallback to pirates on Node 24 versions before the instrumentation fix", () => {
+    it("should recover from broken mixed hook validation on Node 24 versions before the validation fix", () => {
         loadModule_({ hasRegisterHooks: true, nodeVersion: "24.12.0" });
+        readFileSyncStub.returns("it('a', () => {})");
 
         replModuleHooks.registerReplModuleHooks();
 
-        assert.notCalled(registerHooksStub);
-        assert.calledOnce(addHookStub);
+        assert.calledOnce(registerHooksStub);
+        assert.notCalled(addHookStub);
+
+        const loadHook = registerHooksStub.firstCall.args[0].load;
+        const fileUrl = pathToFileURL("/tmp/spec.hermione.js").href;
+        const result = loadHook(fileUrl, { format: "commonjs" }, () => {
+            throw createInvalidLoadSourceError_();
+        });
+
+        assert.deepEqual(result, {
+            format: "commonjs",
+            shortCircuit: true,
+            source: "it('a', () => {})\n/* instrumented */",
+        });
+        assert.calledOnceWith(readFileSyncStub, "/tmp/spec.hermione.js", "utf8");
+        assert.calledOnceWith(instrumentStub, "it('a', () => {})", "/tmp/spec.hermione.js");
     });
 
     it("should not instrument sources outside repl mode", () => {
