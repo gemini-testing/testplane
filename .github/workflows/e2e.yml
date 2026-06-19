@@ -1,4 +1,4 @@
-name: Testplane E2E
+name: E2E Tests (driven by Testplane)
 
 on:
     pull_request:
@@ -62,7 +62,7 @@ jobs:
             - name: "e2e: Run Testplane"
               id: "testplane"
               continue-on-error: true
-              run: npm run test-e2e:run-tests
+              run: npm run test-e2e-testplane
 
             - name: "e2e: Stop browser docker image"
               run: |

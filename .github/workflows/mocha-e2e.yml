@@ -1,4 +1,4 @@
-name: REPL E2E Tests
+name: E2E Tests (driven by Mocha)
 
 on:
     pull_request:
@@ -36,4 +36,4 @@ jobs:
               run: npm run build
 
             - name: Run REPL e2e tests
-              run: npm run test-e2e-repl
+              run: npm run test-e2e-mocha
