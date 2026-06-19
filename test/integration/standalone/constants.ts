@@ -1,11 +1,12 @@
 import _ from "lodash";
 
 export const BROWSER_NAME = (process.env.BROWSER || "chrome").toLowerCase();
+export const BROWSER_VERSION = process.env.INTEGRATION_BROWSER_VERSION || "138.0";
 
 export const BROWSER_CONFIG = {
     desiredCapabilities: {
         browserName: BROWSER_NAME,
-        browserVersion: "138.0",
+        browserVersion: BROWSER_VERSION,
     },
     headless: true,
     system: {
