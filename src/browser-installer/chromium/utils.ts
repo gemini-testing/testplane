@@ -14,6 +14,7 @@ export const getChromiumBuildId = async (platform: BrowserPlatform, milestone: s
 export const getChromeDriverArchiveUrl = (version: string): string => {
     const chromeDriverArchiveName: Record<BrowserPlatform, string> = {
         linux: "linux64",
+        linux_arm: "linux64", // eslint-disable-line camelcase
         mac: "mac64",
         mac_arm: "mac64_m1", // eslint-disable-line camelcase
         win32: "win32",
