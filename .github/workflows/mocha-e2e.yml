@@ -1,4 +1,4 @@
-name: REPL E2E Tests
+name: E2E Tests (driven by Mocha)
 
 on:
     pull_request:
@@ -9,7 +9,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                node-version: [24.x]
+                node-version: [22.18.0, 24.13.0]
 
         steps:
             - uses: actions/checkout@v4
@@ -36,4 +36,4 @@ jobs:
               run: npm run build
 
             - name: Run REPL e2e tests
-              run: npm run test-e2e -- --grep "REPL e2e"
+              run: npm run test-e2e-mocha

@@ -1,16 +1,19 @@
 import { detectBrowserPlatform, BrowserPlatform, Browser as PuppeteerBrowser } from "@puppeteer/browsers";
-import extractZip from "extract-zip";
 import os from "os";
 import path from "path";
 import fs from "fs-extra";
+import { execFile } from "child_process";
 import { Readable } from "stream";
 import debug from "debug";
+import { promisify } from "util";
 import { MIN_CHROMIUM_MAC_ARM_VERSION } from "./constants";
 import type { BrowserName } from "../browser/types";
 
 export type DownloadProgressCallback = (done: number, total?: number) => void;
 
 export const browserInstallerDebug = debug("testplane:browser-installer");
+
+const execFileAsync = promisify(execFile);
 
 export const DriverName = {
     CHROMEDRIVER: PuppeteerBrowser.CHROMEDRIVER,
@@ -153,7 +156,58 @@ export const downloadFile = async (url: string, filePath: string): Promise<void>
 };
 
 export const unzipFile = async (zipPath: string, outputDir: string): Promise<string> => {
-    await extractZip(zipPath, { dir: outputDir });
+    await fs.ensureDir(outputDir);
 
-    return outputDir;
+    const windowsSystemRoot = process.env.SystemRoot ?? process.env.SYSTEMROOT ?? "C:\\Windows";
+
+    // Mirrors @puppeteer/browsers native zip extraction:
+    // https://github.com/puppeteer/puppeteer/blob/main/packages/browsers/src/fileUtil.ts#L195-L233
+    const attempts =
+        process.platform === "win32"
+            ? [
+                  {
+                      command: path.win32.join(windowsSystemRoot, "System32", "tar.exe"),
+                      args: ["-xf", zipPath, "-C", outputDir],
+                  },
+                  {
+                      command: "powershell.exe",
+                      args: [
+                          "-NoProfile",
+                          "-NonInteractive",
+                          "-Command",
+                          "& { Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force }",
+                          zipPath,
+                          outputDir,
+                      ],
+                  },
+                  {
+                      command: "pwsh.exe",
+                      args: [
+                          "-NoProfile",
+                          "-NonInteractive",
+                          "-Command",
+                          "& { Expand-Archive -LiteralPath $args[0] -DestinationPath $args[1] -Force }",
+                          zipPath,
+                          outputDir,
+                      ],
+                  },
+              ]
+            : [{ command: "unzip", args: ["-o", zipPath, "-d", outputDir] }];
+
+    const errors: string[] = [];
+
+    for (const attempt of attempts) {
+        try {
+            await execFileAsync(attempt.command, attempt.args, { windowsHide: true });
+
+            return outputDir;
+        } catch (err) {
+            const error = err as NodeJS.ErrnoException & { stderr?: string; stdout?: string };
+            const output = [error.stdout, error.stderr].filter(Boolean).join("\n").trim();
+
+            errors.push(`${attempt.command} failed: ${error.message}${output ? `\n${output}` : ""}`);
+        }
+    }
+
+    throw new Error(`Unable to unzip ${zipPath} to ${outputDir}:\n${errors.join("\n\n")}`);
 };

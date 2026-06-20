@@ -11,6 +11,7 @@ import { shouldIgnoreUnhandledRejection } from "../utils/errors";
 import { utilInspectSafe } from "../utils/secret-replacer";
 import { withCommonCliOptions, collectCliValues, handleRequires } from "../utils/cli";
 import { CliCommands } from "./constants";
+import { addReplOptions, isReplModeEnabled } from "./repl-options";
 
 export type TestplaneRunOpts = { cliName?: string };
 
@@ -60,7 +61,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
     const configPath = preparseOption(program, "config") as string;
     testplane = await Testplane.create(configPath);
 
-    withCommonCliOptions({ cmd: program, actionName: "run" })
+    const runCommand = withCommonCliOptions({ cmd: program, actionName: "run" })
         .on("--help", () => console.log(configOverriding(opts)))
         .description("Run tests")
         .option("--reporter <name>", "test reporters", collectCliValues)
@@ -69,21 +70,11 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
             'update screenshot references or gather them if they do not exist ("assertView" command)',
         )
         .option("--inspect [inspect]", "nodejs inspector on [=[host:]port]")
-        .option("--inspect-brk [inspect-brk]", "nodejs inspector with break at the start")
-        .option(
-            "--repl [type]",
-            "run one test, call `browser.switchToRepl` in test code to open repl interface",
-            Boolean,
-            false,
-        )
-        .option("--repl-before-test [type]", "open repl interface before test run", Boolean, false)
-        .option("--repl-on-fail [type]", "open repl interface on test fail only", Boolean, false)
-        .option(
-            "--repl-port <number>",
-            "run net server on port to exchange messages with repl (used free random port by default)",
-            Number,
-            0,
-        )
+        .option("--inspect-brk [inspect-brk]", "nodejs inspector with break at the start");
+
+    addReplOptions(runCommand);
+
+    runCommand
         .option("--local", "use local browsers, managed by testplane (same as 'gridUrl': 'local')")
         .option("--keep-browser", "do not close browser session after test completion")
         .option("--keep-browser-on-fail", "do not close browser session when test fails")
@@ -105,6 +96,7 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     keepBrowser,
                     keepBrowserOnFail,
                 } = program;
+                const isReplEnabled = isReplModeEnabled(program);
 
                 const isTestsSuccess = await testplane.run(paths, {
                     reporters: reporters || defaults.reporters,
@@ -116,10 +108,10 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     requireModules,
                     inspectMode: (inspect || inspectBrk) && { inspect, inspectBrk },
                     replMode: {
-                        enabled: isReplModeEnabled(program),
+                        enabled: isReplEnabled,
                         beforeTest: replBeforeTest,
                         onFail: replOnFail,
-                        port: await getReplPort(program),
+                        port: await getReplPort(program, isReplEnabled),
                     },
                     local: local || false,
                     keepBrowserMode: {
@@ -157,16 +149,10 @@ function preparseOption(program: Command, option: string): unknown {
     return configFileParser[option];
 }
 
-function isReplModeEnabled(program: Command): boolean {
-    const { repl, replBeforeTest, replOnFail } = program;
-
-    return repl || replBeforeTest || replOnFail;
-}
-
-async function getReplPort(program: Command): Promise<number> {
+async function getReplPort(program: Command, isReplEnabled: boolean): Promise<number> {
     let { replPort } = program;
 
-    if (isReplModeEnabled(program) && !replPort) {
+    if (isReplEnabled && !replPort) {
         replPort = await getPort();
     }
 

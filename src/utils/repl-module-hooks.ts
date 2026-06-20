@@ -1,8 +1,11 @@
 import * as nodeModule from "node:module";
-import type { LoadFnOutput, ModuleHooks, ModuleSource } from "node:module";
+import type { LoadFnOutput, LoadHookContext, ModuleHooks, ModuleSource } from "node:module";
+import { Command } from "@gemini-testing/commander";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { addHook } from "pirates";
+import { addReplOptions, isReplModeEnabled } from "../cli/repl-options";
 import { instrumentReplIfNeeded } from "./repl-instrumentation";
 import * as logger from "./logger";
 
@@ -20,6 +23,14 @@ export const registerReplModuleHooks = (): void => {
         return;
     }
 
+    const program = addReplOptions(new Command("testplane").allowUnknownOption().option("-h, --help"));
+
+    program.parse(process.argv);
+
+    if (!isReplModeEnabled(program)) {
+        return;
+    }
+
     const hook = registerNodeModuleHooks() || registerPiratesHook();
 
     processWithHook[TESTPLANE_REPL_MODULE_HOOK] = hook;
@@ -34,7 +45,15 @@ function registerNodeModuleHooks(): { revert: () => void } | null {
 
     const hooks: ModuleHooks = registerHooks({
         load(url, context, nextLoad) {
-            const result = nextLoad(url, context);
+            let result: LoadFnOutput;
+
+            try {
+                result = nextLoad(url, context);
+            } catch (err) {
+                // https://github.com/nodejs/node/issues/57327
+                // Fixed for REPL instrumentation in Node 24.13.0; older versions mishandle CJS sources with mixed sync/async hooks.
+                return instrumentLoadAfterFailedLoad(url, context, err);
+            }
 
             return instrumentLoadResult(url, result);
         },
@@ -52,14 +71,38 @@ function registerPiratesHook(): { revert: () => void } {
     return { revert };
 }
 
+function instrumentLoadAfterFailedLoad(url: string, context: LoadHookContext, err: unknown): LoadFnOutput {
+    const sourceFile = getSourceFileFromUrl(url);
+
+    if (!isInvalidLoadSourceError(err) || !sourceFile || !shouldReadSourceFile(sourceFile)) {
+        throw err;
+    }
+
+    const source = readSourceFile(sourceFile);
+
+    if (source === null) {
+        throw err;
+    }
+
+    return {
+        format: getFallbackFormat(context, sourceFile),
+        shortCircuit: true,
+        source: shouldHandleSourceFile(sourceFile) ? safeInstrumentRepl(source, sourceFile) : source,
+    };
+}
+
 function instrumentLoadResult(url: string, result: LoadFnOutput): LoadFnOutput {
     const sourceFile = getSourceFileFromUrl(url);
 
-    if (!sourceFile || !result.source || !shouldHandleSourceFile(sourceFile)) {
+    if (!sourceFile || !shouldHandleSourceFile(sourceFile)) {
         return result;
     }
 
-    const source = moduleSourceToString(result.source);
+    const resultSource = result.source as ModuleSource | null | undefined;
+    const source =
+        resultSource === null || resultSource === undefined
+            ? readSourceFile(sourceFile)
+            : moduleSourceToString(resultSource);
 
     if (source === null) {
         return result;
@@ -77,6 +120,51 @@ function safeInstrumentRepl(source: string, sourceFile: string): string {
     }
 }
 
+function readSourceFile(sourceFile: string): string | null {
+    try {
+        return readFileSync(sourceFile, "utf8");
+    } catch {
+        return null;
+    }
+}
+
+function isInvalidLoadSourceError(err: unknown): boolean {
+    if (!(err instanceof Error)) {
+        return false;
+    }
+
+    const error = err as Error & { code?: string };
+
+    return (
+        error.code === "ERR_INVALID_RETURN_PROPERTY_VALUE" &&
+        error.message.includes('"source"') &&
+        error.message.includes('"load" hook')
+    );
+}
+
+function shouldReadSourceFile(sourceFile: string): boolean {
+    return TRANSFORM_CODE_EXTENSIONS.includes(path.extname(sourceFile));
+}
+
+function getFallbackFormat(context: LoadHookContext, sourceFile: string): string {
+    if (context.format) {
+        return context.format;
+    }
+
+    switch (path.extname(sourceFile)) {
+        case ".mjs":
+            return "module";
+        case ".mts":
+            return "module-typescript";
+        case ".ts":
+        case ".tsx":
+        case ".cts":
+            return "commonjs-typescript";
+        default:
+            return "commonjs";
+    }
+}
+
 function getSourceFileFromUrl(url: string): string | null {
     try {
         return url.startsWith("file:") ? fileURLToPath(url) : null;
@@ -86,10 +174,7 @@ function getSourceFileFromUrl(url: string): string | null {
 }
 
 function shouldHandleSourceFile(sourceFile: string): boolean {
-    return (
-        TRANSFORM_CODE_EXTENSIONS.includes(path.extname(sourceFile)) &&
-        !sourceFile.includes(`${path.sep}node_modules${path.sep}`)
-    );
+    return shouldReadSourceFile(sourceFile) && !sourceFile.includes(`${path.sep}node_modules${path.sep}`);
 }
 
 function moduleSourceToString(source: ModuleSource): string | null {
