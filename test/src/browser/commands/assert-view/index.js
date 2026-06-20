@@ -180,6 +180,28 @@ describe("assertView command", () => {
         assert.calledOnceWith(ViewportScreenShooter.prototype.capture, sinon.match({ screenshotDelay: 0 }));
     });
 
+    it("should lazily create viewport screen shooter with current browser properties", async () => {
+        const browser = await initBrowser_();
+
+        sandbox.stub(browser, "needsCompatLib").get(() => true);
+
+        assert.notCalled(ElementsScreenShooter.create);
+        assert.notCalled(ViewportScreenShooter.create);
+
+        await browser.publicAPI.assertView("plain");
+
+        assert.notCalled(ElementsScreenShooter.create);
+        assert.calledOnceWithMatch(ViewportScreenShooter.create, {
+            camera: browser.camera,
+            browser: browser.publicAPI,
+            browserProperties: sinon.match({
+                isWebdriverProtocol: true,
+                shouldUsePixelRatio: true,
+                needsCompatLib: true,
+            }),
+        });
+    });
+
     it("should add custom options if selector is not provided", async () => {
         const browser = await initBrowser_();
 
@@ -359,8 +381,15 @@ describe("assertView command", () => {
             });
 
             describe("take screenshot", () => {
-                it("should create an instance of a screen shooter", async () => {
+                it("should lazily create an instance of elements screen shooter", async () => {
                     const browser = await initBrowser_();
+
+                    sandbox.stub(browser, "needsCompatLib").get(() => true);
+
+                    assert.notCalled(ElementsScreenShooter.create);
+                    assert.notCalled(ViewportScreenShooter.create);
+
+                    await fn(browser);
 
                     assert.calledOnceWithMatch(ElementsScreenShooter.create, {
                         camera: browser.camera,
@@ -368,18 +397,10 @@ describe("assertView command", () => {
                         browserProperties: sinon.match({
                             isWebdriverProtocol: true,
                             shouldUsePixelRatio: true,
-                            needsCompatLib: false,
+                            needsCompatLib: true,
                         }),
                     });
-                    assert.calledOnceWithMatch(ViewportScreenShooter.create, {
-                        camera: browser.camera,
-                        browser: browser.publicAPI,
-                        browserProperties: sinon.match({
-                            isWebdriverProtocol: true,
-                            shouldUsePixelRatio: true,
-                            needsCompatLib: false,
-                        }),
-                    });
+                    assert.notCalled(ViewportScreenShooter.create);
                 });
 
                 it("should capture a screenshot image", async () => {

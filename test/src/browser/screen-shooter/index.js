@@ -650,7 +650,7 @@ describe("ElementsScreenShooter", () => {
         it("should fall back to Node-side polling when browser-side code detects stubbed setTimeout", async () => {
             browser.execute
                 .onCall(0)
-                .resolves({ setTimeoutStubbed: true })
+                .resolves({ success: false })
                 .onCall(1)
                 .resolves([{ top: 1, height: 2 }])
                 .onCall(2)
@@ -667,6 +667,16 @@ describe("ElementsScreenShooter", () => {
             assert.calledWithExactly(browser.setTimeout.firstCall, { script: 3000 });
             assert.calledWithExactly(browser.setTimeout.secondCall, { script: 30000 });
             assert.callCount(browser.execute, 5);
+        });
+
+        it("should use Node-side polling when browser needs compat lib", async () => {
+            browser.execute.resolves([{ top: 1, height: 2 }]);
+
+            await waitForSelectorsToSettle(browser, [".element"], { needsCompatLib: true });
+
+            assert.notCalled(browser.getTimeouts);
+            assert.notCalled(browser.setTimeout);
+            assert.callCount(browser.execute, 4);
         });
 
         it("should fall back to Node-side polling when browser-side code hits script timeout", async () => {
@@ -690,6 +700,16 @@ describe("ElementsScreenShooter", () => {
             assert.calledWithExactly(browser.setTimeout.firstCall, { script: 3000 });
             assert.calledWithExactly(browser.setTimeout.secondCall, { script: 30000 });
             assert.callCount(browser.execute, 5);
+        });
+
+        it("should not override script timeout if getTimeouts is not available", async () => {
+            delete browser.getTimeouts;
+            browser.execute.resolves({ success: true });
+
+            await waitForSelectorsToSettle(browser, [".element"]);
+
+            assert.notCalled(browser.setTimeout);
+            assert.calledOnce(browser.execute);
         });
 
         it("should propagate non-timeout browser-side errors", async () => {

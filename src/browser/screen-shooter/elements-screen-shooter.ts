@@ -410,7 +410,9 @@ export class ElementsScreenShooter {
                 debug(`========== Starting compositing iteration #${iterations} ==========`);
 
                 const waitForSettleStartTime = performance.now();
-                await waitForSelectorsToSettle(this._browser, selectorsToCapture);
+                await waitForSelectorsToSettle(this._browser, selectorsToCapture, {
+                    needsCompatLib: this._browserProperties.needsCompatLib,
+                });
                 waitForSettleTime += performance.now() - waitForSettleStartTime;
 
                 const recomputeStartTime = performance.now();

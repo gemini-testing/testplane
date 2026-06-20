@@ -10,18 +10,26 @@ const SELECTORS_SETTLE_FALLBACK_ATTEMPTS = 5;
 type SelectorRect = { top: number; height: number } | null;
 
 interface BrowserSelectorsSettleResult {
-    setTimeoutStubbed: boolean;
+    success: boolean;
 }
 
-export async function waitForSelectorsToSettle(browser: WdioBrowser, selectors: string[]): Promise<void> {
-    try {
-        const settleResult = await waitForSelectorsToSettleInBrowser(browser, selectors);
+interface WaitForSelectorsToSettleOptions {
+    needsCompatLib?: boolean;
+}
 
-        if (!settleResult.setTimeoutStubbed) {
+export async function waitForSelectorsToSettle(
+    browser: WdioBrowser,
+    selectors: string[],
+    options: WaitForSelectorsToSettleOptions = {},
+): Promise<void> {
+    try {
+        const settleResult = await waitForSelectorsToSettleInBrowser(browser, selectors, options);
+
+        if (settleResult.success) {
             return;
         }
 
-        debug("Browser-side waitForSelectorsToSettle detected stubbed setTimeout, using Node-side polling");
+        debug("Browser-side waitForSelectorsToSettle cannot run, using Node-side polling");
     } catch (err) {
         const scriptTimeoutError = err as { name?: string; message?: string; error?: string };
         const scriptTimeoutErrorText =
@@ -42,9 +50,14 @@ export async function waitForSelectorsToSettle(browser: WdioBrowser, selectors: 
 async function waitForSelectorsToSettleInBrowser(
     browser: WdioBrowser,
     selectors: string[],
+    options: WaitForSelectorsToSettleOptions,
 ): Promise<BrowserSelectorsSettleResult> {
-    const originalTimeouts = await browser.getTimeouts();
-    const originalScriptTimeout = originalTimeouts.script;
+    if (options.needsCompatLib) {
+        return { success: false };
+    }
+
+    const originalScriptTimeout =
+        typeof browser.getTimeouts === "function" ? (await browser.getTimeouts())?.script : undefined;
     const shouldRestoreScriptTimeout = typeof originalScriptTimeout === "number";
 
     let executionError: unknown = null;
@@ -62,11 +75,11 @@ async function waitForSelectorsToSettleInBrowser(
             try {
                 setTimeoutSource = typeof setTimeout === "function" ? Function.prototype.toString.call(setTimeout) : "";
             } catch {
-                return { setTimeoutStubbed: true };
+                return { success: false };
             }
 
             if (!setTimeoutSource.includes("[native code]")) {
-                return { setTimeoutStubbed: true };
+                return { success: false };
             }
 
             const PAGE_SETTLE_MAX_WAIT_MS = 50;
@@ -104,7 +117,7 @@ async function waitForSelectorsToSettleInBrowser(
                 await new Promise(resolve => setTimeout(resolve, 5));
             }
 
-            return { setTimeoutStubbed: false };
+            return { success: true };
         }, selectors);
     } catch (err) {
         executionError = err;
@@ -129,7 +142,7 @@ async function waitForSelectorsToSettleInBrowser(
         throw executionError;
     }
 
-    return result ?? { setTimeoutStubbed: false };
+    return result ?? { success: true };
 }
 
 async function waitForSelectorsToSettleInNode(browser: WdioBrowser, selectors: string[]): Promise<void> {
@@ -150,9 +163,10 @@ async function waitForSelectorsToSettleInNode(browser: WdioBrowser, selectors: s
         }
 
         const previousBoundingClientRects = lastBoundingClientRects;
-        const currentBoundingClientRects: SelectorRect[] = await browser.execute(selectors => {
-            return selectors.map((selector): SelectorRect => {
-                const rect = document.querySelector(selector)?.getBoundingClientRect();
+        const currentBoundingClientRects: SelectorRect[] = await browser.execute(function (selectors: string[]) {
+            return selectors.map(function (selector): SelectorRect {
+                const element = document.querySelector(selector);
+                const rect = element ? element.getBoundingClientRect() : null;
 
                 return rect ? { top: rect.top, height: rect.height } : null;
             });

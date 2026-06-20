@@ -23,5 +23,15 @@ export function trim(str: string): string {
     return str.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, "");
 }
 
+export function getRootNode(node: Node): Node {
+    let root = node;
+
+    while (root.parentNode) {
+        root = root.parentNode;
+    }
+
+    return root;
+}
+
 export { getComputedStyle } from "./polyfills/getComputedStyle";
 export { matchMedia } from "./polyfills/matchMedia";

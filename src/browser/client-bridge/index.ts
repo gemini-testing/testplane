@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import makeDebug from "debug";
 import { ClientBridgeError } from "./error";
+import { WdioBrowser } from "../../types";
 
 const debug = makeDebug("testplane:client-bridge");
 
@@ -28,12 +29,26 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
         const scriptFileName = needsCompatLib ? "bundle.compat.js" : "bundle.native.js";
         const scriptFilePath = path.join(__dirname, "..", "client-scripts", namespace, "build", scriptFileName);
 
+        let debugBrowserId = "";
+        if (debug.enabled) {
+            debugBrowserId = `${(browser as WdioBrowser)?.capabilities?.browserName} ${
+                (browser as WdioBrowser)?.capabilities?.browserVersion
+            }`;
+        }
+
         if (bundlesCache[scriptFilePath]) {
+            debug(
+                `creating ClientBridge with cached script for namespace ${namespace} at ${scriptFilePath} for browser ${debugBrowserId}`,
+            );
             return new ClientBridge(browser, bundlesCache[scriptFilePath], namespace);
         }
 
         const bundle = await fs.promises.readFile(scriptFilePath, { encoding: "utf8" });
         bundlesCache[scriptFilePath] = bundle;
+
+        debug(
+            `creating ClientBridge with new script for namespace ${namespace} at ${scriptFilePath} for browser ${debugBrowserId}`,
+        );
 
         return new this(browser, bundle, namespace);
     }
@@ -89,10 +104,7 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
     }
 
     private async _inject(): Promise<void> {
-        debug(` > injecting script into namespace ${this._namespace}`);
-        if (debug.enabled) {
-            console.log(this._script);
-        }
+        debug(` > injecting script into namespace ${this._namespace}: ${this._script.slice(0, 256)}...`);
         await this._browser.execute(this._script, this._namespace);
     }
 }

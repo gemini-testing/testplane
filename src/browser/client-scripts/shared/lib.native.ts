@@ -25,3 +25,7 @@ export function matchMedia(mediaQuery: string): MediaQueryList {
 export function trim(str: string): string {
     return str.trim();
 }
+
+export function getRootNode(node: Node): Node {
+    return node.getRootNode();
+}

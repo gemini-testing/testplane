@@ -36,18 +36,8 @@ const getIgnoreDiffPixelCountRatio = value => {
 };
 
 module.exports.default = browser => {
-    const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
-    const browserProperties = { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib };
-    const elementsScreenShooterPromise = ElementsScreenShooter.create({
-        camera: browser.camera,
-        browser: browser.publicAPI,
-        browserProperties,
-    });
-    const viewportScreenShooterPromise = ViewportScreenShooter.create({
-        camera: browser.camera,
-        browser: browser.publicAPI,
-        browserProperties,
-    });
+    let elementsScreenShooterPromise;
+    let viewportScreenShooterPromise;
     const { publicAPI: session, config } = browser;
     const {
         assertViewOpts,
@@ -192,6 +182,15 @@ module.exports.default = browser => {
         debug(`[${debugId}] assertView selectors: %O`, selectors);
         debug(`[${debugId}] assertView opts: %O`, opts);
 
+        if (!elementsScreenShooterPromise) {
+            const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
+            elementsScreenShooterPromise = ElementsScreenShooter.create({
+                camera: browser.camera,
+                browser: browser.publicAPI,
+                browserProperties: { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib },
+            });
+        }
+
         const screenShooter = await elementsScreenShooterPromise;
         await waitForStaticToLoad(opts);
         const { image, meta } = await screenShooter.capture(selectors, opts);
@@ -237,6 +236,15 @@ module.exports.default = browser => {
         opts = getDefaultOpts(opts);
 
         debug(`assertViewByViewport state: ${state}, opts: %O`, opts);
+
+        if (!viewportScreenShooterPromise) {
+            const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
+            viewportScreenShooterPromise = ViewportScreenShooter.create({
+                camera: browser.camera,
+                browser: browser.publicAPI,
+                browserProperties: { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib },
+            });
+        }
 
         const vpScreenShooter = await viewportScreenShooterPromise;
         await waitForStaticToLoad(opts);

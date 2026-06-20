@@ -53,7 +53,14 @@
     }
 
     function needsCompatLib() {
-        return !hasCSS3Selectors() || !window.getComputedStyle || !window.matchMedia || !String.prototype.trim;
+        return (
+            !hasCSS3Selectors() ||
+            !window.getComputedStyle ||
+            !window.matchMedia ||
+            !String.prototype.trim ||
+            !window.Node ||
+            !window.Node.prototype.getRootNode
+        );
     }
 
     // In safari `window.innerWidth` always returns default 980px and and even viewport meta tag setting does not change it.
