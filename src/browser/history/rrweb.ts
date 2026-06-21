@@ -1,20 +1,26 @@
 import fs from "fs";
+import path from "path";
 import { eventWithTime } from "@rrweb/types";
+import makeDebug from "debug";
 import type { Callstack } from "./callstack";
 import { MasterEvents } from "../../events";
 import type { SnapshotsData, Test, TestContext } from "../../types";
 import { runWithoutHistory } from "./index";
-import path from "path";
+
+const debug = makeDebug("testplane:time-travel:rrweb");
 
 // Built from branch https://github.com/gemini-testing/rrweb/tree/TESTPLANE-712.syntax_err
 // PR: https://github.com/rrweb-io/rrweb/pull/1735
 // Issue: https://github.com/rrweb-io/rrweb/issues/1734
 const rrwebCode = fs.readFileSync(path.join(__dirname, "../client-scripts/rrweb-record.min.js"), "utf-8");
-const sessionsWithRrwebRequested = new WeakSet<WebdriverIO.Browser>();
+const sessionsWithRrwebSent = new WeakSet<WebdriverIO.Browser>();
+const sessionsWithUnsupportedRrweb = new WeakSet<WebdriverIO.Browser>();
 
 interface CollectRrwebEventsResult {
+    isRrwebSupported?: false;
     isRrwebInstalled: boolean;
     rrwebEvents: eventWithTime[];
+    evalError?: string;
 }
 
 /* eslint-disable @typescript-eslint/ban-ts-comment */
@@ -23,19 +29,42 @@ export async function installRrwebAndCollectEvents(
     callstack: Callstack,
 ): Promise<eventWithTime[]> {
     return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, async () => {
-        const shouldSendRrwebCode = !sessionsWithRrwebRequested.has(session);
-
-        if (shouldSendRrwebCode) {
-            sessionsWithRrwebRequested.add(session);
+        if (sessionsWithUnsupportedRrweb.has(session)) {
+            return [];
         }
 
-        const result = await collectRrwebEvents(session, shouldSendRrwebCode ? rrwebCode : null);
+        const shouldSendRrwebCode = !sessionsWithRrwebSent.has(session);
 
+        if (shouldSendRrwebCode) {
+            sessionsWithRrwebSent.add(session);
+        }
+
+        let result = await collectRrwebEvents(session, shouldSendRrwebCode ? rrwebCode : undefined);
+
+        if (result.isRrwebSupported === false) {
+            debug("rrweb is not supported in this browser, error: %s", result.evalError);
+            sessionsWithUnsupportedRrweb.add(session);
+
+            return [];
+        }
+
+        // If rrweb is installed (success) or we already provided the code (no point in trying again)
         if (result.isRrwebInstalled || shouldSendRrwebCode) {
             return result.rrwebEvents;
         }
 
-        return (await collectRrwebEvents(session, rrwebCode)).rrwebEvents;
+        debug("collectRrwebEvents, rrweb was not installed, sending code again");
+
+        result = await collectRrwebEvents(session, rrwebCode);
+
+        if (result.isRrwebSupported === false) {
+            debug("rrweb is not supported in this browser, error: %s", result.evalError);
+            sessionsWithUnsupportedRrweb.add(session);
+
+            return [];
+        }
+
+        return result.rrwebEvents;
     });
 }
 
@@ -46,9 +75,9 @@ export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Call
                 try {
                     // @ts-expect-error
                     const rrwebEvents = window.rrwebEvents;
-                    const rrwebData = rrwebEvents?.testplane;
+                    const rrwebData = rrwebEvents && rrwebEvents.testplane;
 
-                    if (rrwebData?.stopRecording) {
+                    if (rrwebData && rrwebData.stopRecording) {
                         try {
                             rrwebData.stopRecording();
                         } catch (e) {
@@ -57,8 +86,8 @@ export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Call
                     }
 
                     try {
-                        const colorSchemeMedia = rrwebData?.colorSchemeMedia;
-                        const colorSchemeListener = rrwebData?.colorSchemeListener;
+                        const colorSchemeMedia = rrwebData && rrwebData.colorSchemeMedia;
+                        const colorSchemeListener = rrwebData && rrwebData.colorSchemeListener;
 
                         if (colorSchemeMedia && colorSchemeListener) {
                             colorSchemeMedia.removeEventListener("change", colorSchemeListener);
@@ -67,7 +96,7 @@ export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Call
                         /**/
                     }
 
-                    if (rrwebData?.isInstalledByTestplane) {
+                    if (rrwebData && rrwebData.isInstalledByTestplane) {
                         // @ts-expect-error
                         delete window.rrweb;
 
@@ -86,13 +115,14 @@ export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Call
     } catch (e) {
         /**/
     } finally {
-        sessionsWithRrwebRequested.delete(session);
+        sessionsWithRrwebSent.delete(session);
+        sessionsWithUnsupportedRrweb.delete(session);
     }
 }
 
 function collectRrwebEvents(
     session: WebdriverIO.Browser,
-    rrwebRecordFnCode: string | null,
+    rrwebRecordFnCode: string | undefined,
 ): Promise<CollectRrwebEventsResult> {
     return session.execute(
         (rrwebRecordFnCode, serverTime) => {
@@ -100,7 +130,7 @@ function collectRrwebEvents(
                 try {
                     // @ts-expect-error
                     return Boolean(window.rrweb);
-                } catch {
+                } catch (e) {
                     return false;
                 }
             };
@@ -112,7 +142,7 @@ function collectRrwebEvents(
                     result = window.rrwebEvents.slice(window.lastProcessedRrwebEvent + 1);
                     // @ts-expect-error
                     window.lastProcessedRrwebEvent = window.rrwebEvents.length - 1;
-                } catch {
+                } catch (e) {
                     result = [];
                 }
 
@@ -159,7 +189,17 @@ function collectRrwebEvents(
 
             try {
                 if (!isRrwebInstalled() && rrwebRecordFnCode) {
-                    window.eval(rrwebRecordFnCode);
+                    try {
+                        window.eval(rrwebRecordFnCode);
+                    } catch (e) {
+                        return {
+                            isRrwebSupported: false,
+                            isRrwebInstalled: false,
+                            rrwebEvents: [],
+                            evalError: String(e),
+                        };
+                    }
+
                     // @ts-expect-error
                     window.lastProcessedRrwebEvent = -1;
                     // @ts-expect-error
