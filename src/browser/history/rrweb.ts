@@ -43,9 +43,7 @@ export async function installRrwebAndCollectEvents(
 
         let debugBrowserId = "";
         if (debug.enabled) {
-            debugBrowserId = `${session?.capabilities?.browserName} ${
-                session?.capabilities?.browserVersion
-            }:${session?.sessionId}`;
+            debugBrowserId = `${session?.capabilities?.browserName} ${session?.capabilities?.browserVersion}:${session?.sessionId}`;
         }
 
         if (result.isRrwebSupported === false) {
