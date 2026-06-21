@@ -54,10 +54,13 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
 };
 
 export class NewBrowser extends Browser {
+    private _onExit: (err?: Error) => Promise<void> = async () => {};
+
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
 
-        signalHandler.on("exit", (err?: Error) => this.quit(err));
+        this._onExit = async (err?: Error): Promise<void> => await this.quit(err);
+        signalHandler.on("exit", this._onExit);
     }
 
     async init(): Promise<NewBrowser> {
@@ -76,6 +79,7 @@ export class NewBrowser extends Browser {
 
     async quit(err?: Error): Promise<void> {
         this._exitError = err;
+        signalHandler.off("exit", this._onExit);
 
         try {
             this.setHttpTimeout(this._config.sessionQuitTimeout);
