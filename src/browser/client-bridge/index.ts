@@ -33,7 +33,7 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
         if (debug.enabled) {
             debugBrowserId = `${(browser as WdioBrowser)?.capabilities?.browserName} ${
                 (browser as WdioBrowser)?.capabilities?.browserVersion
-            }`;
+            }:${(browser as WdioBrowser)?.sessionId}`;
         }
 
         if (bundlesCache[scriptFilePath]) {

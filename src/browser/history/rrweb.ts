@@ -41,8 +41,15 @@ export async function installRrwebAndCollectEvents(
 
         let result = await collectRrwebEvents(session, shouldSendRrwebCode ? rrwebCode : undefined);
 
+        let debugBrowserId = "";
+        if (debug.enabled) {
+            debugBrowserId = `${session?.capabilities?.browserName} ${
+                session?.capabilities?.browserVersion
+            }:${session?.sessionId}`;
+        }
+
         if (result.isRrwebSupported === false) {
-            debug("rrweb is not supported in this browser, error: %s", result.evalError);
+            debug("rrweb is not supported in browser %s, error: %s", debugBrowserId, result.evalError);
             sessionsWithUnsupportedRrweb.add(session);
 
             return [];
@@ -58,7 +65,7 @@ export async function installRrwebAndCollectEvents(
         result = await collectRrwebEvents(session, rrwebCode);
 
         if (result.isRrwebSupported === false) {
-            debug("rrweb is not supported in this browser, error: %s", result.evalError);
+            debug("rrweb is not supported in browser %s, error: %s", debugBrowserId, result.evalError);
             sessionsWithUnsupportedRrweb.add(session);
 
             return [];
