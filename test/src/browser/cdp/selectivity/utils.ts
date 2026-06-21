@@ -10,7 +10,12 @@ describe("CDP/Selectivity/Utils", () => {
     let fsStub: { existsSync: SinonStub };
     let pathStub: { posix: { relative: SinonStub; resolve: SinonStub; join: SinonStub; sep: string } };
     let softFileURLToPathStub: SinonStub;
-    let SourceMapConsumerStub: SinonStub;
+    let traceMapStub: SinonStub;
+    let originalPositionForStub: SinonStub;
+    let generatedPositionForStub: SinonStub;
+
+    const GREATEST_LOWER_BOUND = 1;
+    const LEAST_UPPER_BOUND = -1;
 
     beforeEach(() => {
         fetchStub = sandbox.stub(globalThis, "fetch").resolves({
@@ -40,13 +45,19 @@ describe("CDP/Selectivity/Utils", () => {
             },
         };
         softFileURLToPathStub = sandbox.stub().returnsArg(0);
-        SourceMapConsumerStub = sandbox.stub();
+        traceMapStub = sandbox.stub();
+        originalPositionForStub = sandbox.stub();
+        generatedPositionForStub = sandbox.stub();
 
         utils = proxyquire("src/browser/cdp/selectivity/utils", {
             fs: fsStub,
             path: pathStub,
-            "source-map-js": {
-                SourceMapConsumer: SourceMapConsumerStub,
+            "@jridgewell/trace-mapping": {
+                TraceMap: traceMapStub,
+                originalPositionFor: originalPositionForStub,
+                generatedPositionFor: generatedPositionForStub,
+                GREATEST_LOWER_BOUND,
+                LEAST_UPPER_BOUND,
             },
             "../../../utils/fs": {
                 softFileURLToPath: softFileURLToPathStub,
@@ -131,7 +142,7 @@ describe("CDP/Selectivity/Utils", () => {
     describe("patchSourceMapSources", () => {
         it("should patch webpack protocol sources", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["webpack://src/app.js", "webpack://src/utils.js", "regular/file.js"],
                 sourceRoot: "",
                 names: [],
@@ -147,7 +158,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should use existing sourceRoot if no custom sourceRoot provided", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["webpack:///src/app.js"],
                 sourceRoot: "/existing/root",
                 names: [],
@@ -162,7 +173,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should handle sources without webpack protocol", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["src/app.js", "lib/utils.js"],
                 sourceRoot: "",
                 names: [],
@@ -178,9 +189,6 @@ describe("CDP/Selectivity/Utils", () => {
 
     describe("extractSourceFilesDeps", () => {
         let consumerMock: { originalPositionFor: SinonStub; generatedPositionFor: SinonStub };
-
-        const GREATEST_LOWER_BOUND = 1;
-        const LEAST_UPPER_BOUND = 2;
 
         const sourceMaps = JSON.stringify({
             version: 3,
@@ -217,12 +225,10 @@ describe("CDP/Selectivity/Utils", () => {
 
         beforeEach(() => {
             consumerMock = {
-                originalPositionFor: sandbox.stub(),
-                generatedPositionFor: sandbox.stub(),
+                originalPositionFor: originalPositionForStub,
+                generatedPositionFor: generatedPositionForStub,
             };
-            SourceMapConsumerStub.returns(consumerMock);
-            (SourceMapConsumerStub as any).GREATEST_LOWER_BOUND = GREATEST_LOWER_BOUND;
-            (SourceMapConsumerStub as any).LEAST_UPPER_BOUND = LEAST_UPPER_BOUND;
+            traceMapStub.returns({});
         });
 
         it("should extract source files from coverage via GREATEST_LOWER_BOUND", () => {
@@ -249,7 +255,7 @@ describe("CDP/Selectivity/Utils", () => {
             ];
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .onCall(0)
                 .returns({ source: "src/app.js", line: 1, column: 0 })
                 .onCall(1)
@@ -282,14 +288,14 @@ describe("CDP/Selectivity/Utils", () => {
             const coverages = mkCoverages([{ startOffset: 6, endOffset: 11 }]);
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .returns({ source: "src/app.js", line: 5, column: 0 });
 
             // generatedPosition.line (1) < startLine + 1 (2) -> fail
             consumerMock.generatedPositionFor.returns({ line: 1 });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .returns({ source: null });
 
             const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
@@ -302,13 +308,13 @@ describe("CDP/Selectivity/Utils", () => {
             const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .returns({ source: "src/app.js", line: 1, column: 0 });
 
             consumerMock.generatedPositionFor.returns({ line: null });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .returns({ source: null });
 
             const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
@@ -322,11 +328,11 @@ describe("CDP/Selectivity/Utils", () => {
             const coverages = mkCoverages([{ startOffset: 0, endOffset: 17 }]);
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .returns({ source: null });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .returns({ source: "src/wrapped.js", line: 1, column: 0 });
 
             // generatedPosition.line (2) <= endLine + 1 (3) -> pass
@@ -344,11 +350,11 @@ describe("CDP/Selectivity/Utils", () => {
             const coverages = mkCoverages([{ startOffset: 6, endOffset: 17 }]);
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .returns({ source: "src/wrong.js", line: 10, column: 0 });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .returns({ source: "src/correct.js", line: 2, column: 0 });
 
             consumerMock.generatedPositionFor
@@ -369,11 +375,11 @@ describe("CDP/Selectivity/Utils", () => {
             const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .returns({ source: null });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .returns({ source: "src/far.js", line: 1, column: 0 });
 
             // generatedPosition.line (5) > endLine + 1 (1) -> fail
@@ -409,7 +415,7 @@ describe("CDP/Selectivity/Utils", () => {
             ];
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .onCall(0)
                 .returns({ source: "src/app.js", line: 1, column: 0 })
                 .onCall(1)
@@ -438,14 +444,14 @@ describe("CDP/Selectivity/Utils", () => {
             // First range: LEAST_UPPER_BOUND returns no source
             // Second range: GREATEST_LOWER_BOUND returns a source with valid bounds
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: GREATEST_LOWER_BOUND }))
                 .onCall(0)
                 .returns({ source: null })
                 .onCall(1)
                 .returns({ source: "src/app.js", line: 2, column: 0 });
 
             consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
+                .withArgs(sinon.match.any, sinon.match({ bias: LEAST_UPPER_BOUND }))
                 .onCall(0)
                 .returns({ source: null });
 
@@ -882,8 +888,12 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map-js": {
-                    SourceMapConsumer: SourceMapConsumerStub,
+                "@jridgewell/trace-mapping": {
+                    TraceMap: traceMapStub,
+                    originalPositionFor: originalPositionForStub,
+                    generatedPositionFor: generatedPositionForStub,
+                    GREATEST_LOWER_BOUND,
+                    LEAST_UPPER_BOUND,
                 },
                 "../../../utils/fs": {
                     softFileURLToPath: softFileURLToPathStub,
@@ -963,8 +973,12 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map-js": {
-                    SourceMapConsumer: SourceMapConsumerStub,
+                "@jridgewell/trace-mapping": {
+                    TraceMap: traceMapStub,
+                    originalPositionFor: originalPositionForStub,
+                    generatedPositionFor: generatedPositionForStub,
+                    GREATEST_LOWER_BOUND,
+                    LEAST_UPPER_BOUND,
                 },
                 "../../../utils/fs": {
                     softFileURLToPath: softFileURLToPathStub,

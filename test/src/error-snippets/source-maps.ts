@@ -1,15 +1,31 @@
 import sinon, { type SinonStub } from "sinon";
-import { MappedPosition, SourceMapConsumer } from "source-map-js";
-import { extractSourceMaps, resolveLocationWithSourceMap } from "./../../../src/error-snippets/source-maps";
+import proxyquire from "proxyquire";
+import { TraceMap } from "@jridgewell/trace-mapping";
 import type { SufficientStackFrame, ResolvedFrame } from "../../../src/error-snippets/types";
 
 describe("error-snippets/source-maps", () => {
     const sandbox = sinon.createSandbox();
 
     let fetchStub: SinonStub;
+    let originalPositionForStub: SinonStub;
+    let sourceContentForStub: SinonStub;
+    let extractSourceMaps: typeof import("../../../src/error-snippets/source-maps").extractSourceMaps;
+    let resolveLocationWithSourceMap: typeof import("../../../src/error-snippets/source-maps").resolveLocationWithSourceMap;
 
     beforeEach(() => {
         fetchStub = sandbox.stub(globalThis, "fetch");
+        originalPositionForStub = sandbox.stub();
+        sourceContentForStub = sandbox.stub();
+
+        const sourceMaps = proxyquire("../../../src/error-snippets/source-maps", {
+            "@jridgewell/trace-mapping": {
+                originalPositionFor: originalPositionForStub,
+                sourceContentFor: sourceContentForStub,
+            },
+        });
+
+        extractSourceMaps = sourceMaps.extractSourceMaps;
+        resolveLocationWithSourceMap = sourceMaps.resolveLocationWithSourceMap;
     });
 
     afterEach(() => sandbox.restore());
@@ -36,10 +52,10 @@ describe("error-snippets/source-maps", () => {
 
             const result = await extractSourceMaps(fileContents, fileName);
 
-            assert.instanceOf(result, SourceMapConsumer);
+            assert.instanceOf(result, TraceMap);
         });
 
-        it("should return a SourceMapConsumer instance if source maps comment is present in file content", async () => {
+        it("should return a TraceMap instance if source maps comment is present in file content", async () => {
             const inlineSourceMap =
                 "data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IiJ9";
             const fileContents = `console.log("Hello, World!");\n//# sourceMappingURL=${inlineSourceMap}`;
@@ -51,18 +67,19 @@ describe("error-snippets/source-maps", () => {
 
             const result = await extractSourceMaps(fileContents, fileName);
 
-            assert.instanceOf(result, SourceMapConsumer);
+            assert.instanceOf(result, TraceMap);
         });
     });
 
     describe("resolveLocationWithSourceMap", () => {
         it("should throw an error when source is null", async () => {
-            const sourceMaps = new SourceMapConsumer({
-                version: 3 as unknown as string,
+            const sourceMaps = new TraceMap({
+                version: 3,
                 sources: [],
                 names: [],
                 mappings: "",
             });
+            originalPositionForStub.returns({ source: null });
             const stackFrame = { lineNumber: 5, columnNumber: 10 } as SufficientStackFrame;
 
             const fn = (): ResolvedFrame => resolveLocationWithSourceMap(stackFrame, sourceMaps);
@@ -71,15 +88,15 @@ describe("error-snippets/source-maps", () => {
         });
 
         it("should throw an error when line or column is null", async () => {
-            const sourceMaps = new SourceMapConsumer({
-                // Specification says it should be number
-                version: 3 as unknown as string,
+            const sourceMaps = new TraceMap({
+                version: 3,
                 sources: ["file1"],
                 names: [],
                 mappings: "",
                 sourcesContent: ["content"],
             });
-            sandbox.stub(sourceMaps, "originalPositionFor").returns({ source: "file1" } as MappedPosition);
+            originalPositionForStub.returns({ source: "file1" });
+            sourceContentForStub.returns("content");
             const stackFrame = { lineNumber: 5, columnNumber: 10 } as SufficientStackFrame;
 
             const fn = (): ResolvedFrame => resolveLocationWithSourceMap(stackFrame, sourceMaps);
@@ -88,17 +105,16 @@ describe("error-snippets/source-maps", () => {
         });
 
         it("should return ResolvedFrame", async () => {
-            const sourceMaps = new SourceMapConsumer({
-                version: 3 as unknown as string,
+            const sourceMaps = new TraceMap({
+                version: 3,
                 sources: ["file1"],
                 names: [],
                 mappings: "AAAA;AACA",
                 sourcesContent: ["content"],
                 file: "file:///file1",
             });
-            sandbox
-                .stub(sourceMaps, "originalPositionFor")
-                .returns({ source: "file1", line: 100, column: 500 } as MappedPosition);
+            originalPositionForStub.returns({ source: "file1", line: 100, column: 500 });
+            sourceContentForStub.returns("content");
             const stackFrame = { lineNumber: 1, columnNumber: 1 } as SufficientStackFrame;
 
             const result = resolveLocationWithSourceMap(stackFrame, sourceMaps);

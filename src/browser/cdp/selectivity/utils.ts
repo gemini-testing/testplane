@@ -1,5 +1,12 @@
 import { sortedIndex, memoize } from "lodash";
-import { SourceFindPosition, SourceMapConsumer, type RawSourceMap } from "source-map-js";
+import {
+    TraceMap,
+    originalPositionFor,
+    GREATEST_LOWER_BOUND,
+    generatedPositionFor,
+    LEAST_UPPER_BOUND,
+} from "@jridgewell/trace-mapping";
+import type { EncodedSourceMap, SourceNeedle } from "@jridgewell/trace-mapping";
 import fs from "fs";
 import path from "path";
 import { URL } from "url";
@@ -67,12 +74,12 @@ const isWebpackProtocol = (posixRelativeSourceFilePath: string): boolean => {
  * @param sourceMap Raw source maps in https://tc39.es/ecma426/ format
  * @param sourceRoot Source root
  */
-export const patchSourceMapSources = (sourceMap: RawSourceMap, sourceRoot?: string): RawSourceMap => {
+export const patchSourceMapSources = (sourceMap: EncodedSourceMap, sourceRoot?: string): EncodedSourceMap => {
     sourceMap.sourceRoot = sourceRoot || sourceMap.sourceRoot;
 
     for (let i = 0; i < sourceMap.sources.length; i++) {
-        if (isWebpackProtocol(sourceMap.sources[i])) {
-            sourceMap.sources[i] = sourceMap.sources[i].slice(WEBPACK_PROTOCOL.length);
+        if (sourceMap.sources[i] && isWebpackProtocol(sourceMap.sources[i] as string)) {
+            sourceMap.sources[i] = (sourceMap.sources[i] as string).slice(WEBPACK_PROTOCOL.length);
         }
     }
 
@@ -112,7 +119,7 @@ export const extractSourceFilesDeps = (
     const dependantSourceFiles = new Set<string>();
     const sourceMapsParsed = patchSourceMapSources(JSON.parse(sourceMaps), sourceRoot);
 
-    const consumer = new SourceMapConsumer(sourceMapsParsed);
+    const consumer = new TraceMap(sourceMapsParsed);
 
     let sourceOffset = source.indexOf("\n");
     const offsetToLine = [0];
@@ -128,15 +135,15 @@ export const extractSourceFilesDeps = (
                 const startLine = offsetToSourceMapLineNumber(offsetToLine, range.startOffset);
 
                 const column = range.startOffset - offsetToLine[startLine];
-                const prevPosition = consumer.originalPositionFor({
+                const prevPosition = originalPositionFor(consumer, {
                     line: startLine + 1,
                     column,
-                    bias: SourceMapConsumer.GREATEST_LOWER_BOUND,
+                    bias: GREATEST_LOWER_BOUND,
                 });
 
                 if (prevPosition && prevPosition.source && (!sourceFilterFn || sourceFilterFn(prevPosition.source))) {
-                    (prevPosition as SourceFindPosition).bias = SourceMapConsumer.GREATEST_LOWER_BOUND;
-                    const generatedPosition = consumer.generatedPositionFor(prevPosition);
+                    (prevPosition as SourceNeedle).bias = GREATEST_LOWER_BOUND;
+                    const generatedPosition = generatedPositionFor(consumer, prevPosition as SourceNeedle);
 
                     if (typeof generatedPosition.line === "number" && generatedPosition.line >= startLine + 1) {
                         dependantSourceFiles.add(prevPosition.source);
@@ -145,15 +152,15 @@ export const extractSourceFilesDeps = (
                 }
 
                 // Bundler source file function wrapper case
-                const nextPosition = consumer.originalPositionFor({
+                const nextPosition = originalPositionFor(consumer, {
                     line: startLine + 1,
                     column,
-                    bias: SourceMapConsumer.LEAST_UPPER_BOUND,
+                    bias: LEAST_UPPER_BOUND,
                 });
 
                 if (nextPosition && nextPosition.source && (!sourceFilterFn || sourceFilterFn(nextPosition.source))) {
-                    (nextPosition as SourceFindPosition).bias = SourceMapConsumer.LEAST_UPPER_BOUND;
-                    const generatedPosition = consumer.generatedPositionFor(nextPosition);
+                    (nextPosition as SourceNeedle).bias = LEAST_UPPER_BOUND;
+                    const generatedPosition = generatedPositionFor(consumer, nextPosition as SourceNeedle);
                     const endLine = offsetToSourceMapLineNumber(offsetToLine, range.endOffset);
 
                     if (typeof generatedPosition.line === "number" && generatedPosition.line <= endLine + 1) {

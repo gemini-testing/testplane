@@ -76,6 +76,7 @@
   "dependencies": {
     "@babel/code-frame": "7.24.2",
     "@gemini-testing/commander": "2.15.4",
+    "@jridgewell/trace-mapping": "0.3.31",
     "@jspm/core": "2.0.1",
     "@jsquash/png": "3.1.1",
     "@puppeteer/browsers": "3.0.4",
@@ -112,7 +113,6 @@
     "sizzle": "2.3.6",
     "socket.io": "4.7.5",
     "socket.io-client": "4.7.5",
-    "source-map-js": "1.2.1",
     "strftime": "0.10.2",
     "strip-ansi": "6.0.1",
     "temp": "0.8.3",
