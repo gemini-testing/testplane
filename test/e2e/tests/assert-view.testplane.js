@@ -61,6 +61,14 @@ describe("assertView", () => {
         });
     });
 
+    it("should use captured chunk when capture area disappears after scrolling", async ({ browser }) => {
+        await browser.url("capture-area-disappears-after-scroll.html");
+
+        await browser.assertView("scroll-sensitive-popup", "[data-testid=scroll-sensitive-popup]", {
+            captureElementFromTop: true,
+        });
+    });
+
     it("should treat sticky content inside capture target as interference", async ({ browser }) => {
         await browser.url("sticky-interference-behind-capture-target.html");
 

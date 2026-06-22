@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Capture Area Disappears After Scroll</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 1800px;
+                font-family: Arial, sans-serif;
+                background: #eef1f5;
+            }
+
+            .bottom-panel {
+                position: fixed;
+                left: 0;
+                top: calc(100vh - 100px);
+                width: 520px;
+                height: 100px;
+                box-sizing: border-box;
+                padding: 24px;
+                border-top: 6px solid #6b1111;
+                background: #d84444;
+                color: #fff;
+                font-size: 24px;
+                font-weight: 700;
+            }
+
+            .capture-target {
+                position: absolute;
+                left: 40px;
+                top: calc(100vh - 350px);
+                width: 360px;
+                height: 300px;
+                box-sizing: border-box;
+                border: 6px solid #183153;
+                background: #fff;
+                color: #183153;
+                overflow: hidden;
+            }
+
+            body.hide-capture-target .capture-target {
+                display: none;
+            }
+
+            .stripe {
+                height: 100px;
+                box-sizing: border-box;
+                padding: 30px;
+                font-size: 26px;
+                font-weight: 700;
+            }
+
+            .stripe-top {
+                background: #8ed2ff;
+            }
+
+            .stripe-middle {
+                background: #fff0a3;
+            }
+
+            .stripe-bottom {
+                background: #b7edc2;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="bottom-panel">Safe area interference</div>
+
+        <main class="capture-target" data-testid="scroll-sensitive-popup">
+            <div class="stripe stripe-top">Popup top</div>
+            <div class="stripe stripe-middle">Popup middle</div>
+            <div class="stripe stripe-bottom">Popup bottom</div>
+        </main>
+
+        <script>
+            window.addEventListener("scroll", function () {
+                if (window.scrollY > 0) {
+                    document.body.classList.add("hide-capture-target");
+                }
+            });
+        </script>
+    </body>
+</html>

@@ -631,6 +631,16 @@ export class ElementsScreenShooter {
                 opts,
                 async currentState => {
                     if (currentState.captureSpecs.length === 0) {
+                        if (iterations > 0) {
+                            debug(
+                                "Capture area disappeared after %d chunk(s), rendering already captured data for selectors: %s",
+                                iterations,
+                                selectorsToCapture.join("; "),
+                            );
+
+                            return;
+                        }
+
                         throw new Error(getEmptyCaptureSpecsErrorMessage(selectorsToCapture));
                     }
 
