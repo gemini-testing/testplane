@@ -53,6 +53,14 @@ describe("assertView", () => {
         });
     });
 
+    it("should rollback first chunk when sticky header appears after scroll", async ({ browser }) => {
+        await browser.url("delayed-fixed-header-after-scroll.html");
+
+        await browser.assertView("sticky-safe-area-first-chunk", "[data-testid=capture-target]", {
+            captureElementFromTop: true,
+        });
+    });
+
     it("should treat sticky content inside capture target as interference", async ({ browser }) => {
         await browser.url("sticky-interference-behind-capture-target.html");
 
