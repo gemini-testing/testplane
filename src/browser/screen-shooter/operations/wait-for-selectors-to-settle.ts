@@ -90,23 +90,31 @@ async function waitForSelectorsToSettleInBrowser(
 
             let matches = 0;
 
-            let lastBoundingClientRects = selectors.map(selector =>
-                document.querySelector(selector)?.getBoundingClientRect(),
-            );
+            let lastBoundingClientRects = selectors.map(selector => {
+                const element = document.querySelector(selector);
+
+                return element ? element.getBoundingClientRect() : null;
+            });
             while (
                 performance.now() - startedAt < PAGE_SETTLE_MAX_WAIT_MS &&
                 iterations < PAGE_SETTLE_MAX_ITERATIONS &&
                 matches < PAGE_SETTLE_MATCHES_THRESHOLD
             ) {
-                const currentBoundingClientRects = selectors.map(selector =>
-                    document.querySelector(selector)?.getBoundingClientRect(),
-                );
+                const currentBoundingClientRects = selectors.map(selector => {
+                    const element = document.querySelector(selector);
+
+                    return element ? element.getBoundingClientRect() : null;
+                });
                 if (
-                    currentBoundingClientRects.every(
-                        (rect, index) =>
-                            rect?.top === lastBoundingClientRects[index]?.top &&
-                            rect?.height === lastBoundingClientRects[index]?.height,
-                    )
+                    currentBoundingClientRects.every((rect, index) => {
+                        const lastRect = lastBoundingClientRects[index];
+
+                        if (!rect || !lastRect) {
+                            return rect === lastRect;
+                        }
+
+                        return rect.top === lastRect.top && rect.height === lastRect.height;
+                    })
                 ) {
                     matches++;
                 } else {
