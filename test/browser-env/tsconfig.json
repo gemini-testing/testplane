@@ -9,6 +9,7 @@
         "skipLibCheck": true,
         "types": [],
         "paths": {
+            "@lib": ["../../src/browser/client-scripts/shared/lib.native.ts"],
             "@isomorphic": ["../../src/browser/isomorphic/index.ts"]
         }
     },

@@ -9,6 +9,7 @@ import { cleanupRrweb, filterEvents, installRrwebAndCollectEvents, sendFilteredE
 import { getHistoryContext, runWithHistoryContext } from "./async-local-storage";
 
 const debug = makeDebug("testplane:browser:history");
+const debugTimeTravel = makeDebug("testplane:time-travel:history");
 
 interface NodeData {
     name: string;
@@ -79,8 +80,10 @@ export const requestDomSnapshots = ({
     attempt,
     currentTest,
 }: RequestDomSnapshotsData): void => {
+    debugTimeTravel("requestDomSnapshots, called");
     try {
         if (!callstack) {
+            debugTimeTravel("requestDomSnapshots, callstack is not defined");
             return;
         }
 
@@ -90,6 +93,7 @@ export const requestDomSnapshots = ({
         const test = currentTest ?? session.executionContext?.ctx?.currentTest;
 
         if (shouldRecord && process.send && test) {
+            debugTimeTravel("requestDomSnapshots, shouldRecord and process.send and test are true");
             const rrwebPromise = installRrwebAndCollectEvents(session, callstack)
                 .then(rrwebEvents => {
                     const rrwebEventsFiltered = filterEvents(rrwebEvents);
@@ -101,6 +105,7 @@ export const requestDomSnapshots = ({
 
             snapshotsPromiseRef.current = snapshotsPromiseRef.current.then(() => rrwebPromise);
         }
+        debugTimeTravel("requestDomSnapshots, done");
     } catch (e) {
         debug("An error occurred during capturing snapshots in browser: %O", e);
     }

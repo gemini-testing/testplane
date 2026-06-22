@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Delayed Fixed Header After Scroll</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 2200px;
+                font-family: Arial, sans-serif;
+                background: #eef1f5;
+            }
+
+            .interference {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 100;
+                display: none;
+                width: 560px;
+                height: 120px;
+                box-sizing: border-box;
+                align-items: center;
+                padding: 24px;
+                border-bottom: 6px solid #4d0f0f;
+                background: #d73535;
+                color: #fff;
+                font-size: 30px;
+                font-weight: 700;
+            }
+
+            body.show-interference .interference {
+                display: flex;
+            }
+
+            .spacer {
+                height: 1200px;
+            }
+
+            .capture-target {
+                width: 560px;
+                height: 360px;
+                box-sizing: border-box;
+                border: 6px solid #183153;
+                background: #fff;
+            }
+
+            .stripe {
+                height: 120px;
+                box-sizing: border-box;
+                padding: 32px;
+                color: #183153;
+                font-size: 30px;
+                font-weight: 700;
+            }
+
+            .stripe-top {
+                background: #80d4ff;
+            }
+
+            .stripe-middle {
+                background: #fff2a8;
+            }
+
+            .stripe-bottom {
+                background: #b8f2c2;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="interference">Fixed header must not be captured</div>
+        <div class="spacer"></div>
+
+        <main class="capture-target" data-testid="capture-target">
+            <div class="stripe stripe-top">Target top</div>
+            <div class="stripe stripe-middle">Target middle</div>
+            <div class="stripe stripe-bottom">Target bottom</div>
+        </main>
+
+        <script>
+            var showTimer = null;
+
+            window.addEventListener("scroll", function () {
+                if (window.scrollY < 900 || document.body.classList.contains("show-interference")) {
+                    return;
+                }
+
+                clearTimeout(showTimer);
+                showTimer = setTimeout(function () {
+                    document.body.classList.add("show-interference");
+                }, 0);
+            });
+        </script>
+    </body>
+</html>

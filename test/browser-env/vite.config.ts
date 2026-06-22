@@ -32,6 +32,7 @@ export default defineConfig({
     resolve: {
         alias: {
             "@isomorphic": path.resolve(__dirname, "../../src/browser/isomorphic/index.ts"),
+            "@lib": path.resolve(__dirname, "../../src/browser/client-scripts/shared/lib.native.ts"),
             "@": path.resolve(__dirname, "../../lib"),
             lib: path.resolve(__dirname, "../../lib"),
         },
