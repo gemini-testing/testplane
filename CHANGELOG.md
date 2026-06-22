@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.1 (2026-06-22)
+
+
+### Bug Fixes
+
+* older browsers support in time travel and assertView ([#1281](https://github.com/gemini-testing/testplane/issues/1281)) ([c74e2ff](https://github.com/gemini-testing/testplane/commit/c74e2ffc9ff3aa614ccdd399e3250b5047c3c6a7))
+
 ## [9.0.0](https://github.com/gemini-testing/testplane/compare/v8.47.2...v9.0.0) (2026-06-16)
 
 
