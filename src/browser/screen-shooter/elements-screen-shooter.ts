@@ -165,7 +165,8 @@ function getSafeAreaRollbackDistance(
     if (lastState && previousCaptureAreaTop !== null) {
         const previousVisibleBottom = Math.max(...lastState.captureSpecs.map(spec => getBottom(spec.visible)));
         const previousSafeBottom = getBottom(lastState.safeArea);
-        previousCoveredBottom = Math.min(previousVisibleBottom, previousSafeBottom) - (previousCaptureAreaTop as number);
+        previousCoveredBottom =
+            Math.min(previousVisibleBottom, previousSafeBottom) - (previousCaptureAreaTop as number);
     }
 
     const currentSafeAreaTop = (currentState.safeArea.top as number) - (currentCaptureAreaTop as number);
