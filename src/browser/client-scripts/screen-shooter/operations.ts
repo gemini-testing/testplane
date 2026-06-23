@@ -48,6 +48,16 @@ export function computeScrollOffset(element: Element): Coord<"page", "css", "y">
 }
 
 export function computeViewportSize(): Size<"css"> {
+    const visualViewport = window.visualViewport;
+
+    // Visual viewport occasionally returns more correct values than innerWidth/Height, but may not be available in older browsers
+    if (visualViewport && visualViewport.width > 0 && visualViewport.height > 0) {
+        return {
+            width: visualViewport.width as Length<"css", "x">,
+            height: visualViewport.height as Length<"css", "y">
+        };
+    }
+
     return {
         width: window.innerWidth as Length<"css", "x">,
         height: window.innerHeight as Length<"css", "y">
