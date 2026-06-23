@@ -1,0 +1,71 @@
+<style>
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 1600px;
+        font-family: Arial, sans-serif;
+        background: #eef3f7;
+    }
+
+    .listing {
+        position: relative;
+        z-index: 1;
+        width: 1000px;
+        min-height: 900px;
+        margin: 0 auto;
+        padding-top: 100px;
+    }
+
+    .sticky-filter {
+        position: sticky;
+        top: 112px;
+        z-index: 22;
+        display: flex;
+        align-items: center;
+        width: 1000px;
+        height: 60px;
+        box-sizing: border-box;
+        padding: 0 24px;
+        background: #304461;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .card {
+        width: 520px;
+        height: 260px;
+        margin-top: 48px;
+        padding: 28px;
+        box-sizing: border-box;
+        background: #fff;
+        border: 1px solid #b9c7d8;
+    }
+
+    .popup {
+        position: absolute;
+        left: 700px;
+        top: 120px;
+        z-index: 11010;
+        width: 360px;
+        height: 116px;
+        box-sizing: border-box;
+        padding: 18px;
+        background: #fff;
+        border: 2px solid #55a0ff;
+        box-shadow: 0 10px 28px rgba(20, 33, 61, 0.22);
+        font-weight: 700;
+    }
+</style>
+
+<div class="listing">
+    <div class="sticky-filter">Sticky filter behind popup</div>
+
+    <div class="card">
+        <h3>Listing card</h3>
+        <p>The sticky filter belongs to page content and is below the popup in stacking order.</p>
+    </div>
+</div>
+
+<div class="popup">Popup target above sticky filter</div>

@@ -333,7 +333,8 @@ export function computeSafeArea(
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
             shouldSkipZIndexCheck =
-                scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl));
+                captureElements.some(capEl => capEl === el || capEl.contains(el)) &&
+                (scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl)));
 
             if (!isNaN(topValue)) {
                 adjustedRect = {
