@@ -11,6 +11,7 @@ export const CacheType = {
     TestFile: "t",
     Asset: "a",
     CssSessionCache: "cs",
+    SourceMapParseResult: "sm",
 } as const;
 
 type CacheTypeValue = (typeof CacheType)[keyof typeof CacheType];
