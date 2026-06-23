@@ -357,7 +357,7 @@ export class CSSSelectivity {
                     rawSourceMap.sources.forEach(sourceFilePath => {
                         // Ignore generated postcss styles:
                         // https://github.com/postcss/postcss/blob/eae46db765d752cf8f40c4fa2b0b85030079c43d/lib/map-generator.js#L122
-                        if (sourceFilePath === "<no source>") {
+                        if (!sourceFilePath || sourceFilePath === "<no source>") {
                             return;
                         }
 

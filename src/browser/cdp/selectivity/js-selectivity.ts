@@ -1,7 +1,13 @@
 import { groupBy } from "lodash";
 import { resolve as urlResolve } from "node:url";
 import { JS_SOURCE_MAP_URL_COMMENT } from "../../../error-snippets/constants";
-import { extractSourceFilesDeps, fetchTextWithBrowserFallback, isCachedOnFs, isDataProtocol } from "./utils";
+import {
+    extractSourceFilesDeps,
+    fetchTextWithBrowserFallback,
+    isCachedOnFs,
+    isDataProtocol,
+    parseSourceMapRanges,
+} from "./utils";
 import { CacheType, getCachedSelectivityFile, hasCachedSelectivityFile, setCachedSelectivityFile } from "./fs-cache";
 import { debugSelectivity } from "./debug";
 import type { CDP } from "..";
@@ -328,11 +334,14 @@ export class JSSelectivity {
                         throw new Error(`JS Selectivity: fs-cache is broken for ${sourceUrl}`);
                     }
 
-                    const dependingSourceFiles = extractSourceFilesDeps(
+                    const parsedSourceMapRanges = await parseSourceMapRanges(
                         sourceString,
                         sourceMapsString,
-                        grouppedByScriptCoverage[scriptId],
                         this._sourceRoot,
+                    );
+                    const dependingSourceFiles = extractSourceFilesDeps(
+                        parsedSourceMapRanges,
+                        grouppedByScriptCoverage[scriptId],
                         isSourceCodeFile,
                     );
 

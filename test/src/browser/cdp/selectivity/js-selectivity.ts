@@ -17,6 +17,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
     };
     let fetchTextWithBrowserFallbackStub: SinonStub;
     let extractSourceFilesDepsStub: SinonStub;
+    let parseSourceMapRangesStub: SinonStub;
     let urlResolveStub: SinonStub;
     let groupByStub: SinonStub;
     let isDataProtocolStub: SinonStub;
@@ -52,6 +53,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
         fetchTextWithBrowserFallbackStub = sandbox.stub().resolves("mock source map");
         extractSourceFilesDepsStub = sandbox.stub().returns(new Set(["src/app.js", "src/utils.js"]));
+        parseSourceMapRangesStub = sandbox.stub().resolves({ offset: [0], filename: ["src/app.js"] });
         urlResolveStub = sandbox.stub().returnsArg(1);
         groupByStub = sandbox.stub().callsFake((arr, key) => {
             const result: Record<string, any[]> = {};
@@ -73,6 +75,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             "node:url": { resolve: urlResolveStub },
             "./utils": {
                 extractSourceFilesDeps: extractSourceFilesDepsStub,
+                parseSourceMapRanges: parseSourceMapRangesStub,
                 fetchTextWithBrowserFallback: fetchTextWithBrowserFallbackStub,
                 isDataProtocol: isDataProtocolStub,
             },
@@ -375,11 +378,15 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             assert.calledWith(cdpMock.profiler.takePreciseCoverage, sessionId);
             assert.calledWith(
-                extractSourceFilesDepsStub,
+                parseSourceMapRangesStub,
                 "mock source\n//# sourceMappingURL=app.js.map",
                 "mock source map",
-                mockCoverage.result,
                 sourceRoot,
+            );
+            assert.calledWith(
+                extractSourceFilesDepsStub,
+                await parseSourceMapRangesStub.returnValues[0],
+                mockCoverage.result,
                 sinon.match.func,
             );
 
@@ -421,8 +428,9 @@ describe("CDP/Selectivity/JSSelectivity", () => {
 
             assert.calledOnceWith(
                 extractSourceFilesDepsStub,
-                "mock source\n//# sourceMappingURL=app.js.map",
-                "mock source map",
+                await parseSourceMapRangesStub.returnValues[0],
+                [mockCoverage.result[1]],
+                sinon.match.func,
             );
         });
 
