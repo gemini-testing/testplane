@@ -1223,6 +1223,113 @@
         ]
     },
     {
+        "id": "prefer-safe-lower-chunk-over-unsafe-upper-relaxation",
+        "fullPage": "prefer-safe-lower-chunk-over-unsafe-upper-relaxation/full-page.png",
+        "expected": "prefer-safe-lower-chunk-over-unsafe-upper-relaxation/expected.png",
+        "chunks": [
+            {
+                "file": "prefer-safe-lower-chunk-over-unsafe-upper-relaxation/chunks/0.png",
+                "safeArea": {
+                    "top": 30,
+                    "height": 190
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 10,
+                            "top": 60,
+                            "width": 100,
+                            "height": 100
+                        },
+                        "clip": {
+                            "left": 0,
+                            "top": 0,
+                            "width": 120,
+                            "height": 300
+                        },
+                        "visible": {
+                            "left": 10,
+                            "top": 60,
+                            "width": 100,
+                            "height": 100
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 10,
+                            "top": 250,
+                            "width": 100,
+                            "height": 160
+                        },
+                        "clip": {
+                            "left": 0,
+                            "top": 0,
+                            "width": 120,
+                            "height": 300
+                        },
+                        "visible": {
+                            "left": 10,
+                            "top": 250,
+                            "width": 100,
+                            "height": 10
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            },
+            {
+                "file": "prefer-safe-lower-chunk-over-unsafe-upper-relaxation/chunks/1.png",
+                "safeArea": {
+                    "top": 30,
+                    "height": 190
+                },
+                "captureSpecs": [
+                    {
+                        "full": {
+                            "left": 10,
+                            "top": -130,
+                            "width": 100,
+                            "height": 100
+                        },
+                        "clip": {
+                            "left": 0,
+                            "top": 0,
+                            "width": 120,
+                            "height": 300
+                        },
+                        "visible": {
+                            "left": 10,
+                            "top": -130,
+                            "width": 0,
+                            "height": 0
+                        }
+                    },
+                    {
+                        "full": {
+                            "left": 10,
+                            "top": 60,
+                            "width": 100,
+                            "height": 160
+                        },
+                        "clip": {
+                            "left": 0,
+                            "top": 0,
+                            "width": 120,
+                            "height": 300
+                        },
+                        "visible": {
+                            "left": 10,
+                            "top": 60,
+                            "width": 100,
+                            "height": 160
+                        }
+                    }
+                ],
+                "ignoreBoundingRects": []
+            }
+        ]
+    },
+    {
         "id": "distant-selectors-without-common-visible-spec",
         "fullPage": "distant-selectors-without-common-visible-spec/full-page.png",
         "expected": "distant-selectors-without-common-visible-spec/expected.png",
