@@ -8,7 +8,6 @@ import {
     fromBcrToRect,
     getBottom,
     getCoveringRect,
-    getHeight,
     getIntersection
 } from "@isomorphic";
 import { OutsideOfViewportError } from "./errors/outside-of-viewport";

@@ -106,8 +106,11 @@ export class CompositeImage {
         }
 
         if (this._captureAreaSize.width <= 0 || this._captureAreaSize.height <= 0) {
-            throw new Error("Capture area size cannot be zero or negative. Got: " + prettySize(this._captureAreaSize) +
-                "\nMost likely this means that you are trying to capture an area that is completely clipped by parent block (e.g. with overflow: hidden), or the element is zero-sized on its own.");
+            throw new Error(
+                "Capture area size cannot be zero or negative. Got: " +
+                    prettySize(this._captureAreaSize) +
+                    "\nMost likely this means that you are trying to capture an area that is completely clipped by parent block (e.g. with overflow: hidden), or the element is zero-sized on its own.",
+            );
         }
 
         const imageSize = viewportImage.getSize() as Size<"device">;
