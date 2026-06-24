@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Fixed Layer in Transformed Page</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                min-height: 3800px;
+                font-family: Arial, sans-serif;
+                background: #f1f4f8;
+            }
+
+            .page {
+                position: relative;
+                min-height: 3800px;
+                transform: translateZ(0);
+            }
+
+            .fixed-layer {
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 2;
+                width: 100%;
+                height: 3800px;
+                pointer-events: none;
+            }
+
+            .capture-target {
+                position: relative;
+                z-index: 1;
+                left: 64px;
+                top: 80px;
+                width: 720px;
+                height: 3720px;
+                box-sizing: border-box;
+                border: 6px solid #1b2a41;
+                background: #fff;
+            }
+
+            .section {
+                height: 930px;
+                box-sizing: border-box;
+                padding: 32px;
+                border-bottom: 3px solid #1b2a41;
+                color: #1b2a41;
+                font-size: 32px;
+                font-weight: 700;
+            }
+
+            .section:nth-child(1) {
+                background: #bfe7ff;
+            }
+
+            .section:nth-child(2) {
+                background: #fff1a8;
+            }
+
+            .section:nth-child(3) {
+                background: #d0f4c7;
+            }
+
+            .section:nth-child(4) {
+                border-bottom: 0;
+                background: #ffc8b8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="page">
+            <div class="fixed-layer" aria-hidden="true"></div>
+
+            <main class="capture-target" data-testid="capture-target">
+                <div class="section">Target top</div>
+                <div class="section">Target upper middle</div>
+                <div class="section">Target lower middle</div>
+                <div class="section">Target bottom must be captured</div>
+            </main>
+        </div>
+    </body>
+</html>

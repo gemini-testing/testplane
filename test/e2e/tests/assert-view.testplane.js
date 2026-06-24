@@ -61,6 +61,14 @@ describe("assertView", () => {
         });
     });
 
+    it("should keep capturing when a fixed layer scrolls inside a transformed page", async ({ browser }) => {
+        await browser.url("fixed-layer-in-transformed-page.html");
+
+        await browser.assertView("fixed-layer-in-transformed-page", "[data-testid=capture-target]", {
+            captureElementFromTop: true,
+        });
+    });
+
     it("should use captured chunk when capture area disappears after scrolling", async ({ browser }) => {
         await browser.url("capture-area-disappears-after-scroll.html");
 

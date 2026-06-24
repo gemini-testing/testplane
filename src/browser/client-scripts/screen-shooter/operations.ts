@@ -407,7 +407,7 @@ export function computeSafeArea(
 
         if (shrinkTop < shrinkBottom) {
             resultingTop = Math.max(brBottom, safeTop) as Coord<"viewport", "css", "y">;
-            resultingHeight = getHeight(safeBottom, resultingTop);
+            resultingHeight = Math.max(0, safeBottom - resultingTop) as Length<"css", "y">;
             logger?.("decided to shrink top");
         } else if (shrinkBottom) {
             resultingHeight = Math.min(safeHeight, br.top - safeTop) as Length<"css", "y">;
