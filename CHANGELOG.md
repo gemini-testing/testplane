@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.2 (2026-06-24)
+
+
+### Bug Fixes
+
+* additional fixes of the new assertView command ([#1282](https://github.com/gemini-testing/testplane/issues/1282)) ([8252681](https://github.com/gemini-testing/testplane/commit/8252681c54579f03ae411247960831b4ae703af2))
+
 ### 9.0.1 (2026-06-22)
 
 
