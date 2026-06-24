@@ -1,8 +1,10 @@
-export enum DisableHoverMode {
-    Always = "always",
-    WhenScrollingNeeded = "when-scrolling-needed",
-    Never = "never",
-}
+export const DisableHoverMode = {
+    Always: "always",
+    WhenScrollingNeeded: "when-scrolling-needed",
+    Never: "never",
+} as const;
+
+export type DisableHoverMode = (typeof DisableHoverMode)[keyof typeof DisableHoverMode];
 
 export enum BrowserSideErrorCode {
     JS = "JS",

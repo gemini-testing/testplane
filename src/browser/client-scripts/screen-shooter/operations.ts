@@ -8,7 +8,6 @@ import {
     fromBcrToRect,
     getBottom,
     getCoveringRect,
-    getHeight,
     getIntersection
 } from "@isomorphic";
 import { OutsideOfViewportError } from "./errors/outside-of-viewport";
@@ -48,6 +47,16 @@ export function computeScrollOffset(element: Element): Coord<"page", "css", "y">
 }
 
 export function computeViewportSize(): Size<"css"> {
+    const visualViewport = window.visualViewport;
+
+    // Visual viewport occasionally returns more correct values than innerWidth/Height, but may not be available in older browsers
+    if (visualViewport && visualViewport.width > 0 && visualViewport.height > 0) {
+        return {
+            width: visualViewport.width as Length<"css", "x">,
+            height: visualViewport.height as Length<"css", "y">
+        };
+    }
+
     return {
         width: window.innerWidth as Length<"css", "x">,
         height: window.innerHeight as Length<"css", "y">
@@ -333,7 +342,8 @@ export function computeSafeArea(
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
             shouldSkipZIndexCheck =
-                scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl));
+                captureElements.some(capEl => capEl === el || capEl.contains(el)) &&
+                (scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl)));
 
             if (!isNaN(topValue)) {
                 adjustedRect = {
@@ -396,7 +406,7 @@ export function computeSafeArea(
 
         if (shrinkTop < shrinkBottom) {
             resultingTop = Math.max(brBottom, safeTop) as Coord<"viewport", "css", "y">;
-            resultingHeight = getHeight(safeBottom, resultingTop);
+            resultingHeight = Math.max(0, safeBottom - resultingTop) as Length<"css", "y">;
             logger?.("decided to shrink top");
         } else if (shrinkBottom) {
             resultingHeight = Math.min(safeHeight, br.top - safeTop) as Length<"css", "y">;

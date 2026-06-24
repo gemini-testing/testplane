@@ -40,7 +40,7 @@
     "test-e2e-testplane": "npm run test-e2e-testplane:generate-fixtures && npm run test-e2e-testplane:run-tests",
     "test-e2e-testplane:run-tests": "node bin/testplane --config test/e2e/testplane.config.ts",
     "test-e2e-testplane:generate-fixtures": "node bin/testplane --config test/e2e/fixtures/basic-report/testplane.config.ts || true",
-    "test-e2e:gui": "node bin/testplane --config test/e2e/testplane.config.ts gui",
+    "test-e2e-testplane:gui": "node bin/testplane --config test/e2e/testplane.config.ts gui",
     "test-browser-env": "TS_NODE_PROJECT=./test/browser-env/tsconfig.json node bin/testplane -r tsconfig-paths/register --config test/browser-env/testplane.config.ts",
     "test-browser-env:gui": "TS_NODE_PROJECT=./test/browser-env/tsconfig.json node bin/testplane gui -r tsconfig-paths/register --config test/browser-env/testplane.config.ts",
     "toc": "doctoc docs --title '### Contents'",

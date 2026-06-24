@@ -336,6 +336,19 @@ describe("computeSafeArea", () => {
         await browser.assertView("compute-safe-area-stacking-context-filter-in-front");
     });
 
+    it("should not shrink when root sticky element is behind absolute popup target", async ({ browser }) => {
+        const { default: html } = await import("./fixtures/safe-areas/root-sticky-behind-absolute-popup.html?raw");
+        document.body.innerHTML = html;
+
+        const selectors = [".popup"];
+        const safeArea = computeSafeArea(selectors);
+        const captureSpecs = computeCaptureSpecs(selectors);
+
+        visualizeCaptureSpecs(captureSpecs);
+        visualizeSafeArea(safeArea.top, safeArea.height);
+        await browser.assertView("compute-safe-area-root-sticky-behind-absolute-popup");
+    });
+
     it("should shrink for fixed header that creates stacking context via filter and is in front", async ({
         browser,
     }) => {
