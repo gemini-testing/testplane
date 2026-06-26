@@ -10,7 +10,12 @@ describe("CDP/Selectivity/Utils", () => {
     let fsStub: { existsSync: SinonStub };
     let pathStub: { posix: { relative: SinonStub; resolve: SinonStub; join: SinonStub; sep: string } };
     let softFileURLToPathStub: SinonStub;
-    let SourceMapConsumerStub: SinonStub;
+    let traceMapStub: SinonStub;
+    let originalPositionForStub: SinonStub;
+    let generatedPositionForStub: SinonStub;
+
+    const GREATEST_LOWER_BOUND = 1;
+    const LEAST_UPPER_BOUND = -1;
 
     beforeEach(() => {
         fetchStub = sandbox.stub(globalThis, "fetch").resolves({
@@ -40,13 +45,19 @@ describe("CDP/Selectivity/Utils", () => {
             },
         };
         softFileURLToPathStub = sandbox.stub().returnsArg(0);
-        SourceMapConsumerStub = sandbox.stub();
+        traceMapStub = sandbox.stub();
+        originalPositionForStub = sandbox.stub();
+        generatedPositionForStub = sandbox.stub();
 
         utils = proxyquire("src/browser/cdp/selectivity/utils", {
             fs: fsStub,
             path: pathStub,
-            "source-map-js": {
-                SourceMapConsumer: SourceMapConsumerStub,
+            "@jridgewell/trace-mapping": {
+                TraceMap: traceMapStub,
+                originalPositionFor: originalPositionForStub,
+                generatedPositionFor: generatedPositionForStub,
+                GREATEST_LOWER_BOUND,
+                LEAST_UPPER_BOUND,
             },
             "../../../utils/fs": {
                 softFileURLToPath: softFileURLToPathStub,
@@ -131,7 +142,7 @@ describe("CDP/Selectivity/Utils", () => {
     describe("patchSourceMapSources", () => {
         it("should patch webpack protocol sources", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["webpack://src/app.js", "webpack://src/utils.js", "regular/file.js"],
                 sourceRoot: "",
                 names: [],
@@ -147,7 +158,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should use existing sourceRoot if no custom sourceRoot provided", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["webpack:///src/app.js"],
                 sourceRoot: "/existing/root",
                 names: [],
@@ -162,7 +173,7 @@ describe("CDP/Selectivity/Utils", () => {
 
         it("should handle sources without webpack protocol", () => {
             const sourceMap = {
-                version: 3 as unknown as string,
+                version: 3 as const,
                 sources: ["src/app.js", "lib/utils.js"],
                 sourceRoot: "",
                 names: [],
@@ -177,22 +188,18 @@ describe("CDP/Selectivity/Utils", () => {
     });
 
     describe("extractSourceFilesDeps", () => {
-        let consumerMock: { originalPositionFor: SinonStub; generatedPositionFor: SinonStub };
-
-        const GREATEST_LOWER_BOUND = 1;
-        const LEAST_UPPER_BOUND = 2;
-
-        const sourceMaps = JSON.stringify({
-            version: 3,
-            sources: ["src/app.js"],
-            sourceRoot: "/root",
-            names: [],
-            mappings: "",
-            file: "bundle.js",
-        });
+        // Boundary list of the generated bundle:
+        //   segment 0: [10, 100)  -> a.js
+        //   segment 1: [100, 200) -> "" (bundler glue, no source)
+        //   segment 2: [200, 300) -> b.js
+        //   segment 3: [300, +inf) -> c.js
+        const parsedMaps = {
+            offset: [10, 100, 200, 300],
+            filename: ["a.js", "", "b.js", "c.js"],
+        };
 
         const mkCoverages = (
-            ranges: Array<{ startOffset: number; endOffset: number }>,
+            functions: Array<{ startOffset: number; endOffset: number; count?: number }>,
         ): Array<{
             scriptId: string;
             url: string;
@@ -205,256 +212,220 @@ describe("CDP/Selectivity/Utils", () => {
             {
                 scriptId: "1",
                 url: "http://example.com/bundle.js",
-                functions: [
-                    {
-                        functionName: "fn",
-                        ranges: ranges.map(r => ({ ...r, count: 1 })),
-                        isBlockCoverage: false,
-                    },
-                ],
+                functions: functions.map((fn, idx) => ({
+                    functionName: `fn${idx}`,
+                    ranges: [{ startOffset: fn.startOffset, endOffset: fn.endOffset, count: fn.count ?? 1 }],
+                    isBlockCoverage: false,
+                })),
             },
         ];
 
-        beforeEach(() => {
-            consumerMock = {
-                originalPositionFor: sandbox.stub(),
-                generatedPositionFor: sandbox.stub(),
-            };
-            SourceMapConsumerStub.returns(consumerMock);
-            (SourceMapConsumerStub as any).GREATEST_LOWER_BOUND = GREATEST_LOWER_BOUND;
-            (SourceMapConsumerStub as any).LEAST_UPPER_BOUND = LEAST_UPPER_BOUND;
+        it("should return empty set when there are no parsed segments", () => {
+            const result = utils.extractSourceFilesDeps(
+                { offset: [], filename: [] },
+                mkCoverages([{ startOffset: 0, endOffset: 50 }]),
+            );
+
+            assert.equal(result.size, 0);
         });
 
-        it("should extract source files from coverage via GREATEST_LOWER_BOUND", () => {
-            // source: "line1\nline2\nline3\nline4"
-            // offsets: line0 starts at 0, line1 at 6, line2 at 12, line3 at 18
-            const source = "line1\nline2\nline3\nline4";
+        it("should return empty set for empty coverages array", () => {
+            const result = utils.extractSourceFilesDeps(parsedMaps, []);
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should attribute a single-file wrapper to its source file", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 210, endOffset: 290 }]),
+            );
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("b.js"));
+        });
+
+        it("should collect every source file a function range intersects", () => {
+            // [50, 250) spans a.js, the glue segment and b.js
+            const result = utils.extractSourceFilesDeps(parsedMaps, mkCoverages([{ startOffset: 50, endOffset: 250 }]));
+
+            assert.equal(result.size, 2);
+            assert.isTrue(result.has("a.js"));
+            assert.isTrue(result.has("b.js"));
+        });
+
+        it("should ignore a full-span wrapper when the bundle has more than 2 real files", () => {
+            // parsedMaps has 3 real files (a.js, b.js, c.js) -> a function covering the whole
+            // bundle is the whole-bundle wrapper and must be dropped
+            const result = utils.extractSourceFilesDeps(parsedMaps, mkCoverages([{ startOffset: 0, endOffset: 400 }]));
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should keep the file of a full-span function in a single-file bundle", () => {
+            // Only one real file -> a function spanning everything is a legitimate file wrapper, not noise
+            const oneFileMaps = { offset: [10], filename: ["a.js"] };
+
+            const result = utils.extractSourceFilesDeps(oneFileMaps, mkCoverages([{ startOffset: 0, endOffset: 50 }]));
+
+            assert.equal(result.size, 1);
+            assert.isTrue(result.has("a.js"));
+        });
+
+        it("should keep files of a full-span function when the bundle has 2 real files (glue not counted)", () => {
+            // 3 segments but only 2 real files (the middle one is glue). A function spanning the whole
+            // bundle is treated as a legitimate (possibly concatenated) wrapper, so both files are kept.
+            // If glue were counted as a file the total would be 3 and they'd be wrongly dropped.
+            const twoFileMaps = { offset: [10, 100, 200], filename: ["a.js", "", "b.js"] };
+
+            const result = utils.extractSourceFilesDeps(twoFileMaps, mkCoverages([{ startOffset: 0, endOffset: 250 }]));
+
+            assert.equal(result.size, 2);
+            assert.isTrue(result.has("a.js"));
+            assert.isTrue(result.has("b.js"));
+        });
+
+        it("should skip functions that were not executed (count === 0)", () => {
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 210, endOffset: 290, count: 0 }]),
+            );
+
+            assert.equal(result.size, 0);
+        });
+
+        it("should skip functions without ranges", () => {
             const coverages = [
                 {
                     scriptId: "1",
                     url: "http://example.com/bundle.js",
-                    functions: [
-                        {
-                            functionName: "fn1",
-                            ranges: [{ startOffset: 0, endOffset: 5, count: 1 }],
-                            isBlockCoverage: false,
-                        },
-                        {
-                            functionName: "fn2",
-                            ranges: [{ startOffset: 6, endOffset: 11, count: 1 }],
-                            isBlockCoverage: false,
-                        },
-                    ],
+                    functions: [{ functionName: "fn", ranges: [], isBlockCoverage: false }],
                 },
             ];
 
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .onCall(0)
-                .returns({ source: "src/app.js", line: 1, column: 0 })
-                .onCall(1)
-                .returns({ source: "src/utils.js", line: 2, column: 0 });
-
-            consumerMock.generatedPositionFor
-                .onCall(0)
-                .returns({ line: 1 }) // >= startLine + 1 (1 >= 1) -> pass
-                .onCall(1)
-                .returns({ line: 2 }); // >= startLine + 1 (2 >= 2) -> pass
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
-
-            assert.equal(result.size, 2);
-            assert.isTrue(result.has("src/app.js"));
-            assert.isTrue(result.has("src/utils.js"));
-        });
-
-        it("should handle empty coverages array", () => {
-            const source = "line1\nline2";
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, [], "/root");
+            const result = utils.extractSourceFilesDeps(parsedMaps, coverages);
 
             assert.equal(result.size, 0);
         });
 
-        it("should reject GREATEST_LOWER_BOUND source if generated position line is before startLine", () => {
-            const source = "line1\nline2\nline3";
-            // startOffset 6 -> startLine 1 -> startLine + 1 = 2
-            const coverages = mkCoverages([{ startOffset: 6, endOffset: 11 }]);
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .returns({ source: "src/app.js", line: 5, column: 0 });
-
-            // generatedPosition.line (1) < startLine + 1 (2) -> fail
-            consumerMock.generatedPositionFor.returns({ line: 1 });
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .returns({ source: null });
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
-
-            assert.equal(result.size, 0);
-        });
-
-        it("should not add source if generatedPositionFor returns null line for GREATEST_LOWER_BOUND", () => {
-            const source = "line1\nline2";
-            const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .returns({ source: "src/app.js", line: 1, column: 0 });
-
-            consumerMock.generatedPositionFor.returns({ line: null });
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .returns({ source: null });
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
-
-            assert.equal(result.size, 0);
-        });
-
-        it("should fall through to LEAST_UPPER_BOUND when GREATEST_LOWER_BOUND returns no source", () => {
-            const source = "line1\nline2\nline3";
-            // endOffset 17 -> endLine 2 -> endLine + 1 = 3
-            const coverages = mkCoverages([{ startOffset: 0, endOffset: 17 }]);
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .returns({ source: null });
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .returns({ source: "src/wrapped.js", line: 1, column: 0 });
-
-            // generatedPosition.line (2) <= endLine + 1 (3) -> pass
-            consumerMock.generatedPositionFor.returns({ line: 2 });
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
-
-            assert.equal(result.size, 1);
-            assert.isTrue(result.has("src/wrapped.js"));
-        });
-
-        it("should fall through to LEAST_UPPER_BOUND when GREATEST_LOWER_BOUND bounds check fails", () => {
-            const source = "line1\nline2\nline3";
-            // startOffset 6 -> startLine 1, endOffset 17 -> endLine 2
-            const coverages = mkCoverages([{ startOffset: 6, endOffset: 17 }]);
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .returns({ source: "src/wrong.js", line: 10, column: 0 });
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .returns({ source: "src/correct.js", line: 2, column: 0 });
-
-            consumerMock.generatedPositionFor
-                .onCall(0)
-                .returns({ line: 1 }) // GREATEST_LOWER_BOUND: 1 < startLine + 1 (2) -> fail
-                .onCall(1)
-                .returns({ line: 3 }); // LEAST_UPPER_BOUND: 3 <= endLine + 1 (3) -> pass
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
-
-            assert.equal(result.size, 1);
-            assert.isTrue(result.has("src/correct.js"));
-        });
-
-        it("should reject LEAST_UPPER_BOUND source if generated position line is after endLine", () => {
-            const source = "line1\nline2\nline3";
-            // startOffset 0, endOffset 5 -> endLine 0 -> endLine + 1 = 1
-            const coverages = mkCoverages([{ startOffset: 0, endOffset: 5 }]);
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .returns({ source: null });
-
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .returns({ source: "src/far.js", line: 1, column: 0 });
-
-            // generatedPosition.line (5) > endLine + 1 (1) -> fail
-            consumerMock.generatedPositionFor.returns({ line: 5 });
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+        it("should not attribute glue-only ranges to any file", () => {
+            // [120, 180) lies entirely within the glue segment [100, 200)
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 120, endOffset: 180 }]),
+            );
 
             assert.equal(result.size, 0);
         });
 
         it("should filter sources by filter function, if provided", () => {
-            // source: "line1\nline2\nline3\nline4"
-            // offsets: line0 starts at 0, line1 at 6, line2 at 12, line3 at 18
-            const source = "line1\nline2\nline3\nline4";
-            const filterFn = (file: string): boolean => file.endsWith(".js");
-            const coverages = [
-                {
-                    scriptId: "1",
-                    url: "http://example.com/bundle.js",
-                    functions: [
-                        {
-                            functionName: "fn1",
-                            ranges: [{ startOffset: 0, endOffset: 5, count: 1 }],
-                            isBlockCoverage: false,
-                        },
-                        {
-                            functionName: "fn2",
-                            ranges: [{ startOffset: 6, endOffset: 11, count: 1 }],
-                            isBlockCoverage: false,
-                        },
-                    ],
-                },
-            ];
+            const filterFn = (file: string): boolean => file === "a.js";
 
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .onCall(0)
-                .returns({ source: "src/app.js", line: 1, column: 0 })
-                .onCall(1)
-                .returns({ source: "webpack/startup", line: 2, column: 0 });
-
-            consumerMock.generatedPositionFor
-                .onCall(0)
-                .returns({ line: 1 }) // >= startLine + 1 (1 >= 1) -> pass
-                .onCall(1)
-                .returns({ line: 2 }); // >= startLine + 1 (2 >= 2) -> pass
-
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root", filterFn);
+            const result = utils.extractSourceFilesDeps(
+                parsedMaps,
+                mkCoverages([{ startOffset: 50, endOffset: 250 }]),
+                filterFn,
+            );
 
             assert.equal(result.size, 1);
-            assert.isTrue(result.has("src/app.js"));
+            assert.isTrue(result.has("a.js"));
+        });
+    });
+
+    describe("parseSourceMapRanges", () => {
+        let getCachedSelectivityFileStub: SinonStub;
+        let setCachedSelectivityFileStub: SinonStub;
+        let utilsReal: typeof import("src/browser/cdp/selectivity/utils");
+
+        // Builds a source map JSON string with already-decoded mappings (TraceMap accepts both
+        // encoded VLQ strings and decoded segment arrays), so we avoid hand-writing VLQ.
+        const mkSourceMaps = (sources: string[], mappings: number[][][]): string =>
+            JSON.stringify({
+                version: 3,
+                file: "bundle.js",
+                names: [],
+                sourceRoot: "",
+                sources,
+                mappings,
+            });
+
+        beforeEach(() => {
+            getCachedSelectivityFileStub = sandbox.stub().resolves(null);
+            setCachedSelectivityFileStub = sandbox.stub().resolves(undefined);
+
+            // Use the real "@jridgewell/trace-mapping" here (no override) so eachMapping actually walks segments
+            utilsReal = proxyquire("src/browser/cdp/selectivity/utils", {
+                fs: fsStub,
+                path: pathStub,
+                "../../../utils/fs": {
+                    softFileURLToPath: softFileURLToPathStub,
+                },
+                "./fs-cache": {
+                    CacheType: { SourceMapParseResult: "source-map-parse-result" },
+                    getCachedSelectivityFile: getCachedSelectivityFileStub,
+                    setCachedSelectivityFile: setCachedSelectivityFileStub,
+                },
+            });
         });
 
-        it("should process multiple ranges within a function and break on first match", () => {
-            const source = "line1\nline2\nline3";
-            const coverages = mkCoverages([
-                { startOffset: 0, endOffset: 5 },
-                { startOffset: 6, endOffset: 11 },
-            ]);
+        it("should return the cached result without parsing when present", async () => {
+            const cached = { offset: [1, 2], filename: ["x.js", "y.js"] };
+            getCachedSelectivityFileStub.resolves(JSON.stringify(cached));
 
-            // First range: GREATEST_LOWER_BOUND returns no source
-            // First range: LEAST_UPPER_BOUND returns no source
-            // Second range: GREATEST_LOWER_BOUND returns a source with valid bounds
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: GREATEST_LOWER_BOUND }))
-                .onCall(0)
-                .returns({ source: null })
-                .onCall(1)
-                .returns({ source: "src/app.js", line: 2, column: 0 });
+            const result = await utilsReal.parseSourceMapRanges("ignored source", "not even valid json", "");
 
-            consumerMock.originalPositionFor
-                .withArgs(sinon.match({ bias: LEAST_UPPER_BOUND }))
-                .onCall(0)
-                .returns({ source: null });
+            assert.deepEqual(result, cached);
+            assert.notCalled(setCachedSelectivityFileStub);
+        });
 
-            consumerMock.generatedPositionFor.returns({ line: 2 }); // >= startLine + 1 (2) -> pass
+        it("should build sorted segment boundaries, coalescing consecutive same-source mappings", async () => {
+            const source = "AAA\nBBB\nCCC\nDDD";
+            const sourceMaps = mkSourceMaps(
+                ["a.js", "b.js"],
+                [
+                    [[0, 0, 0, 0]], // genLine 1 -> a.js
+                    [[0, 0, 1, 0]], // genLine 2 -> a.js (coalesced, no new boundary)
+                    [[0, 1, 0, 0]], // genLine 3 -> b.js
+                    [[0, 1, 1, 0]], // genLine 4 -> b.js (coalesced)
+                ],
+            );
 
-            const result = utils.extractSourceFilesDeps(source, sourceMaps, coverages, "/root");
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "");
 
-            assert.equal(result.size, 1);
-            assert.isTrue(result.has("src/app.js"));
+            assert.deepEqual(result, { offset: [0, 8], filename: ["a.js", "b.js"] });
+            assert.calledWith(setCachedSelectivityFileStub, "source-map-parse-result", sourceMaps, sinon.match.string);
+        });
+
+        it("should record glue boundaries for generated-only mappings (no source)", async () => {
+            const source = "AAA\nBBB\nCCC";
+            const sourceMaps = mkSourceMaps(
+                ["a.js", "b.js"],
+                [
+                    [[0, 0, 0, 0]], // genLine 1 -> a.js
+                    [[0]], // genLine 2 -> generated only -> glue ("")
+                    [[0, 1, 0, 0]], // genLine 3 -> b.js
+                ],
+            );
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "");
+
+            assert.deepEqual(result, { offset: [0, 4, 8], filename: ["a.js", "", "b.js"] });
+        });
+
+        it("should skip mappings whose generated line is out of the source's range", async () => {
+            // source has a single line, but the map references a second generated line
+            const source = "AAA";
+            const sourceMaps = mkSourceMaps(
+                ["a.js", "b.js"],
+                [
+                    [[0, 0, 0, 0]], // genLine 1 -> a.js
+                    [[0, 1, 0, 0]], // genLine 2 -> out of range -> skipped
+                ],
+            );
+
+            const result = await utilsReal.parseSourceMapRanges(source, sourceMaps, "");
+
+            assert.deepEqual(result, { offset: [0], filename: ["a.js"] });
         });
     });
 
@@ -882,8 +853,12 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map-js": {
-                    SourceMapConsumer: SourceMapConsumerStub,
+                "@jridgewell/trace-mapping": {
+                    TraceMap: traceMapStub,
+                    originalPositionFor: originalPositionForStub,
+                    generatedPositionFor: generatedPositionForStub,
+                    GREATEST_LOWER_BOUND,
+                    LEAST_UPPER_BOUND,
                 },
                 "../../../utils/fs": {
                     softFileURLToPath: softFileURLToPathStub,
@@ -963,8 +938,12 @@ describe("CDP/Selectivity/Utils", () => {
             utils = proxyquire("src/browser/cdp/selectivity/utils", {
                 fs: fsStub,
                 path: { ...pathStub, join: pathJoinStub },
-                "source-map-js": {
-                    SourceMapConsumer: SourceMapConsumerStub,
+                "@jridgewell/trace-mapping": {
+                    TraceMap: traceMapStub,
+                    originalPositionFor: originalPositionForStub,
+                    generatedPositionFor: generatedPositionForStub,
+                    GREATEST_LOWER_BOUND,
+                    LEAST_UPPER_BOUND,
                 },
                 "../../../utils/fs": {
                     softFileURLToPath: softFileURLToPathStub,
