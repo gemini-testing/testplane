@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.47.3](https://github.com/gemini-testing/testplane/compare/v8.47.2...v8.47.3) (2026-06-26)
+
+
+### Bug Fixes
+
+* **selectivity:** dont rely on source maps originalPositionFor mappings ([009f8f6](https://github.com/gemini-testing/testplane/commit/009f8f69aa39c91957f15c82db75d29851161caa))
+
 ### 8.47.2 (2026-06-11)
 
 ### 8.47.1 (2026-06-09)
