@@ -15,6 +15,9 @@ const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { TestplaneInternalError } = require("../../../errors");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 
+const SNAPSHOTS_TIMEOUT_MS = 5000;
+const SNAPSHOTS_WARNING_TIMEOUT_MS = 2000;
+
 module.exports = class TestRunner {
     static create(...args) {
         return new this(...args);
@@ -235,13 +238,23 @@ module.exports = class TestRunner {
                 attempt: this._attempt,
             });
 
+            const snapshotsTimeout = new Promise((_, reject) =>
+                setTimeout(
+                    () =>
+                        reject(new Error(`Collecting Time Travel snapshots timed out after ${SNAPSHOTS_TIMEOUT_MS}ms`)),
+                    SNAPSHOTS_TIMEOUT_MS,
+                ),
+            );
+
             // If collecting time travel snapshots takes a lot of time, make it obvious by writing a message
             const collectingSnapshotsMessageTimeout = setTimeout(() => {
                 console.log("Collecting Time Travel snapshots takes longer than expected. Waiting...");
-            }, 2000);
+            }, SNAPSHOTS_WARNING_TIMEOUT_MS);
 
             try {
-                await this._browser.snapshotsPromiseRef.current;
+                await Promise.race([this._browser.snapshotsPromiseRef.current, snapshotsTimeout]);
+            } catch (e) {
+                console.error(e.message);
             } finally {
                 clearTimeout(collectingSnapshotsMessageTimeout);
                 await history.cleanupDomSnapshots({

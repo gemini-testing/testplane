@@ -1067,4 +1067,59 @@ describe("worker/runner/test-runner", () => {
             assert.strictEqual(browser.state.isLastTestFailed, false);
         });
     });
+
+    describe("snapshots collection timeout", () => {
+        let clock;
+        let TimeTravelTestRunner;
+
+        const run_ = async () => {
+            const browser = mkBrowser_();
+            browser.snapshotsPromiseRef = { current: new Promise(() => {}) };
+            BrowserAgent.prototype.getBrowser.resolves(browser);
+
+            const runner = TimeTravelTestRunner.create({
+                test: mkTest_(),
+                file: "/default/file/path",
+                config: makeConfigStub(),
+                browserAgent: Object.create(BrowserAgent.prototype),
+            });
+
+            await runner.prepareBrowser({ sessionId: "session-id", sessionCaps: {}, sessionOpts: {}, state: {} });
+            return runner.run();
+        };
+
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+
+            TimeTravelTestRunner = proxyquire("src/worker/runner/test-runner", {
+                "../../../browser/history": {
+                    runGroup: historyRunGroupStub,
+                    requestDomSnapshots: sandbox.stub(),
+                    cleanupDomSnapshots: sandbox.stub().resolves(),
+                },
+                "../../../browser/cdp/selectivity": {
+                    startSelectivity: sandbox.stub().resolves(() => Promise.resolve()),
+                },
+                "./capture-fail-screenshot": {
+                    captureFailScreenshot: captureFailScreenshotStub,
+                },
+            });
+        });
+
+        afterEach(() => {
+            clock.restore();
+        });
+
+        it("should log warning after 2 seconds if snapshots collection is slow and log error after 5 seconds timeout ", async () => {
+            sandbox.stub(console, "error");
+            sandbox.stub(console, "log");
+
+            const runPromise = run_();
+            await clock.tickAsync(5000);
+            await runPromise;
+
+            assert.calledWith(console.log, "Collecting Time Travel snapshots takes longer than expected. Waiting...");
+            assert.calledWith(console.error, "Collecting Time Travel snapshots timed out after 5000ms");
+        });
+    });
 });
