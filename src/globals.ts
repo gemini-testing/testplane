@@ -48,11 +48,14 @@ function afterEachFunc(this: unknown, ...args: Parameters<GlobalAfterEachType>):
     return typedGlobals.afterEach.apply(this, args);
 }
 
-const testplaneProxy = new Proxy(typedGlobals.testplane, {
-    get(_, prop: keyof GlobalTestplaneType): GlobalTestplaneType[keyof GlobalTestplaneType] {
-        return typedGlobals.testplane[prop];
+const testplaneProxy = new Proxy(
+    {},
+    {
+        get(_, prop: keyof GlobalTestplaneType): GlobalTestplaneType[keyof GlobalTestplaneType] {
+            return typedGlobals.testplane[prop];
+        },
     },
-});
+);
 
 export const it = itFunc as GlobalItType;
 export const describe = describeFunc as GlobalDescribeType;
