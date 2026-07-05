@@ -34,6 +34,7 @@ interface ViewportScreenShooterFullParams extends ViewportScreenShooterInputPara
 }
 
 interface ViewportCaptureOpts {
+    ignoreElements?: string | string[];
     screenshotDelay?: number;
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
@@ -82,12 +83,15 @@ export class ViewportScreenShooter {
     }
 
     private async _captureImpl(opts: ViewportCaptureOpts): Promise<ViewportCaptureResult> {
+        const selectorsToIgnore = ([] as string[]).concat(opts.ignoreElements ?? []);
+
         const prepareResult = await runWithoutHistory({}, () =>
             this._browserSideScreenshooter.call("prepareViewportScreenshot", [
                 {
                     usePixelRatio: this._browserProperties.shouldUsePixelRatio,
                     disableAnimation: opts.disableAnimation,
                     disableHover: opts.disableHover,
+                    ignoreSelectors: selectorsToIgnore,
                 },
             ]),
         );
@@ -96,6 +100,7 @@ export class ViewportScreenShooter {
             usePixelRatio: this._browserProperties.shouldUsePixelRatio,
             disableAnimation: opts.disableAnimation,
             disableHover: opts.disableHover,
+            ignoreSelectors: selectorsToIgnore,
         });
         debug("prepareViewportScreenshot result: %O", prepareResult);
 
@@ -125,6 +130,13 @@ export class ViewportScreenShooter {
             screenshotDelay: opts.screenshotDelay,
             cropMargins: opts.cropMargins,
         });
+
+        if (prepareResult.ignoreAreas.length > 0) {
+            for (const ignoreArea of prepareResult.ignoreAreas) {
+                await image.addClear(ignoreArea);
+            }
+            await image.applyJoin();
+        }
 
         return {
             image,

@@ -157,6 +157,14 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=test-card]", { ignoreElements: [".to-be-ignored"] });
     });
 
+    it("should work with ignoreAreas in viewport capture mode", async ({ browser }) => {
+        await browser.url("viewport-ignore-elements.html");
+
+        await browser.assertView("viewport-ignore-elements", {
+            ignoreElements: [".to-be-ignored"],
+        });
+    });
+
     it("should work with ignoreAreas with scrollable container", async ({ browser }) => {
         await browser.url("long-block-inside-scrollable-container-not-in-view-ignore-areas.html");
 
