@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.6 (2026-07-07)
+
+
+### Bug Fixes
+
+* add timeTravel timeout ([c78efcd](https://github.com/gemini-testing/testplane/commit/c78efcdbde057301ab14911db550df75c1c29d1b))
+
 ### 9.0.5 (2026-06-30)
 
 ### 9.0.4 (2026-06-30)
