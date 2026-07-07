@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.7 (2026-07-07)
+
+
+### Bug Fixes
+
+* add support for ignoreElements in viewport-mode assertView ([#1289](https://github.com/gemini-testing/testplane/issues/1289)) ([29c5221](https://github.com/gemini-testing/testplane/commit/29c5221421cf1b9b33e3a08bb6e848dd286b9dce))
+
 ### 9.0.6 (2026-07-07)
 
 
