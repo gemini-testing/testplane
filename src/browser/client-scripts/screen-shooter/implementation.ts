@@ -380,12 +380,13 @@ export function prepareViewportScreenshot(
         const viewportSize = computeViewportSize();
         const viewportOffset = computeViewportOffset();
         const documentSize = computeDocumentSize();
-        const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors);
         const canHaveCaret = computeCanHaveCaret();
 
         if (opts.disableAnimation) {
             disableAnimations();
         }
+
+        const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors);
 
         let pointerEventsDisabled = false;
         if (opts.disableHover === DisableHoverMode.Always) {

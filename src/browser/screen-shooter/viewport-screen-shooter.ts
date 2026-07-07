@@ -132,8 +132,17 @@ export class ViewportScreenShooter {
         });
 
         if (prepareResult.ignoreAreas.length > 0) {
+            const cropOffset = {
+                left: opts.cropMargins?.left ?? 0,
+                top: opts.cropMargins?.top ?? 0,
+            };
+
             for (const ignoreArea of prepareResult.ignoreAreas) {
-                await image.addClear(ignoreArea);
+                await image.addClear({
+                    ...ignoreArea,
+                    left: ignoreArea.left - cropOffset.left,
+                    top: ignoreArea.top - cropOffset.top,
+                });
             }
             await image.applyJoin();
         }
