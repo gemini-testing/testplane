@@ -106,6 +106,7 @@ export interface PrepareViewportScreenshotSuccess {
     viewportSize: Size<"device">;
     viewportOffset: Point<"page", "device">;
     documentSize: Size<"device">;
+    ignoreAreas: Rect<"viewport", "device">[];
     canHaveCaret: boolean;
     pixelRatio: number;
     pointerEventsDisabled?: boolean;

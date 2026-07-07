@@ -368,7 +368,12 @@ export function scrollFullPage(
 }
 
 export function prepareViewportScreenshot(
-    opts: { usePixelRatio?: boolean; disableAnimation?: boolean; disableHover?: DisableHoverMode } = {}
+    opts: {
+        usePixelRatio?: boolean;
+        disableAnimation?: boolean;
+        disableHover?: DisableHoverMode;
+        ignoreSelectors?: string[];
+    } = {}
 ): PrepareViewportScreenshotResult {
     return safeCall((): PrepareViewportScreenshotResult => {
         const pixelRatio = computePixelRatio(opts.usePixelRatio);
@@ -381,6 +386,8 @@ export function prepareViewportScreenshot(
             disableAnimations();
         }
 
+        const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors);
+
         let pointerEventsDisabled = false;
         if (opts.disableHover === DisableHoverMode.Always) {
             disablePointerEventsUnsafe();
@@ -391,6 +398,7 @@ export function prepareViewportScreenshot(
             viewportSize: fromCssToDevice(viewportSize, pixelRatio),
             viewportOffset: fromCssToDevice(floorCoords(viewportOffset), pixelRatio),
             documentSize: ceilCoords(fromCssToDevice(documentSize, pixelRatio)),
+            ignoreAreas: ignoreAreas.map(area => fromCssToDevice(roundCoords(area), pixelRatio)),
             canHaveCaret,
             pixelRatio,
             pointerEventsDisabled
