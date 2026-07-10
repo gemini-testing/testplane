@@ -19,11 +19,13 @@ describe("commands-history", () => {
                     },
                     field: "value",
                     array: [1, 2, 3, 4, { some: "data" }],
-                    longString: "abc".repeat(100),
+                    longString: "abc".repeat(200),
                 };
 
                 assert.deepEqual(normalizeCommandArgs("click", [largeObject]), [
-                    "{ some: [Object], field: 'value', array: [Array...",
+                    `{ some: [Object], field: 'value', array: [Array], longString: '${"abc"
+                        .repeat(145)
+                        .slice(0, -1)}...`,
                 ]);
             });
 
@@ -32,11 +34,9 @@ describe("commands-history", () => {
             });
 
             it("should truncate string", () => {
-                const arg = "more then 50 characters string string string string";
+                const arg = "abc".repeat(200);
 
-                assert.deepEqual(normalizeCommandArgs("click", [arg]), [
-                    "more then 50 characters string string string st...",
-                ]);
+                assert.deepEqual(normalizeCommandArgs("click", [arg]), ["abc".repeat(166).slice(0, -1) + "..."]);
             });
 
             it("should convert argument to string if it is not string or object", () => {
