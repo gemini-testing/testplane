@@ -144,8 +144,20 @@ export const clearUnusedSelectivityDumps = async (config: Config, isRunFailed: b
     }
 };
 
+// Pauses the renderer at page boundaries so JS coverage can be resolved/reset while "scriptId"s are still valid:
+//  - "page start": first thing on every new document, and on bfcache restore ("pageshow" with persisted=true),
+//    BEFORE the incoming page's scripts run — the point where the previous page is done and the next hasn't started;
+//  - "beforeunload": while the leaving page is still alive (needed to capture it before a cross-process isolate swap).
+const testplaneCoveragePageStartScriptName = "__testplane_cdp_coverage_page_start";
 const testplaneCoverageBreakScriptName = "__testplane_cdp_coverage_snapshot_pause";
-const scriptToEvaluateOnNewDocument = `window.addEventListener("beforeunload", function ${testplaneCoverageBreakScriptName}() {debugger;});`;
+const scriptToEvaluateOnNewDocument = [
+    "if (window.top === window) {",
+    `    function ${testplaneCoveragePageStartScriptName}() { debugger; }`,
+    `    ${testplaneCoveragePageStartScriptName}();`,
+    `    window.addEventListener("pageshow", function (e) { if (e.persisted) { ${testplaneCoveragePageStartScriptName}(); } });`,
+    `    window.addEventListener("beforeunload", function ${testplaneCoverageBreakScriptName}() { debugger; });`,
+    "}",
+].join("\n");
 
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
     const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath, mapSourceMapUrl } =
@@ -207,26 +219,43 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
 
     let pageSwitchPromise: Promise<void> = Promise.resolve();
     let isSelectivityStopped = false;
+    // A failure to process coverage means the test's dependencies would be incomplete. Missing a dependency is worse
+    // than failing the test (an incomplete dump silently under-runs later), so we remember the error and rethrow it
+    // from stopSelectivity — but still resume the renderer so the browser is never left paused.
+    let pageSwitchError: Error | null = null;
+
+    const resume = (): void => {
+        cdp.debugger.resume(cdpSessionId).catch(() => {});
+    };
 
     const debuggerPausedFn = ({ callFrames }: DebuggerEvents["paused"], eventCdpSessionId?: CDPSessionId): void => {
         if (eventCdpSessionId !== cdpSessionId) {
             return;
         }
 
-        if (callFrames[0]?.functionName !== testplaneCoverageBreakScriptName || isSelectivityStopped) {
-            cdp.debugger.resume(cdpSessionId).catch(() => {});
+        const functionName = callFrames[0]?.functionName;
+        const isBeforeUnloadPause = functionName === testplaneCoverageBreakScriptName;
+        const isPageStartPause = functionName === testplaneCoveragePageStartScriptName;
+
+        if (isSelectivityStopped || (!isBeforeUnloadPause && !isPageStartPause)) {
+            resume();
             return;
         }
 
-        pageSwitchPromise = pageSwitchPromise.finally(() =>
-            Promise.all([cssSelectivity.takeCoverageSnapshot(), jsSelectivity.takeCoverageSnapshot()])
+        pageSwitchPromise = pageSwitchPromise.finally(() => {
+            // "beforeunload": leaving page still alive — snapshot+resolve it (captures it before a cross-process swap).
+            // "page start" / bfcache restore: previous page done, next not started — resolve its tail, then reset
+            // coverage and clear the script maps so the next page starts with a clean window and id namespace.
+            const action = isBeforeUnloadPause
+                ? Promise.all([cssSelectivity.takeCoverageSnapshot(), jsSelectivity.takeCoverageSnapshot()])
+                : jsSelectivity.flushPage();
+
+            return Promise.resolve(action)
                 .catch(err => {
-                    console.error("Selectivity: couldn't take snapshot while navigating:", err);
+                    pageSwitchError ||= err instanceof Error ? err : new Error(String(err));
                 })
-                .then(() => {
-                    cdp.debugger.resume(cdpSessionId).catch(() => {});
-                }),
-        );
+                .then(resume);
+        });
     };
 
     cdp.debugger.on("paused", debuggerPausedFn);
@@ -246,6 +275,10 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
 
         cdp.debugger.off("paused", debuggerPausedFn);
         cdp.target.detachFromTarget(cdpSessionId).catch(() => {});
+
+        if (!drop && pageSwitchError) {
+            throw pageSwitchError;
+        }
 
         if (jsDependenciesPromise.status === "rejected") {
             throw jsDependenciesPromise.reason;
