@@ -1,17 +1,25 @@
 import * as xpath from "./xpath";
 
-export function queryFirst(selector: string): Element | null {
-    if (xpath.isXpathSelector(selector)) {
-        return xpath.queryFirst(selector);
+export type ElementTarget = string | Element;
+
+export function queryFirst(target: ElementTarget): Element | null {
+    if (typeof target !== "string") {
+        return target;
     }
-    return document.querySelector(selector);
+    if (xpath.isXpathSelector(target)) {
+        return xpath.queryFirst(target);
+    }
+    return document.querySelector(target);
 }
 
-export function queryAll(selector: string): Element[] {
-    if (xpath.isXpathSelector(selector)) {
-        return xpath.queryAll(selector);
+export function queryAll(target: ElementTarget): Element[] {
+    if (typeof target !== "string") {
+        return [target];
     }
-    return Array.from(document.querySelectorAll(selector));
+    if (xpath.isXpathSelector(target)) {
+        return xpath.queryAll(target);
+    }
+    return Array.from(document.querySelectorAll(target));
 }
 
 export function getComputedStyle(element: Element, pseudoElement: string): CSSStyleDeclaration {

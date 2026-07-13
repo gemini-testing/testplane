@@ -1,4 +1,7 @@
-import { computeCaptureSpecs } from "../../../../../src/browser/client-scripts/screen-shooter/operations";
+import {
+    computeCaptureSpecs,
+    computeIgnoreAreas,
+} from "../../../../../src/browser/client-scripts/screen-shooter/operations";
 import { createDebugLogger } from "../../../../../src/browser/client-scripts/shared/logger";
 import { visualizeCaptureSpecs } from "../../utils";
 
@@ -9,8 +12,8 @@ describe("computeCaptureSpecs", () => {
     });
 
     describe("error cases", () => {
-        it("should throw when selectors array is empty", () => {
-            expect(() => computeCaptureSpecs([])).toThrow("No selectors to compute capture area");
+        it("should throw when targets array is empty", () => {
+            expect(() => computeCaptureSpecs([])).toThrow("No targets to compute capture area");
         });
 
         it("should throw on invalid CSS selector", () => {
@@ -39,6 +42,23 @@ describe("computeCaptureSpecs", () => {
     });
 
     describe("single element", () => {
+        it("should compute the same rect for selector, XPath and element targets", async () => {
+            const { default: html } = await import("./fixtures/capture-areas/single-element.html?raw");
+            document.body.innerHTML = html;
+            const element = document.querySelector(".target")!;
+
+            expect(computeCaptureSpecs([element])).toEqual(computeCaptureSpecs(["//div[contains(@class, 'target')]"]));
+            expect(computeCaptureSpecs([element])).toEqual(computeCaptureSpecs([".target"]));
+        });
+
+        it("should compute ignore areas from an element target", async () => {
+            const { default: html } = await import("./fixtures/capture-areas/single-element.html?raw");
+            document.body.innerHTML = html;
+            const element = document.querySelector(".target")!;
+
+            expect(computeIgnoreAreas([element])).toEqual(computeIgnoreAreas([".target"]));
+        });
+
         it("should return rect for a single visible element", async ({ browser }) => {
             const { default: html } = await import("./fixtures/capture-areas/single-element.html?raw");
             document.body.innerHTML = html;

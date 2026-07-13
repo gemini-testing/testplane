@@ -1,4 +1,5 @@
 import { BrowserSideError, Coord, DisableHoverMode, Point, Rect, Size, Space, Unit, YBand } from "@isomorphic";
+import type { ElementTarget } from "@lib";
 
 export interface CaptureSpec<S extends Space, U extends Unit> {
     /** Full element rect, unconstrained by ancestor overflow clipping */
@@ -38,10 +39,10 @@ export interface ScreenshooterNamespaceData {
 }
 
 export interface PrepareScreenshotOptions {
-    ignoreSelectors?: string[];
+    ignoreSelectors?: ElementTarget[];
     allowViewportOverflow?: boolean;
     captureElementFromTop?: boolean;
-    selectorToScroll?: string;
+    selectorToScroll?: ElementTarget;
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
     compositeImage?: boolean;
