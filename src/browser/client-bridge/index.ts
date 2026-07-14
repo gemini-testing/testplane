@@ -9,6 +9,12 @@ const debug = makeDebug("testplane:client-bridge");
 
 const bundlesCache: Record<string, string> = {};
 
+export type ClientBridgeArgument<T> = T extends Element
+    ? WebdriverIO.Element
+    : T extends object
+    ? { [K in keyof T]: ClientBridgeArgument<T[K]> }
+    : T;
+
 interface Browser {
     execute: <R>(command: string, ...args: unknown[]) => Promise<R>;
 }
@@ -59,17 +65,17 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
         this._namespace = namespace;
     }
 
-    async call<K extends keyof T>(name: K, args: Parameters<T[K]>): Promise<ReturnType<T[K]>> {
-        return this._callCommand<T>(this._clientMethodCommand(name, args), true) as ReturnType<T[K]>;
+    async call<K extends keyof T>(name: K, args: ClientBridgeArgument<Parameters<T[K]>>): Promise<ReturnType<T[K]>> {
+        return this._callCommand<ReturnType<T[K]>>(this._clientMethodCommand(name), args, true);
     }
 
-    private async _callCommand<T>(command: string, shouldInjectScriptBeforeCall: boolean): Promise<T> {
+    private async _callCommand<T>(command: string, args: unknown[], shouldInjectScriptBeforeCall: boolean): Promise<T> {
         try {
             if (debug.enabled) {
                 debug(` > calling command ${command}`);
             }
 
-            const result = await this._browser.execute<{ isClientScriptNotInjected?: boolean }>(command);
+            const result = await this._browser.execute<{ isClientScriptNotInjected?: boolean }>(command, ...args);
 
             if (debug.enabled) {
                 debug(` < result for command ${command.slice(0, 256)}: ${inspect(result, { depth: null })}`);
@@ -81,7 +87,7 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
 
             if (shouldInjectScriptBeforeCall) {
                 await this._inject();
-                return this._callCommand<T>(command, false);
+                return this._callCommand<T>(command, args, false);
             }
 
             throw new ClientBridgeError("Unable to inject client script");
@@ -93,9 +99,9 @@ export class ClientBridge<T extends Record<string, (...args: any[]) => any>> {
         }
     }
 
-    private _clientMethodCommand<K extends keyof T>(name: K, args: Parameters<T[K]>): string {
-        const params = args.map(arg => (arg !== undefined ? JSON.stringify(arg) : "undefined")).join(", ");
-        const call = `__geminiCore['${this._namespace}'].${String(name)}(${params})`;
+    private _clientMethodCommand<K extends keyof T>(name: K): string {
+        const namespace = `__geminiCore['${this._namespace}']`;
+        const call = `${namespace}.${String(name)}.apply(${namespace}, arguments)`;
         return this._guardClientCall(call);
     }
 

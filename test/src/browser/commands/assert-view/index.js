@@ -147,6 +147,7 @@ describe("assertView command", () => {
         await element.assertView("plain");
 
         assert.calledOnce(element.waitForExist);
+        assert.calledOnceWith(ElementsScreenShooter.prototype.capture, element);
     });
 
     it("should fail on duplicate name of the state on mixed scopes", async () => {
@@ -244,7 +245,8 @@ describe("assertView command", () => {
 
                     await fn(browser, "plain", ".selector");
 
-                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, ".selector");
+                    const expectedTarget = scope === "browser" ? ".selector" : await browser.publicAPI.$(".selector");
+                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, expectedTarget);
                 });
 
                 describe("should pass ignore elements to ScreenShooter", () => {
@@ -408,7 +410,8 @@ describe("assertView command", () => {
 
                     await fn(browser);
 
-                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, ".selector", sinon.match.object);
+                    const expectedTarget = scope === "browser" ? ".selector" : await browser.publicAPI.$(".selector");
+                    assert.calledOnceWith(ElementsScreenShooter.prototype.capture, expectedTarget, sinon.match.object);
                 });
 
                 it("should save a captured screenshot", async () => {
