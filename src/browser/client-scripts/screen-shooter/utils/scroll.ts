@@ -1,19 +1,25 @@
 import { Coord } from "../../../isomorphic/geometry";
+import * as lib from "@lib";
+import type { ElementTarget } from "@lib";
 import { getParentElement } from "./dom";
 import { isSafariMobile } from "./user-agent";
 
 const PSEUDO_SELECTOR_REGEXP = /(.*?)(::before|::after)\s*$/i;
 
-function getElementSelector(selector: string): string {
-    const match = selector.match(PSEUDO_SELECTOR_REGEXP);
+function getElementTarget(target: ElementTarget): ElementTarget {
+    if (typeof target !== "string") {
+        return target;
+    }
+
+    const match = target.match(PSEUDO_SELECTOR_REGEXP);
 
     if (!match) {
-        return selector;
+        return target;
     }
 
     const elementSelector = match[1].trim();
 
-    return elementSelector || selector;
+    return elementSelector || target;
 }
 
 function isScrollable(element: Element): boolean {
@@ -53,9 +59,9 @@ export function getScrollParentsChain(element: Element): Element[] {
     return chain;
 }
 
-export function getCommonScrollParent(selectors: string[]): Element {
-    const elements = selectors
-        .map(s => document.querySelector(getElementSelector(s)))
+export function getCommonScrollParent(targets: ElementTarget[]): Element {
+    const elements = targets
+        .map(target => lib.queryFirst(getElementTarget(target)))
         .filter((e): e is NonNullable<typeof e> => e !== null);
     if (elements.length === 0) return document.documentElement;
     if (elements.length === 1) {

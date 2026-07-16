@@ -2,19 +2,27 @@
 import Sizzle from "sizzle";
 import * as xpath from "./xpath";
 
-export function queryFirst(selector: string): Element | null {
-    if (xpath.isXpathSelector(selector)) {
-        return xpath.queryFirst(selector);
+export type ElementTarget = string | Element;
+
+export function queryFirst(target: ElementTarget): Element | null {
+    if (typeof target !== "string") {
+        return target;
     }
-    const elems = Sizzle(trim(selector) + ":first");
+    if (xpath.isXpathSelector(target)) {
+        return xpath.queryFirst(target);
+    }
+    const elems = Sizzle(trim(target) + ":first");
     return elems.length > 0 ? elems[0] : null;
 }
 
-export function queryAll(selector: string): Element[] {
-    if (xpath.isXpathSelector(selector)) {
-        return xpath.queryAll(selector);
+export function queryAll(target: ElementTarget): Element[] {
+    if (typeof target !== "string") {
+        return [target];
     }
-    return Sizzle(selector);
+    if (xpath.isXpathSelector(target)) {
+        return xpath.queryAll(target);
+    }
+    return Sizzle(target);
 }
 
 export function trim(str: string): string {

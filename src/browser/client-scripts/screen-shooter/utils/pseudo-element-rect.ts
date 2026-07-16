@@ -1,4 +1,5 @@
 import { Rect, Coord, Length } from "@isomorphic";
+import type { ElementTarget } from "@lib";
 
 interface TransformMatrix {
     a: number;
@@ -15,26 +16,30 @@ export const PSEUDO_ELEMENTS: PseudoElementSelector[] = ["::before", "::after"];
 
 const PSEUDO_SELECTOR_REGEXP = /(.*?)(::before|::after)\s*$/i;
 
-interface ParsedCaptureSelector {
-    elementSelector: string;
+interface ParsedCaptureTarget {
+    elementTarget: ElementTarget;
     pseudoElement: PseudoElementSelector | null;
 }
 
-export function parseCaptureSelector(selector: string): ParsedCaptureSelector {
-    const match = selector.match(PSEUDO_SELECTOR_REGEXP);
+export function parseCaptureTarget(target: ElementTarget): ParsedCaptureTarget {
+    if (typeof target !== "string") {
+        return { elementTarget: target, pseudoElement: null };
+    }
+
+    const match = target.match(PSEUDO_SELECTOR_REGEXP);
 
     if (!match) {
-        return { elementSelector: selector, pseudoElement: null };
+        return { elementTarget: target, pseudoElement: null };
     }
 
     const elementSelector = match[1].trim();
 
     if (!elementSelector) {
-        return { elementSelector: selector, pseudoElement: null };
+        return { elementTarget: target, pseudoElement: null };
     }
 
     return {
-        elementSelector,
+        elementTarget: elementSelector,
         pseudoElement: match[2].toLowerCase() as PseudoElementSelector
     };
 }

@@ -17,10 +17,10 @@ import { Coord, Length, getBottom } from "../isomorphic/geometry";
 import { WdioBrowser } from "../../types";
 import { Camera } from "../camera";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
-import { ClientBridge } from "../client-bridge";
+import { ClientBridge, type ClientBridgeArgument } from "../client-bridge";
 import type {
     CaptureState,
-    PrepareScreenshotOptions,
+    PrepareScreenshotOptions as BrowserPrepareScreenshotOptions,
     PrepareScreenshotSuccess,
 } from "../client-scripts/screen-shooter/types";
 import { isBrowserSideError } from "../isomorphic/types";
@@ -41,6 +41,9 @@ const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
 }
+
+type PrepareScreenshotOptions = ClientBridgeArgument<BrowserPrepareScreenshotOptions>;
+type ElementTarget = ClientBridgeArgument<string | Element>;
 
 interface CaptureImageResult {
     image: Image;
@@ -174,14 +177,18 @@ function getSafeAreaRollbackDistance(
     return Math.max(0, currentSafeAreaTop - previousCoveredBottom) as Length<"device", "y">;
 }
 
-function getEmptyCaptureSpecsErrorMessage(selectorsToCapture: string[]): string {
+function getTargetDescriptions(targets: ElementTarget[]): string[] {
+    return targets.map(target => (typeof target === "string" ? target : `element (${target.elementId})`));
+}
+
+function getEmptyCaptureSpecsErrorMessage(targetsToCapture: ElementTarget[]): string {
     return (
-        `Failed to capture element screenshot for selectors: ${selectorsToCapture.join("; ")}.\n` +
+        `Failed to capture element screenshot for targets: ${getTargetDescriptions(targetsToCapture).join("; ")}.\n` +
         `Could not determine coordinates of the matched elements.\n` +
         `Most likely the matched element became hidden, zero-sized, detached, moved offscreen, ` +
         `or was clipped after scrolling/waiting for layout to settle.\n` +
         `If you are capturing element sensitive to scrolling, like a tooltip, it could be hidden due to auto-scrolling on our side.\n` +
-        `Make sure the selector stays visible during the screenshot or disable scrolling via compositeImage/captureElementFromTop options.`
+        `Make sure the target stays visible during the screenshot or disable scrolling via compositeImage/captureElementFromTop options.`
     );
 }
 
@@ -208,22 +215,26 @@ export class ElementsScreenShooter {
         this._browserSideScreenshooter = browserSideScreenshooter;
     }
 
-    async capture(selectorOrSelectors: string | string[], opts: ScreenShooterOpts = {}): Promise<CaptureImageResult> {
+    async capture(
+        targetOrTargets: ElementTarget | ElementTarget[],
+        opts: ScreenShooterOpts = {},
+    ): Promise<CaptureImageResult> {
         const globalStartedAt = performance.now();
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
 
-        const selectorsToCapture = ([] as string[]).concat(selectorOrSelectors);
-        const selectorsToIgnore = ([] as string[]).concat(opts.ignoreElements ?? []);
+        const targetsToCapture = Array.isArray(targetOrTargets) ? targetOrTargets : [targetOrTargets];
+        const targetsToIgnore = ([] as ElementTarget[]).concat(opts.ignoreElements ?? []);
+        const targetDescriptions = getTargetDescriptions(targetsToCapture);
 
-        if (selectorsToCapture.length === 0) {
-            throw new Error("No selectors to capture passed to ElementsScreenShooter.capture");
+        if (targetsToCapture.length === 0) {
+            throw new Error("No targets to capture passed to ElementsScreenShooter.capture");
         }
 
         try {
             perfDebug("capture: begin");
 
-            const page = await this._prepareScreenshot(selectorsToCapture, {
-                ignoreSelectors: selectorsToIgnore,
+            const page = await this._prepareScreenshot(targetsToCapture, {
+                ignoreSelectors: targetsToIgnore,
                 allowViewportOverflow: opts.allowViewportOverflow,
                 captureElementFromTop: opts.captureElementFromTop,
                 selectorToScroll: opts.selectorToScroll,
@@ -233,7 +244,7 @@ export class ElementsScreenShooter {
             });
 
             assertCorrectCaptureAreaBounds(
-                JSON.stringify(selectorsToCapture),
+                JSON.stringify(targetDescriptions),
                 page.viewportSize,
                 page.viewportOffset,
                 page.captureSpecs.map(s => s.full),
@@ -247,23 +258,17 @@ export class ElementsScreenShooter {
 
             let compositeImage: CompositeImage;
             try {
-                compositeImage = await this._performCaptureAttempt(
-                    selectorsToCapture,
-                    selectorsToIgnore,
-                    page,
-                    opts,
-                    true,
-                );
+                compositeImage = await this._performCaptureAttempt(targetsToCapture, targetsToIgnore, page, opts, true);
             } catch (error) {
                 if (!(error instanceof CaptureAreaSizeChangeError)) {
                     throw error;
                 }
 
                 perfDebug("capture: retrying in best-effort mode");
-                await this._preloadCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts);
+                await this._preloadCaptureArea(targetsToCapture, targetsToIgnore, page, opts);
                 compositeImage = await this._performCaptureAttempt(
-                    selectorsToCapture,
-                    selectorsToIgnore,
+                    targetsToCapture,
+                    targetsToIgnore,
                     page,
                     opts,
                     false,
@@ -284,16 +289,15 @@ export class ElementsScreenShooter {
             } catch (cleanupError) {
                 const cleanupMessage = cleanupError instanceof Error ? cleanupError.message : String(cleanupError);
                 console.warn(
-                    `Warning: failed to cleanup after screenshot for selectors: ${JSON.stringify(
-                        selectorsToCapture,
-                    )}\n` + `Cleanup error: ${cleanupMessage}`,
+                    `Warning: failed to cleanup after screenshot for targets: ${JSON.stringify(targetDescriptions)}\n` +
+                        `Cleanup error: ${cleanupMessage}`,
                 );
             }
         }
     }
 
     private async _prepareScreenshot(
-        selectorsToCapture: string[],
+        targetsToCapture: ElementTarget[],
         opts: PrepareScreenshotOptions = {},
     ): Promise<PrepareScreenshotSuccess> {
         return runWithoutHistory({}, async () => {
@@ -312,7 +316,7 @@ export class ElementsScreenShooter {
             };
 
             const result = await this._browserSideScreenshooter.call("prepareElementsScreenshot", [
-                selectorsToCapture,
+                targetsToCapture,
                 extendedOpts,
             ]);
 
@@ -324,13 +328,13 @@ export class ElementsScreenShooter {
                 throw new Error(
                     `Failed to perform the visual check, because we couldn't compute screenshot area to capture.\n\n` +
                         `What happened:\n` +
-                        `- You called assertView command with the following selectors: ${JSON.stringify(
-                            selectorsToCapture,
+                        `- You called assertView command with the following elements: ${JSON.stringify(
+                            getTargetDescriptions(targetsToCapture),
                         )}\n` +
                         `- You passed the following options: ${JSON.stringify(extendedOpts)}\n` +
                         `- We tried to determine positions of these elements, but failed with the '${result.errorCode}' error: ${result.message}\n\n` +
                         `What you can do:\n` +
-                        `- Check that passed selectors are valid and exist on the page\n` +
+                        `- Check that elements are valid and exist on the page\n` +
                         `- If you believe this is a bug on our side, re-run this test with DEBUG=testplane:screenshots* and file an issue with this log at ${NEW_ISSUE_LINK}\n`,
                 );
             }
@@ -363,8 +367,8 @@ export class ElementsScreenShooter {
 
     /** Scrolls through the entire capture area to trigger lazy loading, then restores scroll and records anchor baselines. */
     private async _preloadCaptureArea(
-        selectorsToCapture: string[],
-        selectorsToIgnore: string[],
+        targetsToCapture: ElementTarget[],
+        targetsToIgnore: ElementTarget[],
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
     ): Promise<void> {
@@ -372,23 +376,23 @@ export class ElementsScreenShooter {
 
         perfDebug("preload capture area: begin");
         try {
-            await this._scrollThroughCaptureArea(selectorsToCapture, selectorsToIgnore, page, opts, async () => {});
+            await this._scrollThroughCaptureArea(targetsToCapture, targetsToIgnore, page, opts, async () => {});
 
             await this._browserSideScreenshooter.call("scrollTo", [
-                selectorsToCapture,
+                targetsToCapture,
                 page.scrollOffset,
                 opts.selectorToScroll ?? null,
             ]);
 
-            await this._browserSideScreenshooter.call("captureAnchorBaseline", [selectorsToCapture]);
+            await this._browserSideScreenshooter.call("captureAnchorBaseline", [targetsToCapture]);
         } finally {
             perfDebug("preload capture area: end");
         }
     }
 
     private async _scrollThroughCaptureArea(
-        selectorsToCapture: string[],
-        selectorsToIgnore: string[],
+        targetsToCapture: ElementTarget[],
+        targetsToIgnore: ElementTarget[],
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
         onNextScroll: (currentState: CaptureState) => Promise<void>,
@@ -417,7 +421,7 @@ export class ElementsScreenShooter {
                 debug(`========== Starting compositing iteration #${iterations} ==========`);
 
                 const waitForSettleStartTime = performance.now();
-                await waitForSelectorsToSettle(this._browser, selectorsToCapture, {
+                await waitForSelectorsToSettle(this._browser, targetsToCapture, {
                     needsCompatLib: this._browserProperties.needsCompatLib,
                 });
                 waitForSettleTime += performance.now() - waitForSettleStartTime;
@@ -431,8 +435,8 @@ export class ElementsScreenShooter {
                 }
 
                 const currentStateOrError = await this._browserSideScreenshooter.call("getCaptureState", [
-                    selectorsToCapture,
-                    selectorsToIgnore,
+                    targetsToCapture,
+                    targetsToIgnore,
                     opts.selectorToScroll,
                     enabledScrollDebugTopics,
                 ]);
@@ -445,9 +449,9 @@ export class ElementsScreenShooter {
 
                 if (isBrowserSideError(currentStateOrError)) {
                     throw new Error(
-                        `Failed to recompute areas while compositing image of selectors: ${selectorsToCapture.join(
-                            ", ",
-                        )}, error type '${currentStateOrError.errorCode}' and error message: ${
+                        `Failed to recompute areas while compositing image of elements: ${getTargetDescriptions(
+                            targetsToCapture,
+                        ).join(", ")}, error type '${currentStateOrError.errorCode}' and error message: ${
                             currentStateOrError.message
                         }`,
                     );
@@ -477,21 +481,21 @@ export class ElementsScreenShooter {
                     });
 
                     await this._browserSideScreenshooter.call("scrollBy", [
-                        selectorsToCapture,
+                        targetsToCapture,
                         -rollbackDistance as Coord<"page", "device", "y">,
                         opts.selectorToScroll,
                     ]);
                     const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
-                        selectorsToCapture,
-                        selectorsToIgnore,
+                        targetsToCapture,
+                        targetsToIgnore,
                         opts.selectorToScroll,
                     ]);
 
                     if (isBrowserSideError(afterRollbackState)) {
                         throw new Error(
-                            `Failed to rollback and recompute areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}, error type '${afterRollbackState.errorCode}' and error message: ${
+                            `Failed to rollback and recompute areas while compositing image of elements: ${getTargetDescriptions(
+                                targetsToCapture,
+                            ).join(", ")}, error type '${afterRollbackState.errorCode}' and error message: ${
                                 afterRollbackState.message
                             }`,
                         );
@@ -499,9 +503,9 @@ export class ElementsScreenShooter {
 
                     if (!afterRollbackState.safeArea || !afterRollbackState.ignoreAreas) {
                         throw new Error(
-                            `Failed to rollback and recompute full areas while compositing image of selectors: ${selectorsToCapture.join(
-                                ", ",
-                            )}`,
+                            `Failed to rollback and recompute full areas while compositing image of elements: ${getTargetDescriptions(
+                                targetsToCapture,
+                            ).join(", ")}`,
                         );
                     }
 
@@ -551,7 +555,7 @@ export class ElementsScreenShooter {
 
                 const scrollStartTime = performance.now();
                 const scrollResult = await this._browserSideScreenshooter.call("scrollBy", [
-                    selectorsToCapture,
+                    targetsToCapture,
                     scrollDelta,
                     opts.selectorToScroll,
                     enabledScrollDebugTopics,
@@ -565,9 +569,11 @@ export class ElementsScreenShooter {
 
                 if (isBrowserSideError(scrollResult)) {
                     throw new Error(
-                        `Failed to scroll once while compositing image of selectors: ${selectorsToCapture.join(
-                            ", ",
-                        )}, error type '${scrollResult.errorCode}' and error message: ${scrollResult.message}`,
+                        `Failed to scroll once while compositing image of elements: ${getTargetDescriptions(
+                            targetsToCapture,
+                        ).join(", ")}, error type '${scrollResult.errorCode}' and error message: ${
+                            scrollResult.message
+                        }`,
                     );
                 }
 
@@ -593,8 +599,8 @@ export class ElementsScreenShooter {
     }
 
     private async _performCaptureAttempt(
-        selectorsToCapture: string[],
-        selectorsToIgnore: string[],
+        targetsToCapture: ElementTarget[],
+        targetsToIgnore: ElementTarget[],
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
         shouldThrowOnCaptureAreaSizeChange: boolean,
@@ -624,97 +630,89 @@ export class ElementsScreenShooter {
 
         perfDebug(`capture attempt (${attemptMode}): begin`);
         try {
-            await this._scrollThroughCaptureArea(
-                selectorsToCapture,
-                selectorsToIgnore,
-                page,
-                opts,
-                async currentState => {
-                    if (currentState.captureSpecs.length === 0) {
-                        if (iterations > 0) {
-                            debug(
-                                "Capture area disappeared after %d chunk(s), rendering already captured data for selectors: %s",
-                                iterations,
-                                selectorsToCapture.join("; "),
-                            );
-
-                            return;
-                        }
-
-                        throw new Error(getEmptyCaptureSpecsErrorMessage(selectorsToCapture));
-                    }
-
-                    const hasCaptureAreaSizeChanged =
-                        lastState.captureSpecs.length !== currentState.captureSpecs.length ||
-                        lastState.captureSpecs.some(
-                            (spec, index) =>
-                                spec.full.width !== currentState.captureSpecs[index]?.full.width ||
-                                spec.full.height !== currentState.captureSpecs[index]?.full.height,
+            await this._scrollThroughCaptureArea(targetsToCapture, targetsToIgnore, page, opts, async currentState => {
+                if (currentState.captureSpecs.length === 0) {
+                    if (iterations > 0) {
+                        debug(
+                            "Capture area disappeared after %d chunk(s), rendering already captured data for targets: %s",
+                            iterations,
+                            getTargetDescriptions(targetsToCapture).join("; "),
                         );
 
-                    if (hasCaptureAreaSizeChanged && shouldThrowOnCaptureAreaSizeChange) {
-                        throw new CaptureAreaSizeChangeError();
+                        return;
                     }
 
-                    const {
-                        captureSpecs: newCaptureSpecs,
-                        ignoreAreas: newIgnoreAreas,
-                        safeArea: newSafeArea,
-                    } = currentState;
+                    throw new Error(getEmptyCaptureSpecsErrorMessage(targetsToCapture));
+                }
 
-                    const captureStartTime = performance.now();
-
-                    const viewportImage = await this._camera.captureViewportImage({
-                        viewportSize: page.viewportSize,
-                        viewportOffset: currentState.viewportOffset,
-                        screenshotDelay: opts.screenshotDelay,
-                        cropMargins: opts.cropMargins,
-                    });
-
-                    timeSpentOnCapture += performance.now() - captureStartTime;
-
-                    const expectedTotalMove = getExpectedTotalMoveFromBaseline(page.captureSpecs, newCaptureSpecs);
-                    const observedTotalMove = currentState.anchorShift;
-
-                    let correctionDelta = 0;
-                    if (!shouldThrowOnCaptureAreaSizeChange && observedTotalMove !== null) {
-                        correctionDelta = expectedTotalMove - observedTotalMove;
-                    }
-
-                    if (correctionDelta !== 0) {
-                        debug("correctionDelta: %d (raw)", correctionDelta);
-                    }
-
-                    const correctionDeltaForComposite = Math.round(correctionDelta);
-                    const correctionDeltaToApply = correctionDeltaForComposite === 0 ? 0 : -correctionDeltaForComposite;
-
-                    await image.registerViewportImageAtOffset(
-                        viewportImage,
-                        newSafeArea,
-                        newCaptureSpecs,
-                        newIgnoreAreas,
-                        correctionDeltaToApply,
+                const hasCaptureAreaSizeChanged =
+                    lastState.captureSpecs.length !== currentState.captureSpecs.length ||
+                    lastState.captureSpecs.some(
+                        (spec, index) =>
+                            spec.full.width !== currentState.captureSpecs[index]?.full.width ||
+                            spec.full.height !== currentState.captureSpecs[index]?.full.height,
                     );
 
-                    hasReachedScrollLimit = iterations > 0 && currentState.scrollOffset <= lastState.scrollOffset;
-                    const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
-                    hasCapturedTheWholeArea = movingCaptureSpecs.every(
-                        s => getBottom(s.full) <= getBottom(newSafeArea),
-                    );
-                    isOverflowingViewport = newCaptureSpecs.some(s => getBottom(s.full) > page.viewportSize.height);
+                if (hasCaptureAreaSizeChanged && shouldThrowOnCaptureAreaSizeChange) {
+                    throw new CaptureAreaSizeChangeError();
+                }
 
-                    if (currentState.scrollOffset !== page.scrollOffset) {
-                        shouldRestoreScrollPosition = true;
-                    }
+                const {
+                    captureSpecs: newCaptureSpecs,
+                    ignoreAreas: newIgnoreAreas,
+                    safeArea: newSafeArea,
+                } = currentState;
 
-                    debug("newCaptureSpecs: %O", newCaptureSpecs);
-                    debug("newSafeArea: %O", newSafeArea);
-                    debug("lastState.captureSpecs: %O", lastState.captureSpecs);
+                const captureStartTime = performance.now();
 
-                    lastState = currentState;
-                    iterations++;
-                },
-            );
+                const viewportImage = await this._camera.captureViewportImage({
+                    viewportSize: page.viewportSize,
+                    viewportOffset: currentState.viewportOffset,
+                    screenshotDelay: opts.screenshotDelay,
+                    cropMargins: opts.cropMargins,
+                });
+
+                timeSpentOnCapture += performance.now() - captureStartTime;
+
+                const expectedTotalMove = getExpectedTotalMoveFromBaseline(page.captureSpecs, newCaptureSpecs);
+                const observedTotalMove = currentState.anchorShift;
+
+                let correctionDelta = 0;
+                if (!shouldThrowOnCaptureAreaSizeChange && observedTotalMove !== null) {
+                    correctionDelta = expectedTotalMove - observedTotalMove;
+                }
+
+                if (correctionDelta !== 0) {
+                    debug("correctionDelta: %d (raw)", correctionDelta);
+                }
+
+                const correctionDeltaForComposite = Math.round(correctionDelta);
+                const correctionDeltaToApply = correctionDeltaForComposite === 0 ? 0 : -correctionDeltaForComposite;
+
+                await image.registerViewportImageAtOffset(
+                    viewportImage,
+                    newSafeArea,
+                    newCaptureSpecs,
+                    newIgnoreAreas,
+                    correctionDeltaToApply,
+                );
+
+                hasReachedScrollLimit = iterations > 0 && currentState.scrollOffset <= lastState.scrollOffset;
+                const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
+                hasCapturedTheWholeArea = movingCaptureSpecs.every(s => getBottom(s.full) <= getBottom(newSafeArea));
+                isOverflowingViewport = newCaptureSpecs.some(s => getBottom(s.full) > page.viewportSize.height);
+
+                if (currentState.scrollOffset !== page.scrollOffset) {
+                    shouldRestoreScrollPosition = true;
+                }
+
+                debug("newCaptureSpecs: %O", newCaptureSpecs);
+                debug("newSafeArea: %O", newSafeArea);
+                debug("lastState.captureSpecs: %O", lastState.captureSpecs);
+
+                lastState = currentState;
+                iterations++;
+            });
         } finally {
             perfDebug(`  raw viewport screenshots: ${formatDuration(timeSpentOnCapture)}`);
             if (shouldRestoreScrollPosition) {
@@ -725,7 +723,7 @@ export class ElementsScreenShooter {
                 }
 
                 const restoreScrollResult = await this._browserSideScreenshooter.call("scrollTo", [
-                    selectorsToCapture,
+                    targetsToCapture,
                     page.scrollOffset,
                     opts.selectorToScroll,
                     enabledScrollDebugTopics,
@@ -736,9 +734,9 @@ export class ElementsScreenShooter {
 
                 if (isBrowserSideError(restoreScrollResult)) {
                     restoreScrollPositionError = new Error(
-                        `Failed to restore scroll position after compositing image of selectors: ${selectorsToCapture.join(
-                            ", ",
-                        )}, error type '${restoreScrollResult.errorCode}' and error message: ${
+                        `Failed to restore scroll position after compositing image of elements: ${getTargetDescriptions(
+                            targetsToCapture,
+                        ).join(", ")}, error type '${restoreScrollResult.errorCode}' and error message: ${
                             restoreScrollResult.message
                         }`,
                     );
@@ -758,17 +756,19 @@ export class ElementsScreenShooter {
         if (isOverflowingViewport && !opts.allowViewportOverflow) {
             console.warn(
                 `Warning: when capturing the ${
-                    opts.debugId ?? selectorsToCapture.join(", ")
+                    opts.debugId ?? getTargetDescriptions(targetsToCapture).join(", ")
                 } screenshot, we failed to capture the whole area.\n` +
                     `Here's what happened:\n` +
-                    `- you requested to capture the following selectors: ${selectorsToCapture.join("; ")}\n` +
+                    `- you requested to capture the following elements: ${getTargetDescriptions(targetsToCapture).join(
+                        "; ",
+                    )}\n` +
                     (opts.selectorToScroll
                         ? `- you requested to scroll the following selector: ${opts.selectorToScroll}`
                         : `- we auto-detected element to scroll ${page.readableSelectorToScrollDescr} and tried scrolling it\n`) +
                     `- we reached the scroll limit, but weren't able to capture the whole area\n\n` +
                     `Here's what you can do:\n` +
                     `- set allowViewportOverflow to true in assertView options to silence this warning\n` +
-                    `- check and adjust selectors that you want to capture or selectorToScroll`,
+                    `- check and adjust elements that you want to capture or selectorToScroll`,
             );
         }
 

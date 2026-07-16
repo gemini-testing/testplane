@@ -157,6 +157,18 @@ describe("assertView", () => {
         await browser.assertView("test-block", "[data-testid=test-card]", { ignoreElements: [".to-be-ignored"] });
     });
 
+    it("should work on a deeply chained element", async ({ browser }) => {
+        await browser.url("simple-ignore-areas-test.html");
+
+        await browser.$(".card-content").$("..").$("h1*=Areas Test").assertView("chained-element");
+    });
+
+    it("should work with an XPath selector", async ({ browser }) => {
+        await browser.url("simple-ignore-areas-test.html");
+
+        await browser.assertView("xpath-element", "//div[@data-testid='test-card']");
+    });
+
     it("should work with ignoreAreas in viewport capture mode", async ({ browser }) => {
         await browser.url("viewport-ignore-elements.html");
 

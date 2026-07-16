@@ -104,7 +104,7 @@ describe("ElementsScreenShooter", () => {
         }
     };
 
-    const stubSuccessfulCapture = ({ page = createMockPage(), opts = {} } = {}) => {
+    const stubSuccessfulCapture = ({ page = createMockPage(), opts = {}, target = ".element" } = {}) => {
         browserSideScreenshooter.call.resolves(page);
 
         const captureResult = {
@@ -114,7 +114,7 @@ describe("ElementsScreenShooter", () => {
         sandbox.stub(screenShooter, "_performCaptureAttempt").resolves(captureResult);
         sandbox.stub(screenShooter, "_cleanupScreenshot").resolves();
 
-        return screenShooter.capture(".element", opts);
+        return screenShooter.capture(target, opts);
     };
 
     beforeEach(() => {
@@ -207,6 +207,17 @@ describe("ElementsScreenShooter", () => {
             assert.deepEqual(args[0], [".element1", ".element2"]);
         });
 
+        it("should accept an element target", async () => {
+            const element = { elementId: "element-id" };
+
+            await stubSuccessfulCapture({ target: element });
+
+            const [method, args] = browserSideScreenshooter.call.firstCall.args;
+            assert.equal(method, "prepareElementsScreenshot");
+            assert.strictEqual(args[0][0], element);
+            assert.calledWith(validationStubs.assertCorrectCaptureAreaBounds, JSON.stringify(["element (element-id)"]));
+        });
+
         it("should pass options to prepareElementsScreenshot", async () => {
             const opts = {
                 ignoreElements: [".ignore1", ".ignore2"],
@@ -243,10 +254,10 @@ describe("ElementsScreenShooter", () => {
             assert.deepEqual(args[1].ignoreSelectors, [".single-ignore"]);
         });
 
-        it("should throw if no selectors were passed", async () => {
+        it("should throw if no targets were passed", async () => {
             await assert.isRejected(
                 screenShooter.capture([]),
-                /No selectors to capture passed to ElementsScreenShooter\.capture/,
+                /No targets to capture passed to ElementsScreenShooter\.capture/,
             );
         });
 
@@ -373,7 +384,7 @@ describe("ElementsScreenShooter", () => {
             const error = await screenShooter.capture(".element", { allowViewportOverflow: true }).catch(e => e);
 
             assert.instanceOf(error, Error);
-            assert.include(error.message, 'selectors: [".element"]');
+            assert.include(error.message, 'elements: [".element"]');
             assert.include(error.message, '"allowViewportOverflow":true');
             assert.include(error.message, "error: boom");
         });
@@ -647,6 +658,15 @@ describe("ElementsScreenShooter", () => {
     });
 
     describe("waitForSelectorsToSettle", () => {
+        it("should pass element targets to browser-side polling", async () => {
+            const element = { elementId: "element-id" };
+            browser.execute.resolves({ success: true });
+
+            await waitForSelectorsToSettle(browser, [element]);
+
+            assert.strictEqual(browser.execute.firstCall.args[1][0], element);
+        });
+
         it("should fall back to Node-side polling when browser-side code detects stubbed setTimeout", async () => {
             browser.execute
                 .onCall(0)
@@ -677,6 +697,36 @@ describe("ElementsScreenShooter", () => {
             assert.notCalled(browser.getTimeouts);
             assert.notCalled(browser.setTimeout);
             assert.callCount(browser.execute, 4);
+        });
+
+        it("should pass element targets to Node-side polling", async () => {
+            const element = { elementId: "element-id" };
+            browser.execute.resolves([{ top: 1, height: 2 }]);
+
+            await waitForSelectorsToSettle(browser, [element], { needsCompatLib: true });
+
+            for (const call of browser.execute.getCalls()) {
+                assert.strictEqual(call.args[1][0], element);
+            }
+        });
+
+        it("should resolve XPath targets during Node-side polling", async () => {
+            const previousDocument = global.document;
+            const previousXPathResult = global.XPathResult;
+            const element = { getBoundingClientRect: () => ({ top: 1, height: 2 }) };
+            const evaluate = sandbox.stub().returns({ singleNodeValue: element });
+            global.document = { evaluate };
+            global.XPathResult = { FIRST_ORDERED_NODE_TYPE: 9 };
+            browser.execute.callsFake((script, targets) => script(targets));
+
+            try {
+                await waitForSelectorsToSettle(browser, ["//main"], { needsCompatLib: true });
+            } finally {
+                global.document = previousDocument;
+                global.XPathResult = previousXPathResult;
+            }
+
+            assert.callCount(evaluate, 4);
         });
 
         it("should fall back to Node-side polling when browser-side code hits script timeout", async () => {

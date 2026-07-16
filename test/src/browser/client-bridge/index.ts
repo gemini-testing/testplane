@@ -26,16 +26,30 @@ describe("ClientBridge", () => {
     afterEach(() => sandbox.restore());
 
     describe("call", () => {
-        const CALL = `__geminiCore['${NAMESPACE}'].example(1, "two")`;
+        const CALL = `__geminiCore['${NAMESPACE}'].example.apply(__geminiCore['${NAMESPACE}'], arguments)`;
 
         it("should try to call a method on __geminiCore namespace", () => {
-            return bridge.call("example", [1, "two"]).then(() => assert.calledWith(browser.execute, sinon.match(CALL)));
+            return bridge
+                .call("example", [1, "two"])
+                .then(() => assert.calledWith(browser.execute, sinon.match(CALL), 1, "two"));
         });
 
         it("should allow to not specify the arguments", () => {
-            return bridge
-                .call("example", [])
-                .then(() => assert.calledWith(browser.execute, sinon.match(`__geminiCore['${NAMESPACE}'].example()`)));
+            return bridge.call("example", []).then(() => assert.calledWith(browser.execute, sinon.match(CALL)));
+        });
+
+        it("should pass nested WebdriverIO elements to execute", async () => {
+            type BrowserApi = {
+                example: (target: Element, opts: { targets: Array<string | Element> }) => void;
+            };
+
+            const element = { elementId: "element-id" } as WebdriverIO.Element;
+            const typedBridge = new ClientBridge<BrowserApi>(browser, script, NAMESPACE);
+
+            await typedBridge.call("example", [element, { targets: [".selector", element] }]);
+
+            assert.strictEqual(browser.execute.firstCall.args[1], element);
+            assert.strictEqual(browser.execute.firstCall.args[2].targets[1], element);
         });
 
         it("should return what execute returns if succeeded", () => {
@@ -89,6 +103,8 @@ describe("ClientBridge", () => {
                     assert.calledThrice(browser.execute);
                     assert.include(browser.execute.firstCall.args[0], CALL);
                     assert.include(browser.execute.thirdCall.args[0], CALL);
+                    assert.deepEqual(browser.execute.firstCall.args.slice(1), [1, "two"]);
+                    assert.deepEqual(browser.execute.thirdCall.args.slice(1), [1, "two"]);
                 });
             });
 

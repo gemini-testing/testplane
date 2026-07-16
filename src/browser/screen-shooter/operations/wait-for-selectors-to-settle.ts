@@ -1,6 +1,7 @@
 import { setTimeout as nodeSetTimeout } from "node:timers";
 import makeDebug from "debug";
 import type { WdioBrowser } from "../../../types";
+import type { ClientBridgeArgument } from "../../client-bridge";
 
 const debug = makeDebug("testplane:screenshots:selectors-settle");
 const SELECTORS_SETTLE_BROWSER_TIMEOUT_MS = 3000;
@@ -8,6 +9,7 @@ const SELECTORS_SETTLE_FALLBACK_INTERVAL_MS = 50;
 const SELECTORS_SETTLE_FALLBACK_ATTEMPTS = 5;
 
 type SelectorRect = { top: number; height: number } | null;
+type ElementTarget = ClientBridgeArgument<string | Element>;
 
 interface BrowserSelectorsSettleResult {
     success: boolean;
@@ -19,11 +21,11 @@ interface WaitForSelectorsToSettleOptions {
 
 export async function waitForSelectorsToSettle(
     browser: WdioBrowser,
-    selectors: string[],
+    targets: ElementTarget[],
     options: WaitForSelectorsToSettleOptions = {},
 ): Promise<void> {
     try {
-        const settleResult = await waitForSelectorsToSettleInBrowser(browser, selectors, options);
+        const settleResult = await waitForSelectorsToSettleInBrowser(browser, targets, options);
 
         if (settleResult.success) {
             return;
@@ -44,12 +46,12 @@ export async function waitForSelectorsToSettle(
         debug("Browser-side waitForSelectorsToSettle hit script timeout, using Node-side polling");
     }
 
-    await waitForSelectorsToSettleInNode(browser, selectors);
+    await waitForSelectorsToSettleInNode(browser, targets);
 }
 
 async function waitForSelectorsToSettleInBrowser(
     browser: WdioBrowser,
-    selectors: string[],
+    targets: ElementTarget[],
     options: WaitForSelectorsToSettleOptions,
 ): Promise<BrowserSelectorsSettleResult> {
     if (options.needsCompatLib) {
@@ -70,7 +72,7 @@ async function waitForSelectorsToSettleInBrowser(
     }
 
     try {
-        result = await browser.execute(async selectors => {
+        result = await browser.execute(async (targets: ElementTarget[]) => {
             let setTimeoutSource = "";
             try {
                 setTimeoutSource = typeof setTimeout === "function" ? Function.prototype.toString.call(setTimeout) : "";
@@ -90,21 +92,28 @@ async function waitForSelectorsToSettleInBrowser(
 
             let matches = 0;
 
-            let lastBoundingClientRects = selectors.map(selector => {
-                const element = document.querySelector(selector);
+            const getBoundingClientRects = (): Array<DOMRect | null> =>
+                targets.map(target => {
+                    let element: Element | null;
+                    if (typeof target !== "string") {
+                        element = target as unknown as Element;
+                    } else if (["/", "(", "../", "./", "*/"].some(start => target.indexOf(start) === 0)) {
+                        element = document.evaluate(target, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+                            .singleNodeValue as Element | null;
+                    } else {
+                        element = document.querySelector(target);
+                    }
 
-                return element ? element.getBoundingClientRect() : null;
-            });
+                    return element ? element.getBoundingClientRect() : null;
+                });
+
+            let lastBoundingClientRects = getBoundingClientRects();
             while (
                 performance.now() - startedAt < PAGE_SETTLE_MAX_WAIT_MS &&
                 iterations < PAGE_SETTLE_MAX_ITERATIONS &&
                 matches < PAGE_SETTLE_MATCHES_THRESHOLD
             ) {
-                const currentBoundingClientRects = selectors.map(selector => {
-                    const element = document.querySelector(selector);
-
-                    return element ? element.getBoundingClientRect() : null;
-                });
+                const currentBoundingClientRects = getBoundingClientRects();
                 if (
                     currentBoundingClientRects.every((rect, index) => {
                         const lastRect = lastBoundingClientRects[index];
@@ -126,7 +135,7 @@ async function waitForSelectorsToSettleInBrowser(
             }
 
             return { success: true };
-        }, selectors);
+        }, targets);
     } catch (err) {
         executionError = err;
     }
@@ -153,7 +162,7 @@ async function waitForSelectorsToSettleInBrowser(
     return result ?? { success: true };
 }
 
-async function waitForSelectorsToSettleInNode(browser: WdioBrowser, selectors: string[]): Promise<void> {
+async function waitForSelectorsToSettleInNode(browser: WdioBrowser, targets: ElementTarget[]): Promise<void> {
     const PAGE_SETTLE_MATCHES_THRESHOLD = 3;
     let matches = 0;
     let lastBoundingClientRects: SelectorRect[] | undefined;
@@ -171,14 +180,29 @@ async function waitForSelectorsToSettleInNode(browser: WdioBrowser, selectors: s
         }
 
         const previousBoundingClientRects = lastBoundingClientRects;
-        const currentBoundingClientRects: SelectorRect[] = await browser.execute(function (selectors: string[]) {
-            return selectors.map(function (selector): SelectorRect {
-                const element = document.querySelector(selector);
-                const rect = element ? element.getBoundingClientRect() : null;
+        const currentBoundingClientRects: SelectorRect[] = await browser.execute<SelectorRect[], [ElementTarget[]]>(
+            function (targets) {
+                return targets.map(function (target): SelectorRect {
+                    let element: Element | null;
+                    if (typeof target !== "string") {
+                        element = target as unknown as Element;
+                    } else if (
+                        ["/", "(", "../", "./", "*/"].some(function (start) {
+                            return target.indexOf(start) === 0;
+                        })
+                    ) {
+                        element = document.evaluate(target, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+                            .singleNodeValue as Element | null;
+                    } else {
+                        element = document.querySelector(target);
+                    }
+                    const rect = element ? element.getBoundingClientRect() : null;
 
-                return rect ? { top: rect.top, height: rect.height } : null;
-            });
-        }, selectors);
+                    return rect ? { top: rect.top, height: rect.height } : null;
+                });
+            },
+            targets,
+        );
 
         if (previousBoundingClientRects) {
             matches = currentBoundingClientRects.every((rect, index) => {

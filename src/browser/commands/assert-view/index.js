@@ -272,7 +272,7 @@ module.exports.default = browser => {
                 );
             });
 
-            return assertView(state, this.selector, opts);
+            return assertView(state, this, opts);
         },
         true,
     );

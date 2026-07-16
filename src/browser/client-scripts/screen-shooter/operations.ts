@@ -10,6 +10,8 @@ import {
     getCoveringRect,
     getIntersection
 } from "@isomorphic";
+import * as lib from "@lib";
+import type { ElementTarget } from "@lib";
 import { OutsideOfViewportError } from "./errors/outside-of-viewport";
 import { CaptureSpec, SavedScrollPosition as ElementScrollPosition, ScrollToCaptureSpecResult } from "./types";
 import { getReadableElementDescriptor } from "./utils/descriptions";
@@ -39,7 +41,7 @@ import {
 } from "./utils/scroll";
 import { createDefaultTrustedTypesPolicy } from "./utils/trusted-types";
 import { buildZChain, isChainBehind } from "./utils/z-index";
-import { parseCaptureSelector, PseudoElementSelector } from "./utils/pseudo-element-rect";
+import { parseCaptureTarget, PseudoElementSelector } from "./utils/pseudo-element-rect";
 import { isSafariMobile } from "./utils/user-agent";
 
 export function computeScrollOffset(element: Element): Coord<"page", "css", "y"> {
@@ -118,22 +120,22 @@ export function computeElementPositionsProbe(
 }
 
 export function computeCaptureSpecs(
-    selectors: string[],
+    targets: ElementTarget[],
     logger?: (...args: unknown[]) => unknown
 ): CaptureSpec<"viewport", "css">[] {
-    if (selectors.length === 0) {
-        throw new Error("No selectors to compute capture area");
+    if (targets.length === 0) {
+        throw new Error("No targets to compute capture area");
     }
     logger?.("========== <computeCaptureSpecs> ==========");
-    logger?.("selectors:", selectors);
+    logger?.("targets:", targets);
     const startTime = performance.now();
 
     const elements: Array<{ element: Element; pseudoElement: PseudoElementSelector | null }> = [];
-    for (let i = 0; i < selectors.length; i++) {
-        const parsedSelector = parseCaptureSelector(selectors[i]);
-        const element = document.querySelector(parsedSelector.elementSelector);
+    for (let i = 0; i < targets.length; i++) {
+        const parsedTarget = parseCaptureTarget(targets[i]);
+        const element = lib.queryFirst(parsedTarget.elementTarget);
         if (element) {
-            elements.push({ element, pseudoElement: parsedSelector.pseudoElement });
+            elements.push({ element, pseudoElement: parsedTarget.pseudoElement });
         }
     }
 
@@ -173,16 +175,16 @@ export function computeCaptureSpecs(
     return captureSpecs;
 }
 
-export function computeIgnoreAreas(selectors: string[] = []): Rect<"viewport", "css">[] {
+export function computeIgnoreAreas(targets: ElementTarget[] = []): Rect<"viewport", "css">[] {
     const ignoreAreas: Rect<"viewport", "css">[] = [];
 
-    for (let s = 0; s < selectors.length; s++) {
-        const parsedSelector = parseCaptureSelector(selectors[s]);
-        const nodeList = document.querySelectorAll(parsedSelector.elementSelector);
-        for (let i = 0; i < nodeList.length; i++) {
-            const rect = parsedSelector.pseudoElement
-                ? getPseudoElementCaptureRect(nodeList[i], parsedSelector.pseudoElement)
-                : getElementCaptureRect(nodeList[i]);
+    for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+        const parsedTarget = parseCaptureTarget(targets[targetIndex]);
+        const elements = lib.queryAll(parsedTarget.elementTarget);
+        for (let i = 0; i < elements.length; i++) {
+            const rect = parsedTarget.pseudoElement
+                ? getPseudoElementCaptureRect(elements[i], parsedTarget.pseudoElement)
+                : getElementCaptureRect(elements[i]);
             if (rect !== null) {
                 ignoreAreas.push(rect);
             }
@@ -193,7 +195,7 @@ export function computeIgnoreAreas(selectors: string[] = []): Rect<"viewport", "
 }
 
 export function computeSafeArea(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     scrollElement?: Element,
     logger?: (...args: unknown[]) => unknown
 ): YBand<"viewport", "css"> {
@@ -207,10 +209,10 @@ export function computeSafeArea(
         width: viewportSize.width as Length<"css", "x">,
         height: viewportSize.height as Length<"css", "y">
     };
-    const captureElements = selectorsToCapture
-        .map(s => document.querySelector(parseCaptureSelector(s).elementSelector))
+    const captureElements = targetsToCapture
+        .map(target => lib.queryFirst(parseCaptureTarget(target).elementTarget))
         .filter((e): e is NonNullable<typeof e> => e !== null);
-    const captureSpecs = computeCaptureSpecs(selectorsToCapture).map(s => s.full);
+    const captureSpecs = computeCaptureSpecs(targetsToCapture).map(s => s.full);
 
     if (captureSpecs.length === 0) {
         return { top: viewportRect.top, height: viewportRect.height };
@@ -479,10 +481,10 @@ export function computePixelRatio(usePixelRatio: boolean = true): number {
 }
 
 export function scrollToCaptureAreaIfNeeded(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     captureElementFromTop?: boolean,
     allowViewportOverflow?: boolean,
-    selectorToScroll?: string,
+    targetToScroll?: ElementTarget,
     logger?: (...args: unknown[]) => unknown
 ): ScrollToCaptureSpecResult {
     const viewportSize = computeViewportSize();
@@ -492,18 +494,18 @@ export function scrollToCaptureAreaIfNeeded(
         ...viewportSize
     };
 
-    const captureSpecsResult = computeCaptureSpecs(selectorsToCapture);
+    const captureSpecsResult = computeCaptureSpecs(targetsToCapture);
     if (!captureSpecsResult) return {};
 
-    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-    const selectorsForScrollParentSearch = selectorsToCapture.map(
-        selector => parseCaptureSelector(selector).elementSelector
-    );
-    const initialScrollElem = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
-    const readableSelectorToScrollDescr = selectorToScroll ?? getReadableElementDescriptor(initialScrollElem);
+    const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
+    const initialScrollElem = scrollTarget ?? getCommonScrollParent(targetsToCapture);
+    const readableSelectorToScrollDescr =
+        typeof targetToScroll === "string"
+            ? targetToScroll
+            : getReadableElementDescriptor(scrollTarget ?? initialScrollElem);
 
     const captureArea = getCoveringRect(captureSpecsResult.map(s => s.full));
-    const safeArea = computeSafeArea(selectorsToCapture, initialScrollElem, logger);
+    const safeArea = computeSafeArea(targetsToCapture, initialScrollElem, logger);
 
     const captureAndSafeAreasIntersection = getIntersection(captureArea, safeArea);
     const captureAndViewportIntersection = getIntersection(captureArea, viewport);
@@ -546,8 +548,8 @@ export function scrollToCaptureAreaIfNeeded(
 
     logger?.("scrollToCaptureAreaIfNeeded: scrolling is required", {
         scrollElement: readableSelectorToScrollDescr,
-        requestedSelectorToScroll: selectorToScroll ?? null,
-        selectorMatched: Boolean(scrollTarget)
+        requestedTargetToScroll: targetToScroll ?? null,
+        targetResolved: Boolean(scrollTarget)
     });
 
     const scrollChain = [...getScrollParentsChain(initialScrollElem)];
@@ -556,7 +558,7 @@ export function scrollToCaptureAreaIfNeeded(
     }
 
     for (let i = 1; i < scrollChain.length; i++) {
-        const currentSafeArea = computeSafeArea(selectorsToCapture, scrollChain[i - 1]);
+        const currentSafeArea = computeSafeArea(targetsToCapture, scrollChain[i - 1]);
         const childTop = scrollChain[i].getBoundingClientRect().top;
         const scrollDelta = childTop - currentSafeArea.top;
         logger?.("scrollToCaptureAreaIfNeeded: scrolling chain element", {
@@ -567,10 +569,10 @@ export function scrollToCaptureAreaIfNeeded(
         scrollElementBy(scrollChain[i - 1], scrollDelta as Coord<"page", "css", "y">, logger);
     }
 
-    const finalCaptureArea = getCoveringRect(computeCaptureSpecs(selectorsToCapture).map(s => s.full));
+    const finalCaptureArea = getCoveringRect(computeCaptureSpecs(targetsToCapture).map(s => s.full));
     if (!finalCaptureArea) return {};
 
-    const finalSafeArea = computeSafeArea(selectorsToCapture, initialScrollElem);
+    const finalSafeArea = computeSafeArea(targetsToCapture, initialScrollElem);
     const finalScrollDelta = finalCaptureArea.top - finalSafeArea.top;
     logger?.("scrollToCaptureAreaIfNeeded: final alignment scroll", {
         scrollElement: readableSelectorToScrollDescr,
@@ -608,14 +610,11 @@ function saveElementScrollPosition(element: Element): void {
     namespaceData.savedScrollPositions.push(savedPosition);
 }
 
-export function saveScrollPositions(selectorsToCapture: string[], selectorToScroll?: string): void {
+export function saveScrollPositions(targetsToCapture: ElementTarget[], targetToScroll?: ElementTarget): void {
     getScreenshooterNamespaceData().savedScrollPositions = [];
 
-    const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-    const selectorsForScrollParentSearch = selectorsToCapture.map(
-        selector => parseCaptureSelector(selector).elementSelector
-    );
-    const initialScrollElement = scrollTarget ?? getCommonScrollParent(selectorsForScrollParentSearch);
+    const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
+    const initialScrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
     const scrollChain = [...getScrollParentsChain(initialScrollElement)];
 
     if (scrollChain[scrollChain.length - 1] !== initialScrollElement) {

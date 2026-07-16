@@ -15,6 +15,8 @@ import {
     getIntersection,
     roundCoords
 } from "@isomorphic";
+import * as lib from "@lib";
+import type { ElementTarget } from "@lib";
 import {
     PrepareScreenshotOptions,
     PrepareScreenshotResult,
@@ -48,6 +50,7 @@ import {
 } from "./operations";
 import { getReadableElementDescriptor } from "./utils/descriptions";
 import { getScreenshooterNamespaceData } from "./utils/dom";
+import { parseCaptureTarget } from "./utils/pseudo-element-rect";
 import { getCommonScrollParent, scrollElementBy, scrollElementToOffset } from "./utils/scroll";
 
 declare global {
@@ -172,29 +175,29 @@ function safeCall<T extends (...args: any[]) => any>(
 }
 
 export function prepareElementsScreenshot(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     opts: PrepareScreenshotOptions
 ): PrepareScreenshotResult {
-    return safeCall(prepareElementsScreenshotUnsafe, selectorsToCapture, opts);
+    return safeCall(prepareElementsScreenshotUnsafe, targetsToCapture, opts);
 }
 
 export function scrollBy(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     scrollDelta: Length<"device", "y"> | Coord<"page", "device", "y">,
-    selectorToScroll?: string | null,
+    targetToScroll?: ElementTarget | null,
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
         const logger = createDebugLogger({ debug }, "scrollBy");
         const pixelRatio = computePixelRatio();
-        const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-        const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
+        const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
+        const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
         const readableAutoScrollElementDescr = getReadableElementDescriptor(scrollElement);
-        const readableSelectorToScrollDescr = selectorToScroll
+        const readableSelectorToScrollDescr = targetToScroll
             ? scrollTarget
-                ? `${selectorToScroll} (${readableAutoScrollElementDescr})`
-                : `${selectorToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
+                ? `${targetToScroll} (${readableAutoScrollElementDescr})`
+                : `${targetToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
             : `auto-detected ${readableAutoScrollElementDescr}`;
 
         const scrollHeightCss = fromDeviceToCssNumber(scrollDelta as Coord<"page", "device", "y">, pixelRatio);
@@ -208,30 +211,30 @@ export function scrollBy(
 }
 
 export function scrollTo(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     scrollOffset: Length<"device", "y"> | Coord<"page", "device", "y">,
-    selectorToScroll?: string | null,
+    targetToScroll?: ElementTarget | null,
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
         const logger = createDebugLogger({ debug }, "scrollTo");
         logger(
-            "Asked to scroll to with params: selectorsToCapture:",
-            selectorsToCapture,
+            "Asked to scroll to with params: targetsToCapture:",
+            targetsToCapture,
             "scrollOffset:",
             scrollOffset,
-            "selectorToScroll:",
-            selectorToScroll
+            "targetToScroll:",
+            targetToScroll
         );
         const pixelRatio = computePixelRatio();
-        const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-        const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
+        const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
+        const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
         const readableAutoScrollElementDescr = getReadableElementDescriptor(scrollElement);
-        const readableSelectorToScrollDescr = selectorToScroll
+        const readableSelectorToScrollDescr = targetToScroll
             ? scrollTarget
-                ? `${selectorToScroll} (${readableAutoScrollElementDescr})`
-                : `${selectorToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
+                ? `${targetToScroll} (${readableAutoScrollElementDescr})`
+                : `${targetToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
             : `auto-detected ${readableAutoScrollElementDescr}`;
 
         const scrollOffsetCss = fromDeviceToCssNumber(
@@ -249,25 +252,25 @@ export function scrollTo(
 
 /** Returns current state: positions of elements to capture, ignore areas, safe area, scroll offset */
 export function getCaptureState(
-    selectorsToCapture: string[],
-    selectorsToIgnore: string[],
-    selectorToScroll?: string | null,
+    targetsToCapture: ElementTarget[],
+    targetsToIgnore: ElementTarget[],
+    targetToScroll?: ElementTarget | null,
     debug?: string[]
 ): GetCaptureStateResult {
     return safeCall((): GetCaptureStateResult => {
         const logger = createDebugLogger({ debug }, "getCaptureState");
         const pixelRatio = computePixelRatio();
-        const scrollTarget = selectorToScroll ? document.querySelector(selectorToScroll) : null;
-        const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
+        const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
+        const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
         const readableAutoScrollElementDescr = getReadableElementDescriptor(scrollElement);
-        const readableSelectorToScrollDescr = selectorToScroll
+        const readableSelectorToScrollDescr = targetToScroll
             ? scrollTarget
-                ? `${selectorToScroll} (${readableAutoScrollElementDescr})`
-                : `${selectorToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
+                ? `${targetToScroll} (${readableAutoScrollElementDescr})`
+                : `${targetToScroll} (not found, auto-detected ${readableAutoScrollElementDescr})`
             : `auto-detected ${readableAutoScrollElementDescr}`;
-        const ignoreAreas = computeIgnoreAreas(selectorsToIgnore);
-        const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger);
-        const captureSpecsAfterCss = computeCaptureSpecs(selectorsToCapture, logger);
+        const ignoreAreas = computeIgnoreAreas(targetsToIgnore);
+        const safeArea = computeSafeArea(targetsToCapture, scrollElement, logger);
+        const captureSpecsAfterCss = computeCaptureSpecs(targetsToCapture, logger);
         const captureSpecs = captureSpecsAfterCss.map(spec => ({
             full: fromCssToDevice(roundCoords(spec.full), pixelRatio),
             clip: fromCssToDevice(roundCoords(spec.clip), pixelRatio),
@@ -372,7 +375,7 @@ export function prepareViewportScreenshot(
         usePixelRatio?: boolean;
         disableAnimation?: boolean;
         disableHover?: DisableHoverMode;
-        ignoreSelectors?: string[];
+        ignoreSelectors?: ElementTarget[];
     } = {}
 ): PrepareViewportScreenshotResult {
     return safeCall((): PrepareViewportScreenshotResult => {
@@ -436,14 +439,14 @@ export function cleanupScrolls(): void {
  * Records up to 500 random non-degenerate descendants of the capture elements as anchor baselines.
  * Must be called once before the best-effort capture pass; getCaptureState will then return anchorShift.
  */
-export function captureAnchorBaseline(selectorsToCapture: string[]): void | BrowserSideError {
+export function captureAnchorBaseline(targetsToCapture: ElementTarget[]): void | BrowserSideError {
     return safeCall((): void => {
-        const captureSpecs = computeCaptureSpecs(selectorsToCapture);
+        const captureSpecs = computeCaptureSpecs(targetsToCapture);
         const captureArea = captureSpecs.length > 0 ? getCoveringRect(captureSpecs.map(spec => spec.full)) : null;
 
         const allDescendants: Element[] = [];
-        for (let si = 0; si < selectorsToCapture.length; si++) {
-            const el = document.querySelector(selectorsToCapture[si]);
+        for (let targetIndex = 0; targetIndex < targetsToCapture.length; targetIndex++) {
+            const el = lib.queryFirst(parseCaptureTarget(targetsToCapture[targetIndex]).elementTarget);
             if (!el) continue;
             allDescendants.push(el);
             const nodes = el.querySelectorAll("*");
@@ -477,15 +480,15 @@ export function captureAnchorBaseline(selectorsToCapture: string[]): void | Brow
 }
 
 function prepareElementsScreenshotUnsafe(
-    selectorsToCapture: string[],
+    targetsToCapture: ElementTarget[],
     opts: PrepareScreenshotOptions
 ): PrepareScreenshotResult {
     const logger = createDebugLogger(opts, "prepareElementsScreenshot");
 
-    saveScrollPositions(selectorsToCapture, opts.selectorToScroll);
+    saveScrollPositions(targetsToCapture, opts.selectorToScroll);
 
     const { readableSelectorToScrollDescr } = scrollToCaptureAreaIfNeeded(
-        selectorsToCapture,
+        targetsToCapture,
         opts.captureElementFromTop,
         opts.allowViewportOverflow,
         opts.selectorToScroll,
@@ -497,14 +500,14 @@ function prepareElementsScreenshotUnsafe(
     }
 
     const pixelRatio = computePixelRatio(opts.usePixelRatio);
-    const scrollTarget = opts.selectorToScroll ? document.querySelector(opts.selectorToScroll) : null;
-    const scrollElement = scrollTarget ?? getCommonScrollParent(selectorsToCapture);
+    const scrollTarget = opts.selectorToScroll ? lib.queryFirst(opts.selectorToScroll) : null;
+    const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
     const ignoreAreas = computeIgnoreAreas(opts.ignoreSelectors);
-    const captureSpecs = computeCaptureSpecs(selectorsToCapture, logger);
+    const captureSpecs = computeCaptureSpecs(targetsToCapture, logger);
     const viewportSize = computeViewportSize();
     const viewportOffset = computeViewportOffset();
-    const safeArea = computeSafeArea(selectorsToCapture, scrollElement, logger);
+    const safeArea = computeSafeArea(targetsToCapture, scrollElement, logger);
     const scrollOffset = computeScrollOffset(scrollElement);
 
     const documentSize = computeDocumentSize();
