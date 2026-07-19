@@ -15,6 +15,10 @@ const debug = makeDebug("testplane:time-travel:rrweb");
 const rrwebCode = fs.readFileSync(path.join(__dirname, "../client-scripts/rrweb-record.min.js"), "utf-8");
 const sessionsWithRrwebSent = new WeakSet<WebdriverIO.Browser>();
 const sessionsWithUnsupportedRrweb = new WeakSet<WebdriverIO.Browser>();
+const INTERNET_EXPLORER_BROWSER_NAME = "internet explorer";
+
+const isInternetExplorer = (session: WebdriverIO.Browser): boolean =>
+    session.capabilities.browserName?.toLowerCase() === INTERNET_EXPLORER_BROWSER_NAME;
 
 interface CollectRrwebEventsResult {
     isRrwebSupported?: false;
@@ -28,6 +32,10 @@ export async function installRrwebAndCollectEvents(
     session: WebdriverIO.Browser,
     callstack: Callstack,
 ): Promise<eventWithTime[]> {
+    if (isInternetExplorer(session)) {
+        return [];
+    }
+
     return runWithoutHistory<Promise<eventWithTime[]>>({ callstack }, async () => {
         if (sessionsWithUnsupportedRrweb.has(session)) {
             return [];
@@ -74,6 +82,10 @@ export async function installRrwebAndCollectEvents(
 }
 
 export async function cleanupRrweb(session: WebdriverIO.Browser, callstack: Callstack): Promise<void> {
+    if (isInternetExplorer(session)) {
+        return;
+    }
+
     try {
         await runWithoutHistory<Promise<void>>({ callstack }, () =>
             session.execute(() => {

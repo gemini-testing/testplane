@@ -58,10 +58,10 @@ export function forEachRoot(cb: (root: Element | ShadowRoot) => void): void {
 }
 
 export function getParentElement(node: Node): Element | null {
-    if (node instanceof ShadowRoot) return node.host;
+    if (lib.isShadowRoot(node)) return node.host;
     if (node instanceof Element) {
         const root = lib.getRootNode(node);
-        return node.parentElement || (root instanceof ShadowRoot ? root.host : null);
+        return node.parentElement || (lib.isShadowRoot(root) ? root.host : null);
     }
     return node.parentNode instanceof Element ? node.parentNode : null;
 }

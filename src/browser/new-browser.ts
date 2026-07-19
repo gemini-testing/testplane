@@ -25,6 +25,8 @@ export type HeadlessBrowserOptions = Partial<
     >
 >;
 const DEFAULT_PORT = 4444;
+const INTERNET_EXPLORER_BROWSER_NAME = "internet explorer";
+const WEBDRIVER_CLASSIC_CAPABILITY = "wdio:enforceWebDriverClassic";
 
 const headlessBrowserOptions: HeadlessBrowserOptions = {
     [BrowserName.CHROME]: {
@@ -216,11 +218,15 @@ export class NewBrowser extends Browser {
     }
 
     protected _addWebDriverClassicCapability(capabilities: WebdriverIO.Capabilities): WebdriverIO.Capabilities {
-        if (capabilities?.webSocketUrl || "wdio:enforceWebDriverClassic" in capabilities) {
+        if (
+            capabilities.browserName?.toLowerCase() === INTERNET_EXPLORER_BROWSER_NAME ||
+            capabilities?.webSocketUrl ||
+            WEBDRIVER_CLASSIC_CAPABILITY in capabilities
+        ) {
             return capabilities;
         }
 
-        return assign({}, capabilities, { "wdio:enforceWebDriverClassic": true });
+        return assign({}, capabilities, { [WEBDRIVER_CLASSIC_CAPABILITY]: true });
     }
 
     protected _extendCapabilitiesByVersion(): WebdriverIO.Capabilities {

@@ -45,7 +45,7 @@ import { parseCaptureTarget, PseudoElementSelector } from "./utils/pseudo-elemen
 import { isSafariMobile } from "./utils/user-agent";
 
 export function computeScrollOffset(element: Element): Coord<"page", "css", "y"> {
-    return (isRootLikeElement(element) ? window.scrollY : element.scrollTop) as Coord<"page", "css", "y">;
+    return (isRootLikeElement(element) ? window.pageYOffset : element.scrollTop) as Coord<"page", "css", "y">;
 }
 
 export function computeViewportSize(): Size<"css"> {
@@ -67,8 +67,8 @@ export function computeViewportSize(): Size<"css"> {
 
 export function computeViewportOffset(): Point<"page", "css"> {
     return {
-        left: window.scrollX as Coord<"page", "css", "x">,
-        top: window.scrollY as Coord<"page", "css", "y">
+        left: window.pageXOffset as Coord<"page", "css", "x">,
+        top: window.pageYOffset as Coord<"page", "css", "y">
     };
 }
 
@@ -283,11 +283,11 @@ export function computeSafeArea(
     for (let idx = 0; idx < allElements.length; idx++) {
         const el = allElements[idx];
 
-        if (scrollEl === el || el.contains(scrollEl)) {
+        if (scrollEl === el || lib.contains(el, scrollEl)) {
             continue;
         }
 
-        if (singleCaptureElement && (el === singleCaptureElement || el.contains(singleCaptureElement))) {
+        if (singleCaptureElement && (el === singleCaptureElement || lib.contains(el, singleCaptureElement))) {
             continue;
         }
 
@@ -318,20 +318,20 @@ export function computeSafeArea(
         const fixedPositionedParent = findFixedPositionedParent(el);
         const isInsideScrollContextFixedParent =
             fixedPositionedParent !== null &&
-            (fixedPositionedParent === scrollEl || fixedPositionedParent.contains(scrollEl));
+            (fixedPositionedParent === scrollEl || lib.contains(fixedPositionedParent, scrollEl));
 
         if (position === "fixed" || (fixedPositionedParent && !isInsideScrollContextFixedParent)) {
             likelyInterferes = true;
             // If the fixed element is inside a capture element, it's almost certainly interfering
-            shouldSkipZIndexCheck = captureElements.some(capEl => capEl.contains(el));
+            shouldSkipZIndexCheck = captureElements.some(capEl => lib.contains(capEl, el));
         } else if (position === "absolute") {
             // Skip absolutely positioned elements that are inside capture elements
-            if (captureElements.some(capEl => capEl.contains(el))) continue;
+            if (captureElements.some(capEl => lib.contains(capEl, el))) continue;
 
             // Absolute elements interfere only if positioned relative to ancestor outside scroll container
             const containingBlock = findContainingBlock(el);
             // scrollElem may be window, in which case it doesn't have a contains method
-            if (scrollEl !== document.documentElement && !scrollEl.contains(containingBlock)) {
+            if (scrollEl !== document.documentElement && !lib.contains(scrollEl, containingBlock)) {
                 likelyInterferes = true;
             }
         } else if (position === "sticky") {
@@ -344,7 +344,7 @@ export function computeSafeArea(
             const scrollParentBcr = scrollParent.getBoundingClientRect();
             topValue += isRootLikeElement(scrollParent) ? 0 : scrollParentBcr.top;
             shouldSkipZIndexCheck =
-                captureElements.some(capEl => capEl === el || capEl.contains(el)) &&
+                captureElements.some(capEl => capEl === el || lib.contains(capEl, el)) &&
                 (scrollParent === scrollEl || (isRootLikeElement(scrollParent) && isRootLikeElement(scrollEl)));
 
             if (!isNaN(topValue)) {
@@ -598,8 +598,8 @@ function saveElementScrollPosition(element: Element): void {
     const savedPosition: ElementScrollPosition = isRootLikeElement(element)
         ? {
               element,
-              left: window.scrollX,
-              top: window.scrollY
+              left: window.pageXOffset,
+              top: window.pageYOffset
           }
         : {
               element,

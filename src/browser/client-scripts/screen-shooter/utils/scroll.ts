@@ -85,7 +85,7 @@ export function getCommonScrollParent(targets: ElementTarget[]): Element {
 }
 
 function getElementScrollTop(element: Element): number {
-    return isRootLikeElement(element) ? window.scrollY : element.scrollTop;
+    return isRootLikeElement(element) ? window.pageYOffset : element.scrollTop;
 }
 
 const SCROLL_APPLY_MAX_WAIT_MS = 50;
@@ -112,8 +112,8 @@ export function performScrollFixForSafariIfNeeded(targetY: number): void {
     if (!isSafariMobile()) {
         return;
     }
-    if (window.scrollY < 100 && targetY < 100) {
-        window.scrollTo(window.scrollX, 100);
+    if (window.pageYOffset < 100 && targetY < 100) {
+        window.scrollTo(window.pageXOffset, 100);
     }
 }
 
@@ -125,17 +125,17 @@ export function scrollElementBy(
     const delta = deltaY;
     const isRootLike = isRootLikeElement(element);
     const scrollMetricsElement = isRootLike ? getPageScrollElement() : element;
-    const currentScrollY = isRootLike ? window.scrollY : element.scrollTop;
+    const currentScrollY = isRootLike ? window.pageYOffset : element.scrollTop;
 
     // Clamping is needed due to a bug in safari - https://bugs.webkit.org/show_bug.cgi?id=179735
     const maxScrollY = scrollMetricsElement.scrollHeight - scrollMetricsElement.clientHeight;
     const targetY = Math.max(0, Math.min(currentScrollY + delta, maxScrollY));
 
     if (isRootLike) {
-        logger?.("scrollElementBy: scrolling window.scrollTo(" + window.scrollX + ", " + targetY + ")");
+        logger?.("scrollElementBy: scrolling window.scrollTo(" + window.pageXOffset + ", " + targetY + ")");
 
         performScrollFixForSafariIfNeeded(targetY);
-        window.scrollTo(window.scrollX, targetY);
+        window.scrollTo(window.pageXOffset, targetY);
     } else {
         logger?.("scrollElementBy: scrolling element.scrollTo(" + element.scrollLeft + ", " + targetY + ")");
         element.scrollTo(element.scrollLeft, targetY);
@@ -154,7 +154,7 @@ export function scrollElementBy(
 export function scrollElementToOffset(element: Element, offset: Coord<"page", "css", "y">): void {
     const isRootLike = isRootLikeElement(element);
     const scrollMetricsElement = isRootLike ? getPageScrollElement() : element;
-    const currentScrollY = isRootLike ? window.scrollY : element.scrollTop;
+    const currentScrollY = isRootLike ? window.pageYOffset : element.scrollTop;
 
     // Clamping is needed due to a bug in safari - https://bugs.webkit.org/show_bug.cgi?id=179735
     const maxScrollY = scrollMetricsElement.scrollHeight - scrollMetricsElement.clientHeight;
@@ -162,7 +162,7 @@ export function scrollElementToOffset(element: Element, offset: Coord<"page", "c
 
     if (isRootLike) {
         performScrollFixForSafariIfNeeded(targetY);
-        window.scrollTo(window.scrollX, targetY);
+        window.scrollTo(window.pageXOffset, targetY);
     } else {
         element.scrollTo(element.scrollLeft, targetY);
     }
