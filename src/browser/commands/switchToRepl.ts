@@ -1,3 +1,4 @@
+import { AsyncResource } from "node:async_hooks";
 import path from "node:path";
 import type repl from "node:repl";
 import net from "node:net";
@@ -56,14 +57,17 @@ export default (browser: Browser): void => {
         const lineEvents = getEventListeners(replServer, REPL_LINE_EVENT);
         replServer.removeAllListeners(REPL_LINE_EVENT);
 
-        replServer.on(REPL_LINE_EVENT, cmd => {
-            const trimmedCmd = cmd.trim();
-            const newCmd = trimmedCmd.replace(/(?<=^|\s|;|\(|\{)(let |const )/g, "var ");
+        replServer.on(
+            REPL_LINE_EVENT,
+            AsyncResource.bind(cmd => {
+                const trimmedCmd = cmd.trim();
+                const newCmd = trimmedCmd.replace(/(?<=^|\s|;|\(|\{)(let |const )/g, "var ");
 
-            for (const event of lineEvents) {
-                event(newCmd);
-            }
-        });
+                for (const event of lineEvents) {
+                    event(newCmd);
+                }
+            }, "testplane:repl"),
+        );
     };
 
     const broadcastMessage = (message: string, sockets: net.Socket[]): void => {

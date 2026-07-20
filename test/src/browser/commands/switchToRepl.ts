@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import repl, { type REPLServer } from "node:repl";
 import net from "node:net";
 import { PassThrough } from "node:stream";
@@ -288,6 +289,25 @@ describe('"switchToRepl" command', () => {
 
             assert.calledOnce(replStart);
             assert.calledOnceWith(warnStub, chalk.yellow("Testplane is already in REPL mode"));
+        });
+
+        it("should evaluate commands in the async context in which repl was started", async () => {
+            const context = new AsyncLocalStorage<string>();
+            const session = mkSessionStub_();
+            const onLine = sandbox.spy(() => context.getStore());
+
+            replServer.on("line", onLine);
+            await initBrowser_({ session });
+
+            const promise = context.run("test-context", () => session.switchToRepl());
+
+            await waitForReplStart_();
+            replServer.emit("line", "getBrowser()");
+            replServer.emit("exit");
+            await promise;
+
+            assert.calledOnceWith(onLine, "getBrowser()");
+            assert.equal(onLine.firstCall.returnValue, "test-context");
         });
 
         ["const", "let"].forEach(decl => {
