@@ -4,7 +4,7 @@ import _ from "lodash";
 import { TestStep, TestStepKey } from "../../types";
 import { TimeTravelMode } from "../../config";
 
-const MAX_STRING_LENGTH = 50;
+const MAX_STRING_LENGTH = 500;
 
 type HookFunctions<T> = {
     fn: () => T;
