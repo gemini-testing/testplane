@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.9 (2026-07-20)
+
+
+### Bug Fixes
+
+* bring back old browsers support, including ie11 ([#1298](https://github.com/gemini-testing/testplane/issues/1298)) ([5625e03](https://github.com/gemini-testing/testplane/commit/5625e0378001a3ed28d4a1b2b6e6494c2ee99d9d))
+
 ### 9.0.8 (2026-07-20)
 
 ### 9.0.7 (2026-07-07)
