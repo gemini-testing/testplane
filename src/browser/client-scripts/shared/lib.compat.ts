@@ -41,5 +41,23 @@ export function getRootNode(node: Node): Node {
     return root;
 }
 
+export function isShadowRoot(node: Node): node is ShadowRoot {
+    return typeof ShadowRoot !== "undefined" && node instanceof ShadowRoot;
+}
+
+export function contains(parent: Node, node: Node): boolean {
+    if (typeof parent.contains === "function") {
+        return parent.contains(node);
+    }
+
+    for (let current: Node | null = node; current; current = current.parentNode) {
+        if (current === parent) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 export { getComputedStyle } from "./polyfills/getComputedStyle";
 export { matchMedia } from "./polyfills/matchMedia";

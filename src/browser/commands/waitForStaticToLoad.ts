@@ -21,7 +21,7 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
         var image = document.images.item(i);
 
         if (image && !image.complete) {
-            return { ready: false, reason: `Image from ${image.src} is loading` };
+            return { ready: false, reason: "Image from " + image.src + " is loading" };
         }
     }
 
@@ -31,75 +31,101 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
     for (var i = 0; i < externalStylesCount; i++) {
         var style = externalStyles.item(i);
 
-        if (!style.sheet) {
-            return { ready: false, reason: `Styles from ${style.href} are loading` };
+        if (style && !style.sheet) {
+            return { ready: false, reason: "Styles from " + style.href + " are loading" };
         }
     }
 
-    var waitingForResourceUrls = new Set<string>();
+    var waitingForResourceUrls = Object.create(null) as Record<string, true>;
 
     var nodesWithInlineStylesWithUrl = document.querySelectorAll<HTMLElement>('[style*="url("]');
-    var styleWithUrlRegExp = /^url\("(.*)"\)$/;
+    var styleWithUrlRegExp = /^url\((?:"(.*)"|'(.*)')\)$/;
 
-    for (var node of nodesWithInlineStylesWithUrl) {
-        if (!node.clientHeight || !node.clientWidth) {
+    for (var nodeIndex = 0; nodeIndex < nodesWithInlineStylesWithUrl.length; nodeIndex++) {
+        var node = nodesWithInlineStylesWithUrl.item(nodeIndex);
+
+        if (!node || !node.clientHeight || !node.clientWidth) {
             continue;
         }
 
         var inlineRulesCount = node.style ? node.style.length : 0;
 
         for (var i = 0; i < inlineRulesCount; i++) {
-            var inlineRuleName = node.style[i];
+            var inlineRuleName = node.style.item(i);
             var inlineRuleValue = node.style[inlineRuleName as keyof CSSStyleDeclaration] as string;
 
-            if (!inlineRuleValue || (!inlineRuleValue.startsWith('url("') && !inlineRuleValue.startsWith("url('"))) {
+            if (
+                !inlineRuleValue ||
+                (inlineRuleValue.indexOf('url("') !== 0 && inlineRuleValue.indexOf("url('") !== 0)
+            ) {
                 continue;
             }
 
             var computedStyleValue = getComputedStyle(node).getPropertyValue(inlineRuleName);
             var match = styleWithUrlRegExp.exec(computedStyleValue);
+            var resourceUrl = match && (match[1] || match[2]);
 
-            if (match && match[1] && !match[1].startsWith("data:")) {
-                waitingForResourceUrls.add(match[1]);
+            if (resourceUrl && resourceUrl.indexOf("data:") !== 0) {
+                waitingForResourceUrls[resourceUrl] = true;
             }
         }
     }
 
-    for (var styleSheet of document.styleSheets) {
+    var styleSheetsCount = (document.styleSheets && document.styleSheets.length) || 0;
+
+    for (var styleSheetIndex = 0; styleSheetIndex < styleSheetsCount; styleSheetIndex++) {
+        var styleSheet = document.styleSheets.item(styleSheetIndex);
+
+        if (!styleSheet) {
+            continue;
+        }
+
         try {
-            for (var cssRules of styleSheet.cssRules) {
-                var cssStyleRule = cssRules as CSSStyleRule;
+            var cssRules = styleSheet.cssRules;
+            var cssRulesCount = (cssRules && cssRules.length) || 0;
+
+            for (var cssRuleIndex = 0; cssRuleIndex < cssRulesCount; cssRuleIndex++) {
+                var cssStyleRule = cssRules.item(cssRuleIndex) as CSSStyleRule;
                 var cssStyleSelector = cssStyleRule.selectorText;
                 var cssStyleRulesCount = cssStyleRule.style ? cssStyleRule.style.length : 0;
 
                 var displayedNodeElementsStyles: CSSStyleDeclaration[] | null = null;
 
                 for (var i = 0; i < cssStyleRulesCount; i++) {
-                    var cssRuleName = cssStyleRule.style[i];
+                    var cssRuleName = cssStyleRule.style.item(i);
                     var cssRuleValue = cssStyleRule.style[cssRuleName as keyof CSSStyleDeclaration] as string;
 
-                    if (!cssRuleValue || (!cssRuleValue.startsWith('url("') && !cssRuleValue.startsWith("url('"))) {
+                    if (!cssRuleValue || (cssRuleValue.indexOf('url("') !== 0 && cssRuleValue.indexOf("url('") !== 0)) {
                         continue;
                     }
 
                     if (!displayedNodeElementsStyles) {
                         displayedNodeElementsStyles = [] as CSSStyleDeclaration[];
+                        var matchingNodes = document.querySelectorAll<HTMLElement>(cssStyleSelector);
 
-                        document.querySelectorAll<HTMLElement>(cssStyleSelector).forEach(function (node) {
-                            if (!node.clientHeight || !node.clientWidth) {
-                                return;
+                        for (var matchingNodeIndex = 0; matchingNodeIndex < matchingNodes.length; matchingNodeIndex++) {
+                            var matchingNode = matchingNodes.item(matchingNodeIndex);
+
+                            if (!matchingNode || !matchingNode.clientHeight || !matchingNode.clientWidth) {
+                                continue;
                             }
 
-                            (displayedNodeElementsStyles as CSSStyleDeclaration[]).push(getComputedStyle(node));
-                        });
+                            displayedNodeElementsStyles.push(getComputedStyle(matchingNode));
+                        }
                     }
 
-                    for (var nodeStyles of displayedNodeElementsStyles) {
+                    for (
+                        var nodeStylesIndex = 0;
+                        nodeStylesIndex < displayedNodeElementsStyles.length;
+                        nodeStylesIndex++
+                    ) {
+                        var nodeStyles = displayedNodeElementsStyles[nodeStylesIndex];
                         var computedStyleValue = nodeStyles.getPropertyValue(cssRuleName);
                         var match = styleWithUrlRegExp.exec(computedStyleValue);
+                        var resourceUrl = match && (match[1] || match[2]);
 
-                        if (match && match[1] && !match[1].startsWith("data:")) {
-                            waitingForResourceUrls.add(match[1]);
+                        if (resourceUrl && resourceUrl.indexOf("data:") !== 0) {
+                            waitingForResourceUrls[resourceUrl] = true;
                         }
                     }
                 }
@@ -107,30 +133,41 @@ function browserIsPageReady(): { ready: boolean; reason?: string; pendingResourc
         } catch (err) {} // eslint-disable-line no-empty
     }
 
-    var performanceResourceEntries = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+    var performanceResourceEntries =
+        window.performance && typeof window.performance.getEntriesByType === "function"
+            ? (window.performance.getEntriesByType("resource") as PerformanceResourceTiming[])
+            : [];
 
     performanceResourceEntries.forEach(function (performanceResourceEntry) {
-        waitingForResourceUrls.delete(performanceResourceEntry.name);
+        delete waitingForResourceUrls[performanceResourceEntry.name];
     });
 
-    if (!waitingForResourceUrls.size) {
+    var pendingResources = Object.keys(waitingForResourceUrls);
+
+    if (!pendingResources.length) {
         return { ready: true };
     }
 
-    var pendingResources = Array.from(waitingForResourceUrls);
-
-    return { ready: false, reason: "Resources are not loaded", pendingResources };
+    return { ready: false, reason: "Resources are not loaded", pendingResources: pendingResources };
 }
 
 function browserAreResourcesLoaded(pendingResources: string[]): string[] {
-    var pendingResourcesSet = new Set(pendingResources);
-    var performanceResourceEntries = performance.getEntriesByType("resource") as PerformanceResourceTiming[];
+    var pendingResourcesMap = Object.create(null) as Record<string, true>;
+
+    for (var i = 0; i < pendingResources.length; i++) {
+        pendingResourcesMap[pendingResources[i]] = true;
+    }
+
+    var performanceResourceEntries =
+        window.performance && typeof window.performance.getEntriesByType === "function"
+            ? (window.performance.getEntriesByType("resource") as PerformanceResourceTiming[])
+            : [];
 
     performanceResourceEntries.forEach(function (performanceResourceEntry) {
-        pendingResourcesSet.delete(performanceResourceEntry.name);
+        delete pendingResourcesMap[performanceResourceEntry.name];
     });
 
-    return Array.from(pendingResourcesSet);
+    return Object.keys(pendingResourcesMap);
 }
 /* eslint-enable no-var */
 

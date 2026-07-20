@@ -60,7 +60,7 @@ export interface PrepareScreenshotSuccess {
     captureSpecs: CaptureSpec<"viewport", "device">[];
     // Viewport size
     viewportSize: Size<"device">;
-    // Viewport scroll offsets, window.scrollX / window.scrollY respectively
+    // Viewport scroll offsets, window.pageXOffset / window.pageYOffset respectively
     viewportOffset: Point<"page", "device">;
     // Total height of the document, may be larger than viewport
     documentSize: Size<"device">;

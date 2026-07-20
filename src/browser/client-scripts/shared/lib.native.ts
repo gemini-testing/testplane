@@ -37,3 +37,11 @@ export function trim(str: string): string {
 export function getRootNode(node: Node): Node {
     return node.getRootNode();
 }
+
+export function isShadowRoot(node: Node): node is ShadowRoot {
+    return node instanceof ShadowRoot;
+}
+
+export function contains(parent: Node, node: Node): boolean {
+    return parent.contains(node);
+}

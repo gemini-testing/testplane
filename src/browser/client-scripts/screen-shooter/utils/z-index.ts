@@ -1,3 +1,4 @@
+import * as lib from "@lib";
 import { getParentElement } from "./dom";
 
 function getCssProp(style: CSSStyleDeclaration, prop: string): string | undefined {
@@ -83,7 +84,7 @@ function getClosestStackingContext(node: Node | null): Element {
         return document.documentElement;
     }
 
-    if (node instanceof ShadowRoot) {
+    if (lib.isShadowRoot(node)) {
         return getClosestStackingContext(node.host);
     }
 

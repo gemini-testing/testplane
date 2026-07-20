@@ -1,4 +1,5 @@
 import { Rect, Coord, Length, getIntersection } from "@isomorphic";
+import * as lib from "@lib";
 import { getBoundingClientContentRect } from "./element-rect";
 import { isRootLikeElement } from "./scroll";
 import { findContainingBlock } from "./dom";
@@ -63,18 +64,18 @@ function escapesOverflowClippingViaAbsoluteContainingBlocks(
     absoluteContainingBlocks: AbsoluteContainingBlock[]
 ): boolean {
     return absoluteContainingBlocks.some(({ absoluteAncestor, containingBlock }) => {
-        if (absoluteAncestor === clippingElement || !clippingElement.contains(absoluteAncestor)) {
+        if (absoluteAncestor === clippingElement || !lib.contains(clippingElement, absoluteAncestor)) {
             return false;
         }
 
-        return containingBlock !== clippingElement && containingBlock.contains(clippingElement);
+        return containingBlock !== clippingElement && lib.contains(containingBlock, clippingElement);
     });
 }
 
 /** Fixed-position descendants escape clipping of ancestors above the fixed ancestor */
 function escapesOverflowClippingViaFixedAncestors(clippingElement: Element, fixedAncestors: Element[]): boolean {
     return fixedAncestors.some(
-        fixedAncestor => fixedAncestor !== clippingElement && clippingElement.contains(fixedAncestor)
+        fixedAncestor => fixedAncestor !== clippingElement && lib.contains(clippingElement, fixedAncestor)
     );
 }
 
