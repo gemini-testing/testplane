@@ -46,6 +46,7 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             profiler: {
                 enable: sandbox.stub().resolves(),
                 startPreciseCoverage: sandbox.stub().resolves(),
+                stopPreciseCoverage: sandbox.stub().resolves(),
                 takePreciseCoverage: sandbox.stub().resolves({ result: [] }),
             } as SinonStubbedInstance<CDPProfiler>,
             runtime: {} as SinonStubbedInstance<CDPRuntime>,
@@ -330,6 +331,117 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             assert.deepEqual(Array.from(result || []), ["src/app.js"]);
             // takePreciseCoverage is called once by takeCoverageSnapshot and once by stop
             assert.calledTwice(cdpMock.profiler.takePreciseCoverage);
+        });
+    });
+
+    describe("page boundaries", () => {
+        const coverageForScript = (scriptId: string, url: string): any => ({
+            timestamp: 1,
+            result: [
+                {
+                    scriptId,
+                    url,
+                    functions: [
+                        {
+                            functionName: "f",
+                            isBlockCoverage: false,
+                            ranges: [{ startOffset: 0, endOffset: 10, count: 1 }],
+                        },
+                    ],
+                },
+            ],
+        });
+
+        it("takeCoverageSnapshot should NOT reset precise coverage (leaving page still alive)", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            await jsSelectivity.takeCoverageSnapshot();
+
+            assert.notCalled(cdpMock.profiler.stopPreciseCoverage);
+        });
+
+        it("flushPage should reset precise coverage", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+            await jsSelectivity.flushPage();
+
+            assert.calledOnceWith(cdpMock.profiler.stopPreciseCoverage, sessionId);
+            // once in start(), once when resetting in flushPage
+            assert.calledTwice(cdpMock.profiler.startPreciseCoverage);
+            assert.alwaysCalledWith(cdpMock.profiler.startPreciseCoverage, sessionId, {
+                callCount: false,
+                detailed: false,
+                allowTriggeredUpdates: false,
+            });
+        });
+
+        it("flushPage should clear script maps so a reused scriptId is treated as a new script", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+            // Page 1: script "10" belongs to http://page1/app.js
+            scriptParsedHandler({ scriptId: "10", url: "http://page1/app.js", sourceMapURL: "app.js.map" }, sessionId);
+
+            await jsSelectivity.flushPage();
+
+            // Page 2 reuses scriptId "10" for a different script
+            scriptParsedHandler({ scriptId: "10", url: "http://page2/app.js", sourceMapURL: "app.js.map" }, sessionId);
+
+            cdpMock.profiler.takePreciseCoverage.resolves({ timestamp: 2, result: [] });
+            await jsSelectivity.stop();
+
+            // Maps were cleared on flushPage, so page 2's "10" is fetched fresh instead of reusing page 1's mapping
+            assert.calledTwice(cdpMock.debugger.getScriptSource);
+            assert.alwaysCalledWith(cdpMock.debugger.getScriptSource, sessionId, "10");
+        });
+
+        it("should re-resolve a scriptId reused for different content (hash change) within one page", async () => {
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+            // Same scriptId "10", first script (hash AAA)
+            scriptParsedHandler(
+                { scriptId: "10", url: "http://page/a.js", sourceMapURL: "a.js.map", hash: "AAA" },
+                sessionId,
+            );
+
+            // scriptId "10" reused for a DIFFERENT script (hash BBB) — no page boundary in between
+            scriptParsedHandler(
+                { scriptId: "10", url: "http://page/b.js", sourceMapURL: "b.js.map", hash: "BBB" },
+                sessionId,
+            );
+
+            cdpMock.profiler.takePreciseCoverage.resolves({ timestamp: 1, result: [] });
+            await jsSelectivity.stop();
+
+            // Hash change drops the stale mapping, so the new script is fetched fresh instead of reusing a.js
+            assert.calledTwice(cdpMock.debugger.getScriptSource);
+            assert.alwaysCalledWith(cdpMock.debugger.getScriptSource, sessionId, "10");
+        });
+
+        it("should propagate (not swallow) when coverage fails to resolve", async () => {
+            hasCachedSelectivityFileStub.resolves(false);
+            getCachedSelectivityFileStub.resolves(null);
+            cdpMock.debugger.getScriptSource.rejects(new Error("boom"));
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript("3", "http://page1/app.js"));
+
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            await jsSelectivity.start();
+
+            // Missing a dependency is worse than failing the test — the error must surface, not be swallowed
+            await assert.isRejected(
+                jsSelectivity.takeCoverageSnapshot(),
+                "JS Selectivity: Couldn't load source code from http://page1/app.js",
+            );
         });
     });
 
