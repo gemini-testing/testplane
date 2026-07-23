@@ -30,15 +30,15 @@ module.exports = class HookRunner {
         }
 
         try {
-            await promiseMapSeries(suite.beforeEachHooks, hook => this._runHook(hook));
+            await promiseMapSeries(suite.beforeEachHooks, hook => this._runHook(hook, "beforeEach"));
         } catch (e) {
             this._failedSuite = suite;
             throw e;
         }
     }
 
-    _runHook(hook) {
-        return this._executionThread.run(hook.clone());
+    _runHook(hook, kind) {
+        return this._executionThread.run(hook.clone(), { kind });
     }
 
     hasAfterEachHooks() {
@@ -55,7 +55,7 @@ module.exports = class HookRunner {
         let error;
 
         try {
-            await promiseMapSeries(suite.afterEachHooks, hook => this._runHook(hook));
+            await promiseMapSeries(suite.afterEachHooks, hook => this._runHook(hook, "afterEach"));
         } catch (e) {
             error = e;
         }

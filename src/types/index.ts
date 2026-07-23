@@ -243,6 +243,7 @@ export interface TestAssignedToWorkerData {
     file: string;
     sessionId: string;
     workerPid: number;
+    attemptId?: string;
 }
 
 export type MasterEventHandler<T extends BaseTestplane> = {

@@ -13,6 +13,7 @@ const RuntimeConfig = require("../../../config/runtime-config");
 const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
+const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
 
 const SNAPSHOTS_TIMEOUT_MS = 10000;
 const SNAPSHOTS_WARNING_TIMEOUT_MS = 2000;
@@ -22,7 +23,16 @@ module.exports = class TestRunner {
         return new this(...args);
     }
 
-    constructor({ test, file, config, browserAgent, attempt }) {
+    constructor({
+        test,
+        file,
+        config,
+        browserAgent,
+        attempt,
+        attemptId = /** @type {string | undefined} */ (undefined),
+        profileSessionId = /** @type {string | undefined} */ (undefined),
+        profiler = /** @type {import("../../../profiler").ProfilerRuntimeLike} */ (noopProfilerRuntime),
+    }) {
         if (test) {
             this._test = test.clone();
             this._test.testplaneCtx = _.cloneDeep(test.testplaneCtx) || {};
@@ -32,6 +42,9 @@ module.exports = class TestRunner {
         this._config = config;
         this._browserAgent = browserAgent;
         this._attempt = attempt;
+        this._attemptId = attemptId;
+        this._profileSessionId = profileSessionId;
+        this._profiler = profiler;
     }
 
     assignTest(test) {
@@ -54,15 +67,27 @@ module.exports = class TestRunner {
     }
 
     async run() {
-        await this.prepareToRun();
+        await this._profiler.withSpan(
+            "test.prepare",
+            { minLevel: 2, name: this._test.fullTitle(), attributes: { stage: "prepare" } },
+            () => this.prepareToRun(),
+        );
 
-        const stopSelectivity = await startSelectivity(this._browser);
+        const stopSelectivity = await this._profiler.withSpan(
+            "test.selectivity-start",
+            { minLevel: 2, name: this._test.fullTitle() },
+            () => startSelectivity(this._browser),
+        );
 
         const error = await this.runRunnables(ExecutionThread);
 
-        await stopSelectivity(this._test, Boolean(error));
+        await this._profiler.withSpan("test.selectivity-stop", { minLevel: 2, name: this._test.fullTitle() }, () =>
+            stopSelectivity(this._test, Boolean(error)),
+        );
 
-        return this.finishRun(error);
+        return this._profiler.withSpan("test.finish", { minLevel: 2, name: this._test.fullTitle() }, () =>
+            this.finishRun(error),
+        );
     }
 
     // TODO: make it protected
@@ -166,6 +191,9 @@ module.exports = class TestRunner {
             testplaneCtx,
             hermioneCtx: testplaneCtx,
             attempt: this._attempt,
+            attemptId: this._attemptId,
+            profileSessionId: this._profileSessionId,
+            profiler: this._profiler,
         });
         const hookRunner = HookRunner.create(test, executionThread);
         const { callstackHistory } = this._browser;
@@ -177,26 +205,30 @@ module.exports = class TestRunner {
             const shouldRunBeforeEach = preparePageActions.length || hookRunner.hasBeforeEachHooks();
 
             if (shouldRunBeforeEach) {
-                await history.runGroup(
-                    {
-                        callstack: callstackHistory,
-                        snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
-                        config: this._config,
-                        session: this._browser.publicAPI,
-                    },
-                    "beforeEach",
-                    async () => {
-                        for (const action of preparePageActions) {
-                            await action();
-                        }
+                await this._profiler.withSpan("test.beforeEach.total", { minLevel: 2, name: test.fullTitle() }, () =>
+                    history.runGroup(
+                        {
+                            callstack: callstackHistory,
+                            snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
+                            config: this._config,
+                            session: this._browser.publicAPI,
+                        },
+                        "beforeEach",
+                        async () => {
+                            for (const action of preparePageActions) {
+                                await action();
+                            }
 
-                        await hookRunner.runBeforeEachHooks();
-                    },
+                            await hookRunner.runBeforeEachHooks();
+                        },
+                    ),
                 );
             }
 
-            await this._runReplBeforeTestIfNeeded(test, executionThread);
-            await executionThread.run(test);
+            await this._profiler.withSpan("test.body", { minLevel: 2, name: test.fullTitle() }, async () => {
+                await this._runReplBeforeTestIfNeeded(test, executionThread);
+                await executionThread.run(test, { kind: "test" });
+            });
         } catch (e) {
             error = e;
         }
@@ -209,15 +241,17 @@ module.exports = class TestRunner {
             const needsAfterEach = hookRunner.hasAfterEachHooks();
 
             if (needsAfterEach) {
-                await history.runGroup(
-                    {
-                        callstack: callstackHistory,
-                        snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
-                        config: this._config,
-                        session: this._browser.publicAPI,
-                    },
-                    "afterEach",
-                    () => hookRunner.runAfterEachHooks(),
+                await this._profiler.withSpan("test.afterEach.total", { minLevel: 2, name: test.fullTitle() }, () =>
+                    history.runGroup(
+                        {
+                            callstack: callstackHistory,
+                            snapshotsPromiseRef: this._browser.snapshotsPromiseRef,
+                            config: this._config,
+                            session: this._browser.publicAPI,
+                        },
+                        "afterEach",
+                        () => hookRunner.runAfterEachHooks(),
+                    ),
                 );
             }
         } catch (e) {
@@ -244,17 +278,23 @@ module.exports = class TestRunner {
                 console.log("Collecting Time Travel snapshots takes longer than expected. Waiting...");
             }, SNAPSHOTS_WARNING_TIMEOUT_MS);
 
-            try {
-                await Promise.race([this._browser.snapshotsPromiseRef.current, snapshotsTimeout]);
-            } catch (e) {
-                console.error(e.message);
-            } finally {
-                clearTimeout(collectingSnapshotsMessageTimeout);
-                await history.cleanupDomSnapshots({
-                    callstack: callstackHistory,
-                    session: this._browser.publicAPI,
-                });
-            }
+            await this._profiler.withSpan(
+                "test.snapshots-cleanup",
+                { minLevel: 2, name: test.fullTitle() },
+                async () => {
+                    try {
+                        await Promise.race([this._browser.snapshotsPromiseRef.current, snapshotsTimeout]);
+                    } catch (e) {
+                        console.error(e.message);
+                    } finally {
+                        clearTimeout(collectingSnapshotsMessageTimeout);
+                        await history.cleanupDomSnapshots({
+                            callstack: callstackHistory,
+                            session: this._browser.publicAPI,
+                        });
+                    }
+                },
+            );
         }
 
         return error;
@@ -275,6 +315,7 @@ module.exports = class TestRunner {
                         value: () => this._browser.publicAPI.switchToRepl(),
                     },
                 }),
+                { kind: "prepare" },
             );
         }
     }

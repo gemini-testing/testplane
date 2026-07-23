@@ -10,13 +10,14 @@ const { passthroughEvent } = require("../../events/utils");
 const { NoRefImageError } = require("../../browser/commands/assert-view/errors/no-ref-image-error");
 
 module.exports = class InsistantTestRunner extends RunnableEmitter {
-    constructor(test, config, browserAgent) {
+    constructor(test, config, browserAgent, profiler) {
         super();
 
         this._test = test;
         this._config = config;
         this._browserConfig = config.forBrowser(browserAgent.browserId);
         this._browserAgent = browserAgent;
+        this._profiler = profiler;
 
         this._retriesPerformed = 0;
         this._cancelled = false;
@@ -28,14 +29,17 @@ module.exports = class InsistantTestRunner extends RunnableEmitter {
         const browserAgent =
             this._retriesPerformed > 0 ? HighPriorityBrowserAgent.create(this._browserAgent) : this._browserAgent;
 
-        const runner = RegularTestRunner.create(this._test, browserAgent).on(MasterEvents.TEST_FAIL, data => {
-            if (this._shouldRetry(data)) {
-                this.emit(MasterEvents.RETRY, _.extend(data, { retriesLeft: this._retriesLeft }));
-                retry = true;
-            } else {
-                this.emit(MasterEvents.TEST_FAIL, data);
-            }
-        });
+        const runner = RegularTestRunner.create(this._test, browserAgent, this._profiler).on(
+            MasterEvents.TEST_FAIL,
+            data => {
+                if (this._shouldRetry(data)) {
+                    this.emit(MasterEvents.RETRY, _.extend(data, { retriesLeft: this._retriesLeft }));
+                    retry = true;
+                } else {
+                    this.emit(MasterEvents.TEST_FAIL, data);
+                }
+            },
+        );
 
         passthroughEvent(runner, this, [MasterEvents.TEST_BEGIN, MasterEvents.TEST_PASS, MasterEvents.TEST_END]);
 
