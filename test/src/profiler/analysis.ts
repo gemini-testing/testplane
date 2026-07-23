@@ -415,6 +415,105 @@ describe("profiler/analysis", () => {
         );
     });
 
+    it("should report a repeatedly loaded test file only once", () => {
+        const fileOp = (wallMs: number, index: number): RetainedOperation => ({
+            id: `file-${index}`,
+            kind: "test.file.load",
+            name: "testplane-tests/suite.testplane.ts",
+            process: { type: "worker" },
+            context: { runId: "run" },
+            startOffsetMs: 0,
+            timing: { wallMs },
+            attributes: {},
+            quality: { timing: "exact", cpu: "unavailable" },
+        });
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 10_000,
+            timeline: [1_600, 1_500, 1_500, 1_400, 1_300].map(fileOp),
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "test-file-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "suite.testplane.ts");
+        assert.include(findings[0].action, "profiler.level 3");
+        assert.include(findings[0].action, "module-scope initialization");
+
+        const dependency = {
+            ...fileOp(800, 6),
+            id: "dependency",
+            kind: "module.load",
+            name: "node_modules/heavy-dep/index.js",
+            attributes: {
+                module: "node_modules/heavy-dep/index.js",
+                ownerFile: "testplane-tests/suite.testplane.ts",
+                cacheHit: false,
+            },
+        };
+        const detailed = normalizedProfile({
+            level: 3,
+            durationMs: 10_000,
+            timeline: [...profile.timeline, dependency],
+        });
+        assert.include(runAnalyzers(detailed).find(item => item.analyzer.id === "test-file-v1")!.action, "heavy-dep");
+
+        const detailedWithoutDependency = normalizedProfile({
+            level: 3,
+            durationMs: 10_000,
+            timeline: [
+                ...profile.timeline,
+                {
+                    ...fileOp(1_000, 7),
+                    id: "test-file-self-module",
+                    kind: "module.load",
+                    attributes: {
+                        module: "testplane-tests/suite.testplane.ts",
+                        ownerFile: "testplane-tests/suite.testplane.ts",
+                        cacheHit: false,
+                    },
+                },
+            ],
+        });
+        assert.include(
+            runAnalyzers(detailedWithoutDependency).find(item => item.analyzer.id === "test-file-v1")!.action,
+            "No slow dependency was retained",
+        );
+    });
+
+    it("should exclude testplane internals and report a real dependency once", () => {
+        const moduleOp = (name: string, wallMs: number, index: number): RetainedOperation => ({
+            id: `${name}-${index}`,
+            kind: "module.load",
+            name,
+            process: { type: "worker" },
+            context: { runId: "run" },
+            startOffsetMs: 0,
+            timing: { wallMs },
+            attributes: {
+                module: name,
+                ownerFile: "testplane-tests/suite.testplane.ts",
+                cacheHit: false,
+            },
+            quality: { timing: "exact", cpu: "thread" },
+        });
+        const profile = normalizedProfile({
+            level: 3,
+            durationMs: 10_000,
+            timeline: [
+                moduleOp("node_modules/testplane/build/src/testplane.js", 800, 0),
+                moduleOp("node_modules/testplane/build/src/testplane.js", 700, 1),
+                moduleOp("node_modules/heavy-dep/index.js", 500, 0),
+                moduleOp("node_modules/heavy-dep/index.js", 450, 1),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "module-dependency-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "heavy-dep");
+        assert.include(findings[0].action, "suite.testplane.ts");
+        assert.include(findings[0].action, "same worker process");
+    });
+
     it("should expose root command wall separately from nested cumulative work", () => {
         const profile = aggregateProfile(
             {
@@ -484,6 +583,151 @@ describe("profiler/analysis", () => {
             profile.aggregates.byKind.map(item => item.kind),
             ["worker.startup"],
         );
+    });
+
+    it("should flag an event listener only when it is slow per call, not merely frequent", () => {
+        const listener = {
+            ...operation("listener", 0, 4_000),
+            kind: "event.listener",
+            name: "INIT:startServer",
+            timing: { wallMs: 4_000, activeJsMs: 3_500, waitingMs: 500 },
+            source: {
+                file: "plugins/server/index.js",
+                line: 42,
+                functionName: "startServer",
+                plugin: "server",
+                confidence: "high" as const,
+            },
+        };
+        const profile = normalizedProfile({
+            level: 3,
+            durationMs: 100_000,
+            timeline: [listener],
+            listeners: [
+                aggregate("event.listener", "NEW_BROWSER:prepareBrowser", {
+                    count: 388,
+                    total: 9_400,
+                    max: 60,
+                }),
+                aggregate("event.listener", "INIT:startServer", {
+                    count: 2,
+                    total: 6_000,
+                    max: 4_000,
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "event-listener-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "startServer");
+        assert.include(findings[0].observation, "server (plugins/server/index.js:42)");
+        assert.notInclude(findings[0].observation, "in active JS");
+        assert.include(findings[0].action, "`INIT:startServer` (index.js:42)");
+        assert.include(findings[0].action, "active JS dominates");
+        assert.include(findings[0].action, "CPU-heavy work");
+        assert.notInclude(findings[0].action, "awaited I/O");
+        assert.deepEqual(findings[0].operationIds, ["listener"]);
+        assert.deepInclude(findings[0].evidence, {
+            metric: "activeJs",
+            value: 3_500,
+            unit: "ms",
+            operationId: "listener",
+        });
+    });
+
+    it("should direct a waiting event listener to awaited I/O instead of CPU work", () => {
+        const listener = {
+            ...operation("listener", 0, 4_000),
+            kind: "event.listener",
+            name: "INIT:startServer",
+            timing: { wallMs: 4_000, activeJsMs: 0, waitingMs: 4_000 },
+        };
+        const profile = normalizedProfile({
+            level: 3,
+            durationMs: 20_000,
+            timeline: [listener],
+            listeners: [
+                aggregate("event.listener", "INIT:startServer", {
+                    total: 4_000,
+                    max: 4_000,
+                }),
+            ],
+        });
+
+        const finding = runAnalyzers(profile).find(item => item.analyzer.id === "event-listener-v1")!;
+
+        assert.include(finding.action, "`INIT:startServer` (source unavailable)");
+        assert.include(finding.action, "waiting dominates");
+        assert.include(finding.action, "awaited I/O or timers");
+        assert.notInclude(finding.action, "CPU-heavy work");
+    });
+
+    it("should flag a sub-second event listener when it materially affects a short run", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 1_000,
+            listeners: [
+                aggregate("event.listener", "INIT:startServer", {
+                    total: 180,
+                    max: 180,
+                }),
+            ],
+        });
+
+        const finding = runAnalyzers(profile).find(item => item.analyzer.id === "event-listener-v1")!;
+
+        assert.include(finding.observation, "`INIT:startServer` used 180ms");
+        assert.include(finding.action, "`INIT:startServer` (source unavailable)");
+        assert.include(finding.action, "run with profiler.level 3");
+        assert.notInclude(finding.action, "CPU-heavy");
+        assert.notInclude(finding.action, "awaited I/O");
+    });
+
+    it("should disambiguate listener sources with the same file name", () => {
+        const listeners = [
+            {
+                ...operation("first-listener", 0, 4_000),
+                kind: "event.listener",
+                name: "INIT:first",
+                timing: { wallMs: 4_000, activeJsMs: 4_000, waitingMs: 0 },
+                source: {
+                    file: "plugins/foo/index.js",
+                    line: 6,
+                    column: 15,
+                    confidence: "high" as const,
+                },
+            },
+            {
+                ...operation("second-listener", 4_000, 4_000),
+                kind: "event.listener",
+                name: "INIT:second",
+                timing: { wallMs: 4_000, activeJsMs: 4_000, waitingMs: 0 },
+                source: {
+                    file: "plugins/bar/index.js",
+                    line: 8,
+                    column: 20,
+                    confidence: "high" as const,
+                },
+            },
+        ];
+        const profile = normalizedProfile({
+            level: 3,
+            durationMs: 20_000,
+            timeline: listeners,
+            listeners: [
+                aggregate("event.listener", "INIT:first", { total: 4_000, max: 4_000 }),
+                aggregate("event.listener", "INIT:second", {
+                    total: 4_000,
+                    max: 4_000,
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "event-listener-v1");
+
+        assert.lengthOf(findings, 2);
+        assert.include(findings[0].action, "`INIT:first` (foo/index.js:6:15)");
+        assert.include(findings[1].action, "`INIT:second` (bar/index.js:8:20)");
     });
 });
 

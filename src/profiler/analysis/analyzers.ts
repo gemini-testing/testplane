@@ -1,6 +1,7 @@
 import type { Finding, FindingEvidence, ProfilerAggregate, ProfilerValue, RetainedOperation } from "../schema";
 import { operationUnionWithin, type NormalizedProfile } from "./aggregator";
 import { compareFindings } from "./finding-order";
+import { findRobustOutliers } from "./outliers";
 import { ANALYSIS_POLICY_V1 } from "./policy-v1";
 
 /* eslint-disable no-use-before-define -- analyzer declarations intentionally precede the shared registry/helpers */
@@ -19,6 +20,9 @@ const createDefaultAnalyzers = (): ProfilerAnalyzer[] => [
     majorPhaseAnalyzer,
     testDiscoveryAnalyzer,
     unattributedAnalyzer,
+    listenerAnalyzer,
+    testFileAnalyzer,
+    moduleDependencyAnalyzer,
 ];
 
 export const runAnalyzers = (profile: NormalizedProfile, analyzers = createDefaultAnalyzers()): Finding[] => {
@@ -359,6 +363,168 @@ function unattributedAction(
         ? `Try profiler.level 3 to retain more operations around this interval. ${inspect}`
         : inspect;
 }
+
+const listenerAnalyzer: ProfilerAnalyzer = {
+    id: "event-listener-v1",
+    minLevel: 2,
+    analyze: profile => {
+        const aggregates = profile.aggregates.listeners
+            .filter(aggregate => !aggregate.name.startsWith("internal:"))
+            // A listener is only slow if it is slow per call: a low per-call average across many
+            // events is normal, not a bottleneck, even when the cumulative total is large.
+            .filter(
+                aggregate =>
+                    aggregate.meanWallMs >= ANALYSIS_POLICY_V1.eventListener.minMeanWallMs &&
+                    (aggregate.maxWallMs >= ANALYSIS_POLICY_V1.eventListener.minSingleWallMs ||
+                        aggregate.totalWallMs >= ANALYSIS_POLICY_V1.eventListener.minTotalWallMs) &&
+                    aggregate.totalWallMs / profile.durationMs >= ANALYSIS_POLICY_V1.eventListener.minRunShare,
+            );
+        const slowestOperations = aggregates.map(aggregate => retainedOperationsForAggregate(profile, aggregate)[0]);
+        const locations = shortestUniqueSourceLocations(slowestOperations.map(operation => operation?.source));
+
+        return aggregates.map((aggregate, index) =>
+            listenerFinding(aggregate, profile, slowestOperations[index], locations[index]),
+        );
+    },
+};
+
+const testFileAnalyzer: ProfilerAnalyzer = {
+    id: "test-file-v1",
+    minLevel: 2,
+    analyze: profile => {
+        // One file loads many times (per worker/session/retry/browser); collapse to the worst
+        // instance per file so a single slow file produces a single finding, not dozens.
+        const operations = dedupeByNameMaxWall(
+            profile.timeline.filter(operation => operation.kind.startsWith("test.file")),
+        );
+        const fileLoadWall = operations.reduce((total, operation) => total + operation.timing.wallMs, 0);
+        const candidates =
+            operations.length >= 8
+                ? findRobustOutliers(operations, operation => operation.timing.wallMs)
+                : operations.map(operation => ({
+                      item: operation,
+                      measurement: operation.timing.wallMs,
+                  }));
+        const retained = candidates
+            .filter(candidate => candidate.measurement >= ANALYSIS_POLICY_V1.testFile.minWallMs)
+            .slice(0, Math.max(3, Math.ceil(operations.length * 0.1)));
+        if (
+            retained.reduce((total, candidate) => total + candidate.measurement, 0) / Math.max(1, fileLoadWall) <
+            ANALYSIS_POLICY_V1.testFile.minGroupShare
+        ) {
+            return [];
+        }
+        return retained.map(({ item: operation }) =>
+            operationFinding("test-file-v1", "test-file", operation, profile, testFileAction(profile, operation)),
+        );
+    },
+};
+
+const moduleDependencyAnalyzer: ProfilerAnalyzer = {
+    id: "module-dependency-v1",
+    minLevel: 3,
+    analyze: profile => {
+        const modules = dedupeByNameMaxWall(
+            profile.timeline.filter(
+                operation =>
+                    operation.kind === "module.load" &&
+                    typeof operation.attributes.ownerFile === "string" &&
+                    !operation.attributes.cacheHit &&
+                    operation.attributes.module !== operation.attributes.ownerFile &&
+                    // Testplane's own internals are not user-actionable dependencies.
+                    !isFrameworkModule(String(operation.attributes.module ?? operation.name)),
+            ),
+        );
+        const candidates =
+            modules.length >= 8
+                ? findRobustOutliers(modules, operation => operation.timing.wallMs)
+                : modules.map(operation => ({
+                      item: operation,
+                      measurement: operation.timing.wallMs,
+                  }));
+        return candidates
+            .filter(({ measurement }) => measurement >= 100 && measurement / profile.durationMs >= 0.01)
+            .slice(0, Math.max(3, Math.ceil(modules.length * 0.1)))
+            .map(({ item: operation }) =>
+                operationFinding(
+                    "module-dependency-v1",
+                    "module",
+                    operation,
+                    profile,
+                    moduleDependencyAction(operation.attributes.ownerFile as string),
+                ),
+            );
+    },
+};
+
+const aggregateFinding = (
+    analyzerId: string,
+    category: string,
+    aggregate: ProfilerAggregate,
+    profile: NormalizedProfile,
+    action: string,
+): FindingDraft => {
+    const retained = retainedOperationsForAggregate(profile, aggregate);
+    return {
+        analyzer: { id: analyzerId, version: 1 },
+        category,
+        severity: "warning",
+        observation: `\`${aggregate.name}\` used ${formatMs(aggregate.totalWallMs)} across ${aggregate.count} call(s).`,
+        evidence: [
+            { metric: "count", value: aggregate.count },
+            { metric: "totalWall", value: aggregate.totalWallMs, unit: "ms" },
+            { metric: "meanWall", value: aggregate.meanWallMs, unit: "ms" },
+            { metric: "maxWall", value: aggregate.maxWallMs, unit: "ms" },
+            {
+                metric: "runShare",
+                value: aggregate.totalWallMs / profile.durationMs,
+                unit: "ratio",
+            },
+            ...retained.slice(0, 1).map(operation => ({
+                metric: "slowestRetainedCall",
+                value: operation.timing.wallMs,
+                unit: "ms",
+                operationId: operation.id,
+            })),
+        ],
+        action,
+        confidence: "medium",
+        operationIds: retained.map(operation => operation.id),
+        entityIds: [aggregate.name],
+        confidenceReasons: ["The total is cumulative work and may overlap other operations"],
+    };
+};
+
+const operationFinding = (
+    analyzerId: string,
+    category: string,
+    operation: RetainedOperation,
+    profile: NormalizedProfile,
+    action: string,
+): FindingDraft => ({
+    analyzer: { id: analyzerId, version: 1 },
+    category,
+    severity: "warning",
+    observation: `\`${operation.name}\` took ${formatMs(operation.timing.wallMs)}.`,
+    evidence: [
+        {
+            metric: "wall",
+            value: operation.timing.wallMs,
+            unit: "ms",
+            operationId: operation.id,
+        },
+        {
+            metric: "runShare",
+            value: operation.timing.wallMs / profile.durationMs,
+            unit: "ratio",
+            operationId: operation.id,
+        },
+    ],
+    action,
+    confidence: operation.quality.timing === "exact" ? "high" : "medium",
+    operationIds: [operation.id],
+    entityIds: [operation.name],
+});
 
 const simpleFinding = ({
     analyzerId,
@@ -714,6 +880,149 @@ function majorPhaseAction(
     return "Open the reported listener or callback sources, or locate their registrations by the displayed names. If active JS dominates, reduce synchronous or CPU-heavy work; if waiting dominates, inspect awaited I/O or timers. Parallelize only independent operations.";
 }
 
+function listenerFinding(
+    aggregate: ProfilerAggregate,
+    profile: NormalizedProfile,
+    slowest: RetainedOperation | undefined,
+    shortLocation: string | undefined,
+): FindingDraft {
+    const finding = aggregateFinding(
+        "event-listener-v1",
+        "event-listener",
+        aggregate,
+        profile,
+        listenerAction(profile.level, aggregate.name, slowest, shortLocation),
+    );
+    if (!slowest) {
+        return finding;
+    }
+
+    const source = formatSource(slowest?.source);
+    const location = source ? ` at \`${source}\`` : " (source unavailable)";
+    finding.observation += ` Slowest retained call${location} took ${formatMs(slowest.timing.wallMs)}.`;
+    if (source) {
+        finding.evidence.push({
+            metric: "source",
+            value: source,
+            operationId: slowest.id,
+        });
+    }
+    if (slowest.timing.activeJsMs !== undefined && slowest.timing.waitingMs !== undefined) {
+        finding.evidence.push(
+            {
+                metric: "activeJs",
+                value: slowest.timing.activeJsMs,
+                unit: "ms",
+                operationId: slowest.id,
+            },
+            {
+                metric: "waiting",
+                value: slowest.timing.waitingMs,
+                unit: "ms",
+                operationId: slowest.id,
+            },
+        );
+    }
+    return finding;
+}
+
+function listenerAction(
+    level: NormalizedProfile["level"],
+    name: string,
+    operation: RetainedOperation | undefined,
+    shortLocation: string | undefined,
+): string {
+    const owner = listenerOwner(name, shortLocation);
+    const activeJsMs = operation?.timing.activeJsMs;
+    const waitingMs = operation?.timing.waitingMs;
+
+    if (activeJsMs === undefined || waitingMs === undefined) {
+        return level < 3
+            ? `${owner}: run with profiler.level 3 to see what happened during this listener call.`
+            : `${owner}: the detailed activity breakdown was not retained; inspect what this listener does during its slow call.`;
+    }
+    if (waitingMs > activeJsMs) {
+        return `${owner}: waiting dominates the slowest retained call; inspect awaited I/O or timers and remove avoidable serial waits.`;
+    }
+    if (activeJsMs > waitingMs) {
+        return `${owner}: active JS dominates the slowest retained call; reduce synchronous CPU-heavy work or move it off the listener's critical path.`;
+    }
+    return `${owner}: active JS and waiting contribute equally; inspect both awaited I/O or timers and synchronous CPU-heavy work.`;
+}
+
+function listenerOwner(name: string, shortLocation: string | undefined): string {
+    return `\`${name}\` (${shortLocation ?? "source unavailable"})`;
+}
+
+function shortestUniqueSourceLocations(sources: Array<RetainedOperation["source"]>): Array<string | undefined> {
+    const paths = sources.map(source => source?.file?.replaceAll("\\", "/"));
+    const uniquePaths = [...new Set(paths.filter((file): file is string => Boolean(file)))];
+    const suffixCounts = new Map<string, number>();
+
+    for (const file of uniquePaths) {
+        const parts = file.split("/").filter(Boolean);
+        for (let depth = 1; depth <= parts.length; depth += 1) {
+            const suffix = parts.slice(-depth).join("/");
+            suffixCounts.set(suffix, (suffixCounts.get(suffix) ?? 0) + 1);
+        }
+    }
+
+    const suffixes = new Map(
+        uniquePaths.map(file => {
+            const parts = file.split("/").filter(Boolean);
+            const suffix = parts
+                .map((_, index) => parts.slice(-(index + 1)).join("/"))
+                .find(candidate => suffixCounts.get(candidate) === 1);
+
+            return [file, suffix ?? parts.join("/")] as const;
+        }),
+    );
+
+    return sources.map((source, index) => {
+        const file = paths[index];
+        if (!file) {
+            return;
+        }
+        const line = source?.line;
+        const column = source?.column;
+
+        return `${suffixes.get(file)}${line === undefined ? "" : `:${line}`}${
+            column === undefined ? "" : `:${column}`
+        }`;
+    });
+}
+
+function testFileAction(profile: NormalizedProfile, operation: RetainedOperation): string {
+    if (profile.level < 3) {
+        return "Run with profiler.level 3 to identify heavy dependencies. If no slow dependency is reported, inspect synchronous or awaited module-scope initialization in this test file.";
+    }
+
+    const dependency = profile.timeline
+        .filter(
+            candidate =>
+                candidate.kind === "module.load" &&
+                candidate.attributes.ownerFile === operation.name &&
+                candidate.name !== operation.name &&
+                candidate.attributes.cacheHit !== true &&
+                !isFrameworkModule(String(candidate.attributes.module ?? candidate.name)),
+        )
+        .sort((left, right) => right.timing.wallMs - left.timing.wallMs)[0];
+    return dependency
+        ? `Inspect \`${dependency.name}\`, the slowest retained uncached dependency of this file. Move heavy initialization out of module scope or load it lazily.`
+        : "No slow dependency was retained for this file. Inspect synchronous or awaited module-scope initialization in the file itself.";
+}
+
+function moduleDependencyAction(ownerFile: string): string {
+    return `In \`${ownerFile}\`, load this dependency lazily or import a lighter entry point. Reduce its initialization work if you own it. Reuse initialized state through the module cache only within the same worker process.`;
+}
+
+function retainedOperationsForAggregate(profile: NormalizedProfile, aggregate: ProfilerAggregate): RetainedOperation[] {
+    return profile.timeline
+        .filter(operation => operation.kind === aggregate.kind && operation.name === aggregate.name)
+        .sort((left, right) => right.timing.wallMs - left.timing.wallMs)
+        .slice(0, 3);
+}
+
 function formatSource(source: RetainedOperation["source"]): string | undefined {
     const location = source?.file
         ? `${source.file}${source.line === undefined ? "" : `:${source.line}`}${
@@ -725,6 +1034,19 @@ function formatSource(source: RetainedOperation["source"]): string | undefined {
     }
     return location ?? source?.plugin;
 }
+
+const dedupeByNameMaxWall = (operations: RetainedOperation[]): RetainedOperation[] => {
+    const byName = new Map<string, RetainedOperation>();
+    for (const operation of operations) {
+        const existing = byName.get(operation.name);
+        if (!existing || operation.timing.wallMs > existing.timing.wallMs) {
+            byName.set(operation.name, operation);
+        }
+    }
+    return [...byName.values()];
+};
+
+const isFrameworkModule = (modulePath: string): boolean => modulePath.includes("node_modules/testplane/");
 
 const sampledAggregateValue = (
     profile: NormalizedProfile,
