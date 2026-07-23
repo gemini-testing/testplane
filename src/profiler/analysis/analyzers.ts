@@ -1,5 +1,5 @@
 import type { Finding, FindingEvidence, ProfilerAggregate, ProfilerValue, RetainedOperation } from "../schema";
-import { operationUnionWithin, type NormalizedProfile } from "./aggregator";
+import { operationUnionWithin, unionDuration, type NormalizedProfile } from "./aggregator";
 import { compareFindings } from "./finding-order";
 import { findRobustOutliers } from "./outliers";
 import { ANALYSIS_POLICY_V1 } from "./policy-v1";
@@ -23,6 +23,9 @@ const createDefaultAnalyzers = (): ProfilerAnalyzer[] => [
     listenerAnalyzer,
     testFileAnalyzer,
     moduleDependencyAnalyzer,
+    slowTestAnalyzer,
+    hookAnalyzer,
+    commandAnalyzer,
 ];
 
 export const runAnalyzers = (profile: NormalizedProfile, analyzers = createDefaultAnalyzers()): Finding[] => {
@@ -455,6 +458,119 @@ const moduleDependencyAnalyzer: ProfilerAnalyzer = {
                 ),
             );
     },
+};
+
+const slowTestAnalyzer: ProfilerAnalyzer = {
+    id: "slow-test-v1",
+    minLevel: 2,
+    analyze: profile => {
+        const tests = profile.aggregates.tests.filter(aggregate => aggregate.kind === "test.body");
+        if (!tests.length) {
+            return [];
+        }
+        const meanPerCall = tests.reduce((sum, aggregate) => sum + aggregate.meanWallMs, 0) / tests.length;
+        const relativeGate =
+            tests.length >= ANALYSIS_POLICY_V1.slowTest.minSampleForRelative
+                ? meanPerCall * ANALYSIS_POLICY_V1.slowTest.minMeanMultiple
+                : 0;
+        return tests
+            .filter(
+                aggregate =>
+                    aggregate.maxWallMs >= ANALYSIS_POLICY_V1.slowTest.minWallMs &&
+                    aggregate.totalWallMs / profile.durationMs >= ANALYSIS_POLICY_V1.slowTest.minExecutionShare &&
+                    aggregate.meanWallMs >= relativeGate,
+            )
+            .map(aggregate =>
+                aggregateFinding(
+                    "slow-test-v1",
+                    "test",
+                    aggregate,
+                    profile,
+                    "Inspect slow commands and awaited operations inside this test body; remove avoidable waits from its critical path.",
+                ),
+            );
+    },
+};
+
+const hookAnalyzer: ProfilerAnalyzer = {
+    id: "common-hook-v1",
+    minLevel: 2,
+    analyze: profile => {
+        const findings: FindingDraft[] = [];
+
+        for (const aggregate of profile.aggregates.hooks) {
+            if (
+                aggregate.count < ANALYSIS_POLICY_V1.commonHook.minCalls ||
+                aggregate.totalWallMs < ANALYSIS_POLICY_V1.commonHook.minTotalWallMs ||
+                aggregate.totalWallMs / profile.durationMs < ANALYSIS_POLICY_V1.commonHook.minExecutionShare
+            ) {
+                continue;
+            }
+
+            // Parallel tests inflate cumulative hook work. For moderate hooks, require their
+            // retained intervals to occupy a material part of the run's actual wall time.
+            const observedWallMs = operationUnionWall(profile, aggregate);
+            if (
+                aggregate.meanWallMs < ANALYSIS_POLICY_V1.commonHook.minMeanWallMs &&
+                observedWallMs / profile.durationMs < ANALYSIS_POLICY_V1.commonHook.minExecutionShare
+            ) {
+                continue;
+            }
+
+            const finding = aggregateFinding(
+                "common-hook-v1",
+                "hook",
+                aggregate,
+                profile,
+                "Check whether every test in this suite needs the hook's full setup. Optimize the repeated work, or split the tests into smaller suites with focused hooks so each test runs only the setup it needs.",
+            );
+            if (observedWallMs > 0) {
+                finding.evidence.push({
+                    metric: "observedUnionWall",
+                    value: observedWallMs,
+                    unit: "ms",
+                    threshold: profile.durationMs * ANALYSIS_POLICY_V1.commonHook.minExecutionShare,
+                });
+            }
+            findings.push(finding);
+        }
+
+        return findings;
+    },
+};
+
+const commandAnalyzer: ProfilerAnalyzer = {
+    id: "browser-command-v1",
+    minLevel: 3,
+    analyze: profile =>
+        profile.aggregates.commands
+            .filter(aggregate => aggregate.name !== "<root>")
+            .flatMap(aggregate => {
+                if (aggregate.name === "pause") {
+                    const matchesPause =
+                        aggregate.totalWallMs >= ANALYSIS_POLICY_V1.pause.minTotalWallMs &&
+                        (aggregate.count >= ANALYSIS_POLICY_V1.pause.minCalls ||
+                            aggregate.maxWallMs >= ANALYSIS_POLICY_V1.pause.minSingleWallMs) &&
+                        aggregate.totalWallMs / profile.durationMs >= ANALYSIS_POLICY_V1.pause.minShare;
+                    return matchesPause
+                        ? [
+                              aggregateFinding(
+                                  "browser-pause-v1",
+                                  "browser-command",
+                                  aggregate,
+                                  profile,
+                                  "Replace static browser.pause calls with a condition-based wait.",
+                              ),
+                          ]
+                        : [];
+                }
+
+                return aggregate.meanWallMs >= ANALYSIS_POLICY_V1.command.minMeanWallMs &&
+                    aggregate.totalWallMs >= ANALYSIS_POLICY_V1.command.minWallMs &&
+                    aggregate.totalWallMs / profile.durationMs >= ANALYSIS_POLICY_V1.command.minExecutionShare
+                    ? [commandFinding(aggregate, profile)]
+                    : [];
+            }),
 };
 
 const aggregateFinding = (
@@ -1016,6 +1132,69 @@ function moduleDependencyAction(ownerFile: string): string {
     return `In \`${ownerFile}\`, load this dependency lazily or import a lighter entry point. Reduce its initialization work if you own it. Reuse initialized state through the module cache only within the same worker process.`;
 }
 
+function commandFinding(aggregate: ProfilerAggregate, profile: NormalizedProfile): FindingDraft {
+    const finding = aggregateFinding(
+        "browser-command-v1",
+        "browser-command",
+        aggregate,
+        profile,
+        "Inspect the slowest retained calls and their test context. Reduce redundant calls or the work performed by each call; for wait-like commands, prefer a condition-based wait.",
+    );
+    const slowest = retainedOperationsForAggregate(profile, aggregate)[0];
+    const context = slowest ? commandContext(profile, slowest) : "";
+    const example = slowest ? ` Slowest retained call took ${formatMs(slowest.timing.wallMs)}${context}.` : "";
+    const source = formatSource(slowest?.source);
+    const registration = source ? ` It was registered at \`${source}\`.` : "";
+    finding.observation = `\`${aggregate.name}\` used ${formatMs(aggregate.totalWallMs)} across ${
+        aggregate.count
+    } call(s) (${formatMs(aggregate.meanWallMs)} average).${example}${registration}`;
+    if (source && slowest) {
+        finding.evidence.push({
+            metric: "source",
+            value: source,
+            operationId: slowest.id,
+        });
+    }
+    return finding;
+}
+
+function commandContext(profile: NormalizedProfile, operation: RetainedOperation): string {
+    const runnable = findAncestor(profile, operation, candidate =>
+        [
+            "test.body",
+            "test.hook",
+            "test.beforeEach.total",
+            "test.afterEach.total",
+            "worker.test-attempt",
+            "test.attempt",
+        ].includes(candidate.kind),
+    );
+    const test = runnable ? ` under \`${runnable.name}\`` : "";
+    const browser = operation.context.browserId ? ` on \`${operation.context.browserId}\`` : "";
+    return `${test}${browser}`;
+}
+
+function findAncestor(
+    profile: NormalizedProfile,
+    operation: RetainedOperation,
+    matches: (candidate: RetainedOperation) => boolean,
+): RetainedOperation | undefined {
+    let parentId = operation.parentId;
+    const visited = new Set<string>();
+    while (parentId && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = profile.timeline.find(candidate => candidate.id === parentId);
+        if (!parent) {
+            return;
+        }
+        if (matches(parent)) {
+            return parent;
+        }
+        parentId = parent.parentId;
+    }
+    return;
+}
+
 function retainedOperationsForAggregate(profile: NormalizedProfile, aggregate: ProfilerAggregate): RetainedOperation[] {
     return profile.timeline
         .filter(operation => operation.kind === aggregate.kind && operation.name === aggregate.name)
@@ -1047,6 +1226,13 @@ const dedupeByNameMaxWall = (operations: RetainedOperation[]): RetainedOperation
 };
 
 const isFrameworkModule = (modulePath: string): boolean => modulePath.includes("node_modules/testplane/");
+
+const operationUnionWall = (profile: NormalizedProfile, aggregate: ProfilerAggregate): number =>
+    unionDuration(
+        profile.timeline
+            .filter(operation => operation.kind === aggregate.kind && operation.name === aggregate.name)
+            .map(operation => [operation.startOffsetMs, operation.startOffsetMs + operation.timing.wallMs] as const),
+    );
 
 const sampledAggregateValue = (
     profile: NormalizedProfile,

@@ -514,6 +514,107 @@ describe("profiler/analysis", () => {
         assert.include(findings[0].action, "same worker process");
     });
 
+    it("should report significant repeated pauses but ignore a short single pause", () => {
+        const significant = normalizedProfile({
+            level: 3,
+            durationMs: 30_000,
+            commands: [
+                aggregate("browser.command", "pause", {
+                    count: 10,
+                    total: 60_000,
+                    max: 20_000,
+                }),
+            ],
+        });
+        const significantSingle = normalizedProfile({
+            level: 3,
+            durationMs: 6_000,
+            commands: [
+                aggregate("browser.command", "pause", {
+                    count: 1,
+                    total: 5_100,
+                    max: 5_100,
+                }),
+            ],
+        });
+        const insignificant = normalizedProfile({
+            level: 3,
+            durationMs: 10_000,
+            commands: [
+                aggregate("browser.command", "pause", {
+                    count: 1,
+                    total: 1_000,
+                    max: 1_000,
+                }),
+            ],
+        });
+
+        assert.equal(
+            runAnalyzers(significant).find(finding => finding.analyzer.id === "browser-pause-v1")!.confidence,
+            "medium",
+        );
+        assert.exists(runAnalyzers(significantSingle).find(finding => finding.analyzer.id === "browser-pause-v1"));
+        assert.notExists(runAnalyzers(insignificant).find(finding => finding.analyzer.id === "browser-pause-v1"));
+    });
+
+    it("should flag commands that are slow per call, not merely frequent", () => {
+        const testBody = {
+            ...operation("test-body", 0, 20_000),
+            kind: "test.body",
+            name: 'checkout "as guest"',
+        };
+        const slowCommand = {
+            ...operation("slow-command", 1_000, 5_000),
+            parentId: testBody.id,
+            kind: "browser.command",
+            name: "waitUntil",
+            context: { runId: "run", browserId: "chrome" },
+            source: {
+                file: "test/helpers/commands.ts",
+                line: 42,
+                functionName: "waitUntil",
+                confidence: "medium" as const,
+            },
+        };
+        const profile = normalizedProfile({
+            level: 3,
+            durationMs: 100_000,
+            timeline: [testBody, slowCommand],
+            commands: [
+                aggregate("browser.command", "$", {
+                    count: 9_991,
+                    total: 212_000,
+                    max: 200,
+                }),
+                aggregate("browser.command", "waitUntil", {
+                    count: 3,
+                    total: 12_000,
+                    max: 5_000,
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "browser-command-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "waitUntil");
+        assert.include(findings[0].observation, 'checkout "as guest"');
+        assert.include(findings[0].observation, "chrome");
+        assert.include(findings[0].observation, "test/helpers/commands.ts:42");
+        assert.deepEqual(findings[0].operationIds, ["slow-command"]);
+        assert.deepInclude(findings[0].evidence, {
+            metric: "slowestRetainedCall",
+            value: 5_000,
+            unit: "ms",
+            operationId: "slow-command",
+        });
+        assert.include(findings[0].action, "condition-based wait");
+        assert.deepInclude(findings[0].evidence, {
+            metric: "source",
+            value: "test/helpers/commands.ts:42",
+            operationId: "slow-command",
+        });
+    });
+
     it("should expose root command wall separately from nested cumulative work", () => {
         const profile = aggregateProfile(
             {
@@ -583,6 +684,22 @@ describe("profiler/analysis", () => {
             profile.aggregates.byKind.map(item => item.kind),
             ["worker.startup"],
         );
+    });
+
+    it("should not report browser-pool queue time as a slow test body", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 20_000,
+            tests: [
+                aggregate("test.attempt", "queued test", {
+                    total: 12_000,
+                    max: 12_000,
+                }),
+                aggregate("test.body", "queued test", { total: 500, max: 500 }),
+            ],
+        });
+
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "slow-test-v1"));
     });
 
     it("should flag an event listener only when it is slow per call, not merely frequent", () => {
@@ -728,6 +845,89 @@ describe("profiler/analysis", () => {
         assert.lengthOf(findings, 2);
         assert.include(findings[0].action, "`INIT:first` (foo/index.js:6:15)");
         assert.include(findings[1].action, "`INIT:second` (bar/index.js:8:20)");
+    });
+
+    it("should flag a common hook only when it is slow per call, not merely frequent", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 1_000_000,
+            hooks: [
+                aggregate("test.beforeEach.total", "fast hook", {
+                    count: 30,
+                    total: 14_100,
+                    max: 600,
+                }),
+                aggregate("test.beforeEach.total", "slow hook", {
+                    count: 12,
+                    total: 132_000,
+                    max: 12_000,
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "common-hook-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "slow hook");
+        assert.include(findings[0].action, "whether every test in this suite needs the hook's full setup");
+        assert.include(findings[0].action, "smaller suites with focused hooks");
+        assert.notInclude(findings[0].action, "module or plugin initialization");
+        assert.notInclude(findings[0].action, "worker process");
+    });
+
+    it("should use observed hook wall time instead of overlapping cumulative work", () => {
+        const hookName = 'suite "before each" hook: setup';
+        const hook = (id: string, startOffsetMs: number): RetainedOperation => ({
+            ...operation(id, startOffsetMs, 140),
+            kind: "test.hook",
+            name: hookName,
+        });
+        const hooks = [aggregate("test.hook", hookName, { count: 10, total: 1_400, max: 140 })];
+        const sequential = normalizedProfile({
+            level: 2,
+            durationMs: 3_000,
+            hooks,
+            timeline: Array.from({ length: 10 }, (_, index) => hook(`sequential-${index}`, index * 150)),
+        });
+        const overlapping = normalizedProfile({
+            level: 2,
+            durationMs: 3_000,
+            hooks,
+            timeline: Array.from({ length: 10 }, (_, index) => hook(`overlapping-${index}`, 0)),
+        });
+
+        const finding = runAnalyzers(sequential).find(item => item.analyzer.id === "common-hook-v1");
+        assert.exists(finding);
+        assert.include(
+            finding!.evidence.map(item => item.metric),
+            "observedUnionWall",
+        );
+        assert.notExists(runAnalyzers(overlapping).find(item => item.analyzer.id === "common-hook-v1"));
+    });
+
+    it("should report only tests that stand out from the run, not everything above the floor", () => {
+        const typical = Array.from({ length: 10 }, (_, index) =>
+            aggregate("test.body", `typical-${index}`, { total: 1_000, max: 1_000 }),
+        );
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 100_000,
+            tests: [
+                ...typical,
+                aggregate("test.body", 'clearly "slow"', {
+                    total: 12_000,
+                    max: 12_000,
+                }),
+                aggregate("test.body", "above-floor-but-typical", {
+                    total: 6_000,
+                    max: 6_000,
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "slow-test-v1");
+        assert.lengthOf(findings, 1);
+        assert.match(findings[0].observation, /^`clearly "slow"` used /);
+        assert.include(findings[0].action, "inside this test body");
     });
 });
 
