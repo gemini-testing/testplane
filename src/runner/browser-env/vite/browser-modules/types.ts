@@ -9,12 +9,36 @@ export type RunnableFn = (
     ctx: { browser: WebdriverIO.Browser },
 ) => Promise<unknown>;
 
-export enum BrowserEventNames {
-    initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
-    runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
-    runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
-    callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
-    reconnect = `${BROWSER_EVENT_PREFIX}:reconnect`,
+export const BrowserEventNames = {
+    initialize: `${BROWSER_EVENT_PREFIX}:initialize`,
+    runBrowserCommand: `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
+    runExpectMatcher: `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
+    callConsoleMethod: `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
+    reconnect: `${BROWSER_EVENT_PREFIX}:reconnect`,
+    profilerFragment: `${BROWSER_EVENT_PREFIX}:profilerFragment`,
+} as const;
+
+export type BrowserEventNames = (typeof BrowserEventNames)[keyof typeof BrowserEventNames];
+
+export interface BrowserProfilerFragmentPayload {
+    /** Full Mocha title of the browser-side runnable. */
+    fullTitle: string;
+    /** Real elapsed time spent executing the runnable in the browser. */
+    wallMs: number;
+    /** Number of new browser Resource Timing entries created while the runnable was executing. */
+    resourceCount: number;
+    /** Number of browser Long Task entries created while the runnable was executing. */
+    longTaskCount: number;
+    /** Sum of the durations of browser Long Task entries created while the runnable was executing. */
+    longTaskWallMs: number;
+    /** Correlation identifiers copied from the worker that requested the runnable. */
+    context?: {
+        attemptId?: string;
+        testId?: string;
+        browserId?: string;
+        sessionId?: string;
+        runnableKind?: string;
+    };
 }
 
 export interface BrowserRunBrowserCommandPayload {
@@ -52,6 +76,7 @@ export interface BrowserViteEvents {
     ) => void;
     [BrowserEventNames.callConsoleMethod]: (payload: BrowserCallConsoleMethodPayload) => void;
     [BrowserEventNames.reconnect]: () => void;
+    [BrowserEventNames.profilerFragment]: (payload: BrowserProfilerFragmentPayload) => void;
 }
 
 // TODO: use from nodejs code when migrate to esm
@@ -74,10 +99,12 @@ export interface WorkerInitializePayload {
         httpTimeout: number;
     };
     expectMatchers: string[];
+    profilerLevel?: 0 | 3;
 }
 
 export interface WorkerRunRunnablePayload {
     fullTitle: string;
+    profileContext?: BrowserProfilerFragmentPayload["context"];
 }
 
 export type WorkerInitializeCb = (err: null | Error) => void;

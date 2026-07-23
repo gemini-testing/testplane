@@ -16,7 +16,7 @@ export const wrapExecutionThread = (
     return class ExecutionThread extends NodejsEnvExecutionThread {
         private _socket = socket;
 
-        constructor(opts: ExecutionThreadCtorOpts & { runUuid: string }) {
+        constructor(opts: ExecutionThreadCtorOpts) {
             super(opts);
         }
 
@@ -48,10 +48,24 @@ export const wrapExecutionThread = (
                     }
 
                     const timeout = runnable.timeout === 0 ? SOCKET_MAX_TIMEOUT : runnable.timeout;
+                    const profilerOptions = this._profiler.isEnabled(3)
+                        ? {
+                              profileContext: {
+                                  attemptId: this._attemptId,
+                                  testId: this._ctx.currentTest?.id,
+                                  browserId: this._browser.id,
+                                  sessionId: this._profileSessionId,
+                                  runnableKind: this._runnableKind,
+                              },
+                          }
+                        : {};
 
                     return this._socket
                         .timeout(timeout)
-                        .emitWithAck(WorkerEventNames.runRunnable, { fullTitle: runnable.fullTitle() })
+                        .emitWithAck(WorkerEventNames.runRunnable, {
+                            fullTitle: runnable.fullTitle(),
+                            ...profilerOptions,
+                        })
                         .then(([error]: [null | Error]) => {
                             if (intervalId) {
                                 clearInterval(intervalId);
