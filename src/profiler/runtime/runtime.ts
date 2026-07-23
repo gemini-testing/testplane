@@ -69,10 +69,19 @@ interface AggregateState {
     statistics: StreamingStatistics;
 }
 
+interface PendingFragment {
+    fragment: ProfilerFragment;
+    /** UTF-8 JSON size used to enforce the pending-fragment memory budget. */
+    serializedBytes: number;
+}
+
 const DEFAULT_QUALITY: MeasurementQuality = {
     timing: "exact",
     cpu: "process-window",
 };
+
+const MAX_PENDING_FRAGMENTS_PER_SOURCE = 32;
+const MAX_PENDING_FRAGMENT_BYTES = 20 * 1024 * 1024;
 
 const SAMPLING_INTERVAL: Record<EnabledProfilerLevel, number> = {
     1: 500,
@@ -109,6 +118,10 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
     private _lastElu?: ReturnType<typeof performance.eventLoopUtilization>;
     private readonly _transferredOperationIds = new Set<string>();
     private _transferredErrorCount = 0;
+    private readonly _ingestedFragmentSequences = new Map<string, number>();
+    /** Out-of-order fragments waiting for a contiguous predecessor (RPC vs IPC race). */
+    private readonly _pendingFragments = new Map<string, Map<number, PendingFragment>>();
+    private _pendingFragmentBytes = 0;
     private readonly _externalTruncation = new Map<string, RuntimeSnapshot["truncation"][number]>();
     private readonly _asyncActivity?: AsyncActivityTracker;
     private _eventLoopDelay?: IntervalHistogram;
@@ -246,10 +259,7 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
         }
 
         const span = this.startSpan(kind, options);
-        const context = {
-            ...(this._context.getStore() ?? { runId: this.runId }),
-            spanId: span.id,
-        };
+        const context = { ...(this._context.getStore() ?? { runId: this.runId }), spanId: span.id };
 
         return this._context.run(context, () => {
             try {
@@ -339,21 +349,12 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
                 kind,
                 name: options.name ?? kind,
                 process: options.process ?? this._process,
-                context: {
-                    runId: this.runId,
-                    ...current,
-                    ...options.context,
-                    spanId: id,
-                },
+                context: { runId: this.runId, ...current, ...options.context, spanId: id },
                 startOffsetMs: Math.max(0, this._clock.now() - this.originMonotonicMs - durationMs),
                 timing: { wallMs: durationMs },
                 source: options.source,
                 attributes: options.attributes ?? {},
-                quality: {
-                    ...DEFAULT_QUALITY,
-                    timing: "estimated",
-                    ...options.quality,
-                },
+                quality: { ...DEFAULT_QUALITY, timing: "estimated", ...options.quality },
                 status,
             });
         } catch (error) {
@@ -373,6 +374,7 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
         }
 
         this.closeOpenSpans();
+        this._reconcilePendingFragments();
         this._stopped = true;
         if (this._sampler) {
             clearInterval(this._sampler);
@@ -486,11 +488,22 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
             }
             return;
         }
+
         if (!this._hasMatchingFragmentLevel(fragment)) {
             return;
         }
 
         const sourceKey = fragmentSourceKey(fragment);
+        const sequence = readOwnDataProperty(fragment, "sequence") as number;
+        const previousSequence = this._ingestedFragmentSequences.get(sourceKey) ?? 0;
+        if (sequence <= previousSequence) {
+            return;
+        }
+        const existing = this._pendingFragments.get(sourceKey);
+        if (sequence > previousSequence + 1 && existing?.has(sequence)) {
+            return;
+        }
+
         let ownedFragment: ProfilerFragment;
         try {
             ownedFragment = cloneProfilerFragment(fragment);
@@ -498,7 +511,29 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
             this.recordError("transport.fragment", error);
             return;
         }
+
+        if (sequence > previousSequence + 1) {
+            // Dual transport (IPC batch + RPC profileFragment) can deliver out of order.
+            // Buffer until the predecessor arrives; report a real gap only on stop (or when
+            // the per-source pending buffer exceeds the cap — likely a permanent hole).
+            const pending = existing ?? new Map<number, PendingFragment>();
+            if (!existing) {
+                this._pendingFragments.set(sourceKey, pending);
+            }
+            const serializedBytes = serializedSize(ownedFragment);
+            pending.set(ownedFragment.sequence, { fragment: ownedFragment, serializedBytes });
+            this._pendingFragmentBytes += serializedBytes;
+            if (
+                pending.size > MAX_PENDING_FRAGMENTS_PER_SOURCE ||
+                this._pendingFragmentBytes > MAX_PENDING_FRAGMENT_BYTES
+            ) {
+                this._forceApplyPendingFragments(sourceKey);
+            }
+            return;
+        }
+
         this._applyFragmentSafely(sourceKey, ownedFragment, ownedFragment.sequence);
+        this._drainPendingFragments(sourceKey);
     }
 
     private _applyFragmentSafely(sourceKey: string, fragment: ProfilerFragment, expectedSequence: number): void {
@@ -532,6 +567,8 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
     }
 
     private _applyIngestedFragment(sourceKey: string, fragment: ProfilerFragment): void {
+        this._ingestedFragmentSequences.set(sourceKey, fragment.sequence);
+
         const epochOffsetMs = fragment.originEpochMs === undefined ? 0 : fragment.originEpochMs - this.originEpochMs;
         const hasAlignedClock = fragment.originEpochMs !== undefined && Number.isFinite(epochOffsetMs);
         if (!hasAlignedClock) {
@@ -596,6 +633,70 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
         for (const error of fragment.errors) {
             this.recordError(`worker.${error.stage}`, error);
         }
+    }
+
+    private _drainPendingFragments(sourceKey: string): void {
+        const pending = this._pendingFragments.get(sourceKey);
+        if (!pending?.size) {
+            return;
+        }
+
+        for (;;) {
+            const nextSequence = (this._ingestedFragmentSequences.get(sourceKey) ?? 0) + 1;
+            const fragment = pending.get(nextSequence);
+            if (!fragment) {
+                break;
+            }
+            this._applyFragmentSafely(sourceKey, this._takePendingFragment(pending, nextSequence), nextSequence);
+        }
+
+        if (!pending.size) {
+            this._pendingFragments.delete(sourceKey);
+        }
+    }
+
+    private _reconcilePendingFragments(): void {
+        for (const sourceKey of [...this._pendingFragments.keys()]) {
+            this._forceApplyPendingFragments(sourceKey);
+        }
+    }
+
+    /** Apply buffered fragments for a source, recording transport.gap for any holes. */
+    private _forceApplyPendingFragments(sourceKey: string): void {
+        const pending = this._pendingFragments.get(sourceKey);
+        if (!pending?.size) {
+            this._pendingFragments.delete(sourceKey);
+            return;
+        }
+
+        const sequences = [...pending.keys()].sort((left, right) => left - right);
+        for (const sequence of sequences) {
+            const previousSequence = this._ingestedFragmentSequences.get(sourceKey) ?? 0;
+            if (sequence <= previousSequence) {
+                this._takePendingFragment(pending, sequence);
+                continue;
+            }
+            if (sequence > previousSequence + 1) {
+                const { fragment } = pending.get(sequence)!;
+                this.recordError(
+                    "transport.gap",
+                    new Error(
+                        `Missing profiler fragment sequence ${previousSequence + 1}-${sequence - 1} from ${
+                            fragment.sourceRunId
+                        }`,
+                    ),
+                );
+            }
+            this._applyFragmentSafely(sourceKey, this._takePendingFragment(pending, sequence), sequence);
+        }
+        this._pendingFragments.delete(sourceKey);
+    }
+
+    private _takePendingFragment(pending: Map<number, PendingFragment>, sequence: number): ProfilerFragment {
+        const current = pending.get(sequence)!;
+        pending.delete(sequence);
+        this._pendingFragmentBytes = Math.max(0, this._pendingFragmentBytes - current.serializedBytes);
+        return current.fragment;
     }
 
     private _endSpan(span: OpenSpan, status: "completed" | "failed" | "interrupted" = "completed"): void {
@@ -896,9 +997,7 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
             this._lastElu = performance.eventLoopUtilization();
         }
         try {
-            this._eventLoopDelay = monitorEventLoopDelay({
-                resolution: EVENT_LOOP_DELAY_RESOLUTION_MS,
-            });
+            this._eventLoopDelay = monitorEventLoopDelay({ resolution: EVENT_LOOP_DELAY_RESOLUTION_MS });
             this._eventLoopDelay.enable();
         } catch (error) {
             this.recordError("runtime.eventLoopDelay.setup", error);
@@ -917,9 +1016,7 @@ export class ProfilerRuntime implements ProfilerRuntimeLike {
                     });
                 }
                 const memory = process.memoryUsage();
-                this._recordResourceSample("process.rssBytes", memory.rss, {
-                    process: this._process.type,
-                });
+                this._recordResourceSample("process.rssBytes", memory.rss, { process: this._process.type });
                 if (this._eventLoopDelay && Number.isFinite(this._eventLoopDelay.percentile(95))) {
                     this._recordResourceSample(
                         "process.eventLoopDelayP95Ms",
@@ -999,6 +1096,14 @@ function stableAttributesKey(attributes?: Record<string, ProfilerValue>): string
     return stringifyDataValue(
         copyEntriesToDataRecord(Object.entries(attributes).sort(([left], [right]) => left.localeCompare(right))),
     );
+}
+
+function serializedSize(value: unknown): number {
+    try {
+        return Buffer.byteLength(stringifyDataValue(value));
+    } catch {
+        return MAX_PENDING_FRAGMENT_BYTES + 1;
+    }
 }
 
 function cloneProfilerFragment(fragment: ProfilerFragment): ProfilerFragment {

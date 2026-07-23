@@ -8,9 +8,7 @@ import { RETENTION_POLICY_V1 } from "src/profiler/retention/policy-v1";
 import type { RetainedOperation } from "src/profiler/schema";
 
 describe("profiler/runtime", () => {
-    const createClock = (): ProfilerClock & {
-        advance(milliseconds: number): void;
-    } => {
+    const createClock = (): ProfilerClock & { advance(milliseconds: number): void } => {
         let now = 0;
         const usage = (): NodeJS.CpuUsage => ({ user: now * 1000, system: 0 });
 
@@ -20,19 +18,13 @@ describe("profiler/runtime", () => {
             cpuUsage: (previous?: NodeJS.CpuUsage): NodeJS.CpuUsage => {
                 const current = usage();
                 return previous
-                    ? {
-                          user: current.user - previous.user,
-                          system: current.system - previous.system,
-                      }
+                    ? { user: current.user - previous.user, system: current.system - previous.system }
                     : current;
             },
             threadCpuUsage: (previous?: NodeJS.CpuUsage): NodeJS.CpuUsage => {
                 const current = usage();
                 return previous
-                    ? {
-                          user: current.user - previous.user,
-                          system: current.system - previous.system,
-                      }
+                    ? { user: current.user - previous.user, system: current.system - previous.system }
                     : current;
             },
             advance: (milliseconds: number): void => {
@@ -109,11 +101,7 @@ describe("profiler/runtime", () => {
             snapshot.operations.filter(operation => operation.kind === "event.listener"),
             listenerLimit,
         );
-        assert.deepInclude(truncation, {
-            seen: listenerCount,
-            retained: listenerLimit,
-            truncated: true,
-        });
+        assert.deepInclude(truncation, { seen: listenerCount, retained: listenerLimit, truncated: true });
     });
 
     it("should account nested browser commands as root wall and cumulative work separately", () => {
@@ -154,23 +142,14 @@ describe("profiler/runtime", () => {
             process: { type: "master", pid: 1 },
         });
 
-        runtime.recordMeasurement("test.file.load", 10, {
-            name: "first.testplane.ts",
-        });
-        runtime.recordMeasurement("test.file.load", 30, {
-            name: "second.testplane.ts",
-        });
+        runtime.recordMeasurement("test.file.load", 10, { name: "first.testplane.ts" });
+        runtime.recordMeasurement("test.file.load", 30, { name: "second.testplane.ts" });
         runtime.stop();
 
         const summary = runtime.snapshot().aggregates.find(item => item.kind === "test.file.load.summary");
         assert.equal(summary!.name, "master");
         assert.deepEqual(summary!.attributes, { process: "master" });
-        assert.deepInclude(summary!.statistics, {
-            count: 2,
-            sum: 40,
-            mean: 20,
-            max: 30,
-        });
+        assert.deepInclude(summary!.statistics, { count: 2, sum: 40, mean: 20, max: 30 });
 
         const worker = new ProfilerRuntime({
             runId: "worker-run",
@@ -178,9 +157,7 @@ describe("profiler/runtime", () => {
             clock: createClock(),
             process: { type: "worker", pid: 2 },
         });
-        worker.recordMeasurement("test.file.load", 20, {
-            name: "worker.testplane.ts",
-        });
+        worker.recordMeasurement("test.file.load", 20, { name: "worker.testplane.ts" });
         worker.stop();
 
         assert.notExists(worker.snapshot().aggregates.find(item => item.kind === "test.file.load.summary"));
@@ -202,11 +179,7 @@ describe("profiler/runtime", () => {
             span.end();
         }
 
-        const master = new ProfilerRuntime({
-            runId: "master-run",
-            level: 2,
-            clock: createClock(),
-        });
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
         master.ingestFragment(worker.takeFragment());
         worker.stop();
         master.stop();
@@ -217,6 +190,35 @@ describe("profiler/runtime", () => {
             master.snapshot().operations.filter(operation => operation.kind === "event.listener"),
             listenerLimit,
         );
+    });
+
+    it("should keep fragments and operation ids distinct when workers share a run id", () => {
+        const firstWorker = new ProfilerRuntime({
+            runId: "shared-run",
+            level: 2,
+            clock: createClock(),
+            process: { type: "worker", pid: 2, workerInstanceId: "worker-1" },
+        });
+        const secondWorker = new ProfilerRuntime({
+            runId: "shared-run",
+            level: 2,
+            clock: createClock(),
+            process: { type: "worker", pid: 3, workerInstanceId: "worker-2" },
+        });
+        firstWorker.recordMeasurement("worker.test-attempt", 10, { name: "first" });
+        secondWorker.recordMeasurement("worker.test-attempt", 20, { name: "second" });
+        const master = new ProfilerRuntime({ runId: "shared-run", level: 2, clock: createClock() });
+
+        master.ingestFragment(firstWorker.takeFragment());
+        master.ingestFragment(secondWorker.takeFragment());
+        firstWorker.stop();
+        secondWorker.stop();
+        master.stop();
+
+        const attempts = master.snapshot().operations.filter(item => item.kind === "worker.test-attempt");
+
+        assert.lengthOf(attempts, 2);
+        assert.equal(new Set(attempts.map(item => item.id)).size, 2);
     });
 
     it("should preserve resource sample process dimensions across worker fragments", () => {
@@ -230,14 +232,8 @@ describe("profiler/runtime", () => {
             worker as unknown as {
                 _recordResourceSample(name: string, value: number, dimensions: Record<string, string>): void;
             }
-        )._recordResourceSample("process.eventLoopUtilization", 0.9, {
-            process: "worker",
-        });
-        const master = new ProfilerRuntime({
-            runId: "master-run",
-            level: 2,
-            clock: createClock(),
-        });
+        )._recordResourceSample("process.eventLoopUtilization", 0.9, { process: "worker" });
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
 
         master.ingestFragment(worker.takeFragment());
         worker.stop();
@@ -251,11 +247,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should reject malformed worker fragments without throwing", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         let getterCalled = false;
         const accessorQuality = {};
         Object.defineProperty(accessorQuality, "timing", {
@@ -290,32 +282,20 @@ describe("profiler/runtime", () => {
             status: "completed",
         };
         const invalidOperations = [
-            {
-                ...validOperation,
-                id: "timing",
-                timing: { wallMs: 1, selfWallMs: "invalid" },
-            },
+            { ...validOperation, id: "timing", timing: { wallMs: 1, selfWallMs: "invalid" } },
             { ...validOperation, id: "quality", quality: {} },
             { ...validOperation, id: "status", status: "invalid" },
             { ...validOperation, id: "context", context: { attempt: "invalid" } },
             { ...validOperation, id: "source", source: { confidence: "invalid" } },
             { ...validOperation, id: "extra", unexpected: true },
             { ...validOperation, id: "accessor", quality: accessorQuality },
-            {
-                ...validOperation,
-                id: "non-enumerable",
-                quality: nonEnumerableQuality,
-            },
+            { ...validOperation, id: "non-enumerable", quality: nonEnumerableQuality },
             { ...validOperation, id: "proxy", quality: proxiedQuality },
             { ...validOperation, id: "pid", process: { type: "worker", pid: -2.5 } },
             { ...validOperation, id: "attempt", context: { attempt: -0.5 } },
             { ...validOperation, id: "negative-offset", startOffsetMs: -1 },
             { ...validOperation, id: "negative-wall", timing: { wallMs: -1 } },
-            {
-                ...validOperation,
-                id: "invalid-elu",
-                timing: { wallMs: 1, eventLoopUtilization: 1.5 },
-            },
+            { ...validOperation, id: "invalid-elu", timing: { wallMs: 1, eventLoopUtilization: 1.5 } },
         ];
 
         const fragment = {
@@ -346,11 +326,7 @@ describe("profiler/runtime", () => {
         assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, truncation: [null] }));
         assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, truncation: Array(1) }));
         assert.doesNotThrow(() =>
-            runtime.ingestFragment({
-                ...fragment,
-                sourceRunId: "clock",
-                clockUncertaintyMs: -1,
-            }),
+            runtime.ingestFragment({ ...fragment, sourceRunId: "clock", clockUncertaintyMs: -1 }),
         );
         assert.doesNotThrow(() =>
             runtime.ingestFragment(
@@ -368,21 +344,12 @@ describe("profiler/runtime", () => {
             ),
         );
         assert.doesNotThrow(() =>
-            runtime.ingestFragment({
-                ...fragment,
-                operations: [validOperation, ...invalidOperations],
-            }),
+            runtime.ingestFragment({ ...fragment, operations: [validOperation, ...invalidOperations] }),
         );
-        runtime.ingestFragment({
-            ...fragment,
-            sourceRunId: "unaligned-worker",
-            originEpochMs: undefined,
-        });
+        runtime.ingestFragment({ ...fragment, sourceRunId: "unaligned-worker", originEpochMs: undefined });
         runtime.stop();
 
-        assert.deepInclude(runtime.snapshot().errors[0], {
-            stage: "transport.fragment",
-        });
+        assert.deepInclude(runtime.snapshot().errors[0], { stage: "transport.fragment" });
         assert.deepEqual(
             runtime.snapshot().operations.map(operation => operation.id),
             ["valid"],
@@ -397,11 +364,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should reject hostile transport accessors and decorated arrays without executing them", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const fragment = {
             transportVersion: 1,
             sequence: 1,
@@ -423,34 +386,23 @@ describe("profiler/runtime", () => {
             },
         });
         const coerceVersion = sinon.spy(() => "2");
-        const objectVersion = {
-            transportVersion: { [Symbol.toPrimitive]: coerceVersion },
-        };
+        const objectVersion = { transportVersion: { [Symbol.toPrimitive]: coerceVersion } };
         const ownIterator = sinon.spy(function* (): Generator<never> {});
         const decoratedOperations: unknown[] = [];
-        Object.defineProperty(decoratedOperations, Symbol.iterator, {
-            value: ownIterator,
-        });
+        Object.defineProperty(decoratedOperations, Symbol.iterator, { value: ownIterator });
         const ownEvery = sinon.spy(() => true);
         const decoratedErrors: unknown[] = [null];
         Object.defineProperty(decoratedErrors, "every", { value: ownEvery });
         const prototypeIterator = sinon.spy(function* (): Generator<never> {});
         const customPrototypeOperations: unknown[] = [];
-        Object.setPrototypeOf(customPrototypeOperations, {
-            [Symbol.iterator]: prototypeIterator,
-        });
+        Object.setPrototypeOf(customPrototypeOperations, { [Symbol.iterator]: prototypeIterator });
         const frozenOperations = Object.freeze([]);
 
         assert.doesNotThrow(() => runtime.ingestFragment(accessorVersion));
         assert.doesNotThrow(() => runtime.ingestFragment(objectVersion));
         assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, operations: decoratedOperations }));
         assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, errors: decoratedErrors }));
-        assert.doesNotThrow(() =>
-            runtime.ingestFragment({
-                ...fragment,
-                operations: customPrototypeOperations,
-            }),
-        );
+        assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, operations: customPrototypeOperations }));
         assert.doesNotThrow(() => runtime.ingestFragment({ ...fragment, operations: frozenOperations }));
         runtime.stop();
 
@@ -463,11 +415,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should not execute inherited Object.prototype getters during validation or application", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const inheritedRead = sinon.spy(() => undefined);
         const inheritedKeys = [
             "workerInstanceId",
@@ -507,14 +455,7 @@ describe("profiler/runtime", () => {
                 {
                     kind: "inherited.aggregate",
                     name: "safe",
-                    statistics: {
-                        count: 1,
-                        sum: 1,
-                        min: 1,
-                        max: 1,
-                        mean: 1,
-                        variance: 0,
-                    },
+                    statistics: { count: 1, sum: 1, min: 1, max: 1, mean: 1, variance: 0 },
                 },
             ],
             errors: [{ stage: "safe", message: "safe" }],
@@ -558,11 +499,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should reject semantically invalid aggregate and truncation records", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const fragment = {
             transportVersion: 1,
             sequence: 1,
@@ -587,38 +524,9 @@ describe("profiler/runtime", () => {
                 mean: 0.5,
                 variance: Number.MAX_VALUE,
             },
-            {
-                count: 3,
-                sum: 3,
-                min: 0,
-                max: 2,
-                mean: 1,
-                variance: 1,
-                p50: 0,
-                p95: 2,
-                samples: [0, 1, 2],
-            },
-            {
-                count: 2,
-                sum: 2,
-                min: 0,
-                max: 2,
-                mean: 1,
-                variance: 1,
-                p50: 0,
-                p95: 0,
-                samples: [0, 2],
-            },
-            {
-                count: 3,
-                sum: 3,
-                min: 0,
-                max: 2,
-                mean: 1,
-                variance: 1,
-                p50: 0,
-                p95: 2,
-            },
+            { count: 3, sum: 3, min: 0, max: 2, mean: 1, variance: 1, p50: 0, p95: 2, samples: [0, 1, 2] },
+            { count: 2, sum: 2, min: 0, max: 2, mean: 1, variance: 1, p50: 0, p95: 0, samples: [0, 2] },
+            { count: 3, sum: 3, min: 0, max: 2, mean: 1, variance: 1, p50: 0, p95: 2 },
             { count: 2, sum: 100, min: 1, max: 2, mean: 1.5, variance: 0 },
             { count: 2, sum: 2, min: 1, max: 2, mean: 2, variance: 0 },
             { count: 1, sum: 1, min: 1, max: 1, mean: 1, variance: 0, samples: [2] },
@@ -645,27 +553,9 @@ describe("profiler/runtime", () => {
             },
         ];
         const invalidTruncation = [
-            {
-                collector: "invalid",
-                seen: -1,
-                retained: 0,
-                rule: "invalid",
-                truncated: true,
-            },
-            {
-                collector: "invalid",
-                seen: 1,
-                retained: 0.5,
-                rule: "invalid",
-                truncated: true,
-            },
-            {
-                collector: "invalid",
-                seen: 1,
-                retained: 2,
-                rule: "invalid",
-                truncated: true,
-            },
+            { collector: "invalid", seen: -1, retained: 0, rule: "invalid", truncated: true },
+            { collector: "invalid", seen: 1, retained: 0.5, rule: "invalid", truncated: true },
+            { collector: "invalid", seen: 1, retained: 2, rule: "invalid", truncated: true },
         ];
 
         invalidStatistics.forEach((statistics, index) =>
@@ -693,11 +583,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should accept statistics that are consistent with a complete sample set", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
 
         runtime.ingestFragment({
             transportVersion: 1,
@@ -737,11 +623,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should drop overflowing aggregate merges without mutating them and retain valid siblings", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const fragment = {
             transportVersion: 1,
             sequence: 1,
@@ -784,14 +666,7 @@ describe("profiler/runtime", () => {
                 {
                     kind: "overflow",
                     name: "variance",
-                    statistics: {
-                        count: 1,
-                        sum: 0,
-                        min: 0,
-                        max: 0,
-                        mean: 0,
-                        variance: 0,
-                    },
+                    statistics: { count: 1, sum: 0, min: 0, max: 0, mean: 0, variance: 0 },
                 },
             ],
         });
@@ -814,14 +689,7 @@ describe("profiler/runtime", () => {
                 {
                     kind: "overflow",
                     name: "count",
-                    statistics: {
-                        count: 1,
-                        sum: 0,
-                        min: 0,
-                        max: 0,
-                        mean: 0,
-                        variance: 0,
-                    },
+                    statistics: { count: 1, sum: 0, min: 0, max: 0, mean: 0, variance: 0 },
                 },
                 {
                     kind: "overflow",
@@ -838,14 +706,7 @@ describe("profiler/runtime", () => {
                 {
                     kind: "valid",
                     name: "sibling",
-                    statistics: {
-                        count: 1,
-                        sum: 7,
-                        min: 7,
-                        max: 7,
-                        mean: 7,
-                        variance: 0,
-                    },
+                    statistics: { count: 1, sum: 7, min: 7, max: 7, mean: 7, variance: 0 },
                 },
             ],
         });
@@ -881,11 +742,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should drop overflowing metric counters and retain valid siblings", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const fragment = {
             transportVersion: 1,
             sequence: 1,
@@ -900,25 +757,13 @@ describe("profiler/runtime", () => {
         runtime.ingestFragment({
             ...fragment,
             sourceRunId: "metric-baseline",
-            metrics: [
-                {
-                    name: "overflow.counter",
-                    value: Number.MAX_VALUE,
-                    dimensions: {},
-                    mode: "counter",
-                },
-            ],
+            metrics: [{ name: "overflow.counter", value: Number.MAX_VALUE, dimensions: {}, mode: "counter" }],
         });
         runtime.ingestFragment({
             ...fragment,
             sourceRunId: "metric-overflow",
             metrics: [
-                {
-                    name: "overflow.counter",
-                    value: Number.MAX_VALUE,
-                    dimensions: {},
-                    mode: "counter",
-                },
+                { name: "overflow.counter", value: Number.MAX_VALUE, dimensions: {}, mode: "counter" },
                 { name: "valid.counter", value: 3, dimensions: {}, mode: "counter" },
             ],
         });
@@ -935,11 +780,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should drop operations whose adjusted start offset overflows and retain valid siblings", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const operation: RetainedOperation = {
             id: "valid-offset",
             kind: "test",
@@ -960,14 +801,7 @@ describe("profiler/runtime", () => {
             level: 2,
             originEpochMs: Number.MAX_VALUE,
             process: { type: "worker", pid: 2 },
-            operations: [
-                {
-                    ...operation,
-                    id: "overflow-offset",
-                    startOffsetMs: Number.MAX_VALUE,
-                },
-                operation,
-            ],
+            operations: [{ ...operation, id: "overflow-offset", startOffsetMs: Number.MAX_VALUE }, operation],
             errors: [],
             truncation: [],
         });
@@ -983,11 +817,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should retain owned copies of accepted worker records", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         const operation: RetainedOperation = {
             id: "owned",
             kind: "test",
@@ -1001,13 +831,7 @@ describe("profiler/runtime", () => {
             quality: { timing: "exact", cpu: "process-window", notes: ["original"] },
             status: "completed",
         };
-        const truncation = {
-            collector: "worker",
-            seen: 2,
-            retained: 1,
-            rule: "limit",
-            truncated: true,
-        };
+        const truncation = { collector: "worker", seen: 2, retained: 1, rule: "limit", truncated: true };
         const aggregateAttributes = { browserId: "chrome" };
         const fragment: ProfilerFragment = {
             transportVersion: 1,
@@ -1022,14 +846,7 @@ describe("profiler/runtime", () => {
                     kind: "test.aggregate",
                     name: "owned",
                     attributes: aggregateAttributes,
-                    statistics: {
-                        count: 1,
-                        sum: 1,
-                        min: 1,
-                        max: 1,
-                        mean: 1,
-                        variance: 0,
-                    },
+                    statistics: { count: 1, sum: 1, min: 1, max: 1, mean: 1, variance: 0 },
                 },
             ],
             errors: [],
@@ -1063,12 +880,31 @@ describe("profiler/runtime", () => {
         });
     });
 
+    it("should deduplicate sequenced fragments before merging aggregates", () => {
+        const workerClock = createClock();
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: workerClock });
+        worker.recordMeasurement("test.body", 10, { name: "test" });
+        const fragment = worker.takeFragment();
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+        const clone = sinon.spy(globalThis, "structuredClone");
+
+        try {
+            master.ingestFragment(fragment);
+            master.ingestFragment(fragment);
+        } finally {
+            clone.restore();
+            worker.stop();
+            master.stop();
+        }
+
+        const aggregate = master.snapshot().aggregates.find(item => item.kind === "test.body");
+        assert.calledOnce(clone);
+        assert.equal(aggregate!.statistics.count, 1);
+        assert.equal(aggregate!.statistics.sum, 10);
+    });
+
     it("should emit only non-empty fragments with contiguous sequence numbers", () => {
-        const worker = new ProfilerRuntime({
-            runId: "worker-run",
-            level: 2,
-            clock: createClock(),
-        });
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
 
         assert.isNull(worker.takeFragment());
         worker.recordMeasurement("test.body", 1, { name: "first" });
@@ -1095,6 +931,218 @@ describe("profiler/runtime", () => {
         worker.stop();
 
         assert.equal(fragment!.clockUncertaintyMs, 12.5);
+    });
+
+    it("should report a fragment sequence gap and reject a mismatched level", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        worker.recordMeasurement("test.body", 1);
+        worker.takeFragment();
+        worker.recordMeasurement("test.body", 1);
+        const fragmentWithGap = worker.takeFragment();
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+
+        master.ingestFragment(fragmentWithGap);
+        master.ingestFragment({ ...fragmentWithGap, sourceRunId: "wrong-level", sequence: 1, level: 3 });
+        worker.stop();
+        master.stop();
+
+        const errors = master.snapshot().errors;
+        assert.deepInclude(
+            errors.find(error => error.stage === "transport.gap"),
+            { stage: "transport.gap" },
+        );
+        assert.deepInclude(
+            errors.find(error => error.stage === "transport.level"),
+            { stage: "transport.level" },
+        );
+    });
+
+    it("should reorder out-of-order fragments from dual transport without reporting a gap", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        worker.recordMeasurement("test.body", 1, { name: "first" });
+        const first = worker.takeFragment();
+        worker.recordMeasurement("test.body", 2, { name: "second" });
+        const second = worker.takeFragment();
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+
+        master.ingestFragment(second);
+        master.ingestFragment(first);
+        worker.stop();
+        master.stop();
+
+        const bodies = master.snapshot().operations.filter(item => item.kind === "test.body");
+        assert.lengthOf(bodies, 2);
+        assert.isEmpty(master.snapshot().errors.filter(error => error.stage === "transport.gap"));
+    });
+
+    it("should retain an owned copy of buffered fragments", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        worker.recordMeasurement("test.body", 1, { name: "first" });
+        const first = worker.takeFragment()!;
+        worker.recordMeasurement("test.body", 2, { name: "second" });
+        worker.increment("worker.counter", 2, { source: "original" });
+        worker.recordError("original", new Error("original"));
+        const second = worker.takeFragment()!;
+        second.truncation.push({ collector: "worker", seen: 2, retained: 1, rule: "limit", truncated: true });
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+
+        master.ingestFragment(second);
+        second.level = 3;
+        second.sourceRunId = "mutated";
+        second.process.pid = 999;
+        second.operations[0].name = "mutated";
+        second.operations[0].timing.wallMs = 999;
+        second.aggregates![0].name = "mutated";
+        second.aggregates![0].statistics.sum = 999;
+        second.metrics![0].value = 999;
+        second.metrics![0].dimensions.source = "mutated";
+        second.errors[0].message = "mutated";
+        second.truncation[0].seen = 999;
+        master.ingestFragment(first);
+        worker.stop();
+        master.stop();
+
+        assert.deepEqual(
+            master.snapshot().operations.map(operation => operation.name),
+            ["first", "second"],
+        );
+        assert.equal(master.snapshot().operations.find(operation => operation.name === "second")!.timing.wallMs, 2);
+        assert.deepInclude(master.snapshot().aggregates.find(aggregate => aggregate.name === "second")!.statistics, {
+            sum: 2,
+        });
+        assert.deepInclude(master.snapshot().metrics.find(metric => metric.name === "worker.counter")!, {
+            value: 2,
+            dimensions: { source: "original" },
+        });
+        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "worker.original")!, {
+            message: "original",
+        });
+        assert.deepInclude(master.snapshot().truncation.find(entry => entry.collector === "worker")!, { seen: 2 });
+    });
+
+    it("should fail open if a pending fragment cannot be cloned", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        worker.recordMeasurement("test.body", 1, { name: "first" });
+        worker.takeFragment();
+        worker.recordMeasurement("test.body", 1, { name: "second" });
+        const second = worker.takeFragment()!;
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+        const clone = sinon.stub(globalThis, "structuredClone").throws(new Error("clone failed"));
+
+        try {
+            assert.doesNotThrow(() => master.ingestFragment(second));
+        } finally {
+            clone.restore();
+            worker.stop();
+            master.stop();
+        }
+
+        assert.isEmpty((master as unknown as { _pendingFragments: Map<string, unknown> })._pendingFragments);
+        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "transport.fragment")!, {
+            message: "clone failed",
+        });
+    });
+
+    it("should allow an immediate fragment to be retried after cloning fails", () => {
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+        const operation: RetainedOperation = {
+            id: "retry",
+            kind: "test.body",
+            name: "retry",
+            process: { type: "worker", pid: 2 },
+            context: {},
+            startOffsetMs: 0,
+            timing: { wallMs: 1 },
+            attributes: {},
+            quality: { timing: "exact", cpu: "process-window" },
+            status: "completed",
+        };
+        const fragment = {
+            transportVersion: 1,
+            sequence: 1,
+            sourceRunId: "worker-run",
+            level: 2,
+            originEpochMs: 1_700_000_000_000,
+            process: { type: "worker", pid: 2 },
+            operations: [operation],
+            errors: [],
+            truncation: [],
+        };
+        const clone = sinon.stub(globalThis, "structuredClone").throws(new Error("clone failed"));
+
+        try {
+            master.ingestFragment(fragment);
+        } finally {
+            clone.restore();
+        }
+        master.ingestFragment(fragment);
+        master.stop();
+
+        assert.deepEqual(
+            master.snapshot().operations.map(item => item.id),
+            ["retry"],
+        );
+        assert.deepInclude(master.snapshot().errors.find(error => error.stage === "transport.fragment")!, {
+            message: "clone failed",
+        });
+    });
+
+    it("should force-apply pending fragments when the per-source buffer exceeds the cap", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        const fragments: ProfilerFragment[] = [];
+        for (let index = 0; index < 34; index += 1) {
+            worker.recordMeasurement("test.body", 1, { name: `body-${index}` });
+            fragments.push(worker.takeFragment()!);
+        }
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+
+        // Skip sequence 1; buffer sequences 2..34 (33 pending) to exceed the per-source cap of 32.
+        for (let index = 1; index < fragments.length; index += 1) {
+            master.ingestFragment(fragments[index]);
+        }
+        worker.stop();
+        master.stop();
+
+        const bodies = master.snapshot().operations.filter(item => item.kind === "test.body");
+        assert.lengthOf(bodies, 33);
+        assert.deepInclude(
+            master.snapshot().errors.find(error => error.stage === "transport.gap"),
+            { stage: "transport.gap" },
+        );
+        assert.match(
+            master.snapshot().errors.find(error => error.stage === "transport.gap")!.message,
+            /Missing profiler fragment sequence 1-1/,
+        );
+        assert.equal((master as unknown as { _pendingFragmentBytes: number })._pendingFragmentBytes, 0);
+    });
+
+    it("should force-apply pending fragments when the global byte budget is exceeded", () => {
+        const worker = new ProfilerRuntime({ runId: "worker-run", level: 2, clock: createClock() });
+        worker.recordMeasurement("test.body", 1, { name: "first" });
+        worker.takeFragment();
+        worker.recordMeasurement("test.body", 1, { name: "second" });
+        const second = worker.takeFragment();
+        const master = new ProfilerRuntime({ runId: "master-run", level: 2, clock: createClock() });
+        const byteLength = sinon.stub(Buffer, "byteLength").returns(21 * 1024 * 1024);
+
+        try {
+            master.ingestFragment(second);
+        } finally {
+            byteLength.restore();
+        }
+        worker.stop();
+        master.stop();
+
+        const pending = master as unknown as {
+            _pendingFragments: Map<string, unknown>;
+            _pendingFragmentBytes: number;
+        };
+        assert.isEmpty(pending._pendingFragments);
+        assert.equal(pending._pendingFragmentBytes, 0);
+        assert.deepInclude(
+            master.snapshot().errors.find(error => error.stage === "transport.gap"),
+            { stage: "transport.gap" },
+        );
     });
 
     it("should retain a fragment parent even when parent-first transport order would evict it", () => {
@@ -1152,19 +1200,12 @@ describe("profiler/runtime", () => {
         const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock });
         const attemptLimit = RETENTION_POLICY_V1.operationLimits["test.attempt"];
         for (let index = 0; index < attemptLimit; index += 1) {
-            runtime.recordMeasurement("test.attempt", 100 + index, {
-                name: `winner-${index}`,
-            });
+            runtime.recordMeasurement("test.attempt", 100 + index, { name: `winner-${index}` });
         }
 
-        const parent = runtime.startSpan("test.attempt", {
-            name: "interrupted-parent",
-        });
+        const parent = runtime.startSpan("test.attempt", { name: "interrupted-parent" });
         clock.advance(1);
-        const child = runtime.startSpan("browser.session.acquire", {
-            name: "interrupted-child",
-            parentId: parent.id,
-        });
+        const child = runtime.startSpan("browser.session.acquire", { name: "interrupted-child", parentId: parent.id });
         clock.advance(1);
         runtime.stop();
 
@@ -1207,9 +1248,7 @@ describe("profiler/runtime", () => {
         }
         type LinkedSpan = { nextSibling?: LinkedSpan };
         const parentSpan = (
-            runtime as unknown as {
-                _openSpans: Map<string, { childIntervalHead?: LinkedSpan }>;
-            }
+            runtime as unknown as { _openSpans: Map<string, { childIntervalHead?: LinkedSpan }> }
         )._openSpans.get(parent.id!)!;
         let retained = 0;
         let child = parentSpan.childIntervalHead;
@@ -1226,11 +1265,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should close deeply nested open spans without overflowing the call stack", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock: createClock() });
         let parentId: string | undefined;
         for (let index = 0; index < 5_000; index += 1) {
             parentId = runtime.startSpan("nested", { parentId }).id;
@@ -1240,11 +1275,7 @@ describe("profiler/runtime", () => {
     });
 
     it("should retain browser process attribution for external measurements", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 3,
-            clock: createClock(),
-        });
+        const runtime = new ProfilerRuntime({ runId: "run", level: 3, clock: createClock() });
         runtime.recordMeasurement("browser.runnable", 25, {
             minLevel: 3,
             process: { type: "browser", browserId: "chrome" },
@@ -1253,10 +1284,7 @@ describe("profiler/runtime", () => {
         runtime.stop();
 
         const operation = runtime.snapshot().operations.find(item => item.kind === "browser.runnable");
-        assert.deepEqual(operation!.process, {
-            type: "browser",
-            browserId: "chrome",
-        });
+        assert.deepEqual(operation!.process, { type: "browser", browserId: "chrome" });
         assert.equal(operation!.timing.wallMs, 25);
     });
 
@@ -1293,65 +1321,5 @@ describe("profiler/runtime", () => {
         assert.isAtMost(snapshot.aggregates.length, 5_000);
         assert.deepInclude(truncation, { retained: 5_000, truncated: true });
         assert.equal(snapshot.aggregates.find(item => item.kind === "profiler.aggregate.other")!.statistics.count, 101);
-    });
-
-    it("should update counters and gauges without committing overflowing values", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-        });
-
-        runtime.increment("counter", Number.MAX_VALUE, { scope: "worker" });
-        runtime.increment("counter", Number.MAX_VALUE, { scope: "worker" });
-        runtime.sample("gauge", 2, { scope: "worker" });
-        runtime.sample("gauge", 3, { scope: "worker" });
-        runtime.stop();
-
-        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "counter")!, {
-            value: Number.MAX_VALUE,
-            mode: "counter",
-            dimensions: { scope: "worker" },
-        });
-        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "gauge")!, {
-            value: 3,
-            mode: "gauge",
-            dimensions: { scope: "worker" },
-        });
-        assert.deepInclude(runtime.snapshot().errors.find(error => error.stage === "runtime.metric")!, {
-            message: "Metric counter overflowed",
-        });
-    });
-
-    it("should record resource samples with dimensions and tear the sampler down on stop", () => {
-        const runtime = new ProfilerRuntime({
-            runId: "run",
-            level: 2,
-            clock: createClock(),
-            process: { type: "worker", pid: 2 },
-        });
-        const internals = runtime as unknown as {
-            _recordResourceSample(name: string, value: number, dimensions: Record<string, string>): void;
-            _sampler?: NodeJS.Timeout;
-        };
-
-        assert.exists(internals._sampler);
-        internals._recordResourceSample("process.eventLoopUtilization", 0.75, {
-            process: "worker",
-        });
-        runtime.stop();
-
-        assert.notExists(internals._sampler);
-        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "process.eventLoopUtilization")!, {
-            value: 0.75,
-            dimensions: { process: "worker" },
-        });
-        const resourceAggregate = runtime
-            .snapshot()
-            .aggregates.find(aggregate => aggregate.name === "process.eventLoopUtilization")!;
-        assert.deepInclude(resourceAggregate, {
-            attributes: { process: "worker" },
-        });
-        assert.deepInclude(resourceAggregate.statistics, { count: 1, sum: 0.75 });
     });
 });
