@@ -1,8 +1,16 @@
 /* eslint-disable no-use-before-define -- compact synthetic fixtures are declared below their assertions */
 
-import { aggregateProfile, unionDuration } from "src/profiler/analysis/aggregator";
+import { aggregateProfile, unionDuration, type NormalizedProfile } from "src/profiler/analysis/aggregator";
+import { runAnalyzers } from "src/profiler/analysis/analyzers";
 import { compactProfileReferences } from "src/profiler/analysis/compact";
-import type { EnabledProfilerLevel, Finding, RetainedOperation } from "src/profiler/schema";
+import type {
+    EnabledProfilerLevel,
+    Finding,
+    ProfilerAggregate,
+    ProfilerOperationName,
+    ProfilerValue,
+    RetainedOperation,
+} from "src/profiler/schema";
 import type { RuntimeAggregate, RuntimeSnapshot } from "src/profiler/runtime/types";
 
 describe("profiler/analysis", () => {
@@ -145,6 +153,268 @@ describe("profiler/analysis", () => {
         assert.equal(unattributed!.attributes.retentionAffected, true);
     });
 
+    it("should not warn about unattributed time that is a retention artifact", () => {
+        const child = {
+            ...operation("child", 0, 10_000),
+            kind: "test.body",
+            parentId: "parent",
+        };
+        const truncatedParent = {
+            ...operation("parent", 0, 100_000),
+            timing: { wallMs: 100_000, observedChildUnionMs: 50_000 },
+        };
+        const suppressed = aggregateProfile(snapshot({ level: 2, operations: [truncatedParent, child] }), 100_000);
+        assert.notExists(runAnalyzers(suppressed).find(item => item.analyzer.id === "unattributed-v1"));
+
+        const genuineParent = {
+            ...operation("parent", 0, 100_000),
+            timing: { wallMs: 100_000 },
+        };
+        const genuine = aggregateProfile(snapshot({ level: 2, operations: [genuineParent, child] }), 100_000);
+        assert.exists(runAnalyzers(genuine).find(item => item.analyzer.id === "unattributed-v1"));
+
+        const next = {
+            ...operation("next", 90_000, 10_000),
+            kind: "browser.command",
+            parentId: "parent",
+        };
+        const detailed = aggregateProfile(snapshot({ level: 3, operations: [genuineParent, child, next] }), 100_000);
+        const finding = runAnalyzers(detailed).find(item => item.analyzer.id === "unattributed-v1")!;
+        assert.include(finding.observation, "inside `parent`");
+        assert.include(finding.observation, "between test body `child` and browser command `next`");
+        assert.include(finding.action, "between test body `child` and browser command `next`");
+        assert.include(finding.action, "synchronous filesystem or CPU work");
+        assert.deepInclude(finding.evidence, {
+            metric: "parentPhase",
+            value: "parent",
+        });
+        assert.deepInclude(finding.evidence, {
+            metric: "previousOperation",
+            value: "child",
+            operationId: "child",
+        });
+        assert.deepInclude(finding.evidence, {
+            metric: "nextOperation",
+            value: "next",
+            operationId: "next",
+        });
+    });
+
+    it("should not flag the execution phase for dominating the run, but still flag setup phases", () => {
+        const phaseOp = (kind: string, name: string, wallMs: number): RetainedOperation => ({
+            id: kind,
+            kind,
+            name,
+            process: { type: "master" },
+            context: { runId: "run" },
+            startOffsetMs: 0,
+            timing: { wallMs },
+            attributes: {},
+            quality: { timing: "exact", cpu: "process-window" },
+        });
+        const profile = normalizedProfile({
+            level: 1,
+            durationMs: 100_000,
+            timeline: [
+                phaseOp("testplane.phase.execution", "Execute tests", 99_000),
+                phaseOp("testplane.phase.init", "Initialize", 20_000),
+            ],
+        });
+
+        const findings = runAnalyzers(profile).filter(item => item.analyzer.id === "major-phase-v1");
+        assert.lengthOf(findings, 1);
+        assert.include(findings[0].observation, "Initialize");
+
+        const listener = {
+            ...operation("listener", 1_000, 15_000),
+            parentId: "testplane.phase.init",
+            kind: "event.listener",
+            name: "init:startServer",
+            timing: { wallMs: 15_000, activeJsMs: 2_000, waitingMs: 13_000 },
+            source: {
+                file: "plugins/server/index.js",
+                line: 42,
+                confidence: "high" as const,
+            },
+        };
+        const fileInsidePhase = {
+            ...operation("file", 30_000, 10_000),
+            parentId: "testplane.phase.init",
+            kind: "test.file.load",
+            name: "nested.hermione.ts",
+        };
+        const dependencyInsidePhase = {
+            ...operation("dependency", 40_000, 10_000),
+            parentId: "testplane.phase.init",
+            kind: "module.load",
+            name: "heavy-dependency",
+            attributes: {
+                module: "heavy-dependency",
+                ownerFile: "nested.hermione.ts",
+                cacheHit: false,
+            },
+        };
+        const detailed = normalizedProfile({
+            level: 3,
+            durationMs: 100_000,
+            timeline: [...profile.timeline, listener, fileInsidePhase, dependencyInsidePhase],
+        });
+        const detailedFinding = runAnalyzers(detailed).find(item => item.analyzer.id === "major-phase-v1")!;
+        assert.include(detailedFinding.observation, "`Initialize` (master process) took");
+        assert.include(detailedFinding.observation, "Slow listeners or callbacks inside this phase");
+        assert.include(detailedFinding.observation, "Listener `init:startServer` (master process)");
+        assert.include(detailedFinding.observation, "plugins/server/index.js:42");
+        assert.include(detailedFinding.observation, "13.0s waiting");
+        assert.notInclude(detailedFinding.observation, "nested.hermione.ts");
+        assert.notInclude(detailedFinding.observation, "heavy-dependency");
+        assert.include(detailedFinding.action, "awaited I/O or timers");
+        assert.notInclude(detailedFinding.action, "files");
+        assert.notInclude(detailedFinding.action, "dependencies");
+        assert.notInclude(detailedFinding.action, "hooks");
+        assert.notInclude(detailedFinding.action, "commands");
+        assert.deepEqual(detailedFinding.operationIds, ["testplane.phase.init", "listener"]);
+
+        const workerPhase = {
+            ...profile.timeline[1],
+            id: "worker-init",
+            process: { type: "worker" as const },
+        };
+        const workerListener = {
+            ...listener,
+            id: "worker-listener",
+            parentId: workerPhase.id,
+            name: "init:startWorker",
+            kind: "user.callback",
+            process: { type: "worker" as const },
+        };
+        const workerProfile = normalizedProfile({
+            level: 3,
+            durationMs: 100_000,
+            timeline: [workerPhase, workerListener],
+        });
+        const workerFinding = runAnalyzers(workerProfile).find(item => item.analyzer.id === "major-phase-v1")!;
+        assert.include(workerFinding.observation, "`Initialize` (worker process) took");
+        assert.include(workerFinding.observation, "Callback `init:startWorker` (worker process)");
+    });
+
+    it("should advise chunks for a long CPU-saturated run and more parallelism otherwise", () => {
+        const durationMs = 20 * 60 * 1000 + 1;
+        const cpuAggregate = aggregate("metric.sample", "host.cpuUtilization", {
+            count: 100,
+            p95: 0.9,
+            attributes: { process: "host" },
+        });
+        const profile = normalizedProfile({
+            level: 1,
+            durationMs,
+            byKind: [cpuAggregate],
+        });
+
+        const saturated = runAnalyzers(profile).find(item => item.analyzer.id === "long-run-v1")!;
+        assert.include(saturated.observation, "longer than the 20-minute threshold");
+        assert.include(saturated.observation, "Host CPU p95 was 90%");
+        assert.include(saturated.action, "@testplane/chunks");
+        assert.include(saturated.action, "parallel");
+        assert.notInclude(saturated.action, "system.workers");
+        assert.deepInclude(saturated.evidence, {
+            metric: "wall",
+            value: durationMs,
+            unit: "ms",
+            threshold: 20 * 60 * 1000,
+        });
+
+        cpuAggregate.p95WallMs = 0.4;
+        const withCpuHeadroom = runAnalyzers(profile).find(item => item.analyzer.id === "long-run-v1")!;
+        assert.include(withCpuHeadroom.observation, "Host CPU p95 was 40%");
+        assert.include(withCpuHeadroom.action, "sessionsPerBrowser");
+        assert.notInclude(withCpuHeadroom.action, "system.workers");
+        assert.notInclude(withCpuHeadroom.action, "@testplane/chunks");
+
+        profile.aggregates.byKind = [];
+        const withoutCpuData = runAnalyzers(profile).find(item => item.analyzer.id === "long-run-v1")!;
+        assert.include(withoutCpuData.observation, "Host CPU utilization data was unavailable");
+        assert.include(withoutCpuData.action, "Check host CPU");
+        assert.notInclude(withoutCpuData.action, "@testplane/chunks");
+
+        profile.operation = "cli:list-tests";
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "long-run-v1"));
+
+        profile.operation = "run";
+        profile.durationMs = 20 * 60 * 1000;
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "long-run-v1"));
+    });
+
+    it("should explain slow test discovery by component, file average and 3x outliers", () => {
+        const phase = {
+            ...operation("discovery", 0, 9_000),
+            kind: "testplane.phase.test-discovery",
+            name: "Discover and load test files",
+        };
+        const component = (id: string, kind: string, startOffsetMs: number, wallMs: number): RetainedOperation => ({
+            ...operation(id, startOffsetMs, wallMs),
+            parentId: phase.id,
+            kind,
+            name: id,
+        });
+        const glob = component("glob", "sets.resolve-and-glob", 0, 6_000);
+        const load = {
+            ...component("load", "files.load", 6_000, 2_500),
+            attributes: { files: 1_000 },
+        };
+        const parse = component("parse", "tests.parse", 8_500, 500);
+        const slowFile = {
+            ...component("slow-file", "test.file.load", 6_100, 30),
+            parentId: load.id,
+            name: "test/slow.testplane.ts",
+        };
+        const fileSummary = aggregate("test.file.load.summary", "master", {
+            count: 1_000,
+            total: 2_000,
+            max: 30,
+            attributes: { process: "master" },
+        });
+        const profile = normalizedProfile({
+            operation: "cli:list-tests",
+            level: 2,
+            durationMs: 10_000,
+            timeline: [phase, glob, load, parse, slowFile],
+            testFiles: [fileSummary],
+        });
+
+        const finding = runAnalyzers(profile).find(item => item.analyzer.id === "test-discovery-v1")!;
+
+        assert.include(finding.observation, "does not execute tests");
+        assert.include(finding.action, "File matching/glob is the largest component");
+        assert.deepInclude(finding.evidence, { metric: "fileCount", value: 1_000 });
+        assert.deepInclude(finding.evidence, {
+            metric: "averageFileLoad",
+            value: 2,
+            unit: "ms",
+        });
+        assert.deepInclude(finding.evidence, {
+            metric: "hasFileLoadOutliers",
+            value: true,
+        });
+        assert.deepInclude(finding.evidence, {
+            metric: "fileLoadOutlier",
+            value: "test/slow.testplane.ts",
+            operationId: slowFile.id,
+        });
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "major-phase-v1"));
+
+        glob.timing.wallMs = 1_000;
+        load.startOffsetMs = 1_000;
+        load.timing.wallMs = 7_000;
+        parse.startOffsetMs = 8_000;
+        parse.timing.wallMs = 1_000;
+        fileSummary.maxWallMs = 5;
+        slowFile.timing.wallMs = 5;
+        assert.include(
+            runAnalyzers(profile).find(item => item.analyzer.id === "test-discovery-v1")!.action,
+            "No file was at least 3× slower than the average",
+        );
+    });
+
     it("should expose root command wall separately from nested cumulative work", () => {
         const profile = aggregateProfile(
             {
@@ -173,6 +443,7 @@ describe("profiler/analysis", () => {
             cumulativeWorkMs: 190,
             overlapMs: 70,
         });
+        assert.notExists(runAnalyzers(profile).find(item => item.observation.includes("<root>")));
         assert.isUndefined(profile.aggregates.byKind.find(item => item.kind.startsWith("browser.")));
         assert.isUndefined(profile.aggregates.browsers.find(item => item.kind.startsWith("browser.command")));
         assert.deepEqual(profile.aggregates.commands.map(item => item.name).sort(), ["<root>", "pause"]);
@@ -235,6 +506,33 @@ const snapshot = ({
     clock: { unalignedFragments: 0 },
 });
 
+interface AggregateOptions {
+    count?: number;
+    total?: number;
+    max?: number;
+    p50?: number;
+    p95?: number;
+    attributes?: Record<string, ProfilerValue>;
+}
+
+const aggregate = (
+    kind: string,
+    name: string,
+    { count = 1, total = 0, max = total, p50, p95, attributes }: AggregateOptions = {},
+): ProfilerAggregate => ({
+    kind,
+    name,
+    count,
+    totalWallMs: total,
+    minWallMs: count ? total / count : 0,
+    maxWallMs: max,
+    meanWallMs: count ? total / count : 0,
+    p50WallMs: p50,
+    p95WallMs: p95,
+    cumulativeWorkMs: total,
+    attributes,
+});
+
 const runtimeAggregate = (
     kind: string,
     name: string,
@@ -253,4 +551,52 @@ const runtimeAggregate = (
         p95: total / count,
         samples: [total / count],
     },
+});
+
+const normalizedProfile = ({
+    operation: profilerOperation = "run",
+    level,
+    durationMs,
+    timeline = [],
+    byKind = [],
+    testFiles = [],
+    commands = [],
+    tests = [],
+    hooks = [],
+    listeners = [],
+    metrics = [],
+}: {
+    operation?: ProfilerOperationName;
+    level: EnabledProfilerLevel;
+    durationMs: number;
+    timeline?: RetainedOperation[];
+    byKind?: ProfilerAggregate[];
+    testFiles?: ProfilerAggregate[];
+    commands?: ProfilerAggregate[];
+    tests?: ProfilerAggregate[];
+    hooks?: ProfilerAggregate[];
+    listeners?: ProfilerAggregate[];
+    metrics?: NormalizedProfile["aggregates"]["metrics"];
+}): NormalizedProfile => ({
+    runId: "run",
+    operation: profilerOperation,
+    level,
+    durationMs,
+    timeline,
+    aggregates: {
+        byKind,
+        phases: [],
+        listeners,
+        testFiles,
+        tests,
+        hooks,
+        commands,
+        workers: [],
+        browsers: [],
+        metrics,
+    },
+    errors: [],
+    truncation: [],
+    overheadMs: 0,
+    clock: { unalignedFragments: 0 },
 });
