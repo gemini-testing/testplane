@@ -54,7 +54,7 @@ export class Testplane extends BaseTestplane {
     protected async _setup(): Promise<void> {
         await super._setup();
 
-        this.runner = Runner.create(this._config);
+        this.runner = Runner.create(this._config, this._profiler.runtime);
 
         passthroughEvent(this.runner, this, [
             WorkerEvents.BEFORE_FILE_READ,

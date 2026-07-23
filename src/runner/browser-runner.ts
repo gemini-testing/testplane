@@ -10,6 +10,8 @@ import { Config } from "../config";
 import { BrowserPool } from "../browser-pool";
 import { Workers } from "./index";
 import type { Test } from "../types";
+import { noopProfilerRuntime } from "../profiler/runtime/noop";
+import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
 
 export interface BrowserRunner {
     on(event: InterceptedEvent, handler: (test: Test) => void): this;
@@ -23,8 +25,15 @@ export class BrowserRunner extends CancelableEmitter {
     private activeTestRunners: Set<TestRunner.TestRunner>;
     private workers: Workers;
     private running: PromiseGroup;
+    private profiler: ProfilerRuntimeLike;
 
-    constructor(browserId: string, config: Config, browserPool: BrowserPool, workers: Workers) {
+    constructor(
+        browserId: string,
+        config: Config,
+        browserPool: BrowserPool,
+        workers: Workers,
+        profiler: ProfilerRuntimeLike = noopProfilerRuntime,
+    ) {
         super();
         this._browserId = browserId;
         this.config = config;
@@ -34,6 +43,7 @@ export class BrowserRunner extends CancelableEmitter {
         this.activeTestRunners = new Set();
         this.workers = workers;
         this.running = new PromiseGroup();
+        this.profiler = profiler;
     }
 
     get browserId(): string {
@@ -60,7 +70,7 @@ export class BrowserRunner extends CancelableEmitter {
             version: test.browserVersion,
             pool: this.browserPool,
         });
-        const runner = TestRunner.create(test, this.config, browserAgent);
+        const runner = TestRunner.create(test, this.config, browserAgent, this.profiler);
 
         runner.on(MasterEvents.TEST_BEGIN, (test: Test) => {
             this.suiteMonitor.testBegin(test);

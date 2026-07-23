@@ -23,6 +23,8 @@ import type { Stats as RunnerStats } from "../stats";
 import EventEmitter from "events";
 import { Test } from "../types";
 import { SelectivityRunner } from "../browser/cdp/selectivity/runner";
+import { noopProfilerRuntime } from "../profiler/runtime/noop";
+import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
 
 interface WorkerMethods {
     runTest: typeof runTest;
@@ -55,8 +57,9 @@ export class MainRunner extends RunnableEmitter {
     protected cancelled: boolean;
     protected workersRegistry: WorkersRegistry;
     protected workers: Workers | null;
+    protected profiler: ProfilerRuntimeLike;
 
-    constructor(config: Config, interceptors: Interceptor[]) {
+    constructor(config: Config, interceptors: Interceptor[], profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
 
         this.config = config;
@@ -69,7 +72,8 @@ export class MainRunner extends RunnableEmitter {
         this.runned = false;
         this.cancelled = false;
 
-        this.workersRegistry = WorkersRegistry.create(this.config);
+        this.profiler = profiler;
+        this.workersRegistry = WorkersRegistry.create(this.config, this.profiler);
         this.workers = null;
         eventsUtils.passthroughEvent(this.workersRegistry, this, [
             MasterEvents.NEW_WORKER_PROCESS,
@@ -91,7 +95,9 @@ export class MainRunner extends RunnableEmitter {
 
         this.workersRegistry.init();
         this.workers = this.registerWorkers(require.resolve("../worker"), ["runTest", "cancel"] as const) as Workers;
-        this.browserPool = pool.create(this.config, this);
+        this.browserPool = pool.create(this.config, this, this.profiler);
+
+        this.once(MasterEvents.EXIT, () => this.workersRegistry.shutdown());
 
         eventsUtils.passthroughEvent(this, this.workersRegistry, MasterEvents.EXIT);
     }
@@ -155,7 +161,7 @@ export class MainRunner extends RunnableEmitter {
     }
 
     protected _createBrowserRunner(browserId: string): BrowserRunner {
-        const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers);
+        const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers, this.profiler);
 
         eventsUtils.passthroughEvent(runner, this, this.getEventsToPassthrough());
         this.interceptEvents(runner, this.getEventsToIntercept());
