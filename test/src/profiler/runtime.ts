@@ -85,6 +85,56 @@ describe("profiler/runtime", () => {
         assert.equal(runtime.snapshot().operations.find(operation => operation.kind === "failed")!.status, "failed");
     });
 
+    it("should retain bounded details without changing full aggregates", () => {
+        const clock = createClock();
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock });
+        const listenerLimit = RETENTION_POLICY_V1.operationLimits["event.listener"];
+        const listenerCount = listenerLimit + 50;
+
+        for (let index = 0; index < listenerCount; index += 1) {
+            const span = runtime.startSpan("event.listener", { name: "listener" });
+            clock.advance(index + 1);
+            span.end();
+        }
+        runtime.stop();
+
+        const snapshot = runtime.snapshot();
+        const aggregate = snapshot.aggregates.find(item => item.kind === "event.listener");
+        const truncation = snapshot.truncation.find(item => item.collector === "event.listener");
+
+        assert.equal(aggregate!.statistics.count, listenerCount);
+        assert.lengthOf(
+            snapshot.operations.filter(operation => operation.kind === "event.listener"),
+            listenerLimit,
+        );
+        assert.deepInclude(truncation, {
+            seen: listenerCount,
+            retained: listenerLimit,
+            truncated: true,
+        });
+    });
+
+    it("should account nested browser commands as root wall and cumulative work separately", () => {
+        const clock = createClock();
+        const runtime = new ProfilerRuntime({ runId: "run", level: 3, clock });
+
+        runtime.withSpan("test.body", {}, () => {
+            runtime.withSpan("browser.command", { name: "outer" }, () => {
+                clock.advance(3);
+                runtime.withSpan("browser.command", { name: "inner" }, () => clock.advance(7));
+                clock.advance(2);
+            });
+        });
+        runtime.stop();
+
+        const snapshot = runtime.snapshot();
+        const root = snapshot.aggregates.find(item => item.kind === "browser.command.root");
+        const cumulative = snapshot.aggregates.find(item => item.kind === "browser.command.cumulative");
+
+        assert.deepInclude(root!.statistics, { count: 1, sum: 12 });
+        assert.deepInclude(cumulative!.statistics, { count: 2, sum: 19 });
+    });
+
     it("should execute the strict no-op path without producing a snapshot", () => {
         const action = sinon.spy(() => "result");
 
@@ -92,6 +142,46 @@ describe("profiler/runtime", () => {
         assert.isFalse(noopProfilerRuntime.isEnabled());
         assert.isNull(noopProfilerRuntime.snapshot());
         assert.calledOnce(action);
+    });
+
+    it("should keep an exact bounded summary of test-file load durations", () => {
+        const runtime = new ProfilerRuntime({
+            runId: "run",
+            level: 2,
+            clock: createClock(),
+            process: { type: "master", pid: 1 },
+        });
+
+        runtime.recordMeasurement("test.file.load", 10, {
+            name: "first.testplane.ts",
+        });
+        runtime.recordMeasurement("test.file.load", 30, {
+            name: "second.testplane.ts",
+        });
+        runtime.stop();
+
+        const summary = runtime.snapshot().aggregates.find(item => item.kind === "test.file.load.summary");
+        assert.equal(summary!.name, "master");
+        assert.deepEqual(summary!.attributes, { process: "master" });
+        assert.deepInclude(summary!.statistics, {
+            count: 2,
+            sum: 40,
+            mean: 20,
+            max: 30,
+        });
+
+        const worker = new ProfilerRuntime({
+            runId: "worker-run",
+            level: 2,
+            clock: createClock(),
+            process: { type: "worker", pid: 2 },
+        });
+        worker.recordMeasurement("test.file.load", 20, {
+            name: "worker.testplane.ts",
+        });
+        worker.stop();
+
+        assert.notExists(worker.snapshot().aggregates.find(item => item.kind === "test.file.load.summary"));
     });
 
     it("should close interrupted spans child-first so retained children keep their parents", () => {
@@ -224,5 +314,81 @@ describe("profiler/runtime", () => {
         assert.isNumber(operation!.timing.activeJsMs);
         assert.isAtLeast(operation!.timing.waitingMs!, 5);
         assert.isAtMost(operation!.timing.activeJsMs!, operation!.timing.wallMs);
+    });
+
+    it("should bound high-cardinality aggregates and report the overflow", () => {
+        const clock = createClock();
+        const runtime = new ProfilerRuntime({ runId: "run", level: 2, clock });
+
+        for (let index = 0; index < 5_100; index += 1) {
+            runtime.recordMeasurement("test.attempt", 1, { name: `test-${index}` });
+        }
+        runtime.stop();
+
+        const snapshot = runtime.snapshot();
+        const truncation = snapshot.truncation.find(item => item.collector === "aggregate-identities");
+        assert.isAtMost(snapshot.aggregates.length, 5_000);
+        assert.deepInclude(truncation, { retained: 5_000, truncated: true });
+        assert.equal(snapshot.aggregates.find(item => item.kind === "profiler.aggregate.other")!.statistics.count, 101);
+    });
+
+    it("should update counters and gauges without committing overflowing values", () => {
+        const runtime = new ProfilerRuntime({
+            runId: "run",
+            level: 2,
+            clock: createClock(),
+        });
+
+        runtime.increment("counter", Number.MAX_VALUE, { scope: "worker" });
+        runtime.increment("counter", Number.MAX_VALUE, { scope: "worker" });
+        runtime.sample("gauge", 2, { scope: "worker" });
+        runtime.sample("gauge", 3, { scope: "worker" });
+        runtime.stop();
+
+        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "counter")!, {
+            value: Number.MAX_VALUE,
+            mode: "counter",
+            dimensions: { scope: "worker" },
+        });
+        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "gauge")!, {
+            value: 3,
+            mode: "gauge",
+            dimensions: { scope: "worker" },
+        });
+        assert.deepInclude(runtime.snapshot().errors.find(error => error.stage === "runtime.metric")!, {
+            message: "Metric counter overflowed",
+        });
+    });
+
+    it("should record resource samples with dimensions and tear the sampler down on stop", () => {
+        const runtime = new ProfilerRuntime({
+            runId: "run",
+            level: 2,
+            clock: createClock(),
+            process: { type: "worker", pid: 2 },
+        });
+        const internals = runtime as unknown as {
+            _recordResourceSample(name: string, value: number, dimensions: Record<string, string>): void;
+            _sampler?: NodeJS.Timeout;
+        };
+
+        assert.exists(internals._sampler);
+        internals._recordResourceSample("process.eventLoopUtilization", 0.75, {
+            process: "worker",
+        });
+        runtime.stop();
+
+        assert.notExists(internals._sampler);
+        assert.deepInclude(runtime.snapshot().metrics.find(metric => metric.name === "process.eventLoopUtilization")!, {
+            value: 0.75,
+            dimensions: { process: "worker" },
+        });
+        const resourceAggregate = runtime
+            .snapshot()
+            .aggregates.find(aggregate => aggregate.name === "process.eventLoopUtilization")!;
+        assert.deepInclude(resourceAggregate, {
+            attributes: { process: "worker" },
+        });
+        assert.deepInclude(resourceAggregate.statistics, { count: 1, sum: 0.75 });
     });
 });
