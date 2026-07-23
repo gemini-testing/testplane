@@ -4,7 +4,7 @@ import defaults from "./defaults";
 import { BrowserConfig } from "./browser-config";
 import parseOptions from "./options";
 import * as logger from "../utils/logger";
-import { ConfigInput, ConfigInputData, ConfigParsed } from "./types";
+import { ConfigInput, ConfigInputData, ConfigLifecycleObserver, ConfigParsed } from "./types";
 import { addUserAgentToArgs } from "./utils";
 
 export { TimeTravelMode, SelectivityMode } from "./types";
@@ -12,14 +12,20 @@ export { TimeTravelMode, SelectivityMode } from "./types";
 export class Config {
     configPath?: string;
 
-    static async create(config?: string | ConfigInput): Promise<Config> {
+    static async create(config?: string | ConfigInput, observer?: ConfigLifecycleObserver): Promise<Config> {
+        const phase = observer?.startPhase("testplane.phase.config", "Load configuration");
         try {
-            const { configPath, options } = await Config._resolve(config);
+            const { configPath, options } = await Config._resolve(config, observer);
 
-            await Config._prepareEnvironment(options);
+            await Config._observe(observer, "testplane.phase.config.prepare-environment", "Prepare environment", () =>
+                Config._prepareEnvironment(options),
+            );
 
-            return new Config(options, configPath);
+            const result = new Config(options, configPath, observer);
+            phase?.end();
+            return result;
         } catch (e: unknown) {
+            phase?.end("failed");
             const error = new Error(`Got an error while trying to read config: ${(e as Error).message}`);
             error.stack = (e as Error).stack;
             error.cause = (e as Error).cause;
@@ -28,14 +34,18 @@ export class Config {
         }
     }
 
-    static async read(configPath: string): Promise<ConfigInputData> {
+    static async read(configPath: string, observer?: ConfigLifecycleObserver): Promise<ConfigInputData> {
+        const phase = observer?.startPhase("testplane.phase.config.read", "Read configuration file");
         try {
             // eslint-disable-next-line @typescript-eslint/no-var-requires
             const configModule = require(path.resolve(process.cwd(), configPath));
             const exported = (configModule.__esModule ? configModule.default : configModule) as ConfigInput;
 
-            return await Config._resolveExportedConfig(exported);
+            const result = await Config._resolveExportedConfig(exported, observer);
+            phase?.end();
+            return result;
         } catch (e) {
+            phase?.end("failed");
             logger.error(`Unable to read config from path ${configPath}`);
             throw e;
         }
@@ -43,9 +53,10 @@ export class Config {
 
     private static async _resolve(
         config?: string | ConfigInput,
+        observer?: ConfigLifecycleObserver,
     ): Promise<{ configPath?: string; options: ConfigInputData }> {
         if (typeof config === "function") {
-            return { options: await Config._resolveExportedConfig(config) };
+            return { options: await Config._resolveExportedConfig(config, observer) };
         }
 
         if (_.isObjectLike(config)) {
@@ -53,16 +64,30 @@ export class Config {
         }
 
         if (typeof config === "string") {
-            return { configPath: config, options: await Config.read(config) };
+            return {
+                configPath: config,
+                options: await Config.read(config, observer),
+            };
         }
 
-        const located = Config._locateConfigPath();
+        const locatePhase = observer?.startPhase("testplane.phase.config.locate", "Locate configuration file");
+        let located: string | null;
+        try {
+            located = Config._locateConfigPath();
+            locatePhase?.end();
+        } catch (error) {
+            locatePhase?.end("failed");
+            throw error;
+        }
 
         if (!located) {
             throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
         }
 
-        return { configPath: located, options: await Config.read(located) };
+        return {
+            configPath: located,
+            options: await Config.read(located, observer),
+        };
     }
 
     private static _locateConfigPath(): string | null {
@@ -83,10 +108,39 @@ export class Config {
         return null;
     }
 
-    private static async _resolveExportedConfig(exported: ConfigInput): Promise<ConfigInputData> {
-        const resolved = typeof exported === "function" ? await (exported as () => unknown)() : exported;
+    private static async _resolveExportedConfig(
+        exported: ConfigInput,
+        observer?: ConfigLifecycleObserver,
+    ): Promise<ConfigInputData> {
+        if (typeof exported !== "function") {
+            return exported as ConfigInputData;
+        }
+
+        const resolved = await Config._observe(
+            observer,
+            "testplane.phase.config.resolve-export",
+            "Resolve exported configuration",
+            () => (exported as () => unknown)(),
+        );
 
         return resolved as ConfigInputData;
+    }
+
+    private static async _observe<T>(
+        observer: ConfigLifecycleObserver | undefined,
+        kind: string,
+        name: string,
+        action: () => T | Promise<T>,
+    ): Promise<T> {
+        const phase = observer?.startPhase(kind, name);
+        try {
+            const result = await action();
+            phase?.end();
+            return result;
+        } catch (error) {
+            phase?.end("failed");
+            throw error;
+        }
     }
 
     private static async _prepareEnvironment(options: ConfigInputData): Promise<void> {
@@ -95,16 +149,24 @@ export class Config {
         }
     }
 
-    constructor(options: ConfigInputData, configPath?: string) {
+    constructor(options: ConfigInputData, configPath?: string, observer?: ConfigLifecycleObserver) {
         if (configPath) {
             this.configPath = configPath;
         }
 
-        const parsedOptions = parseOptions({
-            options,
-            env: process.env,
-            argv: process.argv,
-        }) as ConfigParsed;
+        const parsePhase = observer?.startPhase("testplane.phase.config.parse", "Parse configuration");
+        let parsedOptions: ConfigParsed;
+        try {
+            parsedOptions = parseOptions({
+                options,
+                env: process.env,
+                argv: process.argv,
+            }) as ConfigParsed;
+            parsePhase?.end();
+        } catch (error) {
+            parsePhase?.end("failed");
+            throw error;
+        }
 
         addUserAgentToArgs(parsedOptions);
 

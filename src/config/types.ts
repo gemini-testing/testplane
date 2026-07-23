@@ -493,6 +493,14 @@ export interface ProfilerConfig {
     output: string | null;
 }
 
+export interface ConfigLifecyclePhase {
+    end(status?: "completed" | "failed" | "interrupted"): void;
+}
+
+export interface ConfigLifecycleObserver {
+    startPhase(kind: string, name?: string): ConfigLifecyclePhase;
+}
+
 type PartialCommonConfig = Partial<
     Omit<
         CommonConfig,
