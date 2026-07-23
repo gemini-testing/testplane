@@ -480,6 +480,19 @@ export interface SetsConfigParsed {
     browsers: Array<string>;
 }
 
+export type ProfilerLevel = 0 | 1 | 2 | 3;
+
+export interface ProfilerConfig {
+    /**
+     * Amount of collected detail. Higher levels include all lower-level data.
+     * `0` disables profiling; `1` covers lifecycle, test discovery, and resources; `2` adds tests, listeners, and pools;
+     * `3` adds commands, modules, async activity, and browser-runtime telemetry.
+     */
+    level: ProfilerLevel;
+    /** Path of the JSON result file, relative to the working directory. `null` disables file output. */
+    output: string | null;
+}
+
 type PartialCommonConfig = Partial<
     Omit<
         CommonConfig,
@@ -524,6 +537,7 @@ export interface ConfigParsed extends CommonConfig {
     prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
+    profiler?: ProfilerConfig;
 }
 
 export interface RuntimeConfig {
