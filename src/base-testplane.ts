@@ -80,15 +80,13 @@ export abstract class BaseTestplane extends AsyncEmitter {
         this._profiler = new ProfilerManager(this._config, this._bootstrapProbe, {
             process:
                 this._pendingProfilerOptions?.process ??
-                ({
-                    type: this.isWorker() ? "worker" : "master",
-                    pid: process.pid,
-                } as ProcessRef),
+                ({ type: this.isWorker() ? "worker" : "master", pid: process.pid } as ProcessRef),
             runId: this._pendingProfilerOptions?.runId,
             clockOffsetMs: this._pendingProfilerOptions?.clockOffsetMs,
             clockUncertaintyMs: this._pendingProfilerOptions?.clockUncertaintyMs,
         });
         this._pendingProfilerOptions = undefined;
+        this._profiler.setResultEmitter(result => this.emitAndWait(MasterEvents.PROFILER_RESULT, result));
         this.setEventObserver(createProfilerEventObserver(this._profiler, this._config));
 
         this._profiler.runtime.withSpan("testplane.phase.plugins", { name: "Load plugins" }, () => {

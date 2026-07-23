@@ -21,6 +21,8 @@ export const MasterAsyncEvents = {
     SESSION_END: "endSession",
 
     EXIT: "exit",
+
+    PROFILER_RESULT: "profilerResult",
 } as const;
 
 export type MasterAsyncEvents = typeof MasterAsyncEvents;

@@ -16,6 +16,7 @@ import type { CoordBounds, LooksSameOptions } from "looks-same";
 import type { eventWithTime as RrwebEvent } from "@rrweb/types";
 import type { runGroup } from "../browser/history";
 import type { NormalizedDependencies, SelectivityCompressionType } from "../browser/cdp/selectivity/types";
+import type { ProfilerResultV1 } from "../profiler/schema";
 
 export type { Test } from "../test-reader/test-object/test";
 export type { Suite } from "../test-reader/test-object/suite";
@@ -253,6 +254,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["SESSION_START"], callback: AsyncSessionEventCallback): T;
     (event: Events["SESSION_END"], callback: AsyncSessionEventCallback): T;
     (event: Events["EXIT"], callback: (error?: Error) => Promise<void> | void): T;
+    (event: Events["PROFILER_RESULT"], callback: (result: Readonly<ProfilerResultV1>) => Promise<void> | void): T;
 
     (event: Events["NEW_WORKER_PROCESS"], callback: (suite: WorkerProcess) => void): T;
     (event: Events["SUITE_BEGIN"], callback: (suite: Suite) => void): T;

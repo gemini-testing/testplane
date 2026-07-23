@@ -534,6 +534,7 @@ export type ConfigInputData = Partial<PartialCommonConfig> & {
     prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
+    profiler?: Partial<ProfilerConfig>;
 };
 
 export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Promise<ConfigInputData>);
@@ -545,7 +546,7 @@ export interface ConfigParsed extends CommonConfig {
     prepareEnvironment?: () => void | Promise<void> | null;
     beforeAll?: HookType;
     afterAll?: HookType;
-    profiler?: ProfilerConfig;
+    profiler: ProfilerConfig;
 }
 
 export interface RuntimeConfig {

@@ -136,6 +136,35 @@ const rootSection = section(
             }),
         }),
 
+        profiler: section({
+            level: option({
+                defaultValue: defaults.profiler.level,
+                parseEnv: Number,
+                parseCli: Number,
+                validate: value => {
+                    if (!Number.isInteger(value) || value < 0 || value > 3) {
+                        throw new Error('"profiler.level" must be one of 0, 1, 2 or 3');
+                    }
+                },
+            }),
+            output: option({
+                defaultValue: defaults.profiler.output,
+                validate: value => {
+                    if (value === null) {
+                        return;
+                    }
+
+                    if (!_.isString(value) || value.length === 0) {
+                        throw new Error('"profiler.output" must be a non-empty string or null');
+                    }
+
+                    if (!value.endsWith(".json")) {
+                        throw new Error('"profiler.output" must have .json extension');
+                    }
+                },
+            }),
+        }),
+
         sets: map(
             section({
                 files: option({

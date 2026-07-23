@@ -304,7 +304,7 @@ export class ProfilerManager {
     }
 
     private _createRuntime(): ProfilerRuntime {
-        const level = this._config.profiler?.level as EnabledProfilerLevel;
+        const level = this._config.profiler.level as EnabledProfilerLevel;
         const runId = this._initialRunId ?? randomUUID();
         const originMonotonicMs = this._probe?.startedAtMonotonicMs ?? performance.now();
         const originEpochMs = (this._probe?.startedAtEpochMs ?? Date.now()) + this._clockOffsetMs;
@@ -399,18 +399,11 @@ function coverageAtLevel(
     level: EnabledProfilerLevel,
     collector: string,
     requiredLevel: EnabledProfilerLevel,
-    available: Omit<CoverageEntry, "collector"> = {
-        status: "complete",
-        reason: undefined,
-    },
+    available: Omit<CoverageEntry, "collector"> = { status: "complete", reason: undefined },
 ): CoverageEntry {
     return level >= requiredLevel
         ? { collector, ...available }
-        : {
-              collector,
-              status: "unavailable",
-              reason: `Requires level ${requiredLevel}`,
-          };
+        : { collector, status: "unavailable", reason: `Requires level ${requiredLevel}` };
 }
 
 function getAvailableParallelism(): number {

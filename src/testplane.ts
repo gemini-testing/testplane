@@ -228,7 +228,11 @@ export class Testplane extends BaseTestplane {
         );
 
         eventsUtils.passthroughEvent(this.runner, this, _.values(MasterSyncEvents));
-        eventsUtils.passthroughEventAsync(this.runner, this, _.values(MasterAsyncEvents));
+        eventsUtils.passthroughEventAsync(
+            this.runner,
+            this,
+            _.without(_.values(MasterAsyncEvents), MasterEvents.PROFILER_RESULT),
+        );
         eventsUtils.passthroughEventAsync(signalHandler, this, MasterEvents.EXIT);
         eventsUtils.passthroughEventAsync(signalHandler, this.runner, MasterEvents.EXIT);
 
@@ -258,20 +262,10 @@ export class Testplane extends BaseTestplane {
         const collection = await this._profiler.runtime.withSpan(
             "testplane.phase.read-tests",
             { name: "Read tests" },
-            () =>
-                this._readTests(testPaths, {
-                    browsers,
-                    sets,
-                    grep,
-                    tag,
-                    replMode,
-                    keepBrowserMode,
-                }),
+            () => this._readTests(testPaths, { browsers, sets, grep, tag, replMode, keepBrowserMode }),
         );
         await this._profiler.runtime.withSpan("testplane.phase.execution", { name: "Execute tests" }, () =>
-            runner.run(collection, RunnerStats.create(this), {
-                shouldDisableSelectivity,
-            }),
+            runner.run(collection, RunnerStats.create(this), { shouldDisableSelectivity }),
         );
 
         if (!shouldDisableSelectivity) {

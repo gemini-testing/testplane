@@ -8,6 +8,7 @@ import { ConfigInput, ConfigInputData, ConfigLifecycleObserver, ConfigParsed } f
 import { addUserAgentToArgs } from "./utils";
 
 export { TimeTravelMode, SelectivityMode } from "./types";
+export type { ProfilerConfig, ProfilerLevel } from "./types";
 
 export class Config {
     configPath?: string;
@@ -64,10 +65,7 @@ export class Config {
         }
 
         if (typeof config === "string") {
-            return {
-                configPath: config,
-                options: await Config.read(config, observer),
-            };
+            return { configPath: config, options: await Config.read(config, observer) };
         }
 
         const locatePhase = observer?.startPhase("testplane.phase.config.locate", "Locate configuration file");
@@ -84,10 +82,7 @@ export class Config {
             throw new Error(`Unable to read config from paths: ${defaults.configPaths.join(", ")}`);
         }
 
-        return {
-            configPath: located,
-            options: await Config.read(located, observer),
-        };
+        return { configPath: located, options: await Config.read(located, observer) };
     }
 
     private static _locateConfigPath(): string | null {
