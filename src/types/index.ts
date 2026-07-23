@@ -252,7 +252,7 @@ export type MasterEventHandler<T extends BaseTestplane> = {
     (event: Events["RUNNER_END"], callback: (result: StatsResult) => Promise<void> | void): T;
     (event: Events["SESSION_START"], callback: AsyncSessionEventCallback): T;
     (event: Events["SESSION_END"], callback: AsyncSessionEventCallback): T;
-    (event: Events["EXIT"], callback: () => Promise<void> | void): T;
+    (event: Events["EXIT"], callback: (error?: Error) => Promise<void> | void): T;
 
     (event: Events["NEW_WORKER_PROCESS"], callback: (suite: WorkerProcess) => void): T;
     (event: Events["SUITE_BEGIN"], callback: (suite: Suite) => void): T;
