@@ -423,6 +423,18 @@ describe("test-reader/test-parser", () => {
                 assert.calledWithMatch(readFiles, sinon.match.any, { runnableOpts });
             });
 
+            it("should collect hook locations only when profiler level 2 is enabled", async () => {
+                const profiler = {
+                    isEnabled: sinon.stub().callsFake(level => level === 2),
+                };
+
+                await loadFiles_({ parser: new TestParser(profiler) });
+
+                assert.calledWithMatch(readFiles, sinon.match.any, {
+                    runnableOpts: { saveHookLocations: true },
+                });
+            });
+
             it("should pass 'isBrowserEnv' option to reader", async () => {
                 const config = makeConfigStub({
                     system: {

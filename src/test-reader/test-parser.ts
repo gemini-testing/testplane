@@ -22,6 +22,10 @@ import { BrowserConfig } from "../config/browser-config";
 import type { ReadTestsOpts } from "../testplane";
 import { TagFilter } from "../utils/cli";
 import { TestplaneGlobals } from "../types/globals";
+import { noopProfilerRuntime } from "../profiler/runtime/noop";
+import type { ProfilerRuntimeLike, SpanHandle } from "../profiler/runtime/types";
+import { ProfilerSanitizer } from "../profiler/sanitize";
+import { ProfilerModuleGraphCollector } from "../profiler/collectors/module-graph";
 
 export type TestParserParseOpts = {
     browserId: string;
@@ -41,12 +45,14 @@ const getFailedTestId = (test: { fullTitle: string; browserId: string; browserVe
 export class TestParser extends EventEmitter {
     #failedTests: Set<string>;
     #buildInstructions: InstructionsList;
+    #profiler: ProfilerRuntimeLike;
 
-    constructor() {
+    constructor(profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
 
         this.#failedTests = new Set();
         this.#buildInstructions = new InstructionsList();
+        this.#profiler = profiler;
     }
 
     async loadFiles(files: string[], { config, runnableOpts }: LoadFilesOpts): Promise<void> {
@@ -84,8 +90,50 @@ export class TestParser extends EventEmitter {
         const rand = Math.random();
         const esmDecorator = (f: string): string => f + `?rand=${rand}`;
         const isBrowserEnv = isRunInBrowserEnv(config);
+        const profileTestFiles = this.#profiler.isEnabled(2);
+        const effectiveRunnableOpts = profileTestFiles ? { ...runnableOpts, saveHookLocations: true } : runnableOpts;
 
-        await readFiles(files, { esmDecorator, config: mochaOpts, eventBus, runnableOpts, isBrowserEnv });
+        const openFileSpans = new Map<string, SpanHandle>();
+        const moduleGraph = this.#profiler.isEnabled(3) ? new ProfilerModuleGraphCollector(this.#profiler) : undefined;
+        const sanitizer = profileTestFiles ? new ProfilerSanitizer() : undefined;
+        const fileObserver = sanitizer
+            ? {
+                  start: (file: string): void => {
+                      moduleGraph?.enterFile(file);
+                      openFileSpans.get(file)?.end("interrupted");
+                      const sanitizedFile = sanitizer.path(file);
+                      openFileSpans.set(
+                          file,
+                          this.#profiler.startSpan("test.file.load", {
+                              minLevel: 2,
+                              name: sanitizedFile,
+                              attributes: { file: sanitizedFile, cache: "master" },
+                          }),
+                      );
+                  },
+                  end: (file: string): void => {
+                      openFileSpans.get(file)?.end();
+                      openFileSpans.delete(file);
+                      moduleGraph?.leaveFile();
+                  },
+              }
+            : undefined;
+
+        try {
+            await readFiles(files, {
+                esmDecorator,
+                config: mochaOpts,
+                eventBus,
+                runnableOpts: effectiveRunnableOpts,
+                isBrowserEnv,
+                fileObserver,
+            });
+        } finally {
+            for (const span of openFileSpans.values()) {
+                span.end("interrupted");
+            }
+            moduleGraph?.dispose();
+        }
 
         if (config.lastFailed.only) {
             try {

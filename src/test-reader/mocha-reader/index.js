@@ -31,7 +31,7 @@ function getTagParser(original) {
     };
 }
 
-async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, isBrowserEnv = false }) {
+async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, isBrowserEnv = false, fileObserver }) {
     const mocha = new Mocha(config);
 
     mocha.suite.on("pre-require", context => {
@@ -54,7 +54,7 @@ async function readFiles(files, { esmDecorator, config, eventBus, runnableOpts, 
     mocha.fullTrace();
 
     initBuildContext(eventBus);
-    initEventListeners({ rootSuite: mocha.suite, outBus: eventBus, config, runnableOpts });
+    initEventListeners({ rootSuite: mocha.suite, outBus: eventBus, config, runnableOpts, fileObserver });
 
     files.forEach(f => mocha.addFile(f));
 
@@ -83,11 +83,11 @@ function initBuildContext(outBus) {
     });
 }
 
-function initEventListeners({ rootSuite, outBus, config, runnableOpts }) {
+function initEventListeners({ rootSuite, outBus, config, runnableOpts, fileObserver }) {
     const inBus = MochaEventBus.create(rootSuite);
 
     forbidSuiteHooks(inBus);
-    passthroughFileEvents(inBus, outBus);
+    passthroughFileEvents(inBus, outBus, fileObserver);
     addLocationToRunnables(inBus, config, runnableOpts);
     registerTestObjects(inBus, outBus);
 
@@ -106,12 +106,14 @@ function forbidSuiteHooks(bus) {
     );
 }
 
-function passthroughFileEvents(inBus, outBus) {
-    [
-        [MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, MasterEvents.BEFORE_FILE_READ],
-        [MochaEventBus.events.EVENT_FILE_POST_REQUIRE, MasterEvents.AFTER_FILE_READ],
-    ].forEach(([mochaEvent, ourEvent]) => {
-        inBus.on(mochaEvent, (ctx, file) => outBus.emit(ourEvent, { file }));
+function passthroughFileEvents(inBus, outBus, fileObserver) {
+    inBus.on(MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, (ctx, file) => {
+        fileObserver?.start(file);
+        outBus.emit(MasterEvents.BEFORE_FILE_READ, { file });
+    });
+    inBus.on(MochaEventBus.events.EVENT_FILE_POST_REQUIRE, (ctx, file) => {
+        outBus.emit(MasterEvents.AFTER_FILE_READ, { file });
+        fileObserver?.end(file);
     });
 }
 
@@ -155,35 +157,56 @@ function applyOnly(rootSuite, eventBus) {
 }
 
 function addLocationToRunnables(inBus, config, runnableOpts) {
-    if (!runnableOpts || !runnableOpts.saveLocations) {
+    if (!runnableOpts?.saveLocations && !runnableOpts?.saveHookLocations) {
         return;
     }
 
     enableSourceMaps();
 
     const sourceMapSupport = tryToRequireSourceMapSupport();
-    const { suiteMethods, testMethods } = getMethodsByInterface(config.ui);
+    const {
+        suiteMethods,
+        testMethods,
+        beforeEachMethods = [],
+        afterEachMethods = [],
+    } = getMethodsByInterface(config.ui);
 
     inBus.on(MochaEventBus.events.EVENT_FILE_PRE_REQUIRE, ctx => {
-        [
-            {
-                methods: suiteMethods,
-                eventName: MochaEventBus.events.EVENT_SUITE_ADD_SUITE,
-            },
-            {
-                methods: testMethods,
-                eventName: MochaEventBus.events.EVENT_SUITE_ADD_TEST,
-            },
-        ].forEach(({ methods, eventName }) => {
+        const runnableMethods = runnableOpts.saveLocations
+            ? [
+                  {
+                      methods: suiteMethods,
+                      eventName: MochaEventBus.events.EVENT_SUITE_ADD_SUITE,
+                  },
+                  {
+                      methods: testMethods,
+                      eventName: MochaEventBus.events.EVENT_SUITE_ADD_TEST,
+                  },
+              ]
+            : [];
+        const hookMethods = runnableOpts.saveHookLocations
+            ? [
+                  {
+                      methods: beforeEachMethods,
+                      eventName: MochaEventBus.events.EVENT_SUITE_ADD_HOOK_BEFORE_EACH,
+                  },
+                  {
+                      methods: afterEachMethods,
+                      eventName: MochaEventBus.events.EVENT_SUITE_ADD_HOOK_AFTER_EACH,
+                  },
+              ]
+            : [];
+
+        [...runnableMethods, ...hookMethods].forEach(({ methods, eventName }) => {
             methods.forEach(methodName => {
                 ctx[methodName] = withLocation(ctx[methodName], { inBus, eventName, sourceMapSupport });
 
-                if (ctx[methodName]) {
+                if (runnableOpts.saveLocations && ctx[methodName]) {
                     ctx[methodName].only = withLocation(ctx[methodName].only, { inBus, eventName, sourceMapSupport });
                     ctx[methodName].skip = withLocation(ctx[methodName].skip, { inBus, eventName, sourceMapSupport });
                 }
 
-                if (!config.ui || config.ui === "bdd") {
+                if (runnableOpts.saveLocations && (!config.ui || config.ui === "bdd")) {
                     const pendingMethodName = `x${methodName}`;
                     ctx[pendingMethodName] = withLocation(ctx[pendingMethodName], {
                         inBus,
