@@ -1,7 +1,7 @@
 /* eslint-disable no-use-before-define -- compact synthetic fixtures are declared below their assertions */
 
 import { aggregateProfile, unionDuration, type NormalizedProfile } from "src/profiler/analysis/aggregator";
-import { runAnalyzers } from "src/profiler/analysis/analyzers";
+import { runAnalyzers, type ProfilerAnalyzer } from "src/profiler/analysis/analyzers";
 import { compactProfileReferences } from "src/profiler/analysis/compact";
 import type {
     EnabledProfilerLevel,
@@ -11,7 +11,7 @@ import type {
     ProfilerValue,
     RetainedOperation,
 } from "src/profiler/schema";
-import type { RuntimeAggregate, RuntimeSnapshot } from "src/profiler/runtime/types";
+import type { RuntimeAggregate, RuntimeMetric, RuntimeSnapshot } from "src/profiler/runtime/types";
 
 describe("profiler/analysis", () => {
     const operation = (id: string, startOffsetMs: number, wallMs: number): RetainedOperation => ({
@@ -135,15 +135,8 @@ describe("profiler/analysis", () => {
     });
 
     it("should compute self time from the observed child union when child detail was truncated", () => {
-        const parent = {
-            ...operation("parent", 0, 100),
-            timing: { wallMs: 100, observedChildUnionMs: 90 },
-        };
-        const child = {
-            ...operation("child", 0, 10),
-            kind: "test.body",
-            parentId: "parent",
-        };
+        const parent = { ...operation("parent", 0, 100), timing: { wallMs: 100, observedChildUnionMs: 90 } };
+        const child = { ...operation("child", 0, 10), kind: "test.body", parentId: "parent" };
         const profile = aggregateProfile(snapshot({ level: 2, operations: [parent, child] }), 100);
 
         assert.equal(profile.timeline.find(item => item.id === "parent")!.timing.selfWallMs, 10);
@@ -154,11 +147,7 @@ describe("profiler/analysis", () => {
     });
 
     it("should not warn about unattributed time that is a retention artifact", () => {
-        const child = {
-            ...operation("child", 0, 10_000),
-            kind: "test.body",
-            parentId: "parent",
-        };
+        const child = { ...operation("child", 0, 10_000), kind: "test.body", parentId: "parent" };
         const truncatedParent = {
             ...operation("parent", 0, 100_000),
             timing: { wallMs: 100_000, observedChildUnionMs: 50_000 },
@@ -166,28 +155,18 @@ describe("profiler/analysis", () => {
         const suppressed = aggregateProfile(snapshot({ level: 2, operations: [truncatedParent, child] }), 100_000);
         assert.notExists(runAnalyzers(suppressed).find(item => item.analyzer.id === "unattributed-v1"));
 
-        const genuineParent = {
-            ...operation("parent", 0, 100_000),
-            timing: { wallMs: 100_000 },
-        };
+        const genuineParent = { ...operation("parent", 0, 100_000), timing: { wallMs: 100_000 } };
         const genuine = aggregateProfile(snapshot({ level: 2, operations: [genuineParent, child] }), 100_000);
         assert.exists(runAnalyzers(genuine).find(item => item.analyzer.id === "unattributed-v1"));
 
-        const next = {
-            ...operation("next", 90_000, 10_000),
-            kind: "browser.command",
-            parentId: "parent",
-        };
+        const next = { ...operation("next", 90_000, 10_000), kind: "browser.command", parentId: "parent" };
         const detailed = aggregateProfile(snapshot({ level: 3, operations: [genuineParent, child, next] }), 100_000);
         const finding = runAnalyzers(detailed).find(item => item.analyzer.id === "unattributed-v1")!;
         assert.include(finding.observation, "inside `parent`");
         assert.include(finding.observation, "between test body `child` and browser command `next`");
         assert.include(finding.action, "between test body `child` and browser command `next`");
         assert.include(finding.action, "synchronous filesystem or CPU work");
-        assert.deepInclude(finding.evidence, {
-            metric: "parentPhase",
-            value: "parent",
-        });
+        assert.deepInclude(finding.evidence, { metric: "parentPhase", value: "parent" });
         assert.deepInclude(finding.evidence, {
             metric: "previousOperation",
             value: "child",
@@ -386,15 +365,8 @@ describe("profiler/analysis", () => {
         assert.include(finding.observation, "does not execute tests");
         assert.include(finding.action, "File matching/glob is the largest component");
         assert.deepInclude(finding.evidence, { metric: "fileCount", value: 1_000 });
-        assert.deepInclude(finding.evidence, {
-            metric: "averageFileLoad",
-            value: 2,
-            unit: "ms",
-        });
-        assert.deepInclude(finding.evidence, {
-            metric: "hasFileLoadOutliers",
-            value: true,
-        });
+        assert.deepInclude(finding.evidence, { metric: "averageFileLoad", value: 2, unit: "ms" });
+        assert.deepInclude(finding.evidence, { metric: "hasFileLoadOutliers", value: true });
         assert.deepInclude(finding.evidence, {
             metric: "fileLoadOutlier",
             value: "test/slow.testplane.ts",
@@ -489,11 +461,7 @@ describe("profiler/analysis", () => {
             context: { runId: "run" },
             startOffsetMs: 0,
             timing: { wallMs },
-            attributes: {
-                module: name,
-                ownerFile: "testplane-tests/suite.testplane.ts",
-                cacheHit: false,
-            },
+            attributes: { module: name, ownerFile: "testplane-tests/suite.testplane.ts", cacheHit: false },
             quality: { timing: "exact", cpu: "thread" },
         });
         const profile = normalizedProfile({
@@ -518,35 +486,17 @@ describe("profiler/analysis", () => {
         const significant = normalizedProfile({
             level: 3,
             durationMs: 30_000,
-            commands: [
-                aggregate("browser.command", "pause", {
-                    count: 10,
-                    total: 60_000,
-                    max: 20_000,
-                }),
-            ],
+            commands: [aggregate("browser.command", "pause", { count: 10, total: 60_000, max: 20_000 })],
         });
         const significantSingle = normalizedProfile({
             level: 3,
             durationMs: 6_000,
-            commands: [
-                aggregate("browser.command", "pause", {
-                    count: 1,
-                    total: 5_100,
-                    max: 5_100,
-                }),
-            ],
+            commands: [aggregate("browser.command", "pause", { count: 1, total: 5_100, max: 5_100 })],
         });
         const insignificant = normalizedProfile({
             level: 3,
             durationMs: 10_000,
-            commands: [
-                aggregate("browser.command", "pause", {
-                    count: 1,
-                    total: 1_000,
-                    max: 1_000,
-                }),
-            ],
+            commands: [aggregate("browser.command", "pause", { count: 1, total: 1_000, max: 1_000 })],
         });
 
         assert.equal(
@@ -581,16 +531,8 @@ describe("profiler/analysis", () => {
             durationMs: 100_000,
             timeline: [testBody, slowCommand],
             commands: [
-                aggregate("browser.command", "$", {
-                    count: 9_991,
-                    total: 212_000,
-                    max: 200,
-                }),
-                aggregate("browser.command", "waitUntil", {
-                    count: 3,
-                    total: 12_000,
-                    max: 5_000,
-                }),
+                aggregate("browser.command", "$", { count: 9_991, total: 212_000, max: 200 }),
+                aggregate("browser.command", "waitUntil", { count: 3, total: 12_000, max: 5_000 }),
             ],
         });
 
@@ -620,14 +562,8 @@ describe("profiler/analysis", () => {
             {
                 ...snapshot({ level: 3, operations: [] }),
                 aggregates: [
-                    runtimeAggregate("browser.command.root", "<root>", {
-                        count: 2,
-                        total: 120,
-                    }),
-                    runtimeAggregate("browser.command.cumulative", "<all>", {
-                        count: 4,
-                        total: 190,
-                    }),
+                    runtimeAggregate("browser.command.root", "<root>", { count: 2, total: 120 }),
+                    runtimeAggregate("browser.command.cumulative", "<all>", { count: 4, total: 190 }),
                     runtimeAggregate("browser.command", "pause", { count: 2, total: 70 }),
                 ],
             },
@@ -654,19 +590,10 @@ describe("profiler/analysis", () => {
             {
                 ...snapshot({ level: 2, operations: [] }),
                 aggregates: [
-                    runtimeAggregate("browser.session.acquire", "chrome", {
-                        count: 3,
-                        total: 900,
-                    }),
-                    runtimeAggregate("browser.pool.wait", "chrome", {
-                        count: 2,
-                        total: 400,
-                    }),
+                    runtimeAggregate("browser.session.acquire", "chrome", { count: 3, total: 900 }),
+                    runtimeAggregate("browser.pool.wait", "chrome", { count: 2, total: 400 }),
                     runtimeAggregate("browser.command", "url", { count: 1, total: 50 }),
-                    runtimeAggregate("worker.startup", "worker-1", {
-                        count: 1,
-                        total: 80,
-                    }),
+                    runtimeAggregate("worker.startup", "worker-1", { count: 1, total: 80 }),
                 ],
             },
             200,
@@ -686,15 +613,195 @@ describe("profiler/analysis", () => {
         );
     });
 
+    it("should suggest more workers only with saturation and host CPU headroom", () => {
+        const attempts: RetainedOperation[] = Array.from({ length: 20 }, (_, index) => ({
+            ...operation(`worker-${index}`, index * 500, 500),
+            kind: "worker.test-attempt",
+            process: { type: "worker", workerInstanceId: `worker-${index % 2}` },
+        }));
+        const workerCalls: RetainedOperation[] = Array.from({ length: 20 }, (_, index) => ({
+            ...operation(`call-${index}`, Math.floor(index / 2) * 1_000, 1_800),
+            kind: "worker.call",
+            name: "runTest",
+        }));
+        const metrics = [
+            metric("config.workers", 2),
+            metric("config.availableParallelism", 8),
+            metric("worker.activeCalls.peak", 4),
+        ];
+        const resources = [
+            aggregate("metric.sample", "process.eventLoopUtilization", {
+                count: 20,
+                p50: 0.9,
+                p95: 0.95,
+                attributes: { process: "worker" },
+            }),
+            aggregate("metric.sample", "host.cpuUtilization", {
+                count: 20,
+                p50: 0.4,
+                p95: 0.5,
+                attributes: { process: "host" },
+            }),
+        ];
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 20_000,
+            timeline: [...attempts, ...workerCalls],
+            metrics,
+            byKind: resources,
+        });
+
+        const finding = runAnalyzers(profile).find(item => item.analyzer.id === "worker-capacity-v1");
+        assert.include(finding!.action, "system.workers: 3");
+        assert.deepInclude(finding!.evidence, { metric: "currentWorkers", value: 2 });
+        assert.isAtLeast(
+            finding!.evidence.find(item => item.metric === "concurrentWorkerCallOverlap")!.value as number,
+            1_000,
+        );
+
+        metrics[2].value = 2;
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "worker-capacity-v1"));
+        metrics[2].value = 4;
+
+        resources[1] = aggregate("metric.sample", "host.cpuUtilization", { count: 20, p50: 0.9, p95: 0.95 });
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "worker-capacity-v1"));
+
+        resources[0] = aggregate("metric.sample", "process.eventLoopUtilization", {
+            count: 20,
+            p50: 0.5,
+            p95: 0.6,
+            attributes: { process: "worker" },
+        });
+        resources[1] = aggregate("metric.sample", "host.cpuUtilization", {
+            count: 20,
+            p50: 0.4,
+            p95: 0.5,
+            attributes: { process: "host" },
+        });
+        resources.push(
+            aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                count: 20,
+                p95: 100,
+                attributes: { process: "worker" },
+            }),
+        );
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "worker-capacity-v1"));
+    });
+
+    it("should compare browser end times when suggesting more sessions", () => {
+        const attempts = Array.from({ length: 20 }, (_, index) => ({
+            ...operation(`attempt-${index}`, index * 600, 600),
+            context: { runId: "run", browserId: "chrome" },
+        }));
+        const otherBrowserAttempt = {
+            ...operation("firefox-attempt", 5_600, 400),
+            context: { runId: "run", browserId: "firefox" },
+        };
+        const metrics = [
+            metric("config.sessionsPerBrowser", 2, { browserId: "chrome" }),
+            metric("browser.pool.queueDepth.peak", 4, { browserId: "chrome", limiter: "browser" }),
+            metric("browser.pool.sessionsLaunched.sampleCount", 20, {
+                browserId: "chrome",
+                limiter: "browser",
+            }),
+            metric("browser.pool.sessionsLaunched.saturatedSampleCount", 8, {
+                browserId: "chrome",
+                limiter: "browser",
+            }),
+        ];
+        const hostCpu = aggregate("metric.sample", "host.cpuUtilization", {
+            count: 20,
+            p50: 0.4,
+            p95: 0.5,
+            attributes: { process: "host" },
+        });
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 20_000,
+            timeline: [...attempts, otherBrowserAttempt],
+            metrics,
+            byKind: [
+                hostCpu,
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 1,
+                    p50: 100,
+                    p95: 100,
+                    attributes: { process: "worker" },
+                }),
+            ],
+        });
+
+        const finding = runAnalyzers(profile).find(item => item.analyzer.id === "session-concurrency-v1");
+        assert.include(finding!.action, "sessionsPerBrowser: 4");
+        assert.include(
+            finding!.observation,
+            "`chrome` tests took: 12.0s; `firefox` tests took: 6.0s. `chrome` finished 6.0s later.",
+        );
+        assert.deepInclude(finding!.evidence, { metric: "browserQueuePeak", value: 4 });
+        assert.deepInclude(finding!.evidence, { metric: "attempts", value: 20 });
+        assert.deepInclude(finding!.evidence, { metric: "browserEnd", value: 12_000, unit: "ms" });
+        assert.deepInclude(finding!.evidence, { metric: "nextBrowserEnd", value: 6_000, unit: "ms" });
+        assert.deepInclude(finding!.evidence, { metric: "proposedSessionsPerBrowser", value: 4 });
+        assert.deepInclude(
+            finding!.evidence.find(item => item.metric === "browserTail"),
+            { metric: "browserTail", value: 6_000, unit: "ms" },
+        );
+        assert.deepInclude(
+            finding!.evidence.find(item => item.metric === "sessionLimitSaturationShare"),
+            { metric: "sessionLimitSaturationShare", value: 0.4 },
+        );
+
+        profile.timeline = attempts;
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "session-concurrency-v1"));
+        profile.timeline = [...attempts, otherBrowserAttempt];
+        profile.aggregates.byKind = [];
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "session-concurrency-v1"));
+        profile.aggregates.byKind = [hostCpu];
+        metrics[3].value = 5;
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "session-concurrency-v1"));
+    });
+
+    it("should isolate an analyzer error and preserve other findings", () => {
+        const profile = normalizedProfile({ level: 1, durationMs: 10_000 });
+        const analyzers: ProfilerAnalyzer[] = [
+            {
+                id: "broken",
+                minLevel: 1,
+                analyze: (): never => {
+                    throw new Error("analysis failed");
+                },
+            },
+            {
+                id: "working",
+                minLevel: 1,
+                analyze: () => [
+                    {
+                        analyzer: { id: "working", version: 1 },
+                        category: "test",
+                        severity: "warning",
+                        observation: "observed",
+                        evidence: [],
+                        action: "act",
+                        confidence: "high",
+                        operationIds: [],
+                    },
+                ],
+            },
+        ];
+
+        const [finding] = runAnalyzers(profile, analyzers);
+
+        assert.equal(finding.analyzer.id, "working");
+        assert.equal(finding.id, "working:1");
+        assert.deepInclude(profile.errors[0], { stage: "analysis.broken", message: "analysis failed" });
+    });
+
     it("should not report browser-pool queue time as a slow test body", () => {
         const profile = normalizedProfile({
             level: 2,
             durationMs: 20_000,
             tests: [
-                aggregate("test.attempt", "queued test", {
-                    total: 12_000,
-                    max: 12_000,
-                }),
+                aggregate("test.attempt", "queued test", { total: 12_000, max: 12_000 }),
                 aggregate("test.body", "queued test", { total: 500, max: 500 }),
             ],
         });
@@ -721,16 +828,8 @@ describe("profiler/analysis", () => {
             durationMs: 100_000,
             timeline: [listener],
             listeners: [
-                aggregate("event.listener", "NEW_BROWSER:prepareBrowser", {
-                    count: 388,
-                    total: 9_400,
-                    max: 60,
-                }),
-                aggregate("event.listener", "INIT:startServer", {
-                    count: 2,
-                    total: 6_000,
-                    max: 4_000,
-                }),
+                aggregate("event.listener", "NEW_BROWSER:prepareBrowser", { count: 388, total: 9_400, max: 60 }),
+                aggregate("event.listener", "INIT:startServer", { count: 2, total: 6_000, max: 4_000 }),
             ],
         });
 
@@ -763,12 +862,7 @@ describe("profiler/analysis", () => {
             level: 3,
             durationMs: 20_000,
             timeline: [listener],
-            listeners: [
-                aggregate("event.listener", "INIT:startServer", {
-                    total: 4_000,
-                    max: 4_000,
-                }),
-            ],
+            listeners: [aggregate("event.listener", "INIT:startServer", { total: 4_000, max: 4_000 })],
         });
 
         const finding = runAnalyzers(profile).find(item => item.analyzer.id === "event-listener-v1")!;
@@ -783,12 +877,7 @@ describe("profiler/analysis", () => {
         const profile = normalizedProfile({
             level: 2,
             durationMs: 1_000,
-            listeners: [
-                aggregate("event.listener", "INIT:startServer", {
-                    total: 180,
-                    max: 180,
-                }),
-            ],
+            listeners: [aggregate("event.listener", "INIT:startServer", { total: 180, max: 180 })],
         });
 
         const finding = runAnalyzers(profile).find(item => item.analyzer.id === "event-listener-v1")!;
@@ -807,24 +896,14 @@ describe("profiler/analysis", () => {
                 kind: "event.listener",
                 name: "INIT:first",
                 timing: { wallMs: 4_000, activeJsMs: 4_000, waitingMs: 0 },
-                source: {
-                    file: "plugins/foo/index.js",
-                    line: 6,
-                    column: 15,
-                    confidence: "high" as const,
-                },
+                source: { file: "plugins/foo/index.js", line: 6, column: 15, confidence: "high" as const },
             },
             {
                 ...operation("second-listener", 4_000, 4_000),
                 kind: "event.listener",
                 name: "INIT:second",
                 timing: { wallMs: 4_000, activeJsMs: 4_000, waitingMs: 0 },
-                source: {
-                    file: "plugins/bar/index.js",
-                    line: 8,
-                    column: 20,
-                    confidence: "high" as const,
-                },
+                source: { file: "plugins/bar/index.js", line: 8, column: 20, confidence: "high" as const },
             },
         ];
         const profile = normalizedProfile({
@@ -833,10 +912,7 @@ describe("profiler/analysis", () => {
             timeline: listeners,
             listeners: [
                 aggregate("event.listener", "INIT:first", { total: 4_000, max: 4_000 }),
-                aggregate("event.listener", "INIT:second", {
-                    total: 4_000,
-                    max: 4_000,
-                }),
+                aggregate("event.listener", "INIT:second", { total: 4_000, max: 4_000 }),
             ],
         });
 
@@ -852,16 +928,8 @@ describe("profiler/analysis", () => {
             level: 2,
             durationMs: 1_000_000,
             hooks: [
-                aggregate("test.beforeEach.total", "fast hook", {
-                    count: 30,
-                    total: 14_100,
-                    max: 600,
-                }),
-                aggregate("test.beforeEach.total", "slow hook", {
-                    count: 12,
-                    total: 132_000,
-                    max: 12_000,
-                }),
+                aggregate("test.beforeEach.total", "fast hook", { count: 30, total: 14_100, max: 600 }),
+                aggregate("test.beforeEach.total", "slow hook", { count: 12, total: 132_000, max: 12_000 }),
             ],
         });
 
@@ -913,14 +981,8 @@ describe("profiler/analysis", () => {
             durationMs: 100_000,
             tests: [
                 ...typical,
-                aggregate("test.body", 'clearly "slow"', {
-                    total: 12_000,
-                    max: 12_000,
-                }),
-                aggregate("test.body", "above-floor-but-typical", {
-                    total: 6_000,
-                    max: 6_000,
-                }),
+                aggregate("test.body", 'clearly "slow"', { total: 12_000, max: 12_000 }),
+                aggregate("test.body", "above-floor-but-typical", { total: 6_000, max: 6_000 }),
             ],
         });
 
@@ -928,6 +990,181 @@ describe("profiler/analysis", () => {
         assert.lengthOf(findings, 1);
         assert.match(findings[0].observation, /^`clearly "slow"` used /);
         assert.include(findings[0].action, "inside this test body");
+    });
+
+    it("should qualify host CPU advice and identify the process with the highest event-loop delay", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 100_000,
+            byKind: [
+                aggregate("metric.sample", "host.cpuUtilization", {
+                    count: 20,
+                    p95: 0.9,
+                    attributes: { process: "host" },
+                }),
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 1,
+                    p50: 200,
+                    p95: 200,
+                    attributes: { process: "master" },
+                }),
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 20,
+                    p50: 80,
+                    p95: 80,
+                    attributes: { process: "worker" },
+                }),
+                aggregate("metric.sample", "process.eventLoopUtilization", {
+                    count: 20,
+                    p50: 0.2,
+                    p95: 0.3,
+                    attributes: { process: "worker" },
+                }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile);
+        const cpu = findings.find(item => item.analyzer.id === "host-cpu-v1")!;
+        const delay = findings.find(item => item.analyzer.id === "event-loop-delay-v1")!;
+
+        assert.equal(cpu.confidence, "medium");
+        assert.include(cpu.observation, "Worker event-loop utilization was 20%");
+        assert.include(cpu.action, "top/htop");
+        assert.include(cpu.action, "another process or a CI/container CPU limit");
+        assert.include(delay.observation, "Worker processes");
+        assert.include(delay.observation, "80ms at p50");
+        assert.include(delay.observation, "20 samples");
+        assert.include(delay.observation, "Healthy event-loop delay is below 20ms at p50");
+        assert.notInclude(delay.observation, "measurement floor");
+        assert.deepInclude(delay.evidence, { metric: "process", value: "worker" });
+        assert.include(delay.action, "does not prove that more system.workers would help");
+        assert.include(delay.action, "Reduce p50 below 20ms");
+        assert.include(delay.action, "replace synchronous filesystem calls with async equivalents");
+        assert.include(delay.action, "CPU-heavy parsing and calculations");
+
+        const level3Delay = runAnalyzers({ ...profile, level: 3 }).find(
+            item => item.analyzer.id === "event-loop-delay-v1",
+        )!;
+        assert.include(level3Delay.observation, "Healthy event-loop delay is below 20ms at p50");
+        assert.notInclude(level3Delay.observation, "10ms");
+    });
+
+    it("should fold worker event-loop pressure into one worker-capacity finding", () => {
+        const workerCalls: RetainedOperation[] = Array.from({ length: 4 }, (_, index) => ({
+            ...operation(`call-${index}`, index * 1_000, 80_000),
+            kind: "worker.call",
+            name: "runTest",
+        }));
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 100_000,
+            timeline: workerCalls,
+            byKind: [
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 100,
+                    p50: 64,
+                    p95: 86,
+                    attributes: { process: "worker" },
+                }),
+                aggregate("metric.sample", "process.eventLoopUtilization", {
+                    count: 100,
+                    p50: 0.92,
+                    p95: 0.98,
+                    attributes: { process: "worker" },
+                }),
+                aggregate("metric.sample", "host.cpuUtilization", {
+                    count: 100,
+                    p95: 0.86,
+                    attributes: { process: "host" },
+                }),
+            ],
+            metrics: [
+                metric("config.workers", 1),
+                metric("config.availableParallelism", 8),
+                metric("config.sessionsPerBrowser", 8, { browserId: "chrome" }),
+                metric("worker.activeCalls.peak", 4),
+            ],
+        });
+
+        const findings = runAnalyzers(profile);
+        const capacity = findings.find(item => item.analyzer.id === "worker-capacity-v1")!;
+        const hostCpu = findings.find(item => item.analyzer.id === "host-cpu-v1")!;
+
+        assert.notExists(findings.find(item => item.analyzer.id === "event-loop-delay-v1"));
+        assert.include(capacity.observation, "92% event-loop utilization");
+        assert.include(capacity.observation, "worker event-loop delay was 64ms at p50 and 86ms at p95");
+        assert.include(capacity.observation, "Host CPU was 86%");
+        assert.include(capacity.action, "system.workers: 2");
+        assert.include(capacity.action, "Host CPU was already high");
+        assert.deepInclude(capacity.evidence, { metric: "currentWorkers", value: 1 });
+        assert.deepInclude(capacity.evidence, { metric: "proposedWorkers", value: 2 });
+        assert.deepInclude(capacity.evidence, { metric: "activeWorkerCallsPeak", value: 4 });
+        assert.deepInclude(
+            capacity.evidence.find(item => item.metric === "eventLoopDelayP50"),
+            {
+                metric: "eventLoopDelayP50",
+                value: 64,
+                unit: "ms",
+            },
+        );
+        assert.include(hostCpu.observation, "Worker event-loop utilization was 92%");
+        assert.include(hostCpu.action, "Testplane workers were also busy");
+        assert.include(hostCpu.action, "Worker capacity recommendation");
+        assert.include(hostCpu.action, "@testplane/chunks");
+    });
+
+    it("should not treat configured browser sessions as active worker demand", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 100_000,
+            byKind: [
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 100,
+                    p50: 64,
+                    p95: 86,
+                    attributes: { process: "worker" },
+                }),
+                aggregate("metric.sample", "process.eventLoopUtilization", {
+                    count: 100,
+                    p50: 0.92,
+                    p95: 0.98,
+                    attributes: { process: "worker" },
+                }),
+            ],
+            metrics: [
+                metric("config.workers", 1),
+                metric("config.availableParallelism", 8),
+                metric("config.sessionsPerBrowser", 8, { browserId: "chrome" }),
+            ],
+        });
+
+        const findings = runAnalyzers(profile);
+
+        assert.notExists(findings.find(item => item.analyzer.id === "worker-capacity-v1"));
+        assert.exists(findings.find(item => item.analyzer.id === "event-loop-delay-v1"));
+    });
+
+    it("should ignore isolated worker event-loop spikes after successful scaling", () => {
+        const profile = normalizedProfile({
+            level: 2,
+            durationMs: 10_000,
+            byKind: [
+                aggregate("metric.sample", "process.eventLoopDelayP95Ms", {
+                    count: 100,
+                    p50: 24,
+                    p95: 180,
+                    attributes: { process: "worker" },
+                }),
+                aggregate("metric.sample", "process.eventLoopUtilization", {
+                    count: 100,
+                    p50: 0.7,
+                    p95: 1,
+                    attributes: { process: "worker" },
+                }),
+            ],
+        });
+
+        assert.notExists(runAnalyzers(profile).find(item => item.analyzer.id === "event-loop-delay-v1"));
     });
 });
 
@@ -995,6 +1232,13 @@ const runtimeAggregate = (
         p95: total / count,
         samples: [total / count],
     },
+});
+
+const metric = (name: string, value: number, dimensions: Record<string, ProfilerValue> = {}): RuntimeMetric => ({
+    name,
+    value,
+    dimensions,
+    mode: "gauge",
 });
 
 const normalizedProfile = ({

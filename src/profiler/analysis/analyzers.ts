@@ -22,10 +22,13 @@ const createDefaultAnalyzers = (): ProfilerAnalyzer[] => [
     unattributedAnalyzer,
     listenerAnalyzer,
     testFileAnalyzer,
-    moduleDependencyAnalyzer,
     slowTestAnalyzer,
     hookAnalyzer,
     commandAnalyzer,
+    moduleDependencyAnalyzer,
+    workerCapacityAnalyzer,
+    sessionConcurrencyAnalyzer,
+    resourceSaturationAnalyzer,
 ];
 
 export const runAnalyzers = (profile: NormalizedProfile, analyzers = createDefaultAnalyzers()): Finding[] => {
@@ -49,16 +52,10 @@ export const runAnalyzers = (profile: NormalizedProfile, analyzers = createDefau
     return findings
         .sort(compareFindings)
         .slice(0, 50)
-        .map(
-            (finding, index): Finding => ({
-                ...finding,
-                id: `${finding.analyzer.id}:${index + 1}`,
-            }),
-        );
+        .map((finding, index): Finding => ({ ...finding, id: `${finding.analyzer.id}:${index + 1}` }));
 };
 
 const TEST_DISCOVERY_PHASE = "testplane.phase.test-discovery";
-
 const NON_ACTIONABLE_PHASES = new Set([
     "testplane.phase.execution",
     "testplane.phase.unattributed",
@@ -206,13 +203,7 @@ const unattributedAnalyzer: ProfilerAnalyzer = {
                                 ]
                               : []),
                           ...(gap.next
-                              ? [
-                                    {
-                                        metric: "nextOperation",
-                                        value: gap.next.name,
-                                        operationId: gap.next.id,
-                                    },
-                                ]
+                              ? [{ metric: "nextOperation", value: gap.next.name, operationId: gap.next.id }]
                               : []),
                       ]
                     : [];
@@ -278,11 +269,7 @@ function largestUnattributedGap(profile: NormalizedProfile, parent: RetainedOper
     let previous: RetainedOperation | undefined;
     for (const child of children) {
         if (child.start > cursor) {
-            gaps.push({
-                wallMs: child.start - cursor,
-                previous,
-                next: child.operation,
-            });
+            gaps.push({ wallMs: child.start - cursor, previous, next: child.operation });
         }
         if (child.end > cursor) {
             cursor = child.end;
@@ -404,10 +391,7 @@ const testFileAnalyzer: ProfilerAnalyzer = {
         const candidates =
             operations.length >= 8
                 ? findRobustOutliers(operations, operation => operation.timing.wallMs)
-                : operations.map(operation => ({
-                      item: operation,
-                      measurement: operation.timing.wallMs,
-                  }));
+                : operations.map(operation => ({ item: operation, measurement: operation.timing.wallMs }));
         const retained = candidates
             .filter(candidate => candidate.measurement >= ANALYSIS_POLICY_V1.testFile.minWallMs)
             .slice(0, Math.max(3, Math.ceil(operations.length * 0.1)));
@@ -441,10 +425,7 @@ const moduleDependencyAnalyzer: ProfilerAnalyzer = {
         const candidates =
             modules.length >= 8
                 ? findRobustOutliers(modules, operation => operation.timing.wallMs)
-                : modules.map(operation => ({
-                      item: operation,
-                      measurement: operation.timing.wallMs,
-                  }));
+                : modules.map(operation => ({ item: operation, measurement: operation.timing.wallMs }));
         return candidates
             .filter(({ measurement }) => measurement >= 100 && measurement / profile.durationMs >= 0.01)
             .slice(0, Math.max(3, Math.ceil(modules.length * 0.1)))
@@ -459,6 +440,443 @@ const moduleDependencyAnalyzer: ProfilerAnalyzer = {
             );
     },
 };
+
+const workerCapacityAnalyzer: ProfilerAnalyzer = {
+    id: "worker-capacity-v1",
+    minLevel: 1,
+    analyze: profile => {
+        const capacity = assessWorkerCapacity(profile);
+        if (!capacity) {
+            return [];
+        }
+
+        const pressure = [
+            `runTest calls overlapped for ${formatMs(capacity.concurrentCallOverlapMs)}`,
+            capacity.eventLoopDelay
+                ? `worker event-loop delay was ${formatMs(capacity.eventLoopDelay.medianMs)} at p50 and ${formatMs(
+                      capacity.eventLoopDelay.ninetyFifthPercentileMs,
+                  )} at p95`
+                : undefined,
+        ].filter((value): value is string => Boolean(value));
+        const hostCpuObservation =
+            capacity.hostCpu95thPercentile === undefined
+                ? " Host CPU data was unavailable."
+                : ` Host CPU was ${formatPercent(capacity.hostCpu95thPercentile)} at p95.`;
+        const evidence: FindingEvidence[] = [
+            { metric: "currentWorkers", value: capacity.currentWorkers },
+            { metric: "proposedWorkers", value: capacity.proposedWorkers },
+            {
+                metric: "workerEluP50",
+                value: capacity.medianWorkerEventLoopUtilization,
+                unit: "ratio",
+                threshold: ANALYSIS_POLICY_V1.workers.minMedianWorkerEventLoopUtilization,
+            },
+            { metric: "activeWorkerCallsPeak", value: capacity.activeCallsPeak },
+            {
+                metric: "concurrentWorkerCallOverlap",
+                value: capacity.concurrentCallOverlapMs,
+                unit: "ms",
+                threshold: ANALYSIS_POLICY_V1.workers.minConcurrentCallOverlapMs,
+            },
+        ];
+        if (capacity.hostCpu95thPercentile !== undefined) {
+            evidence.push({
+                metric: "hostCpuP95",
+                value: capacity.hostCpu95thPercentile,
+                unit: "ratio",
+                threshold: ANALYSIS_POLICY_V1.workers.maxHostCpu95thPercentile,
+            });
+        }
+        if (capacity.eventLoopDelay) {
+            evidence.push(
+                {
+                    metric: "eventLoopDelayP50",
+                    value: capacity.eventLoopDelay.medianMs,
+                    unit: "ms",
+                    threshold: ANALYSIS_POLICY_V1.workers.minSustainedEventLoopDelayMs,
+                },
+                {
+                    metric: "eventLoopDelayP95",
+                    value: capacity.eventLoopDelay.ninetyFifthPercentileMs,
+                    unit: "ms",
+                },
+                { metric: "eventLoopDelaySamples", value: capacity.eventLoopDelay.samples },
+            );
+        }
+
+        return [
+            simpleFinding({
+                analyzerId: "worker-capacity-v1",
+                category: "workers",
+                observation: `Workers were CPU-saturated (${formatPercent(
+                    capacity.medianWorkerEventLoopUtilization,
+                )} event-loop utilization at p50) while ${pressure.join(" and ")}.${hostCpuObservation}`,
+                evidence,
+                action: workerCapacityAction(capacity),
+                confidence: "medium",
+                operationIds: [],
+                confidenceReasons: ["The suggested gain is a counterfactual estimate"],
+            }),
+        ];
+    },
+};
+
+interface WorkerCapacityAssessment {
+    /** Worker count used by the analyzed run. */
+    currentWorkers: number;
+    /** Conservative worker count suggested for the next comparison run. */
+    proposedWorkers: number;
+    /** Largest number of worker calls that were active at the same time. */
+    activeCallsPeak: number;
+    /** Total elapsed time during which at least two worker calls were active. */
+    concurrentCallOverlapMs: number;
+    /** Estimated median fraction from `0` to `1` showing how busy worker event loops were. */
+    medianWorkerEventLoopUtilization: number;
+    /** Estimated 95th percentile of sampled whole-host CPU use, expressed as a fraction from `0` to `1`. */
+    hostCpu95thPercentile?: number;
+    eventLoopDelay?: SustainedEventLoopDelay;
+}
+
+interface SustainedEventLoopDelay {
+    /** Median of the per-window 95th-percentile event-loop delays. */
+    medianMs: number;
+    /** 95th percentile of the per-window 95th-percentile event-loop delays. */
+    ninetyFifthPercentileMs: number;
+    /** Number of sampling windows represented by this assessment. */
+    samples: number;
+}
+
+function assessWorkerCapacity(profile: NormalizedProfile): WorkerCapacityAssessment | undefined {
+    const currentWorkers = metricValue(profile, "config.workers");
+    const availableParallelism = metricValue(profile, "config.availableParallelism");
+    const medianWorkerEventLoopUtilization = sampledAggregateValue(
+        profile,
+        "process.eventLoopUtilization",
+        "p50WallMs",
+        { process: "worker" },
+    );
+    if (
+        profile.durationMs < ANALYSIS_POLICY_V1.workers.minExecutionMs ||
+        currentWorkers === undefined ||
+        availableParallelism === undefined ||
+        currentWorkers >= availableParallelism ||
+        medianWorkerEventLoopUtilization === undefined ||
+        medianWorkerEventLoopUtilization < ANALYSIS_POLICY_V1.workers.minMedianWorkerEventLoopUtilization
+    ) {
+        return;
+    }
+
+    const activeCallsPeak = metricValue(profile, "worker.activeCalls.peak") ?? 0;
+    const concurrentCallOverlapMs = durationAtConcurrency(
+        profile.timeline.filter(operation => operation.kind === "worker.call" && operation.name === "runTest"),
+        2,
+    );
+    const hasDistributableCalls =
+        activeCallsPeak > currentWorkers &&
+        concurrentCallOverlapMs >= ANALYSIS_POLICY_V1.workers.minConcurrentCallOverlapMs &&
+        concurrentCallOverlapMs / profile.durationMs >= ANALYSIS_POLICY_V1.workers.minConcurrentCallOverlapShare;
+    const eventLoopDelay = sustainedEventLoopDelay(
+        findAggregate(profile, "process.eventLoopDelayP95Ms", { process: "worker" }),
+    );
+    const hostCpu95thPercentile = sampledAggregateValue(profile, "host.cpuUtilization", "p95WallMs", {
+        process: "host",
+    });
+    const hasHostHeadroom =
+        hostCpu95thPercentile !== undefined &&
+        hostCpu95thPercentile < ANALYSIS_POLICY_V1.workers.maxHostCpu95thPercentile;
+    if (!hasDistributableCalls || (!hasHostHeadroom && !eventLoopDelay)) {
+        return;
+    }
+
+    const proposedWorkers = Math.min(availableParallelism, activeCallsPeak, Math.ceil(currentWorkers * 1.25));
+
+    return {
+        currentWorkers,
+        proposedWorkers,
+        activeCallsPeak,
+        concurrentCallOverlapMs,
+        medianWorkerEventLoopUtilization,
+        hostCpu95thPercentile,
+        eventLoopDelay,
+    };
+}
+
+function sustainedEventLoopDelay(aggregate: ProfilerAggregate | undefined): SustainedEventLoopDelay | undefined {
+    if (
+        (aggregate?.count ?? 0) < ANALYSIS_POLICY_V1.resources.minSamples ||
+        aggregate?.p50WallMs === undefined ||
+        aggregate.p50WallMs < ANALYSIS_POLICY_V1.workers.minSustainedEventLoopDelayMs ||
+        aggregate.p95WallMs === undefined
+    ) {
+        return;
+    }
+    return {
+        medianMs: aggregate.p50WallMs,
+        ninetyFifthPercentileMs: aggregate.p95WallMs,
+        samples: aggregate.count,
+    };
+}
+
+function workerCapacityAction(capacity: WorkerCapacityAssessment): string {
+    const action = `Try system.workers: ${capacity.proposedWorkers} (currently ${capacity.currentWorkers}) and compare worker event-loop delay and total run time on the next run.`;
+    return capacity.hostCpu95thPercentile !== undefined &&
+        capacity.hostCpu95thPercentile >= ANALYSIS_POLICY_V1.workers.maxHostCpu95thPercentile
+        ? `${action} Host CPU was already high, so revert the increase if it remains saturated; then add CPU capacity or split the run across separate CI hosts with @testplane/chunks.`
+        : action;
+}
+
+const sessionConcurrencyAnalyzer: ProfilerAnalyzer = {
+    id: "session-concurrency-v1",
+    minLevel: 2,
+    analyze: profile => {
+        const attemptsByBrowser = groupOperations(
+            profile.timeline.filter(operation => operation.kind === "test.attempt" && operation.context.browserId),
+            operation => operation.context.browserId!,
+        );
+        const browsers = [...attemptsByBrowser]
+            .map(([browserId, attempts]) => ({
+                browserId,
+                attempts,
+                end: Math.max(...attempts.map(operation => operation.startOffsetMs + operation.timing.wallMs)),
+            }))
+            .sort((left, right) => right.end - left.end);
+        if (browsers.length < 2) {
+            return [];
+        }
+
+        const [browser, nextBrowser] = browsers;
+        if (nextBrowser.end <= 0) {
+            return [];
+        }
+
+        const hostCpu95thPercentile = sampledAggregateValue(profile, "host.cpuUtilization", "p95WallMs", {
+            process: "host",
+        });
+        const medianWorkerEventLoopUtilization = sampledAggregateValue(
+            profile,
+            "process.eventLoopUtilization",
+            "p50WallMs",
+            { process: "worker" },
+        );
+        const medianWorker95thPercentileEventLoopDelayMs = sampledAggregateValue(
+            profile,
+            "process.eventLoopDelayP95Ms",
+            "p50WallMs",
+            { process: "worker" },
+        );
+        const globalQueuePeak = maxMetricValue(profile, "browser.pool.queueDepth.peak", { limiter: "global" });
+        const minimumBrowserTailMs = Math.max(
+            ANALYSIS_POLICY_V1.sessions.minTailMs,
+            profile.durationMs * ANALYSIS_POLICY_V1.sessions.minTailShare,
+        );
+        const currentSessionsPerBrowser = metricValue(profile, "config.sessionsPerBrowser", {
+            browserId: browser.browserId,
+        });
+        const browserQueuePeak =
+            metricValue(profile, "browser.pool.queueDepth.peak", {
+                browserId: browser.browserId,
+                limiter: "browser",
+            }) ?? 0;
+        const sessionSampleCount =
+            metricValue(profile, "browser.pool.sessionsLaunched.sampleCount", {
+                browserId: browser.browserId,
+                limiter: "browser",
+            }) ?? 0;
+        const saturatedSessionSampleCount =
+            metricValue(profile, "browser.pool.sessionsLaunched.saturatedSampleCount", {
+                browserId: browser.browserId,
+                limiter: "browser",
+            }) ?? 0;
+        const sessionLimitSaturationShare = sessionSampleCount ? saturatedSessionSampleCount / sessionSampleCount : 0;
+        const browserTailMs = browser.end - nextBrowser.end;
+        if (
+            currentSessionsPerBrowser === undefined ||
+            browser.attempts.length < ANALYSIS_POLICY_V1.sessions.minAttempts ||
+            browserQueuePeak <= 0 ||
+            sessionLimitSaturationShare < ANALYSIS_POLICY_V1.sessions.minLimitSaturationShare ||
+            hostCpu95thPercentile === undefined ||
+            hostCpu95thPercentile >= ANALYSIS_POLICY_V1.workers.maxHostCpu95thPercentile ||
+            (medianWorkerEventLoopUtilization ?? 0) >= ANALYSIS_POLICY_V1.workers.minMedianWorkerEventLoopUtilization ||
+            (medianWorker95thPercentileEventLoopDelayMs ?? 0) >=
+                ANALYSIS_POLICY_V1.workers.minSustainedEventLoopDelayMs ||
+            (globalQueuePeak ?? 0) !== 0 ||
+            browserTailMs < minimumBrowserTailMs
+        ) {
+            return [];
+        }
+
+        const proposedSessionsPerBrowser = Math.ceil((browser.end / nextBrowser.end) * currentSessionsPerBrowser);
+        return [
+            simpleFinding({
+                analyzerId: "session-concurrency-v1",
+                category: "sessions",
+                observation: `\`${browser.browserId}\` tests took: ${formatMs(browser.end)}; \`${
+                    nextBrowser.browserId
+                }\` tests took: ${formatMs(nextBrowser.end)}. \`${browser.browserId}\` finished ${formatMs(
+                    browserTailMs,
+                )} later.`,
+                evidence: [
+                    { metric: "browser", value: browser.browserId },
+                    { metric: "browserQueuePeak", value: browserQueuePeak },
+                    { metric: "attempts", value: browser.attempts.length },
+                    { metric: "browserEnd", value: browser.end, unit: "ms" },
+                    { metric: "nextBrowser", value: nextBrowser.browserId },
+                    { metric: "nextBrowserEnd", value: nextBrowser.end, unit: "ms" },
+                    {
+                        metric: "browserTail",
+                        value: browserTailMs,
+                        unit: "ms",
+                        threshold: minimumBrowserTailMs,
+                    },
+                    { metric: "currentSessionsPerBrowser", value: currentSessionsPerBrowser },
+                    { metric: "proposedSessionsPerBrowser", value: proposedSessionsPerBrowser },
+                    {
+                        metric: "sessionLimitSaturationShare",
+                        value: sessionLimitSaturationShare,
+                        unit: "ratio",
+                        threshold: ANALYSIS_POLICY_V1.sessions.minLimitSaturationShare,
+                    },
+                ],
+                action: `Try sessionsPerBrowser: ${proposedSessionsPerBrowser} for ${browser.browserId} (currently ${currentSessionsPerBrowser}), unless an external grid limit is already saturated.`,
+                confidence: "medium",
+                operationIds: browser.attempts.map(operation => operation.id).slice(0, 20),
+                confidenceReasons: [
+                    "The recommendation predicts the next run and cannot observe external grid capacity",
+                    "The target assumes browser time scales inversely with the number of sessions",
+                ],
+            }),
+        ];
+    },
+};
+
+const resourceSaturationAnalyzer: ProfilerAnalyzer = {
+    id: "resource-saturation-v1",
+    minLevel: 1,
+    analyze: profile => {
+        const hostCpu95thPercentile = sampledAggregateValue(profile, "host.cpuUtilization", "p95WallMs", {
+            process: "host",
+        });
+        const medianWorkerEventLoopUtilization = sampledAggregateValue(
+            profile,
+            "process.eventLoopUtilization",
+            "p50WallMs",
+            { process: "worker" },
+        );
+        const highestMedianEventLoopDelayAggregate = maxAggregate(
+            profile,
+            "process.eventLoopDelayP95Ms",
+            "p50WallMs",
+            ANALYSIS_POLICY_V1.resources.minSamples,
+        );
+        const eventLoopDelayStats = sustainedEventLoopDelay(highestMedianEventLoopDelayAggregate);
+        const affectedProcess = String(highestMedianEventLoopDelayAggregate?.attributes?.process ?? "Node");
+        const workerCapacity = assessWorkerCapacity(profile);
+        const findings: FindingDraft[] = [];
+        if (
+            hostCpu95thPercentile !== undefined &&
+            hostCpu95thPercentile >= ANALYSIS_POLICY_V1.hostCpu.high95thPercentile
+        ) {
+            findings.push(
+                simpleFinding({
+                    analyzerId: "host-cpu-v1",
+                    category: "cpu",
+                    observation: `Host CPU utilization reached ${formatPercent(hostCpu95thPercentile)} at p95.${
+                        medianWorkerEventLoopUtilization === undefined
+                            ? ""
+                            : ` Worker event-loop utilization was ${formatPercent(
+                                  medianWorkerEventLoopUtilization,
+                              )} at p50.`
+                    }`,
+                    evidence: [
+                        {
+                            metric: "hostCpuP95",
+                            value: hostCpu95thPercentile,
+                            unit: "ratio",
+                            threshold: ANALYSIS_POLICY_V1.hostCpu.high95thPercentile,
+                        },
+                        ...(medianWorkerEventLoopUtilization === undefined
+                            ? []
+                            : [
+                                  {
+                                      metric: "workerEluP50",
+                                      value: medianWorkerEventLoopUtilization,
+                                      unit: "ratio" as const,
+                                      threshold: ANALYSIS_POLICY_V1.workers.minMedianWorkerEventLoopUtilization,
+                                  },
+                              ]),
+                    ],
+                    action: hostCpuAction(medianWorkerEventLoopUtilization, workerCapacity),
+                    confidence: "medium",
+                    operationIds: [],
+                    confidenceReasons: ["Host CPU is sampled and may include unrelated processes"],
+                }),
+            );
+        }
+        if (eventLoopDelayStats && !(affectedProcess === "worker" && workerCapacity?.eventLoopDelay)) {
+            const processLabel =
+                affectedProcess === "worker" ? "Worker processes" : `${capitalize(affectedProcess)} process`;
+            findings.push(
+                simpleFinding({
+                    analyzerId: "event-loop-delay-v1",
+                    category: "event-loop",
+                    observation: `${processLabel} event-loop delay was ${formatMs(
+                        eventLoopDelayStats.medianMs,
+                    )} at p50 and reached ${formatMs(eventLoopDelayStats.ninetyFifthPercentileMs)} at p95 across ${
+                        eventLoopDelayStats.samples
+                    } samples. Healthy event-loop delay is below ${formatMs(
+                        ANALYSIS_POLICY_V1.resources.healthyMedianEventLoopDelayMs,
+                    )} at p50.`,
+                    evidence: [
+                        {
+                            metric: "eventLoopDelayP50",
+                            value: eventLoopDelayStats.medianMs,
+                            unit: "ms",
+                            threshold: ANALYSIS_POLICY_V1.workers.minSustainedEventLoopDelayMs,
+                        },
+                        {
+                            metric: "eventLoopDelayP95",
+                            value: eventLoopDelayStats.ninetyFifthPercentileMs,
+                            unit: "ms",
+                        },
+                        { metric: "eventLoopDelaySamples", value: eventLoopDelayStats.samples },
+                        { metric: "process", value: affectedProcess },
+                    ],
+                    action: eventLoopDelayAction(affectedProcess, processLabel),
+                    confidence: "medium",
+                    operationIds: [],
+                    confidenceReasons: ["Event-loop delay is a process-window metric, not exclusive function CPU"],
+                }),
+            );
+        }
+        return findings;
+    },
+};
+
+function eventLoopDelayAction(process: string, processLabel: string): string {
+    const healthyMedianDelay = formatMs(ANALYSIS_POLICY_V1.resources.healthyMedianEventLoopDelayMs);
+    const reduceDelay = `Reduce p50 below ${healthyMedianDelay} by removing long synchronous sections: replace synchronous filesystem calls with async equivalents, and optimize or move CPU-heavy parsing and calculations off the affected Node event loop.`;
+
+    if (process === "worker") {
+        return `${reduceDelay} The profile does not prove that more system.workers would help. Start with the concrete slow listener, hook, dependency, test, or command findings printed in this report. If none explains the delay, try profiler.level 3 and inspect worker-side plugins and test files.`;
+    }
+    return `${reduceDelay} Start with the slow phase, listener, and file findings printed for ${processLabel.toLowerCase()}. If none explains the delay, try profiler.level 3 and inspect custom code in that process.`;
+}
+
+function hostCpuAction(
+    medianWorkerEventLoopUtilization: number | undefined,
+    workerCapacity: WorkerCapacityAssessment | undefined,
+): string {
+    if (medianWorkerEventLoopUtilization === undefined) {
+        return "Host CPU includes Testplane and unrelated processes. Check top/htop and CI or container CPU limits to identify the saturated process before changing system.workers.";
+    }
+    if (medianWorkerEventLoopUtilization >= ANALYSIS_POLICY_V1.workers.minMedianWorkerEventLoopUtilization) {
+        if (workerCapacity) {
+            return `Testplane workers were also busy and parallel work exceeded system.workers. Follow the Worker capacity recommendation up to ${workerCapacity.proposedWorkers} workers, then recheck host CPU. If the host stays saturated, reduce CPU-heavy test or plugin work, add CPU capacity, or split the run across separate CI hosts with @testplane/chunks.`;
+        }
+        return "Testplane workers were also busy. Do not add more workers on the same CPU-saturated host. Reduce CPU-heavy test or plugin work, add CPU capacity, or split the run across separate CI hosts with @testplane/chunks.";
+    }
+    return "Testplane workers were not saturated, so the load likely comes from another process or a CI/container CPU limit. Check top/htop and the CPU limit, then free or add capacity before changing system.workers.";
+}
 
 const slowTestAnalyzer: ProfilerAnalyzer = {
     id: "slow-test-v1",
@@ -591,11 +1009,7 @@ const aggregateFinding = (
             { metric: "totalWall", value: aggregate.totalWallMs, unit: "ms" },
             { metric: "meanWall", value: aggregate.meanWallMs, unit: "ms" },
             { metric: "maxWall", value: aggregate.maxWallMs, unit: "ms" },
-            {
-                metric: "runShare",
-                value: aggregate.totalWallMs / profile.durationMs,
-                unit: "ratio",
-            },
+            { metric: "runShare", value: aggregate.totalWallMs / profile.durationMs, unit: "ratio" },
             ...retained.slice(0, 1).map(operation => ({
                 metric: "slowestRetainedCall",
                 value: operation.timing.wallMs,
@@ -623,12 +1037,7 @@ const operationFinding = (
     severity: "warning",
     observation: `\`${operation.name}\` took ${formatMs(operation.timing.wallMs)}.`,
     evidence: [
-        {
-            metric: "wall",
-            value: operation.timing.wallMs,
-            unit: "ms",
-            operationId: operation.id,
-        },
+        { metric: "wall", value: operation.timing.wallMs, unit: "ms", operationId: operation.id },
         {
             metric: "runShare",
             value: operation.timing.wallMs / profile.durationMs,
@@ -645,9 +1054,7 @@ const operationFinding = (
 const simpleFinding = ({
     analyzerId,
     ...finding
-}: Omit<FindingDraft, "analyzer" | "severity"> & {
-    analyzerId: string;
-}): FindingDraft => ({
+}: Omit<FindingDraft, "analyzer" | "severity"> & { analyzerId: string }): FindingDraft => ({
     analyzer: { id: analyzerId, version: 1 },
     severity: "warning",
     ...finding,
@@ -698,37 +1105,17 @@ function testDiscoveryFinding(profile: NormalizedProfile, phase: RetainedOperati
     }
     if (breakdown.averageFileLoadMs !== undefined) {
         evidence.push(
-            {
-                metric: "averageFileLoad",
-                value: breakdown.averageFileLoadMs,
-                unit: "ms",
-            },
-            {
-                metric: "fileLoadOutlierThreshold",
-                value: breakdown.averageFileLoadMs * 3,
-                unit: "ms",
-            },
+            { metric: "averageFileLoad", value: breakdown.averageFileLoadMs, unit: "ms" },
+            { metric: "fileLoadOutlierThreshold", value: breakdown.averageFileLoadMs * 3, unit: "ms" },
         );
     }
     if (breakdown.hasFileLoadOutliers !== undefined) {
-        evidence.push({
-            metric: "hasFileLoadOutliers",
-            value: breakdown.hasFileLoadOutliers,
-        });
+        evidence.push({ metric: "hasFileLoadOutliers", value: breakdown.hasFileLoadOutliers });
     }
     for (const outlier of breakdown.outliers) {
         evidence.push(
-            {
-                metric: "fileLoadOutlier",
-                value: outlier.name,
-                operationId: outlier.id,
-            },
-            {
-                metric: "fileLoadOutlierWall",
-                value: outlier.timing.wallMs,
-                unit: "ms",
-                operationId: outlier.id,
-            },
+            { metric: "fileLoadOutlier", value: outlier.name, operationId: outlier.id },
+            { metric: "fileLoadOutlierWall", value: outlier.timing.wallMs, unit: "ms", operationId: outlier.id },
         );
     }
 
@@ -878,11 +1265,7 @@ function majorPhaseFinding(profile: NormalizedProfile, operation: RetainedOperat
     ];
     for (const listener of listeners) {
         evidence.push(
-            {
-                metric: "phaseContributor",
-                value: listener.name,
-                operationId: listener.id,
-            },
+            { metric: "phaseContributor", value: listener.name, operationId: listener.id },
             {
                 metric: "phaseContributorWall",
                 value: listener.timing.wallMs,
@@ -892,11 +1275,7 @@ function majorPhaseFinding(profile: NormalizedProfile, operation: RetainedOperat
         );
         const source = formatSource(listener.source);
         if (source) {
-            evidence.push({
-                metric: "phaseContributorSource",
-                value: source,
-                operationId: listener.id,
-            });
+            evidence.push({ metric: "phaseContributorSource", value: source, operationId: listener.id });
         }
         if (listener.timing.activeJsMs !== undefined) {
             evidence.push({
@@ -1017,11 +1396,7 @@ function listenerFinding(
     const location = source ? ` at \`${source}\`` : " (source unavailable)";
     finding.observation += ` Slowest retained call${location} took ${formatMs(slowest.timing.wallMs)}.`;
     if (source) {
-        finding.evidence.push({
-            metric: "source",
-            value: source,
-            operationId: slowest.id,
-        });
+        finding.evidence.push({ metric: "source", value: source, operationId: slowest.id });
     }
     if (slowest.timing.activeJsMs !== undefined && slowest.timing.waitingMs !== undefined) {
         finding.evidence.push(
@@ -1149,11 +1524,7 @@ function commandFinding(aggregate: ProfilerAggregate, profile: NormalizedProfile
         aggregate.count
     } call(s) (${formatMs(aggregate.meanWallMs)} average).${example}${registration}`;
     if (source && slowest) {
-        finding.evidence.push({
-            metric: "source",
-            value: source,
-            operationId: slowest.id,
-        });
+        finding.evidence.push({ metric: "source", value: source, operationId: slowest.id });
     }
     return finding;
 }
@@ -1227,12 +1598,60 @@ const dedupeByNameMaxWall = (operations: RetainedOperation[]): RetainedOperation
 
 const isFrameworkModule = (modulePath: string): boolean => modulePath.includes("node_modules/testplane/");
 
+const groupOperations = (
+    operations: RetainedOperation[],
+    getKey: (operation: RetainedOperation) => string,
+): Map<string, RetainedOperation[]> => {
+    const result = new Map<string, RetainedOperation[]>();
+    for (const operation of operations) {
+        const key = getKey(operation);
+        const group = result.get(key);
+        if (group) {
+            group.push(operation);
+        } else {
+            result.set(key, [operation]);
+        }
+    }
+    return result;
+};
+
 const operationUnionWall = (profile: NormalizedProfile, aggregate: ProfilerAggregate): number =>
     unionDuration(
         profile.timeline
             .filter(operation => operation.kind === aggregate.kind && operation.name === aggregate.name)
             .map(operation => [operation.startOffsetMs, operation.startOffsetMs + operation.timing.wallMs] as const),
     );
+
+const durationAtConcurrency = (operations: RetainedOperation[], minimumConcurrency: number): number => {
+    const boundaries = operations
+        .flatMap(operation => [
+            { offset: operation.startOffsetMs, delta: 1 },
+            { offset: operation.startOffsetMs + operation.timing.wallMs, delta: -1 },
+        ])
+        .sort((left, right) => left.offset - right.offset || left.delta - right.delta);
+    let active = 0;
+    let previousOffset = boundaries[0]?.offset ?? 0;
+    let durationMs = 0;
+    for (const boundary of boundaries) {
+        if (active >= minimumConcurrency) {
+            durationMs += Math.max(0, boundary.offset - previousOffset);
+        }
+        active += boundary.delta;
+        previousOffset = boundary.offset;
+    }
+    return durationMs;
+};
+
+const metricValue = (
+    profile: NormalizedProfile,
+    name: string,
+    dimensions: Record<string, string> = {},
+): number | undefined =>
+    profile.aggregates.metrics.find(
+        metric =>
+            metric.name === name &&
+            Object.entries(dimensions).every(([key, value]) => metric.dimensions[key] === value),
+    )?.value;
 
 const sampledAggregateValue = (
     profile: NormalizedProfile,
@@ -1256,7 +1675,35 @@ const findAggregate = (
             Object.entries(attributes).every(([key, value]) => aggregate.attributes?.[key] === value),
     );
 
+const maxAggregate = (
+    profile: NormalizedProfile,
+    name: string,
+    field: "p50WallMs" | "p95WallMs",
+    minSamples = 0,
+): ProfilerAggregate | undefined =>
+    profile.aggregates.byKind
+        .filter(aggregate => aggregate.kind === "metric.sample" && aggregate.name === name)
+        .filter(aggregate => aggregate.count >= minSamples && aggregate[field] !== undefined)
+        .sort((left, right) => (right[field] ?? 0) - (left[field] ?? 0))[0];
+
+const maxMetricValue = (
+    profile: NormalizedProfile,
+    name: string,
+    dimensions: Record<string, string> = {},
+): number | undefined => {
+    const values = profile.aggregates.metrics
+        .filter(
+            metric =>
+                metric.name === name &&
+                Object.entries(dimensions).every(([key, value]) => metric.dimensions[key] === value),
+        )
+        .map(metric => metric.value);
+    return values.length ? Math.max(...values) : undefined;
+};
+
 const formatMs = (milliseconds: number): string =>
     milliseconds >= 1000 ? `${(milliseconds / 1000).toFixed(1)}s` : `${milliseconds.toFixed(0)}ms`;
 
 const formatPercent = (ratio: number): string => `${Math.round(ratio * 100)}%`;
+
+const capitalize = (value: string): string => (value ? `${value[0].toUpperCase()}${value.slice(1)}` : value);
