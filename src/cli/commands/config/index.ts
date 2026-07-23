@@ -1,6 +1,7 @@
 import { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
 import * as logger from "../../../utils/logger";
+import { resolveExitCode } from "../../../utils/exit-code";
 
 const { CONFIG: commandName } = CliCommands;
 
@@ -12,14 +13,16 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
         .option("--space <count>", "white spaces count to insert into the JSON output", Number, 0)
         .action(async (options: typeof commander) => {
             const { space } = options;
+            let exitCode = 0;
 
             try {
-                console.info(JSON.stringify(testplane.config, null, space));
-
-                process.exit(0);
+                await testplane.profileCliCommand(commandName, () => {
+                    console.info(JSON.stringify(testplane.config, null, space));
+                });
             } catch (err) {
                 logger.error((err as Error).stack || err);
-                process.exit(1);
+                exitCode = 1;
             }
+            process.exit(resolveExitCode(exitCode));
         });
 };

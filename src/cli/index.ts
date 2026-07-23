@@ -12,6 +12,8 @@ import { utilInspectSafe } from "../utils/secret-replacer";
 import { withCommonCliOptions, collectCliValues, handleRequires } from "../utils/cli";
 import { CliCommands } from "./constants";
 import { addReplOptions, isReplModeEnabled } from "./repl-options";
+import { BootstrapProbe } from "../profiler/runtime/bootstrap-probe";
+import { resolveExitCode } from "../utils/exit-code";
 
 export type TestplaneRunOpts = { cliName?: string };
 
@@ -19,7 +21,7 @@ let testplane: Testplane;
 
 process.on("uncaughtException", err => {
     logger.error(utilInspectSafe(err));
-    process.exit(1);
+    process.exit(resolveExitCode(1));
 });
 
 process.on("unhandledRejection", reason => {
@@ -37,14 +39,16 @@ process.on("unhandledRejection", reason => {
     ].join("\n");
 
     if (testplane) {
+        process.exitCode = resolveExitCode(1);
         testplane.halt(new Error(error));
     } else {
         logger.error(error);
-        process.exit(1);
+        process.exit(resolveExitCode(1));
     }
 });
 
 export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
+    const bootstrapProbe = new BootstrapProbe();
     const program = new Command(opts.cliName || "testplane");
 
     program.version(pkg.version).allowUnknownOption().option("-c, --config <path>", "path to configuration file");
@@ -55,11 +59,13 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
         .option("-r, --require <module>", "require module", collectCliValues);
     const requireModules = preparseOption(programToParseRequires, "require") as string[];
     if (requireModules) {
-        await handleRequires(requireModules);
+        await bootstrapProbe.withPhase("testplane.phase.cli-requires", "Load CLI require modules", () =>
+            handleRequires(requireModules),
+        );
     }
 
     const configPath = preparseOption(program, "config") as string;
-    testplane = await Testplane.create(configPath);
+    testplane = await Testplane.create(configPath, bootstrapProbe);
 
     const runCommand = withCommonCliOptions({ cmd: program, actionName: "run" })
         .on("--help", () => console.log(configOverriding(opts)))
@@ -120,10 +126,10 @@ export const run = async (opts: TestplaneRunOpts = {}): Promise<void> => {
                     },
                 });
 
-                process.exit(isTestsSuccess ? 0 : 1);
+                process.exit(resolveExitCode(isTestsSuccess ? 0 : 1));
             } catch (err) {
                 logger.error((err as Error).stack || err);
-                process.exit(1);
+                process.exit(resolveExitCode(1));
             }
         });
 

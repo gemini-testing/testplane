@@ -11,8 +11,10 @@ const any = sinon.match.any;
 
 describe("cli", () => {
     const sandbox = sinon.createSandbox();
+    const originalExitCode = process.exitCode;
     let testplaneCli;
     let loggerLogStub, loggerWarnStub, loggerErrorStub, getPortStub;
+    let uncaughtExceptionHandler, unhandledRejectionHandler;
 
     const run_ = async (argv = "", cli) => {
         process.argv = ["foo/bar/node", "foo/bar/script", ...argv.split(" ")];
@@ -24,6 +26,9 @@ describe("cli", () => {
     };
 
     beforeEach(() => {
+        const uncaughtExceptionHandlers = process.listeners("uncaughtException");
+        const unhandledRejectionHandlers = process.listeners("unhandledRejection");
+
         loggerLogStub = sandbox.stub();
         loggerWarnStub = sandbox.stub();
         loggerErrorStub = sandbox.stub();
@@ -45,6 +50,13 @@ describe("cli", () => {
             "get-port": getPortStub,
         });
 
+        uncaughtExceptionHandler = process
+            .listeners("uncaughtException")
+            .find(handler => !uncaughtExceptionHandlers.includes(handler));
+        unhandledRejectionHandler = process
+            .listeners("unhandledRejection")
+            .find(handler => !unhandledRejectionHandlers.includes(handler));
+
         sandbox.stub(Testplane, "create").resolves(Object.create(Testplane.prototype));
         sandbox.stub(Testplane.prototype, "run").resolves();
         sandbox.stub(Testplane.prototype, "extendCli");
@@ -54,7 +66,12 @@ describe("cli", () => {
         sandbox.spy(Command.prototype, "action");
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        process.exitCode = originalExitCode;
+        process.removeListener("uncaughtException", uncaughtExceptionHandler);
+        process.removeListener("unhandledRejection", unhandledRejectionHandler);
+        sandbox.restore();
+    });
 
     describe("config overriding", () => {
         it('should show information about config overriding on "--help"', async () => {
@@ -237,6 +254,24 @@ describe("cli", () => {
         assert.calledWith(process.exit, 0);
     });
 
+    it("should preserve a pending ordinary nonzero exit code if tests pass", async () => {
+        Testplane.prototype.run.resolves(true);
+        process.exitCode = 2;
+
+        await run_();
+
+        assert.calledWith(process.exit, 2);
+    });
+
+    it("should turn an invalid pending exit code into failure if tests pass", async () => {
+        Testplane.prototype.run.resolves(true);
+        process.exitCode = 256;
+
+        await run_();
+
+        assert.calledWith(process.exit, 1);
+    });
+
     it("should exit with code 1 if tests fail", async () => {
         Testplane.prototype.run.resolves(false);
 
@@ -245,12 +280,62 @@ describe("cli", () => {
         assert.calledWith(process.exit, 1);
     });
 
+    it("should preserve a signal exit code if tests fail", async () => {
+        Testplane.prototype.run.resolves(false);
+        const originalExitCode = process.exitCode;
+        process.exitCode = 130;
+
+        try {
+            await run_();
+        } finally {
+            process.exitCode = originalExitCode;
+        }
+
+        assert.calledWith(process.exit, 130);
+    });
+
     it("should exit with code 1 on reject", async () => {
         Testplane.prototype.run.rejects();
 
         await run_();
 
         assert.calledWith(process.exit, 1);
+    });
+
+    it("should preserve a signal exit code on reject", async () => {
+        Testplane.prototype.run.rejects();
+        const originalExitCode = process.exitCode;
+        process.exitCode = 143;
+
+        try {
+            await run_();
+        } finally {
+            process.exitCode = originalExitCode;
+        }
+
+        assert.calledWith(process.exit, 143);
+    });
+
+    it("should set a failure exit code before halting on initialized unhandled rejection", async () => {
+        const haltStub = sandbox.stub(Testplane.prototype, "halt").callsFake(() => {
+            assert.equal(process.exitCode, 1);
+        });
+        const processedFlag = "__TESTPLANE_INTERNAL_UNHANDLED_REJECTION_PROCESSED";
+        const originalProcessedFlag = global[processedFlag];
+        process.exitCode = undefined;
+
+        try {
+            await run_();
+            unhandledRejectionHandler(new Error("rejection"));
+        } finally {
+            if (originalProcessedFlag === undefined) {
+                delete global[processedFlag];
+            } else {
+                global[processedFlag] = originalProcessedFlag;
+            }
+        }
+
+        assert.calledOnce(haltStub);
     });
 
     it("should log an error stack on reject", async () => {

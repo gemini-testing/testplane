@@ -7,6 +7,7 @@ import { validateFormatter } from "../../../test-collection";
 import { CliCommands } from "../../constants";
 import { withCommonCliOptions, collectCliValues, type CommonCmdOpts } from "../../../utils/cli";
 import * as logger from "../../../utils/logger";
+import { resolveExitCode } from "../../../utils/exit-code";
 
 import type { ValueOf } from "../../../types/helpers";
 
@@ -32,35 +33,37 @@ export const registerCmd = (cliTool: ListTestsCmd, testplane: Testplane): void =
         .action(async (paths: string[], options: ListTestsCmdOpts) => {
             const { grep, tag, browser: browsers, set: sets } = cliTool;
             const { ignore, silent, outputFile, formatter } = options;
+            let exitCode = 0;
 
             try {
-                validateFormatter(formatter);
+                await testplane.profileCliCommand(commandName, async () => {
+                    validateFormatter(formatter);
 
-                const testCollection = await testplane.readTests(paths, {
-                    browsers,
-                    sets,
-                    grep,
-                    tag,
-                    ignore,
-                    silent,
-                    runnableOpts: {
-                        saveLocations: formatter === Formatters.TREE,
-                    },
+                    const testCollection = await testplane.readTests(paths, {
+                        browsers,
+                        sets,
+                        grep,
+                        tag,
+                        ignore,
+                        silent,
+                        runnableOpts: {
+                            saveLocations: formatter === Formatters.TREE,
+                        },
+                    });
+
+                    const result = testCollection.format(formatter);
+
+                    if (outputFile) {
+                        await fs.ensureDir(path.dirname(outputFile));
+                        await fs.writeJson(outputFile, result);
+                    } else {
+                        console.info(JSON.stringify(result));
+                    }
                 });
-
-                const result = testCollection.format(formatter);
-
-                if (outputFile) {
-                    await fs.ensureDir(path.dirname(outputFile));
-                    await fs.writeJson(outputFile, result);
-                } else {
-                    console.info(JSON.stringify(result));
-                }
-
-                process.exit(0);
             } catch (err) {
                 logger.error((err as Error).stack || err);
-                process.exit(1);
+                exitCode = 1;
             }
+            process.exit(resolveExitCode(exitCode));
         });
 };

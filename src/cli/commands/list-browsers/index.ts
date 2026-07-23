@@ -2,6 +2,7 @@ import _ from "lodash";
 import { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
 import * as logger from "../../../utils/logger";
+import { resolveExitCode } from "../../../utils/exit-code";
 
 const { LIST_BROWSERS: commandName } = CliCommands;
 
@@ -77,27 +78,29 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
         )
         .action(async (options: typeof commander) => {
             const { type, format } = options;
+            let exitCode = 0;
 
             try {
-                validateOption(BrowsersListOutputType, type, "type");
-                validateOption(BrowsersListOutputFormat, format, "format");
+                await testplane.profileCliCommand(commandName, () => {
+                    validateOption(BrowsersListOutputType, type, "type");
+                    validateOption(BrowsersListOutputFormat, format, "format");
 
-                const browsersSorted =
-                    type === BrowsersListOutputType.IDS
-                        ? extractBrowserIds(testplane.config)
-                        : extractBrowserTags(testplane.config, format);
+                    const browsersSorted =
+                        type === BrowsersListOutputType.IDS
+                            ? extractBrowserIds(testplane.config)
+                            : extractBrowserTags(testplane.config, format);
 
-                const outputResult =
-                    format === BrowsersListOutputFormat.PLAIN
-                        ? browsersSorted.join(" ")
-                        : JSON.stringify(browsersSorted);
+                    const outputResult =
+                        format === BrowsersListOutputFormat.PLAIN
+                            ? browsersSorted.join(" ")
+                            : JSON.stringify(browsersSorted);
 
-                console.info(outputResult);
-
-                process.exit(0);
+                    console.info(outputResult);
+                });
             } catch (err) {
                 logger.error((err as Error).stack || err);
-                process.exit(1);
+                exitCode = 1;
             }
+            process.exit(resolveExitCode(exitCode));
         });
 };
