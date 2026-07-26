@@ -61,8 +61,11 @@ describe("ExistingBrowser", () => {
                 createTarget: sandbox.stub().resolves({ targetId: "some-target-id" }),
                 closeTarget: sandbox.stub().resolves(),
                 activateTarget: sandbox.stub().resolves(),
-                attachToTarget: sandbox.stub().resolves("some-target-id"),
+                attachToTarget: sandbox.stub().resolves({ sessionId: "some-session-id" }),
                 getTargets: sandbox.stub().resolves({ targetInfos: [] }),
+            },
+            page: {
+                bringToFront: sandbox.stub().resolves(),
             },
             close: sandbox.stub(),
         };
@@ -586,6 +589,22 @@ describe("ExistingBrowser", () => {
                 await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
 
                 assert.calledOnceWithExactly(CDPStub.target.createTarget, { browserContextId: "new-browser-context" });
+            });
+
+            it("should bring new page to front", async () => {
+                CDPStub.target.createTarget.resolves({ targetId: "new-target-id" });
+                CDPStub.target.attachToTarget.resolves({ sessionId: "new-session-id" });
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps });
+
+                assert.calledOnceWithExactly(CDPStub.target.attachToTarget, "new-target-id");
+                assert.calledOnceWithExactly(CDPStub.page.bringToFront, "new-session-id");
+                assert.callOrder(
+                    CDPStub.target.activateTarget,
+                    CDPStub.target.attachToTarget,
+                    CDPStub.page.bringToFront,
+                );
             });
 
             it("should work with chrome-headless-shell", async () => {
