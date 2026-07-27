@@ -307,6 +307,17 @@ describe("computeCaptureSpecs", () => {
             await browser.assertView("overflow-hidden");
         });
 
+        it("should not clip element by a display:contents ancestor with overflow:hidden", async () => {
+            const { default: html } = await import(
+                "./fixtures/capture-areas/display-contents-overflow-hidden.html?raw"
+            );
+            document.body.innerHTML = html;
+
+            const result = computeCaptureSpecs([".target"]);
+            expect(result).toHaveLength(1);
+            expect(result[0].visible).toEqual(result[0].full);
+        });
+
         it("should clip visible rect to overflow:scroll container", async ({ browser }) => {
             const { default: html } = await import("./fixtures/capture-areas/overflow-scroll.html?raw");
             document.body.innerHTML = html;
