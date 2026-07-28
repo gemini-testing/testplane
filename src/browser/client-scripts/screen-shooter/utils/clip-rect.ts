@@ -102,6 +102,13 @@ export function getClipRect(element: Element, logger?: (...args: unknown[]) => u
         }
         const style = getComputedStyle(current);
 
+        // display: contents elements do not generate a box, so their overflow
+        // declarations cannot establish a clipping area for descendants.
+        if (style.display === "contents") {
+            current = current.parentElement;
+            continue;
+        }
+
         if (hasOverflowClipping(style)) {
             const isEscapingCurrentOverflowClipping =
                 escapesOverflowClippingViaAbsoluteContainingBlocks(current, absoluteContainingBlocks) ||
