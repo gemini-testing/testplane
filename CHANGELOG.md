@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.10 (2026-07-28)
+
+
+### Bug Fixes
+
+* bring page to front when isolation is turned on ([#1300](https://github.com/gemini-testing/testplane/issues/1300)) ([ee44b2a](https://github.com/gemini-testing/testplane/commit/ee44b2abdbc30a7085a2ba0a431124de05865543))
+
 ### 9.0.9 (2026-07-20)
 
 
