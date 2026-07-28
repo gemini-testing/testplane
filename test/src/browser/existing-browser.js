@@ -62,6 +62,7 @@ describe("ExistingBrowser", () => {
                 closeTarget: sandbox.stub().resolves(),
                 activateTarget: sandbox.stub().resolves(),
                 attachToTarget: sandbox.stub().resolves({ sessionId: "some-session-id" }),
+                detachFromTarget: sandbox.stub().resolves(),
                 getTargets: sandbox.stub().resolves({ targetInfos: [] }),
             },
             page: {
@@ -600,11 +601,26 @@ describe("ExistingBrowser", () => {
 
                 assert.calledOnceWithExactly(CDPStub.target.attachToTarget, "new-target-id");
                 assert.calledOnceWithExactly(CDPStub.page.bringToFront, "new-session-id");
+                assert.calledOnceWithExactly(CDPStub.target.detachFromTarget, "new-session-id");
                 assert.callOrder(
                     CDPStub.target.activateTarget,
                     CDPStub.target.attachToTarget,
                     CDPStub.page.bringToFront,
+                    CDPStub.target.detachFromTarget,
                 );
+            });
+
+            it("should detach from new page if bringing it to front fails", async () => {
+                CDPStub.target.attachToTarget.resolves({ sessionId: "new-session-id" });
+                CDPStub.page.bringToFront.rejects(new Error("bring to front failed"));
+                const sessionCaps = { browserName: "chrome", browserVersion: "100.0" };
+
+                await assert.isRejected(
+                    initBrowser_(mkBrowser_({ isolation: true }), { sessionCaps }),
+                    "bring to front failed",
+                );
+
+                assert.calledOnceWithExactly(CDPStub.target.detachFromTarget, "new-session-id");
             });
 
             it("should work with chrome-headless-shell", async () => {

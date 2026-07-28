@@ -419,7 +419,11 @@ export class ExistingBrowser extends Browser {
         const { sessionId } = await cdpTarget.attachToTarget(incognitoWindowId);
         // Important for chrome older than ~133, because otherwise "focus" states on the page will be lost in
         // headful mode, with isolation=true and resetCursor=false.
-        await this._cdp.page.bringToFront(sessionId);
+        try {
+            await this._cdp.page.bringToFront(sessionId);
+        } finally {
+            await cdpTarget.detachFromTarget(sessionId).catch(() => {});
+        }
     }
 
     protected async _performIsolation({

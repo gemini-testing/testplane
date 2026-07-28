@@ -107,7 +107,7 @@ export class CDPTarget extends CDPEventEmitter<TargetEvents> {
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-detachFromTarget */
-    async detachFromTarget(sessionId: CDPSessionId): Promise<AttachToTargetResponse["sessionId"]> {
+    async detachFromTarget(sessionId: CDPSessionId): Promise<void> {
         return this._connection.request("Target.detachFromTarget", { params: { sessionId } });
     }
 
