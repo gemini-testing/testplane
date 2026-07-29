@@ -29,7 +29,12 @@ describe("CDP/Selectivity", () => {
     };
 
     let cssSelectivityMock: { start: SinonStub; stop: SinonStub; takeCoverageSnapshot: SinonStub };
-    let jsSelectivityMock: { start: SinonStub; stop: SinonStub; takeCoverageSnapshot: SinonStub };
+    let jsSelectivityMock: {
+        start: SinonStub;
+        stop: SinonStub;
+        takeCoverageSnapshot: SinonStub;
+        flushPage: SinonStub;
+    };
     let testDependenciesWriterMock: { saveFor: SinonStub };
     let hashWriterMock: { addTestDependencyHashes: SinonStub; addPatternDependencyHash: SinonStub; save: SinonStub };
     let hashReaderMock: { patternHasChanged: SinonStub; getTestChangedDeps: SinonStub };
@@ -60,7 +65,7 @@ describe("CDP/Selectivity", () => {
             dom: { enable: SinonStub };
             css: { enable: SinonStub };
             debugger: { enable: SinonStub; on: SinonStub; off: SinonStub; resume: SinonStub };
-            page: { enable: SinonStub; addScriptToEvaluateOnNewDocument: SinonStub };
+            page: { enable: SinonStub; addScriptToEvaluateOnNewDocument: SinonStub; on: SinonStub; off: SinonStub };
             profiler: { enable: SinonStub };
         } | null;
     };
@@ -75,6 +80,7 @@ describe("CDP/Selectivity", () => {
             start: sandbox.stub().resolves(),
             stop: sandbox.stub().resolves(new Set(["src/app.js"])),
             takeCoverageSnapshot: sandbox.stub().resolves(),
+            flushPage: sandbox.stub().resolves(),
         };
         testDependenciesWriterMock = {
             saveFor: sandbox.stub().resolves(),
@@ -158,6 +164,8 @@ describe("CDP/Selectivity", () => {
                 page: {
                     enable: sandbox.stub().resolves(),
                     addScriptToEvaluateOnNewDocument: sandbox.stub().resolves(),
+                    on: sandbox.stub(),
+                    off: sandbox.stub(),
                 },
                 profiler: { enable: sandbox.stub().resolves() },
             },
@@ -327,6 +335,32 @@ describe("CDP/Selectivity", () => {
             assert.notCalled(jsSelectivityMock.takeCoverageSnapshot);
         });
 
+        it("should add page-start (doc-start + bfcache pageshow) pauses to the injected script", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            const source = browserMock.cdp!.page.addScriptToEvaluateOnNewDocument.args[0][1].source;
+
+            assert.include(source, "function __testplane_cdp_coverage_page_start()");
+            assert.include(source, "window.top === window");
+            assert.include(source, "pageshow");
+            assert.include(source, "e.persisted");
+        });
+
+        it("should flush the JS page (not css) when debugger pauses on the page-start handler", async () => {
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+
+            pausedHandler({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "session-123");
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            assert.calledOnce(jsSelectivityMock.flushPage);
+            assert.notCalled(jsSelectivityMock.takeCoverageSnapshot);
+            assert.notCalled(cssSelectivityMock.takeCoverageSnapshot);
+            assert.calledWith(browserMock.cdp!.debugger.resume, "session-123");
+        });
+
         it("should handle window handle containing target ID", async () => {
             browserMock.publicAPI.getWindowHandle.resolves("CDwindow-target-123-suffix");
             browserMock.cdp!.target.getTargets.resolves({
@@ -413,6 +447,30 @@ describe("CDP/Selectivity", () => {
             jsSelectivityMock.stop.rejects(new Error("JS error"));
 
             await assert.isRejected(stopFn(mockTest, false), "JS error");
+        });
+
+        it("should fail the stop when flushPage errors on a page-start pause (never swallow)", async () => {
+            jsSelectivityMock.flushPage.rejects(new Error("flush boom"));
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+            pausedHandler({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "session-123");
+
+            // Let the paused-handler chain settle (capture error + resume)
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            assert.calledWith(browserMock.cdp!.debugger.resume, "session-123");
+            await assert.isRejected(stopFn(mockTest, false), "flush boom");
+        });
+
+        it("should NOT fail the stop on a page-start error when dropping", async () => {
+            jsSelectivityMock.flushPage.rejects(new Error("flush boom"));
+
+            const pausedHandler = browserMock.cdp!.debugger.on.getCall(0).args[1];
+            pausedHandler({ callFrames: [{ functionName: "__testplane_cdp_coverage_page_start" }] }, "session-123");
+
+            await new Promise(resolve => setTimeout(resolve, 10));
+
+            await stopFn(mockTest, true);
         });
 
         it("should handle test dependencies writer errors", async () => {
