@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.12 (2026-07-30)
+
+
+### Bug Fixes
+
+* type "NEW_BROWSER" event in worker context ([de93b96](https://github.com/gemini-testing/testplane/commit/de93b96cf9f007e2e0ac35eeb5028d5ed2337c18))
+
 ### 9.0.11 (2026-07-29)
 
 ### 9.0.10 (2026-07-28)
