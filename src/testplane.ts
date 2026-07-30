@@ -16,7 +16,7 @@ import * as logger from "./utils/logger";
 import { isRunInNodeJsEnv } from "./utils/config";
 import { initDevServer } from "./dev-server";
 import { ConfigInput } from "./config/types";
-import { MasterEventHandler, Test, TestResult } from "./types";
+import { MasterEventHandler, Test, TestResult, WorkerEventHandler } from "./types";
 import { preloadWebdriverIO } from "./utils/preload-utils";
 import { clearUnusedSelectivityDumps, updateSelectivityHashes } from "./browser/cdp/selectivity";
 import { TagFilter } from "./utils/cli";
@@ -66,6 +66,12 @@ export interface ReadTestsOpts
     ignore: string | string[];
     failed: FailedListItem[];
     runnableOpts?: RunnableOpts;
+}
+
+interface WorkerEventEmitter<T extends BaseTestplane> {
+    on: WorkerEventHandler<T>;
+    once: WorkerEventHandler<T>;
+    prependListener: WorkerEventHandler<T>;
 }
 
 export interface Testplane {
@@ -316,7 +322,7 @@ export class Testplane extends BaseTestplane {
         });
     }
 
-    isWorker(): boolean {
+    isWorker(): this is this & WorkerEventEmitter<this> {
         return false;
     }
 

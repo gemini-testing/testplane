@@ -37,6 +37,16 @@ export type AsyncSessionEventCallback = (
     browserInfo: BrowserInfo,
 ) => Promise<void> | void;
 
+export interface NewBrowserInfo {
+    browserId: string;
+    browserVersion: string;
+}
+
+export type NewBrowserEventCallback = (
+    browser: WebdriverIO.Browser,
+    browserInfo: NewBrowserInfo,
+) => Promise<void> | void;
+
 export interface ImageSize {
     width: number;
     height: number;
@@ -277,7 +287,7 @@ export type WorkerEventHandler<T extends BaseTestplane> = {
     (event: Events["AFTER_TESTS_READ"], callback: (collection: TestCollection) => void): T;
 
     (event: Events["UPDATE_REFERENCE"], callback: (data: { state: string; refImg: RefImageInfo }) => void): T;
-    (event: Events["NEW_BROWSER"], callback: AsyncSessionEventCallback): T;
+    (event: Events["NEW_BROWSER"], callback: NewBrowserEventCallback): T;
 };
 
 export type CookieSameSite = "Strict" | "Lax" | "None";
