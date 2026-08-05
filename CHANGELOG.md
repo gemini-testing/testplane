@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.0.13 (2026-08-05)
+
+
+### Bug Fixes
+
+* discard shrinking the calibration area too much ([#1307](https://github.com/gemini-testing/testplane/issues/1307)) ([d452870](https://github.com/gemini-testing/testplane/commit/d4528708d40abb95dcf72cf7a89c26fed5ab5c56))
+
 ### 9.0.12 (2026-07-30)
 
 
