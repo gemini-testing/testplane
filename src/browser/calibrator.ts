@@ -78,12 +78,16 @@ export class Calibrator {
 
     private async _findMarkerAreaInImage(image: Image, searchColor: RGB): Promise<Rect<"image", "device"> | null> {
         const imageHeight = image.getSize().height;
+        const imageWidth = image.getSize().width;
+
+        // 80% is a safeguard against shrinking the calibration area too much, happens for irregular interferences on the edges
+        const isCalibratedXBandTooSmall = (area: XBand<"image", "device">): boolean => area.width < imageWidth * 0.8;
 
         let topPart: Rect<"image", "device"> | null = null;
 
         for (let y = 0 as Coord<"image", "device", "y">; y < imageHeight; y++) {
             const result = await findMarkerXBandInRow(y, image, searchColor);
-            if (result) {
+            if (result && !isCalibratedXBandTooSmall(result)) {
                 topPart = {
                     top: y,
                     left: result.left,
@@ -100,7 +104,7 @@ export class Calibrator {
 
         for (let y = (imageHeight - 1) as Coord<"image", "device", "y">; y >= 0; y--) {
             const result = await findMarkerXBandInRow(y, image, searchColor);
-            if (result) {
+            if (result && !isCalibratedXBandTooSmall(result)) {
                 const bottomPart = {
                     top: 0,
                     left: result.left,

@@ -93,13 +93,30 @@ describe("calibrator", () => {
     });
 
     describe("when image has iCCP chunk", () => {
+        it("should ignore an overlay scrollbar when detecting the marker area", async () => {
+            const image = setScreenshot("calibrate-with-overlay-scrollbar.png");
+
+            // The fixture was captured from an iCCP-backed browser screenshot, but Image.save() strips the chunk.
+            image._hasICCPChunk = true;
+            browser.evalScript.returns(Promise.resolve({ innerWidth: 375, pixelRatio: 2, needsCompatLib: false }));
+
+            const result = await calibrator.calibrate(browser);
+
+            assert.deepEqual(result.viewportArea, {
+                top: 0,
+                left: 0,
+                width: 750,
+                height: 1616,
+            });
+        });
+
         it("should use the color at the center of the image as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
             // Color profile shifts the rendered marker color away from the hardcoded green
             const markerColor = { R: 50, G: 100, B: 150 };
-            const markerLeft = 4;
+            const markerLeft = 1;
             const markerTop = 4;
-            const markerRight = 6;
+            const markerRight = 9;
             const markerBottom = 6;
 
             image._hasICCPChunk = true;
@@ -124,9 +141,9 @@ describe("calibrator", () => {
         it("should use the hardcoded green color as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
             const greenColor = { R: 148, G: 250, B: 0 };
-            const markerLeft = 3;
+            const markerLeft = 1;
             const markerTop = 5;
-            const markerRight = 6;
+            const markerRight = 9;
             const markerBottom = 6;
 
             image._hasICCPChunk = false;
