@@ -114,9 +114,9 @@ describe("calibrator", () => {
             const image = setScreenshot("calibrate.png");
             // Color profile shifts the rendered marker color away from the hardcoded green
             const markerColor = { R: 50, G: 100, B: 150 };
-            const markerLeft = 4;
+            const markerLeft = 1;
             const markerTop = 4;
-            const markerRight = 6;
+            const markerRight = 9;
             const markerBottom = 6;
 
             image._hasICCPChunk = true;
@@ -141,9 +141,9 @@ describe("calibrator", () => {
         it("should use the hardcoded green color as the marker search color", async () => {
             const image = setScreenshot("calibrate.png");
             const greenColor = { R: 148, G: 250, B: 0 };
-            const markerLeft = 3;
+            const markerLeft = 1;
             const markerTop = 5;
-            const markerRight = 6;
+            const markerRight = 9;
             const markerBottom = 6;
 
             image._hasICCPChunk = false;
