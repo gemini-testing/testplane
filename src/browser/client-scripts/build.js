@@ -1,8 +1,7 @@
 const path = require("path");
 const childProcess = require("node:child_process");
-const browserify = require("browserify");
-const uglifyify = require("uglifyify");
-const aliasify = require("aliasify");
+const esbuild = require("esbuild");
+const swc = require("@swc/core");
 const fs = require("fs-extra");
 
 const compileTypescript = async (targetDir, tsConfigName = "tsconfig.json") => {
@@ -20,53 +19,45 @@ const compileTypescript = async (targetDir, tsConfigName = "tsconfig.json") => {
 
 /**
  * @param {object} opts
- * @param {boolean} opts.needsCompatLib
  * @param {string} opts.entryFilePath
  * @param {string} opts.libPath
- * @returns {Promise<Buffer>}
+ * @param {string} opts.isomorphicPath
+ * @param {boolean} opts.needsCompatLib
+ * @returns {Promise<string>}
  */
 const bundleScript = async opts => {
-    const basedir = path.dirname(opts.entryFilePath);
-
-    const script = browserify({
-        entries: [opts.entryFilePath],
-        basedir
+    const result = await esbuild.build({
+        entryPoints: [opts.entryFilePath],
+        alias: {
+            "@lib": opts.libPath,
+            "@isomorphic": opts.isomorphicPath
+        },
+        bundle: true,
+        format: "iife",
+        minify: true,
+        platform: "browser",
+        write: false
     });
 
-    script.transform(
-        {
-            sourcemap: false,
-            global: true,
-            compress: { screw_ie8: false }, // eslint-disable-line camelcase
-            mangle: { screw_ie8: false }, // eslint-disable-line camelcase
-            output: { screw_ie8: false } // eslint-disable-line camelcase
-        },
-        uglifyify
-    );
+    let bundledScript = result.outputFiles[0].text;
 
-    script.transform(
-        {
-            aliases: {
-                "@lib": opts.libPath,
-                "@isomorphic": opts.isomorphicPath
+    if (opts.needsCompatLib) {
+        const transformed = await swc.transform(bundledScript, {
+            jsc: {
+                parser: { syntax: "ecmascript" },
+                target: "es5",
+                minify: {
+                    compress: true,
+                    mangle: true
+                }
             },
-            verbose: false
-        },
-        aliasify
-    );
-
-    return new Promise((resolve, reject) => {
-        script.bundle((err, buffer) => {
-            if (err) {
-                console.error(err);
-                reject(err);
-            }
-
-            const resultingScript = `(function (__geminiNamespace) { ${buffer.toString()} })(arguments[0])`;
-
-            resolve(resultingScript);
+            minify: true
         });
-    });
+
+        bundledScript = transformed.code;
+    }
+
+    return `(function (__geminiNamespace) { ${bundledScript} })(arguments[0])`;
 };
 
 async function main() {
@@ -78,10 +69,8 @@ async function main() {
 
     const tscOutDir = path.join(targetDir, "tsc-out");
 
-    const compatLibPath =
-        "./" + path.relative(process.cwd(), path.join(tscOutDir, "client-scripts", "shared", "lib.compat.js"));
-    const nativeLibPath =
-        "./" + path.relative(process.cwd(), path.join(tscOutDir, "client-scripts", "shared", "lib.native.js"));
+    const compatLibPath = path.join(tscOutDir, "client-scripts", "shared", "lib.compat.js");
+    const nativeLibPath = path.join(tscOutDir, "client-scripts", "shared", "lib.native.js");
 
     await Promise.all(
         [
@@ -93,7 +82,7 @@ async function main() {
             const projectDirName = path.basename(targetDir);
             const entryFilePath = path.join(tscOutDir, "client-scripts", projectDirName, "inject.js");
             const isomorphicPath = path.join(tscOutDir, "isomorphic", "index.js");
-            const buffer = await bundleScript({ needsCompatLib, entryFilePath, libPath, isomorphicPath });
+            const buffer = await bundleScript({ entryFilePath, libPath, isomorphicPath, needsCompatLib });
 
             const buildDir = path.join(targetDir, "build");
             await fs.ensureDir(buildDir);
