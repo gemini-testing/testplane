@@ -34,7 +34,7 @@ import { WsError } from "../../ws-connection/error";
 import { parseWsDriverIncomingMessage } from "./response";
 import { BrowserConfig } from "../../config/browser-config";
 import { constructWsDriverRequest } from "./request";
-import { exponentiallyWait } from "../../ws-connection/utils";
+import { exponentiallyWait } from "../../utils/exponentiallyWait";
 
 interface WSDriverRequestAgentOptions {
     sessionId: string;

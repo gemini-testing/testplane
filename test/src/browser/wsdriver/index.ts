@@ -93,7 +93,7 @@ describe('"WSDriverRequestAgent"', () => {
         exponentiallyWaitStub = sandbox.stub().resolves();
 
         WSDriverRequestAgentProxied = proxyquire("src/browser/wsdriver", {
-            "../../ws-connection/utils": {
+            "../../utils/exponentiallyWait": {
                 exponentiallyWait: exponentiallyWaitStub,
             },
             "../../utils/logger": {

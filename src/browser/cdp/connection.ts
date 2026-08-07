@@ -25,7 +25,7 @@ import type { Browser } from "../types";
 import { WsConnection } from "../../ws-connection";
 import { WS_ERROR_CODE } from "../../ws-connection/constants";
 import { WsError } from "../../ws-connection/error";
-import { exponentiallyWait } from "../../ws-connection/utils";
+import { exponentiallyWait } from "../../utils/exponentiallyWait";
 
 type OnEventMessageFn = (cdpEventMessage: CDPEvent) => unknown;
 

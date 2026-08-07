@@ -13,7 +13,7 @@ import { LOCAL_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../consta
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { BrowserName, type W3CBrowserName } from "./types";
-import { exponentiallyWait } from "../ws-connection/utils";
+import { exponentiallyWait } from "../utils/exponentiallyWait";
 
 export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
 export type HeadlessBrowserOptions = Partial<

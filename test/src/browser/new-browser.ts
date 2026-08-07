@@ -41,7 +41,7 @@ describe("NewBrowser", () => {
             },
             "../browser-installer": { installBrowser: installBrowserStub },
             "../utils/logger": { warn: warnStub },
-            "../ws-connection/utils": { exponentiallyWait: exponentiallyWaitStub },
+            "../utils/exponentiallyWait": { exponentiallyWait: exponentiallyWaitStub },
             "./history": {
                 runGroup: runGroupStub,
             },

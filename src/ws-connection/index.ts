@@ -11,7 +11,7 @@ import {
     WsConnectionTimeoutError,
     WsRequestTimeoutError,
 } from "./error";
-import { exponentiallyWait } from "./utils";
+import { exponentiallyWait } from "../utils/exponentiallyWait";
 import { WS_MAX_REQUEST_ID, WS_PING_INTERVAL, WS_PING_TIMEOUT, WS_PING_MAX_SUBSEQUENT_FAILS } from "./constants";
 
 enum WsConnectionStatus {

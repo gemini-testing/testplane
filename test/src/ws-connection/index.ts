@@ -182,7 +182,7 @@ describe('"WsConnection"', () => {
         exponentiallyWaitStub = sandbox.stub().resolves();
 
         WsConnectionProxied = proxyquire("src/ws-connection", {
-            "./utils": {
+            "../utils/exponentiallyWait": {
                 exponentiallyWait: exponentiallyWaitStub,
             },
         }).WsConnection;

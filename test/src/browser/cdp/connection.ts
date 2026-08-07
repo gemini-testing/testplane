@@ -121,7 +121,7 @@ describe('"CDPConnection"', () => {
 
         CDPConnectionProxied = proxyquire("src/browser/cdp/connection", {
             "./ws-endpoint": { getWsEndpoint: getWsEndpointStub },
-            "../../ws-connection/utils": {
+            "../../utils/exponentiallyWait": {
                 exponentiallyWait: exponentiallyWaitStub,
             },
             "./utils": {
