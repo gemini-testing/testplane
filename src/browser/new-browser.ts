@@ -13,6 +13,7 @@ import { LOCAL_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../consta
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { BrowserName, type W3CBrowserName } from "./types";
+import { exponentiallyWait } from "../ws-connection/utils";
 
 export type VendorSpecificCapabilityName = "goog:chromeOptions" | "moz:firefoxOptions" | "ms:edgeOptions";
 export type HeadlessBrowserOptions = Partial<
@@ -27,6 +28,9 @@ export type HeadlessBrowserOptions = Partial<
 const DEFAULT_PORT = 4444;
 const INTERNET_EXPLORER_BROWSER_NAME = "internet explorer";
 const WEBDRIVER_CLASSIC_CAPABILITY = "wdio:enforceWebDriverClassic";
+
+const SESSION_REQUEST_RETRY_COUNT = 3;
+const SESSION_REQUEST_RETRY_BASE_DELAY = 3000;
 
 const headlessBrowserOptions: HeadlessBrowserOptions = {
     [BrowserName.CHROME]: {
@@ -114,8 +118,30 @@ export class NewBrowser extends Browser {
 
     protected async _createSession(): Promise<WebdriverIO.Browser> {
         const sessionOpts = await this._getSessionOpts();
+        // Disable got-level retries so we can apply exponential backoff between attempts
+        const sessionOptsNoRetry = { ...sessionOpts, connectionRetryCount: 0 };
+        let lastErr: Error | undefined;
 
-        return remote(sessionOpts);
+        for (let attempt = 0; attempt <= SESSION_REQUEST_RETRY_COUNT; attempt++) {
+            try {
+                const browser = await remote(sessionOptsNoRetry);
+                // Restore connectionRetryCount for subsequent browser commands
+                Object.assign(browser.options, { connectionRetryCount: sessionOpts.connectionRetryCount });
+                return browser;
+            } catch (err) {
+                lastErr = err as Error;
+                if (attempt < SESSION_REQUEST_RETRY_COUNT) {
+                    warn(
+                        `WARNING: Failed to create session (attempt ${attempt + 1}/${
+                            SESSION_REQUEST_RETRY_COUNT + 1
+                        }): ${lastErr.message}. Retrying...`,
+                    );
+                    await exponentiallyWait({ baseDelay: SESSION_REQUEST_RETRY_BASE_DELAY, attempt });
+                }
+            }
+        }
+
+        throw lastErr;
     }
 
     protected async _setPageLoadTimeout(): Promise<void> {

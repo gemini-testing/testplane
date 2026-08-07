@@ -20,6 +20,7 @@ describe("NewBrowser", () => {
     let initCommandHistoryStub: SinonStub;
     let installBrowserStub: SinonStub;
     let warnStub: SinonStub;
+    let exponentiallyWaitStub: SinonStub;
 
     const mkBrowser_ = (configOpts?: Partial<Config>, opts?: any): any => {
         return mkNewBrowser_(configOpts, opts, NewBrowser);
@@ -29,6 +30,7 @@ describe("NewBrowser", () => {
         session = mkSessionStub_();
         installBrowserStub = sandbox.stub().resolves("/browser/path");
         warnStub = sandbox.stub();
+        exponentiallyWaitStub = sandbox.stub().resolves();
         webdriverioRemoteStub = sandbox.stub().resolves(session);
         runGroupStub = sandbox.stub().callsFake(runGroup);
         initCommandHistoryStub = sandbox.stub();
@@ -39,6 +41,7 @@ describe("NewBrowser", () => {
             },
             "../browser-installer": { installBrowser: installBrowserStub },
             "../utils/logger": { warn: warnStub },
+            "../ws-connection/utils": { exponentiallyWait: exponentiallyWaitStub },
             "./history": {
                 runGroup: runGroupStub,
             },
@@ -74,7 +77,7 @@ describe("NewBrowser", () => {
                 waitforTimeout: 100,
                 waitforInterval: 50,
                 connectionRetryTimeout: 3000,
-                connectionRetryCount: 3,
+                connectionRetryCount: 0,
                 baseUrl: "http://base_url",
                 transformRequest: sinon.match.func,
             });
@@ -269,6 +272,56 @@ describe("NewBrowser", () => {
             await mkBrowser_({ sessionRequestTimeout: 100500, httpTimeout: 500100 }).init();
 
             assert.propertyVal(session.options, "connectionRetryTimeout", 500100);
+        });
+
+        describe("session creation retry", () => {
+            it("should retry on failure with exponential backoff and succeed", async () => {
+                const err = new Error("session not created");
+                webdriverioRemoteStub.onCall(0).rejects(err);
+                webdriverioRemoteStub.onCall(1).resolves(session);
+
+                await mkBrowser_().init();
+
+                assert.calledTwice(webdriverioRemoteStub);
+                assert.calledOnceWith(exponentiallyWaitStub, { baseDelay: 3000, attempt: 0 });
+            });
+
+            it("should throw after all retries are exhausted", async () => {
+                const err = new Error("Too Many Requests");
+                webdriverioRemoteStub.rejects(err);
+
+                await assert.isRejected(mkBrowser_().init(), "Too Many Requests");
+
+                assert.callCount(webdriverioRemoteStub, 4);
+                assert.callCount(exponentiallyWaitStub, 3);
+            });
+
+            it("should apply exponential backoff with increasing attempt index", async () => {
+                const err = new Error("429");
+                webdriverioRemoteStub.rejects(err);
+
+                await assert.isRejected(mkBrowser_().init());
+
+                assert.calledWith(exponentiallyWaitStub.getCall(0), { baseDelay: 3000, attempt: 0 });
+                assert.calledWith(exponentiallyWaitStub.getCall(1), { baseDelay: 3000, attempt: 1 });
+                assert.calledWith(exponentiallyWaitStub.getCall(2), { baseDelay: 3000, attempt: 2 });
+            });
+
+            it("should restore connectionRetryCount on browser options after success", async () => {
+                await mkBrowser_().init();
+
+                assert.equal(session.options.connectionRetryCount, 3);
+            });
+
+            it("should log a warning on each failed attempt", async () => {
+                const err = new Error("session not created");
+                webdriverioRemoteStub.onCall(0).rejects(err);
+                webdriverioRemoteStub.onCall(1).resolves(session);
+
+                await mkBrowser_().init();
+
+                assert.calledWithMatch(warnStub, sinon.match(/attempt 1\/4/));
+            });
         });
 
         it("should not set page load timeout if it is not specified in a config", async () => {
