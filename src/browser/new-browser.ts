@@ -120,6 +120,7 @@ export class NewBrowser extends Browser {
         const sessionOpts = await this._getSessionOpts();
         // Disable got-level retries so we can apply exponential backoff between attempts
         const sessionOptsNoRetry = { ...sessionOpts, connectionRetryCount: 0 };
+
         let lastErr: Error | undefined;
 
         for (let attempt = 0; attempt <= SESSION_REQUEST_RETRY_COUNT; attempt++) {
@@ -130,14 +131,18 @@ export class NewBrowser extends Browser {
                 return browser;
             } catch (err) {
                 lastErr = err as Error;
-                if (attempt < SESSION_REQUEST_RETRY_COUNT) {
-                    warn(
-                        `WARNING: Failed to create session (attempt ${attempt + 1}/${
-                            SESSION_REQUEST_RETRY_COUNT + 1
-                        }): ${lastErr.message}. Retrying...`,
-                    );
-                    await exponentiallyWait({ baseDelay: SESSION_REQUEST_RETRY_BASE_DELAY, attempt });
+                const isRateLimit = lastErr.message.includes("Too Many Requests");
+
+                if (!isRateLimit || attempt >= SESSION_REQUEST_RETRY_COUNT) {
+                    throw lastErr;
                 }
+
+                warn(
+                    `WARNING: Failed to create session (attempt ${attempt + 1}/${
+                        SESSION_REQUEST_RETRY_COUNT + 1
+                    }): rate limit exceeded. Retrying...`,
+                );
+                await exponentiallyWait({ baseDelay: SESSION_REQUEST_RETRY_BASE_DELAY, attempt });
             }
         }
 

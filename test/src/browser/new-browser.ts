@@ -275,9 +275,10 @@ describe("NewBrowser", () => {
         });
 
         describe("session creation retry", () => {
-            it("should retry on failure with exponential backoff and succeed", async () => {
-                const err = new Error("session not created");
-                webdriverioRemoteStub.onCall(0).rejects(err);
+            const mk429Error = (): Error => new Error("Error: Too Many Requests");
+
+            it("should retry on 429 with exponential backoff and succeed", async () => {
+                webdriverioRemoteStub.onCall(0).rejects(mk429Error());
                 webdriverioRemoteStub.onCall(1).resolves(session);
 
                 await mkBrowser_().init();
@@ -287,18 +288,16 @@ describe("NewBrowser", () => {
             });
 
             it("should throw after all retries are exhausted", async () => {
-                const err = new Error("Too Many Requests");
-                webdriverioRemoteStub.rejects(err);
+                webdriverioRemoteStub.rejects(mk429Error());
 
-                await assert.isRejected(mkBrowser_().init(), "Too Many Requests");
+                await assert.isRejected(mkBrowser_().init(), "Error: Too Many Requests");
 
                 assert.callCount(webdriverioRemoteStub, 4);
                 assert.callCount(exponentiallyWaitStub, 3);
             });
 
             it("should apply exponential backoff with increasing attempt index", async () => {
-                const err = new Error("429");
-                webdriverioRemoteStub.rejects(err);
+                webdriverioRemoteStub.rejects(mk429Error());
 
                 await assert.isRejected(mkBrowser_().init());
 
@@ -307,15 +306,24 @@ describe("NewBrowser", () => {
                 assert.calledWith(exponentiallyWaitStub.getCall(2), { baseDelay: 3000, attempt: 2 });
             });
 
+            it("should not retry on non-429 errors", async () => {
+                const err = new Error("connection refused");
+                webdriverioRemoteStub.rejects(err);
+
+                await assert.isRejected(mkBrowser_().init(), "connection refused");
+
+                assert.calledOnce(webdriverioRemoteStub);
+                assert.notCalled(exponentiallyWaitStub);
+            });
+
             it("should restore connectionRetryCount on browser options after success", async () => {
                 await mkBrowser_().init();
 
                 assert.equal(session.options.connectionRetryCount, 3);
             });
 
-            it("should log a warning on each failed attempt", async () => {
-                const err = new Error("session not created");
-                webdriverioRemoteStub.onCall(0).rejects(err);
+            it("should log a warning on each 429 retry attempt", async () => {
+                webdriverioRemoteStub.onCall(0).rejects(mk429Error());
                 webdriverioRemoteStub.onCall(1).resolves(session);
 
                 await mkBrowser_().init();
