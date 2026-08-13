@@ -6,10 +6,12 @@ const { extractBase64PngSize } = require("src/image");
 describe("Image", () => {
     const sandbox = sinon.createSandbox();
     let Image;
+    let initImage;
     let looksSameStub;
     let convertRgbaToPngStub;
     let fsStub;
     let loadEsmStub;
+    let jsquashInitStub;
     let jsquashDecodeStub;
 
     const createMockPngBuffer = (width = 100, height = 50) => {
@@ -36,23 +38,43 @@ describe("Image", () => {
             },
         };
         loadEsmStub = sandbox.stub();
+        jsquashInitStub = sandbox.stub().resolves();
         jsquashDecodeStub = sandbox.stub().resolves({ data: createMockImageData() });
 
         // Mock the jsquash module loading
         loadEsmStub.withArgs("@jsquash/png/decode.js").resolves({
-            init: sandbox.stub().resolves(),
+            init: jsquashInitStub,
             decode: jsquashDecodeStub,
         });
 
-        Image = proxyquire("src/image", {
+        const imageModule = proxyquire("src/image", {
             fs: fsStub,
             "looks-same": looksSameStub,
             "./utils/preload-utils": { loadEsm: loadEsmStub },
             "./utils/eight-bit-rgba-to-png": { convertRgbaToPng: convertRgbaToPngStub },
-        }).Image;
+        });
+
+        Image = imageModule.Image;
+        initImage = imageModule.initImage;
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("initImage", () => {
+        it("should not load jsquash ESM module when image module is imported", () => {
+            assert.notCalled(loadEsmStub);
+        });
+
+        it("should initialize jsquash only once for concurrent calls", async () => {
+            const firstInit = initImage();
+            const secondInit = initImage();
+
+            assert.strictEqual(firstInit, secondInit);
+            await Promise.all([firstInit, secondInit]);
+            assert.calledOnceWithExactly(loadEsmStub, "@jsquash/png/decode.js");
+            assert.calledOnce(jsquashInitStub);
+        });
+    });
 
     describe("extractBase64PngSize", () => {
         it("should throw error on invalid small strings", () => {

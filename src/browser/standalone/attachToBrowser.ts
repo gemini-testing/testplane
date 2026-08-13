@@ -6,8 +6,11 @@ import { BrowserName, type W3CBrowserName, type SessionOptions } from "./../type
 import { getNormalizedBrowserName } from "../../utils/browser";
 import fs from "fs-extra";
 import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
+import { initImage } from "../../image";
 
 export async function attachToBrowser(session: SessionOptions): Promise<WebdriverIO.Browser> {
+    await initImage();
+
     const browserName = session.sessionCaps?.browserName || BrowserName.CHROME;
     const normalizedBrowserName = getNormalizedBrowserName(browserName) as W3CBrowserName;
 
