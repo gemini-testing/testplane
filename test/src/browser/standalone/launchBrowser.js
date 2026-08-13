@@ -21,10 +21,14 @@ describe("browser/standalone/launchBrowser", () => {
     let savedEnvironment;
     let launchBrowser;
     let receivedConfig;
+    let initImageStub;
+    let newBrowserInitStub;
 
     beforeEach(() => {
         savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
         environmentNames.forEach(name => delete process.env[name]);
+
+        initImageStub = sandbox.stub().resolves();
 
         class NewBrowserStub {
             constructor(config) {
@@ -61,7 +65,10 @@ describe("browser/standalone/launchBrowser", () => {
         class WebdriverPoolStub {}
         class CalibratorStub {}
 
+        newBrowserInitStub = sandbox.stub(NewBrowserStub.prototype, "init").resolves();
+
         ({ launchBrowser } = proxyquire("../../../../src/browser/standalone/launchBrowser", {
+            "../../image": { initImage: initImageStub },
             "./../new-browser": { NewBrowser: NewBrowserStub },
             "./../existing-browser": { ExistingBrowser: ExistingBrowserStub },
             "./../calibrator": { Calibrator: CalibratorStub },
@@ -78,6 +85,12 @@ describe("browser/standalone/launchBrowser", () => {
             }
         });
         sandbox.restore();
+    });
+
+    it("should initialize images before initializing new browser", async () => {
+        await launchBrowser();
+
+        assert.callOrder(initImageStub, newBrowserInitStub);
     });
 
     it("should accept browser download mirrors in standalone options", async () => {
