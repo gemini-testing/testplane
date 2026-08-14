@@ -377,6 +377,140 @@ describe("CDP/Selectivity/JSSelectivity", () => {
             });
         });
 
+        it("should load an unavailable stale script by URL at a page boundary", async () => {
+            const scriptId = "42";
+            const sourceUrl = "https://mc.yandex.ru/metrika/watch.js";
+            const missingScriptError = Object.assign(
+                new Error(`No script for id: ${scriptId}\n\tErrorCode: -32000\n\tRequest ID: 56`),
+                { code: -32000 },
+            );
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript(scriptId, sourceUrl));
+            cdpMock.debugger.getScriptSource.rejects(missingScriptError);
+            fetchTextWithBrowserFallbackStub.resolves("source without source maps");
+
+            await jsSelectivity.start();
+            await jsSelectivity.flushPage();
+
+            assert.calledOnceWithExactly(fetchTextWithBrowserFallbackStub, sourceUrl, cdpMock.runtime, sessionId);
+            assert.notCalled(parseSourceMapRangesStub);
+            assert.notCalled(extractSourceFilesDepsStub);
+        });
+
+        it("should preserve unload-tail dependencies loaded through the source URL fallback", async () => {
+            const scriptId = "42";
+            const sourceUrl = "https://example.com/app.js";
+            const missingScriptError = Object.assign(
+                new Error(`No script for id: ${scriptId}\n\tErrorCode: -32000\n\tRequest ID: 56`),
+                { code: -32000 },
+            );
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            cdpMock.profiler.takePreciseCoverage
+                .onFirstCall()
+                .resolves(coverageForScript(scriptId, sourceUrl))
+                .onSecondCall()
+                .resolves({ timestamp: 2, result: [] });
+            cdpMock.debugger.getScriptSource.rejects(missingScriptError);
+            fetchTextWithBrowserFallbackStub.resolves("source\n//# sourceMappingURL=app.js.map");
+
+            await jsSelectivity.start();
+            await jsSelectivity.flushPage();
+
+            const dependencies = await jsSelectivity.stop();
+
+            assert.deepEqual(Array.from(dependencies || []).sort(), ["src/app.js", "src/utils.js"]);
+            assert.calledOnceWithExactly(fetchTextWithBrowserFallbackStub, sourceUrl, cdpMock.runtime, sessionId);
+        });
+
+        it("should fall back when stale source loading was started by scriptParsed", async () => {
+            const scriptId = "42";
+            const sourceUrl = "https://mc.yandex.ru/metrika/watch.js";
+            const missingScriptError = Object.assign(
+                new Error(`No script for id: ${scriptId}\n\tErrorCode: -32000\n\tRequest ID: 56`),
+                { code: -32000 },
+            );
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript(scriptId, sourceUrl));
+            cdpMock.debugger.getScriptSource.rejects(missingScriptError);
+            fetchTextWithBrowserFallbackStub.callsFake((url: string) => {
+                return Promise.resolve(url === sourceUrl ? "source" : "source map");
+            });
+
+            await jsSelectivity.start();
+
+            const scriptParsedHandler = cdpMock.debugger.on.getCall(0).args[1];
+
+            scriptParsedHandler({ scriptId, url: sourceUrl, sourceMapURL: "watch.js.map" }, sessionId);
+
+            await jsSelectivity.flushPage();
+
+            assert.calledOnceWithExactly(cdpMock.debugger.getScriptSource, sessionId, scriptId);
+            assert.calledWithExactly(fetchTextWithBrowserFallbackStub, sourceUrl, cdpMock.runtime, sessionId);
+        });
+
+        it("should fail a page boundary when the source URL fallback also fails", async () => {
+            const scriptId = "42";
+            const sourceUrl = "https://mc.yandex.ru/metrika/watch.js";
+            const missingScriptError = Object.assign(new Error(`No script for id: ${scriptId}`), { code: -32000 });
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript(scriptId, sourceUrl));
+            cdpMock.debugger.getScriptSource.rejects(missingScriptError);
+            fetchTextWithBrowserFallbackStub.rejects(new Error("fetch failed"));
+
+            await jsSelectivity.start();
+
+            await assert.isRejected(
+                jsSelectivity.flushPage(),
+                `JS Selectivity: Couldn't load source code from ${sourceUrl}`,
+            );
+        });
+
+        for (const error of [
+            Object.assign(new Error("No script for id: 420"), { code: -32000 }),
+            Object.assign(new Error("No script for id: 42"), { code: -32001 }),
+        ]) {
+            it(`should not ignore a different missing-script error at a page boundary: ${error.message}`, async () => {
+                const scriptId = "42";
+                const sourceUrl = "https://mc.yandex.ru/metrika/watch.js";
+                const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+                cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript(scriptId, sourceUrl));
+                cdpMock.debugger.getScriptSource.rejects(error);
+
+                await jsSelectivity.start();
+
+                await assert.isRejected(
+                    jsSelectivity.flushPage(),
+                    `JS Selectivity: Couldn't load source code from ${sourceUrl}`,
+                );
+            });
+        }
+
+        it("should not ignore an unavailable script while stopping", async () => {
+            const scriptId = "42";
+            const sourceUrl = "https://mc.yandex.ru/metrika/watch.js";
+            const missingScriptError = Object.assign(
+                new Error(`No script for id: ${scriptId}\n\tErrorCode: -32000\n\tRequest ID: 56`),
+                { code: -32000 },
+            );
+            const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
+
+            cdpMock.profiler.takePreciseCoverage.resolves(coverageForScript(scriptId, sourceUrl));
+            cdpMock.debugger.getScriptSource.rejects(missingScriptError);
+            fetchTextWithBrowserFallbackStub.rejects(new Error("fetch failed"));
+
+            await jsSelectivity.start();
+
+            await assert.isRejected(
+                jsSelectivity.stop(),
+                `JS Selectivity: Couldn't load source code from ${sourceUrl}`,
+            );
+        });
+
         it("flushPage should clear script maps so a reused scriptId is treated as a new script", async () => {
             const jsSelectivity = new JSSelectivity(cdpMock as unknown as CDP, sessionId, sourceRoot, null);
 
