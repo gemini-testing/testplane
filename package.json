@@ -81,7 +81,7 @@
     "@jsquash/png": "3.1.1",
     "@puppeteer/browsers": "3.0.4",
     "@testplane/wdio-protocols": "9.4.7",
-    "@testplane/wdio-utils": "9.5.4",
+    "@testplane/wdio-utils": "9.5.5",
     "@testplane/webdriverio": "9.6.2",
     "@vitest/spy": "2.1.4",
     "buffer-crc32": "1.0.0",
