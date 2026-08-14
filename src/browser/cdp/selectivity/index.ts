@@ -17,6 +17,8 @@ import { debugSelectivity } from "./debug";
 import { getUsedDumpsTracker } from "./used-dumps-tracker";
 import { DebuggerEvents } from "../domains/debugger";
 import { CDPSessionId } from "../types";
+import { createClickNavigationGuard, type ClickNavigationGuard } from "./navigation-guard";
+import { CoveragePause, coverageHooksScripts, getCoveragePause } from "./coverage-hooks";
 
 type StopSelectivityFn = (test: Test, shouldWrite: boolean) => Promise<void>;
 
@@ -144,21 +146,6 @@ export const clearUnusedSelectivityDumps = async (config: Config, isRunFailed: b
     }
 };
 
-// Pauses the renderer at page boundaries so JS coverage can be resolved/reset while "scriptId"s are still valid:
-//  - "page start": first thing on every new document, and on bfcache restore ("pageshow" with persisted=true),
-//    BEFORE the incoming page's scripts run — the point where the previous page is done and the next hasn't started;
-//  - "beforeunload": while the leaving page is still alive (needed to capture it before a cross-process isolate swap).
-const testplaneCoveragePageStartScriptName = "__testplane_cdp_coverage_page_start";
-const testplaneCoverageBreakScriptName = "__testplane_cdp_coverage_snapshot_pause";
-const scriptToEvaluateOnNewDocument = [
-    "if (window.top === window) {",
-    `    function ${testplaneCoveragePageStartScriptName}() { debugger; }`,
-    `    ${testplaneCoveragePageStartScriptName}();`,
-    `    window.addEventListener("pageshow", function (e) { if (e.persisted) { ${testplaneCoveragePageStartScriptName}(); } });`,
-    `    window.addEventListener("beforeunload", function ${testplaneCoverageBreakScriptName}() { debugger; });`,
-    "}",
-].join("\n");
-
 export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSelectivityFn> => {
     const { enabled, compression, sourceRoot, testDependenciesPath, mapDependencyRelativePath, mapSourceMapUrl } =
         browser.config.selectivity;
@@ -194,6 +181,7 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
 
     const wdSessionId = browser.sessionId;
     const cdpSessionId = await cdp.target.attachToTarget(cdpTargetId).then(r => r.sessionId);
+    const pageLoadStrategy = browser.publicAPI.capabilities?.pageLoadStrategy ?? "normal";
 
     const cssSelectivity = new CSSSelectivity(cdp, cdpSessionId, wdSessionId, sourceRoot, mapSourceMapUrl);
     const jsSelectivity = new JSSelectivity(cdp, cdpSessionId, sourceRoot, mapSourceMapUrl);
@@ -223,9 +211,10 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
     // than failing the test (an incomplete dump silently under-runs later), so we remember the error and rethrow it
     // from stopSelectivity — but still resume the renderer so the browser is never left paused.
     let pageSwitchError: Error | null = null;
+    let clickNavigationGuard: ClickNavigationGuard | null = null;
 
-    const resume = (): void => {
-        cdp.debugger.resume(cdpSessionId).catch(() => {});
+    const resume = async (): Promise<void> => {
+        await cdp.debugger.resume(cdpSessionId).catch(() => {});
     };
 
     const debuggerPausedFn = ({ callFrames }: DebuggerEvents["paused"], eventCdpSessionId?: CDPSessionId): void => {
@@ -233,40 +222,81 @@ export const startSelectivity = async (browser: ExistingBrowser): Promise<StopSe
             return;
         }
 
-        const functionName = callFrames[0]?.functionName;
-        const isBeforeUnloadPause = functionName === testplaneCoverageBreakScriptName;
-        const isPageStartPause = functionName === testplaneCoveragePageStartScriptName;
+        const coveragePause = getCoveragePause(callFrames[0]?.functionName);
+        const isBfcacheRestoreForClick =
+            coveragePause === CoveragePause.BfcacheRestore && clickNavigationGuard?.onBfcacheRestorePause() === true;
 
-        if (isSelectivityStopped || (!isBeforeUnloadPause && !isPageStartPause)) {
-            resume();
+        if (coveragePause === CoveragePause.BeforeUnload && !isSelectivityStopped) {
+            // The injected top-frame beforeunload hook is a stable, synchronous navigation-intent signal. It avoids
+            // deprecated and experimental Page navigation lifecycle events.
+            clickNavigationGuard?.onBeforeUnloadPause();
+        }
+
+        if (isSelectivityStopped || !coveragePause) {
+            void resume();
             return;
         }
 
-        pageSwitchPromise = pageSwitchPromise.finally(() => {
-            // "beforeunload": leaving page still alive — snapshot+resolve it (captures it before a cross-process swap).
-            // "page start" / bfcache restore: previous page done, next not started — resolve its tail, then reset
-            // coverage and clear the script maps so the next page starts with a clean window and id namespace.
-            const action = isBeforeUnloadPause
-                ? Promise.all([cssSelectivity.takeCoverageSnapshot(), jsSelectivity.takeCoverageSnapshot()])
-                : jsSelectivity.flushPage();
+        pageSwitchPromise = pageSwitchPromise.finally(async () => {
+            try {
+                // "beforeunload": leaving page still alive — snapshot+resolve it (captures it before a cross-process swap).
+                // "page start" / bfcache restore: previous page done, next not started — resolve its tail, then reset
+                // coverage and clear the script maps so the next page starts with a clean window and id namespace.
+                const action =
+                    coveragePause === CoveragePause.BeforeUnload
+                        ? Promise.all([cssSelectivity.takeCoverageSnapshot(), jsSelectivity.takeCoverageSnapshot()])
+                        : jsSelectivity.flushPage();
 
-            return Promise.resolve(action)
-                .catch(err => {
-                    pageSwitchError ||= err instanceof Error ? err : new Error(String(err));
-                })
-                .then(resume);
+                await action;
+            } catch (err) {
+                pageSwitchError ||= err instanceof Error ? err : new Error(String(err));
+            } finally {
+                await resume();
+
+                // pageshow.persisted is emitted after the document was restored. It is the completion signal for a
+                // BFCache navigation because a restored page does not emit a new DOMContentLoaded/load event, and
+                // Page.frameNavigated delivery is not required for this injected stable marker.
+                if (isBfcacheRestoreForClick) {
+                    clickNavigationGuard?.completeBfcacheRestore();
+                }
+            }
         });
     };
 
     cdp.debugger.on("paused", debuggerPausedFn);
 
-    await cdp.page.addScriptToEvaluateOnNewDocument(cdpSessionId, { source: scriptToEvaluateOnNewDocument });
+    try {
+        await Promise.all([
+            cdp.page.addScriptToEvaluateOnNewDocument(cdpSessionId, { source: coverageHooksScripts.newDocument }),
+            cdp.runtime
+                .evaluate(cdpSessionId, { expression: coverageHooksScripts.currentDocument })
+                .catch(() => undefined),
+        ]);
+
+        if (pageLoadStrategy !== "none") {
+            clickNavigationGuard = createClickNavigationGuard({
+                browser: browser.publicAPI,
+                cdp,
+                cdpSessionId,
+                pageLoadStrategy,
+                pageLoadTimeout: browser.config.pageLoadTimeout,
+                waitForPageSwitch: () => pageSwitchPromise,
+            });
+        }
+    } catch (err) {
+        cdp.debugger.off("paused", debuggerPausedFn);
+        await Promise.allSettled([cssSelectivity.stop(true), jsSelectivity.stop(true)]);
+        await cdp.target.detachFromTarget(cdpSessionId).catch(() => {});
+        throw err;
+    }
 
     /** @param drop only performs cleanup without writing anything. Should be "true" if test is failed */
     return async function stopSelectivity(test: Test, drop: boolean): Promise<void> {
         isSelectivityStopped = true;
 
         await pageSwitchPromise;
+
+        clickNavigationGuard?.dispose();
 
         const [cssDependenciesPromise, jsDependenciesPromise] = await Promise.allSettled([
             cssSelectivity.stop(drop),
