@@ -81,7 +81,7 @@ function prepareScreenshotUnsafe(areas, opts) {
             width: viewportWidth,
             height: viewportHeight
         }),
-        pixelRatio = configurePixelRatio(opts.usePixelRatio),
+        pixelRatio = configurePixelRatio(opts.usePixelRatio, opts.preferredPixelRatio),
         rect,
         selectors = [];
 
@@ -252,9 +252,13 @@ function getCaptureRect(selectors, opts) {
           };
 }
 
-function configurePixelRatio(usePixelRatio) {
+function configurePixelRatio(usePixelRatio, preferredPixelRatio) {
     if (usePixelRatio === false) {
         return 1;
+    }
+
+    if (preferredPixelRatio) {
+        return preferredPixelRatio;
     }
 
     if (window.devicePixelRatio) {

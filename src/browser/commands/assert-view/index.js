@@ -12,6 +12,16 @@ const AssertViewResults = require("./assert-view-results");
 const { BaseStateError } = require("./errors/base-state-error");
 const { addTestplaneSelectivityPngDependency } = require("../../cdp/selectivity/testplane-selectivity");
 
+const HEADLESS_CHROME_ARG_RE = /^-{0,2}headless(?:=|$)/;
+
+const isHeadlessBrowser = chromeOptions => (chromeOptions?.args || []).some(arg => HEADLESS_CHROME_ARG_RE.test(arg));
+
+const getEmulatedPixelRatio = chromeOptions => {
+    const pixelRatio = _.get(chromeOptions, "mobileEmulation.deviceMetrics.pixelRatio");
+
+    return _.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : undefined;
+};
+
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
 
@@ -29,6 +39,8 @@ const getIgnoreDiffPixelCountRatio = value => {
 module.exports.default = browser => {
     const screenShooter = ScreenShooter.create(browser);
     const { publicAPI: session, config } = browser;
+    const chromeOptions = session.requestedCapabilities?.["goog:chromeOptions"];
+    const emulatedPixelRatio = getEmulatedPixelRatio(chromeOptions);
     const {
         assertViewOpts,
         compareOpts,
@@ -68,12 +80,16 @@ module.exports.default = browser => {
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
+        const preferredPixelRatio =
+            browser.shouldUsePixelRatio && !isHeadlessBrowser(chromeOptions) ? emulatedPixelRatio : undefined;
+
         const page = await browser.prepareScreenshot([].concat(selectors), {
             ignoreSelectors: [].concat(opts.ignoreElements),
             allowViewportOverflow: opts.allowViewportOverflow,
             captureElementFromTop: opts.captureElementFromTop,
             selectorToScroll: opts.selectorToScroll,
             disableAnimation: opts.disableAnimation,
+            preferredPixelRatio,
         });
 
         const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
@@ -85,6 +101,7 @@ module.exports.default = browser => {
             "screenshotDelay",
             "selectorToScroll",
         ]);
+        screenshoterOpts.preferredPixelRatio = preferredPixelRatio;
         const currImgInst = await screenShooter
             .capture(page, screenshoterOpts)
             .finally(() => browser.cleanupScreenshot(opts));

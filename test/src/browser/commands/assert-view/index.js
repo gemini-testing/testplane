@@ -161,6 +161,25 @@ describe("assertView command", () => {
         assert.calledOnceWith(browser.prepareScreenshot, [".selector1", ".selector2"]);
     });
 
+    it("should use emulated pixel ratio from requested capabilities in headful browser", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceMetrics: { pixelRatio: 3 } },
+            },
+        };
+        const browser = await initBrowser_({ session });
+
+        await browser.publicAPI.assertView("plain", ".selector");
+
+        assert.calledOnceWith(browser.prepareScreenshot, [".selector"], sinon.match({ preferredPixelRatio: 3 }));
+        assert.calledOnceWith(
+            ScreenShooter.prototype.capture,
+            sinon.match.any,
+            sinon.match({ preferredPixelRatio: 3 }),
+        );
+    });
+
     it("should screenshot the viewport if selector is not provided", async () => {
         const browser = await initBrowser_();
 

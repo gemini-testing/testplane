@@ -12,11 +12,33 @@ module.exports = class ScreenShooter {
     }
 
     async capture(page, opts = {}) {
-        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll } = opts;
+        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll, preferredPixelRatio } = opts;
         const viewportOpts = { allowViewportOverflow, compositeImage };
         const cropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
         const capturedImage = await this._browser.captureViewportImage(page, screenshotDelay);
+        if (preferredPixelRatio) {
+            const currentPixelRatio = await this._browser.evalScript("window.devicePixelRatio");
+
+            if (currentPixelRatio !== preferredPixelRatio) {
+                const scale = currentPixelRatio / page.pixelRatio;
+                const scaleArea = area => {
+                    area.left *= scale;
+                    area.top *= scale;
+                    area.width *= scale;
+                    area.height *= scale;
+                };
+
+                [page.captureArea, page.viewport, ...page.ignoreAreas].forEach(scaleArea);
+                page.documentHeight *= scale;
+                page.documentWidth *= scale;
+                page.pixelRatio = currentPixelRatio;
+                delete opts.preferredPixelRatio;
+
+                return this.capture(page, opts);
+            }
+        }
+
         const viewport = Viewport.create(page, capturedImage, viewportOpts);
         await viewport.handleImage(capturedImage);
 

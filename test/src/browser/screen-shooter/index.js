@@ -29,6 +29,7 @@ describe("screen-shooter", () => {
             browser = {
                 config: {},
                 captureViewportImage: sandbox.stub().resolves(imageStub),
+                evalScript: sandbox.stub().resolves(1),
                 scrollBy: sandbox.stub().resolves(),
             };
         });
@@ -92,6 +93,39 @@ describe("screen-shooter", () => {
             await capture(stubPage(), { screenshotDelay: 2000 });
 
             assert.calledWithMatch(browser.captureViewportImage, sinon.match.any, 2000);
+        });
+
+        it("should retry capture using pixel ratio from browser if it differs from preferred", async () => {
+            const opts = { preferredPixelRatio: 3 };
+
+            await capture(
+                {
+                    captureArea: { left: 3, top: 6, width: 30, height: 60 },
+                    viewport: { left: 0, top: 0, width: 300, height: 600 },
+                    ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
+                    documentHeight: 900,
+                    documentWidth: 600,
+                    pixelRatio: 3,
+                },
+                opts,
+            );
+
+            assert.calledTwice(browser.captureViewportImage);
+            assert.calledOnceWith(browser.evalScript, "window.devicePixelRatio");
+            assert.calledOnceWith(
+                Viewport.create,
+                {
+                    captureArea: { left: 1, top: 2, width: 10, height: 20 },
+                    viewport: { left: 0, top: 0, width: 100, height: 200 },
+                    ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
+                    documentHeight: 300,
+                    documentWidth: 200,
+                    pixelRatio: 1,
+                },
+                imageStub,
+                sinon.match.any,
+            );
+            assert.notProperty(opts, "preferredPixelRatio");
         });
 
         it("should extract image of passed size", async () => {
