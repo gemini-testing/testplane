@@ -19,7 +19,17 @@ const { AssertViewError } = require("./errors/assert-view-error");
 const makeDebug = require("debug");
 const debug = makeDebug("testplane:screenshots:assert-view");
 
+const HEADLESS_CHROME_ARG_RE = /^-{0,2}headless(?:=|$)/;
+
 const getShortDebugId = debugId => crypto.createHash("sha1").update(debugId).digest("hex").slice(0, 7);
+
+const isHeadlessBrowser = chromeOptions => (chromeOptions?.args || []).some(arg => HEADLESS_CHROME_ARG_RE.test(arg));
+
+const getEmulatedPixelRatio = chromeOptions => {
+    const pixelRatio = _.get(chromeOptions, "mobileEmulation.deviceMetrics.pixelRatio");
+
+    return _.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : undefined;
+};
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -184,10 +194,17 @@ module.exports.default = browser => {
 
         if (!elementsScreenShooterPromise) {
             const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
+            const chromeOptions = session.requestedCapabilities?.["goog:chromeOptions"];
             elementsScreenShooterPromise = ElementsScreenShooter.create({
                 camera: browser.camera,
                 browser: browser.publicAPI,
-                browserProperties: { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib },
+                browserProperties: {
+                    isWebdriverProtocol,
+                    shouldUsePixelRatio,
+                    needsCompatLib,
+                    isHeadless: isHeadlessBrowser(chromeOptions),
+                    emulatedPixelRatio: getEmulatedPixelRatio(chromeOptions),
+                },
             });
         }
 

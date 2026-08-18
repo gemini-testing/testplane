@@ -34,12 +34,20 @@ class CaptureAreaSizeChangeError extends Error {
     }
 }
 
+class PixelRatioChangeError extends Error {
+    constructor() {
+        super("Estimated pixel ratio did not match actual pixel ratio during capture");
+        this.name = "PixelRatioChangeError";
+    }
+}
+
 const debug = makeVerboseScreenshotsDebug("testplane:screenshots:elements-screen-shooter");
 const SCROLL_OVERLAP_PX = 1;
 const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
 
 interface ScreenShooterOpts extends AssertViewOpts {
     debugId?: string;
+    preferredPixelRatio?: number;
 }
 
 type PrepareScreenshotOptions = ClientBridgeArgument<BrowserPrepareScreenshotOptions>;
@@ -54,6 +62,10 @@ interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;
     shouldUsePixelRatio: boolean;
     needsCompatLib: boolean;
+    isHeadless: boolean;
+    // Emulated pixel ratio from the requested capabilities, important to fix a bug with DPR,
+    // see test in dpr-oopif.testplane.js, which reproduces the bug with DPR without this fix.
+    emulatedPixelRatio?: number;
 }
 
 interface ScreenShooterInputParams {
@@ -230,6 +242,16 @@ export class ElementsScreenShooter {
             throw new Error("No targets to capture passed to ElementsScreenShooter.capture");
         }
 
+        if (
+            this._browserProperties.shouldUsePixelRatio &&
+            !this._browserProperties.isHeadless &&
+            this._browserProperties.emulatedPixelRatio !== undefined
+        ) {
+            debug("using emulated pixel ratio %d", this._browserProperties.emulatedPixelRatio);
+
+            opts.preferredPixelRatio = this._browserProperties.emulatedPixelRatio;
+        }
+
         try {
             perfDebug("capture: begin");
 
@@ -241,6 +263,7 @@ export class ElementsScreenShooter {
                 disableAnimation: opts.disableAnimation,
                 disableHover: opts.disableHover,
                 compositeImage: opts.compositeImage,
+                preferredPixelRatio: opts.preferredPixelRatio,
             });
 
             assertCorrectCaptureAreaBounds(
@@ -260,12 +283,20 @@ export class ElementsScreenShooter {
             try {
                 compositeImage = await this._performCaptureAttempt(targetsToCapture, targetsToIgnore, page, opts, true);
             } catch (error) {
-                if (!(error instanceof CaptureAreaSizeChangeError)) {
+                if (!(error instanceof CaptureAreaSizeChangeError) && !(error instanceof PixelRatioChangeError)) {
                     throw error;
                 }
 
-                perfDebug("capture: retrying in best-effort mode");
-                await this._preloadCaptureArea(targetsToCapture, targetsToIgnore, page, opts);
+                perfDebug(`capture: retrying in best-effort mode (${error.message})`);
+
+                if (error instanceof PixelRatioChangeError) {
+                    delete opts.preferredPixelRatio;
+                }
+
+                if (error instanceof CaptureAreaSizeChangeError) {
+                    await this._preloadCaptureArea(targetsToCapture, targetsToIgnore, page, opts);
+                }
+
                 compositeImage = await this._performCaptureAttempt(
                     targetsToCapture,
                     targetsToIgnore,
@@ -382,6 +413,7 @@ export class ElementsScreenShooter {
                 targetsToCapture,
                 page.scrollOffset,
                 opts.selectorToScroll ?? null,
+                opts.preferredPixelRatio,
             ]);
 
             await this._browserSideScreenshooter.call("captureAnchorBaseline", [targetsToCapture]);
@@ -438,6 +470,7 @@ export class ElementsScreenShooter {
                     targetsToCapture,
                     targetsToIgnore,
                     opts.selectorToScroll,
+                    opts.preferredPixelRatio,
                     enabledScrollDebugTopics,
                 ]);
                 recomputeTime += performance.now() - recomputeStartTime;
@@ -484,11 +517,13 @@ export class ElementsScreenShooter {
                         targetsToCapture,
                         -rollbackDistance as Coord<"page", "device", "y">,
                         opts.selectorToScroll,
+                        opts.preferredPixelRatio,
                     ]);
                     const afterRollbackState = await this._browserSideScreenshooter.call("getCaptureState", [
                         targetsToCapture,
                         targetsToIgnore,
                         opts.selectorToScroll,
+                        opts.preferredPixelRatio,
                     ]);
 
                     if (isBrowserSideError(afterRollbackState)) {
@@ -558,6 +593,7 @@ export class ElementsScreenShooter {
                     targetsToCapture,
                     scrollDelta,
                     opts.selectorToScroll,
+                    opts.preferredPixelRatio,
                     enabledScrollDebugTopics,
                 ]);
                 scrollTime += performance.now() - scrollStartTime;
@@ -603,10 +639,10 @@ export class ElementsScreenShooter {
         targetsToIgnore: ElementTarget[],
         page: PrepareScreenshotSuccess,
         opts: ScreenShooterOpts,
-        shouldThrowOnCaptureAreaSizeChange: boolean,
+        isStrictAttempt: boolean,
     ): Promise<CompositeImage> {
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
-        const attemptMode = shouldThrowOnCaptureAreaSizeChange ? "strict" : "best-effort";
+        const attemptMode = isStrictAttempt ? "strict" : "best-effort";
         const image = CompositeImage.create();
 
         let timeSpentOnCapture = 0;
@@ -653,7 +689,13 @@ export class ElementsScreenShooter {
                             spec.full.height !== currentState.captureSpecs[index]?.full.height,
                     );
 
-                if (hasCaptureAreaSizeChanged && shouldThrowOnCaptureAreaSizeChange) {
+                if (hasCaptureAreaSizeChanged && isStrictAttempt) {
+                    debug(
+                        "capture area size changed, will retry capture attempt. Last state: %O, current state: %O",
+                        lastState.captureSpecs,
+                        currentState.captureSpecs,
+                    );
+
                     throw new CaptureAreaSizeChangeError();
                 }
 
@@ -674,11 +716,27 @@ export class ElementsScreenShooter {
 
                 timeSpentOnCapture += performance.now() - captureStartTime;
 
+                if (isStrictAttempt && this._browserProperties.emulatedPixelRatio) {
+                    const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
+
+                    if (currentPixelRatio !== opts.preferredPixelRatio) {
+                        debug(
+                            "expected pixel ratio %d did not match actual %d, retrying capture attempt",
+                            opts.preferredPixelRatio,
+                            currentPixelRatio,
+                        );
+
+                        throw new PixelRatioChangeError();
+                    } else {
+                        debug("pixel ratio %d matched expected %d", currentPixelRatio, opts.preferredPixelRatio);
+                    }
+                }
+
                 const expectedTotalMove = getExpectedTotalMoveFromBaseline(page.captureSpecs, newCaptureSpecs);
                 const observedTotalMove = currentState.anchorShift;
 
                 let correctionDelta = 0;
-                if (!shouldThrowOnCaptureAreaSizeChange && observedTotalMove !== null) {
+                if (!isStrictAttempt && observedTotalMove !== null) {
                     correctionDelta = expectedTotalMove - observedTotalMove;
                 }
 
@@ -726,6 +784,7 @@ export class ElementsScreenShooter {
                     targetsToCapture,
                     page.scrollOffset,
                     opts.selectorToScroll,
+                    opts.preferredPixelRatio,
                     enabledScrollDebugTopics,
                 ]);
                 const restoreScrollDebugLog = restoreScrollResult.debugLog;

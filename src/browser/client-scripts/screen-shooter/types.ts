@@ -48,6 +48,7 @@ export interface PrepareScreenshotOptions {
     compositeImage?: boolean;
     debug?: string[];
     usePixelRatio?: boolean;
+    preferredPixelRatio?: number;
 }
 
 export interface PrepareScreenshotSuccess {

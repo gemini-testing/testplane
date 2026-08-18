@@ -466,9 +466,13 @@ export function computeCanHaveCaret(): boolean {
     return canHaveCaret;
 }
 
-export function computePixelRatio(usePixelRatio: boolean = true): number {
+export function computePixelRatio(usePixelRatio: boolean = true, preferredPixelRatio?: number): number {
     if (usePixelRatio === false) {
         return 1;
+    }
+
+    if (preferredPixelRatio) {
+        return preferredPixelRatio;
     }
 
     if (window.devicePixelRatio) {

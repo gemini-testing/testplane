@@ -141,6 +141,7 @@ describe("ElementsScreenShooter", () => {
             isWebdriverProtocol: true,
             shouldUsePixelRatio: true,
             needsCompatLib: false,
+            isHeadless: false,
         };
         browserSideScreenshooter = {
             call: sandbox.stub(),
@@ -244,6 +245,7 @@ describe("ElementsScreenShooter", () => {
                 compositeImage: true,
                 debug: [],
                 usePixelRatio: true,
+                preferredPixelRatio: undefined,
             });
         });
 
@@ -443,7 +445,7 @@ describe("ElementsScreenShooter", () => {
             assert.calledOnce(camera.captureViewportImage);
             assert.deepEqual(browserSideScreenshooter.call.getCall(1).args, [
                 "getCaptureState",
-                [[".element"], [], undefined, []],
+                [[".element"], [], undefined, undefined, []],
             ]);
         });
 
@@ -483,11 +485,11 @@ describe("ElementsScreenShooter", () => {
             assert.calledTwice(compositeImage.registerViewportImageAtOffset);
             assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
                 "scrollBy",
-                [[".element"], 50, undefined, []],
+                [[".element"], 50, undefined, undefined, []],
             ]);
             assert.deepEqual(browserSideScreenshooter.call.getCall(4).args, [
                 "scrollTo",
-                [[".element"], 0, undefined, []],
+                [[".element"], 0, undefined, undefined, []],
             ]);
         });
 

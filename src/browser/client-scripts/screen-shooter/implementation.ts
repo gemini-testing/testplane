@@ -181,15 +181,20 @@ export function prepareElementsScreenshot(
     return safeCall(prepareElementsScreenshotUnsafe, targetsToCapture, opts);
 }
 
+export function getCurrentPixelRatio(): number {
+    return computePixelRatio();
+}
+
 export function scrollBy(
     targetsToCapture: ElementTarget[],
     scrollDelta: Length<"device", "y"> | Coord<"page", "device", "y">,
     targetToScroll?: ElementTarget | null,
+    preferredPixelRatio?: number,
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
         const logger = createDebugLogger({ debug }, "scrollBy");
-        const pixelRatio = computePixelRatio();
+        const pixelRatio = computePixelRatio(true, preferredPixelRatio);
         const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
@@ -214,6 +219,7 @@ export function scrollTo(
     targetsToCapture: ElementTarget[],
     scrollOffset: Length<"device", "y"> | Coord<"page", "device", "y">,
     targetToScroll?: ElementTarget | null,
+    preferredPixelRatio?: number,
     debug?: string[]
 ): ScrollResult {
     return safeCall((): ScrollResult => {
@@ -226,7 +232,7 @@ export function scrollTo(
             "targetToScroll:",
             targetToScroll
         );
-        const pixelRatio = computePixelRatio();
+        const pixelRatio = computePixelRatio(true, preferredPixelRatio);
         const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
@@ -255,11 +261,12 @@ export function getCaptureState(
     targetsToCapture: ElementTarget[],
     targetsToIgnore: ElementTarget[],
     targetToScroll?: ElementTarget | null,
+    preferredPixelRatio?: number,
     debug?: string[]
 ): GetCaptureStateResult {
     return safeCall((): GetCaptureStateResult => {
         const logger = createDebugLogger({ debug }, "getCaptureState");
-        const pixelRatio = computePixelRatio();
+        const pixelRatio = computePixelRatio(true, preferredPixelRatio);
         const scrollTarget = targetToScroll ? lib.queryFirst(targetToScroll) : null;
         const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
         const readableAutoScrollElementDescr = getReadableElementDescriptor(scrollElement);
@@ -499,7 +506,7 @@ function prepareElementsScreenshotUnsafe(
         disableAnimations();
     }
 
-    const pixelRatio = computePixelRatio(opts.usePixelRatio);
+    const pixelRatio = computePixelRatio(opts.usePixelRatio, opts.preferredPixelRatio);
     const scrollTarget = opts.selectorToScroll ? lib.queryFirst(opts.selectorToScroll) : null;
     const scrollElement = scrollTarget ?? getCommonScrollParent(targetsToCapture);
 
