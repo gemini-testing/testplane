@@ -33,6 +33,7 @@ const createScreenShooter = async (browser: WdioBrowser): Promise<ElementsScreen
             isWebdriverProtocol: true,
             shouldUsePixelRatio: true,
             needsCompatLib: false,
+            isHeadless: false,
         },
     });
 };
