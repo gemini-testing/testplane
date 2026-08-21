@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.1.1 (2026-08-21)
+
+
+### Bug Fixes
+
+* **selectivity:** stabilize navigation coverage ([#1311](https://github.com/gemini-testing/testplane/issues/1311)) ([a0f6b6b](https://github.com/gemini-testing/testplane/commit/a0f6b6bca20ba86c80eb654bdcd90992dbe650fc))
+
 ## 9.1.0 (2026-08-18)
 
 ### 9.0.13 (2026-08-05)
