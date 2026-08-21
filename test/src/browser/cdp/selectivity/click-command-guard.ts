@@ -1,6 +1,34 @@
 import { enableClickCommandGuard } from "src/browser/cdp/selectivity/click-command-guard";
 
 describe("CDP/Selectivity/click command guard", () => {
+    it("should install the wrapper once and disable only the current guard", () => {
+        let overwriteCommandCalls = 0;
+        const browser = {
+            overwriteCommand: (): void => {
+                overwriteCommandCalls++;
+            },
+        } as unknown as WebdriverIO.Browser;
+        let firstCancelClickCalls = 0;
+        let secondCancelClickCalls = 0;
+        const disableFirstGuard = enableClickCommandGuard(browser, {
+            startClick: () => {},
+            waitForNavigationCompletion: () => Promise.resolve(),
+            cancelClick: () => firstCancelClickCalls++,
+        });
+        const disableSecondGuard = enableClickCommandGuard(browser, {
+            startClick: () => {},
+            waitForNavigationCompletion: () => Promise.resolve(),
+            cancelClick: () => secondCancelClickCalls++,
+        });
+
+        disableFirstGuard();
+        disableSecondGuard();
+
+        assert.equal(overwriteCommandCalls, 1);
+        assert.equal(firstCancelClickCalls, 0);
+        assert.equal(secondCancelClickCalls, 1);
+    });
+
     it("should not execute a queued click after the guard is disposed", async () => {
         let clickWrapper!: (
             originalClick: (options?: unknown) => Promise<unknown>,
