@@ -1,4 +1,4 @@
-import sinon, { SinonStub } from "sinon";
+import sinon, { type SinonStub } from "sinon";
 import proxyquire from "proxyquire";
 import type { ExistingBrowser } from "src/browser/existing-browser";
 import type { Test } from "src/types";
@@ -20,7 +20,12 @@ describe("CDP/Selectivity", () => {
     let debugSelectivityStub: SinonStub;
     let getSelectivityTestsPathStub: SinonStub;
     let getUsedDumpsTrackerStub: SinonStub;
+    let createClickNavigationGuardStub: SinonStub;
     let usedDumpsTrackerMock: { usedDumpsFor: SinonStub; wasUsed: SinonStub; trackUsed: SinonStub };
+    let clickNavigationGuardMock: {
+        onBeforeUnloadPause: SinonStub;
+        dispose: SinonStub;
+    };
     let fsStub: {
         access: SinonStub;
         readdir: SinonStub;
@@ -43,6 +48,7 @@ describe("CDP/Selectivity", () => {
     let browserMock: {
         sessionId: string;
         config: {
+            pageLoadTimeout: null;
             selectivity: {
                 enabled: SelectivityModeValue;
                 saveIncompleteDumpOnFail: false;
@@ -54,7 +60,11 @@ describe("CDP/Selectivity", () => {
                 mapSourceMapUrl: null;
             };
         };
-        publicAPI: { isChromium: boolean; getWindowHandle: SinonStub };
+        publicAPI: {
+            isChromium: boolean;
+            capabilities: { pageLoadStrategy: "normal" | "eager" | "none" };
+            getWindowHandle: SinonStub;
+        };
         cdp: {
             target: {
                 getTargets: SinonStub;
@@ -67,6 +77,7 @@ describe("CDP/Selectivity", () => {
             debugger: { enable: SinonStub; on: SinonStub; off: SinonStub; resume: SinonStub };
             page: { enable: SinonStub; addScriptToEvaluateOnNewDocument: SinonStub; on: SinonStub; off: SinonStub };
             profiler: { enable: SinonStub };
+            runtime: { evaluate: SinonStub };
         } | null;
     };
 
@@ -111,6 +122,11 @@ describe("CDP/Selectivity", () => {
             trackUsed: sandbox.stub(),
         };
         getUsedDumpsTrackerStub = sandbox.stub().returns(usedDumpsTrackerMock);
+        clickNavigationGuardMock = {
+            onBeforeUnloadPause: sandbox.stub(),
+            dispose: sandbox.stub(),
+        };
+        createClickNavigationGuardStub = sandbox.stub().returns(clickNavigationGuardMock);
 
         CSSSelectivityStub = sandbox.stub().returns(cssSelectivityMock);
         JSSelectivityStub = sandbox.stub().returns(jsSelectivityMock);
@@ -129,6 +145,7 @@ describe("CDP/Selectivity", () => {
         browserMock = {
             sessionId: "wd-session-456",
             config: {
+                pageLoadTimeout: null,
                 selectivity: {
                     enabled: SelectivityMode.Enabled,
                     saveIncompleteDumpOnFail: false,
@@ -142,6 +159,7 @@ describe("CDP/Selectivity", () => {
             },
             publicAPI: {
                 isChromium: true,
+                capabilities: { pageLoadStrategy: "normal" },
                 getWindowHandle: sandbox.stub().resolves("CDwindow-target-123"),
             },
             cdp: {
@@ -168,6 +186,7 @@ describe("CDP/Selectivity", () => {
                     off: sandbox.stub(),
                 },
                 profiler: { enable: sandbox.stub().resolves() },
+                runtime: { evaluate: sandbox.stub().resolves() },
             },
         };
 
@@ -184,6 +203,7 @@ describe("CDP/Selectivity", () => {
             },
             "./debug": { debugSelectivity: debugSelectivityStub },
             "./used-dumps-tracker": { getUsedDumpsTracker: getUsedDumpsTrackerStub },
+            "./navigation-guard": { createClickNavigationGuard: createClickNavigationGuardStub },
             "fs-extra": fsStub,
         });
 
@@ -261,7 +281,26 @@ describe("CDP/Selectivity", () => {
             assert.calledWith(JSSelectivityStub, browserMock.cdp, "session-123", "/test/source-root");
             assert.calledOnce(cssSelectivityMock.start);
             assert.calledOnce(jsSelectivityMock.start);
+            assert.calledOnceWith(
+                createClickNavigationGuardStub,
+                sinon.match({
+                    browser: browserMock.publicAPI,
+                    cdp: browserMock.cdp,
+                    cdpSessionId: "session-123",
+                    pageLoadStrategy: "normal",
+                    pageLoadTimeout: null,
+                    waitForPageSwitch: sinon.match.func,
+                }),
+            );
             assert.isFunction(stopFn);
+        });
+
+        it("should not create a click navigation guard for pageLoadStrategy none", async () => {
+            browserMock.publicAPI.capabilities.pageLoadStrategy = "none";
+
+            await startSelectivity(browserMock as unknown as ExistingBrowser);
+
+            assert.notCalled(createClickNavigationGuardStub);
         });
 
         it("should enable CDP domains before starting selectivity", async () => {
@@ -285,6 +324,9 @@ describe("CDP/Selectivity", () => {
             assert.calledOnceWith(browserMock.cdp!.page.addScriptToEvaluateOnNewDocument, "session-123", {
                 source: sinon.match.string,
             });
+            assert.calledOnceWith(browserMock.cdp!.runtime.evaluate, "session-123", {
+                expression: sinon.match.string,
+            });
             assert.include(
                 browserMock.cdp!.page.addScriptToEvaluateOnNewDocument.args[0][1].source,
                 'window.addEventListener("beforeunload", function',
@@ -303,6 +345,7 @@ describe("CDP/Selectivity", () => {
 
             assert.calledOnce(cssSelectivityMock.takeCoverageSnapshot);
             assert.calledOnce(jsSelectivityMock.takeCoverageSnapshot);
+            assert.calledOnce(clickNavigationGuardMock.onBeforeUnloadPause);
             assert.calledWith(browserMock.cdp!.debugger.resume, "session-123");
         });
 
@@ -387,6 +430,7 @@ describe("CDP/Selectivity", () => {
 
             assert.calledWith(cssSelectivityMock.stop, true);
             assert.calledWith(jsSelectivityMock.stop, true);
+            assert.calledOnce(clickNavigationGuardMock.dispose);
             assert.calledWith(browserMock.cdp!.target.detachFromTarget, "session-123");
             assert.notCalled(testDependenciesWriterMock.saveFor);
             assert.notCalled(hashWriterMock.addTestDependencyHashes);
