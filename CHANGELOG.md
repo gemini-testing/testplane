@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [8.47.5](https://github.com/gemini-testing/testplane/compare/v8.47.4...v8.47.5) (2026-08-21)
+
+
+### Bug Fixes
+
+* **selectivity:** stabilize navigation coverage ([#1316](https://github.com/gemini-testing/testplane/issues/1316)) ([17d27dd](https://github.com/gemini-testing/testplane/commit/17d27ddee3c761274ae494f221573a2f1c4b065d))
+
 ### [8.47.3](https://github.com/gemini-testing/testplane/compare/v8.47.2...v8.47.3) (2026-06-26)
 
 
