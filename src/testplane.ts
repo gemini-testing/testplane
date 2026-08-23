@@ -454,6 +454,8 @@ export class Testplane extends BaseTestplane {
             message: this._profiler.sanitizeMessage(err?.message ?? "Testplane run was aborted"),
         });
 
+        signalHandler.emit(MasterEvents.EXIT, err);
+
         if (timeout > 0) {
             setTimeout(() => {
                 logger.error("Forcing shutdown...");

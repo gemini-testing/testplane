@@ -111,10 +111,10 @@ export class BasicPool implements Pool {
         });
     }
 
-    cancel(): void {
+    cancel(err?: Error): void {
         this._cancelled = true;
 
-        _.forEach(this._activeSessions, browser => browser.quit());
+        _.forEach(this._activeSessions, browser => browser.quit(err));
 
         this._activeSessions = {};
     }
