@@ -58,6 +58,15 @@ interface CaptureImageResult {
     meta: PrepareScreenshotSuccess;
 }
 
+interface CaptureAttemptParams {
+    targetsToCapture: ElementTarget[];
+    targetsToIgnore: ElementTarget[];
+    page: PrepareScreenshotSuccess;
+    opts: ScreenShooterOpts;
+    isStrictAttempt: boolean;
+    shouldCheckPixelRatio: boolean;
+}
+
 interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;
     shouldUsePixelRatio: boolean;
@@ -285,14 +294,14 @@ export class ElementsScreenShooter {
 
             let compositeImage: CompositeImage;
             try {
-                compositeImage = await this._performCaptureAttempt(
+                compositeImage = await this._performCaptureAttempt({
                     targetsToCapture,
                     targetsToIgnore,
                     page,
                     opts,
-                    true,
-                    shouldValidatePixelRatio,
-                );
+                    isStrictAttempt: true,
+                    shouldCheckPixelRatio: shouldValidatePixelRatio,
+                });
             } catch (error) {
                 if (!(error instanceof CaptureAreaSizeChangeError) && !(error instanceof PixelRatioChangeError)) {
                     throw error;
@@ -309,14 +318,14 @@ export class ElementsScreenShooter {
                     await this._preloadCaptureArea(targetsToCapture, targetsToIgnore, page, opts);
                 }
 
-                compositeImage = await this._performCaptureAttempt(
+                compositeImage = await this._performCaptureAttempt({
                     targetsToCapture,
                     targetsToIgnore,
                     page,
                     opts,
-                    false,
-                    false,
-                );
+                    isStrictAttempt: false,
+                    shouldCheckPixelRatio: false,
+                });
             }
 
             const renderedImage = await compositeImage.render();
@@ -640,14 +649,14 @@ export class ElementsScreenShooter {
         }
     }
 
-    private async _performCaptureAttempt(
-        targetsToCapture: ElementTarget[],
-        targetsToIgnore: ElementTarget[],
-        page: PrepareScreenshotSuccess,
-        opts: ScreenShooterOpts,
-        isStrictAttempt: boolean,
-        shouldCheckPixelRatio: boolean,
-    ): Promise<CompositeImage> {
+    private async _performCaptureAttempt({
+        targetsToCapture,
+        targetsToIgnore,
+        page,
+        opts,
+        isStrictAttempt,
+        shouldCheckPixelRatio,
+    }: CaptureAttemptParams): Promise<CompositeImage> {
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
         const attemptMode = isStrictAttempt ? "strict" : "best-effort";
         const image = CompositeImage.create();
