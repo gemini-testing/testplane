@@ -23,15 +23,20 @@ module.exports = class ScreenShooter {
             if (currentPixelRatio !== preferredPixelRatio) {
                 const scale = currentPixelRatio / page.pixelRatio;
                 const scaleArea = area => {
-                    area.left *= scale;
-                    area.top *= scale;
-                    area.width *= scale;
-                    area.height *= scale;
+                    const left = Math.floor(area.left * scale);
+                    const top = Math.floor(area.top * scale);
+                    const right = Math.ceil((area.left + area.width) * scale);
+                    const bottom = Math.ceil((area.top + area.height) * scale);
+
+                    area.left = left;
+                    area.top = top;
+                    area.width = right - left;
+                    area.height = bottom - top;
                 };
 
                 [page.captureArea, page.viewport, ...page.ignoreAreas].forEach(scaleArea);
-                page.documentHeight *= scale;
-                page.documentWidth *= scale;
+                page.documentHeight = Math.ceil(page.documentHeight * scale);
+                page.documentWidth = Math.ceil(page.documentWidth * scale);
                 page.pixelRatio = currentPixelRatio;
                 delete opts.preferredPixelRatio;
 

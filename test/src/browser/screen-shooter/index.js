@@ -128,6 +128,36 @@ describe("screen-shooter", () => {
             assert.notProperty(opts, "preferredPixelRatio");
         });
 
+        it("should round rescaled page geometry outwards", async () => {
+            const opts = { preferredPixelRatio: 2.625 };
+
+            await capture(
+                {
+                    captureArea: { left: 3, top: 6, width: 28, height: 54 },
+                    viewport: { left: 0, top: 0, width: 266, height: 528 },
+                    ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
+                    documentHeight: 528,
+                    documentWidth: 266,
+                    pixelRatio: 2.625,
+                },
+                opts,
+            );
+
+            assert.calledOnceWith(
+                Viewport.create,
+                {
+                    captureArea: { left: 1, top: 2, width: 11, height: 21 },
+                    viewport: { left: 0, top: 0, width: 102, height: 202 },
+                    ignoreAreas: [{ left: 3, top: 4, width: 7, height: 8 }],
+                    documentHeight: 202,
+                    documentWidth: 102,
+                    pixelRatio: 1,
+                },
+                imageStub,
+                sinon.match.any,
+            );
+        });
+
         it("should extract image of passed size", async () => {
             await capture({ captureArea: { foo: "bar" } });
 
