@@ -161,6 +161,66 @@ describe("assertView command", () => {
         assert.calledOnceWith(browser.prepareScreenshot, [".selector1", ".selector2"]);
     });
 
+    it("should use emulated pixel ratio from requested capabilities in headful browser", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceMetrics: { pixelRatio: 3 } },
+            },
+        };
+        const browser = await initBrowser_({ session });
+        sandbox.stub(browser, "cleanupScreenshot").resolves();
+
+        await browser.publicAPI.assertView("plain", ".selector", { disableAnimation: true });
+
+        assert.calledOnceWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: true, preferredPixelRatio: 3 }),
+        );
+        assert.calledOnceWith(
+            ScreenShooter.prototype.capture,
+            sinon.match.any,
+            sinon.match({ preferredPixelRatio: 3 }),
+        );
+
+        const reprepareScreenshot = ScreenShooter.prototype.capture.lastCall.args[1].reprepareScreenshot;
+
+        await reprepareScreenshot(1);
+
+        assert.calledWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: false, preferredPixelRatio: 1 }),
+        );
+    });
+
+    it("should validate pixel ratio when mobile emulation uses a device name", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceName: "Pixel 7" },
+            },
+        };
+        const browser = await initBrowser_({ session });
+        sandbox.stub(browser, "cleanupScreenshot").resolves();
+
+        await browser.publicAPI.assertView("plain", ".selector");
+
+        const screenShooterOpts = ScreenShooter.prototype.capture.lastCall.args[1];
+
+        assert.notProperty(screenShooterOpts, "preferredPixelRatio");
+        assert.isFunction(screenShooterOpts.reprepareScreenshot);
+
+        await screenShooterOpts.reprepareScreenshot(3);
+
+        assert.calledWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: false, preferredPixelRatio: 3 }),
+        );
+    });
+
     it("should screenshot the viewport if selector is not provided", async () => {
         const browser = await initBrowser_();
 

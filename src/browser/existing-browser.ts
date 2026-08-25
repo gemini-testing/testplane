@@ -172,7 +172,7 @@ export class ExistingBrowser extends Browser {
         // Running this fragment with history causes rrweb snapshots to break on pages with iframes
         return runWithoutHistory({ callstack: this._callstackHistory! }, async () => {
             opts = _.extend(opts, {
-                usePixelRatio: this._calibration ? this._calibration.usePixelRatio : true,
+                usePixelRatio: this.shouldUsePixelRatio,
             });
 
             ensure(this._clientBridge, CLIENT_BRIDGE_HINT);
@@ -210,6 +210,10 @@ export class ExistingBrowser extends Browser {
         ensure(this._session, BROWSER_SESSION_HINT);
 
         return this._session.execute(`return ${script}`);
+    }
+
+    get shouldUsePixelRatio(): boolean {
+        return this._calibration ? this._calibration.usePixelRatio : true;
     }
 
     injectScript(script: string): Promise<unknown> {
