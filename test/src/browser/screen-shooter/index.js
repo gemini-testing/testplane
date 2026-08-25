@@ -96,7 +96,16 @@ describe("screen-shooter", () => {
         });
 
         it("should retry capture using pixel ratio from browser if it differs from preferred", async () => {
-            const opts = { preferredPixelRatio: 3 };
+            const preparedPage = {
+                captureArea: { left: 1, top: 2, width: 10, height: 20 },
+                viewport: { left: 0, top: 0, width: 100, height: 200 },
+                ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
+                documentHeight: 300,
+                documentWidth: 200,
+                pixelRatio: 1,
+            };
+            const reprepareScreenshot = sandbox.stub().resolves(preparedPage);
+            const opts = { preferredPixelRatio: 3, reprepareScreenshot };
 
             await capture(
                 {
@@ -112,29 +121,28 @@ describe("screen-shooter", () => {
 
             assert.calledTwice(browser.captureViewportImage);
             assert.calledOnceWith(browser.evalScript, "window.devicePixelRatio");
-            assert.calledOnceWith(
-                Viewport.create,
-                {
-                    captureArea: { left: 1, top: 2, width: 10, height: 20 },
-                    viewport: { left: 0, top: 0, width: 100, height: 200 },
-                    ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
-                    documentHeight: 300,
-                    documentWidth: 200,
-                    pixelRatio: 1,
-                },
-                imageStub,
-                sinon.match.any,
-            );
+            assert.calledOnceWith(reprepareScreenshot, 1);
+            assert.calledOnceWith(Viewport.create, preparedPage, imageStub, sinon.match.any);
             assert.notProperty(opts, "preferredPixelRatio");
+            assert.notProperty(opts, "reprepareScreenshot");
         });
 
-        it("should round rescaled page geometry outwards", async () => {
-            const opts = { preferredPixelRatio: 2.625 };
+        it("should recompute fractional-DPR geometry instead of rescaling rounded bounds", async () => {
+            const preparedPage = {
+                captureArea: { left: 1, top: 2, width: 10, height: 20 },
+                viewport: { left: 50, top: 0, width: 101, height: 201 },
+                ignoreAreas: [{ left: 3, top: 4, width: 6, height: 7 }],
+                documentHeight: 201,
+                documentWidth: 101,
+                pixelRatio: 1,
+            };
+            const reprepareScreenshot = sandbox.stub().resolves(preparedPage);
+            const opts = { preferredPixelRatio: 2.625, reprepareScreenshot };
 
             await capture(
                 {
                     captureArea: { left: 3, top: 6, width: 28, height: 54 },
-                    viewport: { left: 0, top: 0, width: 266, height: 528 },
+                    viewport: { left: 131, top: 0, width: 266, height: 528 },
                     ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
                     documentHeight: 528,
                     documentWidth: 266,
@@ -143,19 +151,8 @@ describe("screen-shooter", () => {
                 opts,
             );
 
-            assert.calledOnceWith(
-                Viewport.create,
-                {
-                    captureArea: { left: 1, top: 2, width: 11, height: 21 },
-                    viewport: { left: 0, top: 0, width: 102, height: 202 },
-                    ignoreAreas: [{ left: 3, top: 4, width: 7, height: 8 }],
-                    documentHeight: 202,
-                    documentWidth: 102,
-                    pixelRatio: 1,
-                },
-                imageStub,
-                sinon.match.any,
-            );
+            assert.calledOnceWith(reprepareScreenshot, 1);
+            assert.calledOnceWith(Viewport.create, preparedPage, imageStub, sinon.match.any);
         });
 
         it("should extract image of passed size", async () => {

@@ -169,14 +169,29 @@ describe("assertView command", () => {
             },
         };
         const browser = await initBrowser_({ session });
+        sandbox.stub(browser, "cleanupScreenshot").resolves();
 
-        await browser.publicAPI.assertView("plain", ".selector");
+        await browser.publicAPI.assertView("plain", ".selector", { disableAnimation: true });
 
-        assert.calledOnceWith(browser.prepareScreenshot, [".selector"], sinon.match({ preferredPixelRatio: 3 }));
+        assert.calledOnceWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: true, preferredPixelRatio: 3 }),
+        );
         assert.calledOnceWith(
             ScreenShooter.prototype.capture,
             sinon.match.any,
             sinon.match({ preferredPixelRatio: 3 }),
+        );
+
+        const reprepareScreenshot = ScreenShooter.prototype.capture.lastCall.args[1].reprepareScreenshot;
+
+        await reprepareScreenshot(1);
+
+        assert.calledWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: false, preferredPixelRatio: 1 }),
         );
     });
 

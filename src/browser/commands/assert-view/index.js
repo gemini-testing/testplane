@@ -83,14 +83,16 @@ module.exports.default = browser => {
         const preferredPixelRatio =
             browser.shouldUsePixelRatio && !isHeadlessBrowser(chromeOptions) ? emulatedPixelRatio : undefined;
 
-        const page = await browser.prepareScreenshot([].concat(selectors), {
+        const screenshotSelectors = [].concat(selectors);
+        const prepareScreenshotOpts = {
             ignoreSelectors: [].concat(opts.ignoreElements),
             allowViewportOverflow: opts.allowViewportOverflow,
             captureElementFromTop: opts.captureElementFromTop,
             selectorToScroll: opts.selectorToScroll,
             disableAnimation: opts.disableAnimation,
             preferredPixelRatio,
-        });
+        };
+        const page = await browser.prepareScreenshot(screenshotSelectors, prepareScreenshotOpts);
 
         const { tempOpts, updateRefs: isUpdatingRefs } = RuntimeConfig.getInstance();
         temp.attach(tempOpts);
@@ -101,7 +103,15 @@ module.exports.default = browser => {
             "screenshotDelay",
             "selectorToScroll",
         ]);
-        screenshoterOpts.preferredPixelRatio = preferredPixelRatio;
+        if (preferredPixelRatio) {
+            screenshoterOpts.preferredPixelRatio = preferredPixelRatio;
+            screenshoterOpts.reprepareScreenshot = currentPixelRatio =>
+                browser.prepareScreenshot(screenshotSelectors, {
+                    ...prepareScreenshotOpts,
+                    disableAnimation: false,
+                    preferredPixelRatio: currentPixelRatio,
+                });
+        }
         const currImgInst = await screenShooter
             .capture(page, screenshoterOpts)
             .finally(() => browser.cleanupScreenshot(opts));

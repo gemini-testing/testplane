@@ -12,7 +12,14 @@ module.exports = class ScreenShooter {
     }
 
     async capture(page, opts = {}) {
-        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll, preferredPixelRatio } = opts;
+        const {
+            allowViewportOverflow,
+            compositeImage,
+            screenshotDelay,
+            selectorToScroll,
+            preferredPixelRatio,
+            reprepareScreenshot,
+        } = opts;
         const viewportOpts = { allowViewportOverflow, compositeImage };
         const cropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
@@ -21,24 +28,9 @@ module.exports = class ScreenShooter {
             const currentPixelRatio = await this._browser.evalScript("window.devicePixelRatio");
 
             if (currentPixelRatio !== preferredPixelRatio) {
-                const scale = currentPixelRatio / page.pixelRatio;
-                const scaleArea = area => {
-                    const left = Math.floor(area.left * scale);
-                    const top = Math.floor(area.top * scale);
-                    const right = Math.ceil((area.left + area.width) * scale);
-                    const bottom = Math.ceil((area.top + area.height) * scale);
-
-                    area.left = left;
-                    area.top = top;
-                    area.width = right - left;
-                    area.height = bottom - top;
-                };
-
-                [page.captureArea, page.viewport, ...page.ignoreAreas].forEach(scaleArea);
-                page.documentHeight = Math.ceil(page.documentHeight * scale);
-                page.documentWidth = Math.ceil(page.documentWidth * scale);
-                page.pixelRatio = currentPixelRatio;
+                Object.assign(page, await reprepareScreenshot(currentPixelRatio));
                 delete opts.preferredPixelRatio;
+                delete opts.reprepareScreenshot;
 
                 return this.capture(page, opts);
             }
