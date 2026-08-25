@@ -76,6 +76,19 @@ describe("cli/commands/list-browsers", () => {
         assert.calledOnceWith(process.exit as unknown as SinonStub, 0);
     });
 
+    it("should preserve a signal exit code on success", async () => {
+        const originalExitCode = process.exitCode;
+        process.exitCode = 130;
+
+        try {
+            await listBrowsers_();
+        } finally {
+            process.exitCode = originalExitCode;
+        }
+
+        assert.calledOnceWith(process.exit as unknown as SinonStub, 130);
+    });
+
     describe("list browsers", () => {
         it("should output browser tags in json format", async () => {
             testplaneStub.config.browsers = {
@@ -151,6 +164,19 @@ describe("cli/commands/list-browsers", () => {
 
             assert.calledOnceWith(loggerErrorStub, sinon.match(errorMessage));
             assert.calledOnceWith(process.exit as unknown as SinonStub, 1);
+        });
+
+        it("should preserve a signal exit code on failure", async () => {
+            const originalExitCode = process.exitCode;
+            process.exitCode = 143;
+
+            try {
+                await listBrowsers_(["--type", "invalid"]);
+            } finally {
+                process.exitCode = originalExitCode;
+            }
+
+            assert.calledOnceWith(process.exit as unknown as SinonStub, 143);
         });
     });
 });

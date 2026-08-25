@@ -1,6 +1,7 @@
 import { Testplane } from "../../../testplane";
 import { CliCommands } from "../../constants";
 import * as logger from "../../../utils/logger";
+import { resolveExitCode } from "../../../utils/exit-code";
 
 const { SELECTIVITY_MERGE_DUMPS: commandName } = CliCommands;
 
@@ -11,17 +12,22 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
         .option("-c, --config <path>", "path to configuration file")
         .option("-d, --destination <destination>", "path to directory with merged dump")
         .action(async (sourcePaths: string[], options: typeof commander) => {
+            let exitCode = 0;
             try {
-                const destPath = options.destination || testplane.config.selectivity.testDependenciesPath;
+                const action = async (): Promise<void> => {
+                    const destPath = options.destination || testplane.config.selectivity.testDependenciesPath;
 
-                const { mergeSelectivityDumps } = await import("../../../browser/cdp/selectivity/merge-dumps");
+                    const { mergeSelectivityDumps } = await import("../../../browser/cdp/selectivity/merge-dumps");
 
-                await mergeSelectivityDumps(destPath, sourcePaths, testplane.config.selectivity.compression);
-
-                process.exit(0);
+                    await mergeSelectivityDumps(destPath, sourcePaths, testplane.config.selectivity.compression);
+                };
+                await (typeof testplane.profileCliCommand === "function"
+                    ? testplane.profileCliCommand(commandName, action)
+                    : action());
             } catch (err) {
                 logger.error((err as Error).stack || err);
-                process.exit(1);
+                exitCode = 1;
             }
+            process.exit(resolveExitCode(exitCode));
         });
 };

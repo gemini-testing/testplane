@@ -2,7 +2,8 @@
 process.env.VITE_CJS_IGNORE_WARNING = "1";
 
 import path from "node:path";
-import { createServer } from "vite";
+import fs from "node:fs";
+import { createServer, searchForWorkspaceRoot } from "vite";
 import _ from "lodash";
 import getPort from "get-port";
 import chalk from "chalk";
@@ -33,7 +34,12 @@ export class ViteServer {
     constructor(testplaneConfig: Config) {
         this._testplaneConfig = testplaneConfig;
         this._viteConfig = {
-            server: { host: "localhost" },
+            server: {
+                host: "localhost",
+                fs: {
+                    allow: [...new Set([searchForWorkspaceRoot(process.cwd()), findPackageRoot(__dirname)])],
+                },
+            },
             configFile: false,
             logLevel: "silent",
             build: {
@@ -146,4 +152,18 @@ export class ViteServer {
             }
         }
     }
+}
+
+function findPackageRoot(start: string): string {
+    let current = start;
+
+    while (path.dirname(current) !== current) {
+        if (fs.existsSync(path.join(current, "package.json"))) {
+            return current;
+        }
+
+        current = path.dirname(current);
+    }
+
+    return fs.existsSync(path.join(current, "package.json")) ? current : start;
 }

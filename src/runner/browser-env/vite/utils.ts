@@ -33,13 +33,22 @@ export const getTestInfoFromViteRequest = (req: Connect.IncomingMessage): TestIn
     }
 
     const parsedUrl = url.parse(req.originalUrl);
-    const [routeName, runUuid] = _.compact(parsedUrl.pathname?.split("/"));
+    const routeParts = _.compact(parsedUrl.pathname?.split("/"));
+    const [routeName, runUuid, routeFile, ...nestedRoute] = routeParts;
 
     if (runUuid?.endsWith(".map")) {
         return null;
     }
 
-    if (routeName !== VITE_RUN_UUID_ROUTE || !runUuid) {
+    if (routeName !== VITE_RUN_UUID_ROUTE) {
+        return null;
+    }
+
+    if (nestedRoute.length || (routeFile && routeFile !== "index.html")) {
+        return null;
+    }
+
+    if (!runUuid) {
         throw new Error(`Pathname must be in "/${VITE_RUN_UUID_ROUTE}/:uuid" format, but got: ${req.originalUrl}`);
     }
 

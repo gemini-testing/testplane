@@ -62,11 +62,27 @@ const computeFile = mochaSuite => {
 const getMethodsByInterface = (mochaInterface = "bdd") => {
     switch (mochaInterface) {
         case "tdd":
+            return {
+                suiteMethods: ["suite"],
+                testMethods: ["test"],
+                beforeEachMethods: ["setup"],
+                afterEachMethods: ["teardown"],
+            };
         case "qunit":
-            return { suiteMethods: ["suite"], testMethods: ["test"] };
+            return {
+                suiteMethods: ["suite"],
+                testMethods: ["test"],
+                beforeEachMethods: ["beforeEach"],
+                afterEachMethods: ["afterEach"],
+            };
         case "bdd":
         default:
-            return { suiteMethods: ["describe", "context"], testMethods: ["it", "specify"] };
+            return {
+                suiteMethods: ["describe", "context"],
+                testMethods: ["it", "specify"],
+                beforeEachMethods: ["beforeEach"],
+                afterEachMethods: ["afterEach"],
+            };
     }
 };
 

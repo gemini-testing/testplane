@@ -6,13 +6,14 @@ const { WorkerEvents } = require("../../events");
 const ipc = require("../../utils/ipc");
 
 module.exports = class BrowserPool {
-    static create(config, emitter) {
-        return new BrowserPool(config, emitter);
+    static create(config, emitter, profiler) {
+        return new BrowserPool(config, emitter, profiler);
     }
 
-    constructor(config, emitter) {
+    constructor(config, emitter, profiler) {
         this._config = config;
         this._emitter = emitter;
+        this._profiler = profiler;
         this._calibrator = new Calibrator();
     }
 
@@ -22,6 +23,7 @@ module.exports = class BrowserPool {
             version: browserVersion,
             state,
             emitter: this._emitter,
+            ...(this._profiler && { profiler: this._profiler }),
         });
 
         try {

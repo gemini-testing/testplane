@@ -542,7 +542,7 @@ describe("testplane", () => {
                 const testplane = await mkTestplane_();
 
                 return testplane.run().then(() => {
-                    _.forEach(MasterAsyncEvents, (event, name) => {
+                    _.forEach(_.omit(MasterAsyncEvents, "PROFILER_RESULT"), (event, name) => {
                         const spy = sinon.spy().named(`${name} handler`);
                         testplane.on(event, spy);
 
@@ -563,7 +563,7 @@ describe("testplane", () => {
                         eventsUtils.passthroughEventAsync,
                         runner,
                         sinon.match.instanceOf(Testplane),
-                        _.values(MasterAsyncEvents),
+                        _.without(_.values(MasterAsyncEvents), RunnerEvents.PROFILER_RESULT),
                     );
                     assert.callOrder(eventsUtils.passthroughEventAsync, runner.run);
                 });
@@ -577,7 +577,7 @@ describe("testplane", () => {
                     browserId: "chrome",
                     browserVersion: "1",
                 };
-                const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE"];
+                const omitEvents = ["EXIT", "NEW_BROWSER", "UPDATE_REFERENCE", "PROFILER_RESULT"];
 
                 return testplane.run().then(() => {
                     _.forEach(_.omit(testplane.events, omitEvents), (event, name) => {
@@ -621,6 +621,28 @@ describe("testplane", () => {
                     );
                     assert.callOrder(eventsUtils.passthroughEventAsync, runner.run);
                 });
+            });
+
+            it("finalizes a signal profile after RUNNER_END teardown handlers", async () => {
+                let releaseRunner;
+                mkRunner_(() => new Promise(resolve => (releaseRunner = resolve)));
+                const testplane = await mkTestplane_();
+                const order = [];
+                testplane.on(RunnerEvents.RUNNER_END, async () => {
+                    await promiseDelay(5);
+                    order.push("teardown");
+                });
+                sandbox.stub(testplane._profiler, "finalizeSafely").callsFake(async () => {
+                    order.push("profiler");
+                });
+
+                const runPromise = testplane.run();
+                await promiseDelay(0);
+                await signalHandler.emitAndWait(RunnerEvents.RUNNER_END, new Error("SIGINT"));
+                releaseRunner();
+                await runPromise;
+
+                assert.deepEqual(order, ["teardown", "profiler"]);
             });
         });
     });
@@ -988,6 +1010,22 @@ describe("testplane", () => {
                         assert.calledWithMatch(loggerErrorStub, /Forcing shutdown.../);
                         assert.calledOnceWith(process.exit, 1);
                     });
+            });
+
+            it("should preserve a pending signal exit code", async () => {
+                const originalExitCode = process.exitCode;
+                process.exitCode = 143;
+                testplane.on(RunnerEvents.RUNNER_START, () => {
+                    testplane.halt(new Error("test error"), 25);
+                });
+
+                try {
+                    await testplane.run().finally(() => promiseDelay(50));
+
+                    assert.calledOnceWith(process.exit, 143);
+                } finally {
+                    process.exitCode = originalExitCode;
+                }
             });
 
             it("should do nothing if timeout is set to zero", async () => {

@@ -113,6 +113,10 @@ module.exports = {
         output: ".testplane/failed.json",
         input: ".testplane/failed.json",
     },
+    profiler: {
+        level: 0,
+        output: null,
+    },
     devServer: {
         command: null,
         cwd: null,

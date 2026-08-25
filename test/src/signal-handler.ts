@@ -11,6 +11,7 @@ describe("src/signal-handler", () => {
     let clock: SinonFakeTimers;
     let processOnStub: SinonStub;
     let processExitStub: SinonStub;
+    let originalExitCode: number | string | null | undefined;
 
     const getCallBySignal = (sig: string): SinonSpyCall => {
         return processOnStub.getCalls().find((call: SinonSpyCall) => call.args[0] === sig) as SinonSpyCall;
@@ -21,6 +22,7 @@ describe("src/signal-handler", () => {
     };
 
     beforeEach(() => {
+        originalExitCode = process.exitCode;
         clock = sandbox.useFakeTimers({ now: 1000 });
         processOnStub = sandbox.stub(process, "on") as SinonStub;
         processExitStub = sandbox.stub(process, "exit") as SinonStub;
@@ -33,7 +35,10 @@ describe("src/signal-handler", () => {
         }).default;
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        process.exitCode = originalExitCode;
+        sandbox.restore();
+    });
 
     [
         { signal: "SIGHUP", exitCode: 129 },
@@ -51,6 +56,7 @@ describe("src/signal-handler", () => {
                 signalHandler.on("exit", handler);
 
                 sendSignal(signal);
+                assert.equal(process.exitCode, exitCode);
 
                 return clock.tickAsync(20).then(() => {
                     assert.callOrder(handler, afterHandler, processExitStub);
@@ -63,6 +69,27 @@ describe("src/signal-handler", () => {
                 sendSignal(signal);
 
                 assert.calledOnceWith(process.exit, exitCode);
+            });
+
+            it("should exit with the signal code if teardown rejects", async () => {
+                signalHandler.on("exit", () => Promise.reject(new Error("teardown failed")));
+
+                sendSignal(signal);
+                await clock.tickAsync(0);
+
+                assert.calledOnceWith(process.exit, exitCode);
+            });
+
+            it("should still emit runner end if exit teardown rejects", async () => {
+                const onRunnerEnd = sandbox.stub().named("onRunnerEnd");
+                signalHandler.on("exit", () => Promise.reject(new Error("teardown failed")));
+                signalHandler.on("endRunner", onRunnerEnd);
+
+                sendSignal(signal);
+                await clock.tickAsync(0);
+
+                assert.calledOnce(onRunnerEnd);
+                assert.callOrder(onRunnerEnd, processExitStub);
             });
         });
     });

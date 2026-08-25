@@ -5,13 +5,25 @@ const RuntimeConfig = require("../../../config/runtime-config");
 const logger = require("../../../utils/logger");
 const { AbortOnReconnectError } = require("../../../errors/abort-on-reconnect-error");
 const { captureFailScreenshot } = require("./capture-fail-screenshot");
+const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
+const { ProfilerSanitizer } = require("../../../profiler/sanitize");
+
+let profilerSanitizer;
 
 module.exports = class ExecutionThread {
     static create(...args) {
         return new this(...args);
     }
 
-    constructor({ test, browser, testplaneCtx, attempt }) {
+    constructor({
+        test,
+        browser,
+        testplaneCtx,
+        attempt,
+        attemptId = /** @type {string | undefined} */ (undefined),
+        profileSessionId = /** @type {string | undefined} */ (undefined),
+        profiler = /** @type {import("../../../profiler").ProfilerRuntimeLike} */ (noopProfilerRuntime),
+    }) {
         this._testplaneCtx = testplaneCtx;
         this._browser = browser;
         this._ctx = {
@@ -21,9 +33,49 @@ module.exports = class ExecutionThread {
         };
 
         this._runtimeConfig = RuntimeConfig.getInstance();
+        this._profiler = profiler;
+        this._attemptId = attemptId;
+        this._profileSessionId = profileSessionId;
+        this._runnableKind = "test";
+        this._profileHookSource = profiler.isEnabled?.(2) ?? false;
     }
 
-    async run(runnable) {
+    async run(runnable, meta = { kind: "test" }) {
+        this._runnableKind = meta.kind;
+        const execute = () => this._profiler.withContext({ runnableKind: meta.kind }, () => this._run(runnable));
+        if (meta.kind === "beforeEach" || meta.kind === "afterEach") {
+            return this._profiler.withSpan(
+                "test.hook",
+                {
+                    minLevel: 2,
+                    name: runnable.fullTitle(),
+                    context: { runnableKind: meta.kind },
+                    source: this._hookSource(runnable),
+                    attributes: { hook: meta.kind },
+                },
+                execute,
+            );
+        }
+
+        return execute();
+    }
+
+    _hookSource(runnable) {
+        if (!this._profileHookSource) {
+            return;
+        }
+
+        profilerSanitizer ??= new ProfilerSanitizer();
+        return {
+            file: profilerSanitizer.path(runnable.file),
+            line: runnable.location?.line,
+            column: runnable.location?.column,
+            functionName: runnable.fn?.name || undefined,
+            confidence: runnable.location ? "high" : "medium",
+        };
+    }
+
+    async _run(runnable) {
         this._setExecutionContext(
             Object.assign(runnable, {
                 testplaneCtx: this._testplaneCtx,

@@ -4,7 +4,7 @@ import { LimitedUseSet } from "./limited-use-set";
 import { buildCompositeBrowserId } from "./utils";
 import { BasicPool } from "./basic-pool";
 import { Config } from "../config";
-import { Pool } from "./types";
+import { Pool, PoolObserver } from "./types";
 import { NewBrowser } from "../browser/new-browser";
 
 export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; compositeIdForNextRequest?: string };
@@ -12,14 +12,16 @@ export type FreeBrowserOpts = { hasFreeSlots?: boolean; force?: boolean; composi
 export class CachingPool implements Pool {
     private _caches: Record<string, LimitedUseSet<NewBrowser>>;
     private _config: Config;
+    private _observer?: PoolObserver;
     underlyingPool: BasicPool;
     log: debug.Debugger;
 
-    constructor(underlyingPool: BasicPool, config: Config) {
+    constructor(underlyingPool: BasicPool, config: Config, observer?: PoolObserver) {
         this.log = debug("testplane:pool:caching");
         this.underlyingPool = underlyingPool;
         this._caches = {};
         this._config = config;
+        this._observer = isPoolObserver(observer) ? observer : undefined;
     }
 
     private _getCacheFor(id: string, version?: string): LimitedUseSet<NewBrowser> {
@@ -48,15 +50,18 @@ export class CachingPool implements Pool {
 
         this.log(`has cached browser ${browser.fullId}`);
 
-        return browser
-            .reset()
-            .catch(e => {
-                return this.underlyingPool.freeBrowser(browser).then(
-                    () => Promise.reject(e),
-                    () => Promise.reject(e),
-                );
-            })
-            .then(() => browser);
+        this._observer?.record("sessionReused", { browserId: id });
+        const resetOperation = this._observer?.start("browser.session.reset", { browserId: id, reused: true });
+
+        try {
+            await browser.reset();
+            resetOperation?.end();
+            return browser;
+        } catch (error) {
+            resetOperation?.end("failed");
+            await this.underlyingPool.freeBrowser(browser).catch(() => undefined);
+            throw error;
+        }
     }
 
     private _initPool(browserId: string, version?: string): void {
@@ -100,11 +105,13 @@ export class CachingPool implements Pool {
         this.log(`free ${browser.fullId} force=${force}`);
 
         if (force) {
+            this._observer?.record("sessionFreed", { browserId: browser.id, cached: false });
             return this.underlyingPool.freeBrowser(browser);
         }
 
         const cache = this._getCacheFor(browser.id, browser.version);
 
+        this._observer?.record("sessionFreed", { browserId: browser.id, cached: true });
         return cache.push(browser);
     }
 
@@ -112,4 +119,8 @@ export class CachingPool implements Pool {
         this.log("cancel");
         this.underlyingPool.cancel();
     }
+}
+
+function isPoolObserver(value?: PoolObserver): value is PoolObserver {
+    return typeof value?.start === "function" && typeof value.record === "function";
 }

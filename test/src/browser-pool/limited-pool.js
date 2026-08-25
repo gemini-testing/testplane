@@ -9,8 +9,8 @@ describe("browser-pool/limited-pool", () => {
     const sandbox = sinon.createSandbox();
     let underlyingPool;
 
-    const makePool_ = ({ limit = 1, isSpecificBrowserLimiter = true } = {}) =>
-        new LimitedPool(underlyingPool, { limit, isSpecificBrowserLimiter });
+    const makePool_ = ({ limit = 1, isSpecificBrowserLimiter = true, observer } = {}) =>
+        new LimitedPool(underlyingPool, { limit, isSpecificBrowserLimiter, observer });
 
     beforeEach(() => {
         underlyingPool = {
@@ -101,6 +101,22 @@ describe("browser-pool/limited-pool", () => {
                     compositeIdForNextRequest: undefined,
                 }),
             );
+        });
+
+        it("should report that the last launched session was released", async () => {
+            const observer = { start: sinon.stub(), record: sinon.stub() };
+            const pool = makePool_({ limit: 1, observer });
+            const browser = stubBrowser("bro");
+
+            await pool.getBrowser("bro");
+            await pool.freeBrowser(browser);
+
+            assert.calledWith(observer.record, "sessionsLaunched", {
+                browserId: "bro",
+                limiter: "browser",
+                limit: 1,
+                value: 0,
+            });
         });
     });
 

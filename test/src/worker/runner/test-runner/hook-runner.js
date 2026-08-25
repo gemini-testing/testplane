@@ -53,7 +53,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
             await mkRunner_().runBeforeEachHooks();
 
-            assert.calledWithMatch(ExecutionThread.prototype.run, hook);
+            assert.calledWithMatch(ExecutionThread.prototype.run, hook, { kind: "beforeEach" });
         });
 
         it("should protect hook from modification during run in execution thread", async () => {
@@ -150,7 +150,7 @@ describe("worker/runner/test-runner/hook-runner", () => {
 
             await mkRunner_().runAfterEachHooks();
 
-            assert.calledWithMatch(ExecutionThread.prototype.run, hook);
+            assert.calledWithMatch(ExecutionThread.prototype.run, hook, { kind: "afterEach" });
         });
 
         it("should protect hook from modification during run in execution thread", async () => {

@@ -592,6 +592,58 @@ describe("config options", () => {
         });
     });
 
+    describe("profiler", () => {
+        it("should disable profiling by default for absent and empty sections", async () => {
+            const absent = await createConfig();
+            Config.read.returns({ profiler: {} });
+            const empty = await createConfig();
+
+            assert.deepEqual(absent.profiler, { level: 0, output: null });
+            assert.deepEqual(empty.profiler, { level: 0, output: null });
+        });
+
+        it("should accept cumulative profiler levels 0 through 3", async () => {
+            for (const level of [0, 1, 2, 3]) {
+                Config.read.returns({ profiler: { level } });
+
+                assert.equal((await createConfig()).profiler.level, level);
+            }
+        });
+
+        it("should reject non-integer and out-of-range profiler levels", async () => {
+            for (const level of [-1, 4, 1.5, "1", null]) {
+                Config.read.returns({ profiler: { level } });
+
+                await assert.isRejected(createConfig(), '"profiler.level" must be one of 0, 1, 2 or 3');
+            }
+        });
+
+        it("should parse profiler level from environment", () => {
+            const result = parse_({
+                options: { profiler: {} },
+                env: { ["testplane_profiler_level"]: "2" },
+            });
+
+            assert.equal(result.profiler.level, 2);
+        });
+
+        it("should accept null or a non-empty JSON output path", async () => {
+            Config.read.returns({ profiler: { output: "reports/profile.json" } });
+            assert.equal((await createConfig()).profiler.output, "reports/profile.json");
+
+            Config.read.returns({ profiler: { output: null } });
+            assert.isNull((await createConfig()).profiler.output);
+        });
+
+        it("should reject invalid profiler output paths", async () => {
+            for (const output of ["", 42, "profile.txt"]) {
+                Config.read.returns({ profiler: { output } });
+
+                await assert.isRejected(createConfig(), /"profiler.output"/);
+            }
+        });
+    });
+
     describe("prepareEnvironment", () => {
         it("should throw error if prepareEnvironment is not a null or function", async () => {
             const readConfig = { prepareEnvironment: "String" };

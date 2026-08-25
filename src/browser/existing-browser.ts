@@ -120,7 +120,18 @@ export class ExistingBrowser extends Browser {
                 this._callstackHistory?.clear();
 
                 try {
-                    this.config.prepareBrowser && this.config.prepareBrowser(this.publicAPI);
+                    if (this.config.prepareBrowser) {
+                        this._profiler.withSpan(
+                            "user.callback",
+                            {
+                                minLevel: 2,
+                                name: this.config.prepareBrowser.name || "prepareBrowser",
+                                attributes: { callback: "prepareBrowser", browserId: this.id },
+                                quality: { source: "unavailable" },
+                            },
+                            () => this.config.prepareBrowser!(this.publicAPI),
+                        );
+                    }
                 } catch (e: unknown) {
                     logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, (e as Error)?.stack);
                 }

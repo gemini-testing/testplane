@@ -371,6 +371,38 @@ describe("test-reader/mocha-reader", () => {
                 });
             });
 
+            ["beforeEach", "afterEach"].forEach((methodName, index) => {
+                it(`should add location to profiler hook using "${methodName}"`, async () => {
+                    getMethodsByInterfaceStub.withArgs("bdd").returns({
+                        suiteMethods: [],
+                        testMethods: [],
+                        beforeEachMethods: ["beforeEach"],
+                        afterEachMethods: ["afterEach"],
+                    });
+                    const hook = {};
+                    const event = index === 0 ? "EVENT_SUITE_ADD_HOOK_BEFORE_EACH" : "EVENT_SUITE_ADD_HOOK_AFTER_EACH";
+                    const globalCtx = {
+                        [methodName]: () => emitAddRunnable_(hook, event),
+                    };
+
+                    Mocha.prototype.loadFilesAsync.callsFake(() => {
+                        MochaEventBus.create.lastCall.returnValue.emit(
+                            MochaEventBus.events.EVENT_FILE_PRE_REQUIRE,
+                            globalCtx,
+                        );
+                    });
+                    SourceMapSupportStub.wrapCallSite.returns({
+                        getLineNumber: () => 42,
+                        getColumnNumber: () => 7,
+                    });
+
+                    await readFiles_({ config: { ui: "bdd" }, runnableOpts: { saveHookLocations: true } });
+                    globalCtx[methodName]();
+
+                    assert.deepEqual(hook, { location: { line: 42, column: 7 } });
+                });
+            });
+
             it(`should add location to each runnable`, async () => {
                 getMethodsByInterfaceStub.withArgs("bdd").returns({ suiteMethods: ["describe"], testMethods: ["it"] });
                 const suite = {};

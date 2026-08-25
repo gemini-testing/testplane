@@ -1,5 +1,6 @@
 import path from "node:path";
 import url from "node:url";
+import fs from "node:fs";
 import { builtinModules, createRequire } from "node:module";
 import _ from "lodash";
 import createDebug from "debug";
@@ -9,7 +10,7 @@ import { polyfillPath } from "../polyfill";
 import * as logger from "../../../../utils/logger";
 
 import type { WorkerInitializePayload } from "../browser-modules/types";
-import type { Plugin, Rollup } from "vite";
+import type { Connect, Plugin, Rollup } from "vite";
 
 const debug = createDebug("vite:plugin:generateIndexHtml");
 
@@ -18,6 +19,7 @@ const DEFAULT_MODULES_TO_STUB = ["puppeteer-core", "archiver", "@wdio/repl", "js
 const POLYFILLS = [...builtinModules, ...builtinModules.map(m => `node:${m}`)];
 
 const virtualDriverModuleId = "virtual:@testplane/driver";
+const MOCHA_RUNTIME_URL = "/__testplane__/mocha.js";
 
 const virtualModules = {
     driver: {
@@ -30,6 +32,7 @@ export const plugin = async (): Promise<Plugin[]> => {
     const require = createRequire(getImportMetaUrl(__filename));
     const mochaMainPath = require.resolve("mocha");
     const mochaModulePath = path.join(path.dirname(mochaMainPath), "mocha.js");
+    const mochaSource = fs.readFileSync(mochaModulePath, "utf8");
 
     const dirname = url.fileURLToPath(new URL(".", getImportMetaUrl(__filename)));
     const browserModulesPath = path.resolve(dirname, "..", "browser-modules");
@@ -53,7 +56,9 @@ export const plugin = async (): Promise<Plugin[]> => {
         {
             name: "testplane:generateIndexHtml",
             enforce: "pre",
-            configureServer(server) {
+            configureServer(server): () => void {
+                server.middlewares.use(createMochaMiddleware(mochaSource));
+
                 return () => {
                     server.middlewares.use(async (req, res, next) => {
                         debug(`Received request for: ${req.originalUrl}`);
@@ -64,7 +69,10 @@ export const plugin = async (): Promise<Plugin[]> => {
                                 return next();
                             }
 
-                            const template = generateTemplate(testInfo.env, testInfo.runUuid);
+                            const template = generateTemplate(testInfo.env, testInfo.runUuid, {
+                                globals: globalsModulePath,
+                                browserRunner: browserRunnerModulePath,
+                            });
                             res.end(await server.transformIndexHtml(`${req.originalUrl}`, template));
                         } catch (err) {
                             const template = generateErrorTemplate(err as Error);
@@ -127,7 +135,11 @@ export const plugin = async (): Promise<Plugin[]> => {
     ];
 };
 
-function generateTemplate(env: WorkerInitializePayload, runUuid: string): string {
+export function generateTemplate(
+    env: WorkerInitializePayload,
+    runUuid: string,
+    modules: { globals: string; browserRunner: string },
+): string {
     return `
 <!DOCTYPE html>
 <html>
@@ -145,13 +157,29 @@ function generateTemplate(env: WorkerInitializePayload, runUuid: string): string
                 return mod;
             }
         </script>
-        <script type="module" src="${MODULE_NAMES.globals}"></script>
-        <script type="module" src="${MODULE_NAMES.mocha}"></script>
-        <script type="module" src="${MODULE_NAMES.browserRunner}"></script>
+        <script type="module" src="${viteFsUrl(modules.globals)}"></script>
+        <script src="${MOCHA_RUNTIME_URL}"></script>
+        <script type="module" src="${viteFsUrl(modules.browserRunner)}"></script>
     </head>
     <body></body>
 </html>
 `;
+}
+
+function viteFsUrl(file: string): string {
+    return path.posix.join("/@fs", file.replaceAll(path.sep, path.posix.sep));
+}
+
+export function createMochaMiddleware(source: string): Connect.NextHandleFunction {
+    return (req, res, next): void => {
+        if (req.url !== MOCHA_RUNTIME_URL) {
+            next();
+            return;
+        }
+
+        res.setHeader("content-type", "text/javascript; charset=utf-8");
+        res.end(source);
+    };
 }
 
 function generateErrorTemplate(error: Error): string {

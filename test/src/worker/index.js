@@ -2,6 +2,8 @@
 
 const clearRequire = require("clear-require");
 const TestplaneFacade = require("src/worker/testplane-facade");
+const ipc = require("src/utils/ipc");
+const { WORKER_PROFILER_BATCH } = require("src/constants/process-messages");
 
 describe("worker", () => {
     const sandbox = sinon.createSandbox();
@@ -18,6 +20,36 @@ describe("worker", () => {
         require("src/worker");
 
         assert.calledOnce(TestplaneFacade.prototype.init);
+    });
+
+    describe("profiler batches", () => {
+        it("should periodically send a non-empty profiler fragment", async () => {
+            const clock = sandbox.useFakeTimers();
+            const fragment = { transportVersion: 1, sequence: 1 };
+            TestplaneFacade.prototype.init.resolves();
+            TestplaneFacade.prototype.profilerLevel.resolves(3);
+            TestplaneFacade.prototype.flushProfiler.resolves(fragment);
+            sandbox.stub(ipc, "emit");
+
+            require("src/worker");
+            await clock.tickAsync(100);
+
+            assert.calledOnceWith(ipc.emit, WORKER_PROFILER_BATCH, {
+                fragment,
+                workerPid: process.pid,
+            });
+        });
+
+        it("should not start a batch timer at level 0", async () => {
+            const clock = sandbox.useFakeTimers();
+            TestplaneFacade.prototype.init.resolves();
+            TestplaneFacade.prototype.profilerLevel.resolves(0);
+
+            require("src/worker");
+            await clock.tickAsync(1000);
+
+            assert.notCalled(TestplaneFacade.prototype.flushProfiler);
+        });
     });
 
     describe("runTest", () => {

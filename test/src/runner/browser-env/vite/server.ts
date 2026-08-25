@@ -1,3 +1,4 @@
+import path from "node:path";
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import Vite from "vite";
@@ -76,6 +77,13 @@ describe("runner/browser-env/vite/server", () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
                     assert.calledOnceWith(Vite.createServer, sinon.match({ server: { host: "localhost" } }));
+                });
+
+                it("allows runtime modules from the Testplane package root", async () => {
+                    await ViteServerStub.create(mkConfig_()).start();
+
+                    const viteConfig = (Vite.createServer as SinonStub).firstCall.args[0] as Vite.InlineConfig;
+                    assert.include(viteConfig.server?.fs?.allow ?? [], path.resolve(__dirname, "../../../../.."));
                 });
 
                 it("without config file", async () => {

@@ -28,6 +28,7 @@ function makeConfigStub(opts = {}) {
             expectOpts: {},
             patternsOnReject: [],
             testRunEnv: NODEJS_TEST_RUN_ENV,
+            workers: 1,
         },
         sets: {},
         lastFailed: {
@@ -41,6 +42,7 @@ function makeConfigStub(opts = {}) {
         },
         timeTravel: { mode: "off" },
         selectivity: { enabled: false },
+        profiler: { level: 0, output: null },
     });
 
     const config = {
@@ -53,6 +55,7 @@ function makeConfigStub(opts = {}) {
         lastFailed: opts.lastFailed,
         timeTravel: opts.timeTravel,
         selectivity: opts.selectivity,
+        profiler: opts.profiler,
         takeScreenshotOnFails: opts.takeScreenshotOnFails,
     };
 

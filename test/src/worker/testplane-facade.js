@@ -61,6 +61,55 @@ describe("worker/testplane-facade", () => {
 
             assert.calledOnceWith(requireModule, "foo");
         });
+
+        it("should create worker Testplane with the master profiler run id", async () => {
+            ipc.on.withArgs(MASTER_INIT).yieldsAsync({
+                configPath: "testplane.config.js",
+                runtimeConfig: {},
+                profiler: { runId: "master-run", workerInstanceId: "worker-7" },
+            });
+
+            await testplaneFacade.init();
+
+            assert.calledOnceWith(
+                Testplane.create,
+                "testplane.config.js",
+                undefined,
+                sinon.match({
+                    runId: "master-run",
+                    process: sinon.match({ type: "worker", workerInstanceId: "worker-7" }),
+                }),
+            );
+        });
+
+        it("should align the worker profiler clock using midpoint timestamps", async () => {
+            sandbox.stub(Date, "now").returns(1_042);
+            ipc.on.withArgs(MASTER_INIT).yieldsAsync({
+                configPath: "testplane.config.js",
+                runtimeConfig: {},
+                profiler: {
+                    runId: "master-run",
+                    workerInstanceId: "worker-7",
+                    clockSync: {
+                        workerSentAtEpochMs: 1_000,
+                        masterReceivedAtEpochMs: 1_120,
+                        masterSentAtEpochMs: 1_122,
+                    },
+                },
+            });
+
+            await testplaneFacade.init();
+
+            assert.calledOnceWith(
+                Testplane.create,
+                "testplane.config.js",
+                undefined,
+                sinon.match({
+                    clockOffsetMs: 100,
+                    clockUncertaintyMs: 20,
+                }),
+            );
+        });
     });
 
     describe("runTest", () => {

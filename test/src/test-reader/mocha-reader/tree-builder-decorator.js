@@ -360,6 +360,14 @@ describe("test-reader/mocha-reader/tree-builder-decorator", () => {
                 assert.calledWithMatch(Hook.create, { fn });
             });
 
+            it("should pass hook location to hook constructor", () => {
+                const location = { line: 42, column: 7 };
+
+                mkDecorator_()[method](mkMochaHook_({ location }));
+
+                assert.calledWithMatch(Hook.create, { location });
+            });
+
             it("should pass created hook to base tree builder", () => {
                 const treeBuilder = sinon.createStubInstance(TreeBuilder);
                 const hook = new Hook({});
