@@ -667,6 +667,10 @@ export class ElementsScreenShooter {
         perfDebug(`capture attempt (${attemptMode}): begin`);
         try {
             await this._scrollThroughCaptureArea(targetsToCapture, targetsToIgnore, page, opts, async currentState => {
+                if (currentState.scrollOffset !== page.scrollOffset) {
+                    shouldRestoreScrollPosition = true;
+                }
+
                 if (currentState.captureSpecs.length === 0) {
                     if (iterations > 0) {
                         debug(
@@ -759,10 +763,6 @@ export class ElementsScreenShooter {
                 const movingCaptureSpecs = getMovingCaptureSpecs(currentState, lastState);
                 hasCapturedTheWholeArea = movingCaptureSpecs.every(s => getBottom(s.full) <= getBottom(newSafeArea));
                 isOverflowingViewport = newCaptureSpecs.some(s => getBottom(s.full) > page.viewportSize.height);
-
-                if (currentState.scrollOffset !== page.scrollOffset) {
-                    shouldRestoreScrollPosition = true;
-                }
 
                 debug("newCaptureSpecs: %O", newCaptureSpecs);
                 debug("newSafeArea: %O", newSafeArea);
