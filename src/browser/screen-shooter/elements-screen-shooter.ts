@@ -289,9 +289,7 @@ export class ElementsScreenShooter {
 
                 perfDebug(`capture: retrying in best-effort mode (${error.message})`);
 
-                if (error instanceof PixelRatioChangeError) {
-                    delete opts.preferredPixelRatio;
-                }
+                delete opts.preferredPixelRatio;
 
                 if (error instanceof CaptureAreaSizeChangeError) {
                     await this._preloadCaptureArea(targetsToCapture, targetsToIgnore, page, opts);

@@ -309,6 +309,7 @@ describe("ElementsScreenShooter", () => {
         });
 
         it("should preload and do best-effort capture when capture area size changes mid-capture", async () => {
+            browserProperties.emulatedPixelRatio = 3;
             const page = createMockPage({ captureSpecs: [captureSpec(rect(0, 0, 100, 80))] });
             const changedState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
             const preloadState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
@@ -344,6 +345,18 @@ describe("ElementsScreenShooter", () => {
                     .filter(m => m === "captureAnchorBaseline"),
                 ["captureAnchorBaseline"],
             );
+            assert.deepEqual(browserSideScreenshooter.call.getCall(1).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, 3, []],
+            ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, undefined, []],
+            ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(5).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, undefined, []],
+            ]);
             assert.calledOnce(camera.captureViewportImage);
             assert.deepEqual(result, { image: renderedImage, meta: page });
         });
