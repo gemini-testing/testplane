@@ -21,6 +21,9 @@ interface ScreenShooterBrowserProperties {
     isWebdriverProtocol: boolean;
     shouldUsePixelRatio: boolean;
     needsCompatLib: boolean;
+    isHeadless: boolean;
+    isPixelRatioEmulated: boolean;
+    estimatedPixelRatioFromCapabilities?: number;
 }
 
 interface ViewportScreenShooterInputParams {
@@ -39,6 +42,7 @@ interface ViewportCaptureOpts {
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
     cropMargins?: CropMargins;
+    pixelRatioOverride?: number;
 }
 
 interface ViewportCaptureResult {
@@ -70,6 +74,15 @@ export class ViewportScreenShooter {
     }
 
     async capture(opts: ViewportCaptureOpts = {}): Promise<ViewportCaptureResult> {
+        const shouldValidatePixelRatio =
+            this._browserProperties.shouldUsePixelRatio &&
+            !this._browserProperties.isHeadless &&
+            this._browserProperties.isPixelRatioEmulated;
+
+        if (shouldValidatePixelRatio && this._browserProperties.estimatedPixelRatioFromCapabilities !== undefined) {
+            opts.pixelRatioOverride = this._browserProperties.estimatedPixelRatioFromCapabilities;
+        }
+
         try {
             return await this._captureImpl(opts);
         } finally {
@@ -82,25 +95,30 @@ export class ViewportScreenShooter {
         }
     }
 
-    private async _captureImpl(opts: ViewportCaptureOpts): Promise<ViewportCaptureResult> {
+    private async _captureImpl(opts: ViewportCaptureOpts, isRetry = false): Promise<ViewportCaptureResult> {
         const selectorsToIgnore = ([] as string[]).concat(opts.ignoreElements ?? []);
+        // Keep the initial preparation side effects and their cleanup callbacks intact during the retry.
+        const disableAnimation = isRetry ? false : opts.disableAnimation;
+        const disableHover = isRetry ? undefined : opts.disableHover;
 
         const prepareResult = await runWithoutHistory({}, () =>
             this._browserSideScreenshooter.call("prepareViewportScreenshot", [
                 {
                     usePixelRatio: this._browserProperties.shouldUsePixelRatio,
-                    disableAnimation: opts.disableAnimation,
-                    disableHover: opts.disableHover,
+                    disableAnimation,
+                    disableHover,
                     ignoreSelectors: selectorsToIgnore,
+                    pixelRatioOverride: opts.pixelRatioOverride,
                 },
             ]),
         );
 
         debug("prepareViewportScreenshot opts: %O", {
             usePixelRatio: this._browserProperties.shouldUsePixelRatio,
-            disableAnimation: opts.disableAnimation,
-            disableHover: opts.disableHover,
+            disableAnimation,
+            disableHover,
             ignoreSelectors: selectorsToIgnore,
+            pixelRatioOverride: opts.pixelRatioOverride,
         });
         debug("prepareViewportScreenshot result: %O", prepareResult);
 
@@ -111,12 +129,12 @@ export class ViewportScreenShooter {
         }
 
         // https://github.com/webdriverio/webdriverio/issues/11396
-        if (this._browserProperties.isWebdriverProtocol && opts.disableAnimation) {
+        if (this._browserProperties.isWebdriverProtocol && disableAnimation) {
             await disableIframeAnimations(this._browser, this._browserSideScreenshooter);
         }
 
         await preparePointerForScreenshot(this._browser, {
-            disableHover: opts.disableHover,
+            disableHover,
             pointerEventsDisabled: prepareResult.pointerEventsDisabled,
         });
 
@@ -130,6 +148,22 @@ export class ViewportScreenShooter {
             screenshotDelay: opts.screenshotDelay,
             cropMargins: opts.cropMargins,
         });
+
+        const shouldCheckPixelRatio =
+            !isRetry &&
+            this._browserProperties.shouldUsePixelRatio &&
+            !this._browserProperties.isHeadless &&
+            this._browserProperties.isPixelRatioEmulated;
+
+        if (shouldCheckPixelRatio) {
+            const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
+
+            if (currentPixelRatio !== prepareResult.pixelRatio) {
+                delete opts.pixelRatioOverride;
+
+                return this._captureImpl(opts, true);
+            }
+        }
 
         if (prepareResult.ignoreAreas.length > 0) {
             const cropOffset = {

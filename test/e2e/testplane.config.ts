@@ -25,6 +25,10 @@ export default {
             files: path.join(__dirname, "tests/calibration-resize.testplane.js"),
             browsers: ["calibrated-chrome"],
         },
+        dprOopif: {
+            files: path.join(__dirname, "tests/dpr-oopif.testplane.js"),
+            browsers: ["chrome-dpr-3"],
+        },
     },
 
     takeScreenshotOnFails: {
@@ -42,7 +46,6 @@ export default {
                 browserName: "chrome",
                 "goog:chromeOptions": {
                     args: ["headless", "no-sandbox", "hide-scrollbars", "disable-dev-shm-usage"],
-                    binary: "/usr/bin/chromium",
                 },
             },
             waitTimeout: 3000,
@@ -57,7 +60,38 @@ export default {
                 browserName: "chrome",
                 "goog:chromeOptions": {
                     args: ["headless", "no-sandbox", "hide-scrollbars", "disable-dev-shm-usage"],
-                    binary: "/usr/bin/chromium",
+                },
+            },
+            waitTimeout: 3000,
+        },
+        "chrome-dpr-3": {
+            headless: false,
+            assertViewOpts: {
+                ignoreDiffPixelCount: 4,
+            },
+            isolation: false,
+            saveHistoryMode: "none",
+            timeTravel: "off",
+            desiredCapabilities: {
+                browserName: "chrome",
+                "goog:chromeOptions": {
+                    args: [
+                        // "headless",
+                        "no-sandbox",
+                        "hide-scrollbars",
+                        "disable-gpu",
+                        "disable-dev-shm-usage",
+                        "--host-resolver-rules=MAP localhost host.docker.internal,MAP 127.0.0.1 host.docker.internal",
+                    ],
+                    mobileEmulation: {
+                        deviceMetrics: {
+                            width: 390,
+                            height: 844,
+                            pixelRatio: 3,
+                            mobile: true,
+                            touch: true,
+                        },
+                    },
                 },
             },
             waitTimeout: 3000,

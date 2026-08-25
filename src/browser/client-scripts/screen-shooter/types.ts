@@ -16,9 +16,15 @@ export interface TrackedElementData {
     rect: Rect<"viewport", "css">;
 }
 
-export interface CaptureState {
-    scrollOffset: Coord<"page", "device", "y">;
+export interface ViewportState {
+    viewportSize: Size<"device">;
     viewportOffset: Point<"page", "device">;
+    documentSize: Size<"device">;
+    pixelRatio: number;
+}
+
+export interface CaptureState extends ViewportState {
+    scrollOffset: Coord<"page", "device", "y">;
     captureSpecs: CaptureSpec<"viewport", "device">[];
     ignoreAreas: Rect<"viewport", "device">[];
     safeArea: YBand<"viewport", "device">;
@@ -48,34 +54,18 @@ export interface PrepareScreenshotOptions {
     compositeImage?: boolean;
     debug?: string[];
     usePixelRatio?: boolean;
+    pixelRatioOverride?: number;
 }
 
-export interface PrepareScreenshotSuccess {
-    // Area free of sticky elements, inside which it's safe to capture element that's interesting to us
-    // Measured relative to browser viewport (not the whole page!)
-    safeArea: YBand<"viewport", "device">;
-    // Boundaries of elements that we should ignore when comparing screenshots (these areas will be painted in black)
-    ignoreAreas: Rect<"viewport", "device">[];
-    // Element capture areas with full (unconstrained) and visible (clipped by ancestor overflow) rects
-    captureSpecs: CaptureSpec<"viewport", "device">[];
-    // Viewport size
-    viewportSize: Size<"device">;
-    // Viewport scroll offsets, window.pageXOffset / window.pageYOffset respectively
-    viewportOffset: Point<"page", "device">;
-    // Total height of the document, may be larger than viewport
-    documentSize: Size<"device">;
+export interface PrepareScreenshotSuccess extends CaptureState {
     // Whether the document.activeElement is likely editable (e.g. input, textarea, etc.)
     canHaveCaret: boolean;
-    // Pixel ratio: window.devicePixelRatio or 1 if usePixelRatio was set to false
-    pixelRatio: number;
     // Whether pointer-events were disabled during prepareScreenshot. Useful for "when-scrolling-needed", because in that case it's determined on browser side
     pointerEventsDisabled?: boolean;
     // Debug log, returned only if DEBUG env includes scope "testplane:screenshots:browser:prepareScreenshot"
     debugLog?: string;
     // Description of the element that is being scrolled, used for human-readable errors
     readableSelectorToScrollDescr?: string;
-    // Current vertical scroll offset of the resolved scroll element (or window/document root)
-    scrollOffset: Coord<"page", "device", "y">;
 }
 
 export type PrepareScreenshotResult = PrepareScreenshotSuccess | BrowserSideError;
@@ -86,13 +76,9 @@ export interface ScrollToCaptureSpecResult {
 
 export type ElementPositionsProbe<U extends Unit> = (Rect<"viewport", U> & { elementDescr?: string }) | null;
 
-export interface PrepareFullPageScreenshotSuccess {
-    documentSize: Size<"device">;
-    viewportSize: Size<"device">;
-    viewportOffset: Point<"page", "device">;
+export interface PrepareFullPageScreenshotSuccess extends ViewportState {
     safeArea: YBand<"viewport", "device">;
     elementPositionsProbe: ElementPositionsProbe<"device">[];
-    pixelRatio: number;
     pointerEventsDisabled?: boolean;
 }
 
@@ -103,13 +89,9 @@ export interface ScrollFullPageSuccess {
     elementPositionsProbe: ElementPositionsProbe<"device">[];
 }
 
-export interface PrepareViewportScreenshotSuccess {
-    viewportSize: Size<"device">;
-    viewportOffset: Point<"page", "device">;
-    documentSize: Size<"device">;
+export interface PrepareViewportScreenshotSuccess extends ViewportState {
     ignoreAreas: Rect<"viewport", "device">[];
     canHaveCaret: boolean;
-    pixelRatio: number;
     pointerEventsDisabled?: boolean;
 }
 

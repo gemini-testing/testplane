@@ -75,6 +75,7 @@ describe("ElementsScreenShooter", () => {
                 documentSize: size(100, 1000),
                 canHaveCaret: false,
                 pixelRatio: 1,
+                anchorShift: null,
                 pointerEventsDisabled: false,
                 readableSelectorToScrollDescr: "html",
                 scrollOffset: 0,
@@ -87,6 +88,10 @@ describe("ElementsScreenShooter", () => {
         Object.assign(
             {
                 scrollOffset: 0,
+                viewportSize: size(100, 100),
+                viewportOffset: { left: 0, top: 0 },
+                documentSize: size(100, 1000),
+                pixelRatio: 1,
                 captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
                 ignoreAreas: [],
                 safeArea: band(0, 100),
@@ -141,6 +146,8 @@ describe("ElementsScreenShooter", () => {
             isWebdriverProtocol: true,
             shouldUsePixelRatio: true,
             needsCompatLib: false,
+            isHeadless: false,
+            isPixelRatioEmulated: false,
         };
         browserSideScreenshooter = {
             call: sandbox.stub(),
@@ -244,6 +251,7 @@ describe("ElementsScreenShooter", () => {
                 compositeImage: true,
                 debug: [],
                 usePixelRatio: true,
+                pixelRatioOverride: undefined,
             });
         });
 
@@ -307,10 +315,29 @@ describe("ElementsScreenShooter", () => {
         });
 
         it("should preload and do best-effort capture when capture area size changes mid-capture", async () => {
-            const page = createMockPage({ captureSpecs: [captureSpec(rect(0, 0, 100, 80))] });
-            const changedState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
-            const preloadState = createCaptureState({ captureSpecs: [captureSpec(rect(0, 0, 100, 120))] });
-            const settledState = createCaptureState({ captureSpecs: page.captureSpecs, safeArea: page.safeArea });
+            browserProperties.isPixelRatioEmulated = true;
+            browserProperties.estimatedPixelRatioFromCapabilities = 3;
+            const page = createMockPage({
+                captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
+                pixelRatio: 3,
+            });
+            const changedState = createCaptureState({
+                captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
+                pixelRatio: 3,
+            });
+            const refreshedState = createCaptureState({
+                captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
+                pixelRatio: 3,
+            });
+            const preloadState = createCaptureState({
+                captureSpecs: [captureSpec(rect(0, 0, 100, 120))],
+                pixelRatio: 3,
+            });
+            const settledState = createCaptureState({
+                captureSpecs: refreshedState.captureSpecs,
+                safeArea: refreshedState.safeArea,
+                pixelRatio: 3,
+            });
 
             browserSideScreenshooter.call
                 .onCall(0)
@@ -318,15 +345,22 @@ describe("ElementsScreenShooter", () => {
                 .onCall(1)
                 .resolves(changedState) // getCaptureState phase 1 → size change
                 .onCall(2)
-                .resolves(preloadState) // getCaptureState in preload
+                .resolves(3) // getCurrentPixelRatio
                 .onCall(3)
-                .resolves({}) // scrollTo restore after preload
+                .resolves(refreshedState) // refresh capture state without override
                 .onCall(4)
-                .resolves(undefined) // captureAnchorBaseline
+                .resolves(preloadState) // getCaptureState in preload
                 .onCall(5)
+                .resolves({}) // scrollTo restore after preload
+                .onCall(6)
+                .resolves(undefined) // captureAnchorBaseline
+                .onCall(7)
                 .resolves(settledState); // getCaptureState phase 2
 
-            const result = await screenShooter.capture(".element", { compositeImage: false });
+            const result = await screenShooter.capture(".element", {
+                compositeImage: false,
+                allowViewportOverflow: true,
+            });
 
             assert.deepEqual(
                 browserSideScreenshooter.call
@@ -342,8 +376,59 @@ describe("ElementsScreenShooter", () => {
                     .filter(m => m === "captureAnchorBaseline"),
                 ["captureAnchorBaseline"],
             );
-            assert.calledOnce(camera.captureViewportImage);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(1).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, 3, []],
+            ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(3).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, undefined, []],
+            ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(4).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, undefined, []],
+            ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(7).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, undefined, []],
+            ]);
+            assert.calledTwice(camera.captureViewportImage);
             assert.deepEqual(result, { image: renderedImage, meta: page });
+        });
+
+        it("should refresh capture state when an emulated pixel ratio changes after a screenshot", async () => {
+            browserProperties.isPixelRatioEmulated = true;
+            const page = createMockPage();
+            const initialState = createCaptureState();
+            const refreshedState = createCaptureState({
+                viewportSize: size(300, 300),
+                documentSize: size(300, 3000),
+                pixelRatio: 3,
+            });
+            const retryState = createCaptureState(refreshedState);
+
+            browserSideScreenshooter.call
+                .onCall(0)
+                .resolves(page)
+                .onCall(1)
+                .resolves(initialState)
+                .onCall(2)
+                .resolves(3)
+                .onCall(3)
+                .resolves(refreshedState)
+                .onCall(4)
+                .resolves(retryState);
+
+            const result = await screenShooter.capture(".element", { compositeImage: false });
+
+            assert.calledTwice(camera.captureViewportImage);
+            assert.equal(result.meta.pixelRatio, 3);
+            assert.deepEqual(result.meta.viewportSize, size(300, 300));
+            assert.deepEqual(result.meta.documentSize, size(300, 3000));
+            assert.deepEqual(browserSideScreenshooter.call.getCall(3).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, undefined, []],
+            ]);
         });
 
         it("should return rendered image and page meta", async () => {
@@ -443,7 +528,7 @@ describe("ElementsScreenShooter", () => {
             assert.calledOnce(camera.captureViewportImage);
             assert.deepEqual(browserSideScreenshooter.call.getCall(1).args, [
                 "getCaptureState",
-                [[".element"], [], undefined, []],
+                [[".element"], [], undefined, true, undefined, []],
             ]);
         });
 
@@ -483,11 +568,11 @@ describe("ElementsScreenShooter", () => {
             assert.calledTwice(compositeImage.registerViewportImageAtOffset);
             assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
                 "scrollBy",
-                [[".element"], 50, undefined, []],
+                [[".element"], 50, undefined, true, undefined, []],
             ]);
             assert.deepEqual(browserSideScreenshooter.call.getCall(4).args, [
                 "scrollTo",
-                [[".element"], 0, undefined, []],
+                [[".element"], 0, undefined, true, undefined, []],
             ]);
         });
 

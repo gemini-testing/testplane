@@ -43,15 +43,15 @@ jobs:
             - name: "Prepare browser-env tests: Pull browser docker image"
               run: |
                   mkdir -p ~/.docker/cache
-                  if [ -f ~/.docker/cache/image.tar ]; then
-                    docker load -i ~/.docker/cache/image.tar
+                  if [ -f ~/.docker/cache/image-ghcr-chromium-126.tar ]; then
+                    docker load -i ~/.docker/cache/image-ghcr-chromium-126.tar
                   else
-                    docker pull yinfra/html-reporter-browsers
-                    docker save yinfra/html-reporter-browsers -o ~/.docker/cache/image.tar
+                    docker pull ghcr.io/gemini-testing/browsers/chromium:126.0
+                    docker save ghcr.io/gemini-testing/browsers/chromium:126.0 -o ~/.docker/cache/image-ghcr-chromium-126.tar
                   fi
 
             - name: "Prepare browser-env tests: Run browser docker image"
-              run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) yinfra/html-reporter-browsers
+              run: docker run -d --name ${{ env.DOCKER_IMAGE_NAME }} -it --rm --network=host $(which colima >/dev/null || echo --add-host=host.docker.internal:0.0.0.0) ghcr.io/gemini-testing/browsers/chromium:126.0
 
             - name: "browser-env: Run Testplane"
               id: "testplane"

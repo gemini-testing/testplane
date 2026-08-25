@@ -182,7 +182,13 @@ describe("assertView command", () => {
     });
 
     it("should lazily create viewport screen shooter with current browser properties", async () => {
-        const browser = await initBrowser_();
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceMetrics: { pixelRatio: 3 } },
+            },
+        };
+        const browser = await initBrowser_({ session });
 
         sandbox.stub(browser, "needsCompatLib").get(() => true);
 
@@ -199,6 +205,28 @@ describe("assertView command", () => {
                 isWebdriverProtocol: true,
                 shouldUsePixelRatio: true,
                 needsCompatLib: true,
+                isHeadless: false,
+                isPixelRatioEmulated: true,
+                estimatedPixelRatioFromCapabilities: 3,
+            }),
+        });
+    });
+
+    it("should recognize pixel ratio emulation without an explicit ratio", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceName: "Pixel 7" },
+            },
+        };
+        const browser = await initBrowser_({ session });
+
+        await browser.publicAPI.assertView("plain");
+
+        assert.calledOnceWithMatch(ViewportScreenShooter.create, {
+            browserProperties: sinon.match({
+                isPixelRatioEmulated: true,
+                estimatedPixelRatioFromCapabilities: undefined,
             }),
         });
     });
