@@ -104,9 +104,13 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
                         ({ tag, reason }) => `- ${tag}: ${reason}`,
                     );
 
-                    if (browsersInstallPerStatus[BrowserInstallStatus.Error].length) {
+                    const isSuccessful = !browsersInstallPerStatus[BrowserInstallStatus.Error].length;
+
+                    if (!isSuccessful) {
                         process.exitCode = resolveExitCode(1);
                     }
+
+                    return isSuccessful;
                 });
             } catch (err) {
                 logger.error((err as Error).stack || err);

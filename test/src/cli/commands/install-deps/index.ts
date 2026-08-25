@@ -3,6 +3,8 @@ import { Command } from "@gemini-testing/commander";
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import { Testplane } from "../../../../../src/testplane";
+import { ProfilerManager } from "../../../../../src/profiler/manager";
+import { BootstrapProbe } from "../../../../../src/profiler/runtime/bootstrap-probe";
 import type { Writable } from "type-fest";
 import type { Config } from "../../../../../src/config";
 
@@ -28,6 +30,23 @@ describe("cli/commands/install-deps", () => {
         ({
             desiredCapabilities: { browserName, browserVersion },
         } as Config["browsers"][string]);
+
+    const enableProfiler_ = (): ProfilerManager => {
+        const profiler = new ProfilerManager(
+            {
+                profiler: { level: 1, output: null },
+                system: { workers: 1 },
+                getBrowserIds: () => [],
+                forBrowser: () => ({ sessionsPerBrowser: 1 }),
+            } as unknown as Config,
+            new BootstrapProbe(),
+            { output: { log: sandbox.stub(), warn: sandbox.stub() } },
+        );
+
+        Object.defineProperty(testplaneStub, "_profiler", { value: profiler, configurable: true });
+
+        return profiler;
+    };
 
     beforeEach(() => {
         const uncaughtExceptionHandlers = process.listeners("uncaughtException");
@@ -164,6 +183,17 @@ describe("cli/commands/install-deps", () => {
 
             assert.equal(process.exitCode, 1);
             assert.notCalled(process.exit as unknown as SinonStub);
+        });
+
+        it("should profile an error result as failed", async () => {
+            installBrowsersWithDriversStub.resolves({
+                "chrome@110": { status: "error", reason: "some reason" },
+            });
+            const profiler = enableProfiler_();
+
+            await installBrowsers_("chrome@110");
+
+            assert.equal(profiler.lastResult?.run.runOutcome, "failed");
         });
 
         it("should not force an immediate exit for a successful result", async () => {
