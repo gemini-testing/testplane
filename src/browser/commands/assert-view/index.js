@@ -25,11 +25,13 @@ const getShortDebugId = debugId => crypto.createHash("sha1").update(debugId).dig
 
 const isHeadlessBrowser = chromeOptions => (chromeOptions?.args || []).some(arg => HEADLESS_CHROME_ARG_RE.test(arg));
 
-const getEmulatedPixelRatio = chromeOptions => {
+const getEstimatedPixelRatioFromCapabilities = chromeOptions => {
     const pixelRatio = _.get(chromeOptions, "mobileEmulation.deviceMetrics.pixelRatio");
 
     return _.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : undefined;
 };
+
+const isPixelRatioEmulated = chromeOptions => Boolean(chromeOptions?.mobileEmulation);
 
 const getIgnoreDiffPixelCountRatio = value => {
     const percent = _.isString(value) && value.endsWith("%") ? parseFloat(value.slice(0, -1)) : false;
@@ -203,7 +205,8 @@ module.exports.default = browser => {
                     shouldUsePixelRatio,
                     needsCompatLib,
                     isHeadless: isHeadlessBrowser(chromeOptions),
-                    emulatedPixelRatio: getEmulatedPixelRatio(chromeOptions),
+                    isPixelRatioEmulated: isPixelRatioEmulated(chromeOptions),
+                    estimatedPixelRatioFromCapabilities: getEstimatedPixelRatioFromCapabilities(chromeOptions),
                 },
             });
         }
@@ -265,7 +268,8 @@ module.exports.default = browser => {
                     shouldUsePixelRatio,
                     needsCompatLib,
                     isHeadless: isHeadlessBrowser(chromeOptions),
-                    emulatedPixelRatio: getEmulatedPixelRatio(chromeOptions),
+                    isPixelRatioEmulated: isPixelRatioEmulated(chromeOptions),
+                    estimatedPixelRatioFromCapabilities: getEstimatedPixelRatioFromCapabilities(chromeOptions),
                 },
             });
         }

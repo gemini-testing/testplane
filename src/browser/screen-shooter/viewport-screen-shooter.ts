@@ -22,7 +22,8 @@ interface ScreenShooterBrowserProperties {
     shouldUsePixelRatio: boolean;
     needsCompatLib: boolean;
     isHeadless: boolean;
-    emulatedPixelRatio?: number;
+    isPixelRatioEmulated: boolean;
+    estimatedPixelRatioFromCapabilities?: number;
 }
 
 interface ViewportScreenShooterInputParams {
@@ -41,7 +42,7 @@ interface ViewportCaptureOpts {
     disableAnimation?: boolean;
     disableHover?: DisableHoverMode;
     cropMargins?: CropMargins;
-    preferredPixelRatio?: number;
+    pixelRatioOverride?: number;
 }
 
 interface ViewportCaptureResult {
@@ -73,12 +74,13 @@ export class ViewportScreenShooter {
     }
 
     async capture(opts: ViewportCaptureOpts = {}): Promise<ViewportCaptureResult> {
-        if (
+        const shouldValidatePixelRatio =
             this._browserProperties.shouldUsePixelRatio &&
             !this._browserProperties.isHeadless &&
-            this._browserProperties.emulatedPixelRatio !== undefined
-        ) {
-            opts.preferredPixelRatio = this._browserProperties.emulatedPixelRatio;
+            this._browserProperties.isPixelRatioEmulated;
+
+        if (shouldValidatePixelRatio && this._browserProperties.estimatedPixelRatioFromCapabilities !== undefined) {
+            opts.pixelRatioOverride = this._browserProperties.estimatedPixelRatioFromCapabilities;
         }
 
         try {
@@ -106,7 +108,7 @@ export class ViewportScreenShooter {
                     disableAnimation,
                     disableHover,
                     ignoreSelectors: selectorsToIgnore,
-                    preferredPixelRatio: opts.preferredPixelRatio,
+                    pixelRatioOverride: opts.pixelRatioOverride,
                 },
             ]),
         );
@@ -116,7 +118,7 @@ export class ViewportScreenShooter {
             disableAnimation,
             disableHover,
             ignoreSelectors: selectorsToIgnore,
-            preferredPixelRatio: opts.preferredPixelRatio,
+            pixelRatioOverride: opts.pixelRatioOverride,
         });
         debug("prepareViewportScreenshot result: %O", prepareResult);
 
@@ -147,11 +149,17 @@ export class ViewportScreenShooter {
             cropMargins: opts.cropMargins,
         });
 
-        if (opts.preferredPixelRatio !== undefined) {
+        const shouldCheckPixelRatio =
+            !isRetry &&
+            this._browserProperties.shouldUsePixelRatio &&
+            !this._browserProperties.isHeadless &&
+            this._browserProperties.isPixelRatioEmulated;
+
+        if (shouldCheckPixelRatio) {
             const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
 
-            if (currentPixelRatio !== opts.preferredPixelRatio) {
-                delete opts.preferredPixelRatio;
+            if (currentPixelRatio !== prepareResult.pixelRatio) {
+                delete opts.pixelRatioOverride;
 
                 return this._captureImpl(opts, true);
             }

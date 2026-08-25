@@ -206,7 +206,27 @@ describe("assertView command", () => {
                 shouldUsePixelRatio: true,
                 needsCompatLib: true,
                 isHeadless: false,
-                emulatedPixelRatio: 3,
+                isPixelRatioEmulated: true,
+                estimatedPixelRatioFromCapabilities: 3,
+            }),
+        });
+    });
+
+    it("should recognize pixel ratio emulation without an explicit ratio", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceName: "Pixel 7" },
+            },
+        };
+        const browser = await initBrowser_({ session });
+
+        await browser.publicAPI.assertView("plain");
+
+        assert.calledOnceWithMatch(ViewportScreenShooter.create, {
+            browserProperties: sinon.match({
+                isPixelRatioEmulated: true,
+                estimatedPixelRatioFromCapabilities: undefined,
             }),
         });
     });
