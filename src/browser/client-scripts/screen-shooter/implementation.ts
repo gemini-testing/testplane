@@ -383,10 +383,11 @@ export function prepareViewportScreenshot(
         disableAnimation?: boolean;
         disableHover?: DisableHoverMode;
         ignoreSelectors?: ElementTarget[];
+        preferredPixelRatio?: number;
     } = {}
 ): PrepareViewportScreenshotResult {
     return safeCall((): PrepareViewportScreenshotResult => {
-        const pixelRatio = computePixelRatio(opts.usePixelRatio);
+        const pixelRatio = computePixelRatio(opts.usePixelRatio, opts.preferredPixelRatio);
         const viewportSize = computeViewportSize();
         const viewportOffset = computeViewportOffset();
         const documentSize = computeDocumentSize();

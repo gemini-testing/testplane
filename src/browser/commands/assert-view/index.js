@@ -256,10 +256,17 @@ module.exports.default = browser => {
 
         if (!viewportScreenShooterPromise) {
             const { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib } = browser;
+            const chromeOptions = session.requestedCapabilities?.["goog:chromeOptions"];
             viewportScreenShooterPromise = ViewportScreenShooter.create({
                 camera: browser.camera,
                 browser: browser.publicAPI,
-                browserProperties: { isWebdriverProtocol, shouldUsePixelRatio, needsCompatLib },
+                browserProperties: {
+                    isWebdriverProtocol,
+                    shouldUsePixelRatio,
+                    needsCompatLib,
+                    isHeadless: isHeadlessBrowser(chromeOptions),
+                    emulatedPixelRatio: getEmulatedPixelRatio(chromeOptions),
+                },
             });
         }
 
