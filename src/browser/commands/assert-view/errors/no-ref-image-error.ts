@@ -30,5 +30,6 @@ export class NoRefImageError extends BaseStateError {
         super(stateName, currImg, refImg);
 
         this.message = `can not find reference image at ${this.refImg.path} for "${stateName}" state`;
+        this.stack = undefined;
     }
 }
