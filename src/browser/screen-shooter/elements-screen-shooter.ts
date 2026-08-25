@@ -720,7 +720,7 @@ export class ElementsScreenShooter {
 
                 timeSpentOnCapture += performance.now() - captureStartTime;
 
-                if (isStrictAttempt && this._browserProperties.emulatedPixelRatio) {
+                if (isStrictAttempt && this._browserProperties.emulatedPixelRatio && opts.preferredPixelRatio !== undefined) {
                     const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
 
                     if (currentPixelRatio !== opts.preferredPixelRatio) {
