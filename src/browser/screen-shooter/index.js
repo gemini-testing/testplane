@@ -24,10 +24,10 @@ module.exports = class ScreenShooter {
         const cropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
         const capturedImage = await this._browser.captureViewportImage(page, screenshotDelay);
-        if (preferredPixelRatio) {
+        if (reprepareScreenshot) {
             const currentPixelRatio = await this._browser.evalScript("window.devicePixelRatio");
 
-            if (currentPixelRatio !== preferredPixelRatio) {
+            if (currentPixelRatio !== (preferredPixelRatio ?? page.pixelRatio)) {
                 Object.assign(page, await reprepareScreenshot(currentPixelRatio));
                 delete opts.preferredPixelRatio;
                 delete opts.reprepareScreenshot;

@@ -16,6 +16,8 @@ const HEADLESS_CHROME_ARG_RE = /^-{0,2}headless(?:=|$)/;
 
 const isHeadlessBrowser = chromeOptions => (chromeOptions?.args || []).some(arg => HEADLESS_CHROME_ARG_RE.test(arg));
 
+const isPixelRatioEmulated = chromeOptions => Boolean(chromeOptions?.mobileEmulation);
+
 const getEmulatedPixelRatio = chromeOptions => {
     const pixelRatio = _.get(chromeOptions, "mobileEmulation.deviceMetrics.pixelRatio");
 
@@ -80,8 +82,9 @@ module.exports.default = browser => {
         const handleCaptureProcessorError = e =>
             e instanceof BaseStateError ? testplaneCtx.assertViewResults.add(e) : Promise.reject(e);
 
-        const preferredPixelRatio =
-            browser.shouldUsePixelRatio && !isHeadlessBrowser(chromeOptions) ? emulatedPixelRatio : undefined;
+        const shouldValidatePixelRatio =
+            browser.shouldUsePixelRatio && !isHeadlessBrowser(chromeOptions) && isPixelRatioEmulated(chromeOptions);
+        const preferredPixelRatio = shouldValidatePixelRatio ? emulatedPixelRatio : undefined;
 
         const screenshotSelectors = [].concat(selectors);
         const prepareScreenshotOpts = {
@@ -103,8 +106,11 @@ module.exports.default = browser => {
             "screenshotDelay",
             "selectorToScroll",
         ]);
-        if (preferredPixelRatio) {
-            screenshoterOpts.preferredPixelRatio = preferredPixelRatio;
+        if (shouldValidatePixelRatio) {
+            if (preferredPixelRatio) {
+                screenshoterOpts.preferredPixelRatio = preferredPixelRatio;
+            }
+
             screenshoterOpts.reprepareScreenshot = currentPixelRatio =>
                 browser.prepareScreenshot(screenshotSelectors, {
                     ...prepareScreenshotOpts,

@@ -195,6 +195,32 @@ describe("assertView command", () => {
         );
     });
 
+    it("should validate pixel ratio when mobile emulation uses a device name", async () => {
+        const session = mkSessionStub_();
+        session.requestedCapabilities = {
+            "goog:chromeOptions": {
+                mobileEmulation: { deviceName: "Pixel 7" },
+            },
+        };
+        const browser = await initBrowser_({ session });
+        sandbox.stub(browser, "cleanupScreenshot").resolves();
+
+        await browser.publicAPI.assertView("plain", ".selector");
+
+        const screenShooterOpts = ScreenShooter.prototype.capture.lastCall.args[1];
+
+        assert.notProperty(screenShooterOpts, "preferredPixelRatio");
+        assert.isFunction(screenShooterOpts.reprepareScreenshot);
+
+        await screenShooterOpts.reprepareScreenshot(3);
+
+        assert.calledWith(
+            browser.prepareScreenshot,
+            [".selector"],
+            sinon.match({ disableAnimation: false, preferredPixelRatio: 3 }),
+        );
+    });
+
     it("should screenshot the viewport if selector is not provided", async () => {
         const browser = await initBrowser_();
 

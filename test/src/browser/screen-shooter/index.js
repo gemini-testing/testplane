@@ -95,17 +95,18 @@ describe("screen-shooter", () => {
             assert.calledWithMatch(browser.captureViewportImage, sinon.match.any, 2000);
         });
 
-        it("should retry capture using pixel ratio from browser if it differs from preferred", async () => {
+        it("should retry capture using pixel ratio from browser if it differs from prepared", async () => {
             const preparedPage = {
                 captureArea: { left: 1, top: 2, width: 10, height: 20 },
                 viewport: { left: 0, top: 0, width: 100, height: 200 },
                 ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
                 documentHeight: 300,
                 documentWidth: 200,
-                pixelRatio: 1,
+                pixelRatio: 3,
             };
             const reprepareScreenshot = sandbox.stub().resolves(preparedPage);
-            const opts = { preferredPixelRatio: 3, reprepareScreenshot };
+            const opts = { reprepareScreenshot };
+            browser.evalScript.resolves(3);
 
             await capture(
                 {
@@ -114,14 +115,14 @@ describe("screen-shooter", () => {
                     ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
                     documentHeight: 900,
                     documentWidth: 600,
-                    pixelRatio: 3,
+                    pixelRatio: 1,
                 },
                 opts,
             );
 
             assert.calledTwice(browser.captureViewportImage);
             assert.calledOnceWith(browser.evalScript, "window.devicePixelRatio");
-            assert.calledOnceWith(reprepareScreenshot, 1);
+            assert.calledOnceWith(reprepareScreenshot, 3);
             assert.calledOnceWith(Viewport.create, preparedPage, imageStub, sinon.match.any);
             assert.notProperty(opts, "preferredPixelRatio");
             assert.notProperty(opts, "reprepareScreenshot");
