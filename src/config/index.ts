@@ -197,6 +197,8 @@ export class Config {
      * in a subrocess with a config from the main process
      */
     mergeWith(config: Config): void {
+        const browserDownloadMirrors = config.browserDownloadMirrors;
+
         _.mergeWith(this, config, (l, r) => {
             if (_.isObjectLike(l)) {
                 return;
@@ -206,5 +208,11 @@ export class Config {
             // all functions are transformed to strings and all regular expressions to empty objects
             return typeof l === typeof r ? r : l;
         });
+
+        // Mirrors are serialized in the master and must replace worker values even when
+        // an unset worker value is null and the configured master value is a string.
+        if (browserDownloadMirrors) {
+            this.browserDownloadMirrors = _.cloneDeep(browserDownloadMirrors);
+        }
     }
 }

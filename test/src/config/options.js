@@ -18,6 +18,182 @@ describe("config options", () => {
 
     afterEach(() => sandbox.restore());
 
+    describe("browserDownloadMirrors", () => {
+        it("should be empty by default", () => {
+            const result = parse_();
+
+            assert.deepEqual(result.browserDownloadMirrors, defaults.browserDownloadMirrors);
+        });
+
+        it("should read mirrors from config", () => {
+            const result = parse_({
+                options: {
+                    browserDownloadMirrors: {
+                        chrome: "https://mirror.example/chrome",
+                        chromium: "https://mirror.example/chromium",
+                        firefox: "https://mirror.example/firefox",
+                    },
+                },
+            });
+
+            assert.deepEqual(result.browserDownloadMirrors, {
+                chrome: "https://mirror.example/chrome",
+                chromium: "https://mirror.example/chromium",
+                firefox: "https://mirror.example/firefox",
+            });
+        });
+
+        it("should preserve pathname prefixes and normalize whitespace and trailing slashes", () => {
+            const result = parse_({
+                options: {
+                    browserDownloadMirrors: {
+                        chrome: "  https://mirror.example/cache/chrome///  ",
+                    },
+                },
+            });
+
+            assert.equal(result.browserDownloadMirrors.chrome, "https://mirror.example/cache/chrome");
+        });
+
+        it("should reject non-string mirror values", () => {
+            assert.throws(
+                () => parse_({ options: { browserDownloadMirrors: { chrome: true } } }),
+                '"browserDownloadMirrors.chrome" must be a string',
+            );
+        });
+
+        it("should reject empty mirror values", () => {
+            assert.throws(
+                () => parse_({ options: { browserDownloadMirrors: { chrome: "  " } } }),
+                '"browserDownloadMirrors.chrome" must not be empty',
+            );
+        });
+
+        ["chrome", "chromium", "firefox"].forEach(browserName => {
+            it(`should reject a non-absolute ${browserName} mirror URL`, () => {
+                assert.throws(
+                    () =>
+                        parse_({
+                            options: { browserDownloadMirrors: { [browserName]: "mirror.example/browser" } },
+                        }),
+                    `"browserDownloadMirrors.${browserName}" must be an absolute http: or https: URL`,
+                );
+            });
+        });
+
+        [
+            {
+                name: "a non-HTTP protocol",
+                value: "ftp://mirror.example/chrome",
+                error: '"browserDownloadMirrors.chrome" must be an absolute http: or https: URL',
+            },
+            {
+                name: "a username",
+                value: "https://user@mirror.example/chrome",
+                error: '"browserDownloadMirrors.chrome" must not contain a username or password',
+            },
+            {
+                name: "a password",
+                value: "https://user:password@mirror.example/chrome",
+                error: '"browserDownloadMirrors.chrome" must not contain a username or password',
+            },
+            {
+                name: "a query string",
+                value: "https://mirror.example/chrome?channel=stable",
+                error: '"browserDownloadMirrors.chrome" must not contain a query string',
+            },
+            {
+                name: "an empty query string",
+                value: "https://mirror.example/chrome?",
+                error: '"browserDownloadMirrors.chrome" must not contain a query string',
+            },
+            {
+                name: "a fragment",
+                value: "https://mirror.example/chrome#stable",
+                error: '"browserDownloadMirrors.chrome" must not contain a fragment',
+            },
+            {
+                name: "an empty fragment",
+                value: "https://mirror.example/chrome#",
+                error: '"browserDownloadMirrors.chrome" must not contain a fragment',
+            },
+        ].forEach(({ name, value, error }) => {
+            it(`should reject a mirror URL with ${name}`, () => {
+                assert.throws(() => parse_({ options: { browserDownloadMirrors: { chrome: value } } }), error);
+            });
+        });
+
+        it("should override config from lowercase environment variable", () => {
+            const result = parse_({
+                options: { browserDownloadMirrors: { chrome: "https://config.example/chrome" } },
+                env: { ["testplane_browser_download_mirrors_chrome"]: "https://env.example/chrome" },
+            });
+
+            assert.equal(result.browserDownloadMirrors.chrome, "https://env.example/chrome");
+        });
+
+        it("should retain the legacy lowercase hermione environment variable", () => {
+            const result = parse_({
+                options: { browserDownloadMirrors: { chrome: "https://config.example/chrome" } },
+                env: { ["hermione_browser_download_mirrors_chrome"]: "https://env.example/chrome" },
+            });
+
+            assert.equal(result.browserDownloadMirrors.chrome, "https://env.example/chrome");
+        });
+
+        it("should prefer uppercase environment variable", () => {
+            const result = parse_({
+                options: { browserDownloadMirrors: { chrome: "https://config.example/chrome" } },
+                env: {
+                    ["testplane_browser_download_mirrors_chrome"]: "https://lowercase.example/chrome",
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME: "https://uppercase.example/chrome",
+                },
+            });
+
+            assert.equal(result.browserDownloadMirrors.chrome, "https://uppercase.example/chrome");
+        });
+
+        it("should read uppercase environment variables for every mirror", () => {
+            const result = parse_({
+                env: {
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME: "https://env.example/chrome",
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM: "https://env.example/chromium",
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX: "https://env.example/firefox",
+                },
+            });
+
+            assert.deepEqual(result.browserDownloadMirrors, {
+                chrome: "https://env.example/chrome",
+                chromium: "https://env.example/chromium",
+                firefox: "https://env.example/firefox",
+            });
+        });
+
+        it("should reject an empty uppercase environment override", () => {
+            assert.throws(
+                () =>
+                    parse_({
+                        options: { browserDownloadMirrors: { chrome: "https://config.example/chrome" } },
+                        env: { TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME: "" },
+                    }),
+                '"browserDownloadMirrors.chrome" must not be empty',
+            );
+        });
+
+        it("should reject empty uppercase environment overrides for every mirror", () => {
+            [
+                ["chrome", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME"],
+                ["chromium", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM"],
+                ["firefox", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX"],
+            ].forEach(([browserName, envName]) => {
+                assert.throws(
+                    () => parse_({ env: { [envName]: "" } }),
+                    `"browserDownloadMirrors.${browserName}" must not be empty`,
+                );
+            });
+        });
+    });
+
     describe("system", () => {
         describe("debug", () => {
             it("should throw error if debug is not a boolean", async () => {

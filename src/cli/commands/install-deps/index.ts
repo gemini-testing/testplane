@@ -61,7 +61,9 @@ export const registerCmd = (cliTool: typeof commander, testplane: Testplane): vo
                         }
                     });
 
-                    const browsersInstallResult = await installBrowsersWithDrivers(browsersToInstall);
+                    const browsersInstallResult = await installBrowsersWithDrivers(browsersToInstall, {
+                        browserDownloadMirrors: testplane.config.browserDownloadMirrors,
+                    });
                     const browserTags = Object.keys(browsersInstallResult);
                     const browsersInstallPerStatus: BrowsersInstallPerStatus = {
                         [BrowserInstallStatus.Ok]: [],

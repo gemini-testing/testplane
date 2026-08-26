@@ -5,6 +5,11 @@ import { BrowserName } from "../../../../src/browser/types";
 
 describe("browser-installer/chromium/browser", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: null,
+        chromium: "https://mirror.example/chromium",
+        firefox: null,
+    };
 
     let installChromium: typeof InstallChromiumType;
 
@@ -78,6 +83,41 @@ describe("browser-installer/chromium/browser", () => {
         const binaryPath = await installChromium("80");
 
         assert.equal(binaryPath, "/new/downloaded/browser/path");
+    });
+
+    it("should download browser from mirror", async () => {
+        installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        await installChromium("80", { browserDownloadMirrors });
+
+        assert.calledOnceWith(
+            canDownloadStub,
+            sinon.match({
+                browser: BrowserName.CHROMIUM,
+                buildId: "100500",
+                baseUrl: browserDownloadMirrors.chromium,
+            }),
+        );
+        assert.calledOnceWith(
+            puppeteerInstallStub,
+            sinon.match({
+                browser: BrowserName.CHROMIUM,
+                buildId: "100500",
+                baseUrl: browserDownloadMirrors.chromium,
+            }),
+        );
+    });
+
+    it("should not expose the mirror URL when the browser artifact download fails", async () => {
+        puppeteerInstallStub.rejects(
+            new Error(`Download failed. URL: ${browserDownloadMirrors.chromium}/100500/chromium.zip`),
+        );
+        installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        const error = await installChromium("80", { browserDownloadMirrors }).catch(error => error);
+
+        assert.instanceOf(error, Error);
+        assert.equal(error.message, "Couldn't download browser artifact from the configured mirror");
     });
 
     it("should throw an error if version is too low", async () => {

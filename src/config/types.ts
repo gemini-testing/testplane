@@ -365,6 +365,14 @@ export type SelectivityMapSourceMapUrlFn = (assetInfo: {
     sourceMapUrl: string;
 }) => string | boolean | void;
 
+export interface BrowserDownloadMirrors {
+    chrome: string | null;
+    chromium: string | null;
+    firefox: string | null;
+}
+
+export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver";
@@ -529,6 +537,7 @@ export type HookType = (params: { config: Config }) => Promise<unknown> | unknow
 // Only browsers desiredCapabilities are required in input config
 export type ConfigInputData = Partial<PartialCommonConfig> & {
     browsers: Record<string, PartialCommonConfig & { desiredCapabilities: WebdriverIO.Capabilities }>;
+    browserDownloadMirrors?: BrowserDownloadMirrorsInput;
     plugins?: Record<string, unknown>;
     sets?: Record<string, SetsConfig>;
     prepareEnvironment?: () => void | Promise<void> | null;
@@ -541,6 +550,7 @@ export type ConfigInput = ConfigInputData | (() => ConfigInputData) | (() => Pro
 
 export interface ConfigParsed extends CommonConfig {
     browsers: Record<string, BrowserConfig>;
+    browserDownloadMirrors: BrowserDownloadMirrors;
     plugins: Record<string, Record<string, unknown>>;
     sets: Record<string, SetsConfigParsed>;
     prepareEnvironment?: () => void | Promise<void> | null;

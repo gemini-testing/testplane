@@ -6,7 +6,7 @@ import { runGroup } from "src/browser/history";
 import { WEBDRIVER_PROTOCOL } from "src/constants/config";
 import { X_REQUEST_ID_DELIMITER } from "src/constants/browser";
 import RuntimeConfig from "src/config/runtime-config";
-import { mkNewBrowser_, mkSessionStub_, mkWdPool_ } from "./utils";
+import { createBrowserConfig_, mkNewBrowser_, mkSessionStub_, mkWdPool_ } from "./utils";
 import { Config } from "src/config";
 import { RequestOptions } from "node:https";
 import { DesiredCapabilities, SelenoidOptions } from "@testplane/wdio-types/build/Capabilities";
@@ -377,9 +377,133 @@ describe("NewBrowser", () => {
                 await assert.isFulfilled(browser.init());
                 assert.calledOnceWith(warnStub, "WARNING: Can not set page load timeout: o.O");
             });
+
+            it("should preserve init error and clean up if session deletion fails", async () => {
+                const initError = new Error("failed to set page load timeout");
+                const deleteError = new Error("failed to delete partial session");
+                const wdProcess = {
+                    gridUrl: "http://localhost:12345/",
+                    free: sandbox.stub(),
+                    kill: sandbox.stub(),
+                    getPid: sandbox.stub().returns(12345),
+                };
+                const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+                session.setTimeout.rejects(initError);
+                session.deleteSession.rejects(deleteError);
+                const exitListenerCount = signalHandler.listenerCount("exit");
+                const browser = mkBrowser_(
+                    {
+                        gridUrl: "local",
+                        pageLoadTimeout: 100500,
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                        },
+                    },
+                    { wdPool },
+                );
+
+                const error = await browser.init().catch((error: Error) => error);
+
+                assert.strictEqual(error, initError);
+                assert.calledOnce(session.deleteSession);
+                assert.notCalled(wdProcess.free);
+                assert.calledOnce(wdProcess.kill);
+                assert.isUndefined(browser.getDriverPid());
+                assert.calledOnceWith(
+                    warnStub,
+                    "WARNING: Can not kill WebDriver process: failed to delete partial session",
+                );
+                assert.equal(signalHandler.listenerCount("exit"), exitListenerCount);
+            });
         });
 
         describe("should use local grid url", () => {
+            it("should pass browser download mirrors to webdriver pool and browser installer", async () => {
+                const browserDownloadMirrors = {
+                    chrome: "https://mirror.example/chrome",
+                    chromium: null,
+                    firefox: null,
+                };
+                const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
+                const config = Object.assign(
+                    createBrowserConfig_({
+                        gridUrl: "local",
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                        },
+                    }),
+                    {
+                        browserDownloadMirrors: {
+                            ...browserDownloadMirrors,
+                            chrome: "https://mirror.example/old-chrome",
+                        },
+                    },
+                );
+                const browser = NewBrowser.create(config, { id: "chrome", wdPool });
+                config.browserDownloadMirrors = browserDownloadMirrors;
+
+                await browser.init();
+
+                assert.calledOnceWith(wdPool.getWebdriver, "chrome", "115.0", {
+                    debug: true,
+                    browserDownloadMirrors,
+                });
+                assert.calledOnceWith(installBrowserStub, "chrome", "115.0", {
+                    shouldInstallWebDriver: false,
+                    shouldInstallUbuntuPackages: true,
+                    browserDownloadMirrors,
+                });
+            });
+
+            it("should clean up webdriver and exit handler if mirrored browser installation fails", async () => {
+                const initError = new Error("mirror artifact is unavailable");
+                const browserDownloadMirrors = {
+                    chrome: "https://mirror.example/chrome",
+                    chromium: null,
+                    firefox: null,
+                };
+                const wdProcess = {
+                    gridUrl: "http://localhost:12345/",
+                    free: sandbox.stub(),
+                    kill: sandbox.stub(),
+                    getPid: sandbox.stub().returns(12345),
+                };
+                const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+                const config = Object.assign(
+                    createBrowserConfig_({
+                        gridUrl: "local",
+                        desiredCapabilities: {
+                            browserName: "chrome",
+                            browserVersion: "115.0",
+                        },
+                    }),
+                    { browserDownloadMirrors },
+                );
+                installBrowserStub.rejects(initError);
+                const exitListenerCount = signalHandler.listenerCount("exit");
+                const browser = NewBrowser.create(config, { id: "chrome", wdPool });
+
+                const error = await browser.init().catch((error: Error) => error);
+
+                assert.strictEqual(error, initError);
+                assert.calledOnceWith(wdPool.getWebdriver, "chrome", "115.0", {
+                    debug: true,
+                    browserDownloadMirrors,
+                });
+                assert.calledOnceWith(installBrowserStub, "chrome", "115.0", {
+                    shouldInstallWebDriver: false,
+                    shouldInstallUbuntuPackages: true,
+                    browserDownloadMirrors,
+                });
+                assert.notCalled(webdriverioRemoteStub);
+                assert.notCalled(wdProcess.free);
+                assert.calledOnce(wdProcess.kill);
+                assert.isUndefined(browser.getDriverPid());
+                assert.equal(signalHandler.listenerCount("exit"), exitListenerCount);
+            });
+
             it("if gridUrl is 'local'", async () => {
                 installBrowserStub.withArgs("chrome", "115.0").resolves("/browser/path/chrome/115.0");
                 (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
@@ -544,8 +668,14 @@ describe("NewBrowser", () => {
         it("should kill webdriver session if cant quit normally", async () => {
             (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
             session.deleteSession.rejects(new Error("failed end"));
-            const wdProcess = { gridUrl: "http://localhost:12345", free: sandbox.stub(), kill: sandbox.stub() };
+            const wdProcess = {
+                gridUrl: "http://localhost:12345",
+                free: sandbox.stub(),
+                kill: sandbox.stub(),
+                getPid: sandbox.stub().returns(12345),
+            };
             const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+            const exitListenerCount = signalHandler.listenerCount("exit");
             const browser = mkBrowser_(
                 {
                     gridUrl: "local",
@@ -564,6 +694,77 @@ describe("NewBrowser", () => {
 
             assert.notCalled(wdProcess.free);
             assert.calledOnce(wdProcess.kill);
+            assert.isUndefined(browser.getDriverPid());
+            assert.equal(signalHandler.listenerCount("exit"), exitListenerCount);
+
+            await browser.quit();
+
+            assert.calledOnce(wdProcess.kill);
+        });
+
+        it("should kill and clear webdriver process if session does not exist", async () => {
+            (RuntimeConfig.getInstance as SinonStub).returns({ local: false });
+            const wdProcess = {
+                gridUrl: "http://localhost:12345",
+                free: sandbox.stub(),
+                kill: sandbox.stub(),
+                getPid: sandbox.stub().returns(12345),
+            };
+            const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+            const exitListenerCount = signalHandler.listenerCount("exit");
+            const browser = mkBrowser_(
+                {
+                    gridUrl: "local",
+                    desiredCapabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                    },
+                },
+                { wdPool },
+            );
+            await browser._getLocalWebdriverGridUrl();
+
+            await browser.quit();
+
+            assert.notCalled(wdProcess.free);
+            assert.calledOnce(wdProcess.kill);
+            assert.isUndefined(browser.getDriverPid());
+            assert.notCalled(warnStub);
+            assert.equal(signalHandler.listenerCount("exit"), exitListenerCount);
+        });
+    });
+
+    describe("kill", () => {
+        it("should kill and clear webdriver process if session deletion fails", async () => {
+            const deleteError = new Error("failed end");
+            session.deleteSession.rejects(deleteError);
+            const wdProcess = {
+                gridUrl: "http://localhost:12345",
+                free: sandbox.stub(),
+                kill: sandbox.stub(),
+                getPid: sandbox.stub().returns(12345),
+            };
+            const wdPool = { getWebdriver: sandbox.stub().resolves(wdProcess) };
+            const exitListenerCount = signalHandler.listenerCount("exit");
+            const browser = mkBrowser_(
+                {
+                    gridUrl: "local",
+                    desiredCapabilities: {
+                        browserName: "chrome",
+                        browserVersion: "115.0",
+                    },
+                },
+                { wdPool },
+            );
+            await browser.init();
+
+            await browser.kill();
+
+            assert.calledOnce(session.deleteSession);
+            assert.calledOnce(wdProcess.kill);
+            assert.isUndefined(browser.getDriverPid());
+            assert.calledOnceWith(warnStub, "WARNING: Can not kill WebDriver process: failed end");
+            assert.equal(signalHandler.listenerCount("exit"), exitListenerCount);
         });
     });
 

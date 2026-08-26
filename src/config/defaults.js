@@ -6,6 +6,11 @@ const { TimeTravelMode } = require("./types");
 
 module.exports = {
     baseUrl: "http://localhost",
+    browserDownloadMirrors: {
+        chrome: null,
+        chromium: null,
+        firefox: null,
+    },
     gridUrl: LOCAL_GRID_URL,
     browserWSEndpoint: null,
     desiredCapabilities: null,

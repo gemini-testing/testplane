@@ -109,6 +109,21 @@ describe("cli/commands/install-deps", () => {
         ]);
     });
 
+    it("should pass browser download mirrors from config", async () => {
+        const browserDownloadMirrors = {
+            chrome: "https://mirror.example/chrome",
+            chromium: null,
+            firefox: null,
+        };
+        testplaneStub.config.browserDownloadMirrors = browserDownloadMirrors;
+
+        await installBrowsers_("chrome@113");
+
+        assert.calledOnceWith(installBrowsersWithDriversStub, [{ browserName: "chrome", browserVersion: "113" }], {
+            browserDownloadMirrors,
+        });
+    });
+
     it("should install browsers from config", async () => {
         testplaneStub.config.browsers = {
             "chrome@113": mkBrowser_("safari", "70"),

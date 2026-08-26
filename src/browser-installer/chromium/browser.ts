@@ -5,8 +5,16 @@ import { getChromiumBuildId } from "./utils";
 import { getChromePlatform } from "../utils";
 import { MIN_CHROMIUM_VERSION } from "../constants";
 import { BrowserName } from "../../browser/types";
+import type { BrowserDownloadMirrors } from "../../config/types";
+import { getBrowserDownloadMirror, sanitizeBrowserDownloadMirrorError } from "../mirrors";
 
-export const installChromium = async (version: string, { force = false } = {}): Promise<string> => {
+export const installChromium = async (
+    version: string,
+    {
+        force = false,
+        browserDownloadMirrors,
+    }: { force?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
+): Promise<string> => {
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROMIUM_VERSION) {
@@ -29,7 +37,14 @@ export const installChromium = async (version: string, { force = false } = {}): 
 
     const buildId = await getChromiumBuildId(platform, milestone);
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: BrowserName.CHROMIUM, platform, buildId, cacheDir });
+    const mirror = getBrowserDownloadMirror(BrowserName.CHROMIUM, browserDownloadMirrors);
+    const canBeInstalled = await canDownload({
+        browser: BrowserName.CHROMIUM,
+        platform,
+        buildId,
+        cacheDir,
+        baseUrl: mirror,
+    });
 
     if (!canBeInstalled) {
         throw new Error(
@@ -50,8 +65,13 @@ export const installChromium = async (version: string, { force = false } = {}): 
             cacheDir,
             downloadProgressCallback,
             browser: BrowserName.CHROMIUM,
+            baseUrl: mirror,
             unpack: true,
-        }).then(result => result.executablePath);
+        })
+            .then(result => result.executablePath)
+            .catch(error => {
+                throw sanitizeBrowserDownloadMirrorError(error, mirror);
+            });
 
     return registry.installBinary(BrowserName.CHROMIUM, platform, milestone, installFn);
 };

@@ -2,6 +2,12 @@ import { BrowserName, type W3CBrowserName } from "../browser/types";
 
 export const ENV_PREFIXES = ["testplane_", "hermione_"];
 
+export const BROWSER_DOWNLOAD_MIRRORS_ENV_VARS = {
+    chrome: "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME",
+    chromium: "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM",
+    firefox: "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX",
+} as const;
+
 export const WEBDRIVER_PROTOCOL = "webdriver";
 export const SAVE_HISTORY_MODE = {
     ALL: "all",

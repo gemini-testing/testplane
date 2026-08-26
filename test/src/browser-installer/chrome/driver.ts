@@ -5,6 +5,11 @@ import { DriverName } from "../../../../src/browser-installer/utils";
 
 describe("browser-installer/chrome/driver", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: "https://mirror.example/chrome",
+        chromium: null,
+        firefox: null,
+    };
 
     let installChromeDriver: typeof InstallChromeDriverType;
 
@@ -13,6 +18,7 @@ describe("browser-installer/chrome/driver", () => {
     let resolveBuildIdStub: SinonStub;
     let puppeteerInstallStub: SinonStub;
     let canDownloadStub: SinonStub;
+    let resolveChromeBuildIdFromMirrorStub: SinonStub;
 
     let getBinaryPathStub: SinonStub;
     let getMatchedDriverVersionStub: SinonStub;
@@ -24,6 +30,7 @@ describe("browser-installer/chrome/driver", () => {
         puppeteerInstallStub = sandbox.stub().resolves({ executablePath: "/chrome/driver/path" });
         resolveBuildIdStub = sandbox.stub().resolves("115.0.5780.170");
         canDownloadStub = sandbox.stub().resolves(true);
+        resolveChromeBuildIdFromMirrorStub = sandbox.stub().resolves("115.0.5790.170");
 
         getBinaryPathStub = sandbox.stub().returns(null);
         getMatchedDriverVersionStub = sandbox.stub().returns(null);
@@ -36,6 +43,7 @@ describe("browser-installer/chrome/driver", () => {
                 install: puppeteerInstallStub,
                 canDownload: canDownloadStub,
             },
+            "./utils": { resolveChromeBuildIdFromMirror: resolveChromeBuildIdFromMirrorStub },
             "../registry": {
                 default: {
                     getBinaryPath: getBinaryPathStub,
@@ -84,6 +92,73 @@ describe("browser-installer/chrome/driver", () => {
         assert.equal(driverPath, "/new/downloaded/driver/path");
     });
 
+    it("should resolve and download driver from mirror", async () => {
+        installBinaryStub.callsFake((_driverName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        await installChromeDriver("115", { browserDownloadMirrors });
+
+        assert.notCalled(resolveBuildIdStub);
+        assert.calledOnceWith(resolveChromeBuildIdFromMirrorStub, "115", browserDownloadMirrors.chrome);
+        assert.calledOnceWith(
+            canDownloadStub,
+            sinon.match({
+                browser: DriverName.CHROMEDRIVER,
+                buildId: "115.0.5790.170",
+                baseUrl: browserDownloadMirrors.chrome,
+            }),
+        );
+        assert.calledOnceWith(
+            puppeteerInstallStub,
+            sinon.match({
+                browser: DriverName.CHROMEDRIVER,
+                buildId: "115.0.5790.170",
+                baseUrl: browserDownloadMirrors.chrome,
+            }),
+        );
+    });
+
+    it("should not expose the mirror URL when the driver artifact download fails", async () => {
+        puppeteerInstallStub.rejects(
+            new Error(`Download failed. URL: ${browserDownloadMirrors.chrome}/115/chromedriver.zip`),
+        );
+        installBinaryStub.callsFake((_driverName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        const error = await installChromeDriver("115", { browserDownloadMirrors }).catch(error => error);
+
+        assert.instanceOf(error, Error);
+        assert.equal(error.message, "Couldn't download browser artifact from the configured mirror");
+    });
+
+    it("should use a shared mirror build resolver when provided", async () => {
+        const resolveMirrorBuildIdStub = sandbox.stub().resolves("115.0.5790.171");
+
+        installBinaryStub.callsFake((_driverName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        await installChromeDriver("115", {
+            browserDownloadMirrors,
+            resolveMirrorBuildId: resolveMirrorBuildIdStub,
+        });
+
+        assert.calledOnceWith(resolveMirrorBuildIdStub, browserDownloadMirrors.chrome);
+        assert.notCalled(resolveChromeBuildIdFromMirrorStub);
+        assert.calledOnceWith(
+            canDownloadStub,
+            sinon.match({
+                browser: DriverName.CHROMEDRIVER,
+                buildId: "115.0.5790.171",
+                baseUrl: browserDownloadMirrors.chrome,
+            }),
+        );
+        assert.calledOnceWith(
+            puppeteerInstallStub,
+            sinon.match({
+                browser: DriverName.CHROMEDRIVER,
+                buildId: "115.0.5790.171",
+                baseUrl: browserDownloadMirrors.chrome,
+            }),
+        );
+    });
+
     it("should use chromium driver manual download if version is too low", async () => {
         getMatchedDriverVersionStub.returns(null);
         installChromeDriverManuallyStub.withArgs("80").resolves("/driver/manual/path");
@@ -91,6 +166,18 @@ describe("browser-installer/chrome/driver", () => {
         const result = await installChromeDriver("80");
 
         assert.equal(result, "/driver/manual/path");
+        assert.notCalled(resolveBuildIdStub);
+        assert.notCalled(installBinaryStub);
+    });
+
+    it("should keep ChromeDriver below 115 on the legacy source when a mirror is configured", async () => {
+        getMatchedDriverVersionStub.returns(null);
+        installChromeDriverManuallyStub.withArgs("114").resolves("/driver/manual/path");
+
+        const result = await installChromeDriver("114", { browserDownloadMirrors });
+
+        assert.equal(result, "/driver/manual/path");
+        assert.notCalled(resolveChromeBuildIdFromMirrorStub);
         assert.notCalled(resolveBuildIdStub);
         assert.notCalled(installBinaryStub);
     });

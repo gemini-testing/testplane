@@ -5,6 +5,11 @@ import { BrowserName } from "../../../src/browser/types";
 
 describe("browser-installer/run", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: "https://mirror.example/chrome",
+        chromium: null,
+        firefox: null,
+    };
 
     let runBrowserDriver: typeof RunBrowserDriver;
 
@@ -42,6 +47,16 @@ describe("browser-installer/run", () => {
             shouldInstallUbuntuPackages: true,
         });
         assert.callOrder(installBrowserStub, runChromeDriverStub);
+    });
+
+    it("should pass browser download mirrors to installer", async () => {
+        await runBrowserDriver(BrowserName.CHROME, "some-version", { browserDownloadMirrors });
+
+        assert.calledOnceWith(installBrowserStub, BrowserName.CHROME, "some-version", {
+            shouldInstallWebDriver: true,
+            shouldInstallUbuntuPackages: true,
+            browserDownloadMirrors,
+        });
     });
 
     it(`should try to install firefox before running its driver`, async () => {

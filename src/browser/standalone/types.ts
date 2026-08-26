@@ -1,4 +1,4 @@
-import type { CommonConfig, SystemConfig } from "../../config/types";
+import type { BrowserDownloadMirrorsInput, CommonConfig, SystemConfig } from "../../config/types";
 
 export type StandaloneBrowserOptions = Pick<
     CommonConfig,
@@ -25,4 +25,5 @@ export type StandaloneBrowserOptions = Pick<
 
 export type StandaloneBrowserOptionsInput = Partial<Omit<StandaloneBrowserOptions, "system">> & {
     system?: Partial<SystemConfig>;
+    browserDownloadMirrors?: BrowserDownloadMirrorsInput;
 };

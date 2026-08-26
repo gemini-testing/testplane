@@ -56,6 +56,7 @@ export async function launchBrowser(
     const filesToRemove: string[] = [];
 
     const config = new Config({
+        browserDownloadMirrors: options.browserDownloadMirrors,
         browsers: {
             [browserName]: browserConfig,
         },

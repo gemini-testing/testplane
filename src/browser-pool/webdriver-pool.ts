@@ -1,6 +1,7 @@
 import type { ChildProcess } from "child_process";
 import { getNormalizedBrowserName } from "../utils/browser";
 import type { SupportedBrowser } from "../browser-installer";
+import type { BrowserDownloadMirrors } from "../config/types";
 
 type BrowserVersion = string;
 type Port = string;
@@ -19,7 +20,10 @@ export class WebdriverPool {
     async getWebdriver(
         browserName?: string,
         browserVersion?: string,
-        { debug = false } = {},
+        {
+            debug = false,
+            browserDownloadMirrors,
+        }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
     ): ReturnType<typeof this.createWebdriverProcess> {
         const browserNameNormalized = getNormalizedBrowserName(browserName);
 
@@ -33,7 +37,11 @@ export class WebdriverPool {
         }
 
         const { resolveBrowserVersion } = await import("../browser-installer");
-        const browserVersionNormalized = browserVersion || (await resolveBrowserVersion(browserNameNormalized));
+        const browserVersionNormalized =
+            browserVersion ||
+            (await resolveBrowserVersion(browserNameNormalized, {
+                ...(browserDownloadMirrors && { browserDownloadMirrors }),
+            }));
 
         const wdProcesses = this.driverProcess.get(browserNameNormalized)?.get(browserVersionNormalized) ?? {};
 
@@ -50,7 +58,10 @@ export class WebdriverPool {
             }
         }
 
-        return this.createWebdriverProcess(browserNameNormalized, browserVersionNormalized, { debug });
+        return this.createWebdriverProcess(browserNameNormalized, browserVersionNormalized, {
+            debug,
+            ...(browserDownloadMirrors && { browserDownloadMirrors }),
+        });
     }
 
     private freeWebdriver(port: Port): void {
@@ -75,10 +86,16 @@ export class WebdriverPool {
     private async createWebdriverProcess(
         browserName: SupportedBrowser,
         browserVersion: string,
-        { debug = false } = {},
+        {
+            debug = false,
+            browserDownloadMirrors,
+        }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
     ): Promise<WdProcess> {
         const { runBrowserDriver } = await import("../browser-installer");
-        const driver = await runBrowserDriver(browserName, browserVersion, { debug });
+        const driver = await runBrowserDriver(browserName, browserVersion, {
+            debug,
+            ...(browserDownloadMirrors && { browserDownloadMirrors }),
+        });
 
         if (!this.driverProcess.has(browserName)) {
             this.driverProcess.set(browserName, new Map());
