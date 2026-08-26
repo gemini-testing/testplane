@@ -9,8 +9,23 @@ import {
     type DownloadProgressCallback,
 } from "../utils";
 import registry from "../registry";
+import { BrowserName } from "../../browser/types";
+import type { BrowserDownloadMirrors } from "../../config/types";
+import { getBrowserDownloadMirror } from "../mirrors";
+import { resolveChromeBuildIdFromMirror, type ChromeBuildIdResolver } from "./utils";
 
-export const installChromeDriver = async (chromeVersion: string, { force = false } = {}): Promise<string> => {
+export const installChromeDriver = async (
+    chromeVersion: string,
+    {
+        force = false,
+        browserDownloadMirrors,
+        resolveMirrorBuildId,
+    }: {
+        force?: boolean;
+        browserDownloadMirrors?: BrowserDownloadMirrors;
+        resolveMirrorBuildId?: ChromeBuildIdResolver;
+    } = {},
+): Promise<string> => {
     const platform = getBrowserPlatform();
     const existingLocallyDriverVersion = registry.getMatchedDriverVersion(
         DriverName.CHROMEDRIVER,
@@ -38,18 +53,29 @@ export const installChromeDriver = async (chromeVersion: string, { force = false
         return installChromeDriverManually(milestone);
     }
 
-    const buildId = await resolveBuildId(DriverName.CHROMEDRIVER, platform, milestone);
+    const mirror = getBrowserDownloadMirror(BrowserName.CHROME, browserDownloadMirrors);
+    const buildId = mirror
+        ? await (resolveMirrorBuildId ? resolveMirrorBuildId() : resolveChromeBuildIdFromMirror(chromeVersion, mirror))
+        : await resolveBuildId(DriverName.CHROMEDRIVER, platform, milestone);
 
     const cacheDir = getChromeDriverDir();
-    const canBeInstalled = await canDownload({ browser: DriverName.CHROMEDRIVER, platform, buildId, cacheDir });
+    const canBeInstalled = await canDownload({
+        browser: DriverName.CHROMEDRIVER,
+        platform,
+        buildId,
+        cacheDir,
+        baseUrl: mirror,
+    });
 
     if (!canBeInstalled) {
         throw new Error(
-            [
-                `chromedriver@${buildId} can't be installed.`,
-                `Probably the major browser version '${milestone}' is invalid`,
-                "Correct chrome version examples: '123', '124'",
-            ].join("\n"),
+            mirror
+                ? "Couldn't download browser artifact from the configured mirror"
+                : [
+                      `chromedriver@${buildId} can't be installed.`,
+                      `Probably the major browser version '${milestone}' is invalid`,
+                      "Correct chrome version examples: '123', '124'",
+                  ].join("\n"),
         );
     }
 
@@ -59,6 +85,7 @@ export const installChromeDriver = async (chromeVersion: string, { force = false
             buildId,
             cacheDir: getChromeDriverDir(),
             browser: DriverName.CHROMEDRIVER,
+            baseUrl: mirror,
             unpack: true,
             downloadProgressCallback,
         }).then(result => result.executablePath);

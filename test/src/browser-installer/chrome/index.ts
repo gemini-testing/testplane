@@ -5,6 +5,11 @@ import type { runChromeDriver as RunChromeDriverType } from "../../../../src/bro
 
 describe("browser-installer/chrome", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: "https://mirror.example/chrome",
+        chromium: null,
+        firefox: null,
+    };
 
     let runChromeDriver: typeof RunChromeDriverType;
 
@@ -55,8 +60,29 @@ describe("browser-installer/chrome", () => {
 
         await runChromeDriver("130");
 
-        assert.calledOnceWith(installChromeDriverStub, "130");
+        assert.calledOnceWithExactly(installChromeDriverStub, "130", { browserDownloadMirrors: undefined });
         assert.calledOnceWith(spawnStub, "/driver/path", ["--port=10050", "--silent"]);
+    });
+
+    it("should pass browser download mirrors to driver installation", async () => {
+        sandbox.stub(process, "once");
+
+        await runChromeDriver("stable", { browserDownloadMirrors });
+
+        assert.calledOnceWithExactly(installChromeDriverStub, "stable", { browserDownloadMirrors });
+    });
+
+    it("should pass the mirror map when Chrome mirror is not configured", async () => {
+        sandbox.stub(process, "once");
+        const emptyBrowserDownloadMirrors = { chrome: null, chromium: null, firefox: null };
+
+        await runChromeDriver("130", {
+            browserDownloadMirrors: emptyBrowserDownloadMirrors,
+        });
+
+        assert.calledOnceWithExactly(installChromeDriverStub, "130", {
+            browserDownloadMirrors: emptyBrowserDownloadMirrors,
+        });
     });
 
     it("should wait for port to be active", async () => {

@@ -2,13 +2,21 @@ import type { ChildProcess } from "child_process";
 import { installBrowser } from "./install";
 import type { SupportedBrowser } from "./utils";
 import { BrowserName } from "../browser/types";
+import type { BrowserDownloadMirrors } from "../config/types";
 
 export const runBrowserDriver = async (
     browserName: SupportedBrowser,
     browserVersion: string,
-    { debug = false } = {},
+    {
+        debug = false,
+        browserDownloadMirrors,
+    }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number }> => {
-    const installBrowserOpts = { shouldInstallWebDriver: true, shouldInstallUbuntuPackages: true };
+    const installBrowserOpts = {
+        shouldInstallWebDriver: true,
+        shouldInstallUbuntuPackages: true,
+        browserDownloadMirrors,
+    };
 
     await installBrowser(browserName, browserVersion, installBrowserOpts);
 
@@ -16,7 +24,9 @@ export const runBrowserDriver = async (
         case BrowserName.CHROME:
         case BrowserName.CHROMIUM:
         case BrowserName.CHROMEHEADLESSSHELL:
-            return import("./chrome").then(module => module.runChromeDriver(browserVersion, { debug }));
+            return import("./chrome").then(module =>
+                module.runChromeDriver(browserVersion, { debug, browserDownloadMirrors }),
+            );
         case BrowserName.FIREFOX:
             return import("./firefox").then(module => module.runGeckoDriver(browserVersion, { debug }));
         case BrowserName.EDGE:

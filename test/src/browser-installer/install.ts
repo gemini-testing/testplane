@@ -8,14 +8,21 @@ import { BrowserName } from "../../../src/browser/types";
 
 describe("browser-installer/install", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: "https://mirror.example/chrome",
+        chromium: "https://mirror.example/chromium",
+        firefox: "https://mirror.example/firefox",
+    };
 
     let installBrowser: typeof InstallBrowser;
     let installBrowsersWithDrivers: typeof InstallBrowsersWithDrivers;
 
     let installChromeStub: SinonStub;
     let installChromeDriverStub: SinonStub;
+    let resolveLatestChromeVersionStub: SinonStub;
     let installFirefoxStub: SinonStub;
     let installLatestGeckoDriverStub: SinonStub;
+    let resolveLatestFirefoxVersionStub: SinonStub;
     let installEdgeDriverStub: SinonStub;
 
     let isUbuntuStub: SinonStub;
@@ -24,17 +31,27 @@ describe("browser-installer/install", () => {
     beforeEach(() => {
         installChromeStub = sandbox.stub();
         installChromeDriverStub = sandbox.stub();
+        resolveLatestChromeVersionStub = sandbox.stub();
         installFirefoxStub = sandbox.stub();
         installLatestGeckoDriverStub = sandbox.stub();
+        resolveLatestFirefoxVersionStub = sandbox.stub();
         installEdgeDriverStub = sandbox.stub();
 
         isUbuntuStub = sandbox.stub().resolves(false);
         installUbuntuPackageDependenciesStub = sandbox.stub().resolves();
 
         const installer = proxyquire("../../../src/browser-installer/install", {
-            "./chrome": { installChrome: installChromeStub, installChromeDriver: installChromeDriverStub },
+            "./chrome": {
+                installChrome: installChromeStub,
+                installChromeDriver: installChromeDriverStub,
+                resolveLatestChromeVersion: resolveLatestChromeVersionStub,
+            },
             "./edge": { installEdgeDriver: installEdgeDriverStub },
-            "./firefox": { installFirefox: installFirefoxStub, installLatestGeckoDriver: installLatestGeckoDriverStub },
+            "./firefox": {
+                installFirefox: installFirefoxStub,
+                installLatestGeckoDriver: installLatestGeckoDriverStub,
+                resolveLatestFirefoxVersion: resolveLatestFirefoxVersionStub,
+            },
             "./ubuntu-packages": {
                 isUbuntu: isUbuntuStub,
                 installUbuntuPackageDependencies: installUbuntuPackageDependenciesStub,
@@ -61,6 +78,7 @@ describe("browser-installer/install", () => {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
+                            browserDownloadMirrors: undefined,
                         });
                     });
 
@@ -77,6 +95,32 @@ describe("browser-installer/install", () => {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: true,
+                            browserDownloadMirrors: undefined,
+                        });
+                    });
+
+                    it("should pass browser download mirrors", async () => {
+                        await installBrowser(BrowserName.CHROME, "115", { force, browserDownloadMirrors });
+
+                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: false,
+                            browserDownloadMirrors,
+                        });
+                    });
+
+                    it("should pass browser download mirrors when resolving an omitted version", async () => {
+                        resolveLatestChromeVersionStub.resolves("stable-chrome");
+
+                        await installBrowser(BrowserName.CHROME, undefined, { force, browserDownloadMirrors });
+
+                        assert.calledOnceWithExactly(resolveLatestChromeVersionStub, force, browserDownloadMirrors);
+                        assert.calledOnceWith(installChromeStub, "chrome", "stable-chrome", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: false,
+                            browserDownloadMirrors,
                         });
                     });
                 });
@@ -92,6 +136,7 @@ describe("browser-installer/install", () => {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
+                            browserDownloadMirrors: undefined,
                         });
                     });
 
@@ -108,6 +153,21 @@ describe("browser-installer/install", () => {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: true,
+                            browserDownloadMirrors: undefined,
+                        });
+                    });
+
+                    it("should pass browser download mirrors when resolving an omitted version", async () => {
+                        resolveLatestFirefoxVersionStub.resolves("stable-firefox");
+
+                        await installBrowser(BrowserName.FIREFOX, undefined, { force, browserDownloadMirrors });
+
+                        assert.calledOnceWithExactly(resolveLatestFirefoxVersionStub, force, browserDownloadMirrors);
+                        assert.calledOnceWith(installFirefoxStub, "stable-firefox", {
+                            force,
+                            needUbuntuPackages: false,
+                            needWebDriver: false,
+                            browserDownloadMirrors,
                         });
                     });
                 });
@@ -153,6 +213,20 @@ describe("browser-installer/install", () => {
                 force: true,
                 needUbuntuPackages: false,
                 needWebDriver: true,
+                browserDownloadMirrors: undefined,
+            });
+        });
+
+        it("should pass browser download mirrors", async () => {
+            await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }], {
+                browserDownloadMirrors,
+            });
+
+            assert.calledOnceWith(installChromeStub, "chrome", "115", {
+                force: true,
+                needUbuntuPackages: false,
+                needWebDriver: true,
+                browserDownloadMirrors,
             });
         });
 
@@ -165,6 +239,7 @@ describe("browser-installer/install", () => {
                 force: true,
                 needWebDriver: true,
                 needUbuntuPackages: true,
+                browserDownloadMirrors: undefined,
             });
         });
 
