@@ -145,6 +145,8 @@ export const installUbuntuPackages = async (
     browserInstallerDebug(`There are ${dependenciesToDownload.length} deb packages to download`);
 
     if (!dependenciesToDownload.length) {
+        downloadProgressCallback(100);
+
         return;
     }
 

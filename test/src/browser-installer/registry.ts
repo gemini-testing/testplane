@@ -116,6 +116,21 @@ describe("browser-installer/registry", () => {
             assert.equal(versionFull, "115.0.5790.170");
         });
 
+        it("should not treat an installed Chrome build as the explicit stable channel", () => {
+            registry = createRegistry_({
+                binaries: {
+                    // eslint-disable-next-line camelcase
+                    chrome_mac_arm: { "115.0.5790.170": "../browsers/chrome-115-0-5790-170" },
+                },
+            });
+
+            assert.equal(
+                registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM),
+                "115.0.5790.170",
+            );
+            assert.isNull(registry.getMatchedBrowserVersion(BrowserName.CHROME, BrowserPlatform.MAC_ARM, "stable"));
+        });
+
         it("should return matching latest firefox browser version", () => {
             registry = createRegistry_({
                 binaries: {

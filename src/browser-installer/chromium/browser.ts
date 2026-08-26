@@ -5,8 +5,16 @@ import { getChromiumBuildId } from "./utils";
 import { getChromePlatform } from "../utils";
 import { MIN_CHROMIUM_VERSION } from "../constants";
 import { BrowserName } from "../../browser/types";
+import type { BrowserDownloadMirrors } from "../../config/types";
+import { getBrowserDownloadMirror } from "../mirrors";
 
-export const installChromium = async (version: string, { force = false } = {}): Promise<string> => {
+export const installChromium = async (
+    version: string,
+    {
+        force = false,
+        browserDownloadMirrors,
+    }: { force?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
+): Promise<string> => {
     const milestone = getMilestone(version);
 
     if (Number(milestone) < MIN_CHROMIUM_VERSION) {
@@ -29,29 +37,44 @@ export const installChromium = async (version: string, { force = false } = {}): 
 
     const buildId = await getChromiumBuildId(platform, milestone);
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: BrowserName.CHROMIUM, platform, buildId, cacheDir });
+    const mirror = getBrowserDownloadMirror(BrowserName.CHROMIUM, browserDownloadMirrors);
+    const canBeInstalled = await canDownload({
+        browser: BrowserName.CHROMIUM,
+        platform,
+        buildId,
+        cacheDir,
+        baseUrl: mirror,
+    });
 
     if (!canBeInstalled) {
         throw new Error(
-            [
-                `chrome@${version} can't be installed.`,
-                `Probably the version '${version}' is invalid, please try another version.`,
-                "Version examples: '93', '93.0'",
-            ].join("\n"),
+            mirror
+                ? `Couldn't download browser artifact from the configured mirror: ${mirror}`
+                : [
+                      `chrome@${version} can't be installed.`,
+                      `Probably the version '${version}' is invalid, please try another version.`,
+                      "Version examples: '93', '93.0'",
+                  ].join("\n"),
         );
     }
 
     browserInstallerDebug(`installing chromium@${buildId} (${milestone}) for ${platform}`);
 
-    const installFn = (downloadProgressCallback: DownloadProgressCallback): Promise<string> =>
-        puppeteerInstall({
+    const installFn = (downloadProgressCallback: DownloadProgressCallback): Promise<string> => {
+        if (mirror) {
+            browserInstallerDebug(`downloading ${BrowserName.CHROMIUM}@${buildId} from mirror ${mirror}`);
+        }
+
+        return puppeteerInstall({
             platform,
             buildId,
             cacheDir,
             downloadProgressCallback,
             browser: BrowserName.CHROMIUM,
+            baseUrl: mirror,
             unpack: true,
         }).then(result => result.executablePath);
+    };
 
     return registry.installBinary(BrowserName.CHROMIUM, platform, milestone, installFn);
 };

@@ -2,30 +2,109 @@
 
 ## Dealing with Browsers
 
-All you need are browsers that Testplane could use for testing. To do this you need to install some browsers, such as [chrome](https://www.google.com/chrome/) (to automate this process you can use the [@testplane/headless-chrome](https://github.com/gemini-testing/testplane-headless-chrome) plugin).
+Testplane v9 runs browser sessions through WebDriver. You can connect to a remote WebDriver grid or let Testplane install and run supported browsers and drivers locally.
 
-Next, you have two ways to configure Testplane to work with browsers:
+### Local browsers and drivers
 
-* Using the devtools protocol (available only for `Chromium`-based browsers). This method does not need to be pre-configured. Just go to the [quick start](#quick-start).
-* Using the webdriver protocol. In this case you need to set up [Selenium](http://www.seleniumhq.org/) grid. The simplest way to get started is to use one of the NPM selenium standalone packages, such as [vvo/selenium-standalone](https://github.com/vvo/selenium-standalone). For more information about setting up, see [selenium-standalone](#selenium-standalone).
+Set `gridUrl` to `"local"` and describe the browsers in the usual `browsers` section:
 
-### Selenium-standalone
-Install `selenium-standalone` by command:
+```typescript
+export default {
+    gridUrl: "local",
 
+    browsers: {
+        chrome: {
+            desiredCapabilities: {
+                browserName: "chrome",
+                browserVersion: "130",
+            },
+        },
+        firefox: {
+            desiredCapabilities: {
+                browserName: "firefox",
+            },
+        },
+    },
+} satisfies import("testplane").ConfigInput;
 ```
-npm i -g selenium-standalone
+
+Install the configured browser binaries and drivers in advance:
+
+```bash
+npx testplane install-deps
 ```
 
-Next you need to install browser drivers
+You can also request explicit versions:
 
-```
-selenium-standalone install
-```
-
-and run your server by executing
-
-```
-selenium-standalone start
+```bash
+npx testplane install-deps chrome@130 firefox@128
 ```
 
-:warning: If you will get error like `No Java runtime present, requesting install.` you should install [Java Development Kit (JDK)](https://www.oracle.com/technetwork/java/javase/downloads/index.html) for your OS.
+If `install-deps` is not run first, Testplane can download missing local dependencies when the browser session starts. For a remote grid, set `gridUrl` to its WebDriver endpoint instead of `"local"`.
+
+For local browser and driver installation, a `browserVersion` consisting only of digits is normalized by adding `.0`: `"139"` is treated as `"139.0"`. Versions containing dots or channel names are not rewritten by this normalization. The same rule applies to explicit `install-deps` versions such as `chrome@139`.
+
+### Browser download mirrors
+
+Configure mirrors once at the root of the Testplane config. The map is not a per-browser option:
+
+```typescript
+export default {
+    gridUrl: "local",
+
+    browserDownloadMirrors: {
+        chrome: "https://mirror.example/chrome-for-testing",
+        chromium: "https://mirror.example/chromium-browser-snapshots",
+        firefox: "https://mirror.example/firefox",
+    },
+
+    browsers: {
+        chrome: {
+            desiredCapabilities: {
+                browserName: "chrome",
+                browserVersion: "130",
+            },
+        },
+    },
+} satisfies import("testplane").ConfigInput;
+```
+
+CI can supply or override individual mirrors with uppercase environment variables:
+
+```bash
+export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME=https://mirror.example/chrome-for-testing
+export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM=https://mirror.example/chromium-browser-snapshots
+export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX=https://mirror.example/firefox
+```
+
+The uppercase variables take precedence over config values and compatibility variables with lowercase `testplane_` or `hermione_` prefixes. Leave an unused variable unset. An empty value is invalid.
+
+Mirror URLs must be absolute `http:` or `https:` URLs without credentials, a query string, or a fragment. Testplane trims surrounding whitespace and trailing slashes while preserving a pathname prefix.
+
+To see which mirror is used for each downloaded binary, enable `DEBUG=testplane:browser-installer` when running `testplane install-deps` or starting a local browser. The debug message includes the binary name, resolved version, and mirror URL. No mirror download message is emitted when an installed binary is reused.
+
+### Mirror layout
+
+A mirror must preserve the archive layout expected by `@puppeteer/browsers` for every target platform used in CI.
+
+- The Chrome mirror serves Chrome for Testing metadata at its root, including `LATEST_RELEASE_STABLE`, channel files such as `LATEST_RELEASE_BETA`, `latest-versions-per-milestone.json`, and `latest-patch-versions-per-build.json`.
+- Chrome, Chrome Headless Shell, and ChromeDriver archives use Chrome for Testing paths such as `<build-id>/<platform>/chrome-<platform>.zip`, `<build-id>/<platform>/chrome-headless-shell-<platform>.zip`, and `<build-id>/<platform>/chromedriver-<platform>.zip`.
+- The Chromium mirror serves snapshot archives under paths such as `<platform-folder>/<revision>/<archive>.zip`.
+- The Firefox mirror serves `firefox_versions.json` at its root. Release archives use paths such as `<version>/<platform>/en-US/<archive>`.
+
+For Chrome, an explicit `browserVersion: "latest"` follows `@puppeteer/browsers` and selects Canary (`LATEST_RELEASE_CANARY`), not the latest Stable release. Use `"stable"` (`LATEST_RELEASE_STABLE`) to check the current Stable release. If `browserVersion` is omitted, Testplane can reuse an already installed Chrome version without checking whether a newer Stable release exists; it queries Stable only when no suitable local browser is found.
+
+The actual platform directory and archive names vary between Linux, macOS, Windows, and architectures. Mirror the upstream paths rather than inventing a new layout.
+
+### Source exceptions and fallback behavior
+
+The mirror keys cover different download sources:
+
+- Chrome versions earlier than 113 are installed from Chromium snapshots and therefore use the `chromium` mirror.
+- ChromeDriver versions earlier than 115 continue to use the legacy `chromedriver.storage.googleapis.com` source.
+- GeckoDriver is not downloaded from the Firefox mirror. It continues to use its Mozilla/GitHub upstream source.
+
+When a mirror covers a requested metadata file or archive, Testplane does not fall back to the public upstream. A missing platform archive, unavailable metadata file, or network failure stops installation with an error.
+
+Download errors retain the underlying network diagnostics, including the mirror URL.
+If an artifact is unavailable during the pre-download check, the error includes the configured mirror URL.

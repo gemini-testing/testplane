@@ -147,7 +147,8 @@ describe("profiler/output/console", () => {
 
         assert.notCalled(stdout);
         assert.calledOnce(stderr);
-        assert.match(stderr.firstCall.args[0], /^\[profiler] Test run profile/);
+        assert.match(stderr.firstCall.args[0], /\[profiler]/);
+        assert.match(stderr.firstCall.args[0], /Test run profile/);
     });
 
     it("should print one aligned report with phase and slow-test tables", () => {

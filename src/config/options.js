@@ -5,13 +5,32 @@ const { root, section, map, option } = require("gemini-configparser");
 const browserOptions = require("./browser-options");
 const defaults = require("./defaults");
 const optionsBuilder = require("./options-builder");
-const { NODEJS_TEST_RUN_ENV, BROWSER_TEST_RUN_ENV, ENV_PREFIXES } = require("../constants/config");
+const { normalizeBrowserDownloadMirror } = require("../browser-installer/mirrors");
+const {
+    NODEJS_TEST_RUN_ENV,
+    BROWSER_TEST_RUN_ENV,
+    ENV_PREFIXES,
+    BROWSER_DOWNLOAD_MIRRORS_ENV_VARS,
+} = require("../constants/config");
 
 const options = optionsBuilder(_.propertyOf(defaults));
+
+const browserDownloadMirrorOption = browserName =>
+    option({
+        defaultValue: defaults.browserDownloadMirrors[browserName],
+        map: value =>
+            value === null ? value : normalizeBrowserDownloadMirror(value, `browserDownloadMirrors.${browserName}`),
+    });
 
 const rootSection = section(
     _.extend(browserOptions.getTopLevel(), {
         browsers: map(section(browserOptions.getPerBrowser())),
+
+        browserDownloadMirrors: section({
+            chrome: browserDownloadMirrorOption("chrome"),
+            chromium: browserDownloadMirrorOption("chromium"),
+            firefox: browserDownloadMirrorOption("firefox"),
+        }),
 
         prepareEnvironment: options.optionalFunction("prepareEnvironment"),
         beforeAll: options.optionalFunction("beforeAll"),
@@ -264,4 +283,16 @@ const rootSection = section(
     }),
 );
 
-module.exports = root(rootSection, { envPrefix: ENV_PREFIXES });
+const parseOptions = root(rootSection, { envPrefix: ENV_PREFIXES });
+
+module.exports = ({ env, ...config }) => {
+    const normalizedEnv = { ...env };
+
+    for (const envName of Object.values(BROWSER_DOWNLOAD_MIRRORS_ENV_VARS)) {
+        if (Object.prototype.hasOwnProperty.call(env, envName)) {
+            normalizedEnv[envName.toLowerCase()] = env[envName];
+        }
+    }
+
+    return parseOptions({ ...config, env: normalizedEnv });
+};
