@@ -13,6 +13,9 @@ const {
     WORKER_INIT,
     WORKER_SYNC_CONFIG,
     WORKER_UNHANDLED_REJECTION,
+    WORKER_PROFILER_BATCH,
+    MASTER_PROFILER_FLUSH,
+    WORKER_PROFILER_FLUSHED,
 } = require("src/constants/process-messages");
 
 describe("WorkersRegistry", () => {
@@ -20,7 +23,7 @@ describe("WorkersRegistry", () => {
 
     let workersImpl, workerFarm, loggerErrorStub;
 
-    const mkWorkersRegistry_ = (config = {}) => {
+    const mkWorkersRegistry_ = (config = {}, profiler) => {
         config = _.defaults(config, {
             system: {},
         });
@@ -32,17 +35,19 @@ describe("WorkersRegistry", () => {
                 error: loggerErrorStub,
             },
         });
-        const workersRegistry = WorkersRegistry.create(config);
+        const workersRegistry = profiler ? WorkersRegistry.create(config, profiler) : WorkersRegistry.create(config);
         workersRegistry.init();
 
         return workersRegistry;
     };
 
-    const initChild_ = () => {
+    const initChild_ = pid => {
         const { onChild } = workerFarm.firstCall.args[0];
 
         const child = new EventEmitter();
+        child.pid = pid;
         child.send = sandbox.stub();
+        child.kill = sandbox.stub();
         onChild(child);
 
         return child;
@@ -127,6 +132,41 @@ describe("WorkersRegistry", () => {
             });
         });
 
+        it("should include midpoint clock samples in profiler worker init", () => {
+            const clock = sinon.useFakeTimers({ now: 1_120 });
+            try {
+                const profiler = {
+                    isEnabled: sinon.stub().returns(true),
+                    startSpan: sinon.stub().returns({ end: sinon.stub() }),
+                    runId: "run",
+                    level: 2,
+                };
+                mkWorkersRegistry_({ configPath: "foo/bar" }, profiler);
+                const child = initChild_(12345);
+
+                child.emit("message", {
+                    event: WORKER_INIT,
+                    profilerClock: { sentAtEpochMs: 1_000 },
+                });
+
+                assert.calledOnceWith(
+                    child.send,
+                    sinon.match({
+                        event: MASTER_INIT,
+                        profiler: sinon.match({
+                            clockSync: {
+                                workerSentAtEpochMs: 1_000,
+                                masterReceivedAtEpochMs: 1_120,
+                                masterSentAtEpochMs: 1_120,
+                            },
+                        }),
+                    }),
+                );
+            } finally {
+                clock.restore();
+            }
+        });
+
         it("should reply to worker sync config request", () => {
             mkWorkersRegistry_({
                 serialize: () => ({ foo: "bar" }),
@@ -199,6 +239,78 @@ describe("WorkersRegistry", () => {
 
             assert.notCalled(onEvent);
         });
+
+        it("should ingest a profiler batch and surface a worker-side collection error", () => {
+            const profiler = {
+                isEnabled: sinon.stub().returns(true),
+                startSpan: sinon.stub().returns({ end: sinon.stub() }),
+                ingestFragment: sinon.stub(),
+                recordError: sinon.stub(),
+            };
+            mkWorkersRegistry_({}, profiler);
+            const child = initChild_(12345);
+            const fragment = { transportVersion: 1 };
+
+            child.emit("message", { event: WORKER_PROFILER_BATCH, fragment });
+            child.emit("message", { event: WORKER_PROFILER_BATCH, error: "collection failed" });
+
+            assert.calledOnceWith(profiler.ingestFragment, fragment);
+            assert.deepEqual(fragment.process, {
+                type: "worker",
+                pid: 12345,
+                workerInstanceId: "worker-1-12345",
+            });
+            assert.calledOnceWith(
+                profiler.recordError,
+                "transport.batch.worker",
+                sinon.match.has("message", "collection failed"),
+            );
+        });
+
+        it("should ingest late profiler flush fragments after the flush waiter timed out", async () => {
+            const clock = sinon.useFakeTimers();
+            try {
+                const profiler = {
+                    isEnabled: sinon.stub().returns(true),
+                    startSpan: sinon.stub().returns({ end: sinon.stub() }),
+                    ingestFragment: sinon.stub(),
+                    recordError: sinon.stub(),
+                    runId: "run",
+                    level: 2,
+                };
+                const workersRegistry = mkWorkersRegistry_({}, profiler);
+                const child = initChild_(12345);
+                const fragment = { transportVersion: 1, sequence: 1 };
+
+                const endPromise = workersRegistry.end();
+                assert.calledWith(child.send, sinon.match({ event: MASTER_PROFILER_FLUSH }));
+                const { requestId } = child.send
+                    .getCalls()
+                    .map(call => call.args[0])
+                    .find(message => message.event === MASTER_PROFILER_FLUSH);
+
+                await clock.tickAsync(1000);
+                await endPromise;
+
+                assert.calledWith(
+                    profiler.recordError,
+                    "transport.flush",
+                    sinon.match.has("message", sinon.match("Timed out")),
+                );
+                assert.notCalled(profiler.ingestFragment);
+
+                child.emit("message", { event: WORKER_PROFILER_FLUSHED, requestId, fragment });
+
+                assert.calledOnceWith(profiler.ingestFragment, fragment);
+                assert.deepEqual(fragment.process, {
+                    type: "worker",
+                    pid: 12345,
+                    workerInstanceId: "worker-1-12345",
+                });
+            } finally {
+                clock.restore();
+            }
+        });
     });
 
     describe("execute worker's method", () => {
@@ -253,6 +365,27 @@ describe("WorkersRegistry", () => {
             await mkWorkersRegistry_().end();
 
             assert.calledOnceWith(workerFarm.end, workersImpl);
+        });
+
+        it("should become ended synchronously before level-zero shutdown", async () => {
+            const workersRegistry = mkWorkersRegistry_();
+
+            const endPromise = workersRegistry.end();
+
+            assert.isTrue(workersRegistry.isEnded());
+            await endPromise;
+        });
+    });
+
+    describe("shutdown", () => {
+        it("should kill children synchronously when profiling is disabled", async () => {
+            const workersRegistry = mkWorkersRegistry_();
+            const child = initChild_(12345);
+
+            const shutdownPromise = workersRegistry.shutdown();
+
+            assert.calledOnce(child.kill);
+            await shutdownPromise;
         });
     });
 
@@ -323,6 +456,24 @@ describe("WorkersRegistry", () => {
                 assert.calledOnceWith(
                     loggerErrorStub,
                     `testplane:worker:${child.pid} terminated unexpectedly with signal: SIGINT`,
+                );
+            });
+
+            it("profiler partial marker", () => {
+                const profiler = {
+                    isEnabled: sinon.stub().returns(true),
+                    startSpan: sinon.stub().returns({ end: sinon.stub() }),
+                    recordError: sinon.stub(),
+                };
+                mkWorkersRegistry_({}, profiler);
+                const child = initChild_(12345);
+
+                child.emit("exit", 1, null);
+
+                assert.calledOnceWith(
+                    profiler.recordError,
+                    "transport.workerExit",
+                    sinon.match.has("message", sinon.match("worker-1-12345")),
                 );
             });
         });

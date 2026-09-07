@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const path = require("node:path");
 const proxyquire = require("proxyquire");
 const { Test } = require("src/test-reader/test-object");
 const RuntimeConfig = require("src/config/runtime-config");
@@ -47,7 +48,7 @@ describe("worker/runner/test-runner/execution-thread", () => {
         const browser = opts.browser || mkBrowser_();
         const testplaneCtx = opts.testplaneCtx || {};
 
-        return ExecutionThread.create({ test, browser, testplaneCtx });
+        return ExecutionThread.create({ ...opts, test, browser, testplaneCtx });
     };
 
     beforeEach(() => {
@@ -142,6 +143,48 @@ describe("worker/runner/test-runner/execution-thread", () => {
             const executionThread = mkExecutionThread_();
 
             await assert.isRejected(executionThread.run(runnable), /foo/);
+        });
+
+        it("should correlate and profile an individual hook by its explicit kind", async () => {
+            const contexts = [];
+            const spans = [];
+            const profiler = {
+                isEnabled: sinon.stub().returns(true),
+                withContext: (context, action) => {
+                    contexts.push(context);
+                    return action();
+                },
+                withSpan: (kind, options, action) => {
+                    spans.push({ kind, options });
+                    return action();
+                },
+            };
+            const runnable = mkRunnable_({
+                fn: function userHook() {},
+                file: path.join(process.cwd(), "test", "hooks.js"),
+                location: { line: 42, column: 7 },
+                fullTitle: () => "suite hook",
+            });
+
+            await mkExecutionThread_({ profiler }).run(runnable, { kind: "beforeEach" });
+
+            assert.deepEqual(contexts, [{ runnableKind: "beforeEach" }]);
+            assert.deepInclude(spans[0], {
+                kind: "test.hook",
+                options: {
+                    minLevel: 2,
+                    name: "suite hook",
+                    context: { runnableKind: "beforeEach" },
+                    source: {
+                        file: "test/hooks.js",
+                        line: 42,
+                        column: 7,
+                        functionName: "userHook",
+                        confidence: "high",
+                    },
+                    attributes: { hook: "beforeEach" },
+                },
+            });
         });
 
         it("should store error in current test on runnable reject", async () => {

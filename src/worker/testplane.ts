@@ -4,6 +4,7 @@ import Runner from "./runner";
 import { BaseTestplane } from "../base-testplane";
 import { RefImageInfo, WdioBrowser, WorkerEventHandler } from "../types";
 import { ConfigInput } from "../config/types";
+import type { ProfilerFragment } from "../profiler/runtime/types";
 
 export interface WorkerRunTestOpts {
     browserId: string;
@@ -14,6 +15,8 @@ export interface WorkerRunTestOpts {
     sessionOpts: WdioBrowser["options"] & { capabilities: WdioBrowser["capabilities"] };
     state: Record<string, unknown>;
     attempt: number;
+    attemptId?: string;
+    profileSessionId?: string;
 }
 
 export interface AssertViewResultsSuccess {
@@ -33,6 +36,7 @@ export interface WorkerRunTestResult {
      */
     hermioneCtx: WorkerRunTestTestplaneCtx;
     tags: string[];
+    profileFragment?: ProfilerFragment;
 }
 
 export interface Testplane {
@@ -50,7 +54,7 @@ export class Testplane extends BaseTestplane {
     protected async _setup(): Promise<void> {
         await super._setup();
 
-        this.runner = Runner.create(this._config);
+        this.runner = Runner.create(this._config, this._profiler.runtime);
 
         passthroughEvent(this.runner, this, [
             WorkerEvents.BEFORE_FILE_READ,
@@ -73,6 +77,14 @@ export class Testplane extends BaseTestplane {
 
     runTest(fullTitle: string, options: WorkerRunTestOpts): Promise<WorkerRunTestResult> {
         return this.runner.runTest(fullTitle, options);
+    }
+
+    takeProfilerFragment(): ProfilerFragment | null {
+        return this._profiler.runtime.takeFragment();
+    }
+
+    profilerLevel(): 0 | 1 | 2 | 3 {
+        return this._profiler.runtime.level;
     }
 
     isWorker(): boolean {

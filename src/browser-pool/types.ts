@@ -11,3 +11,14 @@ export interface BrowserOpts {
     version?: string;
     highPriority?: boolean;
 }
+
+export type PoolLimiterKind = "browser" | "global";
+
+export interface PoolObserverOperation {
+    end(status?: "completed" | "failed" | "interrupted"): void;
+}
+
+export interface PoolObserver {
+    start(kind: string, data: Record<string, string | number | boolean | null>): PoolObserverOperation;
+    record(event: string, data: Record<string, string | number | boolean | null>): void;
+}

@@ -69,6 +69,7 @@ function sendError(err, cb) {
             "hermioneCtx",
             "meta",
             "history",
+            "profileFragment",
         ]);
 
         cb(serializeWorkerError(shortenedErr));

@@ -25,6 +25,7 @@ function notifyAndExit(signalNo: number): (signal: NodeJS.Signals) => void {
         }
 
         lastCallTime = time;
+        process.exitCode = exitCode;
 
         if (callCount++ > 0) {
             log("Force quit.");
@@ -33,11 +34,17 @@ function notifyAndExit(signalNo: number): (signal: NodeJS.Signals) => void {
 
         const err = new Error(`The process was terminated by a signal: ${signal}`);
 
-        signalHandler.emitAndWait(MasterEvents.EXIT, err).then(() => {
-            signalHandler.emitAndWait(MasterEvents.RUNNER_END, err).then(() => {
-                process.exit(exitCode);
-            });
-        });
+        (async (): Promise<void> => {
+            try {
+                await signalHandler.emitAndWait(MasterEvents.EXIT, err);
+            } finally {
+                try {
+                    await signalHandler.emitAndWait(MasterEvents.RUNNER_END, err);
+                } finally {
+                    process.exit(exitCode);
+                }
+            }
+        })().catch(() => undefined);
     };
 }
 

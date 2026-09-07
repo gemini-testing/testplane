@@ -5,3 +5,7 @@ export const WORKER_INIT = "worker.init";
 export const WORKER_SYNC_CONFIG = "worker.syncConfig";
 export const WORKER_UNHANDLED_REJECTION = "worker.unhandledRejection";
 export const TEST_ASSIGNED_TO_WORKER = "worker.testAssignedToWorker";
+
+export const WORKER_PROFILER_BATCH = "worker.profilerBatch";
+export const MASTER_PROFILER_FLUSH = "master.profilerFlush";
+export const WORKER_PROFILER_FLUSHED = "worker.profilerFlushed";

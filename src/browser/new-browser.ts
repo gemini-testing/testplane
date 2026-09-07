@@ -109,7 +109,7 @@ export class NewBrowser extends Browser {
             return this._wdProcess.getPid();
         }
 
-        return undefined;
+        return;
     }
 
     protected async _createSession(): Promise<WebdriverIO.Browser> {

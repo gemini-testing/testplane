@@ -152,4 +152,9 @@ function handleBrowserEvents(
             cb([{ pass: false, message: (err as Error).message }]);
         }
     });
+
+    socket.on(BrowserEventNames.profilerFragment, payload => {
+        const { runUuid } = socket.handshake.auth;
+        io.to(runUuid).except(socket.id).emit(BrowserEventNames.profilerFragment, payload);
+    });
 }

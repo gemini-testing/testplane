@@ -3,16 +3,21 @@ import { Command } from "@gemini-testing/commander";
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import { Testplane } from "../../../../../src/testplane";
+import { ProfilerManager } from "../../../../../src/profiler/manager";
+import { BootstrapProbe } from "../../../../../src/profiler/runtime/bootstrap-probe";
 import type { Writable } from "type-fest";
 import type { Config } from "../../../../../src/config";
 
 describe("cli/commands/install-deps", () => {
     const sandbox = sinon.createSandbox();
+    const originalExitCode = process.exitCode;
 
     let cli: { run: () => Promise<void> };
     let loggerStub: { log: SinonStub; warn: SinonStub; error: SinonStub };
     let testplaneStub: Writable<Testplane>;
     let installBrowsersWithDriversStub: SinonStub;
+    let uncaughtExceptionHandler: NodeJS.UncaughtExceptionListener;
+    let unhandledRejectionHandler: NodeJS.UnhandledRejectionListener;
 
     const installBrowsers_ = async (argv: string = ""): Promise<void> => {
         process.argv = ["foo/bar/node", "foo/bar/script", "install-deps", ...argv.split(" ")].filter(Boolean);
@@ -26,7 +31,27 @@ describe("cli/commands/install-deps", () => {
             desiredCapabilities: { browserName, browserVersion },
         } as Config["browsers"][string]);
 
+    const enableProfiler_ = (): ProfilerManager => {
+        const profiler = new ProfilerManager(
+            {
+                profiler: { level: 1, output: null },
+                system: { workers: 1 },
+                getBrowserIds: () => [],
+                forBrowser: () => ({ sessionsPerBrowser: 1 }),
+            } as unknown as Config,
+            new BootstrapProbe(),
+            { output: { log: sandbox.stub(), warn: sandbox.stub() } },
+        );
+
+        Object.defineProperty(testplaneStub, "_profiler", { value: profiler, configurable: true });
+
+        return profiler;
+    };
+
     beforeEach(() => {
+        const uncaughtExceptionHandlers = process.listeners("uncaughtException");
+        const unhandledRejectionHandlers = process.listeners("unhandledRejection");
+
         loggerStub = { log: sandbox.stub(), warn: sandbox.stub(), error: sandbox.stub() };
         testplaneStub = Object.create(Testplane.prototype);
 
@@ -56,9 +81,21 @@ describe("cli/commands/install-deps", () => {
                 },
             ),
         });
+
+        uncaughtExceptionHandler = process
+            .listeners("uncaughtException")
+            .find(handler => !uncaughtExceptionHandlers.includes(handler))!;
+        unhandledRejectionHandler = process
+            .listeners("unhandledRejection")
+            .find(handler => !unhandledRejectionHandlers.includes(handler))!;
     });
 
-    afterEach(() => sandbox.restore());
+    afterEach(() => {
+        process.exitCode = originalExitCode;
+        process.removeListener("uncaughtException", uncaughtExceptionHandler);
+        process.removeListener("unhandledRejection", unhandledRejectionHandler);
+        sandbox.restore();
+    });
 
     it("should install listed browsers with versions", async () => {
         testplaneStub.config.browsers = {};
@@ -119,6 +156,55 @@ describe("cli/commands/install-deps", () => {
             { browserName: "firefox", browserVersion: "120" },
             { browserName: "firefox", browserVersion: "115" },
         ]);
+    });
+
+    it("should preserve a signal exit code when installation fails", async () => {
+        const originalExitCode = process.exitCode;
+        process.exitCode = 143;
+        installBrowsersWithDriversStub.rejects(new Error("install failed"));
+
+        try {
+            await installBrowsers_("chrome@113");
+        } finally {
+            process.exitCode = originalExitCode;
+        }
+
+        assert.calledOnceWith(process.exit as unknown as SinonStub, 143);
+    });
+
+    describe("exit status", () => {
+        it("should set a nonzero exit code without exiting immediately for an error result", async () => {
+            installBrowsersWithDriversStub.resolves({
+                "chrome@110": { status: "error", reason: "some reason" },
+            });
+            process.exitCode = undefined;
+
+            await installBrowsers_("chrome@110");
+
+            assert.equal(process.exitCode, 1);
+            assert.notCalled(process.exit as unknown as SinonStub);
+        });
+
+        it("should profile an error result as failed", async () => {
+            installBrowsersWithDriversStub.resolves({
+                "chrome@110": { status: "error", reason: "some reason" },
+            });
+            const profiler = enableProfiler_();
+
+            await installBrowsers_("chrome@110");
+
+            assert.equal(profiler.lastResult?.run.runOutcome, "failed");
+        });
+
+        it("should not force an immediate exit for a successful result", async () => {
+            installBrowsersWithDriversStub.resolves({ "chrome@110": { status: "ok" } });
+            process.exitCode = undefined;
+
+            await installBrowsers_("chrome@110");
+
+            assert.isUndefined(process.exitCode);
+            assert.notCalled(process.exit as unknown as SinonStub);
+        });
     });
 
     describe("should log", () => {

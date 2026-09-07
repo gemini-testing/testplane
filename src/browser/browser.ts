@@ -13,6 +13,8 @@ import { AsyncEmitter } from "../events";
 import { BrowserConfig } from "../config/browser-config";
 import type { Callstack } from "./history/callstack";
 import type { WdProcess, WebdriverPool } from "../browser-pool/webdriver-pool";
+import { noopProfilerRuntime } from "../profiler/runtime/noop";
+import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
 
 const CUSTOM_SESSION_OPTS = [
     "outputDir",
@@ -33,6 +35,7 @@ export type BrowserOpts = {
     state?: Record<string, unknown>;
     emitter: AsyncEmitter;
     wdPool?: WebdriverPool;
+    profiler?: ProfilerRuntimeLike;
 };
 
 export type BrowserState = {
@@ -55,6 +58,7 @@ export class Browser {
     protected _wdPool?: WebdriverPool;
     protected _wdProcess: WdProcess | null;
     protected _exitError?: Error;
+    protected _profiler: ProfilerRuntimeLike;
     /** This Promise is awaited after test is finished. Can be used for cleanup.
        Right now is used to wait for time travel snapshots to finish collecting */
     protected _snapshotsPromiseRef: history.PromiseRef;
@@ -87,6 +91,7 @@ export class Browser {
         this._customCommands = new Set();
         this._wdPool = opts.wdPool;
         this._emitter = opts.emitter;
+        this._profiler = opts.profiler ?? noopProfilerRuntime;
     }
 
     setHttpTimeout(timeout: number | null): void {
@@ -118,8 +123,12 @@ export class Browser {
     }
 
     protected _addHistory(): void {
-        if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE) {
-            const initHistoryResult = history.initCommandHistory(this._session as WebdriverIO.Browser, this._config);
+        if (this._config.saveHistoryMode !== SAVE_HISTORY_MODE.NONE || this._profiler.isEnabled(3)) {
+            const initHistoryResult = history.initCommandHistory(
+                this._session as WebdriverIO.Browser,
+                this._config,
+                this._profiler,
+            );
             this._callstackHistory = initHistoryResult.callstack;
             this._snapshotsPromiseRef = initHistoryResult.snapshotsPromiseRef;
         }

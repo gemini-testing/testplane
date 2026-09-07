@@ -1,7 +1,7 @@
 import debug from "debug";
 import { zipObject, forEach } from "lodash";
 
-import { Pool } from "./types";
+import { Pool, PoolObserver } from "./types";
 import { Config } from "../config";
 import { Browser } from "../browser/browser";
 import { LimitedPool } from "./limited-pool";
@@ -11,7 +11,7 @@ export class PerBrowserLimitedPool implements Pool {
     log: debug.Debugger;
     private _browserPools: Record<string, LimitedPool>;
 
-    constructor(underlyingPool: Pool, config: Config) {
+    constructor(underlyingPool: Pool, config: Config, observer?: PoolObserver) {
         this.log = debug("testplane:pool:per-browser-limited");
 
         const ids = config.getBrowserIds();
@@ -20,6 +20,7 @@ export class PerBrowserLimitedPool implements Pool {
             ids.map(id =>
                 LimitedPool.create(underlyingPool, {
                     limit: config.forBrowser(id).sessionsPerBrowser,
+                    ...(observer && { observer }),
                 }),
             ),
         );

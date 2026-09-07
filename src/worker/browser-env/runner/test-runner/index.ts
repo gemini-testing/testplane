@@ -210,11 +210,30 @@ export class TestRunner extends NodejsEnvTestRunner {
                 });
 
                 this._socket.on(BrowserEventNames.runBrowserCommand, this._handleRunBrowserCommand(browser));
+                this._socket.on(BrowserEventNames.profilerFragment, payload => {
+                    this._profiler.recordMeasurement("browser.runnable", payload.wallMs, {
+                        minLevel: 3,
+                        name: payload.fullTitle,
+                        process: { type: "browser", browserId: this._browser.id },
+                        context: payload.context,
+                        attributes: {
+                            resourceCount: payload.resourceCount,
+                            longTaskCount: payload.longTaskCount,
+                            longTaskWallMs: payload.longTaskWallMs,
+                        },
+                        quality: {
+                            timing: "estimated",
+                            cpu: "unavailable",
+                            notes: ["Browser duration is exact; cross-process start alignment is estimated"],
+                        },
+                    });
+                });
                 this._socket.on(
                     BrowserEventNames.runExpectMatcher,
                     this._handleRunExpectMatcher(browser, expectMatchers),
                 );
 
+                const profilerOptions = this._profiler.isEnabled(3) ? { profilerLevel: 3 as const } : {};
                 const err = (await this._socket.timeout(SOCKET_MAX_TIMEOUT).emitWithAck(WorkerEventNames.initialize, {
                     file: this._file,
                     sessionId: this._runOpts.sessionId,
@@ -225,6 +244,7 @@ export class TestRunner extends NodejsEnvTestRunner {
                     customCommands: browser.customCommands,
                     config: this._config as BrowserConfig,
                     expectMatchers: Object.getOwnPropertyNames(expectMatchers),
+                    ...profilerOptions,
                 })) as null | Error;
 
                 if (err) {
@@ -248,7 +268,9 @@ export class TestRunner extends NodejsEnvTestRunner {
         ];
     }
 
-    private _handleRunBrowserCommand(browser: Browser): BrowserViteEvents[BrowserEventNames.runBrowserCommand] {
+    private _handleRunBrowserCommand(
+        browser: Browser,
+    ): BrowserViteEvents[(typeof BrowserEventNames)["runBrowserCommand"]] {
         const { publicAPI: session } = browser;
 
         return async (payload, cb): Promise<void> => {
@@ -298,7 +320,7 @@ export class TestRunner extends NodejsEnvTestRunner {
     private _handleRunExpectMatcher(
         browser: Browser,
         expectMatchers: ExpectWdioMatchers,
-    ): BrowserViteEvents[BrowserEventNames.runExpectMatcher] {
+    ): BrowserViteEvents[(typeof BrowserEventNames)["runExpectMatcher"]] {
         const { publicAPI: session } = browser;
 
         return async (payload, cb): Promise<void> => {

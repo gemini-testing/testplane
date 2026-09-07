@@ -4,6 +4,8 @@ import { passthroughEvent } from "../../events/utils";
 import { TestParser } from "../../test-reader/test-parser";
 import { WorkerEvents } from "../../events";
 import { Test } from "../../types";
+import { noopProfilerRuntime } from "../../profiler/runtime/noop";
+import type { ProfilerRuntimeLike } from "../../profiler/runtime/types";
 
 export type ParseArgs = {
     file: string;
@@ -12,6 +14,7 @@ export type ParseArgs = {
 
 export class SimpleTestParser extends EventEmitter {
     private _config: Config;
+    private _profiler: ProfilerRuntimeLike;
 
     static create<T extends SimpleTestParser>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,14 +24,15 @@ export class SimpleTestParser extends EventEmitter {
         return new this(...args);
     }
 
-    constructor(config: Config) {
+    constructor(config: Config, profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
 
         this._config = config;
+        this._profiler = profiler;
     }
 
     async parse({ file, browserId }: ParseArgs): Promise<Test[]> {
-        const parser = new TestParser();
+        const parser = new TestParser(this._profiler);
 
         passthroughEvent(parser, this, [WorkerEvents.BEFORE_FILE_READ, WorkerEvents.AFTER_FILE_READ]);
 

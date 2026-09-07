@@ -20,6 +20,12 @@ const SOURCE_CODE_EXTENSIONS = [".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".
 
 const PRECISE_COVERAGE_PARAMS = { callCount: false, detailed: false, allowTriggeredUpdates: false } as const;
 
+const isMissingScriptError = (error: Error, scriptId: CDPRuntimeScriptId): boolean => {
+    const [cdpMessage] = error.message.split("\n", 1);
+
+    return (error as Error & { code?: number }).code === -32000 && cdpMessage === `No script for id: ${scriptId}`;
+};
+
 const isSourceCodeFile = (sourceFileName: string): boolean => {
     return SOURCE_CODE_EXTENSIONS.some(ext => sourceFileName.endsWith(ext));
 };
@@ -66,6 +72,17 @@ export class JSSelectivity {
         this._sessionId = sessionId;
         this._sourceRoot = sourceRoot;
         this._mapSourceMapUrl = mapSourceMapUrl;
+    }
+
+    private _loadScriptSource(scriptId: CDPRuntimeScriptId, sourceUrl: string): Promise<string | Error> {
+        return this._cdp.debugger
+            .getScriptSource(this._sessionId, scriptId)
+            .then(res => res.scriptSource)
+            .catch((err: Error) => {
+                return isMissingScriptError(err, scriptId)
+                    ? fetchTextWithBrowserFallback(sourceUrl, this._cdp.runtime, this._sessionId).catch(() => err)
+                    : err;
+            });
     }
 
     private _processScript(
@@ -121,18 +138,16 @@ export class JSSelectivity {
         this._scriptsSource[scriptId] ||= hasCachedSelectivityFile(CacheType.Asset, url).then(isCached => {
             return isCached
                 ? true
-                : this._cdp.debugger
-                      .getScriptSource(this._sessionId, scriptId)
-                      .then(res => res.scriptSource)
-                      .then(data =>
-                          setCachedSelectivityFile(CacheType.Asset, url, data)
-                              .then(() => true as const)
-                              .catch(err => {
-                                  debugSelectivity(`Couldn't offload asset from "${url}" to fs-cache: %O`, err);
-                                  return data;
-                              }),
-                      )
-                      .catch((err: Error) => err);
+                : this._loadScriptSource(scriptId, url).then<string | true | Error>(data =>
+                      data instanceof Error
+                          ? data
+                          : setCachedSelectivityFile(CacheType.Asset, url, data)
+                                .then(() => true as const)
+                                .catch(err => {
+                                    debugSelectivity(`Couldn't offload asset from "${url}" to fs-cache: %O`, err);
+                                    return data;
+                                }),
+                  );
         });
 
         // Embedded source maps are not cached on file system because of their large cache key
@@ -192,13 +207,13 @@ export class JSSelectivity {
                     return cacheResolvedValue;
                 }
 
-                return this._cdp.debugger
-                    .getScriptSource(this._sessionId, scriptId)
-                    .then(({ scriptSource }) => {
-                        setCachedSelectivityFile(CacheType.Asset, fixedUrl, scriptSource).catch(() => {});
-                        return scriptSource;
-                    })
-                    .catch((err: Error) => err);
+                const scriptSource = await this._loadScriptSource(scriptId, fixedUrl);
+
+                if (!(scriptSource instanceof Error)) {
+                    setCachedSelectivityFile(CacheType.Asset, fixedUrl, scriptSource).catch(() => {});
+                }
+
+                return scriptSource;
             })();
 
             this._scriptIdToSourceUrl[scriptId] ||= url;
@@ -393,8 +408,6 @@ export class JSSelectivity {
 
         await this._waitForLoadingScripts();
 
-        // Missing a dependency is worse than failing the test, so resolution and coverage-reset errors are
-        // propagated (turned into a test failure by index.ts), never swallowed into a partial dump.
         await this._resolveCoverageToDeps(coveragePart.result);
 
         // Reset coverage so the next page's window starts empty (a persisting same-process isolate would otherwise

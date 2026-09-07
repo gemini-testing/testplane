@@ -8,11 +8,14 @@ import env from "../utils/env";
 import type { Config } from "../config";
 import type { Test } from "./test-object";
 import type { ReadTestsOpts } from "../testplane";
+import { noopProfilerRuntime } from "../profiler/runtime/noop";
+import type { ProfilerRuntimeLike } from "../profiler/runtime/types";
 
 export type TestReaderOpts = { paths: string[] } & Partial<ReadTestsOpts>;
 
 export class TestReader extends EventEmitter {
     #config;
+    #profiler;
 
     static create<T extends TestReader>(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,10 +25,11 @@ export class TestReader extends EventEmitter {
         return new this(...args);
     }
 
-    constructor(config: Config) {
+    constructor(config: Config, profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
 
         this.#config = config;
+        this.#profiler = profiler;
     }
 
     async read(options: TestReaderOpts): Promise<Record<string, Test[]>> {
@@ -33,23 +37,48 @@ export class TestReader extends EventEmitter {
 
         const { fileExtensions } = this.#config.system;
         const envSets = env.parseCommaSeparatedValue(["TESTPLANE_SETS", "HERMIONE_SETS"]).value;
-        const setCollection = await SetsBuilder.create(this.#config.sets, { defaultPaths: ["testplane", "hermione"] })
-            .useFiles(paths)
-            .useSets((sets || []).concat(envSets))
-            .useBrowsers(browsers!)
-            .build(process.cwd(), { ignore }, fileExtensions);
-
-        const parser = new TestParser();
-        passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
-
-        await parser.loadFiles(setCollection.getAllFiles(), { config: this.#config, runnableOpts });
-
-        const filesByBro = setCollection.groupByBrowser();
-        const testsByBro = _.mapValues(filesByBro, (files, browserId) =>
-            parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep, tag }),
+        const setCollection = await this.#profiler.withSpan(
+            "sets.resolve-and-glob",
+            { minLevel: 1, name: "Resolve sets and find test files" },
+            () =>
+                SetsBuilder.create(this.#config.sets, { defaultPaths: ["testplane", "hermione"] })
+                    .useFiles(paths)
+                    .useSets((sets || []).concat(envSets))
+                    .useBrowsers(browsers!)
+                    .build(process.cwd(), { ignore }, fileExtensions),
         );
 
-        validateTests(testsByBro, options, this.#config);
+        const parser = new TestParser(this.#profiler);
+        passthroughEvent(parser, this, [MasterEvents.BEFORE_FILE_READ, MasterEvents.AFTER_FILE_READ]);
+
+        const testFiles = setCollection.getAllFiles();
+        await this.#profiler.withSpan(
+            "files.load",
+            { minLevel: 1, name: "Load test files", attributes: { files: testFiles.length } },
+            () => parser.loadFiles(testFiles, { config: this.#config, runnableOpts }),
+        );
+
+        const filesByBro = this.#profiler.withSpan(
+            "files.group-by-browser",
+            { minLevel: 1, name: "Group test files by browser" },
+            () => setCollection.groupByBrowser(),
+        );
+        const testsByBro = _.mapValues(filesByBro, (files, browserId) =>
+            this.#profiler.withSpan(
+                "tests.parse",
+                {
+                    minLevel: 1,
+                    name: browserId,
+                    context: { browserId },
+                    attributes: { browserId, files: files.length },
+                },
+                () => parser.parse(files, { browserId, config: this.#config.forBrowser(browserId), grep, tag }),
+            ),
+        );
+
+        this.#profiler.withSpan("tests.validate", { minLevel: 1, name: "Validate tests" }, () =>
+            validateTests(testsByBro, options, this.#config),
+        );
 
         return testsByBro;
     }

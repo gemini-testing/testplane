@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>DPR OOPIF reproduction</title>
+        <style>
+            body {
+                margin: 0;
+                padding: 32px;
+                background: white;
+            }
+
+            .capture-target {
+                box-sizing: border-box;
+                width: 260px;
+                height: 180px;
+                border: 8px solid black;
+                background: #4dc3ff;
+            }
+
+            #attach {
+                margin-top: 24px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="capture-target" data-testid="capture-target"></div>
+        <button id="attach" type="button">Attach iframes</button>
+
+        <script>
+            const frameRole = new URLSearchParams(location.search).get("frame");
+
+            const attachFrame = src => {
+                const frame = document.createElement("iframe");
+                frame.src = src;
+                frame.hidden = true;
+                document.body.append(frame);
+            };
+
+            window.addEventListener("message", event => {
+                if (event.data === "dpr-oopif-child-ready" && frameRole === "provider") {
+                    window.parent.postMessage("dpr-oopif-ready", "*");
+                }
+
+                if (event.data === "dpr-oopif-ready" && frameRole === null) {
+                    window.__dprOopifReady = true;
+                }
+            });
+
+            if (frameRole === null) {
+                document.querySelector("#attach").onclick = () => {
+                    attachFrame(`http://127.0.0.1:${location.port}${location.pathname}?frame=provider`);
+                };
+            } else {
+                document.querySelector("#attach").remove();
+            }
+
+            if (frameRole === "provider") {
+                setTimeout(() => {
+                    attachFrame(`http://localhost:${location.port}${location.pathname}?frame=child`);
+                }, 1000);
+            }
+
+            if (frameRole === "child") {
+                window.parent.postMessage("dpr-oopif-child-ready", "*");
+            }
+        </script>
+    </body>
+</html>

@@ -20,7 +20,7 @@ describe("browser-pool/basic-pool", () => {
             emitter: new AsyncEmitter(),
         });
 
-        return BasicPool.create(opts.config, opts.emitter);
+        return BasicPool.create(opts.config, opts.emitter, opts.observer);
     };
 
     beforeEach(() => {
@@ -75,6 +75,17 @@ describe("browser-pool/basic-pool", () => {
         await assert.isRejected(pool.getBrowser(), "foo");
 
         assert.notCalled(browser.quit);
+    });
+
+    it("should fail the profiler operation if browser creation throws", async () => {
+        const error = new Error("factory failed");
+        const operation = { end: sandbox.stub() };
+        const observer = { start: sandbox.stub().returns(operation), record: sandbox.stub() };
+        NewBrowser.create.throws(error);
+
+        await assert.isRejected(mkPool_({ observer }).getBrowser("broId"), error.message);
+
+        assert.calledOnceWith(operation.end, "failed");
     });
 
     it("should finalize browser if failed after start it", async () => {

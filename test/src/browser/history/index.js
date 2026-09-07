@@ -4,6 +4,8 @@ const webdriver = require("@testplane/webdriver");
 const webdriverio = require("@testplane/webdriverio");
 const proxyquire = require("proxyquire");
 const { Callstack } = require("../../../../src/browser/history/callstack");
+const { SAVE_HISTORY_MODE } = require("src/constants/config");
+const { ProfilerRuntime } = require("src/profiler/runtime/runtime");
 const { mkExistingBrowser_, mkSessionStub_, createBrowserConfig_ } = require("../utils");
 
 describe("commands-history", () => {
@@ -154,6 +156,60 @@ describe("commands-history", () => {
             assert.notProperty(clickNode, "o");
             assert.deepPropertyVal(clickNode, "c", []);
             assert.deepPropertyVal(clickNode, "a", ["arg1"]);
+        });
+
+        it("should profile safe command attributes without enabling command history", async () => {
+            getBrowserCommands.returns(["pause", "url"]);
+            const session = mkSessionStub_();
+            session.pause = sinon.stub().resolves();
+            const profiler = new ProfilerRuntime({ runId: "run", level: 3 });
+            const config = { ...browserConfig, saveHistoryMode: SAVE_HISTORY_MODE.NONE };
+            const { callstack } = initCommandHistory(session, config, profiler);
+
+            session.addCommand("customCommand", () => Promise.resolve());
+            await session.url("https://user:password@example.com/page?token=secret#fragment");
+            await session.pause(500);
+            await session.customCommand({ secret: "must-not-be-inspected" });
+            profiler.stop();
+
+            assert.deepEqual(callstack.release(), []);
+            const commands = profiler.snapshot().operations.filter(operation => operation.kind === "browser.command");
+            assert.deepInclude(commands.find(command => command.name === "url").attributes, {
+                command: "url",
+                url: "https://example.com/page",
+                custom: false,
+                overwritten: false,
+            });
+            assert.propertyVal(
+                commands.find(command => command.name === "pause").attributes,
+                "requestedDurationMs",
+                500,
+            );
+            assert.deepInclude(commands.find(command => command.name === "customCommand").attributes, {
+                command: "customCommand",
+                custom: true,
+                overwritten: false,
+            });
+            assert.match(
+                commands.find(command => command.name === "customCommand").source.file,
+                /test\/src\/browser\/history\/index\.js$/,
+            );
+            assert.notProperty(commands.find(command => command.name === "customCommand").source, "functionName");
+            assert.notInclude(JSON.stringify(commands), "must-not-be-inspected");
+        });
+
+        it("should skip command profiling work below level 3", async () => {
+            getBrowserCommands.returns(["url"]);
+            const session = mkSessionStub_();
+            const profiler = new ProfilerRuntime({ runId: "run", level: 2 });
+            const withSpan = sandbox.spy(profiler, "withSpan");
+            initCommandHistory(session, browserConfig, profiler);
+
+            await session.url("https://example.com");
+            profiler.stop();
+
+            assert.notCalled(withSpan);
+            assert.isEmpty(profiler.snapshot().operations.filter(operation => operation.kind === "browser.command"));
         });
     });
 

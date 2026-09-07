@@ -25,10 +25,13 @@ export interface ClientViteEvents extends BrowserViteEvents, WorkerViteEvents {}
 export interface ViteClientEvents extends BrowserViteEvents, ViteBrowserEvents {}
 
 // TODO: use from "./browser-modules/types" after migrate to esm
-export enum BrowserEventNames {
-    initialize = `${BROWSER_EVENT_PREFIX}:initialize`,
-    runBrowserCommand = `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
-    runExpectMatcher = `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
-    callConsoleMethod = `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
-    reconnect = `${BROWSER_EVENT_PREFIX}:reconnect`,
-}
+export const BrowserEventNames = {
+    initialize: `${BROWSER_EVENT_PREFIX}:initialize`,
+    runBrowserCommand: `${BROWSER_EVENT_PREFIX}:runBrowserCommand`,
+    runExpectMatcher: `${BROWSER_EVENT_PREFIX}:runExpectMatcher`,
+    callConsoleMethod: `${BROWSER_EVENT_PREFIX}:callConsoleMethod`,
+    reconnect: `${BROWSER_EVENT_PREFIX}:reconnect`,
+    profilerFragment: `${BROWSER_EVENT_PREFIX}:profilerFragment`,
+} as const;
+
+export type BrowserEventNames = (typeof BrowserEventNames)[keyof typeof BrowserEventNames];

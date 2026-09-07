@@ -7,21 +7,61 @@ const logger = require("../../utils/logger");
 const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
 const RuntimeConfig = require("../../config/runtime-config");
+const { noopProfilerRuntime } = require("../../profiler/runtime/noop");
+const { ProfilerSanitizer } = require("../../profiler/sanitize");
 
 module.exports = class RegularTestRunner extends RunnableEmitter {
-    constructor(test, browserAgent) {
+    constructor(test, browserAgent, profiler) {
         super();
 
         this._test = test.clone();
         this._browserAgent = browserAgent;
         this._browser = null;
+        this._profiler = profiler || noopProfilerRuntime;
+        this._profilerSanitizer = this._profiler.isEnabled(2) ? new ProfilerSanitizer() : null;
     }
 
     async run(workers, retriesPerformed) {
+        if (!this._profiler.isEnabled(2)) {
+            return this._run(workers, retriesPerformed);
+        }
+
+        const attemptId = crypto.randomUUID();
+        const context = {
+            attemptId,
+            attempt: retriesPerformed,
+            testId: this._test.id,
+            browserId: this._browserAgent.browserId,
+            runnableKind: "test",
+        };
+
+        return this._profiler.withContext(context, () =>
+            this._profiler.withSpan(
+                "test.attempt",
+                {
+                    minLevel: 2,
+                    name: this._test.fullTitle(),
+                    context,
+                    attributes: {
+                        file: this._profilerSanitizer?.path(this._test.file) ?? this._test.file,
+                        browserId: this._browserAgent.browserId,
+                        attempt: retriesPerformed,
+                    },
+                },
+                () => this._run(workers, retriesPerformed, attemptId),
+            ),
+        );
+    }
+
+    async _run(workers, retriesPerformed, attemptId) {
         let freeBrowserPromise;
 
         try {
-            const browser = await this._getBrowser();
+            const browser = await this._profiler.withSpan(
+                "browser.session.acquire",
+                { minLevel: 2, name: this._browserAgent.browserId },
+                () => this._getBrowser(),
+            );
 
             if (browser) {
                 workers.once(`worker.${browser.sessionId}.freeBrowser`, browserState => {
@@ -33,8 +73,15 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             this._test.startTime = Date.now();
 
-            const results = await this._runTest(workers, retriesPerformed);
-            this._applyTestResults(results);
+            const sessionId = this._profileSessionId(browser?.sessionId);
+            const results = await this._profiler.withContext(sessionId ? { sessionId } : {}, () =>
+                this._profiler.withSpan("worker.execution", { minLevel: 2, name: this._test.fullTitle() }, () =>
+                    this._runTest(workers, retriesPerformed, attemptId, sessionId),
+                ),
+            );
+            this._profiler.withSpan("test.result-processing", { minLevel: 2, name: this._test.fullTitle() }, () =>
+                this._applyTestResults(results),
+            );
 
             this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
@@ -47,28 +94,55 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
         this._emit(MasterEvents.TEST_END);
 
-        await (freeBrowserPromise || this._freeBrowser());
+        await this._profiler.withSpan(
+            "browser.session.release",
+            { minLevel: 2, name: this._browserAgent.browserId },
+            () => freeBrowserPromise || this._freeBrowser(),
+        );
     }
 
     _emit(event) {
         this.emit(event, this._test);
     }
 
-    async _runTest(workers, attempt) {
+    async _runTest(workers, attempt, attemptId, profileSessionId) {
         if (!this._browser) {
             throw this._test.err;
         }
 
-        return await workers.runTest(this._test.fullTitle(), {
-            browserId: this._browser.id,
-            browserVersion: this._browser.version,
-            sessionId: this._browser.sessionId,
-            sessionCaps: this._browser.capabilities,
-            sessionOpts: this._browser.publicAPI.options,
-            file: this._test.file,
-            state: this._browser.state,
-            attempt,
-        });
+        try {
+            const result = await workers.runTest(this._test.fullTitle(), {
+                browserId: this._browser.id,
+                browserVersion: this._browser.version,
+                sessionId: this._browser.sessionId,
+                sessionCaps: this._browser.capabilities,
+                sessionOpts: this._browser.publicAPI.options,
+                file: this._test.file,
+                state: this._browser.state,
+                attempt,
+                ...(attemptId && { attemptId }),
+                ...(profileSessionId && { profileSessionId }),
+            });
+            this._ingestProfileFragment(result);
+            return result;
+        } catch (error) {
+            this._ingestProfileFragment(error);
+            throw error;
+        }
+    }
+
+    _ingestProfileFragment(container) {
+        const fragment = container && container.profileFragment;
+        if (!fragment) {
+            return;
+        }
+
+        this._profiler.ingestFragment(fragment);
+        try {
+            delete container.profileFragment;
+        } catch {
+            // The fragment is internal; a frozen worker error can safely keep it until serialization ends.
+        }
     }
 
     _applyTestResults({ tags, meta, testplaneCtx = {}, history = [] }) {
@@ -94,6 +168,18 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         const traceFlag = "01";
 
         return `${version}-${traceId}-${parentId}-${traceFlag}`;
+    }
+
+    _profileSessionId(sessionId) {
+        if (!this._profiler.isEnabled(2) || typeof sessionId !== "string") {
+            return;
+        }
+
+        return `session-${crypto
+            .createHash("sha256")
+            .update(`${this._profiler.runId}\0${sessionId}`)
+            .digest("hex")
+            .slice(0, 12)}`;
     }
 
     async _getBrowser() {

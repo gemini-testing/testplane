@@ -1,11 +1,9 @@
 import path from "path";
-import { Module as UntypedModule } from "module";
 import { AsyncLocalStorage } from "async_hooks";
 import { CacheType, getCachedSelectivityFile, setCachedSelectivityFile } from "./fs-cache";
 import { debugSelectivity } from "./debug";
+import { moduleObserverRegistry, ModuleObserverRegistration } from "../../../utils/module-observer-registry";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const TypedModule = UntypedModule as unknown as { _resolveFilename: (...args: any) => string | void };
 const testDependenciesStorage = new AsyncLocalStorage<{
     jsTestplaneDeps?: Set<string>;
     pngTestplaneDeps?: Set<string>;
@@ -14,6 +12,7 @@ const testFileDependenciesRamCache = new Map<string, string[]>();
 const testFileLocks: Record<string, Promise<void>> = {};
 
 let disableCollectingDependenciesCb: (() => void) | null = null;
+let dependencyRegistration: ModuleObserverRegistration | null = null;
 
 export const disableCollectingTestplaneDependencies = (): void => {
     if (disableCollectingDependenciesCb) {
@@ -27,29 +26,25 @@ export const enableCollectingTestplaneDependencies = (): void => {
         return;
     }
 
-    const originalResolveFileName = TypedModule._resolveFilename;
-
     disableCollectingDependenciesCb = (): void => {
-        TypedModule._resolveFilename = originalResolveFileName;
+        dependencyRegistration?.dispose();
+        dependencyRegistration = null;
     };
 
-    TypedModule._resolveFilename = function (): string | void {
-        // eslint-disable-next-line prefer-rest-params
-        const result = originalResolveFileName.apply(this, arguments);
+    dependencyRegistration = moduleObserverRegistry.register({
+        onResolve: ({ resolved }) => {
+            try {
+                const store = disableCollectingDependenciesCb ? testDependenciesStorage.getStore() : null;
+                const relPath = resolved && path.isAbsolute(resolved) ? path.relative(process.cwd(), resolved) : null;
 
-        try {
-            const store = disableCollectingDependenciesCb ? testDependenciesStorage.getStore() : null;
-            const relPath = result && path.isAbsolute(result) ? path.relative(process.cwd(), result) : null;
-
-            if (store && relPath) {
-                const posixRelPath =
-                    path.sep === path.posix.sep ? relPath : relPath.replaceAll(path.sep, path.posix.sep);
-                store.jsTestplaneDeps?.add(posixRelPath);
-            }
-        } catch {} // eslint-disable-line no-empty
-
-        return result;
-    };
+                if (store && relPath) {
+                    const posixRelPath =
+                        path.sep === path.posix.sep ? relPath : relPath.replaceAll(path.sep, path.posix.sep);
+                    store.jsTestplaneDeps?.add(posixRelPath);
+                }
+            } catch {} // eslint-disable-line no-empty
+        },
+    });
 };
 
 export const getCollectedTestplaneJsDependencies = (): Set<string> | null => {
@@ -72,12 +67,14 @@ export const runWithTestplaneDependenciesCollecting = <T>(fn: () => Promise<T>):
         pngTestplaneDeps?: Set<string>;
     } = { jsTestplaneDeps: new Set(), pngTestplaneDeps: new Set() };
 
-    return testDependenciesStorage.run(store, fn).finally(() => {
-        // After "fn" completion, "store" is reachable in CDP ping interval callback, so it never GC-removed
-        // Thats why we do it manually. It is enough, and set remains unchanged, if used
-        delete store.jsTestplaneDeps;
-        delete store.pngTestplaneDeps;
-    });
+    return testDependenciesStorage
+        .run(store, () => dependencyRegistration!.run(fn))
+        .finally(() => {
+            // After "fn" completion, "store" is reachable in CDP ping interval callback, so it never GC-removed
+            // Thats why we do it manually. It is enough, and set remains unchanged, if used
+            delete store.jsTestplaneDeps;
+            delete store.pngTestplaneDeps;
+        });
 };
 
 export const addTestplaneSelectivityPngDependency = (pngPath: string): void => {

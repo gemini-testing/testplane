@@ -53,8 +53,8 @@ class TreeBuilderDecorator {
     }
 
     #addHook(mochaHook, cb) {
-        const { fn, title } = mochaHook;
-        const hook = Hook.create({ fn, title });
+        const { fn, title, location } = mochaHook;
+        const hook = Hook.create({ fn, title, location });
 
         cb(hook, this.#getParent(mochaHook));
 
