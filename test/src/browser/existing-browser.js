@@ -3,7 +3,6 @@
 const { EventEmitter } = require("events");
 const crypto = require("crypto");
 const _ = require("lodash");
-const jsdom = require("jsdom-global");
 const { Calibrator } = require("src/browser/calibrator");
 const { Camera } = require("src/browser/camera");
 const history = require("src/browser/history");
@@ -917,16 +916,24 @@ describe("ExistingBrowser", () => {
     });
 
     describe("scrollBy", () => {
-        let cleanupJsdom;
+        let originalGlobals;
 
         beforeEach(() => {
-            cleanupJsdom = jsdom();
-            global.window.scrollTo = sinon.stub();
-            global.document.querySelector = sinon.stub();
+            originalGlobals = Object.fromEntries(
+                ["window", "document"].map(key => [key, Object.getOwnPropertyDescriptor(global, key)]),
+            );
+            global.window = { scrollTo: sinon.stub() };
+            global.document = { querySelector: sinon.stub() };
         });
 
         afterEach(() => {
-            cleanupJsdom();
+            for (const [key, descriptor] of Object.entries(originalGlobals)) {
+                if (descriptor) {
+                    Object.defineProperty(global, key, descriptor);
+                } else {
+                    delete global[key];
+                }
+            }
         });
 
         it("should throw error if passed selector is not found", async () => {
