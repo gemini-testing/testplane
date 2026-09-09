@@ -8,7 +8,7 @@ export interface ProfilerConsole {
 }
 
 const defaultConsole: ProfilerConsole = {
-    log: message => console.log(message),
+    log: message => console.error(message),
     warn: message => console.warn(message),
 };
 

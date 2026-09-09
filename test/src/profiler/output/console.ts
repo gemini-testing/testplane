@@ -1,11 +1,15 @@
 import chalk from "chalk";
+import sinon from "sinon";
 
 import { printProfilerResult } from "src/profiler/output/console";
 import type { Finding, ProcessRef, ProfilerConfidence, ProfilerResultV1, RetainedOperation } from "src/profiler/schema";
 
 describe("profiler/output/console", () => {
+    const sandbox = sinon.createSandbox();
     const ansiPattern = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
     const withoutColors = (value: string): string => value.replace(ansiPattern, "");
+
+    afterEach(() => sandbox.restore());
 
     const finding = (
         analyzerId: string,
@@ -134,6 +138,17 @@ describe("profiler/output/console", () => {
             chalk.level = level;
         }
     };
+
+    it("should print the default report to stderr", () => {
+        const stdout = sandbox.stub(console, "log");
+        const stderr = sandbox.stub(console, "error");
+
+        printProfilerResult(makeResult());
+
+        assert.notCalled(stdout);
+        assert.calledOnce(stderr);
+        assert.match(stderr.firstCall.args[0], /^\[profiler] Test run profile/);
+    });
 
     it("should print one aligned report with phase and slow-test tables", () => {
         const durationMs = 246_000;
