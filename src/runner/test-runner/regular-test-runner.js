@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const _ = require("lodash");
 const { RunnableEmitter } = require("../types");
 const logger = require("../../utils/logger");
-const { formatError } = require("../../utils/format-error");
 const { MasterEvents } = require("../../events");
 const AssertViewResults = require("../../browser/commands/assert-view/assert-view-results");
 const RuntimeConfig = require("../../config/runtime-config");
@@ -86,7 +85,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
-            this._test.err = formatError(this._browser?.exitError || error);
+            this._test.err = this._browser?.exitError || error;
 
             this._applyTestResults(this._test.err);
 
