@@ -68,6 +68,13 @@ export class NewBrowser extends Browser {
     async init(): Promise<NewBrowser> {
         this._session = await this._createSession();
 
+        if (this._session.isBidi) {
+            // This connection owns the session lifecycle, not test execution.
+            // ExistingBrowser attaches another connection in the worker (or in
+            // standalone mode). Only that connection may handle user dialogs.
+            this._session.on("dialog", () => {});
+        }
+
         this._addCommands();
         this.restoreHttpTimeout();
         await this._setPageLoadTimeout();

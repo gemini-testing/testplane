@@ -77,6 +77,10 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                 const logInButton = await browser.$('[type="submit"]');
                 await logInButton.click();
 
+                await browser.waitUntil(async () => (await status.getText()) === "You are logged in", {
+                    timeoutMsg: "Login should complete before saving browser state",
+                });
+
                 // save state
                 loginState = await browser.saveState();
 
