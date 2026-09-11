@@ -493,10 +493,34 @@ describe("NewBrowser", () => {
             assert.called(session.deleteSession);
         });
 
+        it("should finalize webdriver.io session only once", async () => {
+            const browser = await mkBrowser_().init();
+            const error = new Error("Tests were stopped by the user");
+
+            await Promise.all([browser.quit(error), browser.quit(error)]);
+
+            assert.calledOnce(session.deleteSession);
+            assert.strictEqual(browser.exitError, error);
+        });
+
+        it("should wait for session creation before finalizing it", async () => {
+            let resolveSession: (browserSession: unknown) => void;
+            webdriverioRemoteStub.returns(new Promise(resolve => (resolveSession = resolve)));
+            const browser = mkBrowser_();
+            const initPromise = browser.init();
+            const quitPromise = browser.quit(new Error("Tests were stopped by the user"));
+
+            assert.notCalled(session.deleteSession);
+            resolveSession!(session);
+            await Promise.all([initPromise, quitPromise]);
+
+            assert.calledOnce(session.deleteSession);
+        });
+
         it("should finalize session on global exit event", async () => {
             await mkBrowser_().init();
 
-            signalHandler.emitAndWait("exit");
+            await signalHandler.emitAndWait("exit");
 
             assert.called(session.deleteSession);
         });
@@ -564,6 +588,15 @@ describe("NewBrowser", () => {
 
             assert.notCalled(wdProcess.free);
             assert.calledOnce(wdProcess.kill);
+        });
+
+        it("should kill webdriver.io session only once", async () => {
+            const browser = await mkBrowser_().init();
+
+            await browser.kill();
+            await browser.kill();
+
+            assert.calledOnce(session.deleteSession);
         });
     });
 

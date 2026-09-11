@@ -108,6 +108,7 @@ export class Testplane extends BaseTestplane {
     protected viteServer: ViteServer | null;
 
     private _filesToRemove: string[];
+    private _haltError: Error | null;
     protected testsTracker: TestsTracker | null;
 
     constructor(config?: string | ConfigInput) {
@@ -119,6 +120,7 @@ export class Testplane extends BaseTestplane {
         this.viteServer = null;
 
         this._filesToRemove = [];
+        this._haltError = null;
 
         this.testsTracker = null;
 
@@ -190,6 +192,7 @@ export class Testplane extends BaseTestplane {
             reporters = [],
         }: Partial<RunOpts>,
     ): Promise<boolean> {
+        this._haltError = null;
         validateUnknownBrowsers(browsers!, _.keys(this._config.browsers));
 
         RuntimeConfig.getInstance().extend({
@@ -209,6 +212,10 @@ export class Testplane extends BaseTestplane {
 
         const runner = RunnerClass.create(this._config, this._interceptors, this._profiler.runtime);
         this.runner = runner;
+
+        if (this._haltError) {
+            runner.cancel(this._haltError);
+        }
 
         this.on(MasterEvents.TEST_FAIL, res => {
             this._fail();
@@ -454,6 +461,9 @@ export class Testplane extends BaseTestplane {
             message: this._profiler.sanitizeMessage(err?.message ?? "Testplane run was aborted"),
         });
 
+        this._haltError = err;
+        signalHandler.emit(MasterEvents.EXIT, err);
+
         if (timeout > 0) {
             setTimeout(() => {
                 logger.error("Forcing shutdown...");
@@ -466,8 +476,6 @@ export class Testplane extends BaseTestplane {
             this.viteServer.close();
         }
 
-        if (this.runner) {
-            this.runner.cancel(err);
-        }
+        this.runner?.cancel(err);
     }
 }

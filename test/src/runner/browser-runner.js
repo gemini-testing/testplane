@@ -154,6 +154,16 @@ describe("runner/browser-runner", () => {
     });
 
     describe("cancel", () => {
+        it("should cancel a test runner created after browser runner cancellation", async () => {
+            const error = new Error("Tests were stopped by the user");
+            const runner = mkRunner_();
+
+            runner.cancel(error);
+            await run_({ runner });
+
+            assert.calledOnceWith(TestRunner.prototype.cancel, error);
+        });
+
         it("should cancel all executing test runners", async () => {
             stubTestCollection_([Test.create({}), Test.create({})]);
 

@@ -966,14 +966,14 @@ describe("testplane", () => {
             assert.notCalled(MainRunner.prototype.cancel);
         });
 
-        it("should cancel test runner", async () => {
+        it("should cancel test runner immediately", async () => {
+            const err = new Error("Tests were stopped by the user");
             testplane.on(RunnerEvents.RUNNER_START, () => {
-                testplane.halt(new Error("test error"));
+                testplane.halt(err, 0);
+                assert.calledOnceWith(MainRunner.prototype.cancel, err);
             });
 
-            return testplane.run().finally(() => {
-                assert.calledOnce(MainRunner.prototype.cancel);
-            });
+            return testplane.run();
         });
 
         it("should mark test run as failed", async () => {
