@@ -57,6 +57,7 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
 
 export class NewBrowser extends Browser {
     private _onExit: (err?: Error) => Promise<void> = async () => {};
+    private _initPromise: Promise<this> | null = null;
     private _quitPromise: Promise<void> | null = null;
     private _killPromise: Promise<void> | null = null;
 
@@ -67,7 +68,13 @@ export class NewBrowser extends Browser {
         signalHandler.on("exit", this._onExit);
     }
 
-    async init(): Promise<NewBrowser> {
+    init(): Promise<this> {
+        this._initPromise ??= this._init();
+
+        return this._initPromise;
+    }
+
+    private async _init(): Promise<this> {
         this._session = await this._createSession();
 
         this._addCommands();
@@ -95,6 +102,7 @@ export class NewBrowser extends Browser {
 
     private async _quit(): Promise<void> {
         try {
+            await this._initPromise;
             this.setHttpTimeout(this._config.sessionQuitTimeout);
             await this._session!.deleteSession();
             this._wdProcess?.free();

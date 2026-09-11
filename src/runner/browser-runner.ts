@@ -26,6 +26,7 @@ export class BrowserRunner extends CancelableEmitter {
     private workers: Workers;
     private running: PromiseGroup;
     private profiler: ProfilerRuntimeLike;
+    private cancelError: Error | null;
 
     constructor(
         browserId: string,
@@ -44,6 +45,7 @@ export class BrowserRunner extends CancelableEmitter {
         this.workers = workers;
         this.running = new PromiseGroup();
         this.profiler = profiler;
+        this.cancelError = null;
     }
 
     get browserId(): string {
@@ -72,6 +74,10 @@ export class BrowserRunner extends CancelableEmitter {
         });
         const runner = TestRunner.create(test, this.config, browserAgent, this.profiler);
 
+        if (this.cancelError && typeof runner.cancel === "function") {
+            runner.cancel(this.cancelError);
+        }
+
         runner.on(MasterEvents.TEST_BEGIN, (test: Test) => {
             this.suiteMonitor.testBegin(test);
         });
@@ -96,6 +102,7 @@ export class BrowserRunner extends CancelableEmitter {
     }
 
     cancel(error: Error): void {
+        this.cancelError ??= error;
         this.activeTestRunners.forEach(runner => runner.cancel(error));
     }
 

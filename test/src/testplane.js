@@ -934,14 +934,7 @@ describe("testplane", () => {
             testplane = await mkTestplane_();
 
             sandbox.stub(process, "exit");
-            sandbox.stub(MainRunner.prototype, "run").callsFake(async function () {
-                await testplane.emitAndWait(RunnerEvents.RUNNER_START);
-                this.emit(RunnerEvents.TEST_BEGIN, {
-                    fullTitle: () => "test",
-                    browserId: "bro",
-                    file: "test.js",
-                });
-            });
+            sandbox.stub(MainRunner.prototype, "run").callsFake(() => testplane.emitAndWait(RunnerEvents.RUNNER_START));
             sandbox.stub(MainRunner.prototype, "cancel");
         });
 
@@ -973,16 +966,14 @@ describe("testplane", () => {
             assert.notCalled(MainRunner.prototype.cancel);
         });
 
-        it("should cancel test runner when the first test starts", async () => {
+        it("should cancel test runner immediately", async () => {
             const err = new Error("Tests were stopped by the user");
             testplane.on(RunnerEvents.RUNNER_START, () => {
                 testplane.halt(err, 0);
-                assert.notCalled(MainRunner.prototype.cancel);
-            });
-
-            return testplane.run().finally(() => {
                 assert.calledOnceWith(MainRunner.prototype.cancel, err);
             });
+
+            return testplane.run();
         });
 
         it("should mark test run as failed", async () => {

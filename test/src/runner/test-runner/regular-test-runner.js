@@ -338,6 +338,24 @@ describe("runner/test-runner/regular-test-runner", () => {
         });
 
         describe("TEST_FAIL event", () => {
+            it("should stop waiting for browser and emit cancel error", async () => {
+                const error = new Error("Tests were stopped by the user");
+                const onFail = sinon.stub().named("onFail");
+                let resolveBrowser;
+                BrowserAgent.prototype.getBrowser.returns(new Promise(resolve => (resolveBrowser = resolve)));
+                const runner = mkRunner_().on(Events.TEST_FAIL, onFail);
+                const workers = mkWorkers_();
+                const runPromise = run_({ runner, workers });
+
+                await Promise.resolve();
+                runner.cancel(error);
+                await runPromise;
+                resolveBrowser(stubBrowser_());
+
+                assert.notCalled(workers.runTest);
+                assert.calledOnceWith(onFail, sinon.match({ err: error }));
+            });
+
             it("should be emitted with cancel error without running test in worker", async () => {
                 const error = new Error("Tests were stopped by the user");
                 const onFail = sinon.stub().named("onFail");

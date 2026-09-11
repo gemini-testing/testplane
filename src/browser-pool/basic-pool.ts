@@ -14,6 +14,7 @@ export class BasicPool implements Pool {
     private _emitter: AsyncEmitter;
     private _activeSessions: Record<string, NewBrowser>;
     private _cancelled: boolean;
+    private _cancelError: Error | null;
     private _wdPool: WebdriverPool;
     private _observer?: PoolObserver;
     log: debug.Debugger;
@@ -29,11 +30,16 @@ export class BasicPool implements Pool {
 
         this._activeSessions = {};
         this._cancelled = false;
+        this._cancelError = null;
         this._wdPool = new WebdriverPool();
         this._observer = isPoolObserver(observer) ? observer : undefined;
     }
 
     async getBrowser(id: string, opts: BrowserOpts = {}): Promise<NewBrowser> {
+        if (this._cancelled) {
+            throw this._cancelError ?? new CancelledError();
+        }
+
         const operation = this._observer?.start("browser.session.create", { browserId: id });
         let browser: NewBrowser | undefined;
 
@@ -51,7 +57,7 @@ export class BasicPool implements Pool {
             await this._emit(MasterEvents.SESSION_START, browser);
 
             if (this._cancelled) {
-                throw new CancelledError();
+                throw this._cancelError ?? new CancelledError();
             }
 
             await browser.reset();
@@ -113,8 +119,9 @@ export class BasicPool implements Pool {
 
     cancel(err?: Error): void {
         this._cancelled = true;
+        this._cancelError ??= err ?? new CancelledError();
 
-        _.forEach(this._activeSessions, browser => browser.quit(err));
+        _.forEach(this._activeSessions, browser => browser.quit(this._cancelError!));
 
         this._activeSessions = {};
     }

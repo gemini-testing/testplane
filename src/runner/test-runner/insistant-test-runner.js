@@ -21,6 +21,7 @@ module.exports = class InsistantTestRunner extends RunnableEmitter {
 
         this._retriesPerformed = 0;
         this._cancelled = false;
+        this._cancelError = null;
         this._activeRunner = null;
     }
 
@@ -42,6 +43,10 @@ module.exports = class InsistantTestRunner extends RunnableEmitter {
             },
         );
         this._activeRunner = runner;
+
+        if (this._cancelError) {
+            runner.cancel(this._cancelError);
+        }
 
         passthroughEvent(runner, this, [MasterEvents.TEST_BEGIN, MasterEvents.TEST_PASS, MasterEvents.TEST_END]);
 
@@ -83,6 +88,7 @@ module.exports = class InsistantTestRunner extends RunnableEmitter {
 
     cancel(error) {
         this._cancelled = true;
+        this._cancelError = this._cancelError || error;
         this._activeRunner?.cancel(error);
     }
 };
