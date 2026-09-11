@@ -33,6 +33,16 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
 
             let browser: WebdriverIO.Browser & { getDriverPid?: () => number | undefined };
 
+            let browserClosed = true;
+            const closeBrowser = async (): Promise<void> => {
+                if (browserClosed) {
+                    return;
+                }
+
+                await browser.deleteSession();
+                browserClosed = true;
+            };
+
             let loginState: SaveStateData;
             let status: WebdriverIO.Element;
             const mockAuthServer = new AuthServer();
@@ -51,6 +61,8 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                     },
                     isolation,
                 });
+
+                browserClosed = false;
 
                 assert.ok(browser, "Browser should be initialized");
                 assert.ok(browser.sessionId, "Browser should have a valid session ID");
@@ -77,6 +89,10 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                 const logInButton = await browser.$('[type="submit"]');
                 await logInButton.click();
 
+                await browser.waitUntil(async () => (await status.getText()) === "You are logged in", {
+                    timeoutMsg: "Login should complete before saving browser state",
+                });
+
                 // save state
                 loginState = await browser.saveState();
 
@@ -90,7 +106,7 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                     path: "./state.json",
                 });
 
-                await browser.deleteSession();
+                await closeBrowser();
 
                 const fileExist = fs.existsSync("./state.json");
                 assert.strictEqual(fileExist, true);
@@ -103,7 +119,7 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                     path: "./state.json",
                 });
 
-                await browser.deleteSession();
+                await closeBrowser();
 
                 const fileExist = fs.existsSync("./state.json");
                 assert.strictEqual(fileExist, false);
@@ -118,7 +134,7 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                     sessionStorage: false,
                 });
 
-                await browser.deleteSession();
+                await closeBrowser();
 
                 const fileExist = fs.existsSync("./state.json");
                 assert.strictEqual(fileExist, false);
@@ -172,11 +188,9 @@ const removeDomainFromCookies = (loginState: SaveStateData): void => {
                 assert.ok(state.cookies?.length === 0);
             });
 
-            afterEach(async () => {
-                if (browser) {
-                    await browser.deleteSession();
-                }
-            });
+            // Some tests close the session themselves to check file cleanup.
+            // Do not send another DELETE to an already stopped driver.
+            afterEach(closeBrowser);
 
             after(async () => {
                 console.log("Stop mock server");

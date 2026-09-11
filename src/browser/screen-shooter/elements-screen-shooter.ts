@@ -50,8 +50,14 @@ interface ScreenShooterOpts extends AssertViewOpts {
     pixelRatioOverride?: number;
 }
 
-type PrepareScreenshotOptions = ClientBridgeArgument<BrowserPrepareScreenshotOptions>;
 type ElementTarget = ClientBridgeArgument<string | Element>;
+type PrepareScreenshotOptions = Omit<
+    ClientBridgeArgument<BrowserPrepareScreenshotOptions>,
+    "ignoreSelectors" | "selectorToScroll"
+> & {
+    ignoreSelectors?: ElementTarget[];
+    selectorToScroll?: ElementTarget;
+};
 
 interface CaptureImageResult {
     image: Image;

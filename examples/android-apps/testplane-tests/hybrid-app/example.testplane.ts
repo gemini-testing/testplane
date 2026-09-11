@@ -1,3 +1,5 @@
+import { describe, it } from "testplane";
+
 const useWithoutAnAccountBtnSelector = 'android=new UiSelector().resourceId("com.android.chrome:id/signin_fre_dismiss_button")';
 const gotItBtnSelector = 'android=new UiSelector().resourceId("com.android.chrome:id/ack_button")';
 

@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:e2e": "testplane",
+    "test:storybook": "testplane --storybook",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
@@ -21,26 +22,59 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^1.9.0",
     "@eslint/js": "^9.9.0",
-    "@storybook/addon-essentials": "^8.3.0",
-    "@storybook/addon-interactions": "^8.3.0",
-    "@storybook/addon-links": "^8.3.0",
-    "@storybook/addon-onboarding": "^8.3.0",
-    "@storybook/blocks": "^8.3.0",
-    "@storybook/react": "^8.3.0",
-    "@storybook/react-vite": "^8.3.0",
-    "@storybook/test": "^8.3.0",
+    "@storybook/addon-controls": "^8.6.18",
+    "@storybook/addon-docs": "^8.6.18",
+    "@storybook/addon-links": "^8.6.18",
+    "@storybook/addon-onboarding": "^8.6.18",
+    "@storybook/blocks": "^8.6.18",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
+    "@storybook/test": "^8.6.18",
     "@swc/core": "^1.7.26",
     "@testplane/storybook": "latest",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
     "globals": "^15.9.0",
     "html-reporter": "latest",
-    "storybook": "^8.3.0",
-    "testplane": "8.40.6",
+    "storybook": "^8.6.18",
+    "testplane": "latest",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.3",
+    "typescript": "^5.8.3",
     "typescript-eslint": "^8.0.1",
-    "vite": "^5.4.1"
+    "vite": "^6.4.3"
+  },
+  "overrides": {
+    "@testplane/devtools": {
+      "uuid": "11.1.1"
+    },
+    "@testplane/webdriver": {
+      "undici": "6.28.0"
+    },
+    "edgedriver": "6.3.0",
+    "form-data": "4.0.6",
+    "js-yaml": "4.3.1",
+    "lodash": "4.18.1",
+    "micromatch": "4.0.8",
+    "shell-quote": "1.10.0",
+    "socket.io-parser": "4.2.7",
+    "tar-fs": "3.1.3",
+    "testplane": {
+      "vite": "6.4.3",
+      "socket.io": "4.8.3",
+      "socket.io-client": "4.8.3"
+    },
+    "brace-expansion@^1.0.0": "1.1.18",
+    "brace-expansion@^2.0.0": "2.1.4",
+    "brace-expansion@^5.0.0": "5.0.9",
+    "ip-address": "10.4.0",
+    "postcss": "8.5.26",
+    "minimatch@^9.0.0": "9.0.9",
+    "@testplane/webdriverio": {
+      "minimatch": "9.0.9"
+    }
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
