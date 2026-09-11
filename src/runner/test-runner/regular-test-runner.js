@@ -17,6 +17,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         this._test = test.clone();
         this._browserAgent = browserAgent;
         this._browser = null;
+        this._cancelError = null;
         this._profiler = profiler || noopProfilerRuntime;
         this._profilerSanitizer = this._profiler.isEnabled(2) ? new ProfilerSanitizer() : null;
     }
@@ -85,7 +86,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
-            this._test.err = this._browser?.exitError || error;
+            this._test.err = this._cancelError || this._browser?.exitError || error;
 
             this._applyTestResults(this._test.err);
 
@@ -106,6 +107,10 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
     }
 
     async _runTest(workers, attempt, attemptId, profileSessionId) {
+        if (this._cancelError) {
+            throw this._cancelError;
+        }
+
         if (!this._browser) {
             throw this._test.err;
         }
@@ -180,6 +185,10 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             .update(`${this._profiler.runId}\0${sessionId}`)
             .digest("hex")
             .slice(0, 12)}`;
+    }
+
+    cancel(error) {
+        this._cancelError = error;
     }
 
     async _getBrowser() {

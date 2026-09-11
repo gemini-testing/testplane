@@ -338,6 +338,20 @@ describe("runner/test-runner/regular-test-runner", () => {
         });
 
         describe("TEST_FAIL event", () => {
+            it("should be emitted with cancel error without running test in worker", async () => {
+                const error = new Error("Tests were stopped by the user");
+                const onFail = sinon.stub().named("onFail");
+                const runner = mkRunner_()
+                    .on(Events.TEST_BEGIN, () => runner.cancel(error))
+                    .on(Events.TEST_FAIL, onFail);
+                const workers = mkWorkers_();
+
+                await run_({ runner, workers });
+
+                assert.notCalled(workers.runTest);
+                assert.calledOnceWith(onFail, sinon.match({ err: error }));
+            });
+
             it("should be emitted on test fail with test data", async () => {
                 const test = new Test({});
                 const onFail = sinon.stub().named("onFail");

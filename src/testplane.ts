@@ -454,7 +454,11 @@ export class Testplane extends BaseTestplane {
             message: this._profiler.sanitizeMessage(err?.message ?? "Testplane run was aborted"),
         });
 
-        signalHandler.emit(MasterEvents.EXIT, err);
+        const cancelRunner = (): void => {
+            signalHandler.emit(MasterEvents.EXIT, err);
+            this.runner?.cancel(err);
+        };
+        const hasRunningTests = this.testsTracker?.getAllTests().some(test => test.isRunning);
 
         if (timeout > 0) {
             setTimeout(() => {
@@ -468,8 +472,10 @@ export class Testplane extends BaseTestplane {
             this.viteServer.close();
         }
 
-        if (this.runner) {
-            this.runner.cancel(err);
+        if (timeout > 0 || hasRunningTests) {
+            cancelRunner();
+        } else {
+            this.once(MasterEvents.TEST_BEGIN, cancelRunner);
         }
     }
 }

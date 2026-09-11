@@ -493,6 +493,16 @@ describe("NewBrowser", () => {
             assert.called(session.deleteSession);
         });
 
+        it("should finalize webdriver.io session only once", async () => {
+            const browser = await mkBrowser_().init();
+            const error = new Error("Tests were stopped by the user");
+
+            await Promise.all([browser.quit(error), browser.quit(error)]);
+
+            assert.calledOnce(session.deleteSession);
+            assert.strictEqual(browser.exitError, error);
+        });
+
         it("should finalize session on global exit event", async () => {
             await mkBrowser_().init();
 
@@ -564,6 +574,15 @@ describe("NewBrowser", () => {
 
             assert.notCalled(wdProcess.free);
             assert.calledOnce(wdProcess.kill);
+        });
+
+        it("should kill webdriver.io session only once", async () => {
+            const browser = await mkBrowser_().init();
+
+            await browser.kill();
+            await browser.kill();
+
+            assert.calledOnce(session.deleteSession);
         });
     });
 
