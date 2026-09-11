@@ -1,7 +1,6 @@
 import fs from "node:fs";
-import { Image } from "../../../image";
+import { Image, initImage } from "../../../image";
 import { convertRgbaToPng } from "../../../utils/eight-bit-rgba-to-png";
-import { loadEsm } from "../../../utils/preload-utils";
 import type { Coord, Rect, Size, YBand } from "../../isomorphic/geometry";
 import path from "node:path";
 import type { CaptureSpec } from "../../client-scripts/screen-shooter/types";
@@ -24,22 +23,8 @@ export const COMPOSITE_IMAGE_DEBUG_COLORS = {
     visibleCoveringRect: { r: 255, g: 105, b: 180, a: 255 }, // pink
 } as const;
 
-const initJsquashPromise = new Promise<unknown>(resolve => {
-    const wasmLocation = require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm");
-
-    Promise.all([
-        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
-        fs.promises.readFile(wasmLocation),
-    ])
-        .then(([mod, wasmBytes]) => mod.init(wasmBytes))
-        .then(resolve);
-});
-
 const decodePngToRgba = async (buffer: Buffer): Promise<{ data: Buffer; width: number; height: number }> => {
-    const [mod] = await Promise.all([
-        loadEsm<typeof import("@jsquash/png/decode.js")>("@jsquash/png/decode.js"),
-        initJsquashPromise,
-    ]);
+    const mod = await initImage();
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
     const imageData = await mod.decode(arrayBuffer, { bitDepth: 8 });
 

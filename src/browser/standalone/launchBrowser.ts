@@ -10,12 +10,15 @@ import { WebdriverPool } from "../../browser-pool/webdriver-pool";
 import type { StandaloneBrowserOptionsInput } from "./types";
 import fs from "fs-extra";
 import { hasGlobalFilesToRemove } from "../../globalFilesToRemove";
+import { initImage } from "../../image";
 
 const webdriverPool = new WebdriverPool();
 
 export async function launchBrowser(
     options: StandaloneBrowserOptionsInput = {},
 ): Promise<WebdriverIO.Browser & { getDriverPid?: () => number | undefined }> {
+    await initImage();
+
     const desiredCapabilities = options.desiredCapabilities || {};
 
     const browserName = desiredCapabilities.browserName || BrowserName.CHROME;
