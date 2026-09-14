@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.2.3 (2026-09-14)
+
+
+### Bug Fixes
+
+* halt test ([9e82f35](https://github.com/gemini-testing/testplane/commit/9e82f357bee17f948b1b7f8bfb0d8cb3166422e8))
+
 ### 9.2.2 (2026-09-11)
 
 ### 9.2.1 (2026-09-11)
