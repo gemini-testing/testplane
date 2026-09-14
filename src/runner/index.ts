@@ -58,6 +58,7 @@ export class MainRunner extends RunnableEmitter {
     protected workersRegistry: WorkersRegistry;
     protected workers: Workers | null;
     protected profiler: ProfilerRuntimeLike;
+    private _cancelError: Error | null;
 
     constructor(config: Config, interceptors: Interceptor[], profiler: ProfilerRuntimeLike = noopProfilerRuntime) {
         super();
@@ -71,6 +72,7 @@ export class MainRunner extends RunnableEmitter {
         this.running = new PromiseGroup();
         this.runned = false;
         this.cancelled = false;
+        this._cancelError = null;
 
         this.profiler = profiler;
         this.workersRegistry = WorkersRegistry.create(this.config, this.profiler);
@@ -97,6 +99,10 @@ export class MainRunner extends RunnableEmitter {
         this.workers = this.registerWorkers(require.resolve("../worker"), ["runTest", "cancel"] as const) as Workers;
         this.browserPool = pool.create(this.config, this, this.profiler);
 
+        if (this._cancelError) {
+            this.browserPool.cancel(this._cancelError);
+        }
+
         this.once(MasterEvents.EXIT, () => this.workersRegistry.shutdown());
 
         eventsUtils.passthroughEvent(this, this.workersRegistry, MasterEvents.EXIT);
@@ -112,7 +118,7 @@ export class MainRunner extends RunnableEmitter {
         try {
             await this.emitAndWait(MasterEvents.RUNNER_START, this);
             this.emit(MasterEvents.BEGIN);
-            !this.cancelled && (await this._runTests(testCollection, opts));
+            await this._runTests(testCollection, opts);
         } finally {
             this.emit(MasterEvents.END);
             await this.emitAndWait(MasterEvents.RUNNER_END, stats.getResult()).catch(logger.warn);
@@ -162,6 +168,10 @@ export class MainRunner extends RunnableEmitter {
 
     protected _createBrowserRunner(browserId: string): BrowserRunner {
         const runner = BrowserRunner.create(browserId, this.config, this.browserPool, this.workers, this.profiler);
+
+        if (this._cancelError) {
+            runner.cancel(this._cancelError);
+        }
 
         eventsUtils.passthroughEvent(runner, this, this.getEventsToPassthrough());
         this.interceptEvents(runner, this.getEventsToIntercept());
@@ -214,9 +224,10 @@ export class MainRunner extends RunnableEmitter {
 
     cancel(error: Error): void {
         this.cancelled = true;
-        this.browserPool?.cancel(error);
+        this._cancelError ??= error;
+        this.browserPool?.cancel(this._cancelError);
 
-        this.activeBrowserRunners.forEach(runner => runner.cancel(error));
+        this.activeBrowserRunners.forEach(runner => runner.cancel(this._cancelError!));
 
         this.workers?.cancel().catch(() => {
             /* we can just ignore the error thrown, because we don't care about cleanup at this point */

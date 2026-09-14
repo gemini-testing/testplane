@@ -66,6 +66,17 @@ describe("runner/test-runner/insistant-test-runner", () => {
     afterEach(() => sandbox.restore());
 
     describe("run", () => {
+        it("should pass cancel error to a regular runner created later", async () => {
+            const error = new Error("Tests were stopped by the user");
+            const cancelSpy = sandbox.spy(RegularTestRunner.prototype, "cancel");
+            const runner = mkRunner_();
+
+            runner.cancel(error);
+            await run_({ runner });
+
+            assert.calledOnceWith(cancelSpy, error);
+        });
+
         it("should run test in regular test runner", async () => {
             const test = new Test({});
             const config = makeConfigStub();

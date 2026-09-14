@@ -57,6 +57,9 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
 
 export class NewBrowser extends Browser {
     private _onExit: (err?: Error) => Promise<void> = async () => {};
+    private _initPromise: Promise<this> | null = null;
+    private _quitPromise: Promise<void> | null = null;
+    private _killPromise: Promise<void> | null = null;
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -65,7 +68,13 @@ export class NewBrowser extends Browser {
         signalHandler.on("exit", this._onExit);
     }
 
-    async init(): Promise<NewBrowser> {
+    init(): Promise<this> {
+        this._initPromise ??= this._init();
+
+        return this._initPromise;
+    }
+
+    private async _init(): Promise<this> {
         this._session = await this._createSession();
 
         this._addCommands();
@@ -79,11 +88,21 @@ export class NewBrowser extends Browser {
         return Promise.resolve();
     }
 
-    async quit(err?: Error): Promise<void> {
+    quit(err?: Error): Promise<void> {
+        if (this._quitPromise) {
+            return this._quitPromise;
+        }
+
         this._exitError = err;
         signalHandler.off("exit", this._onExit);
+        this._quitPromise = this._quit();
 
+        return this._quitPromise;
+    }
+
+    private async _quit(): Promise<void> {
         try {
+            await this._initPromise;
             this.setHttpTimeout(this._config.sessionQuitTimeout);
             await this._session!.deleteSession();
             this._wdProcess?.free();
@@ -95,7 +114,17 @@ export class NewBrowser extends Browser {
         }
     }
 
-    async kill(): Promise<void> {
+    kill(): Promise<void> {
+        if (this._killPromise) {
+            return this._killPromise;
+        }
+
+        this._killPromise = this._kill();
+
+        return this._killPromise;
+    }
+
+    private async _kill(): Promise<void> {
         try {
             await this._session!.deleteSession();
             this._wdProcess?.kill();

@@ -115,9 +115,9 @@ export class CachingPool implements Pool {
         return cache.push(browser);
     }
 
-    cancel(): void {
+    cancel(err?: Error): void {
         this.log("cancel");
-        this.underlyingPool.cancel();
+        this.underlyingPool.cancel(err);
     }
 }
 

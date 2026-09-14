@@ -704,14 +704,15 @@ describe("NodejsEnvRunner", () => {
             assert.notCalled(BrowserRunner.prototype.cancel);
         });
 
-        it("shuld not run tests in browser runners if cancelled", async () => {
-            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, () => runner.cancel());
+        it("should pass cancelled tests to browser runners to emit test results", async () => {
+            const error = new Error("Tests were stopped by the user");
+            const runner = new Runner(makeConfigStub()).on(RunnerEvents.RUNNER_START, () => runner.cancel(error));
 
             await run_({ runner });
 
-            assert.notCalled(BrowserRunner.prototype.addTestToRun);
-            assert.notCalled(BrowserRunner.prototype.waitTestsCompletion);
-            assert.notCalled(BrowserRunner.prototype.cancel);
+            assert.calledOnce(BrowserRunner.prototype.addTestToRun);
+            assert.calledOnce(BrowserRunner.prototype.waitTestsCompletion);
+            assert.calledOnceWith(BrowserRunner.prototype.cancel, error);
         });
 
         it("should cancel all executing workers", async () => {

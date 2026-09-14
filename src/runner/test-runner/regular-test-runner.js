@@ -17,6 +17,8 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
         this._test = test.clone();
         this._browserAgent = browserAgent;
         this._browser = null;
+        this._cancelError = null;
+        this._cancelBrowserRequest = null;
         this._profiler = profiler || noopProfilerRuntime;
         this._profilerSanitizer = this._profiler.isEnabled(2) ? new ProfilerSanitizer() : null;
     }
@@ -85,7 +87,7 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             this._emit(MasterEvents.TEST_PASS);
         } catch (error) {
-            this._test.err = this._browser?.exitError || error;
+            this._test.err = this._cancelError || this._browser?.exitError || error;
 
             this._applyTestResults(this._test.err);
 
@@ -106,6 +108,10 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
     }
 
     async _runTest(workers, attempt, attemptId, profileSessionId) {
+        if (this._cancelError) {
+            throw this._cancelError;
+        }
+
         if (!this._browser) {
             throw this._test.err;
         }
@@ -182,14 +188,28 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
             .slice(0, 12)}`;
     }
 
+    cancel(error) {
+        this._cancelError = this._cancelError || error;
+        this._cancelBrowserRequest?.(this._cancelError);
+    }
+
     async _getBrowser() {
+        if (this._cancelError) {
+            this._test.err = this._cancelError;
+            return;
+        }
+
+        const cancelPromise = new Promise((_, reject) => {
+            this._cancelBrowserRequest = reject;
+        });
+
         try {
             const state = {
                 testXReqId: crypto.randomUUID(),
                 traceparent: this._getTraceparent(),
             };
 
-            this._browser = await this._browserAgent.getBrowser({ state });
+            this._browser = await Promise.race([this._browserAgent.getBrowser({ state }), cancelPromise]);
 
             // TODO: move logic to caching pool (in order to use correct state for cached browsers)
             if (
@@ -203,7 +223,9 @@ module.exports = class RegularTestRunner extends RunnableEmitter {
 
             return this._browser;
         } catch (error) {
-            this._test.err = error;
+            this._test.err = this._cancelError || error;
+        } finally {
+            this._cancelBrowserRequest = null;
         }
     }
 

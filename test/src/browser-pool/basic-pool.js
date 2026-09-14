@@ -227,6 +227,16 @@ describe("browser-pool/basic-pool", () => {
             await assert.isRejected(pool.getBrowser(), CancelledError);
         });
 
+        it("should reject subsequent browser requests with passed cancel error", async () => {
+            const error = new Error("Tests were stopped by the user");
+            const pool = mkPool_();
+
+            pool.cancel(error);
+
+            await assert.isRejected(pool.getBrowser(), error);
+            assert.notCalled(NewBrowser.create);
+        });
+
         it("should quit browser once if it was launched after cancel", async () => {
             const browser = stubBrowser();
             NewBrowser.create.returns(browser);
