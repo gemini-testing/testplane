@@ -10,6 +10,7 @@ import {
     WSDriverError,
     WSDriverRequestError,
     WSDriverRequestTimeoutError,
+    WSDriverRequestDeadlineError,
 } from "./error";
 import {
     WSD_ACCEPT_ENCODING_HEADER,
@@ -36,7 +37,14 @@ import { BrowserConfig } from "../../config/browser-config";
 import { constructWsDriverRequest } from "./request";
 import { exponentiallyWait } from "../../ws-connection/utils";
 
+interface RequestDeadlineContext {
+    signal: AbortSignal;
+    remaining: () => number;
+    check: () => void;
+}
+
 interface WSDriverRequestAgentOptions {
+    onRequestDeadline?: () => void;
     sessionId: string;
     headers?: Record<string, string>;
     requestTimeout: number;
@@ -50,11 +58,27 @@ export class WSDriverRequestAgent {
     private _serverSupportedCompressionType?: WsDriverCompressionType;
     private _sessionId: string;
     private _sessionPrefix: string;
+    private readonly _requestTimeout: number;
+    private readonly _onRequestDeadline?: () => void;
+    private readonly _deadlineEnabled: boolean;
+    private readonly _requestAbort = new AbortController();
 
     private constructor(
         wsdWsEndpoint: string,
-        { sessionId, headers, requestTimeout, clientSupportedCompressionTypes }: WSDriverRequestAgentOptions,
+        {
+            sessionId,
+            headers,
+            requestTimeout,
+            clientSupportedCompressionTypes,
+            onRequestDeadline,
+        }: WSDriverRequestAgentOptions,
     ) {
+        this._requestTimeout = requestTimeout;
+        this._onRequestDeadline = onRequestDeadline;
+        this._deadlineEnabled =
+            process.env.TESTPLANE_WSDRIVER_DEADLINE_ENABLED === "true" &&
+            Number.isFinite(requestTimeout) &&
+            requestTimeout > 0;
         headers ||= {};
         headers[WSD_ACCEPT_ENCODING_HEADER] = clientSupportedCompressionTypes.join(", ");
 
@@ -90,11 +114,13 @@ export class WSDriverRequestAgent {
         sessionCaps,
         headers = {},
         browserConfig,
+        onRequestDeadline,
     }: {
         sessionId: string;
         sessionCaps: WebdriverIO.Capabilities;
         headers: Record<string, string>;
         browserConfig: BrowserConfig;
+        onRequestDeadline?: () => void;
     }): WSDriverRequestAgent {
         if (!sessionCaps["se:wsdriver"]) {
             throw new WSDriverError({ message: "Couldn't determine wsdriver endpoint" });
@@ -122,11 +148,15 @@ export class WSDriverRequestAgent {
             requestTimeout,
             clientSupportedCompressionTypes,
             supportedVersions,
+            onRequestDeadline,
         });
     }
 
     close(): void {
-        this._wsConnection.close();
+        if (this._deadlineEnabled) {
+            this._requestAbort.abort(new WSDriverRequestAgentTerminatedError());
+        }
+        this._wsConnection.close(this._deadlineEnabled);
     }
 
     private async _onMessage(data: RawData, isBinary: boolean): Promise<void> {
@@ -238,17 +268,64 @@ export class WSDriverRequestAgent {
 
     /** @description Performs high-level WSDriver request with timeout */
     async request(url: URL, options: RequestWsDriverOptions): Promise<RequestWsDriverResponse> {
+        if (!this._deadlineEnabled) return this._request(url, options);
+        const signal = this._requestAbort.signal;
+        signal.throwIfAborted();
+        const responseTimeout = options.timeout?.response;
+        const requestTimeout =
+            Number.isFinite(responseTimeout) && responseTimeout! > 0 ? responseTimeout! : this._requestTimeout;
+        const deadline = performance.now() + requestTimeout;
+        let onAbort!: () => void;
+        const expire = (): void => {
+            if (signal.aborted) return;
+            // Ошибка не ETIMEDOUT: повтор всей команды в WebdriverIO обнулит общий срок.
+            const error = new WSDriverRequestDeadlineError(requestTimeout);
+            this._requestAbort.abort(error);
+            this._wsConnection.close(true);
+            this._onRequestDeadline?.();
+        };
+        const context: RequestDeadlineContext = {
+            signal,
+            remaining: () => Math.max(1, Math.ceil(deadline - performance.now())),
+            check: () => {
+                if (performance.now() >= deadline) expire();
+                signal.throwIfAborted();
+            },
+        };
+        const aborted = new Promise<never>((_, reject) => {
+            onAbort = (): void => reject(signal.reason);
+            signal.addEventListener("abort", onAbort, { once: true });
+        });
+        const timer = setTimeout(expire, requestTimeout).unref();
+        try {
+            // Отмена закрывает транспорт; проверки после await запрещают позднюю отправку.
+            return await Promise.race([this._request(url, options, context), aborted]);
+        } finally {
+            clearTimeout(timer);
+            signal.removeEventListener("abort", onAbort);
+        }
+    }
+
+    private async _request(
+        url: URL,
+        options: RequestWsDriverOptions,
+        context?: RequestDeadlineContext,
+    ): Promise<RequestWsDriverResponse> {
         let requestId!: number;
         let result!: IncomingWsDriverMessage | WsError;
 
         for (let retriesLeft = WSD_REQUEST_RETRIES; retriesLeft >= 0; retriesLeft--) {
+            context?.check();
             requestId = this._wsConnection.getRequestId();
+            const compressionType = await this._getRequestCompressionType();
+            context?.check();
             const requestMessage = await constructWsDriverRequest(url, options, {
                 requestId,
                 sessionPrefix: this._sessionPrefix,
-                compressionType: await this._getRequestCompressionType(),
+                compressionType,
             });
 
+            context?.check();
             if (debugWSDriver.enabled) {
                 const header = requestMessage.readUint8(1);
                 const commandEndIdx = requestMessage.indexOf(0, 8);
@@ -273,10 +350,11 @@ export class WSDriverRequestAgent {
                 );
             }
 
-            result = (await this._wsConnection.makeRequest(requestId, requestMessage).catch((err: WsError) => err)) as
-                | IncomingWsDriverMessage
-                | WsError;
+            result = (await this._wsConnection
+                .makeRequest(requestId, requestMessage, context?.remaining())
+                .catch((err: WsError) => err)) as IncomingWsDriverMessage | WsError;
 
+            context?.check();
             if (result instanceof WSDriverRequestTimeoutError) {
                 const requestError = new Error(result.message);
                 requestError.stack = result.stack;
@@ -289,6 +367,7 @@ export class WSDriverRequestAgent {
                 break;
             }
 
+            context?.check();
             if (debugWSDriver.enabled) {
                 const header = requestMessage.readUint8(1);
                 const commandEndIdx = requestMessage.indexOf(0, 8);
@@ -310,6 +389,7 @@ export class WSDriverRequestAgent {
             await exponentiallyWait({
                 baseDelay: WSD_REQUEST_RETRY_BASE_DELAY,
                 attempt: WSD_REQUEST_RETRIES - retriesLeft,
+                signal: context?.signal,
             });
         }
 

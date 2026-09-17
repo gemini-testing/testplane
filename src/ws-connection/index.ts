@@ -58,14 +58,14 @@ interface WsConnectionOptions {
 
 // Closing WS when its still not connected produces error:
 // https://github.com/websockets/ws/blob/86eac5b44ac2bff9087ec40c9bd06bc7b4f0da07/lib/websocket.js#L297-L301
-const closeWsConnection = (ws: WebSocket): void => {
-    if (ws.readyState !== ws.CONNECTING) {
-        ws.close();
-    } else {
-        ws.once("open", () => {
-            ws.close();
-        });
+const closeWsConnection = (ws: WebSocket, force = false): void => {
+    if (force || ws.readyState === ws.CONNECTING) {
+        // terminate прерывает и незавершённый HTTP upgrade; ws сообщает об этом error.
+        ws.once("error", () => {});
+        ws.terminate();
+        return;
     }
+    ws.close();
 };
 
 export class WsConnection<
@@ -88,7 +88,9 @@ export class WsConnection<
     private _pingShouldSkip = false;
     private _pingInterval: ReturnType<typeof setInterval> | null = null;
     private _pingSubsequentFails = 0;
-    private _onConnectionCloseFn: (() => void) | null = null; // Defined, if there is connection attempt at the moment
+    private _pongTimeout?: ReturnType<typeof setTimeout>;
+    private readonly _connectionAbort = new AbortController();
+    private _onConnectionCloseFn: ((force?: boolean) => void) | null = null; // Defined, if there is connection attempt at the moment
     private _wsConnectionStatus: WsConnectionStatus = WsConnectionStatus.DISCONNECTED;
     private _wsConnection: WebSocket | null = null;
     private _wsConnectionPromise: Promise<WebSocket> | null = null;
@@ -119,23 +121,22 @@ export class WsConnection<
 
     /** @description Tries to establish ws connection with timeout */
     private async _tryToEstablishWsConnection(endpoint: string): Promise<WebSocket | Error> {
+        if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
+            return new this._errors.ConnectionTerminated();
+        }
         return new Promise<WebSocket | Error>(resolve => {
             try {
-                const onConnectionCloseFn = (): void => done(new this._errors.ConnectionTerminated());
-
-                if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
-                    onConnectionCloseFn();
-                } else {
-                    this._onConnectionCloseFn = onConnectionCloseFn;
-                }
-
                 // eslint-disable-next-line
                 const cdpConnectionInstance = this;
                 const ws = new WebSocket(endpoint, { headers: this._requestHeaders });
+                this._onConnectionCloseFn = (force): void => {
+                    closeWsConnection(ws, force);
+                    done(new this._errors.ConnectionTerminated());
+                };
                 let isSettled = false;
 
                 const timeoutId = setTimeout(() => {
-                    closeWsConnection(ws);
+                    closeWsConnection(ws, true);
                     done(
                         new this._errors.ConnectionTimeout({
                             message: `Couldn't establish WS connection to "${endpoint}" in ${this._timeouts.createSession}ms`,
@@ -147,10 +148,9 @@ export class WsConnection<
                     done(ws);
                 };
 
-                const onUnexpectedResponse = async (ws: WebSocket, res: IncomingMessage): Promise<void> => {
-                    closeWsConnection(ws);
-
+                const onUnexpectedResponse = async (_request: unknown, res: IncomingMessage): Promise<void> => {
                     const reason = await consumeText(res).catch(() => "Unknown reason");
+                    closeWsConnection(ws, true);
 
                     done(
                         new this._errors.ConnectionEstablishment({
@@ -161,7 +161,7 @@ export class WsConnection<
                 };
 
                 const onError = (error: unknown): void => {
-                    closeWsConnection(ws);
+                    closeWsConnection(ws, true);
                     done(
                         new this._errors.ConnectionEstablishment({
                             message: `Couldn't establish WS connection to "${endpoint}": ${error}`,
@@ -300,6 +300,7 @@ export class WsConnection<
                             baseDelay: this._retries.baseDelay,
                             attempt: this._retries.count - retriesLeft,
                             factor: this._retries.factor,
+                            signal: this._connectionAbort.signal,
                         });
                     }
                 }
@@ -336,7 +337,11 @@ export class WsConnection<
     }
 
     /** @description Performs WS request with timeout */
-    async makeRequest(requestId: number, requestMessage: RequestMessageType): Promise<ResponseMessageType | WsError> {
+    async makeRequest(
+        requestId: number,
+        requestMessage: RequestMessageType,
+        requestTimeout = this._timeouts.request,
+    ): Promise<ResponseMessageType | WsError> {
         const ws = await this._getWsConnection();
 
         if (this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
@@ -352,12 +357,12 @@ export class WsConnection<
 
             const onTimeout = setTimeout(() => {
                 const err = new this._errors.RequestTimeout({
-                    message: `Timed out while waiting for request in ${this._timeouts.request}ms`,
+                    message: `Timed out while waiting for request in ${requestTimeout}ms`,
                     requestId,
                 });
 
                 done(err);
-            }, this._timeouts.request).unref();
+            }, requestTimeout).unref();
 
             function done(response: ResponseMessageType | WsError): void {
                 if (isSettled) {
@@ -440,26 +445,27 @@ export class WsConnection<
     private _closeWsConnection(
         sessionAbortMessage: string,
         status: WsConnectionStatus.CLOSED | WsConnectionStatus.DISCONNECTED,
+        force = false,
     ): void {
         const ws = this._wsConnection;
 
-        if (!ws || this._wsConnectionStatus === WsConnectionStatus.CLOSED) {
+        const isClosing = status === WsConnectionStatus.CLOSED;
+        if (this._wsConnectionStatus === WsConnectionStatus.CLOSED || (!ws && !isClosing)) {
             this._wsConnection = null;
             return;
         }
 
         this._debugFn(`\u2718 ${sessionAbortMessage}; endpoint: "${this._endpoint}"`);
 
-        const isClosing = status === WsConnectionStatus.CLOSED;
-
-        if (isClosing && this._onConnectionCloseFn) {
-            this._onConnectionCloseFn();
-        }
-
-        this._wsConnection = null;
+        // Сначала запрещаем reconnect, в том числе во время handshake и backoff.
         this._wsConnectionStatus = status;
-        this._abortPendingRequests(`Request was aborted because ${sessionAbortMessage}`, isClosing);
+        if (isClosing) this._connectionAbort.abort();
+        if (isClosing && this._onConnectionCloseFn) {
+            this._onConnectionCloseFn(force);
+        }
         this._pingHealthCheckStop();
+        this._wsConnection = null;
+        this._abortPendingRequests(`Request was aborted because ${sessionAbortMessage}`, isClosing);
 
         if (isClosing) {
             this._onClose?.();
@@ -467,7 +473,7 @@ export class WsConnection<
             this._onDisconnect?.();
         }
 
-        closeWsConnection(ws);
+        if (ws) closeWsConnection(ws, force);
     }
 
     /**
@@ -488,11 +494,12 @@ export class WsConnection<
     }
 
     /** @description Closes websocket connection, terminating all pending requests */
-    close(): void {
-        this._closeWsConnection("Connection was closed manually", WsConnectionStatus.CLOSED);
+    close(force = false): void {
+        this._closeWsConnection("Connection was closed manually", WsConnectionStatus.CLOSED, force);
     }
 
     private _pingHealthCheckStop(): void {
+        clearTimeout(this._pongTimeout);
         this._pingSubsequentFails = 0;
 
         if (this._pingInterval) {
@@ -547,7 +554,7 @@ export class WsConnection<
                 return;
             }
 
-            pongTimeout = setTimeout(() => {
+            pongTimeout = this._pongTimeout = setTimeout(() => {
                 if (isWaitingForPong && this._isWebSocketActive(ws)) {
                     isWaitingForPong = false;
 
