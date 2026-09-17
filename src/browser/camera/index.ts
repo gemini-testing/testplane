@@ -23,6 +23,11 @@ const debug = makeDebug("testplane:screenshots:camera");
 export type ScreenshotMode = "fullpage" | "viewport" | "auto";
 export type { CropMargins } from "./utils";
 
+export interface ViewportImage extends Image {
+    /** Calibrated screenshot dimensions before applying user margins or cropping to the viewport. */
+    readonly uncroppedSize: Size<"device">;
+}
+
 export interface CaptureViewportImageOpts {
     viewportOffset: Point<"page", "device">;
     viewportSize: Size<"device">;
@@ -64,7 +69,7 @@ export class Camera {
         this._calibrationScreenshotSize = screenshotSize;
     }
 
-    async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<Image> {
+    async captureViewportImage(opts?: CaptureViewportImageOpts): Promise<ViewportImage> {
         if (opts?.screenshotDelay) {
             await new Promise(resolve => setTimeout(resolve, opts.screenshotDelay));
         }
@@ -108,7 +113,9 @@ export class Camera {
             await image.crop(viewportCroppedArea);
         }
 
-        return image;
+        return Object.assign(image, {
+            uncroppedSize: { width: calibratedImageArea.width, height: calibratedImageArea.height },
+        });
     }
 
     private _cropAreaToIntersection(

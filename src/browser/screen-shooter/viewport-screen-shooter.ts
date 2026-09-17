@@ -1,7 +1,9 @@
 import { Image } from "../../image";
 import type { DisableHoverMode } from "../isomorphic/types";
 import type { WdioBrowser } from "../../types";
-import { Camera, type CropMargins } from "../camera";
+import { Camera, type CropMargins, type ViewportImage } from "../camera";
+import { assertPixelRatio } from "./validation";
+import { PixelRatioChangeError } from "./errors/pixel-ratio-change-error";
 import type * as browserSideScreenshooterImplementation from "../client-scripts/screen-shooter/implementation";
 import { ClientBridge } from "../client-bridge";
 import { isBrowserSideError } from "../isomorphic/types";
@@ -142,27 +144,31 @@ export class ViewportScreenShooter {
 
         debug("Capturing viewport screenshot.\n  viewportSize: %O\n  viewportOffset: %O", viewportSize, viewportOffset);
 
-        const image = await this._camera.captureViewportImage({
-            viewportSize,
-            viewportOffset,
-            screenshotDelay: opts.screenshotDelay,
-            cropMargins: opts.cropMargins,
-        });
-
         const shouldCheckPixelRatio =
-            !isRetry &&
             this._browserProperties.shouldUsePixelRatio &&
             !this._browserProperties.isHeadless &&
             this._browserProperties.isPixelRatioEmulated;
 
-        if (shouldCheckPixelRatio) {
-            const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
+        let image: ViewportImage;
+        try {
+            image = await this._camera.captureViewportImage({
+                viewportSize,
+                viewportOffset,
+                screenshotDelay: opts.screenshotDelay,
+                cropMargins: opts.cropMargins,
+            });
 
-            if (currentPixelRatio !== prepareResult.pixelRatio) {
-                delete opts.pixelRatioOverride;
+            if (shouldCheckPixelRatio) {
+                assertPixelRatio(image.uncroppedSize, viewportSize, prepareResult.viewportSizeInCss);
+            }
+        } catch (error) {
+            if (error instanceof PixelRatioChangeError && !isRetry) {
+                opts.pixelRatioOverride = error.pixelRatio;
 
                 return this._captureImpl(opts, true);
             }
+
+            throw error;
         }
 
         if (prepareResult.ignoreAreas.length > 0) {

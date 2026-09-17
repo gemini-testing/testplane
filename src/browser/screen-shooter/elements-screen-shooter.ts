@@ -1,7 +1,8 @@
 import makeDebug from "debug";
 import { CompositeImage } from "./composite-image";
 import { Image } from "../../image";
-import { assertCorrectCaptureAreaBounds } from "./validation";
+import { assertCorrectCaptureAreaBounds, assertPixelRatio } from "./validation";
+import { PixelRatioChangeError } from "./errors/pixel-ratio-change-error";
 import type { AssertViewOpts } from "../../config/types";
 import { runWithoutHistory } from "../history";
 import {
@@ -34,13 +35,6 @@ class CaptureAreaSizeChangeError extends Error {
     }
 }
 
-class PixelRatioChangeError extends Error {
-    constructor() {
-        super("Estimated pixel ratio did not match actual pixel ratio during capture");
-        this.name = "PixelRatioChangeError";
-    }
-}
-
 const debug = makeVerboseScreenshotsDebug("testplane:screenshots:elements-screen-shooter");
 const SCROLL_OVERLAP_PX = 1;
 const formatDuration = (duration: number): string => `${duration.toFixed(1)}ms`;
@@ -64,7 +58,7 @@ interface CaptureAttemptParams {
     page: PrepareScreenshotSuccess;
     opts: ScreenShooterOpts;
     isStrictAttempt: boolean;
-    shouldCheckPixelRatio: boolean;
+    shouldValidatePixelRatio: boolean;
 }
 
 interface ScreenShooterBrowserProperties {
@@ -250,7 +244,7 @@ export class ElementsScreenShooter {
             throw new Error("No targets to capture passed to ElementsScreenShooter.capture");
         }
 
-        // Important to fix a bug with DPR, see test in dpr-off.testplane.js, which reproduces the bug with DPR
+        // OOPIFs can corrupt window.devicePixelRatio; validate against the screenshot instead.
         const shouldValidatePixelRatio =
             this._browserProperties.shouldUsePixelRatio &&
             !this._browserProperties.isHeadless &&
@@ -300,7 +294,7 @@ export class ElementsScreenShooter {
                     page,
                     opts,
                     isStrictAttempt: true,
-                    shouldCheckPixelRatio: shouldValidatePixelRatio,
+                    shouldValidatePixelRatio,
                 });
             } catch (error) {
                 if (!(error instanceof CaptureAreaSizeChangeError) && !(error instanceof PixelRatioChangeError)) {
@@ -310,7 +304,9 @@ export class ElementsScreenShooter {
                 perfDebug(`capture: retrying in best-effort mode (${error.message})`);
 
                 if (opts.pixelRatioOverride !== undefined || error instanceof PixelRatioChangeError) {
-                    delete opts.pixelRatioOverride;
+                    if (error instanceof PixelRatioChangeError) {
+                        opts.pixelRatioOverride = error.pixelRatio;
+                    }
                     Object.assign(page, await this._getCaptureState(targetsToCapture, targetsToIgnore, opts));
                 }
 
@@ -324,7 +320,7 @@ export class ElementsScreenShooter {
                     page,
                     opts,
                     isStrictAttempt: false,
-                    shouldCheckPixelRatio: false,
+                    shouldValidatePixelRatio: false,
                 });
             }
 
@@ -655,7 +651,7 @@ export class ElementsScreenShooter {
         page,
         opts,
         isStrictAttempt,
-        shouldCheckPixelRatio,
+        shouldValidatePixelRatio,
     }: CaptureAttemptParams): Promise<CompositeImage> {
         const perfDebug = makeDebug("testplane:screenshots:perf:" + opts.debugId);
         const attemptMode = isStrictAttempt ? "strict" : "best-effort";
@@ -702,7 +698,7 @@ export class ElementsScreenShooter {
                             spec.full.height !== currentState.captureSpecs[index]?.full.height,
                     );
 
-                if (hasCaptureAreaSizeChanged && isStrictAttempt && !shouldCheckPixelRatio) {
+                if (hasCaptureAreaSizeChanged && isStrictAttempt && !shouldValidatePixelRatio) {
                     debug(
                         "capture area size changed, will retry capture attempt. Last state: %O, current state: %O",
                         lastState.captureSpecs,
@@ -721,7 +717,7 @@ export class ElementsScreenShooter {
                 const captureStartTime = performance.now();
 
                 const viewportImage = await this._camera.captureViewportImage({
-                    viewportSize: page.viewportSize,
+                    viewportSize: currentState.viewportSize,
                     viewportOffset: currentState.viewportOffset,
                     screenshotDelay: opts.screenshotDelay,
                     cropMargins: opts.cropMargins,
@@ -729,20 +725,12 @@ export class ElementsScreenShooter {
 
                 timeSpentOnCapture += performance.now() - captureStartTime;
 
-                if (shouldCheckPixelRatio) {
-                    const currentPixelRatio = await this._browserSideScreenshooter.call("getCurrentPixelRatio", []);
-
-                    if (currentPixelRatio !== currentState.pixelRatio) {
-                        debug(
-                            "expected pixel ratio %d did not match actual %d, retrying capture attempt",
-                            currentState.pixelRatio,
-                            currentPixelRatio,
-                        );
-
-                        throw new PixelRatioChangeError();
-                    } else {
-                        debug("pixel ratio %d matched expected %d", currentPixelRatio, currentState.pixelRatio);
-                    }
+                if (shouldValidatePixelRatio) {
+                    assertPixelRatio(
+                        viewportImage.uncroppedSize,
+                        currentState.viewportSize,
+                        currentState.viewportSizeInCss,
+                    );
                 }
 
                 if (hasCaptureAreaSizeChanged && isStrictAttempt) {
