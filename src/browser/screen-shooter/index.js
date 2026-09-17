@@ -12,22 +12,15 @@ module.exports = class ScreenShooter {
     }
 
     async capture(page, opts = {}) {
-        const {
-            allowViewportOverflow,
-            compositeImage,
-            screenshotDelay,
-            selectorToScroll,
-            preferredPixelRatio,
-            reprepareScreenshot,
-        } = opts;
+        const { allowViewportOverflow, compositeImage, screenshotDelay, selectorToScroll, reprepareScreenshot } = opts;
         const viewportOpts = { allowViewportOverflow, compositeImage };
         const cropImageOpts = { screenshotDelay, compositeImage, selectorToScroll };
 
         const capturedImage = await this._browser.captureViewportImage(page, screenshotDelay);
         if (reprepareScreenshot) {
-            const currentPixelRatio = await this._browser.evalScript("window.devicePixelRatio");
+            const currentPixelRatio = getPixelRatioFromImage(capturedImage.uncroppedSize, page);
 
-            if (currentPixelRatio !== (preferredPixelRatio ?? page.pixelRatio)) {
+            if (currentPixelRatio !== undefined) {
                 Object.assign(page, await reprepareScreenshot(currentPixelRatio));
                 delete opts.preferredPixelRatio;
                 delete opts.reprepareScreenshot;
@@ -67,3 +60,27 @@ module.exports = class ScreenShooter {
         await viewport.extendBy(physicalScrollHeight, newImage);
     }
 };
+
+function getPixelRatioFromImage(imageSize, page) {
+    // Allow rounding differences between CSS geometry and the captured bitmap.
+    if (
+        Math.abs(imageSize.width - page.viewport.width) <= 1 &&
+        Math.abs(imageSize.height - page.viewport.height) <= 1
+    ) {
+        return;
+    }
+
+    const pixelRatio = imageSize.width / page.viewportSizeInCss.width;
+    if (Math.abs(imageSize.height - page.viewportSizeInCss.height * pixelRatio) > 1) {
+        throw new Error("Screenshot dimensions do not match the viewport at a consistent pixel ratio");
+    }
+
+    const roundedPixelRatio = Math.round(pixelRatio);
+    const epsilon = 0.001;
+
+    return roundedPixelRatio > 0 &&
+        pixelRatio >= roundedPixelRatio - epsilon &&
+        pixelRatio <= roundedPixelRatio + epsilon
+        ? roundedPixelRatio
+        : pixelRatio;
+}

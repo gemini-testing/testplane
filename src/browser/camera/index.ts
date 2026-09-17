@@ -17,6 +17,11 @@ export interface PageMeta {
     documentWidth: number;
 }
 
+export interface ViewportImage extends Image {
+    /** Calibrated screenshot dimensions before cropping to the viewport. */
+    readonly uncroppedSize: Pick<ImageArea, "width" | "height">;
+}
+
 interface Calibration {
     left: number;
     top: number;
@@ -41,7 +46,7 @@ export class Camera {
         this._calibration = calibration;
     }
 
-    async captureViewportImage(page?: PageMeta): Promise<Image> {
+    async captureViewportImage(page?: PageMeta): Promise<ViewportImage> {
         const base64 = await this._takeScreenshot();
         const image = Image.fromBase64(base64);
 
@@ -55,7 +60,9 @@ export class Camera {
             await image.crop(viewportCroppedArea);
         }
 
-        return image;
+        return Object.assign(image, {
+            uncroppedSize: { width: calibratedArea.width, height: calibratedArea.height },
+        });
     }
 
     private _calibrateArea(imageArea: ImageArea): ImageArea {
