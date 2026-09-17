@@ -27,3 +27,12 @@ export class WSDriverRequestError extends WsError {
         return true;
     }
 }
+
+export class WSDriverRequestDeadlineError extends Error {
+    readonly code = "WSDRIVER_REQUEST_DEADLINE";
+
+    constructor(timeout: number) {
+        super(`WSDriver command timed out after ${timeout}ms including connection and retries`);
+        this.name = "WSDriverRequestDeadlineError";
+    }
+}
