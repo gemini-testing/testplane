@@ -36,6 +36,19 @@ describe("browser/camera", () => {
             return assert.becomes(camera.captureViewportImage(), image);
         });
 
+        it("should expose calibrated dimensions before cropping to the viewport", async () => {
+            const camera = Camera.create("viewport", sinon.stub().resolves());
+            image.getSize.returns({ width: 1204, height: 2406 });
+            camera.calibrate({ left: 4, top: 6 });
+
+            const result = await camera.captureViewportImage({
+                viewport: { left: 0, top: 0, width: 400, height: 800 },
+            });
+
+            assert.deepEqual(result.uncroppedSize, { width: 1200, height: 2400 });
+            assert.calledOnceWith(image.crop, { left: 4, top: 6, width: 400, height: 800 });
+        });
+
         describe("crop", () => {
             describe("calibration", () => {
                 it("should apply calibration on taken screenshot", async () => {

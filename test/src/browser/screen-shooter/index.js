@@ -26,6 +26,7 @@ describe("screen-shooter", () => {
         const capture = (page, opts) => ScreenShooter.create(browser).capture(stubPage(page), opts);
 
         beforeEach(() => {
+            imageStub.uncroppedSize = { width: 300, height: 600 };
             browser = {
                 config: {},
                 captureViewportImage: sandbox.stub().resolves(imageStub),
@@ -95,33 +96,34 @@ describe("screen-shooter", () => {
             assert.calledWithMatch(browser.captureViewportImage, sinon.match.any, 2000);
         });
 
-        it("should retry capture using pixel ratio from browser if it differs from prepared", async () => {
+        it("should retry using the screenshot pixel ratio even if the browser reports another value", async () => {
             const preparedPage = {
-                captureArea: { left: 1, top: 2, width: 10, height: 20 },
-                viewport: { left: 0, top: 0, width: 100, height: 200 },
-                ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
-                documentHeight: 300,
-                documentWidth: 200,
+                captureArea: { left: 3, top: 6, width: 30, height: 60 },
+                viewport: { left: 0, top: 0, width: 300, height: 600 },
+                viewportSizeInCss: { width: 100, height: 200 },
+                ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
+                documentHeight: 900,
+                documentWidth: 600,
                 pixelRatio: 3,
             };
             const reprepareScreenshot = sandbox.stub().resolves(preparedPage);
             const opts = { reprepareScreenshot };
-            browser.evalScript.resolves(3);
 
             await capture(
                 {
-                    captureArea: { left: 3, top: 6, width: 30, height: 60 },
-                    viewport: { left: 0, top: 0, width: 300, height: 600 },
-                    ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
-                    documentHeight: 900,
-                    documentWidth: 600,
+                    captureArea: { left: 1, top: 2, width: 10, height: 20 },
+                    viewport: { left: 0, top: 0, width: 100, height: 200 },
+                    viewportSizeInCss: { width: 100, height: 200 },
+                    ignoreAreas: [{ left: 3, top: 4, width: 5, height: 6 }],
+                    documentHeight: 300,
+                    documentWidth: 200,
                     pixelRatio: 1,
                 },
                 opts,
             );
 
             assert.calledTwice(browser.captureViewportImage);
-            assert.calledOnceWith(browser.evalScript, "window.devicePixelRatio");
+            assert.notCalled(browser.evalScript);
             assert.calledOnceWith(reprepareScreenshot, 3);
             assert.calledOnceWith(Viewport.create, preparedPage, imageStub, sinon.match.any);
             assert.notProperty(opts, "preferredPixelRatio");
@@ -132,6 +134,7 @@ describe("screen-shooter", () => {
             const preparedPage = {
                 captureArea: { left: 1, top: 2, width: 10, height: 20 },
                 viewport: { left: 50, top: 0, width: 101, height: 201 },
+                viewportSizeInCss: { width: 101, height: 201 },
                 ignoreAreas: [{ left: 3, top: 4, width: 6, height: 7 }],
                 documentHeight: 201,
                 documentWidth: 101,
@@ -139,11 +142,13 @@ describe("screen-shooter", () => {
             };
             const reprepareScreenshot = sandbox.stub().resolves(preparedPage);
             const opts = { preferredPixelRatio: 2.625, reprepareScreenshot };
+            imageStub.uncroppedSize = { width: 101, height: 201 };
 
             await capture(
                 {
                     captureArea: { left: 3, top: 6, width: 28, height: 54 },
                     viewport: { left: 131, top: 0, width: 266, height: 528 },
+                    viewportSizeInCss: { width: 101, height: 201 },
                     ignoreAreas: [{ left: 9, top: 12, width: 15, height: 18 }],
                     documentHeight: 528,
                     documentWidth: 266,
@@ -154,6 +159,89 @@ describe("screen-shooter", () => {
 
             assert.calledOnceWith(reprepareScreenshot, 1);
             assert.calledOnceWith(Viewport.create, preparedPage, imageStub, sinon.match.any);
+        });
+
+        it("should retain the capabilities estimate without a browser round trip when the image matches", async () => {
+            const reprepareScreenshot = sandbox.stub();
+
+            await capture(
+                { viewport: { width: 300, height: 600 }, pixelRatio: 3 },
+                { preferredPixelRatio: 3, reprepareScreenshot },
+            );
+
+            assert.calledOnce(browser.captureViewportImage);
+            assert.notCalled(browser.evalScript);
+            assert.notCalled(reprepareScreenshot);
+        });
+
+        it("should allow a one-pixel rounding difference in screenshot dimensions", async () => {
+            const reprepareScreenshot = sandbox.stub();
+
+            await capture({ viewport: { width: 301, height: 599 }, pixelRatio: 3 }, { reprepareScreenshot });
+
+            assert.notCalled(reprepareScreenshot);
+        });
+
+        it("should finish the retry in best-effort mode if the screenshot scale changes again", async () => {
+            const reprepareScreenshot = sandbox.stub().resolves({
+                viewport: { width: 300, height: 600 },
+                pixelRatio: 3,
+            });
+            const secondImage = sinon.createStubInstance(Image);
+            secondImage.uncroppedSize = { width: 200, height: 400 };
+            browser.captureViewportImage.onSecondCall().resolves(secondImage);
+
+            await capture(
+                { viewport: { width: 100, height: 200 }, viewportSizeInCss: { width: 100, height: 200 } },
+                { reprepareScreenshot },
+            );
+
+            assert.calledOnceWith(reprepareScreenshot, 3);
+            assert.calledTwice(browser.captureViewportImage);
+            assert.calledOnceWith(Viewport.prototype.handleImage, secondImage);
+        });
+
+        it("should reject screenshot dimensions that do not indicate a uniform scale", async () => {
+            imageStub.uncroppedSize = { width: 300, height: 800 };
+            const reprepareScreenshot = sandbox.stub();
+
+            await assert.isRejected(
+                capture(
+                    { viewport: { width: 100, height: 200 }, viewportSizeInCss: { width: 100, height: 200 } },
+                    { reprepareScreenshot },
+                ),
+                "Screenshot dimensions do not match the viewport at a consistent pixel ratio",
+            );
+
+            assert.notCalled(reprepareScreenshot);
+        });
+
+        [
+            [1.999999, 2],
+            [2.000001, 2],
+            [1.999, 2],
+            [2.001, 2],
+            [4.999, 5],
+            [5.001, 5],
+            [1.9989, 1.9989],
+            [2.0011, 2.0011],
+            [1.75, 1.75],
+            [0.0005, 0.0005],
+        ].forEach(([actual, expected]) => {
+            it(`should infer screenshot pixel ratio ${actual} as ${expected}`, async () => {
+                imageStub.uncroppedSize = { width: actual * 1000000, height: actual * 2000000 };
+                const reprepareScreenshot = sandbox.stub().resolves({ pixelRatio: expected });
+
+                await capture(
+                    {
+                        viewport: { width: 1000000, height: 2000000 },
+                        viewportSizeInCss: { width: 1000000, height: 2000000 },
+                    },
+                    { reprepareScreenshot },
+                );
+
+                assert.calledOnceWith(reprepareScreenshot, expected);
+            });
         });
 
         it("should extract image of passed size", async () => {

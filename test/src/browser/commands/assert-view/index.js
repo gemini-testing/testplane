@@ -221,6 +221,24 @@ describe("assertView command", () => {
         );
     });
 
+    [{ args: ["--headless=new"], mobileEmulation: { deviceMetrics: { pixelRatio: 3 } } }, { args: [] }].forEach(
+        chromeOptions => {
+            it(`should not validate pixel ratio without headful mobile emulation: ${JSON.stringify(
+                chromeOptions,
+            )}`, async () => {
+                const session = mkSessionStub_();
+                session.requestedCapabilities = { "goog:chromeOptions": chromeOptions };
+                const browser = await initBrowser_({ session });
+
+                await browser.publicAPI.assertView("plain", ".selector");
+
+                const screenShooterOpts = ScreenShooter.prototype.capture.lastCall.args[1];
+                assert.notProperty(screenShooterOpts, "preferredPixelRatio");
+                assert.notProperty(screenShooterOpts, "reprepareScreenshot");
+            });
+        },
+    );
+
     it("should screenshot the viewport if selector is not provided", async () => {
         const browser = await initBrowser_();
 
