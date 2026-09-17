@@ -1,7 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
-const Mocha = require("mocha");
+const { Mocha } = require("mocha");
 
 const { MochaEventBus } = require("./mocha-event-bus");
 const { TreeBuilderDecorator } = require("./tree-builder-decorator");
