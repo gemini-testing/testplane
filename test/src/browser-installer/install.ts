@@ -24,6 +24,7 @@ describe("browser-installer/install", () => {
     let installLatestGeckoDriverStub: SinonStub;
     let resolveLatestFirefoxVersionStub: SinonStub;
     let installEdgeDriverStub: SinonStub;
+    let resolveEdgeVersionStub: SinonStub;
 
     let isUbuntuStub: SinonStub;
     let installUbuntuPackageDependenciesStub: SinonStub;
@@ -36,6 +37,7 @@ describe("browser-installer/install", () => {
         installLatestGeckoDriverStub = sandbox.stub();
         resolveLatestFirefoxVersionStub = sandbox.stub();
         installEdgeDriverStub = sandbox.stub();
+        resolveEdgeVersionStub = sandbox.stub();
 
         isUbuntuStub = sandbox.stub().resolves(false);
         installUbuntuPackageDependenciesStub = sandbox.stub().resolves();
@@ -46,7 +48,7 @@ describe("browser-installer/install", () => {
                 installChromeDriver: installChromeDriverStub,
                 resolveLatestChromeVersion: resolveLatestChromeVersionStub,
             },
-            "./edge": { installEdgeDriver: installEdgeDriverStub },
+            "./edge": { installEdgeDriver: installEdgeDriverStub, resolveEdgeVersion: resolveEdgeVersionStub },
             "./firefox": {
                 installFirefox: installFirefoxStub,
                 installLatestGeckoDriver: installLatestGeckoDriverStub,
@@ -65,16 +67,73 @@ describe("browser-installer/install", () => {
     afterEach(() => sandbox.restore());
 
     describe(`installBrowser`, () => {
+        describe("browser version normalization", () => {
+            const installOptions = {
+                force: false,
+                needUbuntuPackages: false,
+                needWebDriver: false,
+                browserDownloadMirrors,
+            };
+
+            it("should append .0 to digit-only versions for Chrome browser variants", async () => {
+                await installBrowser(BrowserName.CHROME, "139", { browserDownloadMirrors });
+                await installBrowser(BrowserName.CHROMIUM, "144", { browserDownloadMirrors });
+                await installBrowser(BrowserName.CHROMEHEADLESSSHELL, "145", { browserDownloadMirrors });
+
+                assert.calledWithExactly(installChromeStub, BrowserName.CHROME, "139.0", installOptions);
+                assert.calledWithExactly(installChromeStub, BrowserName.CHROME, "144.0", installOptions);
+                assert.calledWithExactly(installChromeStub, BrowserName.CHROMEHEADLESSSHELL, "145.0", installOptions);
+            });
+
+            it("should append .0 to a digit-only Firefox version", async () => {
+                await installBrowser(BrowserName.FIREFOX, "144", { browserDownloadMirrors });
+
+                assert.calledOnceWithExactly(installFirefoxStub, "144.0", installOptions);
+            });
+
+            it("should append .0 to a digit-only Edge version", async () => {
+                await installBrowser(BrowserName.EDGE, "139", { shouldInstallWebDriver: true });
+
+                assert.calledOnceWithExactly(installEdgeDriverStub, "139.0", { force: false });
+            });
+
+            ["139.0", "139.0.7258.1", "stable", "beta", "dev", "canary", "latest"].forEach(version => {
+                it(`should preserve supplied Chrome selector ${version}`, async () => {
+                    await installBrowser(BrowserName.CHROME, version, { browserDownloadMirrors });
+
+                    assert.calledOnceWithExactly(installChromeStub, BrowserName.CHROME, version, installOptions);
+                });
+            });
+
+            it("should preserve a version resolved for an omitted Chrome version", async () => {
+                resolveLatestChromeVersionStub.resolves("139");
+
+                await installBrowser(BrowserName.CHROME, undefined, { browserDownloadMirrors });
+
+                assert.calledOnceWithExactly(resolveLatestChromeVersionStub, false, browserDownloadMirrors);
+                assert.calledOnceWithExactly(installChromeStub, BrowserName.CHROME, "139", installOptions);
+            });
+
+            it("should preserve a version resolved for an omitted Edge version", async () => {
+                resolveEdgeVersionStub.resolves("139");
+
+                await installBrowser(BrowserName.EDGE, undefined, { shouldInstallWebDriver: true });
+
+                assert.calledOnceWithExactly(resolveEdgeVersionStub);
+                assert.calledOnceWithExactly(installEdgeDriverStub, "139", { force: false });
+            });
+        });
+
         [true, false].forEach(force => {
             describe(`force: ${force}`, () => {
                 describe("chrome", () => {
                     it("should install browser", async () => {
-                        installChromeStub.withArgs("chrome", "115").resolves("/browser/path");
+                        installChromeStub.withArgs("chrome", "115.0").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.CHROME, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
+                        assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
@@ -83,7 +142,7 @@ describe("browser-installer/install", () => {
                     });
 
                     it("should install browser with webdriver", async () => {
-                        installChromeStub.withArgs("chrome", "115").resolves("/browser/path");
+                        installChromeStub.withArgs("chrome", "115.0").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.CHROME, "115", {
                             force,
@@ -91,7 +150,7 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
+                        assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: true,
@@ -102,7 +161,7 @@ describe("browser-installer/install", () => {
                     it("should pass browser download mirrors", async () => {
                         await installBrowser(BrowserName.CHROME, "115", { force, browserDownloadMirrors });
 
-                        assert.calledOnceWith(installChromeStub, "chrome", "115", {
+                        assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
@@ -127,12 +186,12 @@ describe("browser-installer/install", () => {
 
                 describe("firefox", () => {
                     it("should install browser", async () => {
-                        installFirefoxStub.withArgs("115").resolves("/browser/path");
+                        installFirefoxStub.withArgs("115.0").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.FIREFOX, "115", { force });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installFirefoxStub, "115", {
+                        assert.calledOnceWith(installFirefoxStub, "115.0", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: false,
@@ -141,7 +200,7 @@ describe("browser-installer/install", () => {
                     });
 
                     it("should install browser with webdriver", async () => {
-                        installFirefoxStub.withArgs("115").resolves("/browser/path");
+                        installFirefoxStub.withArgs("115.0").resolves("/browser/path");
 
                         const binaryPath = await installBrowser(BrowserName.FIREFOX, "115", {
                             force,
@@ -149,7 +208,7 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, "/browser/path");
-                        assert.calledOnceWith(installFirefoxStub, "115", {
+                        assert.calledOnceWith(installFirefoxStub, "115.0", {
                             force,
                             needUbuntuPackages: false,
                             needWebDriver: true,
@@ -187,7 +246,7 @@ describe("browser-installer/install", () => {
                         });
 
                         assert.equal(binaryPath, null);
-                        assert.calledOnceWith(installEdgeDriverStub, "115", { force });
+                        assert.calledOnceWith(installEdgeDriverStub, "115.0", { force });
                     });
                 });
 
@@ -206,10 +265,26 @@ describe("browser-installer/install", () => {
     });
 
     describe("installBrowsersWithDrivers", () => {
+        it("should normalize installation while keeping the requested version in the result key", async () => {
+            installChromeStub.resolves("/browser/path");
+
+            const result = await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "139" }], {
+                browserDownloadMirrors,
+            });
+
+            assert.calledOnceWithExactly(installChromeStub, BrowserName.CHROME, "139.0", {
+                force: true,
+                needUbuntuPackages: false,
+                needWebDriver: true,
+                browserDownloadMirrors,
+            });
+            assert.deepEqual(result, { "chrome@139": { status: "ok" } });
+        });
+
         it("should force install browser with driver", async () => {
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installChromeStub, "chrome", "115", {
+            assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                 force: true,
                 needUbuntuPackages: false,
                 needWebDriver: true,
@@ -222,7 +297,7 @@ describe("browser-installer/install", () => {
                 browserDownloadMirrors,
             });
 
-            assert.calledOnceWith(installChromeStub, "chrome", "115", {
+            assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                 force: true,
                 needUbuntuPackages: false,
                 needWebDriver: true,
@@ -235,7 +310,7 @@ describe("browser-installer/install", () => {
 
             await installBrowsersWithDrivers([{ browserName: "chrome", browserVersion: "115" }]);
 
-            assert.calledOnceWith(installChromeStub, "chrome", "115", {
+            assert.calledOnceWith(installChromeStub, "chrome", "115.0", {
                 force: true,
                 needWebDriver: true,
                 needUbuntuPackages: true,

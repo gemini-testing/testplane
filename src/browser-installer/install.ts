@@ -22,6 +22,7 @@ export const installBrowser = async (
         browserDownloadMirrors?: BrowserDownloadMirrors;
     } = {},
 ): Promise<string | null> => {
+    const normalizedBrowserVersion = browserVersion?.replace(/^(\d+)$/, "$1.0");
     const { isUbuntu } = await import("./ubuntu-packages");
 
     const needUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
@@ -41,7 +42,8 @@ export const installBrowser = async (
         case BrowserName.CHROMEHEADLESSSHELL: {
             const { installChrome, resolveLatestChromeVersion } = await import("./chrome");
             const w3cBrowserName = browserName === BrowserName.CHROMIUM ? BrowserName.CHROME : browserName;
-            const version = browserVersion || (await resolveLatestChromeVersion(force, browserDownloadMirrors));
+            const version =
+                normalizedBrowserVersion || (await resolveLatestChromeVersion(force, browserDownloadMirrors));
 
             return installChrome(w3cBrowserName, version, {
                 force,
@@ -53,7 +55,8 @@ export const installBrowser = async (
 
         case BrowserName.FIREFOX: {
             const { installFirefox, resolveLatestFirefoxVersion } = await import("./firefox");
-            const version = browserVersion || (await resolveLatestFirefoxVersion(force, browserDownloadMirrors));
+            const version =
+                normalizedBrowserVersion || (await resolveLatestFirefoxVersion(force, browserDownloadMirrors));
 
             return installFirefox(version, {
                 force,
@@ -65,7 +68,7 @@ export const installBrowser = async (
 
         case BrowserName.EDGE: {
             const { installEdgeDriver, resolveEdgeVersion } = await import("./edge");
-            const version = browserVersion || (await resolveEdgeVersion());
+            const version = normalizedBrowserVersion || (await resolveEdgeVersion());
 
             if (shouldInstallWebDriver) {
                 await installEdgeDriver(version, { force });

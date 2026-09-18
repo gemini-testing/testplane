@@ -42,6 +42,8 @@ npx testplane install-deps chrome@130 firefox@128
 
 If `install-deps` is not run first, Testplane can download missing local dependencies when the browser session starts. For a remote grid, set `gridUrl` to its WebDriver endpoint instead of `"local"`.
 
+For local browser and driver installation, a `browserVersion` consisting only of digits is normalized by adding `.0`: `"139"` is treated as `"139.0"`, and `"144"` as `"144.0"`. Versions containing dots or channel names are not rewritten by this normalization. The same rule applies to explicit `install-deps` versions such as `chrome@139`.
+
 ### Browser download mirrors
 
 Configure mirrors once at the root of the Testplane config. The map is not a per-browser option:
