@@ -183,10 +183,6 @@ export function prepareElementsScreenshot(
     return safeCall(prepareElementsScreenshotUnsafe, targetsToCapture, opts);
 }
 
-export function getCurrentPixelRatio(): number {
-    return computePixelRatio();
-}
-
 export function scrollBy(
     targetsToCapture: ElementTarget[],
     scrollDelta: Length<"device", "y"> | Coord<"page", "device", "y">,
@@ -262,9 +258,11 @@ export function scrollTo(
 
 function getViewportState(usePixelRatio?: boolean, pixelRatioOverride?: number): ViewportState {
     const pixelRatio = computePixelRatio(usePixelRatio, pixelRatioOverride);
+    const viewportSizeInCss = computeViewportSize();
 
     return {
-        viewportSize: fromCssToDevice(computeViewportSize(), pixelRatio),
+        viewportSize: fromCssToDevice(viewportSizeInCss, pixelRatio),
+        viewportSizeInCss,
         viewportOffset: fromCssToDevice(floorCoords(computeViewportOffset()), pixelRatio),
         documentSize: ceilCoords(fromCssToDevice(computeDocumentSize(), pixelRatio)),
         pixelRatio
@@ -378,6 +376,7 @@ export function prepareFullPageScreenshot(
         return {
             documentSize: ceilCoords(fromCssToDevice(documentSize, pixelRatio)),
             viewportSize: fromCssToDevice(viewportSize, pixelRatio),
+            viewportSizeInCss: viewportSize,
             viewportOffset: fromCssToDevice(floorCoords(viewportOffset), pixelRatio),
             safeArea: fromCssToDevice(roundCoords(safeArea), pixelRatio),
             elementPositionsProbe,
