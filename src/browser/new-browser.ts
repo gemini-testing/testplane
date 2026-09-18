@@ -56,14 +56,17 @@ const headlessBrowserOptions: HeadlessBrowserOptions = {
 };
 
 export class NewBrowser extends Browser {
+    private _rootConfig: Config;
     private _onExit: (err?: Error) => Promise<void> = async () => {};
     private _initPromise: Promise<this> | null = null;
     private _quitPromise: Promise<void> | null = null;
-    private _killPromise: Promise<void> | null = null;
+    private _cleanupPromise: Promise<void> | null = null;
+    private _shouldKillWebdriver = false;
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
 
+        this._rootConfig = config;
         this._onExit = async (err?: Error): Promise<void> => await this.quit(err);
         signalHandler.on("exit", this._onExit);
     }
@@ -75,13 +78,19 @@ export class NewBrowser extends Browser {
     }
 
     private async _init(): Promise<this> {
-        this._session = await this._createSession();
+        try {
+            this._session = await this._createSession();
 
-        this._addCommands();
-        this.restoreHttpTimeout();
-        await this._setPageLoadTimeout();
+            this._addCommands();
+            this.restoreHttpTimeout();
+            await this._setPageLoadTimeout();
 
-        return this;
+            return this;
+        } catch (error) {
+            await this.kill();
+
+            throw error;
+        }
     }
 
     reset(): Promise<void> {
@@ -103,33 +112,52 @@ export class NewBrowser extends Browser {
     private async _quit(): Promise<void> {
         try {
             await this._initPromise;
-            this.setHttpTimeout(this._config.sessionQuitTimeout);
-            await this._session!.deleteSession();
-            this._wdProcess?.free();
-        } catch (e) {
-            warn(`WARNING: Can not close session: ${(e as Error).message}`);
-            this._wdProcess?.kill();
-        } finally {
-            this._wdProcess = null;
+        } catch {
+            return;
         }
+
+        await this._cleanup(true);
     }
 
     kill(): Promise<void> {
-        if (this._killPromise) {
-            return this._killPromise;
-        }
-
-        this._killPromise = this._kill();
-
-        return this._killPromise;
+        return this._cleanup(false);
     }
 
-    private async _kill(): Promise<void> {
+    private _cleanup(canReuseWebdriver: boolean): Promise<void> {
+        if (!canReuseWebdriver) {
+            this._shouldKillWebdriver = true;
+        }
+
+        this._cleanupPromise ??= this._performCleanup(canReuseWebdriver);
+
+        return this._cleanupPromise;
+    }
+
+    private async _performCleanup(canReuseWebdriver: boolean): Promise<void> {
+        signalHandler.off("exit", this._onExit);
+
         try {
-            await this._session!.deleteSession();
-            this._wdProcess?.kill();
-        } catch (e) {
-            warn(`WARNING: Can not kill WebDriver process: ${(e as Error).message}`);
+            if (this._session) {
+                if (canReuseWebdriver) {
+                    this.setHttpTimeout(this._config.sessionQuitTimeout);
+                }
+
+                await this._session.deleteSession();
+            }
+        } catch (error) {
+            this._shouldKillWebdriver = true;
+            const warningSubject = canReuseWebdriver ? "close session" : "kill WebDriver process";
+
+            warn(`WARNING: Can not ${warningSubject}: ${(error as Error)?.message ?? String(error)}`);
+        } finally {
+            if (canReuseWebdriver && this._session && !this._shouldKillWebdriver) {
+                this._wdProcess?.free();
+            } else {
+                this._wdProcess?.kill();
+            }
+
+            // Pool cleanup still reads session metadata after cancellation.
+            this._wdProcess = null;
         }
     }
 
@@ -278,7 +306,10 @@ export class NewBrowser extends Browser {
         this._wdProcess = await this._wdPool.getWebdriver(
             this._config.desiredCapabilities?.browserName,
             this._config.desiredCapabilities?.browserVersion,
-            { debug: this._config.system.debug },
+            {
+                debug: this._rootConfig.system.debug,
+                browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
+            },
         );
 
         return this._wdProcess.gridUrl;
@@ -303,6 +334,7 @@ export class NewBrowser extends Browser {
         const executablePath = await installBrowser(browserNameW3C, config.desiredCapabilities?.browserVersion, {
             shouldInstallWebDriver: false,
             shouldInstallUbuntuPackages: true,
+            browserDownloadMirrors: this._rootConfig.browserDownloadMirrors,
         });
 
         if (executablePath) {

@@ -8,6 +8,11 @@ import type {
 
 describe("browser-installer/firefox/browser", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: null,
+        chromium: null,
+        firefox: "https://mirror.example/firefox",
+    };
 
     let installFirefox: typeof InstallFirefoxType;
     let resolveLatestFirefoxVersion: typeof ResolveLatestFirefoxVersionType;
@@ -99,6 +104,49 @@ describe("browser-installer/firefox/browser", () => {
             assert.equal(binaryPath, "/new/downloaded/browser/path");
         });
 
+        it("should download browser from mirror", async () => {
+            installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+            await installFirefox("115", { browserDownloadMirrors });
+
+            assert.calledOnceWith(
+                canDownloadStub,
+                sinon.match({
+                    browser: BrowserName.FIREFOX,
+                    buildId: "stable_115.0",
+                    baseUrl: browserDownloadMirrors.firefox,
+                }),
+            );
+            assert.calledOnceWith(
+                puppeteerInstallStub,
+                sinon.match({
+                    browser: BrowserName.FIREFOX,
+                    buildId: "stable_115.0",
+                    baseUrl: browserDownloadMirrors.firefox,
+                }),
+            );
+        });
+
+        it("should preserve the mirrored browser artifact download error", async () => {
+            const downloadError = new Error(`Download failed. URL: ${browserDownloadMirrors.firefox}/115/firefox.zip`);
+
+            puppeteerInstallStub.rejects(downloadError);
+            installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+            const error = await installFirefox("115", { browserDownloadMirrors }).catch(error => error);
+
+            assert.strictEqual(error, downloadError);
+        });
+
+        it("should report a configured mirror error when the browser artifact is unavailable", async () => {
+            canDownloadStub.resolves(false);
+
+            const error = await installFirefox("115", { browserDownloadMirrors }).catch(error => error);
+
+            assert.instanceOf(error, Error);
+            assert.equal(error.message, "Couldn't download browser artifact from the configured mirror");
+        });
+
         it("should throw an error if can't download the browser", async () => {
             getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string, "115").returns(null);
             canDownloadStub.resolves(false);
@@ -152,6 +200,58 @@ describe("browser-installer/firefox/browser", () => {
             assert.equal(version, "100.500");
             assert.calledOnce(retryFetchStub);
         });
+
+        it("should resolve network version from mirror", async () => {
+            retryFetchStub
+                .withArgs("https://mirror.example/firefox/firefox_versions.json")
+                .resolves({ ok: true, json: () => Promise.resolve({ LATEST_FIREFOX_VERSION: "101.0" }) });
+
+            const version = await resolveLatestFirefoxVersion(false, browserDownloadMirrors);
+
+            assert.equal(version, "101.0");
+            assert.calledOnceWith(retryFetchStub, "https://mirror.example/firefox/firefox_versions.json");
+        });
+
+        it("should reject an unsuccessful mirror response even when its body contains a valid version", async () => {
+            retryFetchStub.resolves({
+                ok: false,
+                json: () => Promise.resolve({ LATEST_FIREFOX_VERSION: "101.0" }),
+            });
+
+            await assert.isRejected(
+                resolveLatestFirefoxVersion(false, browserDownloadMirrors),
+                "Couldn't resolve latest firefox version from the configured mirror",
+            );
+        });
+
+        it("should preserve mirrored latest version request errors", async () => {
+            const requestError = new Error(`Failed to fetch ${browserDownloadMirrors.firefox}/firefox_versions.json`);
+
+            retryFetchStub.rejects(requestError);
+
+            const error = await resolveLatestFirefoxVersion(false, browserDownloadMirrors).catch(error => error);
+
+            assert.strictEqual(error, requestError);
+        });
+
+        for (const [name, value] of [
+            ["missing", undefined],
+            ["wrong-type", 101],
+            ["empty", "  "],
+            ["unsafe", `101.0 from ${browserDownloadMirrors.firefox}`],
+        ]) {
+            it(`should reject ${name} latest version mirror metadata`, async () => {
+                retryFetchStub.resolves({
+                    ok: true,
+                    json: () => Promise.resolve({ LATEST_FIREFOX_VERSION: value }),
+                });
+
+                await assert.isRejected(
+                    resolveLatestFirefoxVersion(false, browserDownloadMirrors),
+                    "Couldn't resolve latest firefox version from the configured mirror",
+                );
+            });
+        }
 
         it("should resolve network version on force mode", async () => {
             getMatchedBrowserVersionStub.withArgs(BrowserName.FIREFOX, sinon.match.string).returns("500.100");
