@@ -25,7 +25,12 @@ export const assertPixelRatio = (
 
     const roundedPixelRatio = Math.round(pixelRatio);
     const PIXEL_RATIO_EPSILON = 0.001;
-    const finalPixelRatio = pixelRatio - roundedPixelRatio <= PIXEL_RATIO_EPSILON ? roundedPixelRatio : pixelRatio;
+    // Compare bounds directly to avoid subtraction rounding at the tolerance boundary.
+    const shouldSnap =
+        roundedPixelRatio > 0 &&
+        pixelRatio >= roundedPixelRatio - PIXEL_RATIO_EPSILON &&
+        pixelRatio <= roundedPixelRatio + PIXEL_RATIO_EPSILON;
+    const finalPixelRatio = shouldSnap ? roundedPixelRatio : pixelRatio;
 
     throw new PixelRatioChangeError(finalPixelRatio);
 };
