@@ -18,6 +18,7 @@ export interface TrackedElementData {
 
 export interface ViewportState {
     viewportSize: Size<"device">;
+    viewportSizeInCss: Size<"css">;
     viewportOffset: Point<"page", "device">;
     documentSize: Size<"device">;
     pixelRatio: number;

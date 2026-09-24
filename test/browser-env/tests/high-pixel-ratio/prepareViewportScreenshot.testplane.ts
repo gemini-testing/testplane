@@ -35,6 +35,7 @@ describe("prepareViewportScreenshot in high pixel ratio mode", () => {
         const result = getPrepareResult({ usePixelRatio: true });
 
         expect(result.pixelRatio).toBe(3);
+        expect(result.viewportSizeInCss).toEqual(cssViewportSize);
         expect(result.viewportSize.width).toBe((cssViewportSize.width as number) * 3);
         expect(result.viewportSize.height).toBe((cssViewportSize.height as number) * 3);
         expect(result.viewportOffset.left).toBe(Math.floor(cssViewportOffset.left as number) * 3);
