@@ -116,6 +116,11 @@ module.exports = class TestRunner {
             try {
                 await flushSessionManagerErrors(this._browser.publicAPI);
             } catch (contextError) {
+                // A failed context update may leave the session pointing at a stale frame.
+                // The master pool discards browsers marked as broken instead of reusing them.
+                if (!this._browser.state.isBroken) {
+                    this._browser.markAsBroken({ stubBrowserCommands: true });
+                }
                 if (error && error !== contextError) {
                     additionalContextError = contextError;
                 } else {

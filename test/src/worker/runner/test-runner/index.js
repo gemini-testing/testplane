@@ -854,6 +854,8 @@ describe("worker/runner/test-runner", () => {
                 assert.calledOnceWithExactly(BrowserAgent.prototype.freeBrowser, browser);
                 assert.callOrder(flushSessionManagerErrorsStub, BrowserAgent.prototype.freeBrowser);
                 assert.isTrue(browser.state.isLastTestFailed);
+                assert.calledOnceWithExactly(browser.markAsBroken, { stubBrowserCommands: true });
+                assert.isTrue(browser.state.isBroken);
             });
 
             it("should release browser after all browser data has been used", async () => {
@@ -995,6 +997,8 @@ describe("worker/runner/test-runner", () => {
             });
 
             it("should retain the original test error when context manager also fails", async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
                 ExecutionThread.prototype.run.rejects(new Error("test failure"));
                 flushSessionManagerErrorsStub.rejects(new Error("context failure"));
 
@@ -1002,6 +1006,7 @@ describe("worker/runner/test-runner", () => {
                 assert.include(error.message, "test failure");
                 assert.include(error.stack, "context failure");
                 assert.calledOnce(flushSessionManagerErrorsStub);
+                assert.calledOnceWithExactly(browser.markAsBroken, { stubBrowserCommands: true });
             });
 
             [SAVE_HISTORY_MODE.ONLY_FAILED, SAVE_HISTORY_MODE.ALL].forEach(saveHistoryMode => {
