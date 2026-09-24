@@ -14,6 +14,7 @@ const { filterExtraStackFrames } = require("../../../browser/stacktrace/utils");
 const { extendWithCodeSnippet } = require("../../../error-snippets");
 const { startSelectivity } = require("../../../browser/cdp/selectivity");
 const { noopProfilerRuntime } = require("../../../profiler/runtime/noop");
+const { flushSessionManagerErrors } = require("@testplane/webdriverio");
 
 const SNAPSHOTS_TIMEOUT_MS = 10000;
 const SNAPSHOTS_WARNING_TIMEOUT_MS = 2000;
@@ -108,6 +109,25 @@ module.exports = class TestRunner {
     async finishRun(error) {
         const testplaneCtx = this._test.testplaneCtx;
         const { callstackHistory } = this._browser;
+        let additionalContextError;
+
+        // Older WebdriverIO versions do not expose the test-boundary check.
+        if (typeof flushSessionManagerErrors === "function") {
+            try {
+                await flushSessionManagerErrors(this._browser.publicAPI);
+            } catch (contextError) {
+                // A failed context update may leave the session pointing at a stale frame.
+                // The master pool discards browsers marked as broken instead of reusing them.
+                if (!this._browser.state.isBroken) {
+                    this._browser.markAsBroken({ stubBrowserCommands: true });
+                }
+                if (error && error !== contextError) {
+                    additionalContextError = contextError;
+                } else {
+                    error = contextError;
+                }
+            }
+        }
 
         const assertViewResults = testplaneCtx.assertViewResults;
         if (!error && assertViewResults && assertViewResults.hasFails()) {
@@ -171,6 +191,10 @@ module.exports = class TestRunner {
 
             // The original cause must be removed to avoid possible duplicates later.
             delete error.cause;
+
+            if (additionalContextError) {
+                error.stack += `\n\nAdditional context manager error: ${additionalContextError.stack}`;
+            }
 
             await extendWithCodeSnippet(error);
 
