@@ -2,6 +2,7 @@ import _ from "lodash";
 import { browserInstallerDebug, type SupportedBrowser } from "./utils";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { BrowserName } from "../browser/types";
+import type { BrowserDownloadMirrors } from "../config/types";
 
 /**
  * @returns path to installed browser binary
@@ -9,8 +10,19 @@ import { BrowserName } from "../browser/types";
 export const installBrowser = async (
     browserName: SupportedBrowser,
     browserVersion?: string,
-    { force = false, shouldInstallWebDriver = false, shouldInstallUbuntuPackages = false } = {},
+    {
+        force = false,
+        shouldInstallWebDriver = false,
+        shouldInstallUbuntuPackages = false,
+        browserDownloadMirrors,
+    }: {
+        force?: boolean;
+        shouldInstallWebDriver?: boolean;
+        shouldInstallUbuntuPackages?: boolean;
+        browserDownloadMirrors?: BrowserDownloadMirrors;
+    } = {},
 ): Promise<string | null> => {
+    const normalizedBrowserVersion = browserVersion?.replace(/^(\d+)$/, "$1.0");
     const { isUbuntu } = await import("./ubuntu-packages");
 
     const needUbuntuPackages = shouldInstallUbuntuPackages && (await isUbuntu());
@@ -30,25 +42,33 @@ export const installBrowser = async (
         case BrowserName.CHROMEHEADLESSSHELL: {
             const { installChrome, resolveLatestChromeVersion } = await import("./chrome");
             const w3cBrowserName = browserName === BrowserName.CHROMIUM ? BrowserName.CHROME : browserName;
-            const version = browserVersion || (await resolveLatestChromeVersion(force));
+            const version =
+                normalizedBrowserVersion || (await resolveLatestChromeVersion(force, browserDownloadMirrors));
 
             return installChrome(w3cBrowserName, version, {
                 force,
                 needUbuntuPackages,
                 needWebDriver: shouldInstallWebDriver,
+                browserDownloadMirrors,
             });
         }
 
         case BrowserName.FIREFOX: {
             const { installFirefox, resolveLatestFirefoxVersion } = await import("./firefox");
-            const version = browserVersion || (await resolveLatestFirefoxVersion(force));
+            const version =
+                normalizedBrowserVersion || (await resolveLatestFirefoxVersion(force, browserDownloadMirrors));
 
-            return installFirefox(version, { force, needUbuntuPackages, needWebDriver: shouldInstallWebDriver });
+            return installFirefox(version, {
+                force,
+                needUbuntuPackages,
+                needWebDriver: shouldInstallWebDriver,
+                browserDownloadMirrors,
+            });
         }
 
         case BrowserName.EDGE: {
             const { installEdgeDriver, resolveEdgeVersion } = await import("./edge");
-            const version = browserVersion || (await resolveEdgeVersion());
+            const version = normalizedBrowserVersion || (await resolveEdgeVersion());
 
             if (shouldInstallWebDriver) {
                 await installEdgeDriver(version, { force });
@@ -83,9 +103,15 @@ const forceInstallBinaries = async (
     installFn: typeof installBrowser,
     browserName?: string,
     browserVersion?: string,
+    browserDownloadMirrors?: BrowserDownloadMirrors,
 ): ForceInstallBinaryResult => {
     const normalizedBrowserName = getNormalizedBrowserName(browserName);
-    const installOpts = { force: true, shouldInstallWebDriver: true, shouldInstallUbuntuPackages: true };
+    const installOpts = {
+        force: true,
+        shouldInstallWebDriver: true,
+        shouldInstallUbuntuPackages: true,
+        browserDownloadMirrors,
+    };
 
     if (!normalizedBrowserName) {
         return {
@@ -108,6 +134,7 @@ const forceInstallBinaries = async (
 
 export const installBrowsersWithDrivers = async (
     browsersToInstall: { browserName?: string; browserVersion?: string }[],
+    { browserDownloadMirrors }: { browserDownloadMirrors?: BrowserDownloadMirrors } = {},
 ): Promise<Record<string, Awaited<ForceInstallBinaryResult>>> => {
     const uniqBrowsers = _.uniqBy(browsersToInstall, b => `${b.browserName}@${b.browserVersion}`);
     const installPromises = [] as Promise<void>[];
@@ -115,7 +142,7 @@ export const installBrowsersWithDrivers = async (
 
     for (const { browserName, browserVersion } of uniqBrowsers) {
         installPromises.push(
-            forceInstallBinaries(installBrowser, browserName, browserVersion).then(result => {
+            forceInstallBinaries(installBrowser, browserName, browserVersion, browserDownloadMirrors).then(result => {
                 const key = browserVersion ? `${browserName}@${browserVersion}` : String(browserName);
 
                 browsersInstallResult[key] = result;

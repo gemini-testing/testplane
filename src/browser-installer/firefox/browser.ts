@@ -12,9 +12,20 @@ import { getFirefoxBuildId, normalizeFirefoxVersion } from "./utils";
 import { installLatestGeckoDriver } from "./driver";
 import { installUbuntuPackageDependencies } from "../ubuntu-packages";
 import { BrowserName } from "../../browser/types";
-import { FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL } from "../constants";
+import { FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL, FIREFOX_VERSIONS_LATEST_VERSIONS_FILENAME } from "../constants";
+import type { BrowserDownloadMirrors } from "../../config/types";
+import { getBrowserDownloadMirror, getBrowserDownloadMirrorFileUrl } from "../mirrors";
 
-const installFirefoxBrowser = async (version: string, { force = false } = {}): Promise<string> => {
+const LATEST_FIREFOX_VERSION_PATTERN = /^\d+(?:\.\d+){0,3}$/;
+const MIRRORED_FIREFOX_VERSION_ERROR = "Couldn't resolve latest firefox version from the configured mirror";
+
+const installFirefoxBrowser = async (
+    version: string,
+    {
+        force = false,
+        browserDownloadMirrors,
+    }: { force?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
+): Promise<string> => {
     const platform = getBrowserPlatform();
     const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, platform, version);
 
@@ -28,39 +39,64 @@ const installFirefoxBrowser = async (version: string, { force = false } = {}): P
     const buildId = getFirefoxBuildId(normalizedVersion);
 
     const cacheDir = getBrowsersDir();
-    const canBeInstalled = await canDownload({ browser: BrowserName.FIREFOX, platform, buildId, cacheDir });
+    const mirror = getBrowserDownloadMirror(BrowserName.FIREFOX, browserDownloadMirrors);
+    const canBeInstalled = await canDownload({
+        browser: BrowserName.FIREFOX,
+        platform,
+        buildId,
+        cacheDir,
+        baseUrl: mirror,
+    });
 
     if (!canBeInstalled) {
         throw new Error(
-            [
-                `firefox@${version} can't be installed.`,
-                `Probably the version '${version}' is invalid, please try another version.`,
-                "Version examples: '120', '130.0', '131.0'",
-            ].join("\n"),
+            mirror
+                ? `Couldn't download browser artifact from the configured mirror: ${mirror}`
+                : [
+                      `firefox@${version} can't be installed.`,
+                      `Probably the version '${version}' is invalid, please try another version.`,
+                      "Version examples: '120', '130.0', '131.0'",
+                  ].join("\n"),
         );
     }
 
     browserInstallerDebug(`installing firefox@${buildId} for ${platform}`);
 
-    const installFn = (downloadProgressCallback: DownloadProgressCallback): Promise<string> =>
-        puppeteerInstall({
+    const installFn = (downloadProgressCallback: DownloadProgressCallback): Promise<string> => {
+        if (mirror) {
+            browserInstallerDebug(`downloading ${BrowserName.FIREFOX}@${buildId} from mirror ${mirror}`);
+        }
+
+        return puppeteerInstall({
             platform,
             buildId,
             cacheDir,
             downloadProgressCallback,
             browser: BrowserName.FIREFOX,
+            baseUrl: mirror,
             unpack: true,
         }).then(result => result.executablePath);
+    };
 
     return registry.installBinary(BrowserName.FIREFOX, platform, buildId, installFn);
 };
 
 export const installFirefox = async (
     version: string,
-    { force = false, needWebDriver = false, needUbuntuPackages = false } = {},
+    {
+        force = false,
+        needWebDriver = false,
+        needUbuntuPackages = false,
+        browserDownloadMirrors,
+    }: {
+        force?: boolean;
+        needWebDriver?: boolean;
+        needUbuntuPackages?: boolean;
+        browserDownloadMirrors?: BrowserDownloadMirrors;
+    } = {},
 ): Promise<string> => {
     const [browserPath] = await Promise.all([
-        installFirefoxBrowser(version, { force }),
+        installFirefoxBrowser(version, { force, browserDownloadMirrors }),
         needWebDriver && installLatestGeckoDriver(version, { force }),
         needUbuntuPackages && installUbuntuPackageDependencies(),
     ]);
@@ -68,20 +104,45 @@ export const installFirefox = async (
     return browserPath;
 };
 
-export const resolveLatestFirefoxVersion = _.memoize(async (force = false): Promise<string> => {
-    if (!force) {
-        const platform = getBrowserPlatform();
-        const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, platform);
+export const resolveLatestFirefoxVersion = _.memoize(
+    async (force = false, browserDownloadMirrors?: BrowserDownloadMirrors): Promise<string> => {
+        if (!force) {
+            const platform = getBrowserPlatform();
+            const existingLocallyBrowserVersion = registry.getMatchedBrowserVersion(BrowserName.FIREFOX, platform);
 
-        if (existingLocallyBrowserVersion) {
-            return existingLocallyBrowserVersion;
+            if (existingLocallyBrowserVersion) {
+                return existingLocallyBrowserVersion;
+            }
         }
-    }
 
-    return retryFetch(FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL)
-        .then(res => res.json())
-        .then(({ LATEST_FIREFOX_VERSION }) => LATEST_FIREFOX_VERSION)
-        .catch(() => {
-            throw new Error("Couldn't resolve latest firefox version");
-        });
-});
+        const mirror = getBrowserDownloadMirror(BrowserName.FIREFOX, browserDownloadMirrors);
+
+        if (mirror) {
+            const response = await retryFetch(
+                getBrowserDownloadMirrorFileUrl(mirror, FIREFOX_VERSIONS_LATEST_VERSIONS_FILENAME),
+            );
+
+            if (!response.ok) {
+                throw new Error(MIRRORED_FIREFOX_VERSION_ERROR);
+            }
+
+            const data = (await response.json()) as { LATEST_FIREFOX_VERSION?: unknown } | null;
+            const version = data?.LATEST_FIREFOX_VERSION;
+
+            if (typeof version !== "string" || !LATEST_FIREFOX_VERSION_PATTERN.test(version.trim())) {
+                throw new Error(MIRRORED_FIREFOX_VERSION_ERROR);
+            }
+
+            return version.trim();
+        }
+
+        return retryFetch(FIREFOX_VERSIONS_LATEST_VERSIONS_API_URL)
+            .then(res => res.json())
+            .then(({ LATEST_FIREFOX_VERSION }) => LATEST_FIREFOX_VERSION)
+            .catch(() => {
+                throw new Error("Couldn't resolve latest firefox version");
+            });
+    },
+    (force, browserDownloadMirrors) =>
+        `${force}:${getBrowserDownloadMirror(BrowserName.FIREFOX, browserDownloadMirrors) ?? "default"}`,
+);

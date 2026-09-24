@@ -5,6 +5,11 @@ import { BrowserName } from "../../../../src/browser/types";
 
 describe("browser-installer/chromium/browser", () => {
     const sandbox = sinon.createSandbox();
+    const browserDownloadMirrors = {
+        chrome: null,
+        chromium: "https://mirror.example/chromium",
+        firefox: null,
+    };
 
     let installChromium: typeof InstallChromiumType;
 
@@ -15,6 +20,7 @@ describe("browser-installer/chromium/browser", () => {
     let getBinaryPathStub: SinonStub;
     let getMatchedBrowserVersionStub: SinonStub;
     let installBinaryStub: SinonStub;
+    let browserInstallerDebugStub: SinonStub;
 
     beforeEach(() => {
         puppeteerInstallStub = sandbox.stub().resolves({ executablePath: "/chromium/browser/path" });
@@ -24,6 +30,7 @@ describe("browser-installer/chromium/browser", () => {
         getBinaryPathStub = sandbox.stub().returns(null);
         getMatchedBrowserVersionStub = sandbox.stub().returns(null);
         installBinaryStub = sandbox.stub();
+        browserInstallerDebugStub = sandbox.stub();
 
         installChromium = proxyquire("../../../../src/browser-installer/chromium/browser", {
             "@puppeteer/browsers": {
@@ -31,6 +38,10 @@ describe("browser-installer/chromium/browser", () => {
                 canDownload: canDownloadStub,
             },
             "./utils": { getChromiumBuildId: getChromiumBuildIdStub },
+            "../utils": {
+                ...require("src/browser-installer/utils"),
+                browserInstallerDebug: browserInstallerDebugStub,
+            },
             "../registry": {
                 default: {
                     getBinaryPath: getBinaryPathStub,
@@ -47,11 +58,12 @@ describe("browser-installer/chromium/browser", () => {
         getMatchedBrowserVersionStub.withArgs(BrowserName.CHROMIUM, sinon.match.string, "80").returns("80");
         getBinaryPathStub.withArgs(BrowserName.CHROMIUM, sinon.match.string, "80").returns("/browser/path");
 
-        const binaryPath = await installChromium("80");
+        const binaryPath = await installChromium("80", { browserDownloadMirrors });
 
         assert.equal(binaryPath, "/browser/path");
         assert.notCalled(getChromiumBuildIdStub);
         assert.notCalled(installBinaryStub);
+        assert.neverCalledWith(browserInstallerDebugStub, sinon.match(/from mirror/));
     });
 
     it("should not try to resolve browser path locally with 'force' flag", async () => {
@@ -78,6 +90,57 @@ describe("browser-installer/chromium/browser", () => {
         const binaryPath = await installChromium("80");
 
         assert.equal(binaryPath, "/new/downloaded/browser/path");
+    });
+
+    it("should download browser from mirror", async () => {
+        installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        await installChromium("80", { browserDownloadMirrors });
+
+        assert.calledOnceWith(
+            canDownloadStub,
+            sinon.match({
+                browser: BrowserName.CHROMIUM,
+                buildId: "100500",
+                baseUrl: browserDownloadMirrors.chromium,
+            }),
+        );
+        assert.calledOnceWith(
+            puppeteerInstallStub,
+            sinon.match({
+                browser: BrowserName.CHROMIUM,
+                buildId: "100500",
+                baseUrl: browserDownloadMirrors.chromium,
+            }),
+        );
+        assert.calledWithExactly(
+            browserInstallerDebugStub,
+            `downloading chromium@100500 from mirror ${browserDownloadMirrors.chromium}`,
+        );
+    });
+
+    it("should preserve the mirrored browser artifact download error", async () => {
+        const downloadError = new Error(`Download failed. URL: ${browserDownloadMirrors.chromium}/100500/chromium.zip`);
+
+        puppeteerInstallStub.rejects(downloadError);
+        installBinaryStub.callsFake((_browserName, _platform, _version, installFn) => installFn(sandbox.stub()));
+
+        const error = await installChromium("80", { browserDownloadMirrors }).catch(error => error);
+
+        assert.strictEqual(error, downloadError);
+    });
+
+    it("should report a configured mirror error when the browser artifact is unavailable", async () => {
+        canDownloadStub.resolves(false);
+
+        const error = await installChromium("80", { browserDownloadMirrors }).catch(error => error);
+
+        assert.instanceOf(error, Error);
+        assert.equal(
+            error.message,
+            `Couldn't download browser artifact from the configured mirror: ${browserDownloadMirrors.chromium}`,
+        );
+        assert.neverCalledWith(browserInstallerDebugStub, sinon.match(/from mirror/));
     });
 
     it("should throw an error if version is too low", async () => {

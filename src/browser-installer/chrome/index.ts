@@ -8,15 +8,19 @@ import { installChrome, resolveLatestChromeVersion } from "./browser";
 import { installChromeDriver } from "./driver";
 import { isUbuntu, getUbuntuLinkerEnv } from "../ubuntu-packages";
 import RuntimeConfig from "../../config/runtime-config";
+import type { BrowserDownloadMirrors } from "../../config/types";
 
 export { installChrome, resolveLatestChromeVersion, installChromeDriver };
 
 export const runChromeDriver = async (
     chromeVersion: string,
-    { debug = false } = {},
+    {
+        debug = false,
+        browserDownloadMirrors,
+    }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number; kill: () => void }> => {
     const [chromeDriverPath, randomPort, chromeDriverEnv] = await Promise.all([
-        installChromeDriver(chromeVersion),
+        installChromeDriver(chromeVersion, { browserDownloadMirrors }),
         getPort(),
         isUbuntu()
             .then(isUbuntu => (isUbuntu ? getUbuntuLinkerEnv() : null))

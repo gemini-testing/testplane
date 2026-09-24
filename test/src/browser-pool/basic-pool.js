@@ -8,6 +8,7 @@ const { CancelledError } = require("src/browser-pool/cancelled-error");
 const { WebdriverPool } = require("src/browser-pool/webdriver-pool");
 const { MasterEvents: Events } = require("src/events");
 const { stubBrowser } = require("./util");
+const { createBrowserConfig_, mkSessionStub_ } = require("../browser/utils");
 const { makeConfigStub } = require("../../utils");
 const { promiseDelay } = require("../../../src/utils/promise");
 
@@ -206,6 +207,25 @@ describe("browser-pool/basic-pool", () => {
 
             assert.calledOnce(bro1.quit);
             assert.calledOnce(bro2.quit);
+        });
+
+        it("should release a real browser after its cancel cleanup completes", async () => {
+            const emitter = new AsyncEmitter();
+            const config = createBrowserConfig_();
+            const session = mkSessionStub_();
+            const browser = new NewBrowser(config, { id: "browser", emitter });
+            sandbox.stub(browser, "_createSession").resolves(session);
+            const pool = mkPool_({ config, emitter });
+
+            await browser.init();
+            pool._activeSessions[browser.sessionId] = browser;
+
+            pool.cancel();
+            await browser.quit();
+
+            await assert.isFulfilled(pool.freeBrowser(browser));
+            assert.equal(browser.sessionId, session.sessionId);
+            assert.calledOnce(session.deleteSession);
         });
 
         it("should quit all browser with the same id on cancel", async () => {

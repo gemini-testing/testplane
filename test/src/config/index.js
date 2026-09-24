@@ -123,6 +123,33 @@ describe("config", () => {
             assert.instanceOf(config.forBrowser("bro1"), BrowserConfig);
         });
 
+        it("should keep browser download mirrors only in the root config", async () => {
+            const browserDownloadMirrors = {
+                chrome: "https://mirror.example/chrome",
+                chromium: null,
+                firefox: null,
+            };
+            const config = await initConfig({
+                configParserReturns: {
+                    browserDownloadMirrors,
+                    browsers: { bro1: {} },
+                },
+            });
+            const replacementMirrors = {
+                chrome: null,
+                chromium: "https://mirror.example/chromium",
+                firefox: "https://mirror.example/firefox",
+            };
+
+            config.browserDownloadMirrors = replacementMirrors;
+            const serializedConfig = config.serialize();
+
+            assert.strictEqual(config.browserDownloadMirrors, replacementMirrors);
+            assert.strictEqual(serializedConfig.browserDownloadMirrors, replacementMirrors);
+            assert.notProperty(config.forBrowser("bro1"), "browserDownloadMirrors");
+            assert.notProperty(serializedConfig.browsers.bro1, "browserDownloadMirrors");
+        });
+
         it("should extend browser config with its id", async () => {
             const config = await initConfig({ configParserReturns: { browsers: { bro: { some: "option" } } } });
 
@@ -200,6 +227,29 @@ describe("config", () => {
             config.mergeWith({ option: "100500" });
 
             assert.deepInclude(config, { option: 100500 });
+        });
+
+        it("should propagate serialized master mirrors to a worker despite null-to-string changes", async () => {
+            const config = await initConfig({
+                configParserReturns: {
+                    browserDownloadMirrors: {
+                        chrome: null,
+                        chromium: "https://mirror.example/worker-chromium",
+                        firefox: null,
+                    },
+                },
+            });
+            const masterMirrors = {
+                chrome: "https://mirror.example/master-chrome",
+                chromium: null,
+                firefox: "https://mirror.example/master-firefox",
+            };
+            const serializedMasterConfig = JSON.parse(JSON.stringify({ browserDownloadMirrors: masterMirrors }));
+
+            config.mergeWith(serializedMasterConfig);
+
+            assert.deepEqual(config.browserDownloadMirrors, masterMirrors);
+            assert.notStrictEqual(config.browserDownloadMirrors, masterMirrors);
         });
     });
 });
