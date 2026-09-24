@@ -836,7 +836,11 @@ describe("ExistingBrowser", () => {
                 sessionCaps: { "se:wsdriver": "ws://grid.url/session/test", "se:wsdriverVersion": "1" },
                 headers: { "X-Custom-Header": "test" },
                 browserConfig: browser.config,
+                onRequestDeadline: sinon.match.func,
             });
+            const markAsBroken = sandbox.stub(browser, "markAsBroken");
+            WSDriverRequestAgentCreateStub.lastCall.args[0].onRequestDeadline();
+            assert.calledOnceWith(markAsBroken, { stubBrowserCommands: true });
         });
 
         it("should set customWdRequestAgent if se:wsdriverVersion includes multiple versions with version 1", async () => {
