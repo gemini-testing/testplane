@@ -138,7 +138,7 @@ describe("browser-pool/limited-pool", () => {
             pool = makePool_({ isSpecificBrowserLimiter: true });
 
             return pool
-                .getBrowser("first")
+                .getBrowser(browser.id)
                 .then(() => pool.freeBrowser(browser))
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
@@ -147,16 +147,16 @@ describe("browser-pool/limited-pool", () => {
             pool = makePool_({ isSpecificBrowserLimiter: false });
 
             return pool
-                .getBrowser("first")
+                .getBrowser(browser.id)
                 .then(() => pool.freeBrowser(browser))
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
         });
 
-        it("for caching if there is at least one pending request", () => {
+        it("for caching if there is at least one pending request for the same browser", () => {
             return pool
-                .getBrowser("first")
+                .getBrowser(browser.id)
                 .then(() => {
-                    pool.getBrowser("second");
+                    pool.getBrowser(browser.id);
                     return pool.freeBrowser(browser);
                 })
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
@@ -164,20 +164,20 @@ describe("browser-pool/limited-pool", () => {
 
         it("for release if there are pending requests but forced to free", () => {
             return pool
-                .getBrowser("first")
+                .getBrowser(browser.id)
                 .then(() => {
-                    pool.getBrowser("second");
+                    pool.getBrowser(browser.id);
                     return pool.freeBrowser(browser, { force: true });
                 })
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
 
-        it("for caching if there are pending requests", () => {
+        it("for caching if there are pending requests for the same browser", () => {
             return pool
-                .getBrowser("first")
+                .getBrowser(browser.id)
                 .then(() => {
-                    pool.getBrowser("second");
-                    pool.getBrowser("third");
+                    pool.getBrowser(browser.id);
+                    pool.getBrowser(browser.id);
                     return pool.freeBrowser(browser);
                 })
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: false })));
@@ -193,12 +193,12 @@ describe("browser-pool/limited-pool", () => {
             };
 
             underlyingPool.getBrowser
-                .withArgs("first")
+                .onFirstCall()
                 .returns(Promise.resolve(browser))
-                .withArgs("second")
+                .onSecondCall()
                 .returns(Promise.reject());
 
-            return Promise.all([pool.getBrowser("first"), reflect(pool.getBrowser("second"))])
+            return Promise.all([pool.getBrowser(browser.id), reflect(pool.getBrowser(browser.id))])
                 .then(() => pool.freeBrowser(browser))
                 .then(() => assert.calledWith(underlyingPool.freeBrowser, browser, sinon.match({ force: true })));
         });
