@@ -2,15 +2,17 @@ import { Rect, Coord, Length, getIntersection } from "@isomorphic";
 import * as lib from "@lib";
 import { getBoundingClientContentRect } from "./element-rect";
 import { isRootLikeElement } from "./scroll";
-import { findContainingBlock } from "./dom";
+import { findContainingBlock, getMainWindow } from "./dom";
 import { getReadableElementDescriptor } from "./descriptions";
 
 function getViewportRect(): Rect<"viewport", "css"> {
+    const mainWindow = getMainWindow();
+
     return {
         top: 0 as Coord<"viewport", "css", "y">,
         left: 0 as Coord<"viewport", "css", "x">,
-        width: window.innerWidth as Length<"css", "x">,
-        height: window.innerHeight as Length<"css", "y">
+        width: mainWindow.innerWidth as Length<"css", "x">,
+        height: mainWindow.innerHeight as Length<"css", "y">
     };
 }
 
