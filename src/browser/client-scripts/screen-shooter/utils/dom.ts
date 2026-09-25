@@ -43,6 +43,10 @@ export function getMainDocumentElem(currDocumentElem?: HTMLElement): HTMLElement
     return getMainDocumentElem(currWindow.document.documentElement);
 }
 
+export function getMainWindow(): Window {
+    return getMainDocumentElem().ownerDocument.defaultView ?? window;
+}
+
 export function forEachRoot(cb: (root: Element | ShadowRoot) => void): void {
     function traverseRoots(root: Element | ShadowRoot): void {
         cb(root);

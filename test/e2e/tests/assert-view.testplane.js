@@ -478,4 +478,12 @@ describe("assertView", () => {
             allowViewportOverflow: true,
         });
     });
+
+    it("should capture the full width of an element inside an offset iframe", async ({ browser }) => {
+        await browser.setWindowSize(1500, 1000);
+        await browser.url("offset-iframe.html");
+
+        await browser.switchToFrame(await browser.$("#frame"));
+        await browser.assertView("iframe-element", ".target-element");
+    });
 });

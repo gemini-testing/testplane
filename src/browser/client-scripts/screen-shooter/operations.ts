@@ -20,6 +20,7 @@ import {
     findFixedPositionedParent,
     forEachRoot,
     getMainDocumentElem,
+    getMainWindow,
     getScreenshooterNamespaceData
 } from "./utils/dom";
 import {
@@ -49,7 +50,8 @@ export function computeScrollOffset(element: Element): Coord<"page", "css", "y">
 }
 
 export function computeViewportSize(): Size<"css"> {
-    const visualViewport = window.visualViewport;
+    const mainWindow = getMainWindow();
+    const visualViewport = mainWindow.visualViewport;
 
     // Visual viewport occasionally returns more correct values than innerWidth/Height, but may not be available in older browsers
     if (visualViewport && visualViewport.width > 0 && visualViewport.height > 0) {
@@ -60,15 +62,17 @@ export function computeViewportSize(): Size<"css"> {
     }
 
     return {
-        width: window.innerWidth as Length<"css", "x">,
-        height: window.innerHeight as Length<"css", "y">
+        width: mainWindow.innerWidth as Length<"css", "x">,
+        height: mainWindow.innerHeight as Length<"css", "y">
     };
 }
 
 export function computeViewportOffset(): Point<"page", "css"> {
+    const mainWindow = getMainWindow();
+
     return {
-        left: window.pageXOffset as Coord<"page", "css", "x">,
-        top: window.pageYOffset as Coord<"page", "css", "y">
+        left: mainWindow.pageXOffset as Coord<"page", "css", "x">,
+        top: mainWindow.pageYOffset as Coord<"page", "css", "y">
     };
 }
 
