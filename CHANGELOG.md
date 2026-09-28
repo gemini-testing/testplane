@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 9.3.1 (2026-09-28)
+
+
+### Bug Fixes
+
+* prevent clipped assertView screenshots in offset iframes ([e45e85e](https://github.com/gemini-testing/testplane/commit/e45e85ecbd87890b9126dc0af084f28ea9e7c66c))
+
 ## 9.3.0 (2026-09-24)
 
 ### 9.2.3 (2026-09-14)
