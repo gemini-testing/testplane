@@ -1,6 +1,6 @@
 import { Rect, Coord, Length, getIntersection } from "@isomorphic";
 import * as lib from "@lib";
-import { getBoundingClientContentRect } from "./element-rect";
+import { getBoundingClientContentRect, intersectWithIframeBounds } from "./element-rect";
 import { isRootLikeElement } from "./scroll";
 import { findContainingBlock, getMainWindow } from "./dom";
 import { getReadableElementDescriptor } from "./descriptions";
@@ -90,7 +90,7 @@ function escapesOverflowClippingViaFixedAncestors(clippingElement: Element, fixe
  * ancestor overflow clipping.
  */
 export function getClipRect(element: Element, logger?: (...args: unknown[]) => unknown): Rect<"viewport", "css"> {
-    const viewportRect = getViewportRect();
+    const viewportRect = intersectWithIframeBounds(getViewportRect());
 
     const absoluteContainingBlocks = getAbsoluteContainingBlocks(element);
     const fixedAncestors = getFixedAncestors(element);
