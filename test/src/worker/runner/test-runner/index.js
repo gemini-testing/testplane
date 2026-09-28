@@ -19,6 +19,7 @@ describe("worker/runner/test-runner", () => {
     const sandbox = sinon.createSandbox();
     let historyRunGroupStub;
     let captureFailScreenshotStub;
+    let flushSessionManagerErrorsStub;
     let TestRunner;
 
     const mkTest_ = (opts = {}) => {
@@ -91,6 +92,7 @@ describe("worker/runner/test-runner", () => {
     beforeEach(() => {
         historyRunGroupStub = sandbox.stub().callsFake(history.runGroup);
         captureFailScreenshotStub = sandbox.stub().resolves(null);
+        flushSessionManagerErrorsStub = sandbox.stub().resolves();
 
         TestRunner = proxyquire("src/worker/runner/test-runner", {
             "../../../browser/history": {
@@ -101,6 +103,9 @@ describe("worker/runner/test-runner", () => {
             },
             "./capture-fail-screenshot": {
                 captureFailScreenshot: captureFailScreenshotStub,
+            },
+            "@testplane/webdriverio": {
+                flushSessionManagerErrors: flushSessionManagerErrorsStub,
             },
         });
 
@@ -838,6 +843,21 @@ describe("worker/runner/test-runner", () => {
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
             });
 
+            it("should fail on a context manager error after the last command", async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+                flushSessionManagerErrorsStub.rejects(new Error("late context failure"));
+
+                await assert.isRejected(run_(), "late context failure");
+
+                assert.calledOnceWithExactly(flushSessionManagerErrorsStub, browser.publicAPI);
+                assert.calledOnceWithExactly(BrowserAgent.prototype.freeBrowser, browser);
+                assert.callOrder(flushSessionManagerErrorsStub, BrowserAgent.prototype.freeBrowser);
+                assert.isTrue(browser.state.isLastTestFailed);
+                assert.calledOnceWithExactly(browser.markAsBroken, { stubBrowserCommands: true });
+                assert.isTrue(browser.state.isBroken);
+            });
+
             it("should release browser after all browser data has been used", async () => {
                 ExecutionThread.create.callsFake(({ browser }) => {
                     ExecutionThread.prototype.run.callsFake(() => {
@@ -974,6 +994,19 @@ describe("worker/runner/test-runner", () => {
                 await run_().catch(e => e);
 
                 assert.calledOnceWith(BrowserAgent.prototype.freeBrowser, browser);
+            });
+
+            it("should retain the original test error when context manager also fails", async () => {
+                const browser = mkBrowser_();
+                BrowserAgent.prototype.getBrowser.resolves(browser);
+                ExecutionThread.prototype.run.rejects(new Error("test failure"));
+                flushSessionManagerErrorsStub.rejects(new Error("context failure"));
+
+                const error = await run_().catch(err => err);
+                assert.include(error.message, "test failure");
+                assert.include(error.stack, "context failure");
+                assert.calledOnce(flushSessionManagerErrorsStub);
+                assert.calledOnceWithExactly(browser.markAsBroken, { stubBrowserCommands: true });
             });
 
             [SAVE_HISTORY_MODE.ONLY_FAILED, SAVE_HISTORY_MODE.ALL].forEach(saveHistoryMode => {
