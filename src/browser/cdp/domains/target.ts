@@ -30,9 +30,19 @@ interface SetAutoAttachRequest {
     autoAttach: boolean;
     waitForDebuggerOnStart: boolean;
     flatten?: boolean;
+    filter?: { type?: CDPTargetInfo["type"]; exclude?: boolean }[];
 }
 
 export interface TargetEvents {
+    attachedToTarget: {
+        sessionId: CDPSessionId;
+        targetInfo: CDPTargetInfo;
+        waitingForDebugger: boolean;
+    };
+    detachedFromTarget: {
+        sessionId: CDPSessionId;
+        targetId?: CDPTargetId;
+    };
     receivedMessageFromTarget: {
         sessionId: CDPSessionId;
         message: string;
@@ -106,9 +116,16 @@ export class CDPTarget extends CDPEventEmitter<TargetEvents> {
         return this._connection.request("Target.attachToTarget", { params: { targetId, flatten: true } });
     }
 
+    async attachToBrowserTarget(): Promise<AttachToTargetResponse> {
+        return this._connection.request("Target.attachToBrowserTarget");
+    }
+
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-detachFromTarget */
-    async detachFromTarget(sessionId: CDPSessionId): Promise<void> {
-        return this._connection.request("Target.detachFromTarget", { params: { sessionId } });
+    async detachFromTarget(sessionId: CDPSessionId, parentSessionId?: CDPSessionId): Promise<void> {
+        return this._connection.request("Target.detachFromTarget", {
+            sessionId: parentSessionId,
+            params: { sessionId },
+        });
     }
 
     /** @link https://chromedevtools.github.io/devtools-protocol/1-3/Target/#method-getTargets */
