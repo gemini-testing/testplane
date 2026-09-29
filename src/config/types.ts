@@ -318,8 +318,18 @@ export const SelectivityMode = {
 
 export type SelectivityModeValue = (typeof SelectivityMode)[keyof typeof SelectivityMode];
 
+export interface TimeTravelConfigInput {
+    mode: TimeTravelMode;
+    network?: boolean | { enabled: boolean; maxBodySizeBytes?: number };
+}
+
 export interface TimeTravelConfig {
     mode: TimeTravelMode;
+    network: {
+        enabled: boolean;
+        /** Maximum captured request or response body size in bytes. Defaults to 10 MiB. */
+        maxBodySizeBytes: number;
+    };
 }
 
 export type StateOpts = {
@@ -522,7 +532,7 @@ type PartialCommonConfig = Partial<
     >
 > & {
     system?: Partial<SystemConfig>;
-    timeTravel?: TimeTravelMode | TimeTravelConfig;
+    timeTravel?: TimeTravelMode | TimeTravelConfigInput;
     takeScreenshotOnFails?: Partial<CommonConfig["takeScreenshotOnFails"]>;
     lastFailed?: Partial<CommonConfig["lastFailed"]>;
     openAndWaitOpts?: Partial<CommonConfig["openAndWaitOpts"]>;
