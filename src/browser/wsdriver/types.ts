@@ -69,6 +69,7 @@ interface IncomingWsDriverStringMessage extends IncomingWsDriverGeneralMessage {
 export type IncomingWsDriverMessage = IncomingWsDriverJsonMessage | IncomingWsDriverStringMessage;
 
 export interface RequestWsDriverOptions {
+    timeout?: { response: number };
     path?: string;
     method?: WsDriverRequestMethodString;
     json?: Record<string, unknown>;

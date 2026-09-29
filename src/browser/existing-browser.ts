@@ -257,6 +257,8 @@ export class ExistingBrowser extends Browser {
                     sessionCaps: sessionCaps as WebdriverIO.Capabilities,
                     headers: sessionOpts.headers as Record<string, string>,
                     browserConfig: this._config,
+                    // Сессия с отменённой WS-командой не должна возвращаться в кэш.
+                    onRequestDeadline: () => this.markAsBroken({ stubBrowserCommands: true }),
                 });
 
                 opts.customWdRequestAgent = this._wsDriver;

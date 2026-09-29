@@ -113,3 +113,9 @@ Visit our [contributing guide](CONTRIBUTING.md) to understand more about our dev
 
 ## License
 Testplane is [MIT licensed](LICENSE).
+
+### Общий срок WSDriver-команды
+
+Экспериментальный режим `TESTPLANE_WSDRIVER_DEADLINE_ENABLED=true` включает общий срок WSDriver-команды: соединение, reconnect, кодирование запроса и внутренние повторы входят в `httpTimeout` (или переданный транспортом `timeout.response`). По истечении срока транспорт закрывается, дальнейшая отправка прекращается, а браузер помечается сломанным и не возвращается в кэш сессий. Ошибка `WSDRIVER_REQUEST_DEADLINE` передаётся механизму повторов тестов; внутренний повтор WebdriverIO не начинает срок заново.
+
+Без флага сохраняются прежние таймауты и повторы команд. Закрытие незавершённого WS-соединения и отмена reconnect при закрытии работают в обоих режимах.
