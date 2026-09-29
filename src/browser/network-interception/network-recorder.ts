@@ -21,7 +21,6 @@ interface RecordedResponse
     extends Pick<NetworkResponse, "status" | "statusText" | "headers" | "timestamp">,
         RecordedBody {}
 
-
 export interface RecordedRequest
     extends Pick<NetworkRequest, "url" | "method" | "headers" | "timestamp">,
         RecordedBody {
@@ -108,7 +107,7 @@ export class NetworkRecorder {
                 );
             }
             record.bodyHash = hash;
-            record.bodyFilePath = await this._bodyWrites.get(hash)!
+            record.bodyFilePath = await this._bodyWrites.get(hash)!;
         } catch (error) {
             record.bodyError = error instanceof Error ? error.message : String(error);
         }
