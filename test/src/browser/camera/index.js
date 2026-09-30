@@ -36,7 +36,27 @@ describe("browser/camera", () => {
 
             Image.fromBase64.withArgs({ foo: "bar" }).returns(image);
 
-            return assert.becomes(camera.captureViewportImage(), image);
+            return camera.captureViewportImage().then(result => {
+                assert.strictEqual(result, image);
+                assert.deepEqual(result.uncroppedSize, { width: 100500, height: 500100 });
+            });
+        });
+
+        it("should expose calibrated dimensions before user margins and viewport cropping", async () => {
+            image.getSize.returns({ width: 390, height: 884 });
+            const camera = Camera.create("fullpage", sinon.stub().resolves());
+            camera.calibrate({ left: 0, top: 20, width: 390, height: 844 }, { width: 390, height: 884 });
+            isFullPageStub.returns(true);
+
+            const result = await camera.captureViewportImage({
+                viewportOffset: { left: 0, top: 20 },
+                viewportSize: { width: 130, height: 200 },
+                cropMargins: { left: 10 },
+            });
+
+            assert.strictEqual(result, image);
+            assert.deepEqual(result.uncroppedSize, { width: 390, height: 844 });
+            assert.calledOnceWithExactly(image.crop, { left: 10, top: 20, width: 120, height: 200 });
         });
 
         describe("crop", () => {
