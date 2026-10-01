@@ -5,6 +5,7 @@ export type StandaloneBrowserOptions = Pick<
     | "automationProtocol"
     | "desiredCapabilities"
     | "gridUrl"
+    | "docker"
     | "isolation"
     | "baseUrl"
     | "httpTimeout"

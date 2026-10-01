@@ -6,7 +6,15 @@ import type { BrowserDownloadMirrors } from "../config/types";
 type BrowserVersion = string;
 type Port = string;
 type ChildProcessWithStatus = { process: ChildProcess; gridUrl: string; isBusy: boolean };
-export type WdProcess = { gridUrl: string; free: () => void; kill: () => void; getPid: () => number | undefined };
+export type WdProcess = {
+    gridUrl: string;
+    free: () => void | Promise<void>;
+    kill: () => void | Promise<void>;
+    getPid: () => number | undefined;
+    getLogs?: () => Promise<string>;
+    saveLogs?: (sessionId: string) => Promise<string>;
+    startCdpProxy?: (sessionId: string, debuggerAddress: string) => Promise<void>;
+};
 
 export class WebdriverPool {
     private driverProcess: Map<SupportedBrowser, Map<BrowserVersion, Record<Port, ChildProcessWithStatus>>>;
