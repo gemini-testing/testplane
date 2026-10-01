@@ -72,6 +72,7 @@ function buildBrowserOptions(defaultFactory, extra) {
 
     return _.extend(extra, {
         gridUrl: options.string("gridUrl"),
+        docker: options.optionalObject("docker"),
 
         baseUrl: option({
             defaultValue: defaultFactory("baseUrl"),

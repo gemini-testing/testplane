@@ -13,6 +13,7 @@ module.exports = {
         geckodriver: null,
     },
     gridUrl: LOCAL_GRID_URL,
+    docker: null,
     browserWSEndpoint: null,
     desiredCapabilities: null,
     automationProtocol: WEBDRIVER_PROTOCOL,
