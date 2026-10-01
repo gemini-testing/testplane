@@ -373,6 +373,18 @@ export interface BrowserDownloadMirrors {
 
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
+/** Browser container settings passed to Selenoid's browsers.json. */
+export interface DockerConfig {
+    image?: string;
+    path?: string;
+    port?: string;
+    shmSize?: number;
+    tmpfs?: Record<string, string>;
+    volumes?: string[];
+    hosts?: string[];
+    [option: string]: unknown;
+}
+
 export interface CommonConfig {
     configPath?: string;
     automationProtocol: "webdriver";
@@ -381,6 +393,7 @@ export interface CommonConfig {
         Record<"isW3C" | "isChrome" | "isMobile" | "isIOS" | "isAndroid" | "isSauce" | "isSeleniumStandalone", boolean>
     >;
     gridUrl: string;
+    docker: DockerConfig | null;
     baseUrl: string;
     sessionsPerBrowser: number;
     testsPerSession: number;

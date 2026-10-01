@@ -36,6 +36,7 @@ export async function launchBrowser(
             ...desiredCapabilities,
         },
         gridUrl: options.gridUrl || LOCAL_GRID_URL,
+        docker: options.docker,
         baseUrl: options.baseUrl,
         headless: options.headless !== undefined ? options.headless : true,
         pageLoadTimeout: options.pageLoadTimeout,

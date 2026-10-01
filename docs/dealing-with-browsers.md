@@ -4,6 +4,8 @@
 
 Testplane v9 runs browser sessions through WebDriver. You can connect to a remote WebDriver grid or let Testplane install and run supported browsers and drivers locally.
 
+To start browser containers automatically with `gridUrl: "docker"` and `docker`, see [Browsers in Docker](./docker.md).
+
 ### Local browsers and drivers
 
 Set `gridUrl` to `"local"` and describe the browsers in the usual `browsers` section:

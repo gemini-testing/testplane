@@ -19,7 +19,9 @@ describe("NewBrowser", () => {
     let runGroupStub: SinonStub;
     let initCommandHistoryStub: SinonStub;
     let installBrowserStub: SinonStub;
+    let runDockerBrowserStub: SinonStub;
     let warnStub: SinonStub;
+    let logStub: SinonStub;
 
     const mkBrowser_ = (configOpts?: Partial<Config>, opts?: any): any => {
         return mkNewBrowser_(configOpts, opts, NewBrowser);
@@ -28,7 +30,17 @@ describe("NewBrowser", () => {
     beforeEach(() => {
         session = mkSessionStub_();
         installBrowserStub = sandbox.stub().resolves("/browser/path");
+        runDockerBrowserStub = sandbox.stub().resolves({
+            gridUrl: "http://127.0.0.1:23456/wd/hub",
+            free: sandbox.stub().resolves(),
+            kill: sandbox.stub().resolves(),
+            getPid: () => undefined,
+            getLogs: sandbox.stub().resolves(""),
+            saveLogs: sandbox.stub().resolves("/tmp/testplane-logs/1234567890.log"),
+            startCdpProxy: sandbox.stub().resolves(),
+        });
         warnStub = sandbox.stub();
+        logStub = sandbox.stub();
         webdriverioRemoteStub = sandbox.stub().resolves(session);
         runGroupStub = sandbox.stub().callsFake(runGroup);
         initCommandHistoryStub = sandbox.stub();
@@ -38,7 +50,8 @@ describe("NewBrowser", () => {
                 remote: webdriverioRemoteStub,
             },
             "../browser-installer": { installBrowser: installBrowserStub },
-            "../utils/logger": { warn: warnStub },
+            "./docker": { runDockerBrowser: runDockerBrowserStub },
+            "../utils/logger": { warn: warnStub, log: logStub },
             "./history": {
                 runGroup: runGroupStub,
             },
@@ -603,6 +616,239 @@ describe("NewBrowser", () => {
                     perfLoggingPrefs: { foo: "bar" },
                 });
             });
+        });
+    });
+
+    describe("Docker browsers", () => {
+        const config = {
+            gridUrl: "docker",
+            docker: { image: "registry/browser:1", path: "/", port: "4444" },
+            desiredCapabilities: { browserName: "chrome", browserVersion: "109.0" },
+        };
+
+        it("should prepare CDP using the debugger address returned by Chrome", async () => {
+            session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
+            session.sessionId = "chrome-session";
+            const browser = await mkBrowser_(config).init();
+            const driver = await runDockerBrowserStub();
+            assert.calledOnceWith(driver.startCdpProxy, "chrome-session", "localhost:39599");
+            assert.callOrder(webdriverioRemoteStub, driver.startCdpProxy);
+            await browser.quit();
+        });
+
+        it("should not start a CDP proxy for a session without a Chrome debugger address", async () => {
+            const browser = await mkBrowser_(config).init();
+            const driver = await runDockerBrowserStub();
+            assert.notCalled(driver.startCdpProxy);
+            await browser.quit();
+        });
+
+        it("should collect logs and clean up when CDP proxy startup fails", async () => {
+            session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
+            const driver = await runDockerBrowserStub();
+            driver.startCdpProxy.rejects(new Error("CDP proxy failed"));
+            await assert.isRejected(mkBrowser_(config).init(), "CDP proxy failed");
+            assert.callOrder(driver.startCdpProxy, driver.getLogs, driver.kill);
+            assert.calledOnceWith(driver.saveLogs, session.sessionId);
+            assert.callOrder(driver.saveLogs, driver.kill);
+        });
+
+        it("should save session logs before deleting the browser and print their path", async () => {
+            const browser = await mkBrowser_(config).init();
+            const driver = await runDockerBrowserStub();
+            await Promise.all([browser.quit(), browser.quit()]);
+            assert.calledOnceWith(driver.saveLogs, session.sessionId);
+            assert.callOrder(driver.saveLogs, session.deleteSession, driver.free);
+            assert.calledWith(logStub, "Docker session log: /tmp/testplane-logs/1234567890.log");
+        });
+
+        it("should save logs before killing a broken session", async () => {
+            const browser = await mkBrowser_(config).init();
+            const driver = await runDockerBrowserStub();
+            session.deleteSession.rejects(new Error("connection lost"));
+            await browser.kill();
+            assert.callOrder(driver.saveLogs, session.deleteSession, driver.kill);
+        });
+
+        it("should warn and still delete the session when saving logs fails", async () => {
+            const browser = await mkBrowser_(config).init();
+            const driver = await runDockerBrowserStub();
+            driver.saveLogs.rejects(new Error("disk full"));
+            await browser.quit();
+            assert.calledOnce(session.deleteSession);
+            assert.calledOnce(driver.free);
+            assert.calledWith(warnStub, "WARNING: Cannot save Docker session log: disk full");
+        });
+
+        it("should connect to the container without installing a browser on the host", async () => {
+            const browser = await mkBrowser_(config).init();
+
+            assert.calledOnceWith(runDockerBrowserStub, config.docker, {
+                browserName: "chrome",
+                browserVersion: "1.0",
+                timeout: 3000,
+            });
+            assert.notCalled(installBrowserStub);
+            assert.calledWithMatch(webdriverioRemoteStub, {
+                hostname: "127.0.0.1",
+                port: 23456,
+                path: "/wd/hub",
+                capabilities: { browserName: "chrome" },
+            });
+            assert.notProperty(webdriverioRemoteStub.firstCall.args[0].capabilities, "goog:chromeOptions");
+            await browser.quit();
+        });
+
+        ["appium:deviceName", "deviceName"].forEach(deviceNameKey => {
+            it(`should route an Appium session using ${deviceNameKey} without changing its capabilities`, async () => {
+                const docker = { image: "registry/android:searchapp", path: "/wd/hub", port: "4723" };
+                const desiredCapabilities = {
+                    [deviceNameKey]: "android-phone",
+                    browserVersion: "searchapp-26.06.6.00",
+                };
+                const browser = await mkBrowser_(
+                    { gridUrl: "docker", docker, desiredCapabilities },
+                    { id: "android", version: "searchapp-26.06.6.00", state: {} },
+                ).init();
+
+                assert.calledOnceWith(runDockerBrowserStub, docker, {
+                    browserName: "android-phone",
+                    browserVersion: "searchapp-26.06.6.00",
+                    timeout: 3000,
+                });
+                const options = webdriverioRemoteStub.firstCall.args[0];
+                assert.equal(options.port, 23456);
+                assert.include(options.capabilities, desiredCapabilities);
+                assert.notProperty(options.capabilities, "browserName");
+                await browser.quit();
+            });
+        });
+
+        it("should prefer browserName over an Appium device name for Selenoid routing", async () => {
+            const browser = await mkBrowser_({
+                ...config,
+                desiredCapabilities: { ...config.desiredCapabilities, "appium:deviceName": "android-phone" },
+            }).init();
+
+            assert.calledWithMatch(runDockerBrowserStub, config.docker, { browserName: "chrome" });
+            await browser.quit();
+        });
+
+        it("should use sessionRequestTimeout for container startup", async () => {
+            const browser = await mkBrowser_({ ...config, sessionRequestTimeout: 60000 }).init();
+            assert.calledOnceWith(runDockerBrowserStub, config.docker, {
+                browserName: "chrome",
+                browserVersion: "1.0",
+                timeout: 60000,
+            });
+            await browser.quit();
+        });
+
+        it("should await container removal on quit", async () => {
+            const driver = await runDockerBrowserStub();
+            let removed = false;
+            driver.free.callsFake(async () => {
+                await Promise.resolve();
+                removed = true;
+            });
+            const browser = await mkBrowser_(config).init();
+            await browser.quit();
+            assert.isTrue(removed);
+            assert.calledOnce(driver.free);
+        });
+
+        it("should remove the container when session creation fails", async () => {
+            const driver = await runDockerBrowserStub();
+            webdriverioRemoteStub.rejects(new Error("session not created"));
+            await assert.isRejected(mkBrowser_(config).init(), "session not created");
+            assert.calledOnce(driver.kill);
+            assert.notCalled(driver.saveLogs);
+        });
+
+        it("should save logs once and kill the container when kill interrupts pending quit cleanup", async () => {
+            const driver = await runDockerBrowserStub();
+            let finishSaving: (file: string) => void;
+            driver.saveLogs.returns(new Promise<string>(resolve => (finishSaving = resolve)));
+            const browser = await mkBrowser_(config).init();
+
+            const quitPromise = browser.quit();
+            await Promise.resolve();
+            const killPromise = browser.kill();
+
+            assert.calledOnce(driver.saveLogs);
+            assert.notCalled(session.deleteSession);
+            finishSaving!("/tmp/testplane-logs/1234567890.log");
+            await Promise.all([quitPromise, killPromise]);
+
+            assert.calledOnce(session.deleteSession);
+            assert.calledOnce(driver.kill);
+            assert.notCalled(driver.free);
+            assert.callOrder(driver.saveLogs, session.deleteSession, driver.kill);
+        });
+
+        it("should kill the container if releasing it fails", async () => {
+            const driver = await runDockerBrowserStub();
+            driver.free.rejects(new Error("release failed"));
+            const browser = await mkBrowser_(config).init();
+
+            await browser.quit();
+
+            assert.calledOnce(driver.kill);
+            assert.callOrder(driver.free, driver.kill);
+            assert.calledWith(warnStub, "WARNING: Can not free WebDriver process: release failed");
+        });
+
+        it("should append Selenoid logs before removing a failed session's environment", async () => {
+            const driver = await runDockerBrowserStub();
+            driver.getLogs.resolves("Chrome startup failed");
+            const error = new Error("session not created");
+            webdriverioRemoteStub.rejects(error);
+            await assert.isRejected(
+                mkBrowser_(config).init(),
+                "Selenoid logs (registry/browser:1):\nChrome startup failed",
+            );
+            assert.callOrder(driver.getLogs, driver.kill);
+            assert.equal(error.stack!.split("Selenoid logs").length, 2);
+        });
+
+        it("should preserve the session error and clean up if reading logs fails", async () => {
+            const driver = await runDockerBrowserStub();
+            driver.getLogs.rejects(new Error("logs unavailable"));
+            webdriverioRemoteStub.rejects(new Error("session not created"));
+            await assert.isRejected(mkBrowser_(config).init(), "session not created");
+            assert.calledOnce(driver.kill);
+        });
+
+        it("should remove the container even when deleting the session fails", async () => {
+            const driver = await runDockerBrowserStub();
+            const browser = await mkBrowser_(config).init();
+            session.deleteSession.rejects(new Error("connection lost"));
+            await browser.kill();
+            assert.calledOnce(driver.kill);
+        });
+
+        it("should remove the container on interruption", async () => {
+            const driver = await runDockerBrowserStub();
+            await mkBrowser_(config).init();
+            await signalHandler.emitAndWait("exit");
+            assert.calledOnce(driver.free);
+            assert.callOrder(driver.saveLogs, session.deleteSession, driver.free);
+        });
+
+        it("should preserve the original session error if container removal also fails", async () => {
+            const driver = await runDockerBrowserStub();
+            driver.kill.rejects(new Error("cleanup failed"));
+            webdriverioRemoteStub.rejects(new Error("session not created"));
+            await assert.isRejected(mkBrowser_(config).init(), "session not created");
+            assert.calledWith(warnStub, "WARNING: Can not remove Docker container: cleanup failed");
+        });
+
+        it("should let --local override Docker just like a remote grid", async () => {
+            (RuntimeConfig.getInstance as SinonStub).returns({ local: true });
+            const browser = await mkBrowser_(config).init();
+            assert.notCalled(runDockerBrowserStub);
+            assert.called(installBrowserStub);
+            await browser.quit();
         });
     });
 
