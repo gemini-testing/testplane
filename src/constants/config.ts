@@ -17,6 +17,7 @@ export const SAVE_HISTORY_MODE = {
 export const NODEJS_TEST_RUN_ENV = "nodejs";
 export const BROWSER_TEST_RUN_ENV = "browser";
 export const LOCAL_GRID_URL = "local";
+export const DOCKER_GRID_URL = "docker";
 
 // https://www.w3.org/TR/webdriver/#capabilities
 export const W3C_CAPABILITIES = [
