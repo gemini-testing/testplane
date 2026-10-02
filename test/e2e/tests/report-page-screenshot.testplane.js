@@ -15,7 +15,15 @@ describe("report page screenshot on fail", () => {
         await browserNode.waitForExist({ timeout: 15000 });
         await browserNode.click();
 
-        await browser.$("img[alt='Screenshot']").waitForExist({ timeout: 15000 });
+        const screenshot = await browser.$("img[alt='Screenshot']");
+        await screenshot.waitForDisplayed({ timeout: 15000 });
+        // Compare the captured page at the reference width, independently of the reporter panel layout.
+        await browser.execute(image => {
+            image.style.width = "725px";
+            image.style.maxWidth = "none";
+            image.style.height = "auto";
+            image.style.boxSizing = "border-box";
+        }, screenshot);
         await browser.assertView("basic-report-page-screenshot", "img[alt='Screenshot']", { tolerance: 10 });
     });
 });

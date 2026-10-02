@@ -171,7 +171,7 @@
     "eslint-config-prettier": "8.7.0",
     "execa": "5.1.1",
     "glob-extra": "5.0.2",
-    "html-reporter": "https://pkg.pr.new/gemini-testing/html-reporter@82c31d0a37af7b39dce3d0e79425c48a418fbb3b",
+    "html-reporter": "https://pkg.pr.new/gemini-testing/html-reporter@da5698be1f99de4b935b4d6fc2359bc312169569",
     "husky": "0.11.4",
     "js-levenshtein": "1.1.6",
     "jsdom": "^24.0.0",
