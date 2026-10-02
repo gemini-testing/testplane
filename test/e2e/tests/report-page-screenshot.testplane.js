@@ -17,9 +17,9 @@ describe("report page screenshot on fail", () => {
 
         const screenshot = await browser.$("img[alt='Screenshot']");
         await screenshot.waitForDisplayed({ timeout: 15000 });
-        // Compare the captured page at the reference width, independently of the reporter panel layout.
+        // Keep the reference width independent of the reporter layout: 723px plus its 1px shadow on each side.
         await browser.execute(image => {
-            image.style.width = "725px";
+            image.style.width = "723px";
             image.style.maxWidth = "none";
             image.style.height = "auto";
             image.style.boxSizing = "border-box";
