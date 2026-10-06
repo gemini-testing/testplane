@@ -4,6 +4,7 @@ export const browserDownloadMirrors: BrowserDownloadMirrorsInput = {
     chrome: "https://mirror.example/chrome",
     chromium: "https://mirror.example/chromium",
     firefox: "https://mirror.example/firefox",
+    geckodriver: "https://mirror.example/geckodriver",
 };
 
 export const configWithBrowserDownloadMirrors = {

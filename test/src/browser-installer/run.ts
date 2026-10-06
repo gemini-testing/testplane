@@ -9,6 +9,7 @@ describe("browser-installer/run", () => {
         chrome: "https://mirror.example/chrome",
         chromium: null,
         firefox: null,
+        geckodriver: null,
     };
 
     let runBrowserDriver: typeof RunBrowserDriver;
@@ -101,5 +102,16 @@ describe("browser-installer/run", () => {
             browserDownloadMirrors: undefined,
         });
         assert.callOrder(installBrowserStub, runGeckoDriverStub);
+    });
+
+    it("should preserve mirrors through Firefox installation and driver launch", async () => {
+        await runBrowserDriver(BrowserName.FIREFOX, "130", { browserDownloadMirrors });
+
+        assert.calledOnceWith(installBrowserStub, BrowserName.FIREFOX, "130", {
+            shouldInstallWebDriver: true,
+            shouldInstallUbuntuPackages: true,
+            browserDownloadMirrors,
+        });
+        assert.calledOnceWithExactly(runGeckoDriverStub, "130", { debug: false, browserDownloadMirrors });
     });
 });

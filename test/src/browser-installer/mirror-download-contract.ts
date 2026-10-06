@@ -206,6 +206,7 @@ describe("browser-installer mirror download contract", () => {
                 chrome: mirror,
                 chromium: null,
                 firefox: null,
+                geckodriver: null,
             },
         }).catch(error => error as Error);
         const downloadResults = await Promise.allSettled(downloadPromises);

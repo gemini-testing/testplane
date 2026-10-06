@@ -114,6 +114,7 @@ describe("cli/commands/install-deps", () => {
             chrome: "https://mirror.example/chrome",
             chromium: null,
             firefox: null,
+            geckodriver: null,
         };
         testplaneStub.config.browserDownloadMirrors = browserDownloadMirrors;
 

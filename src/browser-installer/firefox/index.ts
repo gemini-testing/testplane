@@ -8,15 +8,19 @@ import { pipeLogsWithPrefix } from "../../dev-server/utils";
 import { DRIVER_WAIT_INTERVAL, DRIVER_WAIT_TIMEOUT } from "../constants";
 import { getUbuntuLinkerEnv, isUbuntu } from "../ubuntu-packages";
 import RuntimeConfig from "../../config/runtime-config";
+import type { BrowserDownloadMirrors } from "../../config/types";
 
 export { installFirefox, resolveLatestFirefoxVersion, installLatestGeckoDriver };
 
 export const runGeckoDriver = async (
     firefoxVersion: string,
-    { debug = false } = {},
+    {
+        debug = false,
+        browserDownloadMirrors,
+    }: { debug?: boolean; browserDownloadMirrors?: BrowserDownloadMirrors } = {},
 ): Promise<{ gridUrl: string; process: ChildProcess; port: number; kill: () => void }> => {
     const [geckoDriverPath, randomPort, geckoDriverEnv] = await Promise.all([
-        installLatestGeckoDriver(firefoxVersion),
+        installLatestGeckoDriver(firefoxVersion, { browserDownloadMirrors }),
         getPort(),
         isUbuntu()
             .then(isUbuntu => (isUbuntu ? getUbuntuLinkerEnv() : null))

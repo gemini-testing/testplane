@@ -9,6 +9,7 @@ describe("browser-installer/chrome", () => {
         chrome: "https://mirror.example/chrome",
         chromium: null,
         firefox: null,
+        geckodriver: null,
     };
 
     let runChromeDriver: typeof RunChromeDriverType;
@@ -74,7 +75,7 @@ describe("browser-installer/chrome", () => {
 
     it("should pass the mirror map when Chrome mirror is not configured", async () => {
         sandbox.stub(process, "once");
-        const emptyBrowserDownloadMirrors = { chrome: null, chromium: null, firefox: null };
+        const emptyBrowserDownloadMirrors = { chrome: null, chromium: null, firefox: null, geckodriver: null };
 
         await runChromeDriver("130", {
             browserDownloadMirrors: emptyBrowserDownloadMirrors,

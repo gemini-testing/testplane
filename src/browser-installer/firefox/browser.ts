@@ -97,7 +97,7 @@ export const installFirefox = async (
 ): Promise<string> => {
     const [browserPath] = await Promise.all([
         installFirefoxBrowser(version, { force, browserDownloadMirrors }),
-        needWebDriver && installLatestGeckoDriver(version, { force }),
+        needWebDriver && installLatestGeckoDriver(version, { force, browserDownloadMirrors }),
         needUbuntuPackages && installUbuntuPackageDependencies(),
     ]);
 

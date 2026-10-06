@@ -8,6 +8,7 @@ describe("browser-pool/webdriver-pool", () => {
         chrome: "https://mirror.example/chrome",
         chromium: null,
         firefox: null,
+        geckodriver: null,
     };
 
     let wdPool: WdPoolType;

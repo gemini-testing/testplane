@@ -9,6 +9,7 @@ describe("browser-installer/chromium/browser", () => {
         chrome: null,
         chromium: "https://mirror.example/chromium",
         firefox: null,
+        geckodriver: null,
     };
 
     let installChromium: typeof InstallChromiumType;

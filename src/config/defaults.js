@@ -10,6 +10,7 @@ module.exports = {
         chrome: null,
         chromium: null,
         firefox: null,
+        geckodriver: null,
     },
     gridUrl: LOCAL_GRID_URL,
     browserWSEndpoint: null,

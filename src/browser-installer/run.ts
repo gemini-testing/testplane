@@ -28,7 +28,9 @@ export const runBrowserDriver = async (
                 module.runChromeDriver(browserVersion, { debug, browserDownloadMirrors }),
             );
         case BrowserName.FIREFOX:
-            return import("./firefox").then(module => module.runGeckoDriver(browserVersion, { debug }));
+            return import("./firefox").then(module =>
+                module.runGeckoDriver(browserVersion, { debug, browserDownloadMirrors }),
+            );
         case BrowserName.EDGE:
             return import("./edge").then(module => module.runEdgeDriver(browserVersion, { debug }));
         case BrowserName.SAFARI:

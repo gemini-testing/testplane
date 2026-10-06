@@ -30,6 +30,7 @@ const rootSection = section(
             chrome: browserDownloadMirrorOption("chrome"),
             chromium: browserDownloadMirrorOption("chromium"),
             firefox: browserDownloadMirrorOption("firefox"),
+            geckodriver: browserDownloadMirrorOption("geckodriver"),
         }),
 
         prepareEnvironment: options.optionalFunction("prepareEnvironment"),

@@ -6,12 +6,15 @@ const MIRROR_ENV_NAMES = [
     "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME",
     "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM",
     "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX",
+    "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER",
     "testplane_browser_download_mirrors_chrome",
     "testplane_browser_download_mirrors_chromium",
     "testplane_browser_download_mirrors_firefox",
+    "testplane_browser_download_mirrors_geckodriver",
     "hermione_browser_download_mirrors_chrome",
     "hermione_browser_download_mirrors_chromium",
     "hermione_browser_download_mirrors_firefox",
+    "hermione_browser_download_mirrors_geckodriver",
 ];
 
 describe("browser/standalone/launchBrowser", () => {
@@ -84,31 +87,44 @@ describe("browser/standalone/launchBrowser", () => {
         await launchBrowser({
             browserDownloadMirrors: {
                 chrome: "  https://mirror.example/options/chrome///  ",
+                geckodriver: "  https://mirror.example/options/geckodriver///  ",
             },
         });
 
         assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/options/chrome");
+        assert.equal(receivedConfig.browserDownloadMirrors.geckodriver, "https://mirror.example/options/geckodriver");
         assert.notProperty(receivedConfig.forBrowser("chrome"), "browserDownloadMirrors");
     });
 
     it("should read a browser download mirror from the environment", async () => {
         process.env.TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME = "https://mirror.example/environment/chrome";
+        process.env.TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER = "https://mirror.example/environment/geckodriver";
 
         await launchBrowser();
 
         assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
+        assert.equal(
+            receivedConfig.browserDownloadMirrors.geckodriver,
+            "https://mirror.example/environment/geckodriver",
+        );
     });
 
     it("should prefer an environment mirror over standalone options", async () => {
         process.env.TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME = "https://mirror.example/environment/chrome";
+        process.env.TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER = "https://mirror.example/environment/geckodriver";
 
         await launchBrowser({
             browserDownloadMirrors: {
                 chrome: "https://mirror.example/options/chrome",
+                geckodriver: "https://mirror.example/options/geckodriver",
             },
         });
 
         assert.equal(receivedConfig.browserDownloadMirrors.chrome, "https://mirror.example/environment/chrome");
+        assert.equal(
+            receivedConfig.browserDownloadMirrors.geckodriver,
+            "https://mirror.example/environment/geckodriver",
+        );
     });
 
     it("should reject an empty environment mirror instead of using standalone options", async () => {

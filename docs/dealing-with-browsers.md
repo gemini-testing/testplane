@@ -56,6 +56,7 @@ export default {
         chrome: "https://mirror.example/chrome-for-testing",
         chromium: "https://mirror.example/chromium-browser-snapshots",
         firefox: "https://mirror.example/firefox",
+        geckodriver: "https://mirror.example/geckodriver",
     },
 
     browsers: {
@@ -75,6 +76,7 @@ CI can supply or override individual mirrors with uppercase environment variable
 export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME=https://mirror.example/chrome-for-testing
 export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM=https://mirror.example/chromium-browser-snapshots
 export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX=https://mirror.example/firefox
+export TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER=https://mirror.example/geckodriver
 ```
 
 The uppercase variables take precedence over config values and compatibility variables with lowercase `testplane_` or `hermione_` prefixes. Leave an unused variable unset. An empty value is invalid.
@@ -91,6 +93,7 @@ A mirror must preserve the archive layout expected by `@puppeteer/browsers` for 
 - Chrome, Chrome Headless Shell, and ChromeDriver archives use Chrome for Testing paths such as `<build-id>/<platform>/chrome-<platform>.zip`, `<build-id>/<platform>/chrome-headless-shell-<platform>.zip`, and `<build-id>/<platform>/chromedriver-<platform>.zip`.
 - The Chromium mirror serves snapshot archives under paths such as `<platform-folder>/<revision>/<archive>.zip`.
 - The Firefox mirror serves `firefox_versions.json` at its root. Release archives use paths such as `<version>/<platform>/en-US/<archive>`.
+- The GeckoDriver mirror serves `Cargo.toml` at its root for latest-version discovery. Archives use paths such as `v<version>/geckodriver-v<version>-linux64.tar.gz` for Linux x64, with upstream platform names and ZIP archives for Windows. A mirror containing only Linux x64 archives cannot serve other platforms. Unix hosts need `tar` on `PATH` to extract mirrored GeckoDriver archives.
 
 For Chrome, an explicit `browserVersion: "latest"` follows `@puppeteer/browsers` and selects Canary (`LATEST_RELEASE_CANARY`), not the latest Stable release. Use `"stable"` (`LATEST_RELEASE_STABLE`) to check the current Stable release. If `browserVersion` is omitted, Testplane can reuse an already installed Chrome version without checking whether a newer Stable release exists; it queries Stable only when no suitable local browser is found.
 
@@ -102,7 +105,7 @@ The mirror keys cover different download sources:
 
 - Chrome versions earlier than 113 are installed from Chromium snapshots and therefore use the `chromium` mirror.
 - ChromeDriver versions earlier than 115 continue to use the legacy `chromedriver.storage.googleapis.com` source.
-- GeckoDriver is not downloaded from the Firefox mirror. It continues to use its Mozilla/GitHub upstream source.
+- GeckoDriver uses the separate `geckodriver` mirror for both version discovery and archive downloads. Without it, GeckoDriver keeps its Mozilla/GitHub upstream source, independently of the Firefox mirror.
 
 When a mirror covers a requested metadata file or archive, Testplane does not fall back to the public upstream. A missing platform archive, unavailable metadata file, or network failure stops installation with an error.
 
