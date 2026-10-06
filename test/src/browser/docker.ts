@@ -1,6 +1,9 @@
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import type { runDockerBrowser as RunDockerBrowser } from "src/browser/docker";
+import type {
+    runDockerBrowser as RunDockerBrowser,
+    checkDockerParallelism as CheckDockerParallelism,
+} from "src/browser/docker";
 import type { DockerConfig } from "src/config/types";
 import { CDP_PROXY_SCRIPT } from "src/browser/docker-cdp-proxy";
 import { EventEmitter } from "events";
@@ -10,6 +13,8 @@ import path from "path";
 describe("browser/docker", () => {
     const sandbox = sinon.createSandbox();
     let runDockerBrowser: typeof RunDockerBrowser;
+    let checkDockerParallelism: typeof CheckDockerParallelism;
+    let warnStub: SinonStub;
     let command: SinonStub;
     let syncCommand: SinonStub;
     let fetchStub: SinonStub;
@@ -66,7 +71,9 @@ describe("browser/docker", () => {
             queueMicrotask(() => child.emit("close", 0, null));
             return child;
         });
-        runDockerBrowser = proxyquire("src/browser/docker", {
+        warnStub = sandbox.stub();
+        const dockerModule = proxyquire("src/browser/docker", {
+            "../utils/logger": { warn: warnStub, log: sandbox.stub() },
             "fs/promises": {
                 mkdtemp: sandbox.stub().resolves("/tmp/testplane-selenoid-test"),
                 writeFile: writeConfig,
@@ -87,10 +94,54 @@ describe("browser/docker", () => {
                 },
                 execFileSync: syncCommand,
             },
-        }).runDockerBrowser;
+        });
+        runDockerBrowser = dockerModule.runDockerBrowser;
+        checkDockerParallelism = dockerModule.checkDockerParallelism;
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("parallelism validation", () => {
+        beforeEach(() => {
+            command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves("8");
+        });
+
+        it("should reject 20 browsers on 8 Docker CPUs", async () => {
+            await assert.isRejected(
+                checkDockerParallelism(20),
+                "Docker browser parallelism is 20, but Docker has 8 CPUs. The maximum allowed is 10",
+            );
+            assert.notCalled(warnStub);
+        });
+
+        it("should allow parallelism at or below the limit", async () => {
+            await checkDockerParallelism(10);
+            await checkDockerParallelism(5);
+            assert.notCalled(warnStub);
+        });
+
+        it("should scale the limit with Docker CPUs and round down", async () => {
+            command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves("6");
+            await checkDockerParallelism(7);
+            assert.notCalled(warnStub);
+            await assert.isRejected(checkDockerParallelism(8), "maximum allowed is 7");
+        });
+
+        it("should reject if Docker CPU detection fails", async () => {
+            command.withArgs(["info", "--format", "{{.NCPU}}"]).rejects(new Error("daemon unavailable"));
+            await assert.isRejected(
+                checkDockerParallelism(20),
+                "Cannot check Docker browser parallelism: daemon unavailable",
+            );
+        });
+
+        ["", "0", "unknown"].forEach(value => {
+            it(`should report an invalid Docker CPU count: ${JSON.stringify(value)}`, async () => {
+                command.withArgs(["info", "--format", "{{.NCPU}}"]).resolves(value);
+                await assert.isRejected(checkDockerParallelism(20), "Invalid Docker CPU count");
+            });
+        });
+    });
 
     it("should configure the browser image and start Selenoid with an isolated network and Docker socket", async () => {
         const driver = await start("registry/browser:1");
