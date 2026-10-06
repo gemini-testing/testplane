@@ -13,6 +13,7 @@ import {
 } from "../events";
 import { RunnableEmitter } from "./types";
 import RuntimeConfig from "../config/runtime-config";
+import { DOCKER_GRID_URL } from "../constants/config";
 import WorkersRegistry from "../utils/workers-registry";
 import PromiseGroup from "./promise-group";
 import { TestCollection } from "../test-collection";
@@ -143,6 +144,17 @@ export class MainRunner extends RunnableEmitter {
     }
 
     protected async _runTests(testCollection: TestCollection, opts?: RunnerRunOptions): Promise<void> {
+        if (!RuntimeConfig.getInstance().local) {
+            const dockerSessions = testCollection.getBrowsers().reduce((total, browserId) => {
+                const browser = this.config.forBrowser(browserId);
+                return total + (browser.gridUrl === DOCKER_GRID_URL ? browser.sessionsPerBrowser : 0);
+            }, 0);
+            if (dockerSessions > 0) {
+                const { checkDockerParallelism } = await import("../browser/docker");
+                await checkDockerParallelism(Math.min(dockerSessions, this.config.system.parallelLimit));
+            }
+        }
+
         const runTestFn = this._addTestToBrowserRunner.bind(this);
         const selectivityRunner = SelectivityRunner.create(this, this.config, runTestFn, {
             shouldDisableSelectivity: opts?.shouldDisableSelectivity,

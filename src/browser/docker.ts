@@ -56,6 +56,28 @@ function errorMessage(error: unknown): string {
     return (error as DockerError).stderr?.trim() || (error as Error).message;
 }
 
+/** Enforce a limit of 5 browser sessions per 4 Docker CPUs. */
+export async function checkDockerParallelism(parallelism: number): Promise<void> {
+    let cpus: number;
+    try {
+        cpus = Number(await docker(["info", "--format", "{{.NCPU}}"]));
+    } catch (error) {
+        throw new Error(`Cannot check Docker browser parallelism: ${errorMessage(error)}`);
+    }
+    if (!Number.isInteger(cpus) || cpus <= 0) {
+        throw new Error(`Invalid Docker CPU count: ${cpus}`);
+    }
+
+    const limit = Math.floor((cpus * 5) / 4);
+    if (parallelism > limit) {
+        throw new Error(
+            `Docker browser parallelism is ${parallelism}, but Docker has ${cpus} CPUs. ` +
+                `The maximum allowed is ${limit} concurrent browsers (5 browsers per 4 CPUs). ` +
+                `Reduce sessionsPerBrowser or system.parallelLimit, or allocate more CPUs to Docker.`,
+        );
+    }
+}
+
 /** Stream complete output to disk without execFile's in-memory buffer limit. */
 async function appendDockerOutput(file: FileHandle, title: string, args: string[]): Promise<void> {
     await file.appendFile(`\n=== ${title} ===\n`);
