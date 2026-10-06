@@ -18,6 +18,7 @@ describe("NodejsEnvRunner", () => {
     let BrowserPool;
     let Runner;
     let SelectivityRunner;
+    let checkDockerParallelism;
 
     const mkWorkers_ = () => {
         return {
@@ -87,12 +88,15 @@ describe("NodejsEnvRunner", () => {
 
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: () => {} });
         sandbox.stub(TestCollection.prototype);
+        TestCollection.prototype.getBrowsers.returns([]);
+        checkDockerParallelism = sandbox.stub().resolves();
 
         sandbox.spy(BrowserRunner, "create");
         sandbox.stub(BrowserRunner.prototype, "addTestToRun").resolves();
         sandbox.stub(BrowserRunner.prototype, "waitTestsCompletion").resolves();
 
         Runner = proxyquire("src/runner", {
+            "../browser/docker": { checkDockerParallelism },
             "../browser-pool": BrowserPool,
             "../browser/cdp/selectivity/runner": { SelectivityRunner },
             "../utils/logger": { warn: sandbox.stub() },
@@ -100,6 +104,65 @@ describe("NodejsEnvRunner", () => {
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("Docker parallelism", () => {
+        const mkDockerConfig = (parallelLimit = Infinity) => {
+            const config = makeConfigStub({ browsers: ["chrome", "firefox", "remote"], sessionsPerBrowser: 10 });
+            config.system.parallelLimit = parallelLimit;
+            config.browsers.chrome.gridUrl = "docker";
+            config.browsers.firefox.gridUrl = "docker";
+            config.browsers.remote.gridUrl = "http://grid:4444/wd/hub";
+            TestCollection.prototype.getBrowsers.returns(["chrome", "firefox", "remote"]);
+            return config;
+        };
+
+        it("should check the sum of selected Docker session limits once before starting browsers", async () => {
+            await run_({ config: mkDockerConfig() });
+            assert.calledOnceWith(checkDockerParallelism, 20);
+            assert.callOrder(checkDockerParallelism, BrowserRunner.create);
+        });
+
+        it("should respect the global parallel limit", async () => {
+            await run_({ config: mkDockerConfig(5) });
+            assert.calledOnceWith(checkDockerParallelism, 5);
+        });
+
+        it("should stop before starting browsers when Docker parallelism validation fails", async () => {
+            checkDockerParallelism.rejects(new Error("Docker parallelism limit exceeded"));
+
+            await assert.isRejected(run_({ config: mkDockerConfig() }), "Docker parallelism limit exceeded");
+
+            assert.notCalled(BrowserRunner.create);
+            assert.calledOnce(WorkersRegistry.prototype.end);
+        });
+
+        it("should exclude Docker browsers not selected for this run", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns(["chrome"]);
+            await run_({ config });
+            assert.calledOnceWith(checkDockerParallelism, 10);
+        });
+
+        it("should not check Docker when only remote browsers are selected", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns(["remote"]);
+            await run_({ config });
+            assert.notCalled(checkDockerParallelism);
+        });
+
+        it("should not check Docker when --local is enabled", async () => {
+            RuntimeConfig.getInstance.returns({ local: true, extend: () => {} });
+            await run_({ config: mkDockerConfig() });
+            assert.notCalled(checkDockerParallelism);
+        });
+
+        it("should not check Docker for an empty selection", async () => {
+            const config = mkDockerConfig();
+            TestCollection.prototype.getBrowsers.returns([]);
+            await run_({ config });
+            assert.notCalled(checkDockerParallelism);
+        });
+    });
 
     describe("constructor", () => {
         it("should init temp with dir from config", () => {
