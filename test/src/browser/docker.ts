@@ -2,6 +2,7 @@ import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
 import type {
     runDockerBrowser as RunDockerBrowser,
+    prepareDockerImages as PrepareDockerImages,
     checkDockerParallelism as CheckDockerParallelism,
 } from "src/browser/docker";
 import type { DockerConfig } from "src/config/types";
@@ -11,6 +12,7 @@ import path from "path";
 
 describe("browser/docker", () => {
     const sandbox = sinon.createSandbox();
+    let prepareDockerImages: typeof PrepareDockerImages;
     let runDockerBrowser: typeof RunDockerBrowser;
     let checkDockerParallelism: typeof CheckDockerParallelism;
     let warnStub: SinonStub;
@@ -97,11 +99,53 @@ describe("browser/docker", () => {
                 execFileSync: syncCommand,
             },
         });
+        prepareDockerImages = dockerModule.prepareDockerImages;
         runDockerBrowser = dockerModule.runDockerBrowser;
         checkDockerParallelism = dockerModule.checkDockerParallelism;
     });
 
     afterEach(() => sandbox.restore());
+
+    describe("image preparation without sessions", () => {
+        it("should pull missing browser and controller images and prepare CDP without starting containers", async () => {
+            for (const image of ["browser", selenoidImage]) {
+                command
+                    .withArgs(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", image])
+                    .onFirstCall()
+                    .rejects(new Error("No such image"));
+            }
+            prepareImage.resolves("testplane-browser:prepared");
+
+            const result = await prepareDockerImages({ image: "browser", selenoidImage }, "Chrome");
+
+            assert.deepEqual(result, { image: "testplane-browser:prepared", selenoidImage });
+            for (const image of ["browser", selenoidImage]) {
+                assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", image]);
+            }
+            assert.calledOnce(prepareImage);
+            assert.isFalse(command.getCalls().some(call => ["create", "start", "network"].includes(call.args[0][0])));
+            assert.notCalled(writeConfig);
+            assert.notCalled(fetchStub);
+        });
+
+        it("should reuse local images and leave Firefox unchanged", async () => {
+            const result = await prepareDockerImages({ image: "firefox", selenoidImage }, "firefox");
+
+            assert.equal(result.image, "firefox");
+            assert.notCalled(prepareImage);
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "pull"));
+        });
+
+        it("should propagate preparation errors before any session is created", async () => {
+            prepareImage.rejects(new Error("CDP image build failed"));
+
+            await assert.isRejected(
+                prepareDockerImages({ image: "browser", selenoidImage }, "yandex"),
+                "CDP image build failed",
+            );
+            assert.notCalled(writeConfig);
+        });
+    });
 
     describe("parallelism validation", () => {
         beforeEach(() => {
@@ -520,15 +564,33 @@ describe("browser/docker", () => {
         });
     });
 
-    it("should give Selenoid the prepared image and use it to locate browser containers", async () => {
-        prepareImage.resolves("testplane-browser:prepared");
-        const driver = await start("browser");
-        const config = JSON.parse(writeConfig.firstCall.args[1]);
-        assert.equal(config.chrome.versions["98.0"].image, "testplane-browser:prepared");
-        await driver.getLogs!();
-        assert.isTrue(command.getCalls().some(call => call.args[0].includes("ancestor=testplane-browser:prepared")));
-        await driver.free();
-    });
+    for (const browserName of ["chrome", "yandex", "Chrome", "Yandex"]) {
+        it(`should give Selenoid the prepared image for "${browserName}" and use it to locate containers`, async () => {
+            prepareImage.resolves("testplane-browser:prepared");
+            const driver = await start("browser", { browserName });
+            const config = JSON.parse(writeConfig.firstCall.args[1]);
+            assert.calledOnce(prepareImage);
+            assert.equal(config[browserName].versions["98.0"].image, "testplane-browser:prepared");
+            await driver.getLogs!();
+            assert.isTrue(
+                command.getCalls().some(call => call.args[0].includes("ancestor=testplane-browser:prepared")),
+            );
+            await driver.free();
+        });
+    }
+
+    for (const browserName of ["firefox", "MicrosoftEdge", "opera", "android", ""]) {
+        it(`should use the original image without devtools preparation for "${browserName}"`, async () => {
+            prepareImage.rejects(new Error("Image preparation must not run"));
+            const driver = await start("original-browser:1", { browserName });
+            const config = JSON.parse(writeConfig.firstCall.args[1]);
+            assert.notCalled(prepareImage);
+            assert.equal(config[browserName].versions["98.0"].image, "original-browser:1");
+            await driver.getLogs!();
+            assert.isTrue(command.getCalls().some(call => call.args[0].includes("ancestor=original-browser:1")));
+            await driver.free();
+        });
+    }
 
     it("should report image preparation failure before creating containers or networks", async () => {
         prepareImage.rejects(new Error("UPX installation failed"));
