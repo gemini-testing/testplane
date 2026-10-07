@@ -1,10 +1,11 @@
 # Browsers in Docker
 
-Set `gridUrl: "docker"` and specify a `docker` object for each browser:
+Set `gridUrl: "docker"`, specify a browser image, and set `docker.selenoidImage` globally or per browser:
 
 ```js
 module.exports = {
     gridUrl: "docker",
+    docker: { selenoidImage: "registry.yandex.net/search-interfaces/selenoid:1.11.3-d496072" },
     baseUrl: "http://host.docker.internal:3000",
     browsers: {
         chrome: {
@@ -23,7 +24,30 @@ npx testplane
 
 Testplane uses `linux/amd64` browser images and starts them through Selenoid. If either image is missing locally, Testplane runs `docker pull --platform linux/amd64` automatically. Parallel sessions share each download; existing local images are not refreshed. On Apple Silicon, Docker must support AMD64 emulation; startup may take longer. Missing Docker, an unavailable daemon, a failed download, and an incompatible image platform produce separate errors. A missing or empty `docker.image` is rejected when starting the browser, not when loading the config.
 
-`docker.image` must be a Selenoid-compatible image. Testplane copies the `docker` object into the browser version entry in `browsers.json`. Set `path`, `port`, `shmSize`, `tmpfs`, `volumes`, and other Selenoid container settings there. Omitted settings default to `port: "4444"`, `path: "/"`, `shmSize: 2147483648` (2 GiB), and `hosts: ["host.docker.internal:host-gateway"]`; explicit values replace these defaults. The path does not depend on the browser name: specify `path: "/wd/hub"` for images that need it, including the Firefox images discussed here.
+`docker.image` must be a Selenoid-compatible image. Testplane copies the `docker` object, except `selenoidImage`, into the browser version entry in `browsers.json`, replacing `image` with the prepared local image. Set `path`, `port`, `shmSize`, `tmpfs`, `volumes`, and other Selenoid container settings there. Omitted settings default to `port: "4444"`, `path: "/"`, `shmSize: 2147483648` (2 GiB), and `hosts: ["host.docker.internal:host-gateway"]`; explicit values replace these defaults. The path does not depend on the browser name: specify `path: "/wd/hub"` for images that need it, including the Firefox images discussed here.
+
+Set `docker.selenoidImage` to choose the Selenoid controller image. A browser-specific value takes precedence over the top-level `docker.selenoidImage`, even when the browser defines its own `docker.image`. There is no default: if neither is set, or the resolved value is empty or invalid, Docker browser startup fails before pulling images or creating containers. The controller image must support Selenoid's existing Docker configuration and command-line options and target `linux/amd64`; missing images are pulled automatically. This field is not passed to `browsers.json`.
+
+```js
+module.exports = {
+    gridUrl: "docker",
+    docker: { selenoidImage: "registry.example.com/selenoid:shared" },
+    browsers: {
+        chrome: {
+            docker: { image: "registry.example.com/browsers/chrome:149.1" },
+            desiredCapabilities: { browserName: "chrome" },
+        },
+        firefox: {
+            docker: {
+                image: "registry.example.com/browsers/firefox:148.0",
+                selenoidImage: "registry.example.com/selenoid:custom",
+                path: "/wd/hub",
+            },
+            desiredCapabilities: { browserName: "firefox" },
+        },
+    },
+};
+```
 
 `tmpfs` maps container paths to mount options, for example `tmpfs: { "/tmp": "size=512m" }`.
 
@@ -49,11 +73,19 @@ Before running Docker browsers, Testplane reads the Docker daemon's CPU count an
 
 Docker sessions use the standard transport selection: WSDriver is used when `useWsDriver` is enabled and the server advertises `se:wsdriver` with version `1` in `se:wsdriverVersion`; otherwise commands use HTTP WebDriver. CDP is initialized independently of `gridUrl`, using the usual endpoint selection (`browserWSEndpoint`, `se:cdp`, or the browser debugger address).
 
-For Chrome containers, Testplane checks the CDP route exposed by Selenoid. If the image does not provide a CDP adapter on port `7070`, Testplane starts a Python proxy inside the browser container using `docker exec`. The image must include `python3`; only Python's standard library is used. No additional image or container is needed. The proxy connects to Chrome's actual debugger port from the session capabilities, resolves the browser WebSocket path, and exposes it through Selenoid's existing port. It stops when the browser container is removed. CDP isolation and selectivity can use this connection; explicit `browserWSEndpoint` settings still take precedence.
+For Chrome containers, Testplane uses Selenoid's existing CDP route and the browser image's native `/usr/bin/devtools` adapter on port `7070`. The adapter connects to Chrome's internal debugger socket; the published Selenoid port remains bound to `127.0.0.1`. No Testplane Python proxy is started.
 
-When a session closes, Testplane removes the controller, any remaining containers in its network, the network, and the temporary config. Cleanup also runs after failed session creation and normal interruption. On forced process exit, cleanup is best effort; SIGKILL or an unavailable daemon can leave resources behind. Controllers and networks have names starting with `testplane-`.
+Before creating sessions, Testplane builds a local derived browser image named `testplane-browser:<hash>`. If `/usr/bin/devtools` is UPX-packed, the build installs `upx-ucl` (unless already installed), unpacks the executable in place, and verifies that it runs. This avoids the packed executable's crash under Rosetta. Images without this adapter skip the preparation commands. The original image is unchanged; its entrypoint, command and user are preserved in the derived image. Its normal entrypoint starts the repaired adapter.
 
-Before deleting a Docker session, Testplane saves a snapshot of the full available Selenoid and browser container output, plus the CDP proxy log, to `<os.tmpdir()>/testplane-logs/<session_id>.log` and prints the file path. Unlike the shortened diagnostics attached to startup errors, this file is not limited to the last 100 lines or 16 KiB. It survives container cleanup and is saved for successful runs, test failures, normal interruption, and initialization failures after a session ID has been assigned. Saving errors produce a warning and do not prevent cleanup. No session file is created if session creation fails before returning an ID; SIGKILL cannot trigger log collection. These files remain until removed manually or by the operating system's temporary-file cleanup.
+Unpacking a packed adapter during the first build requires an apt-based image with `upx-ucl` available and network access to its package repositories, unless UPX is already installed. The build has a ten-minute timeout. Subsequent sessions use the prepared image directly: no apt, UPX checks, binary copying or separate adapter startup takes place in browser containers. The image name depends on the source image's immutable ID and the preparation recipe, so a changed source image or recipe produces a new image. Workers share a build lock and reuse the finished image. Timing logs report image preparation, build time and lock waits.
+
+Prepared images remain in Docker's local image store until explicitly removed (for example, with `docker image rm <prepared-image>`). The next run rebuilds a removed image. There is no host filesystem cache of executables; the former `~/.testplane/docker-devtools` directory is no longer read or written and can be deleted. Temporary Dockerfiles and build locks are cleaned up after preparation. CDP session preparation only waits for the native route to become ready; explicit `browserWSEndpoint` settings skip this wait.
+
+### Logs and timings
+
+Before deleting a Docker session, Testplane saves a snapshot of the full available Selenoid and browser container output (including the native CDP adapter output) to `<os.tmpdir()>/testplane-logs/<session_id>.log` and prints the file path. Unlike the shortened diagnostics attached to startup errors, this file is not limited to the last 100 lines or 16 KiB. It survives container cleanup and is saved for successful runs, test failures, normal interruption, and initialization failures after a session ID has been assigned. Saving errors produce a warning and do not prevent cleanup. No session file is created if session creation fails before returning an ID; SIGKILL cannot trigger log collection. These files remain until removed manually or by the operating system's temporary-file cleanup.
+
+Docker operations print `[Docker timing][<container/session>]` messages before starting and after finishing, with duration in seconds or time until failure. Timings cover image preparation and pulls, network and Selenoid startup, WebDriver session creation, local image builds and CDP readiness, CDP connection, isolation, session preparation, calibration, browser utilities, log saving, and cleanup. Container names, grid addresses, and session IDs distinguish concurrent launches. Nested timings overlap and should not be summed.
 
 Selenoid readiness uses `sessionRequestTimeout`, falling back to `httpTimeout`; the same value is passed to Selenoid for browser startup and session creation. Startup and session creation errors include the last Selenoid log lines and saved browser logs, collected before cleanup. If the browser service has not become ready, Testplane also reads Docker logs directly from up to four containers of the selected image in the session network (last 100 lines, capped at 16,384 characters per container). Saved browser log output is limited to four files and the last 16 KiB of each file. Docker commands have a separate 30-second timeout; image downloads have a 10-minute timeout.
 

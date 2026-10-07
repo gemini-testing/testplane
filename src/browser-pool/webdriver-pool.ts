@@ -13,7 +13,7 @@ export type WdProcess = {
     getPid: () => number | undefined;
     getLogs?: () => Promise<string>;
     saveLogs?: (sessionId: string) => Promise<string>;
-    startCdpProxy?: (sessionId: string, debuggerAddress: string) => Promise<void>;
+    prepareCdp?: (sessionId: string) => Promise<void>;
 };
 
 export class WebdriverPool {

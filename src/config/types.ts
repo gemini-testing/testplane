@@ -374,8 +374,10 @@ export interface BrowserDownloadMirrors {
 
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;
 
-/** Browser container settings passed to Selenoid's browsers.json. */
+/** Selenoid controller image and browser container settings. */
 export interface DockerConfig {
+    /** Required for Docker startup, either here or inherited from the top-level docker option. No default. */
+    selenoidImage?: string;
     image?: string;
     path?: string;
     port?: string;

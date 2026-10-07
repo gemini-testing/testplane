@@ -5,7 +5,6 @@ import type {
     checkDockerParallelism as CheckDockerParallelism,
 } from "src/browser/docker";
 import type { DockerConfig } from "src/config/types";
-import { CDP_PROXY_SCRIPT } from "src/browser/docker-cdp-proxy";
 import { EventEmitter } from "events";
 import { tmpdir } from "os";
 import path from "path";
@@ -15,6 +14,7 @@ describe("browser/docker", () => {
     let runDockerBrowser: typeof RunDockerBrowser;
     let checkDockerParallelism: typeof CheckDockerParallelism;
     let warnStub: SinonStub;
+    let prepareImage: SinonStub;
     let command: SinonStub;
     let syncCommand: SinonStub;
     let fetchStub: SinonStub;
@@ -31,7 +31,7 @@ describe("browser/docker", () => {
         options = {},
         container: DockerConfig = {},
     ): ReturnType<typeof runDockerBrowser> =>
-        runDockerBrowser(image === null ? null : { image, ...container }, {
+        runDockerBrowser(image === null ? null : { image, selenoidImage, ...container }, {
             browserName: "chrome",
             browserVersion: "98.0",
             ...options,
@@ -72,7 +72,9 @@ describe("browser/docker", () => {
             return child;
         });
         warnStub = sandbox.stub();
+        prepareImage = sandbox.stub().callsFake(async (image: string) => image);
         const dockerModule = proxyquire("src/browser/docker", {
+            "./docker-image": { prepareDockerBrowserImage: prepareImage },
             "../utils/logger": { warn: warnStub, log: sandbox.stub() },
             "fs/promises": {
                 mkdtemp: sandbox.stub().resolves("/tmp/testplane-selenoid-test"),
@@ -197,6 +199,43 @@ describe("browser/docker", () => {
         assert.calledWith(fetchStub, "http://127.0.0.1:12345/status");
         await driver.free();
         assert.calledOnce(removeConfig);
+    });
+
+    it("should use a custom Selenoid image without passing it to browsers.json", async () => {
+        const customImage = "registry/selenoid:custom";
+        command
+            .withArgs(["image", "inspect", "--format", "{{.Os}}/{{.Architecture}}", "--", customImage])
+            .onFirstCall()
+            .rejects(new Error("No such image"))
+            .onSecondCall()
+            .resolves("linux/amd64");
+        const driver = await start("browser:1", {}, { selenoidImage: customImage });
+        assert.calledWith(command, ["pull", "--platform", "linux/amd64", "--quiet", customImage]);
+        const create = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+        assert.include(create, customImage);
+        assert.notInclude(create, selenoidImage);
+        const config = JSON.parse(writeConfig.firstCall.args[1]);
+        assert.equal(config.chrome.versions["98.0"].image, "browser:1");
+        assert.notProperty(config.chrome.versions["98.0"], "selenoidImage");
+        await driver.free();
+    });
+
+    it("should require an explicitly configured Selenoid image before calling Docker", async () => {
+        await assert.isRejected(
+            runDockerBrowser({ image: "browser:1" }, { browserName: "chrome" }),
+            '"docker.selenoidImage" must be a non-empty string when "gridUrl" is "docker"',
+        );
+        assert.notCalled(command);
+    });
+
+    [null, "", "  ", 123, "--privileged", "image extra"].forEach(value => {
+        it(`should reject invalid selenoidImage before starting Docker: ${JSON.stringify(value)}`, async () => {
+            await assert.isRejected(
+                start("browser", {}, { selenoidImage: value } as DockerConfig),
+                "docker.selenoidImage",
+            );
+            assert.notCalled(command);
+        });
     });
 
     it("should route Firefox sessions through /wd/hub inside the browser container", async () => {
@@ -481,40 +520,47 @@ describe("browser/docker", () => {
         });
     });
 
-    describe("CDP proxy", () => {
+    it("should give Selenoid the prepared image and use it to locate browser containers", async () => {
+        prepareImage.resolves("testplane-browser:prepared");
+        const driver = await start("browser");
+        const config = JSON.parse(writeConfig.firstCall.args[1]);
+        assert.equal(config.chrome.versions["98.0"].image, "testplane-browser:prepared");
+        await driver.getLogs!();
+        assert.isTrue(command.getCalls().some(call => call.args[0].includes("ancestor=testplane-browser:prepared")));
+        await driver.free();
+    });
+
+    it("should report image preparation failure before creating containers or networks", async () => {
+        prepareImage.rejects(new Error("UPX installation failed"));
+        await assert.isRejected(start("browser"), "UPX installation failed");
+        assert.isFalse(command.getCalls().some(call => ["create", "network"].includes(call.args[0][0])));
+        assert.notCalled(writeConfig);
+    });
+
+    describe("CDP adapter", () => {
         it("should reuse a working CDP adapter without starting a proxy", async () => {
             const driver = await start("browser");
             fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
-            await driver.startCdpProxy!("session-id", "localhost:39599");
+            await driver.prepareCdp!("session-id");
             assert.calledWith(fetchStub, "http://127.0.0.1:12345/devtools/session-id/json/protocol");
             assert.lengthOf(
                 command.getCalls().filter(call => call.args[0][0] === "create"),
                 1,
             );
             assert.isFalse(command.getCalls().some(call => call.args[0][0] === "exec"));
+            assert.calledOnce(prepareImage);
             await driver.free();
         });
 
-        it("should start Python inside the browser without another image or container", async () => {
+        it("should wait for the native adapter without running commands in the browser", async () => {
             const driver = await start("browser");
             fetchStub.resetHistory();
             fetchStub.resolves({ ok: true, json: async () => ({ domains: [] }) });
             fetchStub.onFirstCall().rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
-            await driver.startCdpProxy!("session-id", "localhost:39599");
-            assert.calledWith(command, [
-                "exec",
-                "--detach",
-                "browser-id",
-                "python3",
-                "-u",
-                "-c",
-                CDP_PROXY_SCRIPT,
-                "localhost",
-                "39599",
-                "7070",
-                "/tmp/testplane-cdp-proxy.log",
-            ]);
+            await driver.prepareCdp!("session-id");
+            assert.calledOnce(prepareImage);
+            assert.isFalse(command.getCalls().some(call => call.args[0][0] === "exec"));
             assert.lengthOf(
                 command.getCalls().filter(call => call.args[0][0] === "create"),
                 1,
@@ -523,20 +569,24 @@ describe("browser/docker", () => {
                 command.getCalls().filter(call => call.args[0][0] === "image"),
                 2,
             );
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("browser-id");
             await driver.free();
-            assert.calledWith(command, ["rm", "--force", "browser-id"]);
         });
 
-        it("should explain the Python requirement and allow cleanup if exec fails", async () => {
+        it("should fail if the browser exits before CDP is ready", async () => {
             const driver = await start("browser");
             fetchStub.rejects(new Error("CDP unavailable"));
             command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
-            command.withArgs(sinon.match.array.startsWith(["exec"])).rejects(new Error("python3 not found"));
-            await assert.isRejected(driver.startCdpProxy!("session-id", "localhost:39599"), "must include Python 3");
-            command.withArgs(sinon.match.array.startsWith(["ps", "--all"])).resolves("browser-id");
+            command.withArgs(["inspect", "--format", "{{.State.Running}}", "browser-id"]).resolves("false");
+            await assert.isRejected(driver.prepareCdp!("session-id"), "browser container exited");
             await driver.kill();
-            assert.calledWith(command, ["rm", "--force", "browser-id"]);
+        });
+
+        it("should time out if CDP never becomes ready", async () => {
+            const driver = await start("browser", { timeout: 10 });
+            fetchStub.rejects(new Error("CDP unavailable"));
+            command.withArgs(sinon.match.array.startsWith(["ps", "--quiet"])).resolves("browser-id");
+            await assert.isRejected(driver.prepareCdp!("session-id"), "CDP adapter did not become ready");
+            await driver.kill();
         });
     });
 

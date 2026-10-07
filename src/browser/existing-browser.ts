@@ -8,7 +8,9 @@ import { Camera, CaptureViewportImageOpts } from "./camera";
 import { ClientBridge } from "./client-bridge";
 import * as history from "./history";
 import * as logger from "../utils/logger";
-import { WEBDRIVER_PROTOCOL } from "../constants/config";
+import { WEBDRIVER_PROTOCOL, DOCKER_GRID_URL } from "../constants/config";
+import { getInstance } from "../config/runtime-config";
+import { timeDockerOperation } from "./docker-timing";
 import { MIN_CHROME_VERSION_SUPPORT_ISOLATION } from "../constants/browser";
 import { isSupportIsolation } from "../utils/browser";
 import { isRunInNodeJsEnv } from "../utils/config";
@@ -88,9 +90,14 @@ export class ExistingBrowser extends Browser {
     }
 
     async init({ sessionId, sessionCaps, sessionOpts }: SessionOptions, calibrator: Calibrator): Promise<this> {
-        this._session = await this._attachSession({ sessionId, sessionCaps, sessionOpts });
+        const scope = this._config.gridUrl === DOCKER_GRID_URL && !getInstance().local ? sessionId : undefined;
+        const timed = <T>(operation: string, action: () => T | Promise<T>): Promise<T> =>
+            timeDockerOperation(scope, operation, action);
+        this._session = await timed("attach WebDriver session", () =>
+            this._attachSession({ sessionId, sessionCaps, sessionOpts }),
+        );
 
-        const cdpPromise = CDP.create(this).then(cdp => {
+        const cdpPromise = timed("connect CDP", () => CDP.create(this)).then(cdp => {
             this._cdp = cdp;
         });
 
@@ -98,7 +105,9 @@ export class ExistingBrowser extends Browser {
             this._startCollectingCustomCommands();
         }
 
-        const isolationPromise = cdpPromise.then(() => this._performIsolation({ sessionCaps, sessionOpts }));
+        const isolationPromise = cdpPromise.then(() =>
+            timed("isolate browser context", () => this._performIsolation({ sessionCaps, sessionOpts })),
+        );
 
         this._extendStacktrace();
         this._addSteps();
@@ -136,9 +145,9 @@ export class ExistingBrowser extends Browser {
                     logger.warn(`WARN: couldn't prepare browser ${this.id}\n`, (e as Error)?.stack);
                 }
 
-                await this._prepareSession();
-                await this._performCalibration(calibrator);
-                await this._initBrowserSideUtils();
+                await timed("prepare browser session", () => this._prepareSession());
+                await timed("calibrate browser", () => this._performCalibration(calibrator));
+                await timed("initialize browser utilities", () => this._initBrowserSideUtils());
             },
         );
 
