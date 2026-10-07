@@ -149,7 +149,7 @@ describe("browser-installer numeric browser version contract", () => {
                 const requestOffset = requests.length;
                 const installedPath = await createInstallBrowser(cacheDir)(BrowserName.CHROME, version, {
                     force: true,
-                    browserDownloadMirrors: { chrome: mirror, chromium: null, firefox: null },
+                    browserDownloadMirrors: { chrome: mirror, chromium: null, firefox: null, geckodriver: null },
                 });
 
                 if (!installedPath) {

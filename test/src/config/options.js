@@ -32,6 +32,7 @@ describe("config options", () => {
                         chrome: "https://mirror.example/chrome",
                         chromium: "https://mirror.example/chromium",
                         firefox: "https://mirror.example/firefox",
+                        geckodriver: "https://mirror.example/geckodriver",
                     },
                 },
             });
@@ -40,6 +41,7 @@ describe("config options", () => {
                 chrome: "https://mirror.example/chrome",
                 chromium: "https://mirror.example/chromium",
                 firefox: "https://mirror.example/firefox",
+                geckodriver: "https://mirror.example/geckodriver",
             });
         });
 
@@ -69,7 +71,7 @@ describe("config options", () => {
             );
         });
 
-        ["chrome", "chromium", "firefox"].forEach(browserName => {
+        ["chrome", "chromium", "firefox", "geckodriver"].forEach(browserName => {
             it(`should reject a non-absolute ${browserName} mirror URL`, () => {
                 assert.throws(
                     () =>
@@ -153,12 +155,26 @@ describe("config options", () => {
             assert.equal(result.browserDownloadMirrors.chrome, "https://uppercase.example/chrome");
         });
 
+        it("should prefer uppercase GeckoDriver env over config and compatibility env", () => {
+            const result = parse_({
+                options: { browserDownloadMirrors: { geckodriver: "https://config.example/geckodriver" } },
+                env: {
+                    ["testplane_browser_download_mirrors_geckodriver"]: "https://lowercase.example/geckodriver",
+                    ["hermione_browser_download_mirrors_geckodriver"]: "https://legacy.example/geckodriver",
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER: "  https://env.example/cache/geckodriver///  ",
+                },
+            });
+
+            assert.equal(result.browserDownloadMirrors.geckodriver, "https://env.example/cache/geckodriver");
+        });
+
         it("should read uppercase environment variables for every mirror", () => {
             const result = parse_({
                 env: {
                     TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME: "https://env.example/chrome",
                     TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM: "https://env.example/chromium",
                     TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX: "https://env.example/firefox",
+                    TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER: "https://env.example/geckodriver",
                 },
             });
 
@@ -166,6 +182,7 @@ describe("config options", () => {
                 chrome: "https://env.example/chrome",
                 chromium: "https://env.example/chromium",
                 firefox: "https://env.example/firefox",
+                geckodriver: "https://env.example/geckodriver",
             });
         });
 
@@ -174,6 +191,7 @@ describe("config options", () => {
                 ["chrome", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROME"],
                 ["chromium", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_CHROMIUM"],
                 ["firefox", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_FIREFOX"],
+                ["geckodriver", "TESTPLANE_BROWSER_DOWNLOAD_MIRRORS_GECKODRIVER"],
             ].forEach(([browserName, envName]) => {
                 assert.throws(
                     () =>

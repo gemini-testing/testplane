@@ -426,6 +426,7 @@ describe("NewBrowser", () => {
                     chrome: "https://mirror.example/chrome",
                     chromium: null,
                     firefox: null,
+                    geckodriver: null,
                 };
                 const wdPool = mkWdPool_({ gridUrl: "http://localhost:12345/" });
                 const config = Object.assign(
@@ -465,6 +466,7 @@ describe("NewBrowser", () => {
                     chrome: "https://mirror.example/chrome",
                     chromium: null,
                     firefox: null,
+                    geckodriver: null,
                 };
                 const wdProcess = {
                     gridUrl: "http://localhost:12345/",

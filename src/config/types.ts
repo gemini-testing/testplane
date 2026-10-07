@@ -369,6 +369,7 @@ export interface BrowserDownloadMirrors {
     chrome: string | null;
     chromium: string | null;
     firefox: string | null;
+    geckodriver: string | null;
 }
 
 export type BrowserDownloadMirrorsInput = Partial<BrowserDownloadMirrors>;

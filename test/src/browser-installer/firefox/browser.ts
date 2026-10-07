@@ -12,6 +12,7 @@ describe("browser-installer/firefox/browser", () => {
         chrome: null,
         chromium: null,
         firefox: "https://mirror.example/firefox",
+        geckodriver: "https://mirror.example/geckodriver",
     };
 
     let installFirefox: typeof InstallFirefoxType;
@@ -176,7 +177,16 @@ describe("browser-installer/firefox/browser", () => {
         it("should try to install geckodriver if 'needWebDriver' is set", async () => {
             await installFirefox("115", { needWebDriver: true });
 
-            assert.calledOnceWith(installLatestGeckoDriverStub, "115", { force: false });
+            assert.calledOnceWith(installLatestGeckoDriverStub, "115", {
+                force: false,
+                browserDownloadMirrors: undefined,
+            });
+        });
+
+        it("should pass mirrors to GeckoDriver installation", async () => {
+            await installFirefox("115", { needWebDriver: true, browserDownloadMirrors });
+
+            assert.calledOnceWithExactly(installLatestGeckoDriverStub, "115", { force: false, browserDownloadMirrors });
         });
 
         it("should try to install ubuntu dependencies if 'needWebDriver' is set", async () => {

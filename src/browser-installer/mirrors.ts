@@ -2,7 +2,7 @@ import { URL } from "node:url";
 
 import type { BrowserDownloadMirrors } from "../config/types";
 import { BrowserName } from "../browser/types";
-import type { SupportedBrowser } from "./utils";
+import { DriverName, type SupportedBrowser } from "./utils";
 
 export const normalizeBrowserDownloadMirror = (mirror: unknown, optionName: string): string => {
     if (typeof mirror !== "string") {
@@ -43,7 +43,7 @@ export const normalizeBrowserDownloadMirror = (mirror: unknown, optionName: stri
 };
 
 export const getBrowserDownloadMirror = (
-    browserName: SupportedBrowser,
+    browserName: SupportedBrowser | typeof DriverName.GECKODRIVER,
     mirrors?: BrowserDownloadMirrors,
 ): string | undefined => {
     let mirrorName: keyof BrowserDownloadMirrors;
@@ -58,6 +58,9 @@ export const getBrowserDownloadMirror = (
             break;
         case BrowserName.FIREFOX:
             mirrorName = "firefox";
+            break;
+        case DriverName.GECKODRIVER:
+            mirrorName = "geckodriver";
             break;
         default:
             return undefined;

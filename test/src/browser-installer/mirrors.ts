@@ -1,4 +1,5 @@
 import { BrowserName } from "../../../src/browser/types";
+import { DriverName } from "../../../src/browser-installer/utils";
 import { getBrowserDownloadMirror, getBrowserDownloadMirrorFileUrl } from "../../../src/browser-installer/mirrors";
 
 describe("browser-installer/mirrors", () => {
@@ -6,6 +7,7 @@ describe("browser-installer/mirrors", () => {
         chrome: "https://mirror.example/chrome/",
         chromium: "https://mirror.example/chromium/",
         firefox: "https://mirror.example/firefox/",
+        geckodriver: "https://mirror.example/geckodriver/",
     };
 
     it("should resolve mirror for each downloadable browser", () => {
@@ -16,6 +18,7 @@ describe("browser-installer/mirrors", () => {
         );
         assert.equal(getBrowserDownloadMirror(BrowserName.CHROMIUM, mirrors), "https://mirror.example/chromium");
         assert.equal(getBrowserDownloadMirror(BrowserName.FIREFOX, mirrors), "https://mirror.example/firefox");
+        assert.equal(getBrowserDownloadMirror(DriverName.GECKODRIVER, mirrors), "https://mirror.example/geckodriver");
     });
 
     it("should not resolve mirrors for browsers that Testplane does not download", () => {

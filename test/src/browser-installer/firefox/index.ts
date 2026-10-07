@@ -75,6 +75,19 @@ describe("browser-installer/firefox", () => {
         assert.calledOnceWith(waitPortStub, { port: 10050, output: "silent", timeout: 10000, interval: 25 });
     });
 
+    it("should pass mirrors to GeckoDriver installation before launch", async () => {
+        const browserDownloadMirrors = {
+            chrome: null,
+            chromium: null,
+            firefox: null,
+            geckodriver: "https://mirror.example/geckodriver",
+        };
+
+        await runGeckoDriver("130", { browserDownloadMirrors });
+
+        assert.calledOnceWithExactly(installLatestGeckoDriverStub, "130", { browserDownloadMirrors });
+    });
+
     it("should be executed in right order", async () => {
         await runGeckoDriver("130");
 

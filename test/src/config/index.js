@@ -236,6 +236,7 @@ describe("config", () => {
                         chrome: null,
                         chromium: "https://mirror.example/worker-chromium",
                         firefox: null,
+                        geckodriver: null,
                     },
                 },
             });
@@ -243,6 +244,7 @@ describe("config", () => {
                 chrome: "https://mirror.example/master-chrome",
                 chromium: null,
                 firefox: "https://mirror.example/master-firefox",
+                geckodriver: "https://mirror.example/master-geckodriver",
             };
             const serializedMasterConfig = JSON.parse(JSON.stringify({ browserDownloadMirrors: masterMirrors }));
 
