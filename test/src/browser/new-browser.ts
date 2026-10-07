@@ -37,7 +37,7 @@ describe("NewBrowser", () => {
             getPid: () => undefined,
             getLogs: sandbox.stub().resolves(""),
             saveLogs: sandbox.stub().resolves("/tmp/testplane-logs/1234567890.log"),
-            startCdpProxy: sandbox.stub().resolves(),
+            prepareCdp: sandbox.stub().resolves(),
         });
         warnStub = sandbox.stub();
         logStub = sandbox.stub();
@@ -633,24 +633,33 @@ describe("NewBrowser", () => {
             session.sessionId = "chrome-session";
             const browser = await mkBrowser_(config).init();
             const driver = await runDockerBrowserStub();
-            assert.calledOnceWith(driver.startCdpProxy, "chrome-session", "localhost:39599");
-            assert.callOrder(webdriverioRemoteStub, driver.startCdpProxy);
+            assert.calledOnceWith(driver.prepareCdp, "chrome-session");
+            assert.callOrder(webdriverioRemoteStub, driver.prepareCdp);
             await browser.quit();
         });
 
-        it("should not start a CDP proxy for a session without a Chrome debugger address", async () => {
+        it("should skip CDP preparation for an explicit browserWSEndpoint", async () => {
+            session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
+            const settings = { ...config, browserWSEndpoint: "ws://custom/devtools" };
+            const browser = await mkBrowser_(settings).init();
+            const driver = await runDockerBrowserStub();
+            assert.notCalled(driver.prepareCdp);
+            await browser.quit();
+        });
+
+        it("should not start a CDP adapter for a session without a Chrome debugger address", async () => {
             const browser = await mkBrowser_(config).init();
             const driver = await runDockerBrowserStub();
-            assert.notCalled(driver.startCdpProxy);
+            assert.notCalled(driver.prepareCdp);
             await browser.quit();
         });
 
-        it("should collect logs and clean up when CDP proxy startup fails", async () => {
+        it("should collect logs and clean up when CDP adapter startup fails", async () => {
             session.capabilities = { "goog:chromeOptions": { debuggerAddress: "localhost:39599" } };
             const driver = await runDockerBrowserStub();
-            driver.startCdpProxy.rejects(new Error("CDP proxy failed"));
-            await assert.isRejected(mkBrowser_(config).init(), "CDP proxy failed");
-            assert.callOrder(driver.startCdpProxy, driver.getLogs, driver.kill);
+            driver.prepareCdp.rejects(new Error("CDP adapter failed"));
+            await assert.isRejected(mkBrowser_(config).init(), "CDP adapter failed");
+            assert.callOrder(driver.prepareCdp, driver.getLogs, driver.kill);
             assert.calledOnceWith(driver.saveLogs, session.sessionId);
             assert.callOrder(driver.saveLogs, driver.kill);
         });

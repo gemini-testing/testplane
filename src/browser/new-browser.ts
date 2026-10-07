@@ -1,4 +1,5 @@
 import { URLSearchParams } from "url";
+import { timeDockerOperation } from "./docker-timing";
 import URI from "urijs";
 import { isBoolean, assign, isEmpty, set } from "lodash";
 import { remote } from "@testplane/webdriverio";
@@ -156,7 +157,13 @@ export class NewBrowser extends Browser {
                     this.setHttpTimeout(this._config.sessionQuitTimeout);
                 }
 
-                await this._session.deleteSession();
+                await timeDockerOperation(
+                    this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl()
+                        ? this._session.sessionId
+                        : undefined,
+                    "delete WebDriver session",
+                    () => this._session!.deleteSession(),
+                );
             }
         } catch (error) {
             this._shouldKillWebdriver = true;
@@ -198,7 +205,9 @@ export class NewBrowser extends Browser {
     private _saveDockerLogs(): Promise<void> {
         if (!this._sessionIdForLogs || !this._wdProcess?.saveLogs) return Promise.resolve();
 
-        this._saveLogsPromise ??= this._wdProcess.saveLogs(this._sessionIdForLogs).then(
+        this._saveLogsPromise ??= timeDockerOperation(this._sessionIdForLogs, "save Docker logs", () =>
+            this._wdProcess!.saveLogs!(this._sessionIdForLogs!),
+        ).then(
             file => log(`Docker session log: ${file}`),
             error => warn(`WARNING: Cannot save Docker session log: ${(error as Error).message}`),
         );
@@ -206,13 +215,24 @@ export class NewBrowser extends Browser {
     }
 
     protected async _createSession(): Promise<WebdriverIO.Browser> {
-        const sessionOpts = await this._getSessionOpts();
+        const dockerScope = this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl() ? this.id : undefined;
+        const sessionOpts = await timeDockerOperation(
+            dockerScope,
+            "prepare session options and Docker environment",
+            () => this._getSessionOpts(),
+        );
 
-        const session = await remote(sessionOpts);
+        const session = await timeDockerOperation(
+            dockerScope ? `${dockerScope} ${this._wdProcess?.gridUrl}` : undefined,
+            "create WebDriver session (launch browser)",
+            () => remote(sessionOpts),
+        );
         this._sessionIdForLogs = session.sessionId;
         const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
-        if (debuggerAddress) {
-            await this._wdProcess?.startCdpProxy?.(session.sessionId, debuggerAddress);
+        if (debuggerAddress && !("browserWSEndpoint" in this._config && this._config.browserWSEndpoint)) {
+            await timeDockerOperation(dockerScope ? session.sessionId : undefined, "prepare CDP (total)", () =>
+                this._wdProcess?.prepareCdp?.(session.sessionId),
+            );
         }
         return session;
     }

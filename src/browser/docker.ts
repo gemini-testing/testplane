@@ -8,11 +8,10 @@ import path from "path";
 import type { WdProcess } from "../browser-pool/webdriver-pool";
 import type { DockerConfig } from "../config/types";
 import { log, warn } from "../utils/logger";
-import { CDP_PROXY_SCRIPT } from "./docker-cdp-proxy";
+import { prepareDockerBrowserImage } from "./docker-image";
+import { timeDockerOperation } from "./docker-timing";
 
 const PLATFORM = "linux/amd64";
-const SELENOID_IMAGE = "registry.yandex.net/search-interfaces/selenoid:1.11.3-d496072";
-const CDP_PROXY_LOG = "/tmp/testplane-cdp-proxy.log";
 const COMMAND_TIMEOUT = 30_000;
 const PULL_TIMEOUT = 10 * 60_000;
 const pendingImages = new Map<string, Promise<void>>();
@@ -44,7 +43,7 @@ function docker(args: string[], { includeStderr = false, timeout = COMMAND_TIMEO
     return new Promise((resolve, reject) => {
         execFile("docker", args, { encoding: "utf8", timeout, windowsHide: true }, (error, stdout, stderr) => {
             if (error) {
-                reject(Object.assign(error, { stderr }));
+                reject(Object.assign(error, { stdout, stderr }));
             } else {
                 resolve((includeStderr ? stdout + stderr : stdout).trim());
             }
@@ -60,7 +59,9 @@ function errorMessage(error: unknown): string {
 export async function checkDockerParallelism(parallelism: number): Promise<void> {
     let cpus: number;
     try {
-        cpus = Number(await docker(["info", "--format", "{{.NCPU}}"]));
+        cpus = Number(
+            await timeDockerOperation("daemon", "check CPU count", () => docker(["info", "--format", "{{.NCPU}}"])),
+        );
     } catch (error) {
         throw new Error(`Cannot check Docker browser parallelism: ${errorMessage(error)}`);
     }
@@ -121,7 +122,9 @@ async function checkImage(image: string): Promise<void> {
 
         log(`Docker image "${image}" is not available locally. Pulling it for ${PLATFORM}...`);
         try {
-            await docker(["pull", "--platform", PLATFORM, "--quiet", image], { timeout: PULL_TIMEOUT });
+            await timeDockerOperation(image, "pull image", () =>
+                docker(["pull", "--platform", PLATFORM, "--quiet", image], { timeout: PULL_TIMEOUT }),
+            );
         } catch (pullError) {
             throw new Error(
                 `Cannot pull Docker image "${image}" for ${PLATFORM}. Check the image name, network connection and registry credentials (docker login).\n${errorMessage(
@@ -203,15 +206,29 @@ export async function runDockerBrowser(
         );
     }
 
-    await ensureImage(image);
-    await ensureImage(SELENOID_IMAGE);
+    const { selenoidImage, ...browserConfig } = config || {};
+    if (typeof selenoidImage !== "string" || !selenoidImage.trim()) {
+        throw new Error(
+            '"docker.selenoidImage" must be a non-empty string when "gridUrl" is "docker". ' +
+                "Set it in the browser's docker config or in the top-level docker config.",
+        );
+    }
+    if (selenoidImage.startsWith("-") || /\s/.test(selenoidImage)) {
+        throw new Error(
+            `Invalid docker.selenoidImage "${selenoidImage}": expected a Docker image reference without whitespace or a leading dash.`,
+        );
+    }
 
     const name = `testplane-${randomUUID()}`;
+    await timeDockerOperation(name, `prepare browser image ${image}`, () => ensureImage(image));
+    await timeDockerOperation(name, `prepare Selenoid image ${selenoidImage}`, () => ensureImage(selenoidImage));
+    const preparedImage = await timeDockerOperation(name, "prepare local browser image", () =>
+        prepareDockerBrowserImage(image, name, docker),
+    );
     const network = `${name}-network`;
     const configDir = await mkdtemp(path.join(tmpdir(), "testplane-selenoid-"));
     const configPath = path.join(configDir, "browsers.json");
     let networkCreated = false;
-    let cdpProxyContainer: string | undefined;
     let removal: Promise<void> | undefined;
     const removeOnExit = (): void => {
         const run = (args: string[]): string => {
@@ -266,7 +283,7 @@ export async function runDockerBrowser(
         unregisterCleanup(removeOnExit);
     };
     const remove = (): Promise<void> => {
-        removal ??= cleanup().catch(error => {
+        removal ??= timeDockerOperation(name, "remove containers and network", cleanup).catch(error => {
             removal = undefined;
             throw new Error(`Cannot remove Docker environment "${name}".\n${errorMessage(error)}`);
         });
@@ -276,12 +293,6 @@ export async function runDockerBrowser(
     const getLogs = async (): Promise<string> => {
         const controllerLogs = await docker(["logs", "--tail", "100", name], { includeStderr: true }).catch(() => "");
         const driverLogs: string[] = [];
-        if (cdpProxyContainer) {
-            const proxyLogs = await docker(["exec", cdpProxyContainer, "tail", "-c", "16384", CDP_PROXY_LOG]).catch(
-                () => "",
-            );
-            if (proxyLogs) driverLogs.push(`CDP proxy log:\n${proxyLogs}`);
-        }
         if (networkCreated) {
             // Selenoid may not save driver logs until the service becomes ready.
             const containers = await docker([
@@ -291,7 +302,7 @@ export async function runDockerBrowser(
                 "--filter",
                 `network=${network}`,
                 "--filter",
-                `ancestor=${image}`,
+                `ancestor=${preparedImage}`,
             ]).catch(() => "");
             for (const container of containers.split(/\s+/).filter(Boolean).slice(0, 4)) {
                 const logs = await docker(["logs", "--tail", "100", container], { includeStderr: true }).catch(
@@ -335,7 +346,9 @@ export async function runDockerBrowser(
         const logPath = path.join(logsDir, `${encodeURIComponent(sessionId)}.log`);
         const file = await open(logPath, "w", 0o600);
         try {
-            await file.appendFile(`Session: ${sessionId}\nImage: ${image}\nSaved: ${new Date().toISOString()}\n`);
+            await file.appendFile(
+                `Session: ${sessionId}\nImage: ${preparedImage}\nSaved: ${new Date().toISOString()}\n`,
+            );
             await appendDockerOutput(file, "Selenoid", ["logs", "--timestamps", name]);
             const containers = (
                 await docker([
@@ -345,16 +358,13 @@ export async function runDockerBrowser(
                     "--filter",
                     `network=${network}`,
                     "--filter",
-                    `ancestor=${image}`,
+                    `ancestor=${preparedImage}`,
                 ])
             )
                 .split(/\s+/)
                 .filter(Boolean);
             for (const container of containers) {
                 await appendDockerOutput(file, `Browser container ${container}`, ["logs", "--timestamps", container]);
-            }
-            if (cdpProxyContainer) {
-                await appendDockerOutput(file, "CDP proxy", ["exec", cdpProxyContainer, "cat", CDP_PROXY_LOG]);
             }
         } finally {
             await file.close();
@@ -378,7 +388,8 @@ export async function runDockerBrowser(
                             path: "/",
                             shmSize: 2 * 1024 ** 3,
                             hosts: ["host.docker.internal:host-gateway"],
-                            ...config,
+                            ...browserConfig,
+                            image: preparedImage,
                         },
                     },
                 },
@@ -386,40 +397,44 @@ export async function runDockerBrowser(
         );
         // Set before creation to also clean up when the CLI times out after creating the network.
         networkCreated = true;
-        await docker(["network", "create", network]);
-        await docker([
-            "create",
-            "--name",
-            name,
-            "--platform",
-            PLATFORM,
-            "--pull",
-            "never",
-            "--publish",
-            "127.0.0.1::4444",
-            "--network",
-            network,
-            // This is the socket path on the daemon's Linux host, including Docker Desktop/Colima.
-            "--volume",
-            "/var/run/docker.sock:/var/run/docker.sock",
-            SELENOID_IMAGE,
-            "-conf",
-            "/browsers.json",
-            "-container-network",
-            network,
-            "-limit",
-            "1",
-            "-retry-count",
-            "1",
-            "-capture-driver-logs",
-            "-service-startup-timeout",
-            `${timeout}ms`,
-            "-session-attempt-timeout",
-            `${timeout}ms`,
-        ]);
+        await timeDockerOperation(name, "create network", () => docker(["network", "create", network]));
+        await timeDockerOperation(name, "create Selenoid container", () =>
+            docker([
+                "create",
+                "--name",
+                name,
+                "--platform",
+                PLATFORM,
+                "--pull",
+                "never",
+                "--publish",
+                "127.0.0.1::4444",
+                "--network",
+                network,
+                // This is the socket path on the daemon's Linux host, including Docker Desktop/Colima.
+                "--volume",
+                "/var/run/docker.sock:/var/run/docker.sock",
+                selenoidImage,
+                "-conf",
+                "/browsers.json",
+                "-container-network",
+                network,
+                "-limit",
+                "1",
+                "-retry-count",
+                "1",
+                "-capture-driver-logs",
+                "-service-startup-timeout",
+                `${timeout}ms`,
+                "-session-attempt-timeout",
+                `${timeout}ms`,
+            ]),
+        );
         // Copy instead of a host bind mount: macOS temporary paths may not be shared with the VM.
-        await docker(["cp", configPath, `${name}:/browsers.json`]);
-        await docker(["start", name]);
+        await timeDockerOperation(name, "copy Selenoid config", () =>
+            docker(["cp", configPath, `${name}:/browsers.json`]),
+        );
+        await timeDockerOperation(name, "start Selenoid container", () => docker(["start", name]));
 
         const ports = JSON.parse(
             await docker(["inspect", "--format", "{{json .NetworkSettings.Ports}}", name]),
@@ -430,9 +445,11 @@ export async function runDockerBrowser(
         }
 
         const gridUrl = `http://127.0.0.1:${port}`;
-        await waitForSelenoid(name, gridUrl, timeout);
+        await timeDockerOperation(name, `wait for Selenoid at ${gridUrl}`, () =>
+            waitForSelenoid(name, gridUrl, timeout),
+        );
 
-        const startCdpProxy = async (sessionId: string, debuggerAddress: string): Promise<void> => {
+        const prepareCdp = async (sessionId: string): Promise<void> => {
             const protocolUrl = `${gridUrl}/devtools/${encodeURIComponent(sessionId)}/json/protocol`;
             const isCdpReady = async (): Promise<boolean> => {
                 try {
@@ -443,53 +460,36 @@ export async function runDockerBrowser(
                     return false;
                 }
             };
-            // Older browser images already provide Selenoid's CDP adapter.
-            if (await isCdpReady()) return;
+            // Healthy images already provide Selenoid's CDP adapter.
+            if (await timeDockerOperation(sessionId, "check native CDP route", isCdpReady)) return;
 
-            const address = new URL(`http://${debuggerAddress}`);
-            const port = Number(address.port);
-            if (!["localhost", "127.0.0.1", "[::1]"].includes(address.hostname) || !port) {
-                throw new Error(`Unsupported Docker Chrome debugger address: ${debuggerAddress}`);
-            }
             const containers = (
-                await docker(["ps", "--quiet", "--filter", `network=${network}`, "--filter", `ancestor=${image}`])
+                await docker([
+                    "ps",
+                    "--quiet",
+                    "--filter",
+                    `network=${network}`,
+                    "--filter",
+                    `ancestor=${preparedImage}`,
+                ])
             )
                 .split(/\s+/)
                 .filter(Boolean);
             if (containers.length !== 1) {
                 throw new Error(`Expected one browser container for CDP, found ${containers.length}.`);
             }
-            cdpProxyContainer = containers[0];
-            try {
-                await docker([
-                    "exec",
-                    "--detach",
-                    cdpProxyContainer,
-                    "python3",
-                    "-u",
-                    "-c",
-                    CDP_PROXY_SCRIPT,
-                    address.hostname === "[::1]" ? "::1" : address.hostname,
-                    String(port),
-                    "7070",
-                    CDP_PROXY_LOG,
-                ]);
-            } catch (error) {
-                throw new Error(
-                    `Cannot start CDP proxy in browser container. The browser image must include Python 3.\n${errorMessage(
-                        error,
-                    )}`,
-                );
-            }
-            const deadline = Date.now() + timeout;
-            while (Date.now() < deadline) {
-                if (await isCdpReady()) return;
-                if ((await docker(["inspect", "--format", "{{.State.Running}}", cdpProxyContainer])) !== "true") {
-                    throw new Error("The browser container exited before the CDP proxy became ready.");
+            const browserContainer = containers[0];
+            await timeDockerOperation(sessionId, "wait for CDP readiness", async () => {
+                const deadline = Date.now() + timeout;
+                while (Date.now() < deadline) {
+                    if (await isCdpReady()) return;
+                    if ((await docker(["inspect", "--format", "{{.State.Running}}", browserContainer])) !== "true") {
+                        throw new Error("The browser container exited before the CDP adapter became ready.");
+                    }
+                    await delay(Math.max(0, Math.min(200, deadline - Date.now())));
                 }
-                await delay(200);
-            }
-            throw new Error(`CDP proxy did not become ready within ${timeout} ms.`);
+                throw new Error(`CDP adapter did not become ready within ${timeout} ms.`);
+            });
         };
 
         return {
@@ -499,7 +499,7 @@ export async function runDockerBrowser(
             getPid: () => undefined,
             getLogs,
             saveLogs,
-            startCdpProxy,
+            prepareCdp,
         };
     } catch (error) {
         const logs = await getLogs().catch(() => "");
