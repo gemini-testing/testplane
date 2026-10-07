@@ -191,11 +191,12 @@ type DockerBrowserOptions = {
     timeout?: number;
 };
 
-/** Start an isolated Selenoid environment per session; Selenoid manages the browser container. */
-export async function runDockerBrowser(
+/** Prepare persistent images without starting browser sessions or Selenoid. */
+export async function prepareDockerImages(
     config: DockerConfig | null,
-    { browserName = "", browserVersion, timeout = COMMAND_TIMEOUT }: DockerBrowserOptions,
-): Promise<WdProcess> {
+    browserName = "",
+    scope = "prepare-docker",
+): Promise<{ image: string; selenoidImage: string }> {
     const image = config?.image;
     if (typeof image !== "string" || !image.trim()) {
         throw new Error('"docker.image" must be a non-empty string when "gridUrl" is "docker"');
@@ -206,7 +207,7 @@ export async function runDockerBrowser(
         );
     }
 
-    const { selenoidImage, ...browserConfig } = config || {};
+    const { selenoidImage } = config || {};
     if (typeof selenoidImage !== "string" || !selenoidImage.trim()) {
         throw new Error(
             '"docker.selenoidImage" must be a non-empty string when "gridUrl" is "docker". ' +
@@ -219,12 +220,25 @@ export async function runDockerBrowser(
         );
     }
 
+    await timeDockerOperation(scope, `prepare browser image ${image}`, () => ensureImage(image));
+    await timeDockerOperation(scope, `prepare Selenoid image ${selenoidImage}`, () => ensureImage(selenoidImage));
+    const preparedImage = ["chrome", "yandex"].includes(browserName.toLowerCase())
+        ? await timeDockerOperation(scope, "prepare local browser image", () =>
+              prepareDockerBrowserImage(image, scope, docker),
+          )
+        : image;
+    return { image: preparedImage, selenoidImage };
+}
+
+/** Start an isolated Selenoid environment per session; Selenoid manages the browser container. */
+export async function runDockerBrowser(
+    config: DockerConfig | null,
+    { browserName = "", browserVersion, timeout = COMMAND_TIMEOUT }: DockerBrowserOptions,
+): Promise<WdProcess> {
     const name = `testplane-${randomUUID()}`;
-    await timeDockerOperation(name, `prepare browser image ${image}`, () => ensureImage(image));
-    await timeDockerOperation(name, `prepare Selenoid image ${selenoidImage}`, () => ensureImage(selenoidImage));
-    const preparedImage = await timeDockerOperation(name, "prepare local browser image", () =>
-        prepareDockerBrowserImage(image, name, docker),
-    );
+    const { image: preparedImage, selenoidImage } = await prepareDockerImages(config, browserName, name);
+    const browserConfig = { ...config };
+    delete browserConfig.selenoidImage;
     const network = `${name}-network`;
     const configDir = await mkdtemp(path.join(tmpdir(), "testplane-selenoid-"));
     const configPath = path.join(configDir, "browsers.json");
@@ -505,7 +519,7 @@ export async function runDockerBrowser(
         const logs = await getLogs().catch(() => "");
         await remove().catch(cleanupError => warn((cleanupError as Error).message));
         throw new Error(
-            `Cannot start Selenoid for Docker browser "${image}".\n${errorMessage(error)}${
+            `Cannot start Selenoid for Docker browser "${config?.image}".\n${errorMessage(error)}${
                 logs ? `\nContainer logs:\n${logs}` : ""
             }`,
         );
