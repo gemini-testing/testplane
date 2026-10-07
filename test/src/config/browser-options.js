@@ -71,6 +71,32 @@ describe("config browser-options", () => {
             assert.isNull(config.forBrowser("remote").docker);
         });
 
+        it("should inherit the global selenoidImage and allow per-browser overrides", async () => {
+            Config.read.resolves({
+                docker: { selenoidImage: "selenoid:global" },
+                browsers: {
+                    inherited: mkBrowser_({ docker: { image: "browser:1" } }),
+                    overridden: mkBrowser_({ docker: { image: "browser:2", selenoidImage: "selenoid:custom" } }),
+                    globalOnly: mkBrowser_(),
+                    disabled: mkBrowser_({ docker: null }),
+                },
+            });
+            const config = await createConfig();
+            assert.deepEqual(config.forBrowser("inherited").docker, {
+                image: "browser:1",
+                selenoidImage: "selenoid:global",
+            });
+            assert.deepEqual(config.forBrowser("overridden").docker, {
+                image: "browser:2",
+                selenoidImage: "selenoid:custom",
+            });
+            assert.deepEqual(config.forBrowser("globalOnly").docker, { selenoidImage: "selenoid:global" });
+            assert.isNull(config.forBrowser("disabled").docker);
+            assert.equal(config.docker.selenoidImage, "selenoid:global");
+            assert.equal(config.serialize().browsers.inherited.docker.selenoidImage, "selenoid:global");
+            assert.equal(config.serialize().browsers.overridden.docker.selenoidImage, "selenoid:custom");
+        });
+
         it("should allow Docker only for a selected browser", async () => {
             Config.read.resolves({
                 browsers: {
