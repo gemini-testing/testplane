@@ -40,7 +40,7 @@ function makeConfigStub(opts = {}) {
             testFail: true,
             assertViewFail: true,
         },
-        timeTravel: { mode: "off" },
+        timeTravel: { mode: "off", network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 } },
         selectivity: { enabled: false },
         profiler: { level: 0, output: null },
     });
@@ -88,7 +88,7 @@ function makeBrowserConfigStub(opts = {}, browserId) {
         urlHttpTimeout: opts.urlHttpTimeout,
         httpTimeout: opts.httpTimeout,
         takeScreenshotOnFails: opts.takeScreenshotOnFails || { testFail: true, assertViewFail: true },
-        timeTravel: { mode: "off" },
+        timeTravel: { mode: "off", network: { enabled: false, maxBodySizeBytes: 10 * 1024 * 1024 } },
         selectivity: opts.selectivity,
     };
 }
