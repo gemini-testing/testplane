@@ -237,6 +237,21 @@ export async function runDockerBrowser(
 ): Promise<WdProcess> {
     const name = `testplane-${randomUUID()}`;
     const { image: preparedImage, selenoidImage } = await prepareDockerImages(config, browserName, name);
+    const securityOptions = JSON.parse(
+        await timeDockerOperation(name, "check container security options", () =>
+            docker(["info", "--format", "{{json .SecurityOptions}}"]),
+        ),
+    ) as string[] | null;
+    // SELinux otherwise prevents the controller from accessing the mounted engine socket.
+    const controllerSecurityArgs = securityOptions?.includes("name=selinux") ? ["--security-opt", "label=disable"] : [];
+    const serverComponents = JSON.parse(
+        await timeDockerOperation(name, "detect container engine", () =>
+            docker(["version", "--format", "{{json .Server.Components}}"]),
+        ),
+    ) as { Name: string }[] | null;
+    // Podman supplies host.docker.internal itself; host-gateway may be unavailable in podman machine.
+    const isPodman = serverComponents?.some(component => component.Name === "Podman Engine") ?? false;
+    const defaultHosts = isPodman ? [] : ["host.docker.internal:host-gateway"];
     const browserConfig = { ...config };
     delete browserConfig.selenoidImage;
     const network = `${name}-network`;
@@ -401,7 +416,7 @@ export async function runDockerBrowser(
                             port: "4444",
                             path: "/",
                             shmSize: 2 * 1024 ** 3,
-                            hosts: ["host.docker.internal:host-gateway"],
+                            hosts: defaultHosts,
                             ...browserConfig,
                             image: preparedImage,
                         },
@@ -428,6 +443,7 @@ export async function runDockerBrowser(
                 // This is the socket path on the daemon's Linux host, including Docker Desktop/Colima.
                 "--volume",
                 "/var/run/docker.sock:/var/run/docker.sock",
+                ...controllerSecurityArgs,
                 selenoidImage,
                 "-conf",
                 "/browsers.json",
@@ -448,6 +464,15 @@ export async function runDockerBrowser(
         await timeDockerOperation(name, "copy Selenoid config", () =>
             docker(["cp", configPath, `${name}:/browsers.json`]),
         );
+        if (isPodman) {
+            // Selenoid detects container execution using this Docker marker. Without it,
+            // it connects to published ports on its own loopback instead of the browser's network IP.
+            await timeDockerOperation(name, "enable Selenoid container detection", async () => {
+                const marker = path.join(configDir, ".dockerenv");
+                await writeFile(marker, "");
+                await docker(["cp", marker, `${name}:/.dockerenv`]);
+            });
+        }
         await timeDockerOperation(name, "start Selenoid container", () => docker(["start", name]));
 
         const ports = JSON.parse(
