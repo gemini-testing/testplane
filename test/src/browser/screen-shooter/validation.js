@@ -2,6 +2,8 @@
 
 const _ = require("lodash");
 const proxyquire = require("proxyquire");
+const { assertPixelRatio } = require("src/browser/screen-shooter/validation");
+const { PixelRatioChangeError } = require("src/browser/screen-shooter/errors/pixel-ratio-change-error");
 
 describe("assertCorrectCaptureAreaBounds", () => {
     const loggerWarnStub = sinon.stub();
@@ -157,4 +159,96 @@ describe("assertCorrectCaptureAreaBounds", () => {
             assert.notCalled(loggerWarnStub);
         });
     });
+});
+
+describe("assertPixelRatio", () => {
+    it("should retain the pixel ratio when screenshot dimensions match within rounding", () => {
+        assert.doesNotThrow(() =>
+            assertPixelRatio({ width: 391, height: 843 }, { width: 390, height: 844 }, { width: 390, height: 844 }),
+        );
+    });
+
+    for (const estimatedRatio of [1, 4]) {
+        it(`should correct a pixel ratio of ${estimatedRatio} using screenshot dimensions`, () => {
+            const error = assert.throws(
+                () =>
+                    assertPixelRatio(
+                        { width: 1170, height: 2532 },
+                        { width: 390 * estimatedRatio, height: 844 * estimatedRatio },
+                        { width: 390, height: 844 },
+                    ),
+                PixelRatioChangeError,
+            );
+
+            assert.equal(error.pixelRatio, 3);
+        });
+    }
+
+    it("should infer the ratio from CSS dimensions when the estimated viewport was rounded", () => {
+        const error = assert.throws(
+            () =>
+                assertPixelRatio(
+                    { width: 780, height: 1688 },
+                    { width: 488, height: 1055 },
+                    { width: 390, height: 844 },
+                ),
+            PixelRatioChangeError,
+        );
+
+        assert.equal(error.pixelRatio, 2);
+    });
+
+    it("should preserve fractional CSS viewport dimensions when inferring the ratio", () => {
+        const error = assert.throws(
+            () =>
+                assertPixelRatio(
+                    { width: 781, height: 1689 },
+                    { width: 1171.5, height: 2533.5 },
+                    { width: 390.5, height: 844.5 },
+                ),
+            PixelRatioChangeError,
+        );
+
+        assert.equal(error.pixelRatio, 2);
+    });
+
+    it("should reject dimensions that do not indicate a uniform scale change", () => {
+        assert.throws(
+            () =>
+                assertPixelRatio(
+                    { width: 1170, height: 844 },
+                    { width: 390, height: 844 },
+                    { width: 390, height: 844 },
+                ),
+            /consistent pixel ratio/,
+        );
+    });
+
+    for (const [measuredRatio, expectedRatio] of [
+        [1.999999, 2],
+        [2.000001, 2],
+        [1.999, 2],
+        [2.001, 2],
+        [4.999, 5],
+        [5.001, 5],
+        [1.9989, 1.9989],
+        [2.0011, 2.0011],
+        [1.25, 1.25],
+        [0.0005, 0.0005],
+    ]) {
+        it(`should correct an inferred ratio of ${measuredRatio} to ${expectedRatio}`, () => {
+            const viewportSizeInCss = { width: 1000 / measuredRatio, height: 2000 / measuredRatio };
+            const error = assert.throws(
+                () =>
+                    assertPixelRatio(
+                        { width: 1000, height: 2000 },
+                        { width: viewportSizeInCss.width * 3, height: viewportSizeInCss.height * 3 },
+                        viewportSizeInCss,
+                    ),
+                PixelRatioChangeError,
+            );
+
+            assert.equal(error.pixelRatio, expectedRatio);
+        });
+    }
 });

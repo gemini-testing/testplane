@@ -1,9 +1,11 @@
 "use strict";
 
 const proxyquire = require("proxyquire").noCallThru();
+const { assertPixelRatio } = require("src/browser/screen-shooter/validation");
 
 const validationStubs = {
     assertCorrectCaptureAreaBounds: sinon.stub(),
+    assertPixelRatio,
 };
 
 const historyStubs = {
@@ -67,10 +69,12 @@ describe("ElementsScreenShooter", () => {
     const createMockPage = (overrides = {}) =>
         Object.assign(
             {
+                isTopLevelViewport: true,
                 safeArea: band(0, 100),
                 ignoreAreas: [],
                 captureSpecs: [captureSpec(rect(0, 0, 100, 80))],
                 viewportSize: size(100, 100),
+                viewportSizeInCss: size(100, 100),
                 viewportOffset: { left: 0, top: 0 },
                 documentSize: size(100, 1000),
                 canHaveCaret: false,
@@ -87,8 +91,10 @@ describe("ElementsScreenShooter", () => {
     const createCaptureState = (overrides = {}) =>
         Object.assign(
             {
+                isTopLevelViewport: true,
                 scrollOffset: 0,
                 viewportSize: size(100, 100),
+                viewportSizeInCss: size(100, 100),
                 viewportOffset: { left: 0, top: 0 },
                 documentSize: size(100, 1000),
                 pixelRatio: 1,
@@ -152,7 +158,7 @@ describe("ElementsScreenShooter", () => {
         browserSideScreenshooter = {
             call: sandbox.stub(),
         };
-        viewportImage = { id: "viewport-image" };
+        viewportImage = { id: "viewport-image", uncroppedSize: size(100, 100) };
         renderedImage = { id: "rendered-image" };
         camera = {
             captureViewportImage: sandbox.stub().resolves(viewportImage),
@@ -345,16 +351,14 @@ describe("ElementsScreenShooter", () => {
                 .onCall(1)
                 .resolves(changedState) // getCaptureState phase 1 → size change
                 .onCall(2)
-                .resolves(3) // getCurrentPixelRatio
+                .resolves(refreshedState) // refresh capture state while retaining the override
                 .onCall(3)
-                .resolves(refreshedState) // refresh capture state without override
-                .onCall(4)
                 .resolves(preloadState) // getCaptureState in preload
-                .onCall(5)
+                .onCall(4)
                 .resolves({}) // scrollTo restore after preload
-                .onCall(6)
+                .onCall(5)
                 .resolves(undefined) // captureAnchorBaseline
-                .onCall(7)
+                .onCall(6)
                 .resolves(settledState); // getCaptureState phase 2
 
             const result = await screenShooter.capture(".element", {
@@ -380,17 +384,17 @@ describe("ElementsScreenShooter", () => {
                 "getCaptureState",
                 [[".element"], [], undefined, true, 3, []],
             ]);
+            assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
+                "getCaptureState",
+                [[".element"], [], undefined, true, 3, []],
+            ]);
             assert.deepEqual(browserSideScreenshooter.call.getCall(3).args, [
                 "getCaptureState",
-                [[".element"], [], undefined, true, undefined, []],
+                [[".element"], [], undefined, true, 3, []],
             ]);
-            assert.deepEqual(browserSideScreenshooter.call.getCall(4).args, [
+            assert.deepEqual(browserSideScreenshooter.call.getCall(6).args, [
                 "getCaptureState",
-                [[".element"], [], undefined, true, undefined, []],
-            ]);
-            assert.deepEqual(browserSideScreenshooter.call.getCall(7).args, [
-                "getCaptureState",
-                [[".element"], [], undefined, true, undefined, []],
+                [[".element"], [], undefined, true, 3, []],
             ]);
             assert.calledTwice(camera.captureViewportImage);
             assert.deepEqual(result, { image: renderedImage, meta: page });
@@ -413,11 +417,11 @@ describe("ElementsScreenShooter", () => {
                 .onCall(1)
                 .resolves(initialState)
                 .onCall(2)
-                .resolves(3)
-                .onCall(3)
                 .resolves(refreshedState)
-                .onCall(4)
+                .onCall(3)
                 .resolves(retryState);
+
+            viewportImage.uncroppedSize = size(300, 300);
 
             const result = await screenShooter.capture(".element", { compositeImage: false });
 
@@ -425,10 +429,37 @@ describe("ElementsScreenShooter", () => {
             assert.equal(result.meta.pixelRatio, 3);
             assert.deepEqual(result.meta.viewportSize, size(300, 300));
             assert.deepEqual(result.meta.documentSize, size(300, 3000));
-            assert.deepEqual(browserSideScreenshooter.call.getCall(3).args, [
+            assert.deepEqual(browserSideScreenshooter.call.getCall(2).args, [
                 "getCaptureState",
-                [[".element"], [], undefined, true, undefined, []],
+                [[".element"], [], undefined, true, 3, []],
             ]);
+        });
+
+        for (const imageSize of [size(300, 600), size(300, 300)]) {
+            it(`should not infer DPR from a frame viewport for a ${imageSize.width}x${imageSize.height} outer screenshot`, async () => {
+                browserProperties.isPixelRatioEmulated = true;
+                const page = createMockPage({ isTopLevelViewport: false });
+                browserSideScreenshooter.call.resolves(page);
+                viewportImage.uncroppedSize = imageSize;
+
+                const result = await screenShooter.capture(".element", { compositeImage: false });
+
+                assert.calledOnce(camera.captureViewportImage);
+                assert.equal(result.meta.pixelRatio, page.pixelRatio);
+                assert.equal(result.image, renderedImage);
+            });
+        }
+
+        it("should return a best-effort screenshot when the pixel ratio still differs on retry", async () => {
+            browserProperties.isPixelRatioEmulated = true;
+            browserSideScreenshooter.call.resolves(createMockPage());
+            viewportImage.uncroppedSize = size(300, 300);
+
+            const result = await screenShooter.capture(".element", { compositeImage: false });
+
+            assert.calledTwice(camera.captureViewportImage);
+            assert.calledOnce(compositeImage.render);
+            assert.strictEqual(result.image, renderedImage);
         });
 
         it("should return rendered image and page meta", async () => {
