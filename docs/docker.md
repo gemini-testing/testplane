@@ -5,7 +5,7 @@ Set `gridUrl: "docker"`, specify a browser image, and set `docker.selenoidImage`
 ```js
 module.exports = {
     gridUrl: "docker",
-    docker: { selenoidImage: "registry.yandex.net/search-interfaces/selenoid:1.11.3-d496072" },
+    docker: { selenoidImage: "registry.example.com/selenoid:1.11.3" },
     baseUrl: "http://host.docker.internal:3000",
     browsers: {
         chrome: {
@@ -16,13 +16,127 @@ module.exports = {
 };
 ```
 
-Install Docker and start the local Docker daemon. For a private registry, authenticate with `docker login` first, then run:
+Install Docker and start the local Docker daemon, or configure Podman or Colima as described below. For a private registry, authenticate with `docker login` first, then run:
 
 ```sh
 npx testplane
 ```
 
 Testplane uses `linux/amd64` browser images and starts them through Selenoid. If either image is missing locally, Testplane runs `docker pull --platform linux/amd64` automatically. Parallel sessions share each download; existing local images are not refreshed. On Apple Silicon, Docker must support AMD64 emulation; startup may take longer. Missing Docker, an unavailable daemon, a failed download, and an incompatible image platform produce separate errors. A missing or empty `docker.image` is rejected when starting the browser, not when loading the config.
+
+### Start Podman or Colima on macOS
+
+Both engines work with `gridUrl: "docker"`. Testplane invokes the Docker CLI, so install the `docker` command even when using Podman. Docker Desktop is not required. The installation commands below use Homebrew.
+
+When switching engines, stop the previous VM (`colima stop` or `podman machine stop`) and select the new Docker context. Clear environment overrides in the terminal used to run tests so they do not override that context:
+
+```sh
+unset DOCKER_HOST DOCKER_CONTEXT
+```
+
+#### Podman
+
+Install the CLI tools:
+
+```sh
+brew install podman docker
+```
+
+On Apple Silicon, enable Rosetta to run the `linux/amd64` browser images. Install Rosetta if it is missing:
+
+```sh
+softwareupdate --install-rosetta
+mkdir -p ~/.config/containers
+```
+
+Add these settings to `~/.config/containers/containers.conf`. If the file already contains a `[machine]` section, update that section instead of adding a duplicate or replacing the file:
+
+```toml
+[machine]
+provider = "applehv"
+rosetta = true
+```
+
+Rosetta translates x86_64 programs inside the ARM Linux VM. It is configured through `containers.conf`, not a `podman machine set --rosetta` flag. On Intel Macs, skip the Rosetta installation and configuration. See [Podman's Rosetta documentation](https://podman-desktop.io/docs/podman/rosetta).
+
+Create the VM once, then start it:
+
+```sh
+podman machine init --provider applehv
+podman machine start
+```
+
+If a machine already exists, skip `init`; after changing its Rosetta configuration, stop and start it. For the Apple Silicon setup, verify that the running machine reports `Rosetta=true`:
+
+```sh
+podman machine inspect --format '{{.State}} Rosetta={{.Rosetta}}'
+```
+
+Connect the Docker CLI to the machine's API socket:
+
+```sh
+podman_socket="$(podman machine inspect --format '{{.ConnectionInfo.PodmanSocket.Path}}')"
+docker context create podman --docker "host=unix://${podman_socket}"
+docker context use podman
+docker info
+```
+
+If the `podman` context already exists, use `docker context update podman --docker "host=unix://${podman_socket}"` instead of `create`. Read the socket path again after recreating the VM. Keep the default rootless mode; Testplane handles the Selenoid socket permissions and container detection described below. Leave `docker.hosts` unset to use Podman's built-in host resolution.
+
+For subsequent runs, use `podman machine start` and `docker context use podman`. Stop the VM with `podman machine stop` when finished.
+
+#### Colima
+
+Install Colima and the Docker CLI:
+
+```sh
+brew install colima docker
+```
+
+On Apple Silicon with macOS 13 or newer, use an ARM VM with Apple's virtualization framework and Rosetta for amd64 programs:
+
+```sh
+softwareupdate --install-rosetta
+colima start --runtime docker --arch aarch64 --vm-type vz --vz-rosetta
+```
+
+On an Intel Mac, no cross-architecture emulation is needed:
+
+```sh
+colima start --runtime docker --arch x86_64
+```
+
+Select the default profile's context and check the engine:
+
+```sh
+docker context use colima
+docker info
+```
+
+As an alternative to Rosetta on Apple Silicon, QEMU can emulate an entire x86_64 VM. Use a separate profile because the VM architecture and type are fixed at creation:
+
+```sh
+brew install qemu
+colima stop
+colima start amd64 --runtime docker --arch x86_64 --vm-type qemu
+docker context use colima-amd64
+docker info
+```
+
+Full VM emulation is generally slower. Do not combine `--arch x86_64` with the VZ/Rosetta setup: Rosetta runs amd64 programs in an `aarch64` VM.
+
+Colima saves settings in `~/.colima/<profile>/colima.yaml`. Subsequent starts need only `colima start` (default profile) or `colima start amd64`; stop them with `colima stop` or `colima stop amd64`. See [Colima configuration](https://colima.run/docs/configuration/).
+
+#### Run tests with the selected engine
+
+Authenticate to any private registries used by your configured images, then optionally prepare images before running tests:
+
+```sh
+npx testplane prepare-docker
+npx testplane
+```
+
+Podman and Colima have separate image stores, as do different Colima profiles. Switching engines may require downloading and preparing images again. The first Chrome or Yandex Browser preparation can also install UPX and unpack the CDP adapter; subsequent runs reuse the prepared local image.
 
 ### Prepare images before running tests
 
@@ -38,7 +152,7 @@ This step is optional: normal test runs still download missing images and build 
 
 ### Browser configuration
 
-`docker.image` must be a Selenoid-compatible image. Testplane copies the `docker` object, except `selenoidImage`, into the browser version entry in `browsers.json`, replacing `image` with the prepared local image for Chrome and Yandex Browser only. Set `path`, `port`, `shmSize`, `tmpfs`, `volumes`, and other Selenoid container settings there. Omitted settings default to `port: "4444"`, `path: "/"`, `shmSize: 2147483648` (2 GiB), and `hosts: ["host.docker.internal:host-gateway"]`; explicit values replace these defaults. The path does not depend on the browser name: specify `path: "/wd/hub"` for images that need it, including the Firefox images discussed here.
+`docker.image` must be a Selenoid-compatible image. Testplane copies the `docker` object, except `selenoidImage`, into the browser version entry in `browsers.json`, replacing `image` with the prepared local image for Chrome and Yandex Browser only. Set `path`, `port`, `shmSize`, `tmpfs`, `volumes`, and other Selenoid container settings there. Omitted settings default to `port: "4444"`, `path: "/"`, `shmSize: 2147483648` (2 GiB), and `hosts: ["host.docker.internal:host-gateway"]` for Docker. For Podman, `hosts` defaults to `[]`: its built-in host resolution provides `host.docker.internal`, and the `host-gateway` alias can fail in Podman machines. Explicit values replace these defaults. The path does not depend on the browser name: specify `path: "/wd/hub"` for images that need it, including the Firefox images discussed here.
 
 Set `docker.selenoidImage` to choose the Selenoid controller image. A browser-specific value takes precedence over the top-level `docker.selenoidImage`, even when the browser defines its own `docker.image`. There is no default: if neither is set, or the resolved value is empty or invalid, Docker browser startup fails before pulling images or creating containers. The controller image must support Selenoid's existing Docker configuration and command-line options and target `linux/amd64`; missing images are pulled automatically. This field is not passed to `browsers.json`.
 
@@ -80,6 +194,10 @@ docker: {
 Volume source paths refer to the Docker daemon's host (the Linux VM when using Docker Desktop or Colima). The controller still listens on port `4444`; `docker.port` selects the WebDriver port inside the browser container.
 
 Testplane selects the entry using `desiredCapabilities.browserName` and the requested browser version. When `browserName` is absent, Testplane uses `appium:deviceName`, falling back to `deviceName`, to match Selenoid routing. If none is set, it uses an empty configuration key. These routing names are not injected into the capabilities sent to Appium. When no version is specified, Selenoid uses the configured image as the default.
+
+When the engine reports SELinux in `docker info`, Testplane starts the Selenoid controller with `--security-opt label=disable` so it can access the mounted engine socket. This applies to SELinux-enabled Podman and Docker hosts. The setting affects only the controller container; browser container settings and host SELinux enforcement are unchanged.
+
+On Podman, Testplane also copies an empty `/.dockerenv` marker into the Selenoid container before starting it. Selenoid uses this marker to detect that it is running in a container and connect to browser services by their IPs in the shared network; without it, it incorrectly tries published ports on its own loopback address.
 
 Each WebDriver session gets an isolated Selenoid controller and Docker network. Testplane mounts the daemon's `/var/run/docker.sock` into Selenoid, copies in the generated config, and connects to `/wd/hub` on a dynamically allocated host port bound to `127.0.0.1`. Selenoid starts the browser container with its standard environment and privileges; the browser gets 2 GiB of shared memory unless overridden by `docker.shmSize`. Existing Testplane session reuse and parallelism settings apply.
 

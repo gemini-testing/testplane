@@ -26,7 +26,7 @@ describe("browser/docker", () => {
     let listLogs: SinonStub;
     let openLog: SinonStub;
     let spawnCommand: SinonStub;
-    const selenoidImage = "registry.yandex.net/search-interfaces/selenoid:1.11.3-d496072";
+    const selenoidImage = "registry.example.com/selenoid:1.11.3";
 
     const start = (
         image: string | null,
@@ -44,6 +44,8 @@ describe("browser/docker", () => {
             .stub()
             .callsFake(async (args: string[]) => (args[0] === "image" && args[1] === "inspect" ? "linux/amd64" : ""));
         command.withArgs(["info", "--format", "{{.OSType}}"]).resolves("linux");
+        command.withArgs(["info", "--format", "{{json .SecurityOptions}}"]).resolves('["name=seccomp"]');
+        command.withArgs(["version", "--format", "{{json .Server.Components}}"]).resolves('[{"Name":"Engine"}]');
         command
             .withArgs(sinon.match.array.startsWith(["inspect", "--format", "{{json .NetworkSettings.Ports}}"]))
             .resolves(JSON.stringify({ "4444/tcp": [{ HostIp: "127.0.0.1", HostPort: "12345" }] }));
@@ -189,6 +191,31 @@ describe("browser/docker", () => {
         });
     });
 
+    it("should allow the Selenoid controller to access the engine socket when SELinux is enabled", async () => {
+        command
+            .withArgs(["info", "--format", "{{json .SecurityOptions}}"])
+            .resolves('["name=rootless", "name=selinux", "name=seccomp"]');
+        const driver = await start("browser");
+        const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+        const position = args.indexOf("--security-opt");
+        assert.isAbove(position, -1);
+        assert.equal(args[position + 1], "label=disable");
+        assert.isBelow(position, args.indexOf(selenoidImage));
+        assert.notInclude(args, "--privileged");
+        assert.notProperty(JSON.parse(writeConfig.firstCall.args[1]).chrome.versions["98.0"], "securityOpt");
+        await driver.free();
+    });
+
+    for (const options of ['["name=seccomp"]', "[]", "null"]) {
+        it(`should keep controller security defaults without SELinux (${options})`, async () => {
+            command.withArgs(["info", "--format", "{{json .SecurityOptions}}"]).resolves(options);
+            const driver = await start("browser");
+            const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
+            assert.notInclude(args, "--security-opt");
+            await driver.free();
+        });
+    }
+
     it("should configure the browser image and start Selenoid with an isolated network and Docker socket", async () => {
         const driver = await start("registry/browser:1");
         const args = command.getCalls().find(call => call.args[0][0] === "create")!.args[0];
@@ -243,6 +270,45 @@ describe("browser/docker", () => {
         assert.calledWith(fetchStub, "http://127.0.0.1:12345/status");
         await driver.free();
         assert.calledOnce(removeConfig);
+    });
+
+    it("should rely on Podman host resolution without injecting host-gateway", async () => {
+        command
+            .withArgs(["version", "--format", "{{json .Server.Components}}"])
+            .resolves('[{"Name":"Podman Engine"},{"Name":"Engine"}]');
+        const driver = await start("browser");
+        const config = JSON.parse(writeConfig.firstCall.args[1]);
+        assert.deepEqual(config.chrome.versions["98.0"].hosts, []);
+        await driver.free();
+    });
+
+    it("should mark Selenoid as containerized before starting it on Podman", async () => {
+        command.withArgs(["version", "--format", "{{json .Server.Components}}"]).resolves('[{"Name":"Podman Engine"}]');
+        const driver = await start("browser");
+        const name = command.getCalls().find(call => call.args[0][0] === "create")!.args[0][2];
+        const marker = "/tmp/testplane-selenoid-test/.dockerenv";
+        assert.calledWith(writeConfig, marker, "");
+        const copy = command.withArgs(["cp", marker, `${name}:/.dockerenv`]);
+        assert.calledOnce(copy);
+        assert.callOrder(writeConfig.withArgs(marker), copy, command.withArgs(["start", name]));
+        await driver.free();
+    });
+
+    it("should use Docker's own container marker on Docker", async () => {
+        const driver = await start("browser");
+        assert.isFalse(
+            command.getCalls().some(call => call.args[0].some((arg: string) => arg.endsWith("/.dockerenv"))),
+        );
+        await driver.free();
+    });
+
+    it("should preserve explicit host mappings on Podman", async () => {
+        command.withArgs(["version", "--format", "{{json .Server.Components}}"]).resolves('[{"Name":"Podman Engine"}]');
+        const hosts = ["app:192.0.2.1", "host.docker.internal:192.0.2.2"];
+        const driver = await start("browser", {}, { hosts });
+        const config = JSON.parse(writeConfig.firstCall.args[1]);
+        assert.deepEqual(config.chrome.versions["98.0"].hosts, hosts);
+        await driver.free();
     });
 
     it("should use a custom Selenoid image without passing it to browsers.json", async () => {
