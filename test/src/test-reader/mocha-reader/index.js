@@ -7,7 +7,7 @@ const { TreeBuilder } = require("src/test-reader/tree-builder");
 const { Test } = require("src/test-reader/test-object");
 const { TestReaderEvents: ReadEvents } = require("src/events");
 const { MasterEvents: RunnerEvents } = require("src/events");
-const Mocha = require("mocha");
+const { Mocha } = require("mocha");
 const proxyquire = require("proxyquire").noCallThru();
 const { EventEmitter } = require("events");
 
@@ -54,7 +54,7 @@ describe("test-reader/mocha-reader", () => {
         loggerWarnStub = sinon.stub();
 
         readFiles = proxyquire("src/test-reader/mocha-reader", {
-            mocha: MochaConstructorStub,
+            mocha: { Mocha: MochaConstructorStub },
             "@cspotcode/source-map-support": SourceMapSupportStub,
             "./utils": { getMethodsByInterface: getMethodsByInterfaceStub },
             "../../utils/typescript": { enableSourceMaps: enableSourceMapsStub },

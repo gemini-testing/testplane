@@ -1,7 +1,7 @@
 import path from "node:path";
 import proxyquire from "proxyquire";
 import sinon, { type SinonStub } from "sinon";
-import Vite from "vite";
+import type Vite from "vite";
 import chalk from "chalk";
 
 import { ViteServer } from "../../../../../src/runner/browser-env/vite/server";
@@ -18,6 +18,7 @@ import type { BrowserTestRunEnvOptions } from "../../../../../src/runner/browser
 describe("runner/browser-env/vite/server", () => {
     const sandbox = sinon.createSandbox();
     let ViteServerStub: typeof ViteServer;
+    let createViteServerStub: SinonStub;
     let getPortStub: SinonStub;
     let createSocketServer: SinonStub;
     let generateIndexHtmlPlugin: () => Vite.Plugin[];
@@ -46,7 +47,7 @@ describe("runner/browser-env/vite/server", () => {
     };
 
     beforeEach(() => {
-        sandbox.stub(Vite, "createServer").resolves(mkViteServer_());
+        createViteServerStub = sandbox.stub().resolves(mkViteServer_());
 
         loggerLogStub = sandbox.stub();
         createSocketServer = sandbox.stub();
@@ -58,6 +59,7 @@ describe("runner/browser-env/vite/server", () => {
         sandbox.stub(RuntimeConfig, "getInstance").returns({ extend: sandbox.stub() });
 
         ({ ViteServer: ViteServerStub } = proxyquire("../../../../../src/runner/browser-env/vite/server", {
+            vite: { createServer: createViteServerStub },
             "get-port": getPortStub,
             "./socket": { createSocketServer },
             "./plugins/generate-index-html": { plugin: generateIndexHtmlPlugin },
@@ -76,33 +78,33 @@ describe("runner/browser-env/vite/server", () => {
                 it("on localhost", async () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ server: { host: "localhost" } }));
+                    assert.calledOnceWith(createViteServerStub, sinon.match({ server: { host: "localhost" } }));
                 });
 
                 it("allows runtime modules from the Testplane package root", async () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
-                    const viteConfig = (Vite.createServer as SinonStub).firstCall.args[0] as Vite.InlineConfig;
+                    const viteConfig = createViteServerStub.firstCall.args[0] as Vite.InlineConfig;
                     assert.include(viteConfig.server?.fs?.allow ?? [], path.resolve(__dirname, "../../../../.."));
                 });
 
                 it("without config file", async () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ configFile: false }));
+                    assert.calledOnceWith(createViteServerStub, sinon.match({ configFile: false }));
                 });
 
                 it("with inlined source map", async () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ build: { sourcemap: "inline" } }));
+                    assert.calledOnceWith(createViteServerStub, sinon.match({ build: { sourcemap: "inline" } }));
                 });
 
                 it("with silent log level", async () => {
                     await ViteServerStub.create(mkConfig_()).start();
 
                     assert.calledOnceWith(
-                        Vite.createServer,
+                        createViteServerStub,
                         sinon.match({
                             logLevel: "silent",
                             optimizeDeps: {
@@ -114,12 +116,25 @@ describe("runner/browser-env/vite/server", () => {
                     );
                 });
 
+                it("with required CommonJS dependencies pre-bundled", async () => {
+                    await ViteServerStub.create(mkConfig_()).start();
+
+                    assert.calledOnceWith(
+                        createViteServerStub,
+                        sinon.match({
+                            optimizeDeps: {
+                                include: sinon.match.array.contains(["expect", "debug"]),
+                            },
+                        }),
+                    );
+                });
+
                 it("with generated port", async () => {
                     getPortStub.resolves(98765);
 
                     await ViteServerStub.create(mkConfig_()).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ server: { port: 98765 } }));
+                    assert.calledOnceWith(createViteServerStub, sinon.match({ server: { port: 98765 } }));
                 });
             });
 
@@ -129,7 +144,10 @@ describe("runner/browser-env/vite/server", () => {
 
                     await ViteServerStub.create(config).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ server: { host: "0.0.0.0", port: 4000 } }));
+                    assert.calledOnceWith(
+                        createViteServerStub,
+                        sinon.match({ server: { host: "0.0.0.0", port: 4000 } }),
+                    );
                 });
             });
 
@@ -148,7 +166,10 @@ describe("runner/browser-env/vite/server", () => {
 
                     await ViteServerStub.create(config).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ server: { host: "1.1.1.1", port: 5000 } }));
+                    assert.calledOnceWith(
+                        createViteServerStub,
+                        sinon.match({ server: { host: "1.1.1.1", port: 5000 } }),
+                    );
                 });
             });
 
@@ -161,7 +182,10 @@ describe("runner/browser-env/vite/server", () => {
 
                     await ViteServerStub.create(config).start();
 
-                    assert.calledOnceWith(Vite.createServer, sinon.match({ server: { host: "2.2.2.2", port: 6000 } }));
+                    assert.calledOnceWith(
+                        createViteServerStub,
+                        sinon.match({ server: { host: "2.2.2.2", port: 6000 } }),
+                    );
                 });
             });
 
@@ -176,7 +200,7 @@ describe("runner/browser-env/vite/server", () => {
                 await ViteServerStub.create(config).start();
 
                 assert.calledOnceWith(
-                    Vite.createServer,
+                    createViteServerStub,
                     sinon.match({
                         plugins: [
                             { name: "user-plugin-1" },
@@ -215,7 +239,7 @@ describe("runner/browser-env/vite/server", () => {
 
         it("should create socket server", async () => {
             const viteServer = mkViteServer_();
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             await ViteServerStub.create(mkConfig_()).start();
 
@@ -224,7 +248,7 @@ describe("runner/browser-env/vite/server", () => {
 
         it("should create socket server before listening vite server", async () => {
             const viteServer = mkViteServer_();
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             await ViteServerStub.create(mkConfig_()).start();
 
@@ -239,7 +263,7 @@ describe("runner/browser-env/vite/server", () => {
                     network: [],
                 },
             });
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             await ViteServerStub.create(mkConfig_()).start();
 
@@ -256,7 +280,7 @@ describe("runner/browser-env/vite/server", () => {
                     network: [],
                 },
             });
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             const config = makeConfigStub({
                 baseUrl: defaults.baseUrl,
@@ -277,7 +301,7 @@ describe("runner/browser-env/vite/server", () => {
                     network: [],
                 },
             });
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             await ViteServerStub.create(mkConfig_()).start();
 
@@ -288,7 +312,7 @@ describe("runner/browser-env/vite/server", () => {
     describe("close", () => {
         it("should close server", async () => {
             const viteServer = mkViteServer_();
-            (Vite.createServer as SinonStub).resolves(viteServer);
+            createViteServerStub.resolves(viteServer);
 
             const viteServerWrapper = ViteServerStub.create(mkConfig_());
             await viteServerWrapper.start();
