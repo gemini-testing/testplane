@@ -1,4 +1,5 @@
 import { URLSearchParams } from "url";
+import { timeDockerOperation } from "./docker-timing";
 import URI from "urijs";
 import { isBoolean, assign, isEmpty, set } from "lodash";
 import { remote } from "@testplane/webdriverio";
@@ -6,10 +7,10 @@ import type { Capabilities } from "@testplane/wdio-types";
 
 import { Browser, BrowserOpts } from "./browser";
 import signalHandler from "../signal-handler";
-import { warn } from "../utils/logger";
+import { log, warn } from "../utils/logger";
 import { getNormalizedBrowserName } from "../utils/browser";
 import { getInstance } from "../config/runtime-config";
-import { LOCAL_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../constants/config";
+import { LOCAL_GRID_URL, DOCKER_GRID_URL, W3C_CAPABILITIES, VENDOR_CAPABILITIES } from "../constants/config";
 import { Config } from "../config";
 import { BrowserConfig } from "../config/browser-config";
 import { BrowserName, type W3CBrowserName } from "./types";
@@ -62,6 +63,8 @@ export class NewBrowser extends Browser {
     private _quitPromise: Promise<void> | null = null;
     private _cleanupPromise: Promise<void> | null = null;
     private _shouldKillWebdriver = false;
+    private _sessionIdForLogs?: string;
+    private _saveLogsPromise?: Promise<void>;
 
     constructor(config: Config, opts: BrowserOpts) {
         super(config, opts);
@@ -87,6 +90,15 @@ export class NewBrowser extends Browser {
 
             return this;
         } catch (error) {
+            if (this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl()) {
+                const logs = await this._wdProcess?.getLogs?.().catch(() => "");
+                if (logs && error instanceof Error) {
+                    const details = `\nSelenoid logs (${this._config.docker?.image}):\n${logs}`;
+                    const originalStack = error.stack;
+                    error.message += details;
+                    error.stack = originalStack ? originalStack + details : `${error.name}: ${error.message}`;
+                }
+            }
             await this.kill();
 
             throw error;
@@ -137,12 +149,21 @@ export class NewBrowser extends Browser {
         signalHandler.off("exit", this._onExit);
 
         try {
+            if (this._wdProcess?.saveLogs) {
+                await this._saveDockerLogs();
+            }
             if (this._session) {
                 if (canReuseWebdriver) {
                     this.setHttpTimeout(this._config.sessionQuitTimeout);
                 }
 
-                await this._session.deleteSession();
+                await timeDockerOperation(
+                    this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl()
+                        ? this._session.sessionId
+                        : undefined,
+                    "delete WebDriver session",
+                    () => this._session!.deleteSession(),
+                );
             }
         } catch (error) {
             this._shouldKillWebdriver = true;
@@ -150,14 +171,26 @@ export class NewBrowser extends Browser {
 
             warn(`WARNING: Can not ${warningSubject}: ${(error as Error)?.message ?? String(error)}`);
         } finally {
-            if (canReuseWebdriver && this._session && !this._shouldKillWebdriver) {
-                this._wdProcess?.free();
-            } else {
-                this._wdProcess?.kill();
+            try {
+                if (canReuseWebdriver && this._session && !this._shouldKillWebdriver) {
+                    try {
+                        await this._wdProcess?.free();
+                    } catch (error) {
+                        this._shouldKillWebdriver = true;
+                        warn(`WARNING: Can not free WebDriver process: ${(error as Error)?.message ?? String(error)}`);
+                        await this._wdProcess?.kill();
+                    }
+                } else {
+                    await this._wdProcess?.kill();
+                }
+            } catch (error) {
+                const subject =
+                    this._config.gridUrl === DOCKER_GRID_URL ? "remove Docker container" : "kill WebDriver process";
+                warn(`WARNING: Can not ${subject}: ${(error as Error)?.message ?? String(error)}`);
+            } finally {
+                // Pool cleanup still reads session metadata after cancellation.
+                this._wdProcess = null;
             }
-
-            // Pool cleanup still reads session metadata after cancellation.
-            this._wdProcess = null;
         }
     }
 
@@ -169,10 +202,39 @@ export class NewBrowser extends Browser {
         return;
     }
 
-    protected async _createSession(): Promise<WebdriverIO.Browser> {
-        const sessionOpts = await this._getSessionOpts();
+    private _saveDockerLogs(): Promise<void> {
+        if (!this._sessionIdForLogs || !this._wdProcess?.saveLogs) return Promise.resolve();
 
-        return remote(sessionOpts);
+        this._saveLogsPromise ??= timeDockerOperation(this._sessionIdForLogs, "save Docker logs", () =>
+            this._wdProcess!.saveLogs!(this._sessionIdForLogs!),
+        ).then(
+            file => log(`Docker session log: ${file}`),
+            error => warn(`WARNING: Cannot save Docker session log: ${(error as Error).message}`),
+        );
+        return this._saveLogsPromise;
+    }
+
+    protected async _createSession(): Promise<WebdriverIO.Browser> {
+        const dockerScope = this._config.gridUrl === DOCKER_GRID_URL && !this._isLocalGridUrl() ? this.id : undefined;
+        const sessionOpts = await timeDockerOperation(
+            dockerScope,
+            "prepare session options and Docker environment",
+            () => this._getSessionOpts(),
+        );
+
+        const session = await timeDockerOperation(
+            dockerScope ? `${dockerScope} ${this._wdProcess?.gridUrl}` : undefined,
+            "create WebDriver session (launch browser)",
+            () => remote(sessionOpts),
+        );
+        this._sessionIdForLogs = session.sessionId;
+        const debuggerAddress = session.capabilities["goog:chromeOptions"]?.debuggerAddress;
+        if (debuggerAddress && !("browserWSEndpoint" in this._config && this._config.browserWSEndpoint)) {
+            await timeDockerOperation(dockerScope ? session.sessionId : undefined, "prepare CDP (total)", () =>
+                this._wdProcess?.prepareCdp?.(session.sessionId),
+            );
+        }
+        return session;
     }
 
     protected async _setPageLoadTimeout(): Promise<void> {
@@ -206,6 +268,21 @@ export class NewBrowser extends Browser {
 
         if (this._isLocalGridUrl()) {
             gridUrl = await this._getLocalWebdriverGridUrl();
+        } else if (gridUrl === DOCKER_GRID_URL) {
+            const { runDockerBrowser } = await import("./docker");
+            this._wdProcess = await runDockerBrowser(config.docker, {
+                // Selenoid uses the Appium device name when browserName is absent.
+                browserName:
+                    config.desiredCapabilities?.browserName ||
+                    config.desiredCapabilities?.["appium:deviceName"] ||
+                    (config.desiredCapabilities as { deviceName?: string } | null)?.deviceName,
+                browserVersion:
+                    this.version ||
+                    config.desiredCapabilities?.browserVersion ||
+                    (config.desiredCapabilities as { version?: string } | null)?.version,
+                timeout: config.sessionRequestTimeout || config.httpTimeout,
+            });
+            gridUrl = this._wdProcess.gridUrl;
         }
 
         const gridUri = new URI(gridUrl);
